@@ -41,7 +41,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       name: "Stores",
       href: "/stores",
       icon: Store,
-      minRole: "manager",
+      minRole: "manager", // Admin should be able to see this too
     },
     {
       name: "Inventory",
@@ -109,25 +109,26 @@ export function Sidebar({ className, ...props }: SidebarProps) {
         <div className="px-3 py-2">
           <div className="space-y-1">
             {menuItems.map((item) => {
-              // Only show menu items the user has permission to access
-              if (!hasPermission(item.minRole as any)) return null;
-              
-              return (
-                <Link key={item.href} to={item.href}>
-                  <Button
-                    variant={isActive(item.href) ? "default" : "ghost"}
-                    className={cn(
-                      "w-full justify-start",
-                      isActive(item.href) 
-                        ? "bg-croffle-primary text-white" 
-                        : "text-croffle-text hover:bg-croffle-primary/10"
-                    )}
-                  >
-                    <item.icon className="mr-2 h-5 w-5" />
-                    {item.name}
-                  </Button>
-                </Link>
-              );
+              // Show all menu items if user is admin, otherwise check permissions
+              if (user.role === 'admin' || hasPermission(item.minRole as any)) {
+                return (
+                  <Link key={item.href} to={item.href}>
+                    <Button
+                      variant={isActive(item.href) ? "default" : "ghost"}
+                      className={cn(
+                        "w-full justify-start",
+                        isActive(item.href) 
+                          ? "bg-croffle-primary text-white" 
+                          : "text-croffle-text hover:bg-croffle-primary/10"
+                      )}
+                    >
+                      <item.icon className="mr-2 h-5 w-5" />
+                      {item.name}
+                    </Button>
+                  </Link>
+                );
+              }
+              return null;
             })}
           </div>
         </div>
