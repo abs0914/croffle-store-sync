@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Store } from "@/types";
 import { useAuth } from "./AuthContext";
@@ -38,7 +39,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         setIsLoading(true);
         
-        let { data, error } = null;
+        let data = null;
+        let error = null;
         
         // Admin and owner can see all stores
         if (user.role === 'admin') {
