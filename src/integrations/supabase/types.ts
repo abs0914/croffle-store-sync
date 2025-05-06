@@ -39,6 +39,53 @@ export type Database = {
         }
         Relationships: []
       }
+      store_settings: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          is_tax_inclusive: boolean
+          receipt_footer: string | null
+          receipt_header: string | null
+          store_id: string
+          tax_percentage: number
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_tax_inclusive?: boolean
+          receipt_footer?: string | null
+          receipt_header?: string | null
+          store_id: string
+          tax_percentage?: number
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          is_tax_inclusive?: boolean
+          receipt_footer?: string | null
+          receipt_header?: string | null
+          store_id?: string
+          tax_percentage?: number
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           address: string

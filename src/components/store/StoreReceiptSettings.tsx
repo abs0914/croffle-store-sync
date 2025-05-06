@@ -10,16 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
-
-interface StoreSettings {
-  id: string;
-  receiptHeader: string;
-  receiptFooter: string;
-  taxPercentage: number;
-  isTaxInclusive: boolean;
-  currency: string;
-  timezone: string;
-}
+import { StoreSettings } from "@/types";
 
 interface StoreReceiptSettingsProps {
   storeId: string;
@@ -30,6 +21,7 @@ export default function StoreReceiptSettings({ storeId }: StoreReceiptSettingsPr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [settings, setSettings] = useState<StoreSettings>({
     id: "",
+    storeId: storeId,
     receiptHeader: "",
     receiptFooter: "Thank you for shopping with us!",
     taxPercentage: 0,
@@ -42,19 +34,23 @@ export default function StoreReceiptSettings({ storeId }: StoreReceiptSettingsPr
     const fetchSettings = async () => {
       setIsLoading(true);
       try {
+        // Check if store_settings table exists in the database schema
         const { data, error } = await supabase
           .from('store_settings')
           .select('*')
           .eq('store_id', storeId)
           .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-          throw error;
+        if (error) {
+          if (error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+            throw error;
+          }
         }
 
         if (data) {
           setSettings({
             id: data.id,
+            storeId: data.store_id,
             receiptHeader: data.receipt_header || "",
             receiptFooter: data.receipt_footer || "Thank you for shopping with us!",
             taxPercentage: data.tax_percentage || 0,
@@ -146,7 +142,7 @@ export default function StoreReceiptSettings({ storeId }: StoreReceiptSettingsPr
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Spinner size="lg" />
+        <Spinner />
       </div>
     );
   }

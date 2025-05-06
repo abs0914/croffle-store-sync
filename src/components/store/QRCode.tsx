@@ -48,7 +48,7 @@ export default function QRCode({ storeId, storeName }: QRCodeProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Spinner size="lg" />
+        <Spinner />
       </div>
     );
   }
