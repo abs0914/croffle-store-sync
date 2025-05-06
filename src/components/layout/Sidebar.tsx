@@ -10,7 +10,8 @@ import {
   FileText,
   Settings,
   CreditCard,
-  BarChart4
+  BarChart4,
+  Store
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -21,7 +22,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
   const { user, hasPermission } = useAuth();
   const location = useLocation();
   
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
   
   const menuItems = [
     {
@@ -35,6 +36,12 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       href: "/pos",
       icon: ShoppingCart,
       minRole: "cashier",
+    },
+    {
+      name: "Stores",
+      href: "/stores",
+      icon: Store,
+      minRole: "manager",
     },
     {
       name: "Inventory",

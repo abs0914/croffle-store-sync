@@ -11,6 +11,8 @@ import { MainLayout } from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import POS from "./pages/POS";
+import Stores from "./pages/Stores";
+import StoreSettings from "./pages/StoreSettings";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -44,6 +46,27 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Role-based route component
+const RoleRoute = ({ 
+  children, 
+  requiredRole 
+}: { 
+  children: React.ReactNode; 
+  requiredRole: "admin" | "owner" | "manager" | "cashier"; 
+}) => {
+  const { hasPermission, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return null; // Or a loading spinner
+  }
+  
+  if (!hasPermission(requiredRole)) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -54,6 +77,11 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/pos" element={<POS />} />
+        
+        {/* Store Management Routes */}
+        <Route path="/stores" element={<RoleRoute requiredRole="manager"><Stores /></RoleRoute>} />
+        <Route path="/stores/:storeId" element={<RoleRoute requiredRole="manager"><StoreSettings /></RoleRoute>} />
+        
         {/* More routes will be added here */}
       </Route>
       
