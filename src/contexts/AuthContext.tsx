@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { User, UserRole } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,18 +54,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // If profile doesn't exist, try to set up the user account
       if (!profileData) {
         console.log('Profile not found, attempting to create one via edge function');
-        // Call the setup-users edge function to create missing profiles
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/setup-users`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: supabaseUser.id }),
-        });
-        
-        if (!response.ok) {
-          console.error('Failed to set up user account:', await response.text());
-          throw new Error('Failed to set up user account');
+        try {
+          // Call the setup-users edge function to create missing profiles
+          const response = await fetch(`${SUPABASE_URL}/functions/v1/setup-users`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId: supabaseUser.id }),
+          });
+          
+          console.log('Edge function response status:', response.status);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Failed to set up user account:', errorText);
+            throw new Error(`Failed to set up user account: ${errorText}`);
+          }
+          
+          const responseData = await response.json();
+          console.log('Edge function response:', responseData);
+        } catch (fetchError) {
+          console.error('Error calling edge function:', fetchError);
+          throw new Error(`Error calling edge function: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`);
         }
         
         // Try fetching profile again
@@ -76,9 +86,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('id', supabaseUser.id)
           .maybeSingle();
           
-        if (newProfileError || !newProfileData) {
-          console.error("Profile still not found:", newProfileError || "No data returned");
-          throw new Error("Unable to create user profile");
+        if (newProfileError) {
+          console.error("Profile refetch error:", newProfileError);
+          throw new Error("Unable to retrieve created user profile");
+        }
+        
+        if (!newProfileData) {
+          console.error("Profile still not found after creation attempt");
+          throw new Error("Profile creation failed - no data returned");
         }
         
         console.log('Profile created successfully:', newProfileData);
@@ -86,6 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Use the newly created profile data
         profileData = newProfileData;
       }
+      
+      console.log('Profile data found:', profileData);
       
       // Fetch the user's store access
       const { data: storeAccess, error: storeError } = await supabase
@@ -95,11 +112,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (storeError) {
         console.error("Store access fetch error:", storeError);
-        throw storeError;
+        // Don't throw here, just use empty array for store IDs
       }
       
+      console.log('Store access:', storeAccess);
+      
       // Map the data to our User type
-      return {
+      const mappedUser = {
         id: supabaseUser.id,
         email: profileData.email,
         name: profileData.name,
@@ -107,6 +126,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         storeIds: storeAccess?.map(access => access.store_id) || [],
         avatar: profileData.avatar || undefined,
       };
+      
+      console.log('Mapped user:', mappedUser);
+      return mappedUser;
     } catch (error) {
       console.error("Error mapping profile:", error);
       throw error;
@@ -118,25 +140,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkUser = async () => {
       try {
         setIsLoading(true);
+        console.log('Checking for existing session...');
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Session check error:', error);
+          throw error;
+        }
+        
+        console.log('Session check complete:', session ? 'Session exists' : 'No session');
         
         if (session?.user) {
           try {
+            console.log('Mapping user from session...');
             const mappedUser = await mapProfileToUser(session.user);
+            console.log('User mapped successfully:', mappedUser);
             setUser(mappedUser);
           } catch (profileError) {
             console.error("Error fetching profile:", profileError);
             setUser(null);
           }
         } else {
+          console.log('No user in session, setting user to null');
           setUser(null);
         }
       } catch (error) {
         console.error("Auth session check error:", error);
         setUser(null);
       } finally {
+        console.log('Finishing session check, setting isLoading to false');
         setIsLoading(false);
       }
     };
@@ -145,15 +178,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+      
       if (event === 'SIGNED_IN' && session?.user) {
         try {
+          console.log('User signed in, mapping profile...');
           const mappedUser = await mapProfileToUser(session.user);
+          console.log('Profile mapped after sign in:', mappedUser);
           setUser(mappedUser);
         } catch (profileError) {
           console.error("Error fetching profile on sign in:", profileError);
           setUser(null);
         }
       } else if (event === 'SIGNED_OUT') {
+        console.log('User signed out, clearing user state');
         setUser(null);
       }
     });
@@ -166,21 +204,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      console.log('Attempting to log in user:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Sign in error:', error);
+        throw error;
+      }
+      
+      console.log('Sign in successful, user:', data.user?.id);
       
       if (data.user) {
         try {
+          console.log('Mapping user profile after login...');
           const mappedUser = await mapProfileToUser(data.user);
           
           if (!mappedUser) {
+            console.error('No mapped user returned');
             throw new Error("Unable to retrieve user profile");
           }
           
+          console.log('Setting user state after successful mapping');
           setUser(mappedUser);
           toast.success(`Welcome back, ${mappedUser.name}!`);
         } catch (profileError) {
@@ -193,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast.error(error.message || "Failed to log in");
       throw error;
     } finally {
+      console.log('Login attempt complete, setting isLoading to false');
       setIsLoading(false);
     }
   };
