@@ -60,7 +60,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         
         const { data, error } = await storeQuery;
         
-        if (error) throw error;
+        if (error) {
+          console.error("Store fetch error:", error);
+          throw error;
+        }
         
         const mappedStores: Store[] = data.map(store => ({
           id: store.id,
@@ -96,7 +99,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
     
     fetchStores();
-  }, [user, currentStore?.id]);
+  }, [user]);
 
   return (
     <StoreContext.Provider

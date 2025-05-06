@@ -7,11 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,11 +24,15 @@ export default function Login() {
       return;
     }
     
+    setIsSubmitting(true);
     try {
       await login(email, password);
+      navigate("/");
     } catch (error) {
       // Error is already handled in the login function
       console.log("Login attempt failed");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -59,6 +66,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="border-croffle-primary/30 focus-visible:ring-croffle-accent"
+                disabled={isSubmitting}
               />
             </div>
             <div className="space-y-2">
@@ -80,6 +88,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="border-croffle-primary/30 focus-visible:ring-croffle-accent"
+                disabled={isSubmitting}
               />
             </div>
           </CardContent>
@@ -87,9 +96,9 @@ export default function Login() {
             <Button
               type="submit"
               className="w-full bg-croffle-primary hover:bg-croffle-primary/90"
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <>
                   <Spinner className="mr-2 h-4 w-4" />
                   Signing in...

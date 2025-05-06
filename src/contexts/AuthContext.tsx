@@ -42,7 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', supabaseUser.id)
         .single();
       
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile fetch error:", profileError);
+        throw new Error("Unable to retrieve user profile");
+      }
       
       if (!profileData) {
         console.error("Profile not found for user:", supabaseUser.id);
@@ -55,7 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select('store_id')
         .eq('user_id', supabaseUser.id);
       
-      if (storeError) throw storeError;
+      if (storeError) {
+        console.error("Store access fetch error:", storeError);
+        throw storeError;
+      }
       
       // Map the data to our User type
       return {
@@ -68,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
     } catch (error) {
       console.error("Error mapping profile:", error);
-      return null;
+      throw error;
     }
   };
 
@@ -76,13 +82,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkUser = async () => {
       try {
+        setIsLoading(true);
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) throw error;
         
         if (session?.user) {
-          const mappedUser = await mapProfileToUser(session.user);
-          setUser(mappedUser);
+          try {
+            const mappedUser = await mapProfileToUser(session.user);
+            setUser(mappedUser);
+          } catch (profileError) {
+            console.error("Error fetching profile:", profileError);
+            setUser(null);
+          }
         } else {
           setUser(null);
         }
@@ -99,8 +111,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        const mappedUser = await mapProfileToUser(session.user);
-        setUser(mappedUser);
+        try {
+          const mappedUser = await mapProfileToUser(session.user);
+          setUser(mappedUser);
+        } catch (profileError) {
+          console.error("Error fetching profile on sign in:", profileError);
+          setUser(null);
+        }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
@@ -122,14 +139,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       
       if (data.user) {
-        const mappedUser = await mapProfileToUser(data.user);
-        
-        if (!mappedUser) {
-          throw new Error("Unable to retrieve user profile");
+        try {
+          const mappedUser = await mapProfileToUser(data.user);
+          
+          if (!mappedUser) {
+            throw new Error("Unable to retrieve user profile");
+          }
+          
+          setUser(mappedUser);
+          toast.success(`Welcome back, ${mappedUser.name}!`);
+        } catch (profileError) {
+          console.error("Profile mapping error:", profileError);
+          throw profileError;
         }
-        
-        setUser(mappedUser);
-        toast.success(`Welcome back, ${mappedUser.name}!`);
       }
     } catch (error: any) {
       console.error("Login error:", error);
