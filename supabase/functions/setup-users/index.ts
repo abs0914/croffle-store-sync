@@ -26,6 +26,7 @@ serve(async (req) => {
       targetUserId = body.userId || null
     } catch {
       // No body or not JSON - that's okay, we'll setup all users
+      console.log('No valid JSON body in request, will setup all users')
     }
 
     // Setup test accounts if they don't exist
@@ -45,6 +46,7 @@ serve(async (req) => {
       .select('id')
     
     if (!storesCheck || storesCheck.length === 0) {
+      console.log('No stores found, creating default store')
       // Create a default store
       const { data: store, error: storeError } = await supabase
         .from('stores')
@@ -60,14 +62,84 @@ serve(async (req) => {
       if (storeError) {
         console.error('Error creating default store:', storeError)
       } else {
+        console.log('Created default store with ID:', store.id)
         existingStores.push(store.id)
       }
     } else {
+      console.log('Found existing stores:', storesCheck.length)
       existingStores.push(...storesCheck.map(store => store.id))
     }
 
     // Process each test account
     for (const account of testAccounts) {
+      // If we have a target user ID, we need to see if it matches any of our accounts
+      if (targetUserId) {
+        // Try to find the user in auth.users
+        const { data: userData } = await supabase.auth.admin.getUserById(targetUserId)
+        
+        // If user exists but doesn't match any of our test accounts by email, skip
+        if (userData?.user && !testAccounts.some(acc => acc.email === userData.user.email)) {
+          console.log(`Creating custom profile for user ${targetUserId}`)
+          
+          // Get email from the auth user
+          const userEmail = userData.user.email
+          
+          // Check if profile already exists
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', targetUserId)
+            .maybeSingle()
+          
+          if (!existingProfile) {
+            // Create a basic profile for this user
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .insert({
+                id: targetUserId,
+                email: userEmail,
+                name: userEmail?.split('@')[0] || 'User', // Simple name from email
+                role: 'cashier', // Default role
+              })
+            
+            if (profileError) {
+              console.error('Error creating profile for custom user:', profileError)
+              results.push({ id: targetUserId, status: 'error', message: profileError.message })
+            } else {
+              results.push({ id: targetUserId, status: 'profile_created' })
+              
+              // Add store access for this user
+              if (existingStores.length > 0) {
+                await supabase
+                  .from('user_store_access')
+                  .insert({
+                    user_id: targetUserId,
+                    store_id: existingStores[0],
+                  })
+              }
+            }
+          } else {
+            results.push({ id: targetUserId, status: 'profile_exists' })
+          }
+          
+          // We've handled the target user, so we can return now
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: 'User setup completed',
+              results,
+            }),
+            {
+              headers: {
+                ...corsHeaders,
+                'Content-Type': 'application/json',
+              },
+              status: 200,
+            }
+          )
+        }
+      }
+
       if (targetUserId) {
         // If we have a target user ID, only process accounts relevant to it
         const { data: userData } = await supabase.auth.admin.getUserById(targetUserId)

@@ -26,6 +26,9 @@ const initialState: AuthState = {
 
 const AuthContext = createContext<AuthState>(initialState);
 
+// Constants for Supabase URLs
+const SUPABASE_URL = "https://bwmkqscqkfoezcuzgpwq.supabase.co";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Mapping user profile for ID:', supabaseUser.id);
       
       // First check if the profile exists
-      const { data: profileData, error: profileError } = await supabase
+      let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
@@ -53,12 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!profileData) {
         console.log('Profile not found, attempting to create one via edge function');
         // Call the setup-users edge function to create missing profiles
-        const response = await fetch(`${supabase.supabaseUrl}/functions/v1/setup-users`, {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/setup-users`, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${supabase.supabaseKey}`,
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify({ userId: supabaseUser.id }),
         });
         
         if (!response.ok) {
@@ -80,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         console.log('Profile created successfully:', newProfileData);
         
-        // Set profileData to the newly created profile
+        // Use the newly created profile data
         profileData = newProfileData;
       }
       
