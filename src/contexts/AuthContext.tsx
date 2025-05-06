@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { User, UserRole } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const response = await fetch(`${SUPABASE_URL}/functions/v1/setup-users`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${supabase.supabaseKey}`,
+              'Authorization': `Bearer ${supabase.auth.getSession().then(({ data }) => data.session?.access_token)}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ userId: supabaseUser.id }),
