@@ -19,6 +19,15 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    // Get user ID from the request if available
+    let targetUserId = null
+    try {
+      const body = await req.json()
+      targetUserId = body.userId || null
+    } catch {
+      // No body or not JSON - that's okay, we'll setup all users
+    }
+
     // Setup test accounts if they don't exist
     const testAccounts = [
       { email: 'admin@example.com', password: 'password123', name: 'Admin User', role: 'admin' },
@@ -28,17 +37,56 @@ serve(async (req) => {
     ]
 
     const results = []
+    const existingStores = []
+    
+    // First check if we have any stores, and create a default one if not
+    const { data: storesCheck } = await supabase
+      .from('stores')
+      .select('id')
+    
+    if (!storesCheck || storesCheck.length === 0) {
+      // Create a default store
+      const { data: store, error: storeError } = await supabase
+        .from('stores')
+        .insert({
+          name: 'Default Store',
+          address: '123 Main St, Anytown, USA',
+          phone: '555-123-4567',
+          email: 'store@example.com'
+        })
+        .select('id')
+        .single()
+      
+      if (storeError) {
+        console.error('Error creating default store:', storeError)
+      } else {
+        existingStores.push(store.id)
+      }
+    } else {
+      existingStores.push(...storesCheck.map(store => store.id))
+    }
 
+    // Process each test account
     for (const account of testAccounts) {
-      // Check if user exists
-      const { data: existingUsers } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', account.email)
-        .maybeSingle()
+      if (targetUserId) {
+        // If we have a target user ID, only process accounts relevant to it
+        const { data: userData } = await supabase.auth.admin.getUserById(targetUserId)
+        if (!userData.user || userData.user.email !== account.email) {
+          continue  // Skip to the next account if this isn't the one we're looking for
+        }
+      }
 
-      if (!existingUsers) {
-        // Create user in auth.users
+      // Check if user exists in auth.users
+      let userId
+      const { data: existingAuth } = await supabase
+        .auth.admin.listUsers()
+
+      const existingAuthUser = existingAuth?.users?.find(u => u.email === account.email)
+      
+      if (existingAuthUser) {
+        userId = existingAuthUser.id
+      } else {
+        // Create user in auth.users if they don't exist
         const { data: user, error: createError } = await supabase.auth.admin.createUser({
           email: account.email,
           password: account.password,
@@ -49,12 +97,23 @@ serve(async (req) => {
           results.push({ email: account.email, status: 'error', message: createError.message })
           continue
         }
-
-        // Create profile
+        
+        userId = user.user.id
+      }
+      
+      // Check if profile exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+      
+      if (!existingProfile) {
+        // Create profile if it doesn't exist
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
-            id: user.user.id,
+            id: userId,
             email: account.email,
             name: account.name,
             role: account.role,
@@ -64,29 +123,31 @@ serve(async (req) => {
           results.push({ email: account.email, status: 'error', message: profileError.message })
           continue
         }
-
-        // For owner, manager and cashier, create a default store access
-        if (account.role !== 'admin') {
-          // Get a store
-          const { data: stores } = await supabase
-            .from('stores')
-            .select('id')
-            .limit(1)
-
-          if (stores && stores.length > 0) {
-            // Add store access
-            await supabase
-              .from('user_store_access')
-              .insert({
-                user_id: user.user.id,
-                store_id: stores[0].id,
-              })
-          }
-        }
-
-        results.push({ email: account.email, status: 'created' })
+        
+        results.push({ email: account.email, status: 'profile_created' })
       } else {
-        results.push({ email: account.email, status: 'exists' })
+        results.push({ email: account.email, status: 'profile_exists' })
+      }
+
+      // For owner, manager and cashier, create a default store access if it doesn't exist
+      if (account.role !== 'admin' && existingStores.length > 0) {
+        // Check if store access exists
+        const { data: existingAccess } = await supabase
+          .from('user_store_access')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('store_id', existingStores[0])
+          .maybeSingle()
+          
+        if (!existingAccess) {
+          // Add store access if it doesn't exist
+          await supabase
+            .from('user_store_access')
+            .insert({
+              user_id: userId,
+              store_id: existingStores[0],
+            })
+        }
       }
     }
 
@@ -105,6 +166,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
+    console.error('Error in setup-users function:', error)
     return new Response(
       JSON.stringify({
         success: false,

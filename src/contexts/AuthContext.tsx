@@ -35,21 +35,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabaseUser) return null;
     
     try {
-      // Fetch the user's profile from our profiles table
+      console.log('Mapping user profile for ID:', supabaseUser.id);
+      
+      // First check if the profile exists
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
-        .single();
+        .maybeSingle();
       
       if (profileError) {
         console.error("Profile fetch error:", profileError);
         throw new Error("Unable to retrieve user profile");
       }
       
+      // If profile doesn't exist, try to set up the user account
       if (!profileData) {
-        console.error("Profile not found for user:", supabaseUser.id);
-        return null;
+        console.log('Profile not found, attempting to create one via edge function');
+        // Call the setup-users edge function to create missing profiles
+        const response = await fetch(`${supabase.supabaseUrl}/functions/v1/setup-users`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${supabase.supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          console.error('Failed to set up user account:', await response.text());
+          throw new Error('Failed to set up user account');
+        }
+        
+        // Try fetching profile again
+        const { data: newProfileData, error: newProfileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .maybeSingle();
+          
+        if (newProfileError || !newProfileData) {
+          console.error("Profile still not found:", newProfileError || "No data returned");
+          throw new Error("Unable to create user profile");
+        }
+        
+        console.log('Profile created successfully:', newProfileData);
+        
+        // Set profileData to the newly created profile
+        profileData = newProfileData;
       }
       
       // Fetch the user's store access
