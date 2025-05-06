@@ -159,6 +159,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_store_users: {
+        Args: { store_id: string }
+        Returns: boolean
+      }
       has_store_access: {
         Args: { user_id: string; store_id: string }
         Returns: boolean

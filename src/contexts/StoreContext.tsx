@@ -38,17 +38,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         setIsLoading(true);
         
-        let storeQuery;
+        let { data, error } = null;
         
         // Admin and owner can see all stores
-        if (user.role === 'admin' || user.role === 'owner') {
-          storeQuery = supabase
+        if (user.role === 'admin') {
+          console.log('Admin user, fetching all stores');
+          const result = await supabase
             .from('stores')
             .select('*')
             .order('name');
+          
+          data = result.data;
+          error = result.error;
+        } else if (user.role === 'owner') {
+          console.log('Owner user, fetching all stores');
+          const result = await supabase
+            .from('stores')
+            .select('*')
+            .order('name');
+          
+          data = result.data;
+          error = result.error;
         } else {
           // Other roles can only see stores they have access to
-          storeQuery = supabase
+          console.log('Regular user, fetching accessible stores');
+          const result = await supabase
             .from('stores')
             .select(`
               *,
@@ -56,9 +70,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             `)
             .eq('user_store_access.user_id', user.id)
             .order('name');
+          
+          data = result.data;
+          error = result.error;
         }
-        
-        const { data, error } = await storeQuery;
         
         if (error) {
           console.error("Store fetch error:", error);
