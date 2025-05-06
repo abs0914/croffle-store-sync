@@ -38,50 +38,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         setIsLoading(true);
         
-        let data = null;
-        let error = null;
+        let result = null;
         
-        // Admin and owner can see all stores
-        if (user.role === 'admin') {
-          console.log('Admin user, fetching all stores');
-          const result = await supabase
+        // Admin and owner roles get access to all stores with a simple query
+        if (user.role === 'admin' || user.role === 'owner') {
+          console.log(`${user.role} user, fetching all stores`);
+          result = await supabase
             .from('stores')
             .select('*')
             .order('name');
-          
-          data = result.data;
-          error = result.error;
-        } else if (user.role === 'owner') {
-          console.log('Owner user, fetching all stores');
-          const result = await supabase
-            .from('stores')
-            .select('*')
-            .order('name');
-          
-          data = result.data;
-          error = result.error;
         } else {
           // Other roles can only see stores they have access to
-          console.log('Regular user, fetching accessible stores');
-          const result = await supabase
-            .from('stores')
+          // Use a regular join query that's less likely to cause issues
+          console.log('Regular user, fetching accessible stores through direct join');
+          result = await supabase
+            .from('user_store_access')
             .select(`
-              *,
-              user_store_access!inner(user_id)
+              stores:store_id(*)
             `)
-            .eq('user_store_access.user_id', user.id)
-            .order('name');
+            .eq('user_id', user.id);
           
-          data = result.data;
-          error = result.error;
+          // Transform the result to match our expected format
+          if (result.data && !result.error) {
+            // Map the nested stores objects from the join
+            result.data = result.data.map(item => item.stores);
+          }
         }
         
-        if (error) {
-          console.error("Store fetch error:", error);
-          throw error;
+        if (result.error) {
+          console.error("Store fetch error:", result.error);
+          throw result.error;
         }
         
-        const mappedStores: Store[] = data.map(store => ({
+        // Map stores to our Store type
+        const mappedStores: Store[] = result.data.map((store: any) => ({
           id: store.id,
           name: store.name,
           address: store.address,

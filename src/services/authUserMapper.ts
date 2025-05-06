@@ -34,20 +34,27 @@ export const mapProfileToUser = async (supabaseUser: any): Promise<User | null> 
     // Only fetch store access for non-admin users
     if (profileData.role !== 'admin') {
       try {
-        const { data: storeAccess } = await supabase
+        // Use a simple query that's less likely to cause issues
+        const { data: storeAccess, error: storeError } = await supabase
           .from('user_store_access')
           .select('store_id')
           .eq('user_id', supabaseUser.id);
         
-        if (storeAccess && storeAccess.length > 0) {
+        if (storeError) {
+          console.error("Store access fetch error:", storeError);
+          // Continue with empty storeIds instead of throwing
+        } else if (storeAccess && storeAccess.length > 0) {
           storeIds = storeAccess.map(access => access.store_id);
+          console.log('Store access:', storeAccess);
+        } else {
+          console.log('No store access entries found');
         }
-        
-        console.log('Store access:', storeAccess);
       } catch (storeError: any) {
         console.error("Error fetching store access:", storeError);
         // Continue with empty storeIds array
       }
+    } else {
+      console.log('Admin user detected, skipping store access fetch');
     }
     
     // Map the data to our User type

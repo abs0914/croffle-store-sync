@@ -4,6 +4,9 @@ import { UserRole } from "@/types";
 export const hasPermission = (userRole: UserRole | undefined, requiredRole: UserRole): boolean => {
   if (!userRole) return false;
   
+  // Admin always has all permissions regardless of hierarchy
+  if (userRole === 'admin') return true;
+  
   const roleHierarchy: Record<UserRole, number> = {
     admin: 4,   // Admin has all permissions
     owner: 3,   // Owner has permissions of manager and below
@@ -11,10 +14,7 @@ export const hasPermission = (userRole: UserRole | undefined, requiredRole: User
     cashier: 1  // Cashier has basic permissions
   };
   
-  // Admin always has all permissions
-  if (userRole === 'admin') return true;
-  
-  // Otherwise check the role hierarchy
+  // Check the role hierarchy for other roles
   return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
 };
 
@@ -25,6 +25,9 @@ export const hasStoreAccess = (userRole: UserRole | undefined, userStoreIds: str
   // Admins have access to all stores
   if (userRole === 'admin') return true;
   
-  // Other roles need explicit access
+  // Owners have access to all stores (as specified in the StoreContext)
+  if (userRole === 'owner') return true;
+  
+  // Other roles need explicit access through storeIds
   return userStoreIds.includes(storeId);
 };
