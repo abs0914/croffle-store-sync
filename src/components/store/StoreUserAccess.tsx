@@ -67,7 +67,7 @@ export default function StoreUserAccess({ storeId }: StoreUserAccessProps) {
       if (accessError) throw accessError;
 
       // Create a set of user IDs with access for quick lookup
-      const userIdsWithAccess = new Set(storeAccess.map(access => access.user_id));
+      const userIdsWithAccess = new Set(storeAccess?.map(access => access.user_id) || []);
 
       // Map profiles to our StoreUser type
       const mappedUsers: StoreUser[] = profiles.map(profile => ({
@@ -75,7 +75,7 @@ export default function StoreUserAccess({ storeId }: StoreUserAccessProps) {
         name: profile.name,
         email: profile.email,
         role: profile.role as UserRole,
-        hasAccess: userIdsWithAccess.has(profile.id)
+        hasAccess: profile.role === 'admin' || userIdsWithAccess.has(profile.id)
       }));
 
       setUsers(mappedUsers);
@@ -90,6 +90,13 @@ export default function StoreUserAccess({ storeId }: StoreUserAccessProps) {
 
   const handleAccessToggle = async (userId: string, hasAccess: boolean) => {
     try {
+      // Don't modify access for admin users
+      const user = users.find(u => u.id === userId);
+      if (user?.role === 'admin') {
+        toast.info("Admin users have global access by default");
+        return;
+      }
+      
       if (hasAccess) {
         // Remove access
         const { error } = await supabase
@@ -147,6 +154,12 @@ export default function StoreUserAccess({ storeId }: StoreUserAccessProps) {
         return;
       }
 
+      // Admin users automatically have access to all stores
+      if (profile.role === 'admin') {
+        toast.info("Admin users already have access to all stores");
+        return;
+      }
+
       // Check if user already has access
       const existingUser = users.find(u => u.id === profile.id);
       if (existingUser && existingUser.hasAccess) {
@@ -187,7 +200,7 @@ export default function StoreUserAccess({ storeId }: StoreUserAccessProps) {
       }
 
       toast.success("User access granted");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding user:", error);
       toast.error("Failed to grant user access");
     } finally {

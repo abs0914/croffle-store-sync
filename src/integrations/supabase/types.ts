@@ -163,6 +163,14 @@ export type Database = {
         Args: { store_id: string }
         Returns: boolean
       }
+      check_store_access: {
+        Args: { store_id: string }
+        Returns: boolean
+      }
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: string
+      }
       has_store_access: {
         Args: { user_id: string; store_id: string }
         Returns: boolean

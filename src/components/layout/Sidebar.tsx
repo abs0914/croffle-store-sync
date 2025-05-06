@@ -41,7 +41,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       name: "Stores",
       href: "/stores",
       icon: Store,
-      minRole: "manager", // Admin should be able to see this too
+      minRole: "manager",
     },
     {
       name: "Inventory",

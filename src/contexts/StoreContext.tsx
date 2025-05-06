@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Store } from "@/types";
 import { useAuth } from "./AuthContext";
