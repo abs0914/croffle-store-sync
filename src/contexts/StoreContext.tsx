@@ -1,7 +1,8 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Store } from "@/types";
 import { useAuth } from "./AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface StoreState {
   stores: Store[];
@@ -26,38 +27,76 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    if (user) {
-      // In a real app, this would fetch stores from Supabase
-      const mockStores: Store[] = [
-        {
-          id: '1',
-          name: 'The Croffle Store - Main Branch',
-          address: '123 Main Street, Anytown',
-          phone: '555-123-4567',
-          email: 'main@crofflestore.com',
-          taxId: '123456789',
-          isActive: true,
-          logo: '/lovable-uploads/e4103c2a-e57f-45f0-9999-1567aeda3f3d.png',
-        },
-        {
-          id: '2',
-          name: 'The Croffle Store - Downtown',
-          address: '456 Market St, Downtown',
-          phone: '555-987-6543',
-          email: 'downtown@crofflestore.com',
-          taxId: '987654321',
-          isActive: true,
+    const fetchStores = async () => {
+      if (!user) {
+        setStores([]);
+        setCurrentStore(null);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        
+        let storeQuery;
+        
+        // Admin and owner can see all stores
+        if (user.role === 'admin' || user.role === 'owner') {
+          storeQuery = supabase
+            .from('stores')
+            .select('*')
+            .order('name');
+        } else {
+          // Other roles can only see stores they have access to
+          storeQuery = supabase
+            .from('stores')
+            .select(`
+              *,
+              user_store_access!inner(user_id)
+            `)
+            .eq('user_store_access.user_id', user.id)
+            .order('name');
         }
-      ];
-      
-      setStores(mockStores);
-      setCurrentStore(mockStores[0]);
-      setIsLoading(false);
-    } else {
-      setStores([]);
-      setCurrentStore(null);
-    }
-  }, [user]);
+        
+        const { data, error } = await storeQuery;
+        
+        if (error) throw error;
+        
+        const mappedStores: Store[] = data.map(store => ({
+          id: store.id,
+          name: store.name,
+          address: store.address,
+          phone: store.phone,
+          email: store.email,
+          taxId: store.tax_id || undefined,
+          isActive: store.is_active,
+          logo: store.logo || undefined,
+        }));
+        
+        setStores(mappedStores);
+        
+        // Set current store to the first one or keep the current if it's still in the list
+        if (mappedStores.length > 0) {
+          if (currentStore && mappedStores.some(store => store.id === currentStore.id)) {
+            // Keep the current store
+          } else {
+            setCurrentStore(mappedStores[0]);
+          }
+        } else {
+          setCurrentStore(null);
+        }
+      } catch (error: any) {
+        console.error("Error fetching stores:", error);
+        toast.error(error.message || "Failed to load stores");
+        setStores([]);
+        setCurrentStore(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchStores();
+  }, [user, currentStore?.id]);
 
   return (
     <StoreContext.Provider

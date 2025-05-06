@@ -1,6 +1,8 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { User, UserRole } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AuthState {
   user: User | null;
@@ -28,37 +30,111 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Function to convert Supabase profile data to our app's User type
+  const mapProfileToUser = async (supabaseUser: any): Promise<User | null> => {
+    if (!supabaseUser) return null;
+    
+    try {
+      // Fetch the user's profile from our profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+      
+      if (profileError) throw profileError;
+      
+      if (!profileData) {
+        console.error("Profile not found for user:", supabaseUser.id);
+        return null;
+      }
+      
+      // Fetch the user's store access
+      const { data: storeAccess, error: storeError } = await supabase
+        .from('user_store_access')
+        .select('store_id')
+        .eq('user_id', supabaseUser.id);
+      
+      if (storeError) throw storeError;
+      
+      // Map the data to our User type
+      return {
+        id: supabaseUser.id,
+        email: profileData.email,
+        name: profileData.name,
+        role: profileData.role as UserRole,
+        storeIds: storeAccess?.map(access => access.store_id) || [],
+        avatar: profileData.avatar || undefined,
+      };
+    } catch (error) {
+      console.error("Error mapping profile:", error);
+      return null;
+    }
+  };
+
+  // Check for existing session on component mount
   useEffect(() => {
-    // For demo purposes, set a mock user
-    // In a real app, this would check session state with Supabase
-    const mockUser: User = {
-      id: '1',
-      email: 'demo@crofflestore.com',
-      name: 'Demo User',
-      role: 'manager',
-      storeIds: ['1'],
-      avatar: 'https://github.com/shadcn.png',
+    const checkUser = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+        
+        if (session?.user) {
+          const mappedUser = await mapProfileToUser(session.user);
+          setUser(mappedUser);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Auth session check error:", error);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
     };
     
-    setTimeout(() => {
-      setUser(mockUser);
-      setIsLoading(false);
-    }, 1000);
+    checkUser();
+    
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const mappedUser = await mapProfileToUser(session.user);
+        setUser(mappedUser);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // This would use Supabase auth in a real app
-      const mockUser: User = {
-        id: '1',
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        name: 'Demo User',
-        role: 'manager',
-        storeIds: ['1'],
-        avatar: 'https://github.com/shadcn.png',
-      };
-      setUser(mockUser);
+        password,
+      });
+      
+      if (error) throw error;
+      
+      if (data.user) {
+        const mappedUser = await mapProfileToUser(data.user);
+        
+        if (!mappedUser) {
+          throw new Error("Unable to retrieve user profile");
+        }
+        
+        setUser(mappedUser);
+        toast.success(`Welcome back, ${mappedUser.name}!`);
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast.error(error.message || "Failed to log in");
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -67,8 +143,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setIsLoading(true);
     try {
-      // This would use Supabase auth in a real app
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
       setUser(null);
+      toast.info("You have been logged out");
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      toast.error(error.message || "Failed to log out");
     } finally {
       setIsLoading(false);
     }
@@ -89,6 +172,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasStoreAccess = (storeId: string): boolean => {
     if (!user) return false;
+    
+    // Admins have access to all stores
+    if (user.role === 'admin') return true;
+    
     return user.storeIds.includes(storeId);
   };
 
