@@ -83,7 +83,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const newItems = [...items];
       newItems[existingItemIndex].quantity += quantity;
       setItems(newItems);
-      toast.success(`Updated quantity for ${product.name}`);
+      
+      const displayName = variation ? 
+        `${product.name} (${variation.size})` : 
+        product.name;
+      
+      toast.success(`Updated quantity for ${displayName}`);
     } else {
       // Add new item
       const newItem: CartItem = {
@@ -99,7 +104,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       
       setItems([...items, newItem]);
-      toast.success(`${product.name} added to cart`);
+      
+      const displayName = variation ? 
+        `${product.name} (${variation.size})` : 
+        product.name;
+      
+      toast.success(`${displayName} added to cart`);
     }
   };
   

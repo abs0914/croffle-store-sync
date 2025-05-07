@@ -26,7 +26,8 @@ export const fetchProductVariations = async (productId: string): Promise<Product
       stockQuantity: item.stock_quantity,
       product_id: item.product_id,
       productId: item.product_id,
-      sku: item.sku
+      sku: item.sku,
+      size: item.size
     })) || [];
   } catch (error) {
     console.error("Error fetching variations:", error);
@@ -43,7 +44,8 @@ export const createProductVariation = async (variation: Omit<ProductVariation, "
       stock_quantity: variation.stock_quantity || variation.stockQuantity || 0,
       is_active: variation.is_active !== undefined ? variation.is_active : (variation.isActive || true),
       product_id: variation.product_id || variation.productId,
-      sku: variation.sku
+      sku: variation.sku,
+      size: variation.size
     };
     
     const { data, error } = await supabase
@@ -69,7 +71,8 @@ export const createProductVariation = async (variation: Omit<ProductVariation, "
       stockQuantity: data.stock_quantity,
       product_id: data.product_id,
       productId: data.product_id,
-      sku: data.sku
+      sku: data.sku,
+      size: data.size
     };
   } catch (error) {
     console.error("Error creating variation:", error);
@@ -89,6 +92,7 @@ export const updateProductVariation = async (id: string, variation: Partial<Prod
     if (variation.is_active !== undefined) dbVariation.is_active = variation.is_active;
     else if (variation.isActive !== undefined) dbVariation.is_active = variation.isActive;
     if (variation.sku !== undefined) dbVariation.sku = variation.sku;
+    if (variation.size !== undefined) dbVariation.size = variation.size;
     
     const { data, error } = await supabase
       .from("product_variations")
@@ -114,7 +118,8 @@ export const updateProductVariation = async (id: string, variation: Partial<Prod
       stockQuantity: data.stock_quantity,
       product_id: data.product_id,
       productId: data.product_id,
-      sku: data.sku
+      sku: data.sku,
+      size: data.size
     };
   } catch (error) {
     console.error("Error updating variation:", error);

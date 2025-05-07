@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Product } from "@/types";
+import { Product, ProductVariation } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Package } from "lucide-react";
@@ -42,6 +42,7 @@ export const ProductsTable = ({ products }: ProductsTableProps) => {
             <TableHead>SKU</TableHead>
             <TableHead className="text-right">Price</TableHead>
             <TableHead className="text-right">Stock</TableHead>
+            <TableHead>Variations</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="w-[100px] text-right">Actions</TableHead>
           </TableRow>
@@ -71,6 +72,19 @@ export const ProductsTable = ({ products }: ProductsTableProps) => {
                 </span>
               </TableCell>
               <TableCell>
+                {product.variations && product.variations.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {product.variations.map((variation: ProductVariation) => (
+                      <Badge key={variation.id} variant="outline" className="capitalize">
+                        {variation.size || 'regular'}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground text-sm">None</span>
+                )}
+              </TableCell>
+              <TableCell>
                 {product.isActive ? (
                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
                 ) : (
@@ -88,4 +102,4 @@ export const ProductsTable = ({ products }: ProductsTableProps) => {
       </Table>
     </div>
   );
-};
+}

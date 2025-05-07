@@ -15,7 +15,7 @@ import {
   createInventoryTransaction
 } from "@/services/productService";
 import { fetchCategories } from "@/services/categoryService";
-import { Product, ProductVariation } from "@/types";
+import { Product, ProductVariation, ProductSize } from "@/types";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +97,7 @@ export default function ProductForm() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const [addDefaultVariations, setAddDefaultVariations] = useState(!isEditing);
   
   // Variations form state
   const [variations, setVariations] = useState<ProductVariation[]>([]);
@@ -107,7 +108,8 @@ export default function ProductForm() {
     price: 0,
     stock_quantity: 0,
     is_active: true,
-    sku: ""
+    sku: "",
+    size: "regular" as ProductSize
   });
   
   // Stock adjustment form state
@@ -217,6 +219,10 @@ export default function ProductForm() {
     setVariationForm(prev => ({ ...prev, [name]: checked }));
   };
 
+  const handleVariationSizeChange = (size: ProductSize) => {
+    setVariationForm(prev => ({ ...prev, size }));
+  };
+
   const handleAddVariation = () => {
     setEditingVariation(null);
     setVariationForm({
@@ -224,7 +230,8 @@ export default function ProductForm() {
       price: formData.price || 0,
       stock_quantity: 0,
       is_active: true,
-      sku: ""
+      sku: "",
+      size: "regular" 
     });
     setIsVariationDialogOpen(true);
   };
@@ -236,7 +243,8 @@ export default function ProductForm() {
       price: variation.price,
       stock_quantity: variation.stock_quantity,
       is_active: variation.is_active,
-      sku: variation.sku
+      sku: variation.sku,
+      size: variation.size || "regular"
     });
     setIsVariationDialogOpen(true);
   };
@@ -245,29 +253,31 @@ export default function ProductForm() {
     if (!id) return;
     
     try {
+      const variationData = {
+        name: variationForm.name || `${formData.name} ${variationForm.size}`,
+        price: variationForm.price,
+        stock_quantity: variationForm.stock_quantity,
+        is_active: variationForm.is_active,
+        sku: variationForm.sku || `${formData.sku}-${variationForm.size}`,
+        size: variationForm.size
+      };
+      
       if (editingVariation) {
-        await updateProductVariation(editingVariation.id, {
-          name: variationForm.name,
-          price: variationForm.price,
-          stock_quantity: variationForm.stock_quantity,
-          is_active: variationForm.is_active,
-          sku: variationForm.sku
-        });
+        await updateProductVariation(editingVariation.id, variationData);
+        toast.success("Variation updated successfully");
       } else {
         await createProductVariation({
           product_id: id,
-          name: variationForm.name,
-          price: variationForm.price,
-          stock_quantity: variationForm.stock_quantity,
-          is_active: variationForm.is_active,
-          sku: variationForm.sku
+          ...variationData
         });
+        toast.success("Variation added successfully");
       }
       
       refetchVariations();
       setIsVariationDialogOpen(false);
     } catch (error) {
       console.error("Error saving variation:", error);
+      toast.error("Error saving variation");
     }
   };
 
@@ -367,6 +377,33 @@ export default function ProductForm() {
         savedProduct = await updateProduct(id, productData);
       } else {
         savedProduct = await createProduct(productData as Omit<Product, "id">);
+        
+        // If creating new product and default variations are requested
+        if (savedProduct && addDefaultVariations) {
+          // Add Regular size variation
+          await createProductVariation({
+            product_id: savedProduct.id,
+            name: `${savedProduct.name} Regular`,
+            price: savedProduct.price,
+            stock_quantity: savedProduct.stockQuantity || 0,
+            is_active: true,
+            sku: `${savedProduct.sku}-REG`,
+            size: "regular"
+          });
+          
+          // Add Mini size variation
+          await createProductVariation({
+            product_id: savedProduct.id,
+            name: `${savedProduct.name} Mini`,
+            price: savedProduct.price * 0.7, // 70% of regular price
+            stock_quantity: savedProduct.stockQuantity || 0,
+            is_active: true,
+            sku: `${savedProduct.sku}-MINI`,
+            size: "mini"
+          });
+          
+          toast.success("Default size variations added");
+        }
       }
       
       if (savedProduct) {
@@ -528,6 +565,22 @@ export default function ProductForm() {
                     </div>
                   </div>
                   
+                  {!isEditing && (
+                    <div className="space-y-2 flex items-center">
+                      <Label htmlFor="addDefaultVariations" className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          id="addDefaultVariations"
+                          name="addDefaultVariations"
+                          checked={addDefaultVariations}
+                          onChange={(e) => setAddDefaultVariations(e.target.checked)}
+                          className="rounded border-gray-300"
+                        />
+                        <span>Add default size variations (Regular and Mini)</span>
+                      </Label>
+                    </div>
+                  )}
+                  
                   <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
                     <Textarea
@@ -619,6 +672,7 @@ export default function ProductForm() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
+                        <TableHead>Size</TableHead>
                         <TableHead>SKU</TableHead>
                         <TableHead className="text-right">Price</TableHead>
                         <TableHead className="text-right">Stock</TableHead>
@@ -629,7 +683,7 @@ export default function ProductForm() {
                     <TableBody>
                       {variations.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="h-24 text-center">
+                          <TableCell colSpan={7} className="h-24 text-center">
                             No variations found
                           </TableCell>
                         </TableRow>
@@ -637,6 +691,9 @@ export default function ProductForm() {
                         variations.map((variation) => (
                           <TableRow key={variation.id}>
                             <TableCell>{variation.name}</TableCell>
+                            <TableCell>
+                              <span className="capitalize">{variation.size || 'Regular'}</span>
+                            </TableCell>
                             <TableCell>{variation.sku}</TableCell>
                             <TableCell className="text-right">${variation.price.toFixed(2)}</TableCell>
                             <TableCell className="text-right">
@@ -721,9 +778,26 @@ export default function ProductForm() {
                       name="name"
                       value={variationForm.name}
                       onChange={handleVariationInputChange}
-                      placeholder="e.g., Small, Red, etc."
+                      placeholder={`${formData.name} ${variationForm.size}`}
                     />
                   </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="variation_size">Size</Label>
+                    <Select
+                      value={variationForm.size}
+                      onValueChange={(value) => handleVariationSizeChange(value as ProductSize)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="regular">Regular</SelectItem>
+                        <SelectItem value="mini">Mini</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
                   <div className="space-y-2">
                     <Label htmlFor="variation_sku">SKU</Label>
                     <Input
@@ -731,7 +805,7 @@ export default function ProductForm() {
                       name="sku"
                       value={variationForm.sku}
                       onChange={handleVariationInputChange}
-                      placeholder="Variation SKU"
+                      placeholder={`${formData.sku}-${variationForm.size.toUpperCase()}`}
                     />
                   </div>
                   <div className="space-y-2">

@@ -58,6 +58,8 @@ export interface Product {
   recipe?: Recipe; // Optional recipe connection
 }
 
+export type ProductSize = 'regular' | 'mini';
+
 export interface ProductVariation {
   id: string;
   name: string;
@@ -69,6 +71,7 @@ export interface ProductVariation {
   product_id: string;
   productId?: string; // For frontend compatibility
   sku: string;
+  size?: ProductSize; // Add size field
   recipe?: Recipe; // Optional recipe connection
 }
 
@@ -104,7 +107,7 @@ export interface RecipeIngredient {
   ingredient_name?: string;
   quantity: number;
   unit_type?: string;
-  cost_per_unit?: number; // Added missing property
+  cost_per_unit?: number;
 }
 
 export interface Category {
