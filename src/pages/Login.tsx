@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingUsers, setIsCreatingUsers] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -28,6 +30,57 @@ export default function Login() {
       console.error("Login error:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const createTestUsers = async () => {
+    setIsCreatingUsers(true);
+    const testUsers = [
+      { email: "admin@example.com", password: "password123", name: "Admin User" },
+      { email: "owner@example.com", password: "password123", name: "Store Owner" },
+      { email: "manager@example.com", password: "password123", name: "Manager User" },
+      { email: "cashier@example.com", password: "password123", name: "Cashier User" }
+    ];
+
+    try {
+      let createdCount = 0;
+
+      for (const user of testUsers) {
+        const { data, error } = await supabase.auth.signUp({
+          email: user.email,
+          password: user.password,
+          options: {
+            data: {
+              name: user.name
+            },
+          }
+        });
+
+        if (error) {
+          // If user already exists, that's fine
+          if (error.message.includes("already registered")) {
+            toast.info(`User ${user.email} already exists`);
+            createdCount++;
+          } else {
+            console.error(`Error creating ${user.email}:`, error);
+            toast.error(`Failed to create ${user.email}: ${error.message}`);
+          }
+        } else if (data.user) {
+          createdCount++;
+          toast.success(`Created user: ${user.email}`);
+        }
+      }
+
+      if (createdCount === testUsers.length) {
+        toast.success("All test users created successfully!");
+      } else {
+        toast.info(`Created ${createdCount}/${testUsers.length} test users.`);
+      }
+    } catch (error: any) {
+      console.error("Error creating test users:", error);
+      toast.error("Failed to create test users");
+    } finally {
+      setIsCreatingUsers(false);
     }
   };
 
@@ -82,13 +135,22 @@ export default function Login() {
                 />
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col space-y-3">
               <Button 
                 type="submit" 
                 className="w-full bg-croffle-primary hover:bg-croffle-primary/90 text-white"
                 disabled={isLoading}
               >
                 {isLoading ? "Logging in..." : "Login"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={createTestUsers}
+                disabled={isCreatingUsers}
+                className="w-full border-croffle-primary/30 text-croffle-primary hover:bg-croffle-primary/10"
+              >
+                {isCreatingUsers ? "Creating test users..." : "Create test users"}
               </Button>
             </CardFooter>
           </form>
@@ -98,6 +160,7 @@ export default function Login() {
           <p>Use one of the test accounts:</p>
           <p className="mt-1">admin@example.com, owner@example.com, manager@example.com, or cashier@example.com</p>
           <p className="mt-1">Password: password123</p>
+          <p className="mt-2 text-xs">If test accounts don't exist yet, click the "Create test users" button above.</p>
         </div>
       </div>
     </div>
