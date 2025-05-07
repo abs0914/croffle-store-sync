@@ -1,7 +1,7 @@
 
 import { useStore } from "@/contexts/StoreContext";
 import { Spinner } from "@/components/ui/spinner";
-import { InventoryHeader } from "./components/InventoryHeader";
+import InventoryHeader from "./components/InventoryHeader";
 import { SearchFilters } from "./components/SearchFilters";
 import { ProductsTable } from "./components/ProductsTable";
 import { useProductData } from "./hooks/useProductData";
@@ -24,9 +24,8 @@ export default function Inventory() {
   return (
     <div className="space-y-6">
       <InventoryHeader
-        onExportCSV={handleExportCSV}
-        onImportClick={handleImportClick}
-        onDownloadTemplate={handleDownloadTemplate}
+        title="Inventory"
+        description="Manage your products and stock levels"
       />
       
       <SearchFilters
