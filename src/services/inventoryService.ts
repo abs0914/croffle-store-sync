@@ -559,13 +559,12 @@ export async function exportProductsToCSV(storeId: string): Promise<string> {
       const stockItem = inventory.find(i => i.product_id === product.id);
       let categoryName = '';
       
-      // Fixed TypeScript check for categories
+      // Fixed TypeScript check for categories using non-null assertion when we're sure it's safe
       const categories = product.categories;
-      if (categories && 
-          categories !== null && 
-          typeof categories === 'object' && 
-          'name' in categories) {
-        categoryName = categories.name || '';
+      if (categories && typeof categories === 'object') {
+        // Now we're sure categories is an object, we can safely access name
+        const categoriesObj = categories as { name?: string };
+        categoryName = categoriesObj.name || '';
       }
       
       const row = [
