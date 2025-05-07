@@ -10,8 +10,7 @@ import {
   FileText,
   Settings,
   CreditCard,
-  BarChart4,
-  Store
+  BarChart4
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -22,7 +21,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
   const { user, hasPermission } = useAuth();
   const location = useLocation();
   
-  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const isActive = (path: string) => location.pathname === path;
   
   const menuItems = [
     {
@@ -36,12 +35,6 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       href: "/pos",
       icon: ShoppingCart,
       minRole: "cashier",
-    },
-    {
-      name: "Stores",
-      href: "/stores",
-      icon: Store,
-      minRole: "manager",
     },
     {
       name: "Inventory",
@@ -109,26 +102,25 @@ export function Sidebar({ className, ...props }: SidebarProps) {
         <div className="px-3 py-2">
           <div className="space-y-1">
             {menuItems.map((item) => {
-              // Show all menu items if user is admin, otherwise check permissions
-              if (user.role === 'admin' || hasPermission(item.minRole as any)) {
-                return (
-                  <Link key={item.href} to={item.href}>
-                    <Button
-                      variant={isActive(item.href) ? "default" : "ghost"}
-                      className={cn(
-                        "w-full justify-start",
-                        isActive(item.href) 
-                          ? "bg-croffle-primary text-white" 
-                          : "text-croffle-text hover:bg-croffle-primary/10"
-                      )}
-                    >
-                      <item.icon className="mr-2 h-5 w-5" />
-                      {item.name}
-                    </Button>
-                  </Link>
-                );
-              }
-              return null;
+              // Only show menu items the user has permission to access
+              if (!hasPermission(item.minRole as any)) return null;
+              
+              return (
+                <Link key={item.href} to={item.href}>
+                  <Button
+                    variant={isActive(item.href) ? "default" : "ghost"}
+                    className={cn(
+                      "w-full justify-start",
+                      isActive(item.href) 
+                        ? "bg-croffle-primary text-white" 
+                        : "text-croffle-text hover:bg-croffle-primary/10"
+                    )}
+                  >
+                    <item.icon className="mr-2 h-5 w-5" />
+                    {item.name}
+                  </Button>
+                </Link>
+              );
             })}
           </div>
         </div>

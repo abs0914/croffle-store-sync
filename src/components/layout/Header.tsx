@@ -12,19 +12,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStore } from "@/contexts/StoreContext";
-import { User, Settings, Store, LogOut } from "lucide-react";
+import { User, Settings, Store } from "lucide-react";
 
 export function Header() {
   const { user, logout } = useAuth();
   const { currentStore, stores, setCurrentStore } = useStore();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error("Error logging out:", error);
-    }
-  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">
@@ -97,9 +89,8 @@ export function Header() {
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+              <DropdownMenuItem onClick={() => logout()}>
+                Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
