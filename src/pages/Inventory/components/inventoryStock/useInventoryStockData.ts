@@ -9,8 +9,12 @@ import {
   fetchInventoryStock, 
   createInventoryStockItem,
   updateInventoryStockItem,
-  adjustInventoryStock
+  adjustInventoryStock,
+  deleteInventoryStockItem,
+  transferInventoryStock
 } from "@/services/inventoryStock";
+import { useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useInventoryStockData = () => {
   const { currentStore } = useStore();
@@ -18,9 +22,31 @@ export const useInventoryStockData = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [currentStockItem, setCurrentStockItem] = useState<InventoryStock | null>(null);
+  const [hasMultipleStores, setHasMultipleStores] = useState(false);
   
   const queryClient = useQueryClient();
+  
+  // Check if user has access to multiple stores
+  useQuery({
+    queryKey: ['user-stores-count'],
+    queryFn: async () => {
+      if (!user) return { count: 0 };
+      
+      const { count, error } = await supabase
+        .from('user_stores')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      setHasMultipleStores(count !== null && count > 1);
+      return { count };
+    },
+    enabled: !!user?.id
+  });
   
   // Query to fetch inventory stock
   const { data: stockItems = [], isLoading } = useQuery({
@@ -35,6 +61,11 @@ export const useInventoryStockData = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-stock', currentStore?.id] });
       setIsAddModalOpen(false);
+      toast.success("Inventory item created successfully");
+    },
+    onError: (error) => {
+      console.error("Error creating inventory item:", error);
+      toast.error("Failed to create inventory item");
     }
   });
 
@@ -45,6 +76,11 @@ export const useInventoryStockData = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-stock', currentStore?.id] });
       setIsEditModalOpen(false);
+      toast.success("Inventory item updated successfully");
+    },
+    onError: (error) => {
+      console.error("Error updating inventory item:", error);
+      toast.error("Failed to update inventory item");
     }
   });
 
@@ -60,10 +96,51 @@ export const useInventoryStockData = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-stock', currentStore?.id] });
       setIsStockModalOpen(false);
+      toast.success("Stock quantity updated successfully");
+    },
+    onError: (error) => {
+      console.error("Error adjusting stock:", error);
+      toast.error("Failed to update stock quantity");
+    }
+  });
+
+  // Mutation for transferring stock
+  const transferMutation = useMutation({
+    mutationFn: ({ 
+      sourceId, 
+      targetStoreId, 
+      quantity,
+      notes 
+    }: { 
+      sourceId: string, 
+      targetStoreId: string,
+      quantity: number,
+      notes?: string
+    }) => {
+      return transferInventoryStock(sourceId, targetStoreId, quantity, notes);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock', currentStore?.id] });
+      setIsTransferModalOpen(false);
+    }
+  });
+
+  // Mutation for deleting an inventory item
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteInventoryStockItem(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock', currentStore?.id] });
+      setIsDeleteConfirmOpen(false);
+      setCurrentStockItem(null);
+      toast.success("Inventory item deleted successfully");
+    },
+    onError: (error) => {
+      console.error("Error deleting inventory item:", error);
+      toast.error("Failed to delete inventory item");
     }
   });
   
-  const handleAddStockItem = (newStockItem: Partial<InventoryStock>) => {
+  const handleAddStockItem = useCallback((newStockItem: Partial<InventoryStock>) => {
     if (!currentStore?.id) {
       toast.error("Please select a store first");
       return;
@@ -80,9 +157,9 @@ export const useInventoryStockData = () => {
       stock_quantity: Number(newStockItem.stock_quantity || 0),
       is_active: true
     } as Omit<InventoryStock, "id">);
-  };
+  }, [currentStore, createMutation]);
 
-  const handleUpdateStockItem = (stockItem: InventoryStock) => {
+  const handleUpdateStockItem = useCallback((stockItem: InventoryStock) => {
     if (!stockItem.id) return;
 
     updateMutation.mutate({
@@ -93,9 +170,9 @@ export const useInventoryStockData = () => {
         is_active: stockItem.is_active
       }
     });
-  };
+  }, [updateMutation]);
 
-  const handleStockAdjustment = (
+  const handleStockAdjustment = useCallback((
     id: string,
     quantity: number,
     notes?: string
@@ -105,36 +182,89 @@ export const useInventoryStockData = () => {
       newQuantity: Number(quantity),
       notes
     });
-  };
+  }, [stockMutation]);
 
-  const openEditModal = (stockItem: InventoryStock) => {
+  const handleStockTransfer = useCallback((
+    sourceId: string,
+    targetStoreId: string,
+    quantity: number,
+    notes?: string
+  ) => {
+    if (quantity <= 0) {
+      toast.error("Transfer quantity must be greater than 0");
+      return;
+    }
+    
+    transferMutation.mutate({
+      sourceId,
+      targetStoreId,
+      quantity,
+      notes
+    });
+  }, [transferMutation]);
+
+  const handleDeleteStockItem = useCallback((id: string) => {
+    deleteMutation.mutate(id);
+  }, [deleteMutation]);
+
+  const openEditModal = useCallback((stockItem: InventoryStock) => {
     setCurrentStockItem(stockItem);
     setIsEditModalOpen(true);
-  };
+  }, []);
 
-  const openStockModal = (stockItem: InventoryStock) => {
+  const openStockModal = useCallback((stockItem: InventoryStock) => {
     setCurrentStockItem(stockItem);
     setIsStockModalOpen(true);
-  };
+  }, []);
+
+  const openTransferModal = useCallback((stockItem: InventoryStock) => {
+    setCurrentStockItem(stockItem);
+    setIsTransferModalOpen(true);
+  }, []);
+  
+  const openDeleteConfirm = useCallback((stockItem: InventoryStock) => {
+    setCurrentStockItem(stockItem);
+    setIsDeleteConfirmOpen(true);
+  }, []);
   
   return {
     currentStore,
     stockItems,
     isLoading,
+    hasMultipleStores,
+    
+    // Modal states
     isAddModalOpen,
     setIsAddModalOpen,
     isEditModalOpen,
     setIsEditModalOpen,
     isStockModalOpen,
     setIsStockModalOpen,
+    isTransferModalOpen,
+    setIsTransferModalOpen,
+    isDeleteConfirmOpen,
+    setIsDeleteConfirmOpen,
+    
     currentStockItem,
+    
+    // Mutations
     createMutation,
     updateMutation,
     stockMutation,
+    transferMutation,
+    deleteMutation,
+    
+    // Action handlers
     handleAddStockItem,
     handleUpdateStockItem,
     handleStockAdjustment,
+    handleStockTransfer,
+    handleDeleteStockItem,
+    
+    // Modal openers
     openEditModal,
-    openStockModal
+    openStockModal,
+    openTransferModal,
+    openDeleteConfirm
   };
 };

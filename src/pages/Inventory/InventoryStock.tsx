@@ -1,5 +1,5 @@
 
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -9,28 +9,62 @@ import { InventoryStockList } from "./components/inventoryStock/InventoryStockLi
 import { AddStockItemForm } from "./components/inventoryStock/AddStockItemForm";
 import { EditStockItemForm } from "./components/inventoryStock/EditStockItemForm";
 import { StockAdjustmentModal } from "./components/inventoryStock/StockAdjustmentModal";
+import { StockTransferModal } from "./components/inventoryStock/StockTransferModal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
 
 export default function InventoryStock() {
   const {
     currentStore,
     stockItems,
     isLoading,
+    hasMultipleStores,
+    
     isAddModalOpen,
     setIsAddModalOpen,
     isEditModalOpen,
     setIsEditModalOpen,
     isStockModalOpen,
     setIsStockModalOpen,
+    isTransferModalOpen,
+    setIsTransferModalOpen,
+    isDeleteConfirmOpen,
+    setIsDeleteConfirmOpen,
+    
     currentStockItem,
+    
     createMutation,
     updateMutation,
     stockMutation,
+    transferMutation,
+    deleteMutation,
+    
     handleAddStockItem,
     handleUpdateStockItem,
     handleStockAdjustment,
+    handleStockTransfer,
+    handleDeleteStockItem,
+    
     openEditModal,
-    openStockModal
+    openStockModal,
+    openTransferModal,
+    openDeleteConfirm
   } = useInventoryStockData();
+
+  const [filterTab, setFilterTab] = useState<"all" | "active" | "inactive" | "low-stock">("all");
+  
+  const filteredStockItems = stockItems.filter(item => {
+    switch (filterTab) {
+      case "active":
+        return item.is_active;
+      case "inactive":
+        return !item.is_active;
+      case "low-stock":
+        return item.stock_quantity <= 10;
+      default:
+        return true;
+    }
+  });
 
   if (!currentStore) {
     return (
@@ -45,10 +79,19 @@ export default function InventoryStock() {
     <div className="container mx-auto p-4">
       <InventoryHeader 
         title="Inventory Stock Management" 
-        description="Manage your raw materials, ingredients, and supplies"
+        description="Track and manage your raw materials, ingredients, and supplies"
       />
       
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-between items-center mb-4">
+        <Tabs defaultValue="all" value={filterTab} onValueChange={(v) => setFilterTab(v as any)}>
+          <TabsList>
+            <TabsTrigger value="all">All Items</TabsTrigger>
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="inactive">Inactive</TabsTrigger>
+            <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      
         <Button 
           onClick={() => setIsAddModalOpen(true)}
           className="bg-croffle-accent hover:bg-croffle-accent/90"
@@ -60,10 +103,13 @@ export default function InventoryStock() {
       <Card>
         <CardContent className="p-4">
           <InventoryStockList 
-            stockItems={stockItems}
+            stockItems={filteredStockItems}
             isLoading={isLoading}
             onEdit={openEditModal}
             onStockAdjust={openStockModal}
+            onStockTransfer={hasMultipleStores ? openTransferModal : undefined}
+            onDelete={openDeleteConfirm}
+            hasMultipleStores={hasMultipleStores}
           />
         </CardContent>
       </Card>
@@ -98,6 +144,47 @@ export default function InventoryStock() {
             onCancel={() => setIsStockModalOpen(false)}
             isLoading={stockMutation.isPending}
           />
+        </Dialog>
+      )}
+      
+      {/* Stock Transfer Modal */}
+      {currentStockItem && hasMultipleStores && (
+        <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+          <StockTransferModal
+            stockItem={currentStockItem}
+            onTransfer={handleStockTransfer}
+            onCancel={() => setIsTransferModalOpen(false)}
+            isLoading={transferMutation.isPending}
+          />
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {currentStockItem && (
+        <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Inventory Item</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{currentStockItem.item}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDeleteConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => handleDeleteStockItem(currentStockItem.id)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
       )}
     </div>
