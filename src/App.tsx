@@ -13,6 +13,11 @@ import Login from "./pages/Login";
 import POS from "./pages/POS";
 import NotFound from "./pages/NotFound";
 import { useAuth } from "@/contexts/AuthContext";
+import Stores from "./pages/Stores";
+import StoreForm from "./pages/Stores/StoreForm";
+import StoreSettings from "./pages/Stores/StoreSettings";
+import StoreQR from "./pages/Stores/StoreQR";
+import CustomerForm from "./pages/Stores/CustomerForm";
 
 const queryClient = new QueryClient();
 
@@ -52,11 +57,20 @@ const AppRoutes = () => {
       {/* Auth Routes */}
       <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
       
+      {/* Public Routes - Customer Form */}
+      <Route path="/customer-form/:storeId" element={<CustomerForm />} />
+      
       {/* Protected Routes */}
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/pos" element={<POS />} />
-        {/* More routes will be added here */}
+        
+        {/* Store Management Routes */}
+        <Route path="/stores" element={<Stores />} />
+        <Route path="/stores/new" element={<StoreForm />} />
+        <Route path="/stores/:id" element={<StoreForm />} />
+        <Route path="/stores/:id/settings" element={<StoreSettings />} />
+        <Route path="/stores/:id/qr" element={<StoreQR />} />
       </Route>
       
       {/* Catch-all Route */}

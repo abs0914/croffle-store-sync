@@ -9,7 +9,171 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string
+          store_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone: string
+          store_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          store_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_settings: {
+        Row: {
+          created_at: string | null
+          currency: string | null
+          id: string
+          is_tax_inclusive: boolean | null
+          receipt_footer: string | null
+          receipt_header: string | null
+          store_id: string
+          tax_percentage: number | null
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          is_tax_inclusive?: boolean | null
+          receipt_footer?: string | null
+          receipt_header?: string | null
+          store_id: string
+          tax_percentage?: number | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          is_tax_inclusive?: boolean | null
+          receipt_footer?: string | null
+          receipt_header?: string | null
+          store_id?: string
+          tax_percentage?: number | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          address: string
+          city: string | null
+          country: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          state: string | null
+          tax_id: string | null
+          updated_at: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address: string
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          state?: string | null
+          tax_id?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          state?: string | null
+          tax_id?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
+      user_stores: {
+        Row: {
+          created_at: string | null
+          id: string
+          store_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          store_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          store_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_stores_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
