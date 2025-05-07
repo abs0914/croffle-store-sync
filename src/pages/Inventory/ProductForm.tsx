@@ -83,7 +83,6 @@ export default function ProductForm() {
     description: "",
     sku: "",
     barcode: "",
-    price: 0,
     cost: 0,
     stockQuantity: 0,
     categoryId: "",
@@ -132,7 +131,6 @@ export default function ProductForm() {
         description: product.description || "",
         sku: product.sku,
         barcode: product.barcode || "",
-        price: product.price,
         cost: product.cost || 0,
         stockQuantity: product.stockQuantity,
         categoryId: product.categoryId || "",
@@ -154,7 +152,7 @@ export default function ProductForm() {
           setRegularPrice(regularVariation.price);
           setRegularStock(regularVariation.stockQuantity || 0);
         } else {
-          setRegularPrice(product.price);
+          setRegularPrice(product.price || 0);
           setRegularStock(product.stockQuantity || 0);
         }
         
@@ -162,26 +160,18 @@ export default function ProductForm() {
           setMiniPrice(miniVariation.price);
           setMiniStock(miniVariation.stockQuantity || 0);
         } else {
-          setMiniPrice(product.price * 0.7);
+          setMiniPrice((product.price || 0) * 0.7);
           setMiniStock(0);
         }
       } else {
         setHasVariations(false);
-        setRegularPrice(product.price);
+        setRegularPrice(product.price || 0);
         setRegularStock(product.stockQuantity || 0);
-        setMiniPrice(product.price * 0.7);
+        setMiniPrice((product.price || 0) * 0.7);
         setMiniStock(0);
       }
     }
   }, [product]);
-  
-  // Update mini price when regular price changes
-  useEffect(() => {
-    if (formData.price) {
-      setRegularPrice(formData.price);
-      setMiniPrice(formData.price * 0.7);
-    }
-  }, [formData.price]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -307,10 +297,12 @@ export default function ProductForm() {
         imageUrl = await uploadProductImage(imageFile);
       }
       
+      // Set the price based on the regular size price
       const productData = {
         ...formData,
         storeId: currentStore.id,
-        image: imageUrl
+        image: imageUrl,
+        price: regularPrice // Use regular variation price as the base product price
       };
       
       let savedProduct: Product | null = null;
@@ -452,19 +444,6 @@ export default function ProductForm() {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="price">Base Price *</Label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    required
-                  />
                 </div>
                 
                 <div className="space-y-2">

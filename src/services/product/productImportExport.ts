@@ -20,7 +20,7 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
         if (header === 'is_active') {
           // Convert string boolean to actual boolean
           product[header] = values[i].toLowerCase() === 'true';
-        } else if (header === 'price' || header === 'stock_quantity') {
+        } else if (header === 'stock_quantity') {
           // Convert string numbers to actual numbers
           product[header] = parseFloat(values[i]);
         } else {
@@ -76,7 +76,7 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
             .upsert({
               name: `${product.name} Regular`,
               sku: regularSku,
-              price: product.price,
+              price: product.regular_price || 0,
               stock_quantity: Math.floor(product.stock_quantity / 2),
               is_active: product.is_active,
               product_id: existingProduct.id,
@@ -90,7 +90,7 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
             .upsert({
               name: `${product.name} Mini`,
               sku: miniSku,
-              price: product.price * 0.7, // 70% of regular price
+              price: product.mini_price || (product.regular_price * 0.7) || 0,
               stock_quantity: Math.floor(product.stock_quantity / 2),
               is_active: product.is_active,
               product_id: existingProduct.id,
@@ -105,7 +105,7 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
             name: product.name,
             sku: product.sku,
             description: product.description || '',
-            price: product.price || 0,
+            price: product.regular_price || 0, // Use regular_price as the price
             stock_quantity: product.stock_quantity || 0,
             is_active: product.is_active !== undefined ? product.is_active : true,
             store_id: storeId
@@ -139,7 +139,7 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
               .insert({
                 name: `${product.name} Regular`,
                 sku: regularSku,
-                price: product.price,
+                price: product.regular_price || 0,
                 stock_quantity: Math.floor(product.stock_quantity / 2),
                 is_active: product.is_active,
                 product_id: newProduct.id,
@@ -153,7 +153,7 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
               .insert({
                 name: `${product.name} Mini`,
                 sku: miniSku,
-                price: product.price * 0.7, // 70% of regular price
+                price: product.mini_price || (product.regular_price * 0.7) || 0,
                 stock_quantity: Math.floor(product.stock_quantity / 2),
                 is_active: product.is_active,
                 product_id: newProduct.id,
@@ -171,18 +171,22 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
 };
 
 export const generateProductsCSV = (products: Product[]): string => {
-  const headers = ['name', 'sku', 'description', 'price', 'stock_quantity', 'is_active', 'has_variations'];
+  const headers = ['name', 'sku', 'description', 'stock_quantity', 'is_active', 'has_variations', 'regular_price', 'mini_price'];
   const csvRows = [headers.join(',')];
   
   products.forEach(product => {
+    const regularVariation = product.variations?.find(v => v.size === 'regular');
+    const miniVariation = product.variations?.find(v => v.size === 'mini');
+    
     const row = [
       `"${product.name.replace(/"/g, '""')}"`,
       `"${product.sku.replace(/"/g, '""')}"`,
       `"${(product.description || '').replace(/"/g, '""')}"`,
-      product.price,
       product.stockQuantity || product.stock_quantity,
       product.isActive || product.is_active ? 'true' : 'false',
-      product.variations && product.variations.length > 0 ? 'true' : 'false'
+      product.variations && product.variations.length > 0 ? 'true' : 'false',
+      regularVariation ? regularVariation.price : product.price,
+      miniVariation ? miniVariation.price : (product.price || 0) * 0.7
     ];
     
     csvRows.push(row.join(','));
@@ -197,10 +201,11 @@ export const generateProductImportTemplate = (): string => {
     'name',
     'sku',
     'description',
-    'price',
     'stock_quantity',
     'is_active',
-    'has_variations'
+    'has_variations',
+    'regular_price',
+    'mini_price'
   ];
   
   // Create the CSV string with headers
@@ -211,20 +216,22 @@ export const generateProductImportTemplate = (): string => {
     '"Product Without Variations"',
     '"SKU123"',
     '"Product description"',
-    '10.99',
     '100',
     'true',
-    'false'
+    'false',
+    '10.99',
+    ''
   ].join(',');
   
   const exampleRow2 = [
     '"Product With Size Variations"',
     '"SKU456"',
     '"Product with Regular and Mini sizes"',
-    '15.99',
     '200',
     'true',
-    'true'
+    'true',
+    '15.99',
+    '11.99'
   ].join(',');
   
   return `${csvContent}\n${exampleRow1}\n${exampleRow2}`;
