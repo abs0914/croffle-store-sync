@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -99,6 +98,7 @@ export default function Stores() {
     }
   };
 
+  
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">

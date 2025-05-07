@@ -20,7 +20,18 @@ export default function StoreForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  const [formData, setFormData] = useState<Partial<Store>>({
+  const [formData, setFormData] = useState<{
+    name: string;
+    address: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+    country?: string;
+    phone?: string;
+    email?: string;
+    tax_id?: string;
+    is_active: boolean;
+  }>({
     name: "",
     address: "",
     city: "",
@@ -51,7 +62,7 @@ export default function StoreForm() {
       if (error) throw error;
       
       if (data) {
-        setFormData(data as Store);
+        setFormData(data);
       }
     } catch (error: any) {
       console.error("Error fetching store details:", error);
