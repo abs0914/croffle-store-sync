@@ -559,8 +559,11 @@ export async function exportProductsToCSV(storeId: string): Promise<string> {
       const stockItem = inventory.find(i => i.product_id === product.id);
       let categoryName = '';
       
-      // Handle possible null or relationship error gracefully
-      if (product.categories && typeof product.categories === 'object' && product.categories !== null) {
+      // More explicit check for categories that satisfies TypeScript
+      if (product.categories && 
+          product.categories !== null && 
+          typeof product.categories === 'object' && 
+          'name' in product.categories) {
         categoryName = product.categories.name || '';
       }
       
