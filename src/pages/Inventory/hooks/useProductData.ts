@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchProducts, generateProductImportTemplate, parseProductsCSV } from "@/services/productService";
 import { Product } from "@/types";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 export const useProductData = (storeId: string | undefined) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,15 +39,15 @@ export const useProductData = (storeId: string | undefined) => {
         const a = document.createElement("a");
         a.setAttribute("hidden", "");
         a.setAttribute("href", url);
-        a.setAttribute("download", `products-${storeId}-${new Date().toISOString().slice(0, 10)}.csv`);
+        a.setAttribute("download", `inventory-stock-${storeId}-${new Date().toISOString().slice(0, 10)}.csv`);
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
       });
-      toast.success("Products exported successfully");
+      toast.success("Inventory exported successfully");
     } catch (error) {
       console.error("Export error:", error);
-      toast.error("Failed to export products");
+      toast.error("Failed to export inventory");
     }
   };
   
@@ -61,28 +60,28 @@ export const useProductData = (storeId: string | undefined) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".csv";
-    input.onchange = (event: any) => {
+    input.onchange = async (event: any) => {
       const file = event.target.files[0];
       if (file) {
         const reader = new FileReader();
         reader.onload = async (e: any) => {
           try {
             const csvData = e.target.result;
-            // Parse CSV and associate with current store
-            const productsToImport = parseProductsCSV(csvData, storeId);
+            toast.loading("Processing inventory import...");
             
-            // In a real implementation, we would process the products here
-            // This is a placeholder for demonstration
-            console.log("Importing products for store:", storeId, productsToImport);
-            toast.info(`Processing ${productsToImport.length} products for store ${storeId}`);
+            // Parse CSV and process products
+            const importedProducts = await parseProductsCSV(csvData, storeId);
+            
+            toast.dismiss();
+            toast.success(`Successfully processed ${importedProducts.length} products`);
             
             // Refresh the products list after import
             setTimeout(() => {
               refetch();
-            }, 2000);
+            }, 1000);
           } catch (error) {
             console.error("Import error:", error);
-            toast.error("Failed to import products");
+            toast.error("Failed to import inventory");
           }
         };
         reader.readAsText(file);
@@ -99,7 +98,7 @@ export const useProductData = (storeId: string | undefined) => {
       const a = document.createElement("a");
       a.setAttribute("hidden", "");
       a.setAttribute("href", url);
-      a.setAttribute("download", `product-import-template.csv`);
+      a.setAttribute("download", `inventory-import-template.csv`);
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -120,6 +119,7 @@ export const useProductData = (storeId: string | undefined) => {
     setActiveTab,
     handleExportCSV,
     handleImportClick,
-    handleDownloadTemplate
+    handleDownloadTemplate,
+    refetch
   };
 };
