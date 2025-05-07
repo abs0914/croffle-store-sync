@@ -536,7 +536,7 @@ export async function exportProductsToCSV(storeId: string): Promise<string> {
       .from('inventory')
       .select('*')
       .eq('store_id', storeId)
-      .eq('variation_id', null);
+      .is('variation_id', null);
       
     if (invError) throw invError;
     
@@ -559,12 +559,13 @@ export async function exportProductsToCSV(storeId: string): Promise<string> {
       const stockItem = inventory.find(i => i.product_id === product.id);
       let categoryName = '';
       
-      // More explicit check for categories that satisfies TypeScript
-      if (product.categories && 
-          product.categories !== null && 
-          typeof product.categories === 'object' && 
-          'name' in product.categories) {
-        categoryName = product.categories.name || '';
+      // Fixed TypeScript check for categories
+      const categories = product.categories;
+      if (categories && 
+          categories !== null && 
+          typeof categories === 'object' && 
+          'name' in categories) {
+        categoryName = categories.name || '';
       }
       
       const row = [
