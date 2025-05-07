@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
@@ -12,7 +11,6 @@ import {
   CreditCard,
   BarChart4,
   Store,
-  Warehouse,
   BoxesIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,12 +47,6 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       name: "Menu Management",
       href: "/inventory",
       icon: Package,
-      minRole: "manager",
-    },
-    {
-      name: "Raw Materials",
-      href: "/inventory/ingredients",
-      icon: Warehouse,
       minRole: "manager",
     },
     {
