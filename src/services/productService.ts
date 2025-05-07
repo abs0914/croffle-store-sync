@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, ProductVariation } from "@/types";
 import { toast } from "sonner";
@@ -494,4 +493,35 @@ export const generateProductsCSV = (products: Product[]): string => {
   });
   
   return csvRows.join('\n');
+};
+
+export const generateProductImportTemplate = (): string => {
+  // Define the headers based on the required fields for product import
+  const headers = [
+    'name',
+    'sku',
+    'barcode',
+    'description',
+    'price',
+    'cost',
+    'stock_quantity',
+    'is_active'
+  ];
+  
+  // Create the CSV string with headers
+  const csvContent = headers.join(',');
+  
+  // Add an example row with empty values
+  const exampleRow = [
+    '"Product Name"',
+    '"SKU123"',
+    '"1234567890"',
+    '"Product description"',
+    '10.99',
+    '5.99',
+    '100',
+    'true'
+  ].join(',');
+  
+  return `${csvContent}\n${exampleRow}`;
 };

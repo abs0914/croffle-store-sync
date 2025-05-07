@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { fetchProducts } from "@/services/productService";
+import { fetchProducts, generateProductImportTemplate } from "@/services/productService";
 import { Product } from "@/types";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -19,8 +18,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, FileDown, FileUp, Package } from "lucide-react";
+import { Search, Plus, FileDown, FileUp, Package, Download } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Inventory() {
   const { currentStore } = useStore();
@@ -94,19 +101,54 @@ export default function Inventory() {
     input.click();
   };
   
+  const handleDownloadTemplate = () => {
+    try {
+      const csvData = generateProductImportTemplate();
+      const blob = new Blob([csvData], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.setAttribute("hidden", "");
+      a.setAttribute("href", url);
+      a.setAttribute("download", `product-import-template.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success("Template downloaded successfully");
+    } catch (error) {
+      console.error("Template download error:", error);
+      toast.error("Failed to download template");
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-croffle-primary">Inventory Management</h1>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportCSV}>
-            <FileDown className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-          <Button variant="outline" onClick={handleImportClick}>
-            <FileUp className="mr-2 h-4 w-4" />
-            Import
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <FileDown className="mr-2 h-4 w-4" />
+                Export/Import
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Data Management</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleExportCSV}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Export Products
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleImportClick}>
+                <FileUp className="mr-2 h-4 w-4" />
+                Import Products
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDownloadTemplate}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Import Template
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button asChild>
             <Link to="/inventory/product/new">
               <Plus className="mr-2 h-4 w-4" />
