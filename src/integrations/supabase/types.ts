@@ -172,11 +172,11 @@ export type Database = {
         Returns: boolean
       }
       get_user_role: {
-        Args: { user_id: string }
+        Args: Record<PropertyKey, never> | { user_id: string }
         Returns: string
       }
       has_store_access: {
-        Args: { user_id: string; store_id: string }
+        Args: { p_store_id: string } | { user_id: string; store_id: string }
         Returns: boolean
       }
       is_admin: {

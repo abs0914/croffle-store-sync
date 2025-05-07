@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStore } from "@/contexts/StoreContext";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { Plus } from "lucide-react";
 
 export default function CreateStoreDialog() {
   const { user } = useAuth();
+  const { refetchStores } = useStore();
   const [isCreatingStore, setIsCreatingStore] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [newStore, setNewStore] = useState({
@@ -34,7 +36,7 @@ export default function CreateStoreDialog() {
     try {
       console.log("Creating store:", newStore);
       
-      // Insert into stores table with the new RLS policy
+      // Insert into stores table using the improved RLS policy
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .insert({
@@ -46,7 +48,8 @@ export default function CreateStoreDialog() {
           is_active: true
         })
         .select('*')
-        .single();
+        .single()
+        .throwOnError();
 
       if (storeError) {
         console.error("Error creating store in database:", storeError);
@@ -63,7 +66,8 @@ export default function CreateStoreDialog() {
           .insert({
             user_id: user.id,
             store_id: storeData.id
-          });
+          })
+          .throwOnError();
 
         if (accessError) {
           console.error("Error creating store access:", accessError);
@@ -85,10 +89,8 @@ export default function CreateStoreDialog() {
       // Close the dialog
       setIsOpen(false);
       
-      // Refresh the page to update the store list
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+      // Refresh store list using the new refetchStores function
+      await refetchStores();
       
     } catch (error: any) {
       console.error("Error creating store:", error);
