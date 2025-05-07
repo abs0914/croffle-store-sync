@@ -188,3 +188,14 @@ export interface StoreSettings {
   currency: string;
   timezone: string;
 }
+
+export interface InventoryStock {
+  id: string;
+  store_id: string;
+  item: string;
+  unit: string;
+  stock_quantity: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}

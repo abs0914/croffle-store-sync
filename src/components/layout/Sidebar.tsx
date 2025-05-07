@@ -12,7 +12,8 @@ import {
   CreditCard,
   BarChart4,
   Store,
-  Warehouse
+  Warehouse,
+  BoxesIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -51,9 +52,15 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       minRole: "manager",
     },
     {
-      name: "Inventory Stock",
+      name: "Raw Materials",
       href: "/inventory/ingredients",
       icon: Warehouse,
+      minRole: "manager",
+    },
+    {
+      name: "Inventory Stock",
+      href: "/inventory/stock",
+      icon: BoxesIcon,
       minRole: "manager",
     },
     {
@@ -141,4 +148,4 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       </div>
     </div>
   );
-}
+};

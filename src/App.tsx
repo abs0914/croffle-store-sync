@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { StoreProvider } from "@/contexts/StoreContext";
+import { StoreProvider } from "@/contexts/StoreProvider";
 import { CartProvider } from "@/contexts/CartContext";
 import { MainLayout } from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
@@ -23,6 +23,7 @@ import Categories from "./pages/Inventory/Categories";
 import ProductForm from "./pages/Inventory/ProductForm";
 import InventoryHistory from "./pages/Inventory/InventoryHistory";
 import Ingredients from "./pages/Inventory/Ingredients";
+import InventoryStock from "./pages/Inventory/InventoryStock";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,7 @@ const AppRoutes = () => {
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/inventory/categories" element={<Categories />} />
         <Route path="/inventory/ingredients" element={<Ingredients />} />
+        <Route path="/inventory/stock" element={<InventoryStock />} />
         <Route path="/inventory/product/new" element={<ProductForm />} />
         <Route path="/inventory/product/:id" element={<ProductForm />} />
         <Route path="/inventory/history" element={<InventoryHistory />} />
