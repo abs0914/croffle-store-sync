@@ -31,12 +31,18 @@ export default function CreateStoreDialog() {
 
   const handleCreateStore = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast.error("You must be logged in to create a store");
+      return;
+    }
+    
     setIsCreatingStore(true);
 
     try {
       console.log("Creating store:", newStore);
       
-      // Insert into stores table using the improved RLS policy
+      // Insert into stores table with a simpler approach
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .insert({
@@ -48,8 +54,7 @@ export default function CreateStoreDialog() {
           is_active: true
         })
         .select('*')
-        .single()
-        .throwOnError();
+        .single();
 
       if (storeError) {
         console.error("Error creating store in database:", storeError);
@@ -59,15 +64,14 @@ export default function CreateStoreDialog() {
       console.log("Store created successfully:", storeData);
 
       // If user is not an admin, give them access to the store
-      if (user && user.role !== 'admin') {
+      if (user.role !== 'admin') {
         console.log("Creating user store access for:", user.id, storeData.id);
         const { error: accessError } = await supabase
           .from('user_store_access')
           .insert({
             user_id: user.id,
             store_id: storeData.id
-          })
-          .throwOnError();
+          });
 
         if (accessError) {
           console.error("Error creating store access:", accessError);
@@ -89,12 +93,12 @@ export default function CreateStoreDialog() {
       // Close the dialog
       setIsOpen(false);
       
-      // Refresh store list using the new refetchStores function
+      // Refresh store list
       await refetchStores();
       
     } catch (error: any) {
       console.error("Error creating store:", error);
-      toast.error(error.message || "Failed to create store");
+      toast.error("Failed to create store. Please try again later.");
     } finally {
       setIsCreatingStore(false);
     }

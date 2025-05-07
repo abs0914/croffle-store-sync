@@ -41,12 +41,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       
       console.log(`Fetching stores for ${user.role} user: ${user.name}`);
       
-      // Add error handling options to see detailed errors
+      // Simplify the query to reduce chance of RLS policy issues
       const { data, error } = await supabase
         .from('stores')
         .select('*')
-        .order('name')
-        .throwOnError();
+        .order('name');
         
       if (error) {
         console.error("Supabase stores query error:", error);
@@ -65,22 +64,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         logo: store.logo || undefined,
       }));
       
-      console.log(`Fetched ${mappedStores.length} stores for user ${user.name}`);
+      console.log(`Successfully fetched ${mappedStores.length} stores for user ${user.name}`);
       setStores(mappedStores);
       
       // Set current store to the first one or keep the current if it's still in the list
       if (mappedStores.length > 0) {
         if (currentStore && mappedStores.some(store => store.id === currentStore.id)) {
           // Keep the current store
+          console.log("Keeping current selected store:", currentStore.name);
         } else {
+          console.log("Setting current store to first available:", mappedStores[0].name);
           setCurrentStore(mappedStores[0]);
         }
       } else {
+        console.log("No stores available, setting current store to null");
         setCurrentStore(null);
       }
     } catch (error: any) {
       console.error("Error fetching stores:", error);
-      toast.error(error.message || "Failed to load stores");
+      toast.error("Failed to load stores. Please try again later.");
       setStores([]);
       setCurrentStore(null);
     } finally {
@@ -88,8 +90,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   };
   
+  // Re-fetch stores when the user changes
   useEffect(() => {
-    fetchStores();
+    if (user) {
+      fetchStores();
+    } else {
+      setStores([]);
+      setCurrentStore(null);
+      setIsLoading(false);
+    }
   }, [user]);
 
   return (
