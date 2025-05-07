@@ -18,6 +18,10 @@ import StoreForm from "./pages/Stores/StoreForm";
 import StoreSettings from "./pages/Stores/StoreSettings";
 import StoreQR from "./pages/Stores/StoreQR";
 import CustomerForm from "./pages/Stores/CustomerForm";
+import Inventory from "./pages/Inventory";
+import Categories from "./pages/Inventory/Categories";
+import ProductForm from "./pages/Inventory/ProductForm";
+import InventoryHistory from "./pages/Inventory/InventoryHistory";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +68,13 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/pos" element={<POS />} />
+        
+        {/* Inventory Routes */}
+        <Route path="/inventory" element={<Inventory />} />
+        <Route path="/inventory/categories" element={<Categories />} />
+        <Route path="/inventory/product/new" element={<ProductForm />} />
+        <Route path="/inventory/product/:id" element={<ProductForm />} />
+        <Route path="/inventory/history" element={<InventoryHistory />} />
         
         {/* Store Management Routes */}
         <Route path="/stores" element={<Stores />} />
