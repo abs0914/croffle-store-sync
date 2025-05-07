@@ -1,4 +1,15 @@
+
 export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier';
+
+// Add Session type for auth context
+export interface Session {
+  access_token: string;
+  refresh_token: string;
+  expires_at?: number;
+  expires_in?: number;
+  token_type?: string;
+  user?: any;
+}
 
 export interface User {
   id: string;

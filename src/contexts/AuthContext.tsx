@@ -1,11 +1,12 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { User, UserRole } from "@/types";
+import { User, UserRole, Session } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface AuthState {
   user: User | null;
+  session: Session | null; // Add session to the context
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -16,6 +17,7 @@ interface AuthState {
 
 const initialState: AuthState = {
   user: null,
+  session: null, // Initialize session as null
   isLoading: true,
   isAuthenticated: false,
   login: async () => {},
@@ -28,6 +30,7 @@ const AuthContext = createContext<AuthState>(initialState);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null); // Add session state
   const [isLoading, setIsLoading] = useState(true);
   
   // Map Supabase auth user to our app's User type
@@ -51,24 +54,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (session && session.user) {
-          setUser(mapSupabaseUser(session.user));
-          setIsLoading(false);
-        } else {
-          setUser(null);
-          setIsLoading(false);
-        }
+      (event, newSession) => {
+        // Only update state with synchronous operations here
+        setSession(newSession);
+        setUser(newSession?.user ? mapSupabaseUser(newSession.user) : null);
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && session.user) {
-        setUser(mapSupabaseUser(session.user));
-      }
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ? mapSupabaseUser(currentSession.user) : null);
       setIsLoading(false);
     });
 
@@ -91,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (data.user) {
         setUser(mapSupabaseUser(data.user));
+        setSession(data.session);
       }
     } catch (error: any) {
       console.error("Login error:", error);
@@ -109,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw error;
       }
       setUser(null);
+      setSession(null);
     } catch (error: any) {
       console.error("Logout error:", error);
       toast.error(error.message || "Failed to logout");
@@ -140,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        session,
         isLoading,
         isAuthenticated: !!user,
         login,
