@@ -23,9 +23,9 @@ export default function Login() {
       await login(email, password);
       toast.success("Login successful!");
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
+      // Error is already handled in the login function
       console.error("Login error:", error);
-      toast.error("Failed to login. Please check your credentials.");
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +95,9 @@ export default function Login() {
         </Card>
         
         <div className="text-center text-sm text-croffle-text/70 mt-4">
-          <p>For demo purposes, you can login with any email and password.</p>
+          <p>Use one of the test accounts:</p>
+          <p className="mt-1">admin@example.com, owner@example.com, manager@example.com, or cashier@example.com</p>
+          <p className="mt-1">Password: password123</p>
         </div>
       </div>
     </div>
