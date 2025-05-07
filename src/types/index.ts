@@ -56,6 +56,7 @@ export interface Product {
   cost?: number;
   stock_quantity: number;
   stockQuantity?: number; // For frontend compatibility
+  recipe?: Recipe; // Optional recipe connection
 }
 
 export interface ProductVariation {
@@ -69,6 +70,41 @@ export interface ProductVariation {
   product_id: string;
   productId?: string; // For frontend compatibility
   sku: string;
+  recipe?: Recipe; // Optional recipe connection
+}
+
+// New interface for ingredients/raw materials
+export interface Ingredient {
+  id: string;
+  name: string;
+  unit_type: 'pieces' | 'portion' | 'serving' | 'scoop' | 'grams' | 'milliliters';
+  store_id: string;
+  stock_quantity: number;
+  cost_per_unit?: number;
+  category_id?: string;
+  sku?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// New interface for recipes that connect products to ingredients
+export interface Recipe {
+  id: string;
+  product_id: string;
+  variation_id?: string;
+  ingredients: RecipeIngredient[];
+  store_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Ingredient with quantity for recipes
+export interface RecipeIngredient {
+  ingredient_id: string;
+  ingredient_name?: string;
+  quantity: number;
+  unit_type?: string;
 }
 
 export interface Category {

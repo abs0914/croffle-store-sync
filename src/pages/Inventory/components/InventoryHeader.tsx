@@ -1,62 +1,62 @@
 
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { FileDown, FileUp, Plus, Download } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import { useLocation, Link } from "react-router-dom";
 
 interface InventoryHeaderProps {
-  onExportCSV: () => void;
-  onImportClick: () => void;
-  onDownloadTemplate: () => void;
+  title: string;
+  description?: string;
 }
 
-export const InventoryHeader = ({
-  onExportCSV,
-  onImportClick,
-  onDownloadTemplate,
-}: InventoryHeaderProps) => {
+const InventoryHeader = ({ title, description }: InventoryHeaderProps) => {
+  const location = useLocation();
+  
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+  
   return (
-    <div className="flex justify-between items-center">
-      <h1 className="text-2xl font-bold text-croffle-primary">Inventory Management</h1>
-      <div className="flex gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">
-              <FileDown className="mr-2 h-4 w-4" />
-              Export/Import
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Data Management</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onExportCSV}>
-              <FileDown className="mr-2 h-4 w-4" />
-              Export Products
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onImportClick}>
-              <FileUp className="mr-2 h-4 w-4" />
-              Import Products
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onDownloadTemplate}>
-              <Download className="mr-2 h-4 w-4" />
-              Download Import Template
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button asChild>
-          <Link to="/inventory/product/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Link>
-        </Button>
+    <div className="mb-6">
+      <h1 className="text-2xl font-bold text-croffle-primary">{title}</h1>
+      {description && (
+        <p className="text-muted-foreground mt-1">{description}</p>
+      )}
+      
+      <div className="mt-6">
+        <div className="flex space-x-2 mb-2">
+          <Button
+            variant={isActive("/inventory") ? "default" : "outline"}
+            size="sm"
+            asChild
+          >
+            <Link to="/inventory">Products</Link>
+          </Button>
+          <Button
+            variant={isActive("/inventory/categories") ? "default" : "outline"}
+            size="sm"
+            asChild
+          >
+            <Link to="/inventory/categories">Categories</Link>
+          </Button>
+          <Button
+            variant={isActive("/inventory/ingredients") ? "default" : "outline"}
+            size="sm"
+            asChild
+          >
+            <Link to="/inventory/ingredients">Ingredients</Link>
+          </Button>
+          <Button
+            variant={isActive("/inventory/history") ? "default" : "outline"}
+            size="sm"
+            asChild
+          >
+            <Link to="/inventory/history">History</Link>
+          </Button>
+        </div>
       </div>
+      <Separator className="mt-2 bg-croffle-primary/20" />
     </div>
   );
 };
+
+export default InventoryHeader;

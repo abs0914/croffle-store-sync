@@ -8,3 +8,4 @@ export * from './product/productVariations';
 export * from './product/productImages';
 export * from './product/productInventory';
 export * from './product/productImportExport';
+export * from './product/productRecipe';
