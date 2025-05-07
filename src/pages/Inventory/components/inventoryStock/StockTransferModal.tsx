@@ -112,7 +112,7 @@ export const StockTransferModal = ({
           <div className="col-span-3">
             {isLoadingStores ? (
               <div className="flex items-center justify-center h-10">
-                <Spinner size="sm" />
+                <Spinner className="h-4 w-4" />
               </div>
             ) : stores.length === 0 ? (
               <p className="text-sm text-muted-foreground">No other active stores available</p>

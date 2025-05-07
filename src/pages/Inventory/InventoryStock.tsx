@@ -108,8 +108,7 @@ export default function InventoryStock() {
             onEdit={openEditModal}
             onStockAdjust={openStockModal}
             onStockTransfer={hasMultipleStores ? openTransferModal : undefined}
-            onDelete={openDeleteConfirm}
-            hasMultipleStores={hasMultipleStores}
+            onDelete={openDeleteConfirm} // This line is fixed - now passing a function that accepts an InventoryStock
           />
         </CardContent>
       </Card>

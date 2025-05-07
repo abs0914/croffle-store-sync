@@ -41,7 +41,7 @@ export const transferInventoryStock = async (
       p_unit: sourceItem.unit,
       p_quantity: quantity,
       p_notes: notes || "Stock transfer",
-      p_user_id: (await supabase.auth.getUser()).data.user?.id
+      p_user_id: (await supabase.auth.getUser()).data.user?.id || ''
     });
     
     if (transactionError) {
