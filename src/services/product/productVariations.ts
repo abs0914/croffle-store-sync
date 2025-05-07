@@ -27,7 +27,7 @@ export const fetchProductVariations = async (productId: string): Promise<Product
       product_id: item.product_id,
       productId: item.product_id,
       sku: item.sku,
-      size: item.size
+      size: item.size || 'regular'  // Set default value if size is null
     })) || [];
   } catch (error) {
     console.error("Error fetching variations:", error);
@@ -45,7 +45,7 @@ export const createProductVariation = async (variation: Omit<ProductVariation, "
       is_active: variation.is_active !== undefined ? variation.is_active : (variation.isActive || true),
       product_id: variation.product_id || variation.productId,
       sku: variation.sku,
-      size: variation.size
+      size: variation.size || 'regular'  // Set default value if size is not provided
     };
     
     const { data, error } = await supabase
@@ -72,7 +72,7 @@ export const createProductVariation = async (variation: Omit<ProductVariation, "
       product_id: data.product_id,
       productId: data.product_id,
       sku: data.sku,
-      size: data.size
+      size: data.size || 'regular'  // Set default value if size is null
     };
   } catch (error) {
     console.error("Error creating variation:", error);
@@ -119,7 +119,7 @@ export const updateProductVariation = async (id: string, variation: Partial<Prod
       product_id: data.product_id,
       productId: data.product_id,
       sku: data.sku,
-      size: data.size
+      size: data.size || 'regular'  // Set default value if size is null
     };
   } catch (error) {
     console.error("Error updating variation:", error);

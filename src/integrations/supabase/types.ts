@@ -163,6 +163,7 @@ export type Database = {
           name: string
           price: number
           product_id: string
+          size: string | null
           sku: string
           stock_quantity: number
           updated_at: string | null
@@ -174,6 +175,7 @@ export type Database = {
           name: string
           price?: number
           product_id: string
+          size?: string | null
           sku: string
           stock_quantity?: number
           updated_at?: string | null
@@ -185,6 +187,7 @@ export type Database = {
           name?: string
           price?: number
           product_id?: string
+          size?: string | null
           sku?: string
           stock_quantity?: number
           updated_at?: string | null
