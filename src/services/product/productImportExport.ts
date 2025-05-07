@@ -2,14 +2,16 @@
 import { Product } from "@/types";
 
 // CSV Import/Export
-export const parseProductsCSV = (csvData: string): any[] => {
+export const parseProductsCSV = (csvData: string, storeId: string): any[] => {
   const lines = csvData.split('\n');
   const headers = lines[0].split(',').map(header => header.trim());
   
   return lines.slice(1).map(line => {
     if (!line.trim()) return null;
     const values = line.split(',').map(value => value.trim());
-    const product: any = {};
+    const product: any = {
+      store_id: storeId // Add the store_id to each product
+    };
     
     headers.forEach((header, i) => {
       product[header] = values[i];

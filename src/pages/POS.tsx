@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useCart } from "@/contexts/CartContext";
+import { useStore } from "@/contexts/StoreContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Search, Minus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function POS() {
+  const { currentStore } = useStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -33,6 +34,18 @@ export default function POS() {
   useEffect(() => {
     async function loadData() {
       try {
+        // Use the current store ID to fetch relevant products
+        const storeId = currentStore?.id;
+        if (!storeId) {
+          toast.error("Please select a store first");
+          setIsLoading(false);
+          return;
+        }
+
+        // In a real implementation, we would pass the store ID to these functions
+        // For now, we're using mock data but logging the store ID for demonstration
+        console.log(`Loading data for store: ${storeId}`);
+        
         const [productsData, categoriesData] = await Promise.all([
           fetchProducts(),
           fetchCategories()
@@ -49,7 +62,7 @@ export default function POS() {
     }
     
     loadData();
-  }, []);
+  }, [currentStore]);
 
   const filteredProducts = products.filter(product => {
     const matchesCategory = activeCategory === "all" || product.categoryId === activeCategory;
@@ -59,7 +72,16 @@ export default function POS() {
   });
   
   const handleCheckout = () => {
-    toast.success("Checkout completed! This is a demo.");
+    if (!currentStore) {
+      toast.error("Please select a store first");
+      return;
+    }
+    
+    // In a real implementation, we would include the store ID in the transaction
+    const storeId = currentStore.id;
+    console.log(`Processing checkout for store: ${storeId}`);
+    
+    toast.success(`Checkout completed for store: ${currentStore.name}!`);
     clearCart();
   };
 
@@ -67,6 +89,11 @@ export default function POS() {
     <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-croffle-primary">Point of Sale</h1>
+        {currentStore && (
+          <Badge variant="outline" className="text-sm">
+            Store: {currentStore.name}
+          </Badge>
+        )}
       </div>
       
       <div className="flex flex-col lg:flex-row gap-4 h-full">

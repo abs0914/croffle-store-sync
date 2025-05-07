@@ -1,9 +1,10 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchProducts, generateProductImportTemplate } from "@/services/productService";
+import { fetchProducts, generateProductImportTemplate, parseProductsCSV } from "@/services/productService";
 import { Product } from "@/types";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useProductData = (storeId: string | undefined) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,6 +53,11 @@ export const useProductData = (storeId: string | undefined) => {
   };
   
   const handleImportClick = () => {
+    if (!storeId) {
+      toast.error("Please select a store first");
+      return;
+    }
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".csv";
@@ -61,7 +67,19 @@ export const useProductData = (storeId: string | undefined) => {
         const reader = new FileReader();
         reader.onload = async (e: any) => {
           try {
-            toast.info("CSV import is a placeholder - full implementation would process the data");
+            const csvData = e.target.result;
+            // Parse CSV and associate with current store
+            const productsToImport = parseProductsCSV(csvData, storeId);
+            
+            // In a real implementation, we would process the products here
+            // This is a placeholder for demonstration
+            console.log("Importing products for store:", storeId, productsToImport);
+            toast.info(`Processing ${productsToImport.length} products for store ${storeId}`);
+            
+            // Refresh the products list after import
+            setTimeout(() => {
+              refetch();
+            }, 2000);
           } catch (error) {
             console.error("Import error:", error);
             toast.error("Failed to import products");

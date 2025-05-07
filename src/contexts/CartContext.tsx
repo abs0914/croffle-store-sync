@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { CartItem, Product, ProductVariation } from "@/types";
 import { toast } from "sonner";
+import { useStore } from "./StoreContext";
 
 interface CartState {
   items: CartItem[];
@@ -13,6 +14,7 @@ interface CartState {
   tax: number;
   total: number;
   itemCount: number;
+  storeId: string | null;
 }
 
 const initialState: CartState = {
@@ -25,6 +27,7 @@ const initialState: CartState = {
   tax: 0,
   total: 0,
   itemCount: 0,
+  storeId: null,
 };
 
 const TAX_RATE = 0.12; // 12% VAT
@@ -32,12 +35,21 @@ const TAX_RATE = 0.12; // 12% VAT
 const CartContext = createContext<CartState>(initialState);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { currentStore } = useStore();
   const [items, setItems] = useState<CartItem[]>([]);
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
   const [total, setTotal] = useState(0);
   const [itemCount, setItemCount] = useState(0);
+  const [storeId, setStoreId] = useState<string | null>(null);
   
+  // Update storeId when currentStore changes
+  useEffect(() => {
+    if (currentStore?.id) {
+      setStoreId(currentStore.id);
+    }
+  }, [currentStore]);
+
   useEffect(() => {
     // Recalculate totals when items change
     const newSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -50,6 +62,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   const addItem = (product: Product, quantity = 1, variation?: ProductVariation) => {
+    // Check if we have a store selected
+    if (!currentStore?.id) {
+      toast.error("Please select a store first");
+      return;
+    }
+
     const itemPrice = variation ? variation.price : product.price;
     
     // Check if the item already exists in cart
@@ -118,6 +136,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         tax,
         total,
         itemCount,
+        storeId,
       }}
     >
       {children}
