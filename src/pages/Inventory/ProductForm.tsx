@@ -459,14 +459,14 @@ export default function ProductForm() {
                     <div className="space-y-2">
                       <Label htmlFor="categoryId">Category</Label>
                       <Select
-                        value={formData.categoryId || ""}
+                        value={formData.categoryId || undefined}
                         onValueChange={(value) => handleSelectChange("categoryId", value)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Uncategorized</SelectItem>
+                          <SelectItem value="uncategorized">Uncategorized</SelectItem>
                           {categories.map((category) => (
                             <SelectItem key={category.id} value={category.id}>
                               {category.name}
