@@ -44,7 +44,7 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       minRole: "manager",
     },
     {
-      name: "Inventory",
+      name: "Menu Management",
       href: "/inventory",
       icon: Package,
       minRole: "manager",

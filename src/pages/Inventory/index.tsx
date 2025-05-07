@@ -24,8 +24,8 @@ export default function Inventory() {
   return (
     <div className="space-y-6">
       <InventoryHeader
-        title="Inventory Stock Management"
-        description="Track and manage your inventory stock levels"
+        title="Menu Management"
+        description="Track and manage your Menu stock levels"
         onExportCSV={handleExportCSV}
         onImportClick={handleImportClick}
         onDownloadTemplate={handleDownloadTemplate}
