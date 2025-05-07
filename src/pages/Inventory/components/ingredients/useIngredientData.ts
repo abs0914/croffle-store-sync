@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +9,7 @@ import {
   createIngredient,
   updateIngredient,
   updateIngredientStock
-} from "@/services/ingredientService";
+} from "@/services/ingredient";
 
 export const useIngredientData = () => {
   const { currentStore } = useStore();
