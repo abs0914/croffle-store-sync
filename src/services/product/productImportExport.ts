@@ -20,17 +20,15 @@ export const parseProductsCSV = (csvData: string): any[] => {
 };
 
 export const generateProductsCSV = (products: Product[]): string => {
-  const headers = ['name', 'sku', 'barcode', 'description', 'price', 'cost', 'stock_quantity', 'is_active'];
+  const headers = ['name', 'sku', 'description', 'price', 'stock_quantity', 'is_active'];
   const csvRows = [headers.join(',')];
   
   products.forEach(product => {
     const row = [
       `"${product.name}"`,
       `"${product.sku}"`,
-      `"${product.barcode || ''}"`,
       `"${product.description?.replace(/"/g, '""') || ''}"`,
       product.price,
-      product.cost || 0,
       product.stockQuantity,
       product.isActive ? 'true' : 'false'
     ];
@@ -46,10 +44,8 @@ export const generateProductImportTemplate = (): string => {
   const headers = [
     'name',
     'sku',
-    'barcode',
     'description',
     'price',
-    'cost',
     'stock_quantity',
     'is_active'
   ];
@@ -61,10 +57,8 @@ export const generateProductImportTemplate = (): string => {
   const exampleRow = [
     '"Product Name"',
     '"SKU123"',
-    '"1234567890"',
     '"Product description"',
     '10.99',
-    '5.99',
     '100',
     'true'
   ].join(',');
