@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -203,8 +202,10 @@ export const useInventoryStockData = () => {
     });
   }, [transferMutation]);
 
-  const handleDeleteStockItem = useCallback((id: string) => {
-    deleteMutation.mutate(id);
+  // Updated to receive the entire stock item object
+  const handleDeleteStockItem = useCallback((stockItem: InventoryStock) => {
+    if (!stockItem || !stockItem.id) return;
+    deleteMutation.mutate(stockItem.id);
   }, [deleteMutation]);
 
   const openEditModal = useCallback((stockItem: InventoryStock) => {

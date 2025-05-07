@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -108,7 +107,8 @@ export default function InventoryStock() {
             onEdit={openEditModal}
             onStockAdjust={openStockModal}
             onStockTransfer={hasMultipleStores ? openTransferModal : undefined}
-            onDelete={openDeleteConfirm} // This line is fixed - now passing a function that accepts an InventoryStock
+            onDelete={openDeleteConfirm}
+            hasMultipleStores={hasMultipleStores}
           />
         </CardContent>
       </Card>
@@ -177,7 +177,7 @@ export default function InventoryStock() {
               </Button>
               <Button 
                 variant="destructive"
-                onClick={() => handleDeleteStockItem(currentStockItem.id)}
+                onClick={() => handleDeleteStockItem(currentStockItem)}
                 disabled={deleteMutation.isPending}
               >
                 {deleteMutation.isPending ? "Deleting..." : "Delete"}
