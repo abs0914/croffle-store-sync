@@ -139,10 +139,10 @@ export default function Dashboard() {
                   <p className="font-medium">{currentStore.phone}</p>
                   <p className="font-medium text-sm">{currentStore.email}</p>
                 </div>
-                {currentStore.taxId && (
+                {currentStore.tax_id && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Tax ID</p>
-                    <p className="font-medium">{currentStore.taxId}</p>
+                    <p className="font-medium">{currentStore.tax_id}</p>
                   </div>
                 )}
               </>
