@@ -66,6 +66,37 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
             created_by: 'system',
             notes: 'CSV Import'
           });
+          
+        // Check if size variations need to be created
+        if (product.has_variations === 'true' && product.name && product.sku) {
+          // Create regular size variation
+          const regularSku = `${product.sku}-REG`;
+          await supabase
+            .from('product_variations')
+            .upsert({
+              name: `${product.name} Regular`,
+              sku: regularSku,
+              price: product.price,
+              stock_quantity: Math.floor(product.stock_quantity / 2),
+              is_active: product.is_active,
+              product_id: existingProduct.id,
+              size: 'regular'
+            });
+            
+          // Create mini size variation
+          const miniSku = `${product.sku}-MINI`;
+          await supabase
+            .from('product_variations')
+            .upsert({
+              name: `${product.name} Mini`,
+              sku: miniSku,
+              price: product.price * 0.7, // 70% of regular price
+              stock_quantity: Math.floor(product.stock_quantity / 2),
+              is_active: product.is_active,
+              product_id: existingProduct.id,
+              size: 'mini'
+            });
+        }
       } else if (product.name && product.sku) {
         // Create new product
         const { data: newProduct, error } = await supabase
@@ -98,6 +129,37 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
               created_by: 'system',
               notes: 'Initial stock from CSV import'
             });
+            
+          // Check if size variations need to be created
+          if (product.has_variations === 'true') {
+            // Create regular size variation
+            const regularSku = `${product.sku}-REG`;
+            await supabase
+              .from('product_variations')
+              .insert({
+                name: `${product.name} Regular`,
+                sku: regularSku,
+                price: product.price,
+                stock_quantity: Math.floor(product.stock_quantity / 2),
+                is_active: product.is_active,
+                product_id: newProduct.id,
+                size: 'regular'
+              });
+              
+            // Create mini size variation
+            const miniSku = `${product.sku}-MINI`;
+            await supabase
+              .from('product_variations')
+              .insert({
+                name: `${product.name} Mini`,
+                sku: miniSku,
+                price: product.price * 0.7, // 70% of regular price
+                stock_quantity: Math.floor(product.stock_quantity / 2),
+                is_active: product.is_active,
+                product_id: newProduct.id,
+                size: 'mini'
+              });
+          }
         }
       }
     } catch (error) {
@@ -109,7 +171,7 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
 };
 
 export const generateProductsCSV = (products: Product[]): string => {
-  const headers = ['name', 'sku', 'description', 'price', 'stock_quantity', 'is_active'];
+  const headers = ['name', 'sku', 'description', 'price', 'stock_quantity', 'is_active', 'has_variations'];
   const csvRows = [headers.join(',')];
   
   products.forEach(product => {
@@ -119,7 +181,8 @@ export const generateProductsCSV = (products: Product[]): string => {
       `"${(product.description || '').replace(/"/g, '""')}"`,
       product.price,
       product.stockQuantity || product.stock_quantity,
-      product.isActive || product.is_active ? 'true' : 'false'
+      product.isActive || product.is_active ? 'true' : 'false',
+      product.variations && product.variations.length > 0 ? 'true' : 'false'
     ];
     
     csvRows.push(row.join(','));
@@ -136,21 +199,33 @@ export const generateProductImportTemplate = (): string => {
     'description',
     'price',
     'stock_quantity',
-    'is_active'
+    'is_active',
+    'has_variations'
   ];
   
   // Create the CSV string with headers
   const csvContent = headers.join(',');
   
-  // Add an example row
-  const exampleRow = [
-    '"Product Name"',
+  // Add example rows
+  const exampleRow1 = [
+    '"Product Without Variations"',
     '"SKU123"',
     '"Product description"',
     '10.99',
     '100',
+    'true',
+    'false'
+  ].join(',');
+  
+  const exampleRow2 = [
+    '"Product With Size Variations"',
+    '"SKU456"',
+    '"Product with Regular and Mini sizes"',
+    '15.99',
+    '200',
+    'true',
     'true'
   ].join(',');
   
-  return `${csvContent}\n${exampleRow}`;
+  return `${csvContent}\n${exampleRow1}\n${exampleRow2}`;
 };

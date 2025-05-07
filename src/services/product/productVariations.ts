@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ProductVariation } from "@/types";
+import { ProductVariation, ProductSize } from "@/types";
 import { toast } from "sonner";
 
 export const fetchProductVariations = async (productId: string): Promise<ProductVariation[]> => {
@@ -27,7 +27,7 @@ export const fetchProductVariations = async (productId: string): Promise<Product
       product_id: item.product_id,
       productId: item.product_id,
       sku: item.sku,
-      size: item.size || 'regular'  // Set default value if size is null
+      size: (item.size || 'regular') as ProductSize  // Cast to ProductSize
     })) || [];
   } catch (error) {
     console.error("Error fetching variations:", error);
@@ -72,7 +72,7 @@ export const createProductVariation = async (variation: Omit<ProductVariation, "
       product_id: data.product_id,
       productId: data.product_id,
       sku: data.sku,
-      size: data.size || 'regular'  // Set default value if size is null
+      size: (data.size || 'regular') as ProductSize  // Cast to ProductSize
     };
   } catch (error) {
     console.error("Error creating variation:", error);
@@ -119,7 +119,7 @@ export const updateProductVariation = async (id: string, variation: Partial<Prod
       product_id: data.product_id,
       productId: data.product_id,
       sku: data.sku,
-      size: data.size || 'regular'  // Set default value if size is null
+      size: (data.size || 'regular') as ProductSize  // Cast to ProductSize
     };
   } catch (error) {
     console.error("Error updating variation:", error);
