@@ -1,8 +1,6 @@
 
-import { useState, useEffect } from "react";
 import { User, UserRole } from "@/types";
 import { X, Check } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 
@@ -17,12 +15,11 @@ interface StoreUser {
 interface UserAccessTableProps {
   users: StoreUser[];
   filteredUsers: StoreUser[];
+  currentUserId?: string;
   onToggleAccess: (userId: string, hasAccess: boolean) => void;
 }
 
-export default function UserAccessTable({ users, filteredUsers, onToggleAccess }: UserAccessTableProps) {
-  const { user: currentUser } = useAuth();
-
+export default function UserAccessTable({ users, filteredUsers, currentUserId, onToggleAccess }: UserAccessTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -37,7 +34,7 @@ export default function UserAccessTable({ users, filteredUsers, onToggleAccess }
       <TableBody>
         {filteredUsers.map((user) => {
           // Don't show the current user in the list
-          if (user.id === currentUser?.id) return null;
+          if (user.id === currentUserId) return null;
           
           // Don't allow modifying admin access as they have global access
           const isAdmin = user.role === 'admin';
