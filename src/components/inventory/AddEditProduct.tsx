@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { Product, ProductVariation, Category } from "@/types";
@@ -10,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetchProductById, saveProduct } from "@/services/inventoryService";
+import { fetchProductById, saveProduct } from "@/services/inventory";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { Trash2, Plus, X } from "lucide-react";

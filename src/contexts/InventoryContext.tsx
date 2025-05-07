@@ -4,7 +4,7 @@ import { Product, Category } from "@/types";
 import { useAuth } from "./AuthContext";
 import { useStore } from "./StoreContext";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchProducts, fetchCategories } from "@/services/inventoryService";
+import { fetchProducts, fetchCategories } from "@/services/inventory";
 import { toast } from "sonner";
 
 interface InventoryState {

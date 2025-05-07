@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { Product } from "@/types";
-import { fetchProductById, updateInventory } from "@/services/inventoryService";
+import { fetchProductById, updateInventory } from "@/services/inventory";
 import { DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

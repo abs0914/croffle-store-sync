@@ -4,7 +4,7 @@ import { useStore } from "@/contexts/StoreContext";
 import { Button } from "@/components/ui/button";
 import { Package, Upload, Download, Plus } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { importProductsFromCSV, exportProductsToCSV } from "@/services/inventoryService";
+import { importProductsFromCSV, exportProductsToCSV } from "@/services/inventory";
 import ImportProducts from "./ImportProducts";
 import AddEditProduct from "./AddEditProduct";
 import { toast } from "sonner";

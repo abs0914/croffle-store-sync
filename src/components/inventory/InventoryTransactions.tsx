@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { fetchInventoryTransactions, fetchProducts } from "@/services/inventoryService";
+import { fetchInventoryTransactions, fetchProducts } from "@/services/inventory";
 import { Product } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
