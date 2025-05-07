@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Category } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit, Category as CategoryIcon } from "lucide-react";
+import { Plus, Edit, Package } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
 import { saveCategory } from "@/services/inventoryService";
 import { toast } from "sonner";
@@ -120,7 +119,7 @@ export default function CategoriesList({ categories, onDataChanged }: Categories
         
         {filteredCategories.length === 0 ? (
           <div className="text-center py-8">
-            <CategoryIcon className="h-12 w-12 mx-auto text-muted-foreground" />
+            <Package className="h-12 w-12 mx-auto text-muted-foreground" />
             <h3 className="mt-4 text-lg font-medium">No categories found</h3>
             <p className="text-muted-foreground mt-2">
               {searchQuery ? "Try changing your search query" : "Get started by adding your first category"}

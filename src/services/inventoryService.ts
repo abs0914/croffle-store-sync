@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Product, ProductVariation, Category, Store } from "@/types";
 import { toast } from "sonner";
@@ -248,7 +247,7 @@ export async function updateInventory({
       .select('quantity')
       .eq('product_id', productId)
       .eq('store_id', storeId)
-      .is('variation_id', variationId ? 'eq.' + variationId : 'is.null')
+      .eq('variation_id', variationId || null)
       .maybeSingle();
 
     if (fetchError) throw fetchError;
@@ -526,7 +525,7 @@ export async function exportProductsToCSV(storeId: string): Promise<string> {
       .from('products')
       .select(`
         *,
-        categories:category_id (name)
+        categories(name)
       `)
       .eq('store_id', storeId);
       
@@ -537,7 +536,7 @@ export async function exportProductsToCSV(storeId: string): Promise<string> {
       .from('inventory')
       .select('*')
       .eq('store_id', storeId)
-      .is('variation_id', 'is.null');
+      .eq('variation_id', null);
       
     if (invError) throw invError;
     
@@ -558,6 +557,13 @@ export async function exportProductsToCSV(storeId: string): Promise<string> {
     
     products.forEach(product => {
       const stockItem = inventory.find(i => i.product_id === product.id);
+      let categoryName = '';
+      
+      // Handle possible null or relationship error gracefully
+      if (product.categories && typeof product.categories === 'object' && product.categories !== null) {
+        categoryName = product.categories.name || '';
+      }
+      
       const row = [
         `"${product.name.replace(/"/g, '""')}"`, // Escape quotes in name
         product.description ? `"${product.description.replace(/"/g, '""')}"` : '',
@@ -565,7 +571,7 @@ export async function exportProductsToCSV(storeId: string): Promise<string> {
         product.cost || '',
         product.sku || '',
         product.barcode || '',
-        product.categories?.name || '',
+        categoryName,
         stockItem?.quantity || 0,
         product.is_active
       ];
