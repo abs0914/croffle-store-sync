@@ -11,7 +11,8 @@ import {
   Settings,
   CreditCard,
   BarChart4,
-  Store
+  Store,
+  Warehouse
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -47,6 +48,12 @@ export function Sidebar({ className, ...props }: SidebarProps) {
       name: "Menu Management",
       href: "/inventory",
       icon: Package,
+      minRole: "manager",
+    },
+    {
+      name: "Inventory Stock",
+      href: "/inventory/ingredients",
+      icon: Warehouse,
       minRole: "manager",
     },
     {

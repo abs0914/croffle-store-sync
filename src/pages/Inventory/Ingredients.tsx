@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,9 +28,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
-  DialogClose
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -196,7 +193,7 @@ export default function Ingredients() {
   if (!currentStore) {
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Ingredients</h1>
+        <h1 className="text-2xl font-bold mb-4">Inventory Stock Management</h1>
         <p>Please select a store first</p>
       </div>
     );
@@ -205,8 +202,8 @@ export default function Ingredients() {
   return (
     <div className="container mx-auto p-4">
       <InventoryHeader 
-        title="Ingredients" 
-        description="Manage your raw materials and ingredients"
+        title="Inventory Stock Management" 
+        description="Manage your raw materials, ingredients, and supplies"
       />
       
       <div className="flex justify-end mb-4">
@@ -214,7 +211,7 @@ export default function Ingredients() {
           onClick={() => setIsAddModalOpen(true)}
           className="bg-croffle-accent hover:bg-croffle-accent/90"
         >
-          <Plus className="mr-2 h-4 w-4" /> Add Ingredient
+          <Plus className="mr-2 h-4 w-4" /> Add Inventory Item
         </Button>
       </div>
 
@@ -226,11 +223,11 @@ export default function Ingredients() {
             </div>
           ) : ingredients.length === 0 ? (
             <div className="text-center p-8 text-muted-foreground">
-              <p>No ingredients found. Add your first ingredient to get started.</p>
+              <p>No inventory items found. Add your first item to get started.</p>
             </div>
           ) : (
             <Table>
-              <TableCaption>List of ingredients and raw materials</TableCaption>
+              <TableCaption>List of ingredients, supplies, and raw materials</TableCaption>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -293,9 +290,9 @@ export default function Ingredients() {
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Ingredient</DialogTitle>
+            <DialogTitle>Add New Inventory Item</DialogTitle>
             <DialogDescription>
-              Add a new ingredient or raw material to your inventory.
+              Add a new inventory item to your inventory.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -369,7 +366,7 @@ export default function Ingredients() {
               className="bg-croffle-accent hover:bg-croffle-accent/90"
             >
               {createMutation.isPending ? <Spinner className="mr-2" /> : <Plus className="mr-2 h-4 w-4" />}
-              Add Ingredient
+              Add Inventory Item
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -380,9 +377,9 @@ export default function Ingredients() {
         <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit Ingredient</DialogTitle>
+              <DialogTitle>Edit Inventory Item</DialogTitle>
               <DialogDescription>
-                Update the details of this ingredient.
+                Update the details of this inventory item.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -477,7 +474,7 @@ export default function Ingredients() {
             <DialogHeader>
               <DialogTitle>Update Stock - {currentIngredient.name}</DialogTitle>
               <DialogDescription>
-                Update the stock quantity of this ingredient.
+                Update the stock quantity of this inventory item.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">

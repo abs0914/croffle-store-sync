@@ -70,7 +70,7 @@ const AppRoutes = () => {
         <Route path="/" element={<Dashboard />} />
         <Route path="/pos" element={<POS />} />
         
-        {/* Inventory Routes */}
+        {/* Menu Management Routes */}
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/inventory/categories" element={<Categories />} />
         <Route path="/inventory/ingredients" element={<Ingredients />} />
