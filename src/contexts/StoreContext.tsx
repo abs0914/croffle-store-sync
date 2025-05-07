@@ -38,87 +38,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         setIsLoading(true);
         
-        let storesData = [];
+        console.log(`Fetching stores for ${user.role} user: ${user.name}`);
         
-        // Admin users get access to all stores with a simple query
-        if (user.role === 'admin') {
-          console.log(`Admin user, fetching all stores`);
+        // With the new RLS policies, we can use a simple query for all users
+        // Our RLS policies will handle the access control
+        const { data, error } = await supabase
+          .from('stores')
+          .select('*')
+          .order('name');
           
-          // Use a simple try-catch to handle specific error types
-          try {
-            const { data, error } = await supabase
-              .from('stores')
-              .select('*')
-              .order('name');
-              
-            if (error) {
-              console.error("Supabase stores query error:", error);
-              throw error;
-            }
-            
-            storesData = data || [];
-          } catch (queryError: any) {
-            console.error("Store fetch error details:", queryError);
-            // Attempt a simpler query without the order clause
-            // as a fallback in case there's an issue with the order directive
-            try {
-              const { data, error } = await supabase
-                .from('stores')
-                .select('*');
-                
-              if (error) throw error;
-              storesData = data || [];
-            } catch (fallbackError: any) {
-              console.error("Even fallback query failed:", fallbackError);
-              throw fallbackError;
-            }
-          }
-        }
-        // Owner users can see stores they have access to
-        else if (user.role === 'owner') {
-          console.log(`Owner user, fetching accessible stores`);
-          try {
-            const { data, error } = await supabase
-              .from('user_store_access')
-              .select(`
-                store_id,
-                stores:store_id(*)
-              `)
-              .eq('user_id', user.id);
-            
-            if (error) throw error;
-            
-            // Transform the result to match our expected format
-            storesData = data?.map(item => item.stores) || [];
-          } catch (ownerError: any) {
-            console.error("Owner store access error:", ownerError);
-            throw ownerError;
-          }
-        } 
-        // Other roles can only see stores they have access to
-        else {
-          console.log('Regular user, fetching accessible stores through access table');
-          try {
-            const { data, error } = await supabase
-              .from('user_store_access')
-              .select(`
-                store_id,
-                stores:store_id(*)
-              `)
-              .eq('user_id', user.id);
-            
-            if (error) throw error;
-            
-            // Transform the result to match our expected format
-            storesData = data?.map(item => item.stores) || [];
-          } catch (accessError: any) {
-            console.error("User store access error:", accessError);
-            throw accessError;
-          }
+        if (error) {
+          console.error("Supabase stores query error:", error);
+          throw error;
         }
         
         // Map stores to our Store type
-        const mappedStores: Store[] = storesData.map((store: any) => ({
+        const mappedStores: Store[] = (data || []).map((store: any) => ({
           id: store.id,
           name: store.name,
           address: store.address,

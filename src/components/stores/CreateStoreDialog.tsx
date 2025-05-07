@@ -3,7 +3,6 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Store } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,7 +34,7 @@ export default function CreateStoreDialog() {
     try {
       console.log("Creating store:", newStore);
       
-      // Insert into stores table
+      // Insert into stores table with the new RLS policy
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
         .insert({
@@ -44,7 +43,7 @@ export default function CreateStoreDialog() {
           phone: newStore.phone,
           email: newStore.email,
           tax_id: newStore.taxId || null,
-          is_active: true // Ensuring the store is active by default
+          is_active: true
         })
         .select('*')
         .single();
@@ -87,7 +86,9 @@ export default function CreateStoreDialog() {
       setIsOpen(false);
       
       // Refresh the page to update the store list
-      window.location.reload();
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
       
     } catch (error: any) {
       console.error("Error creating store:", error);

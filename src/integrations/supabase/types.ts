@@ -163,6 +163,10 @@ export type Database = {
         Args: { store_id: string }
         Returns: boolean
       }
+      can_manage_store_users_safely: {
+        Args: { store_id: string }
+        Returns: boolean
+      }
       check_store_access: {
         Args: { store_id: string }
         Returns: boolean
@@ -173,6 +177,10 @@ export type Database = {
       }
       has_store_access: {
         Args: { user_id: string; store_id: string }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
       }
       user_can_manage_store_access: {
