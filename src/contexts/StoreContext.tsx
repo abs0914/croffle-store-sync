@@ -2,6 +2,8 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Store } from "@/types";
 import { useAuth } from "./AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface StoreState {
   stores: Store[];
@@ -25,39 +27,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [currentStore, setCurrentStore] = useState<Store | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Fetch all stores when the user is authenticated
   useEffect(() => {
     if (user) {
-      // In a real app, this would fetch stores from Supabase
-      const mockStores: Store[] = [
-        {
-          id: '1',
-          name: 'The Croffle Store - Main Branch',
-          address: '123 Main Street, Anytown',
-          phone: '555-123-4567',
-          email: 'main@crofflestore.com',
-          tax_id: '123456789',
-          is_active: true,
-          logo_url: '/lovable-uploads/e4103c2a-e57f-45f0-9999-1567aeda3f3d.png',
-        },
-        {
-          id: '2',
-          name: 'The Croffle Store - Downtown',
-          address: '456 Market St, Downtown',
-          phone: '555-987-6543',
-          email: 'downtown@crofflestore.com',
-          tax_id: '987654321',
-          is_active: true,
-        }
-      ];
-      
-      setStores(mockStores);
-      setCurrentStore(mockStores[0]);
-      setIsLoading(false);
+      fetchStores();
     } else {
       setStores([]);
       setCurrentStore(null);
+      setIsLoading(false);
     }
   }, [user]);
+
+  const fetchStores = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch all stores from the database
+      const { data, error } = await supabase
+        .from('stores')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        setStores(data as Store[]);
+        // Set the first store as the current store if none is selected
+        if (!currentStore) {
+          setCurrentStore(data[0] as Store);
+        }
+      } else {
+        setStores([]);
+      }
+    } catch (error) {
+      console.error('Error fetching stores:', error);
+      toast.error('Failed to fetch stores');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <StoreContext.Provider
