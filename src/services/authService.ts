@@ -1,3 +1,4 @@
+
 import { UserRole } from "@/types";
 
 // Role-based permissions utility with a clear hierarchy
@@ -25,9 +26,6 @@ export const hasStoreAccess = (userRole: UserRole | undefined, userStoreIds: str
   // Admins have access to all stores
   if (userRole === 'admin') return true;
   
-  // Owners have access to all stores (as specified in the StoreContext)
-  if (userRole === 'owner') return true;
-  
-  // Other roles need explicit access through storeIds
+  // Owners only have access to stores in their storeIds array
   return userStoreIds.includes(storeId);
 };

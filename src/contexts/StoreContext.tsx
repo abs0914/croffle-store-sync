@@ -38,40 +38,49 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         setIsLoading(true);
         
-        let result = null;
+        let storesData = [];
         
-        // Admin and owner roles get access to all stores with a simple query
-        if (user.role === 'admin' || user.role === 'owner') {
-          console.log(`${user.role} user, fetching all stores`);
-          result = await supabase
+        // Admin users get access to all stores with a simple query
+        if (user.role === 'admin') {
+          console.log(`Admin user, fetching all stores`);
+          const { data, error } = await supabase
             .from('stores')
             .select('*')
             .order('name');
-        } else {
-          // Other roles can only see stores they have access to
-          // Use a regular join query that's less likely to cause issues
-          console.log('Regular user, fetching accessible stores through direct join');
-          result = await supabase
+            
+          if (error) throw error;
+          storesData = data || [];
+        }
+        // Owner users can also see all stores, but we'll still respect their storeIds
+        else if (user.role === 'owner') {
+          console.log(`Owner user, fetching all accessible stores`);
+          const { data, error } = await supabase
+            .from('stores')
+            .select('*')
+            .order('name');
+            
+          if (error) throw error;
+          storesData = data || [];
+        } 
+        // Other roles can only see stores they have access to
+        else {
+          console.log('Regular user, fetching accessible stores through access table');
+          const { data, error } = await supabase
             .from('user_store_access')
             .select(`
+              store_id,
               stores:store_id(*)
             `)
             .eq('user_id', user.id);
           
+          if (error) throw error;
+          
           // Transform the result to match our expected format
-          if (result.data && !result.error) {
-            // Map the nested stores objects from the join
-            result.data = result.data.map(item => item.stores);
-          }
-        }
-        
-        if (result.error) {
-          console.error("Store fetch error:", result.error);
-          throw result.error;
+          storesData = data?.map(item => item.stores) || [];
         }
         
         // Map stores to our Store type
-        const mappedStores: Store[] = result.data.map((store: any) => ({
+        const mappedStores: Store[] = storesData.map((store: any) => ({
           id: store.id,
           name: store.name,
           address: store.address,
@@ -82,6 +91,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           logo: store.logo || undefined,
         }));
         
+        console.log(`Fetched ${mappedStores.length} stores for user ${user.name}`);
         setStores(mappedStores);
         
         // Set current store to the first one or keep the current if it's still in the list

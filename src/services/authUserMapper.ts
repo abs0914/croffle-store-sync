@@ -45,7 +45,7 @@ export const mapProfileToUser = async (supabaseUser: any): Promise<User | null> 
           // Continue with empty storeIds instead of throwing
         } else if (storeAccess && storeAccess.length > 0) {
           storeIds = storeAccess.map(access => access.store_id);
-          console.log('Store access:', storeAccess);
+          console.log('Store access:', storeIds.length, 'stores');
         } else {
           console.log('No store access entries found');
         }
@@ -58,7 +58,7 @@ export const mapProfileToUser = async (supabaseUser: any): Promise<User | null> 
     }
     
     // Map the data to our User type
-    const mappedUser = {
+    const mappedUser: User = {
       id: supabaseUser.id,
       email: profileData.email,
       name: profileData.name,
@@ -67,7 +67,7 @@ export const mapProfileToUser = async (supabaseUser: any): Promise<User | null> 
       avatar: profileData.avatar || undefined,
     };
     
-    console.log('Mapped user:', mappedUser);
+    console.log('Mapped user:', mappedUser.name, 'with role:', mappedUser.role);
     return mappedUser;
   } catch (error) {
     console.error("Error mapping profile:", error);

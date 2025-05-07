@@ -175,6 +175,10 @@ export type Database = {
         Args: { user_id: string; store_id: string }
         Returns: boolean
       }
+      user_can_manage_store_access: {
+        Args: { _store_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       user_role: "admin" | "owner" | "manager" | "cashier"
