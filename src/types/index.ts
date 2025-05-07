@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier';
 
 // Add Session type for auth context
@@ -105,6 +104,7 @@ export interface RecipeIngredient {
   ingredient_name?: string;
   quantity: number;
   unit_type?: string;
+  cost_per_unit?: number; // Added missing property
 }
 
 export interface Category {
