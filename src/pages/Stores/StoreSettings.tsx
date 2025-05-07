@@ -57,7 +57,7 @@ export default function StoreSettings() {
         .single();
       
       if (storeError) throw storeError;
-      setStore(storeData);
+      setStore(storeData as Store);
       
       // Fetch store settings
       const { data: settingsData, error: settingsError } = await supabase

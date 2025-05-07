@@ -51,7 +51,7 @@ export default function StoreForm() {
       if (error) throw error;
       
       if (data) {
-        setFormData(data);
+        setFormData(data as Store);
       }
     } catch (error: any) {
       console.error("Error fetching store details:", error);
@@ -79,6 +79,7 @@ export default function StoreForm() {
       // Validate required fields
       if (!formData.name || !formData.address) {
         toast.error("Please fill in all required fields");
+        setIsSaving(false);
         return;
       }
       
@@ -96,7 +97,7 @@ export default function StoreForm() {
         // Create new store
         const { error } = await supabase
           .from("stores")
-          .insert([formData]);
+          .insert(formData);
           
         if (error) throw error;
         

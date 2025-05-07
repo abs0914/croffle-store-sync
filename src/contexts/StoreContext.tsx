@@ -35,9 +35,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           address: '123 Main Street, Anytown',
           phone: '555-123-4567',
           email: 'main@crofflestore.com',
-          taxId: '123456789',
-          isActive: true,
-          logo: '/lovable-uploads/e4103c2a-e57f-45f0-9999-1567aeda3f3d.png',
+          tax_id: '123456789',
+          is_active: true,
+          logo_url: '/lovable-uploads/e4103c2a-e57f-45f0-9999-1567aeda3f3d.png',
         },
         {
           id: '2',
@@ -45,8 +45,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           address: '456 Market St, Downtown',
           phone: '555-987-6543',
           email: 'downtown@crofflestore.com',
-          taxId: '987654321',
-          isActive: true,
+          tax_id: '987654321',
+          is_active: true,
         }
       ];
       

@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier';
 
 export interface User {
@@ -14,11 +13,17 @@ export interface Store {
   id: string;
   name: string;
   address: string;
-  phone: string;
-  email: string;
-  taxId?: string;
-  isActive: boolean;
-  logo?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  country?: string;
+  phone?: string;
+  email?: string;
+  tax_id?: string;
+  is_active: boolean;
+  logo_url?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Product {

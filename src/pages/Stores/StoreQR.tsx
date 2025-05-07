@@ -7,7 +7,7 @@ import { Store } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Download, QrCode, Copy, Link } from "lucide-react";
-import QRCode from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 
 export default function StoreQR() {
   const { id } = useParams();
@@ -42,7 +42,7 @@ export default function StoreQR() {
         
       if (error) throw error;
       
-      setStore(data);
+      setStore(data as Store);
     } catch (error: any) {
       console.error("Error fetching store:", error);
       toast.error("Failed to load store details");
@@ -103,12 +103,11 @@ export default function StoreQR() {
               ref={qrRef} 
               className="bg-white p-4 rounded-lg shadow-sm mb-6"
             >
-              <QRCode
+              <QRCodeCanvas
                 value={qrValue}
                 size={250}
                 level="H"
                 includeMargin={true}
-                renderAs="canvas"
               />
             </div>
             

@@ -8,7 +8,7 @@ import {
   Search, 
   Edit, 
   QrCode, 
-  Settings as SettingsIcon, 
+  Settings, 
   Trash, 
   Loader2 
 } from "lucide-react";
@@ -68,8 +68,8 @@ export default function Stores() {
         throw error;
       }
 
-      setStores(data || []);
-      setFilteredStores(data || []);
+      setStores(data as Store[] || []);
+      setFilteredStores(data as Store[] || []);
     } catch (error: any) {
       console.error('Error fetching stores:', error);
       toast.error('Failed to load stores');
@@ -152,7 +152,7 @@ export default function Stores() {
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <span className="sr-only">Open menu</span>
-                        <SettingsIcon className="h-4 w-4" />
+                        <Settings className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -161,7 +161,7 @@ export default function Stores() {
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate(`/stores/${store.id}/settings`)}>
-                        <SettingsIcon className="mr-2 h-4 w-4" />
+                        <Settings className="mr-2 h-4 w-4" />
                         Settings
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate(`/stores/${store.id}/qr`)}>
@@ -190,15 +190,15 @@ export default function Stores() {
                     <span className="font-medium">Email:</span> {store.email}
                   </div>
                 )}
-                {store.taxId && (
+                {store.tax_id && (
                   <div className="text-sm mb-1">
-                    <span className="font-medium">Tax ID:</span> {store.taxId}
+                    <span className="font-medium">Tax ID:</span> {store.tax_id}
                   </div>
                 )}
                 <div className="text-sm">
                   <span className="font-medium">Status:</span>
-                  <span className={store.isActive ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
-                    {store.isActive ? "Active" : "Inactive"}
+                  <span className={store.is_active ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
+                    {store.is_active ? "Active" : "Inactive"}
                   </span>
                 </div>
               </CardContent>
