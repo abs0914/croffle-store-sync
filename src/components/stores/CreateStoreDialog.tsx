@@ -33,6 +33,8 @@ export default function CreateStoreDialog() {
     setIsCreatingStore(true);
 
     try {
+      console.log("Creating store:", newStore);
+      
       // Insert into stores table
       const { data: storeData, error: storeError } = await supabase
         .from('stores')
@@ -41,15 +43,22 @@ export default function CreateStoreDialog() {
           address: newStore.address,
           phone: newStore.phone,
           email: newStore.email,
-          tax_id: newStore.taxId || null
+          tax_id: newStore.taxId || null,
+          is_active: true // Ensuring the store is active by default
         })
         .select('*')
         .single();
 
-      if (storeError) throw storeError;
+      if (storeError) {
+        console.error("Error creating store in database:", storeError);
+        throw storeError;
+      }
+      
+      console.log("Store created successfully:", storeData);
 
       // If user is not an admin, give them access to the store
       if (user && user.role !== 'admin') {
+        console.log("Creating user store access for:", user.id, storeData.id);
         const { error: accessError } = await supabase
           .from('user_store_access')
           .insert({
@@ -57,7 +66,12 @@ export default function CreateStoreDialog() {
             store_id: storeData.id
           });
 
-        if (accessError) throw accessError;
+        if (accessError) {
+          console.error("Error creating store access:", accessError);
+          throw accessError;
+        }
+        
+        console.log("User store access created successfully");
       }
       
       toast.success("Store created successfully");
@@ -71,6 +85,9 @@ export default function CreateStoreDialog() {
 
       // Close the dialog
       setIsOpen(false);
+      
+      // Refresh the page to update the store list
+      window.location.reload();
       
     } catch (error: any) {
       console.error("Error creating store:", error);
