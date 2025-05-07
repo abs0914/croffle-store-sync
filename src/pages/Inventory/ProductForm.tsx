@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "@/contexts/StoreContext";
@@ -52,7 +51,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Spinner } from "@/components/ui/spinner";
-import { ArrowLeft, Plus, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Upload, X, Pencil } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,10 +104,10 @@ export default function ProductForm() {
   const [editingVariation, setEditingVariation] = useState<ProductVariation | null>(null);
   const [variationForm, setVariationForm] = useState({
     name: "",
-    sku: "",
     price: 0,
     stock_quantity: 0,
-    is_active: true
+    is_active: true,
+    sku: ""
   });
   
   // Stock adjustment form state
@@ -222,10 +221,10 @@ export default function ProductForm() {
     setEditingVariation(null);
     setVariationForm({
       name: "",
-      sku: "",
       price: formData.price || 0,
       stock_quantity: 0,
-      is_active: true
+      is_active: true,
+      sku: ""
     });
     setIsVariationDialogOpen(true);
   };
@@ -234,10 +233,10 @@ export default function ProductForm() {
     setEditingVariation(variation);
     setVariationForm({
       name: variation.name,
-      sku: variation.sku,
       price: variation.price,
-      stock_quantity: variation.stockQuantity,
-      is_active: variation.isActive
+      stock_quantity: variation.stock_quantity,
+      is_active: variation.is_active,
+      sku: variation.sku
     });
     setIsVariationDialogOpen(true);
   };
@@ -249,19 +248,19 @@ export default function ProductForm() {
       if (editingVariation) {
         await updateProductVariation(editingVariation.id, {
           name: variationForm.name,
-          sku: variationForm.sku,
           price: variationForm.price,
-          stockQuantity: variationForm.stock_quantity,
-          isActive: variationForm.is_active
+          stock_quantity: variationForm.stock_quantity,
+          is_active: variationForm.is_active,
+          sku: variationForm.sku
         });
       } else {
         await createProductVariation({
-          productId: id,
+          product_id: id,
           name: variationForm.name,
-          sku: variationForm.sku,
           price: variationForm.price,
-          stockQuantity: variationForm.stock_quantity,
-          isActive: variationForm.is_active
+          stock_quantity: variationForm.stock_quantity,
+          is_active: variationForm.is_active,
+          sku: variationForm.sku
         });
       }
       

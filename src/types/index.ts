@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier';
 
 export interface User {
@@ -30,33 +29,47 @@ export interface Store {
 export interface Product {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  categoryId: string;
-  image?: string;
-  isActive: boolean;
+  category_id?: string;
+  categoryId?: string; // For frontend compatibility
+  image_url?: string;
+  image?: string; // For frontend compatibility
+  is_active: boolean;
+  isActive?: boolean; // For frontend compatibility
   variations?: ProductVariation[];
-  storeId?: string;
+  store_id?: string;
+  storeId?: string; // For frontend compatibility
   sku: string;
   barcode?: string;
   cost?: number;
-  stockQuantity: number;
+  stock_quantity: number;
+  stockQuantity?: number; // For frontend compatibility
 }
 
 export interface ProductVariation {
   id: string;
   name: string;
   price: number;
-  isActive: boolean;
-  stockQuantity: number;
+  is_active: boolean;
+  isActive?: boolean; // For frontend compatibility
+  stock_quantity: number;
+  stockQuantity?: number; // For frontend compatibility
+  product_id: string;
+  productId?: string; // For frontend compatibility
+  sku: string;
 }
 
 export interface Category {
   id: string;
   name: string;
   description?: string;
-  image?: string;
-  isActive: boolean;
+  image_url?: string;
+  image?: string; // For frontend compatibility
+  is_active: boolean;
+  isActive?: boolean; // For frontend compatibility
+  store_id?: string;
+  storeId?: string; // For frontend compatibility
 }
 
 export interface CartItem {

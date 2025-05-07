@@ -15,7 +15,18 @@ export const fetchCategories = async (storeId: string): Promise<Category[]> => {
       throw new Error(error.message);
     }
     
-    return data || [];
+    // Map database fields to our TypeScript interface
+    return data?.map(item => ({
+      id: item.id,
+      name: item.name,
+      description: item.description || undefined,
+      image_url: item.image_url || undefined,
+      image: item.image_url || undefined, // For frontend compatibility
+      is_active: item.is_active !== null ? item.is_active : true,
+      isActive: item.is_active !== null ? item.is_active : true, // For frontend compatibility
+      store_id: item.store_id,
+      storeId: item.store_id // For frontend compatibility
+    })) || [];
   } catch (error) {
     console.error("Error fetching categories:", error);
     toast.error("Failed to load categories");
@@ -25,9 +36,17 @@ export const fetchCategories = async (storeId: string): Promise<Category[]> => {
 
 export const createCategory = async (category: Omit<Category, "id">): Promise<Category | null> => {
   try {
+    // Prepare the data for database insertion
+    const dbCategory = {
+      name: category.name,
+      description: category.description || null,
+      is_active: category.is_active !== undefined ? category.is_active : category.isActive,
+      store_id: category.store_id || category.storeId
+    };
+    
     const { data, error } = await supabase
       .from("categories")
-      .insert(category)
+      .insert(dbCategory)
       .select()
       .single();
     
@@ -36,7 +55,19 @@ export const createCategory = async (category: Omit<Category, "id">): Promise<Ca
     }
     
     toast.success("Category created successfully");
-    return data;
+    
+    // Map the response back to our TypeScript interface
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description || undefined,
+      image_url: data.image_url || undefined,
+      image: data.image_url || undefined, 
+      is_active: data.is_active !== null ? data.is_active : true,
+      isActive: data.is_active !== null ? data.is_active : true,
+      store_id: data.store_id,
+      storeId: data.store_id
+    };
   } catch (error) {
     console.error("Error creating category:", error);
     toast.error("Failed to create category");
@@ -46,9 +77,16 @@ export const createCategory = async (category: Omit<Category, "id">): Promise<Ca
 
 export const updateCategory = async (id: string, category: Partial<Category>): Promise<Category | null> => {
   try {
+    // Prepare the data for database update
+    const dbCategory: any = {};
+    if (category.name !== undefined) dbCategory.name = category.name;
+    if (category.description !== undefined) dbCategory.description = category.description;
+    if (category.is_active !== undefined) dbCategory.is_active = category.is_active;
+    else if (category.isActive !== undefined) dbCategory.is_active = category.isActive;
+    
     const { data, error } = await supabase
       .from("categories")
-      .update(category)
+      .update(dbCategory)
       .eq("id", id)
       .select()
       .single();
@@ -58,7 +96,19 @@ export const updateCategory = async (id: string, category: Partial<Category>): P
     }
     
     toast.success("Category updated successfully");
-    return data;
+    
+    // Map the response back to our TypeScript interface
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description || undefined,
+      image_url: data.image_url || undefined,
+      image: data.image_url || undefined,
+      is_active: data.is_active !== null ? data.is_active : true,
+      isActive: data.is_active !== null ? data.is_active : true,
+      store_id: data.store_id,
+      storeId: data.store_id
+    };
   } catch (error) {
     console.error("Error updating category:", error);
     toast.error("Failed to update category");

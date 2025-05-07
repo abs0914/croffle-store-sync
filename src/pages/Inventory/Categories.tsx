@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Pencil, Trash2, Plus, Check, X } from "lucide-react";
+import { Search, Pencil, Trash2, Plus } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
@@ -105,15 +105,15 @@ export default function Categories() {
         await updateCategory(editingCategory.id, {
           name: formData.name,
           description: formData.description || null,
-          isActive: formData.is_active
+          is_active: formData.is_active
         });
       } else {
         // Create new category
         await createCategory({
           name: formData.name,
           description: formData.description || null,
-          storeId: currentStore.id,
-          isActive: formData.is_active
+          store_id: currentStore.id,
+          is_active: formData.is_active
         });
       }
       
