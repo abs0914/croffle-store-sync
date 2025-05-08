@@ -4,15 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, AlertCircle } from "lucide-react";
-import { Product, Category } from "@/types";
+import { Product, Category, ProductVariation } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { fetchProductVariations } from "@/services/productService";
 
 interface ProductGridProps {
   products: Product[];
   categories: Category[];
   activeCategory: string;
   setActiveCategory: (category: string) => void;
-  addItemToCart: (product: Product) => void;
+  addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   isShiftActive: boolean;
   isLoading: boolean;
 }
@@ -27,6 +34,44 @@ export default function ProductGrid({
   isLoading
 }: ProductGridProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productVariations, setProductVariations] = useState<ProductVariation[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoadingVariations, setIsLoadingVariations] = useState(false);
+  
+  // Handle product selection
+  const handleProductClick = async (product: Product) => {
+    if (!isShiftActive || !product.isActive) return;
+    
+    setSelectedProduct(product);
+
+    try {
+      setIsLoadingVariations(true);
+      const variations = await fetchProductVariations(product.id);
+      
+      // If there are variations, show the dialog
+      if (variations && variations.length > 0) {
+        setProductVariations(variations);
+        setIsDialogOpen(true);
+      } else {
+        // If no variations, add the product directly
+        addItemToCart(product);
+      }
+      
+    } catch (error) {
+      console.error("Error loading product variations:", error);
+    } finally {
+      setIsLoadingVariations(false);
+    }
+  };
+
+  // Handle variation selection
+  const handleVariationSelect = (variation: ProductVariation) => {
+    if (selectedProduct) {
+      addItemToCart(selectedProduct, 1, variation);
+      setIsDialogOpen(false);
+    }
+  };
   
   const filteredProducts = products.filter(product => {
     const matchesCategory = activeCategory === "all" || 
@@ -100,7 +145,7 @@ export default function ProductGrid({
                         className={`h-auto p-2 flex flex-col items-center justify-between text-left border-croffle-primary/20 hover:bg-croffle-background hover:border-croffle-primary ${
                           !isShiftActive || !product.isActive ? 'opacity-70' : ''
                         }`}
-                        onClick={() => addItemToCart(product)}
+                        onClick={() => handleProductClick(product)}
                         disabled={!isShiftActive || !product.isActive}
                       >
                         {product.image ? (
@@ -133,7 +178,7 @@ export default function ProductGrid({
                         ? "Start a shift to add items to cart" 
                         : !product.isActive 
                           ? "This product is inactive" 
-                          : `Add ${product.name} to cart`}
+                          : `Select ${product.name}`}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -146,6 +191,51 @@ export default function ProductGrid({
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Product Variations Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{selectedProduct?.name} - Select Size</DialogTitle>
+          </DialogHeader>
+          
+          {isLoadingVariations ? (
+            <div className="py-6 flex justify-center">
+              <p>Loading variations...</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 py-4">
+              {productVariations.map(variation => (
+                <Button 
+                  key={variation.id}
+                  onClick={() => handleVariationSelect(variation)}
+                  className="w-full justify-between"
+                  variant="outline"
+                >
+                  <span>{variation.name}</span>
+                  <span className="font-bold">₱{variation.price.toFixed(2)}</span>
+                </Button>
+              ))}
+              
+              {/* Option to add base product without variation */}
+              {selectedProduct && (
+                <Button
+                  onClick={() => {
+                    if (selectedProduct) {
+                      addItemToCart(selectedProduct);
+                      setIsDialogOpen(false);
+                    }
+                  }}
+                  className="w-full justify-between mt-2"
+                >
+                  <span>Regular (No variation)</span>
+                  <span className="font-bold">₱{selectedProduct.price.toFixed(2)}</span>
+                </Button>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
