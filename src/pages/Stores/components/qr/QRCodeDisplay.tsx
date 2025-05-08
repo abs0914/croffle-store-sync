@@ -2,8 +2,9 @@
 import React, { useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Button } from "@/components/ui/button";
-import { Copy } from "lucide-react";
+import { Copy, Download } from "lucide-react";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface QRCodeDisplayProps {
   qrValue: string;
@@ -12,6 +13,7 @@ interface QRCodeDisplayProps {
 
 export const QRCodeDisplay = ({ qrValue, storeName }: QRCodeDisplayProps) => {
   const qrRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
   
   const downloadQRCode = () => {
     if (!qrRef.current) return;
@@ -35,6 +37,8 @@ export const QRCodeDisplay = ({ qrValue, storeName }: QRCodeDisplayProps) => {
       .catch(() => toast.error("Failed to copy link"));
   };
   
+  const qrSize = isMobile ? 200 : 250;
+  
   return (
     <div className="flex flex-col items-center">
       <div 
@@ -43,7 +47,7 @@ export const QRCodeDisplay = ({ qrValue, storeName }: QRCodeDisplayProps) => {
       >
         <QRCodeCanvas
           value={qrValue}
-          size={250}
+          size={qrSize}
           level="H"
           includeMargin={true}
         />
@@ -56,20 +60,32 @@ export const QRCodeDisplay = ({ qrValue, storeName }: QRCodeDisplayProps) => {
         </p>
       </div>
       
-      <div className="flex items-center border rounded-md pl-3 pr-1 py-1 w-full max-w-md">
-        <input
-          type="text"
-          value={qrValue}
-          readOnly
-          className="flex-1 outline-none text-sm bg-transparent"
-        />
+      <div className="flex flex-col sm:flex-row w-full max-w-md space-y-2 sm:space-y-0">
+        <div className="flex items-center border rounded-md pl-3 pr-1 py-1 w-full">
+          <input
+            type="text"
+            value={qrValue}
+            readOnly
+            className="flex-1 outline-none text-sm bg-transparent"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={copyLink}
+            className="text-croffle-primary h-8 px-2"
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
+        
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          onClick={copyLink}
-          className="text-croffle-primary h-8 px-2"
+          onClick={downloadQRCode}
+          className="ml-0 sm:ml-2 flex items-center justify-center"
         >
-          <Copy className="h-4 w-4" />
+          <Download className="mr-1 h-4 w-4" />
+          Download
         </Button>
       </div>
     </div>

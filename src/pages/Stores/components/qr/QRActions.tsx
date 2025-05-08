@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Link, QrCode, Download } from "lucide-react";
+import { ArrowLeft, QrCode, Download, Eye } from "lucide-react";
 
 interface QRActionsProps {
   storeId: string | undefined;
@@ -13,25 +13,27 @@ export const QRActions = ({ storeId, onDownload }: QRActionsProps) => {
   const navigate = useNavigate();
   
   return (
-    <div className="flex justify-between">
+    <div className="flex flex-col sm:flex-row justify-between gap-2">
       <Button
         variant="outline"
         onClick={() => navigate("/stores")}
+        className="flex-shrink-0"
       >
-        <Link className="mr-2 h-4 w-4" />
+        <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Stores
       </Button>
       
-      <div className="space-x-2">
+      <div className="flex space-x-2">
         <Button
           variant="outline"
           onClick={() => navigate(`/stores/${storeId}/qr/preview`)}
+          className="flex-grow sm:flex-grow-0"
         >
-          <QrCode className="mr-2 h-4 w-4" />
+          <Eye className="mr-2 h-4 w-4" />
           Preview Form
         </Button>
         <Button
-          className="bg-croffle-primary hover:bg-croffle-primary/90"
+          className="bg-croffle-primary hover:bg-croffle-primary/90 flex-grow sm:flex-grow-0"
           onClick={onDownload}
         >
           <Download className="mr-2 h-4 w-4" />

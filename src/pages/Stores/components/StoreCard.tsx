@@ -8,7 +8,8 @@ import {
   Edit, 
   QrCode, 
   Settings, 
-  Trash 
+  Trash,
+  Store as StoreIcon 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -25,6 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface StoreCardProps {
   store: Store;
@@ -33,6 +35,7 @@ interface StoreCardProps {
 
 export const StoreCard = ({ store, onDelete }: StoreCardProps) => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const handleDeleteClick = () => {
     onDelete(store.id);
@@ -42,9 +45,14 @@ export const StoreCard = ({ store, onDelete }: StoreCardProps) => {
     <Card className="shadow-sm hover:shadow transition-shadow">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-xl">{store.name}</CardTitle>
-            <CardDescription className="mt-1">{store.address}</CardDescription>
+          <div className="flex items-start gap-3">
+            <div className="rounded-full bg-gray-100 p-2 hidden sm:flex">
+              <StoreIcon className="h-5 w-5 text-croffle-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">{store.name}</CardTitle>
+              <CardDescription className="mt-1">{store.address}</CardDescription>
+            </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -78,32 +86,35 @@ export const StoreCard = ({ store, onDelete }: StoreCardProps) => {
         </div>
       </CardHeader>
       <CardContent className="pt-2 pb-4">
-        {store.phone && (
-          <div className="text-sm mb-1">
-            <span className="font-medium">Phone:</span> {store.phone}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
+          {store.phone && (
+            <div className="text-sm">
+              <span className="font-medium">Phone:</span> {store.phone}
+            </div>
+          )}
+          {store.email && (
+            <div className="text-sm">
+              <span className="font-medium">Email:</span> {store.email}
+            </div>
+          )}
+          {store.tax_id && (
+            <div className="text-sm">
+              <span className="font-medium">Tax ID:</span> {store.tax_id}
+            </div>
+          )}
+          <div className="text-sm">
+            <span className="font-medium">Status:</span>
+            <span className={store.is_active ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
+              {store.is_active ? "Active" : "Inactive"}
+            </span>
           </div>
-        )}
-        {store.email && (
-          <div className="text-sm mb-1">
-            <span className="font-medium">Email:</span> {store.email}
-          </div>
-        )}
-        {store.tax_id && (
-          <div className="text-sm mb-1">
-            <span className="font-medium">Tax ID:</span> {store.tax_id}
-          </div>
-        )}
-        <div className="text-sm">
-          <span className="font-medium">Status:</span>
-          <span className={store.is_active ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
-            {store.is_active ? "Active" : "Inactive"}
-          </span>
         </div>
       </CardContent>
-      <CardFooter className="pt-0 flex justify-between">
+      <CardFooter className="pt-0 flex flex-col sm:flex-row justify-between gap-2">
         <Button
           variant="outline"
           size="sm"
+          className="w-full sm:w-auto"
           onClick={() => navigate(`/stores/${store.id}`)}
         >
           View Details
@@ -111,6 +122,7 @@ export const StoreCard = ({ store, onDelete }: StoreCardProps) => {
         <Button
           variant="outline"
           size="sm"
+          className="w-full sm:w-auto"
           onClick={() => navigate(`/stores/${store.id}/qr`)}
         >
           <QrCode className="mr-1 h-4 w-4" /> Generate QR

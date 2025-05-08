@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,18 +7,55 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Store } from "@/types";
 
 export default function CustomerForm() {
   const { storeId } = useParams();
   const navigate = useNavigate();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [store, setStore] = useState<Store | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     email: "",
   });
+  
+  useEffect(() => {
+    const fetchStore = async () => {
+      if (!storeId) {
+        setError("Invalid store ID");
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from("stores")
+          .select("*")
+          .eq("id", storeId)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          setStore(data as Store);
+        } else {
+          setError("Store not found");
+        }
+      } catch (error: any) {
+        console.error("Error fetching store:", error);
+        setError("Failed to load store information");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchStore();
+  }, [storeId]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -70,16 +107,53 @@ export default function CustomerForm() {
     }
   };
   
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-md flex justify-center items-center min-h-[50vh]">
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-croffle-primary" />
+          <p className="mt-4 text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error || !store) {
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-md">
+        <Card className="shadow-lg">
+          <CardHeader className="text-center pb-2">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-2" />
+            <CardTitle className="text-2xl font-bold text-red-500">
+              Error
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-gray-700">{error || "Failed to load the form"}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   return (
     <div className="container mx-auto py-8 px-4 max-w-md">
       <Card className="shadow-lg">
         <CardHeader className="text-center pb-2">
           <div className="mb-4">
-            <img
-              src="/lovable-uploads/e4103c2a-e57f-45f0-9999-1567aeda3f3d.png"
-              alt="The Croffle Store"
-              className="h-24 mx-auto"
-            />
+            {store.logo_url ? (
+              <img
+                src={store.logo_url}
+                alt={store.name}
+                className="h-24 mx-auto"
+              />
+            ) : (
+              <img
+                src="/lovable-uploads/e4103c2a-e57f-45f0-9999-1567aeda3f3d.png"
+                alt="The Croffle Store"
+                className="h-24 mx-auto"
+              />
+            )}
           </div>
           <CardTitle className="text-2xl font-bold text-croffle-primary">
             Join Our Loyalty Program
@@ -89,7 +163,7 @@ export default function CustomerForm() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4 pt-4">
             <p className="text-sm text-center text-gray-500 mb-4">
-              Sign up to receive special offers and rewards!
+              Sign up to receive special offers and rewards at {store.name}!
             </p>
             
             <div className="space-y-2">

@@ -13,6 +13,11 @@ import { StoreProvider } from "./contexts/StoreContext";
 import { ShiftProvider } from "./contexts/shift";
 import { StoreDisplayProvider } from "./contexts/StoreDisplayContext";
 import Stores from "./pages/Stores";
+import StoreForm from "./pages/Stores/StoreForm";
+import StoreSettings from "./pages/Stores/StoreSettings";
+import StoreQR from "./pages/Stores/StoreQR";
+import CustomerForm from "./pages/Stores/CustomerForm";
+import CustomerFormPreview from "./pages/Stores/CustomerFormPreview";
 import InventoryStock from "./pages/Inventory/InventoryStock";
 import Inventory from "./pages/Inventory"; 
 import Reports from "./pages/Reports"; 
@@ -52,6 +57,11 @@ function App() {
                 <Route path="/customers" element={<MainLayout><CustomerManagement /></MainLayout>} />
                 <Route path="/pos" element={<MainLayout><POS /></MainLayout>} />
                 <Route path="/stores" element={<MainLayout><Stores /></MainLayout>} />
+                <Route path="/stores/:id" element={<MainLayout><StoreForm /></MainLayout>} />
+                <Route path="/stores/:id/settings" element={<MainLayout><StoreSettings /></MainLayout>} />
+                <Route path="/stores/:id/qr" element={<MainLayout><StoreQR /></MainLayout>} />
+                <Route path="/stores/:id/qr/preview" element={<MainLayout><CustomerFormPreview /></MainLayout>} />
+                <Route path="/customer-form/:storeId" element={<CustomerForm />} />
                 <Route path="/inventory" element={<MainLayout><Inventory /></MainLayout>} />
                 <Route path="/inventory/stock" element={<MainLayout><InventoryStock /></MainLayout>} />
                 <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
