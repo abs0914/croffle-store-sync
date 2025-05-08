@@ -17,11 +17,25 @@ export const parseInventoryStockCSV = async (csvData: string, storeId: string): 
       };
       
       headers.forEach((header, i) => {
-        if (header === 'is_active') {
-          stockItem[header] = values[i].toLowerCase() === 'true';
-        } else if (header === 'stock_quantity') {
+        // Map 'name' field to 'item' in database
+        if (header === 'name') {
+          stockItem['item'] = values[i];
+        }
+        // Map 'measure' field to 'unit' in database
+        else if (header === 'measure') {
+          stockItem['unit'] = values[i];
+        }
+        // Convert numeric fields
+        else if (header === 'stock_quantity') {
           stockItem[header] = parseInt(values[i], 10);
-        } else {
+        }
+        else if (header === 'cost') {
+          stockItem[header] = parseFloat(values[i]);
+        }
+        else if (header === 'is_active') {
+          stockItem[header] = values[i].toLowerCase() === 'true';
+        }
+        else {
           stockItem[header] = values[i];
         }
       });
@@ -110,15 +124,16 @@ export const parseInventoryStockCSV = async (csvData: string, storeId: string): 
 
 // Generate CSV from inventory stock items
 export const generateInventoryStockCSV = (stockItems: InventoryStock[]): string => {
-  const headers = ['item', 'unit', 'stock_quantity', 'is_active'];
+  const headers = ['name', 'sku', 'measure', 'stock_quantity', 'cost'];
   const csvRows = [headers.join(',')];
   
   stockItems.forEach(item => {
     const row = [
       `"${item.item.replace(/"/g, '""')}"`,
+      `"${item.sku || ''}".replace(/"/g, '""')`,
       `"${item.unit.replace(/"/g, '""')}"`,
       item.stock_quantity,
-      item.is_active ? 'true' : 'false'
+      item.cost || '0'
     ];
     
     csvRows.push(row.join(','));
@@ -129,21 +144,23 @@ export const generateInventoryStockCSV = (stockItems: InventoryStock[]): string 
 
 // Generate inventory stock import template
 export const generateInventoryStockImportTemplate = (): string => {
-  const headers = ['item', 'unit', 'stock_quantity', 'is_active'];
+  const headers = ['name', 'sku', 'measure', 'stock_quantity', 'cost'];
   const csvContent = headers.join(',');
   
   const exampleRow1 = [
     '"Coffee Beans"',
+    '"COFFEE-001"',
     '"kg"',
     '50',
-    'true'
+    '250'
   ].join(',');
   
   const exampleRow2 = [
     '"Milk"',
+    '"MILK-001"',
     '"liter"',
     '100',
-    'true'
+    '80'
   ].join(',');
   
   return `${csvContent}\n${exampleRow1}\n${exampleRow2}`;

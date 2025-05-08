@@ -193,8 +193,10 @@ export interface InventoryStock {
   id: string;
   store_id: string;
   item: string;
+  sku?: string;
   unit: string;
   stock_quantity: number;
+  cost?: number;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
