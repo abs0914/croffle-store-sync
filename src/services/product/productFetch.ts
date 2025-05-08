@@ -9,7 +9,7 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       .from("products")
       .select(`
         *,
-        category:category_id(id, name)
+        category:category_id(id, name, is_active, image_url, description)
       `)
       .eq("store_id", storeId)
       .order("name");
@@ -26,7 +26,17 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       price: item.price,
       category_id: item.category_id || undefined,
       categoryId: item.category_id || undefined,
-      category: item.category, // Include the full category object
+      category: item.category ? {
+        id: item.category.id,
+        name: item.category.name,
+        is_active: item.category.is_active !== null ? item.category.is_active : true,
+        isActive: item.category.is_active !== null ? item.category.is_active : true,
+        image_url: item.category.image_url || undefined,
+        image: item.category.image_url || undefined,
+        description: item.category.description || undefined,
+        store_id: storeId, // Since we're filtering by storeId, this is the store_id
+        storeId: storeId // For frontend compatibility
+      } : undefined,
       image_url: item.image_url || undefined,
       image: item.image_url || undefined,
       is_active: item.is_active !== null ? item.is_active : true,
@@ -52,7 +62,7 @@ export const fetchProduct = async (id: string): Promise<Product | null> => {
       .from("products")
       .select(`
         *,
-        category:category_id(id, name)
+        category:category_id(id, name, is_active, image_url, description)
       `)
       .eq("id", id)
       .single();
@@ -61,6 +71,9 @@ export const fetchProduct = async (id: string): Promise<Product | null> => {
       throw new Error(error.message);
     }
     
+    // Get the store_id for use in the category object
+    const storeId = data.store_id;
+
     // Map database fields to our TypeScript interface
     return {
       id: data.id,
@@ -69,7 +82,17 @@ export const fetchProduct = async (id: string): Promise<Product | null> => {
       price: data.price,
       category_id: data.category_id || undefined,
       categoryId: data.category_id || undefined,
-      category: data.category, // Include the full category object
+      category: data.category ? {
+        id: data.category.id,
+        name: data.category.name,
+        is_active: data.category.is_active !== null ? data.category.is_active : true,
+        isActive: data.category.is_active !== null ? data.category.is_active : true,
+        image_url: data.category.image_url || undefined,
+        image: data.category.image_url || undefined,
+        description: data.category.description || undefined,
+        store_id: storeId,
+        storeId: storeId
+      } : undefined,
       image_url: data.image_url || undefined,
       image: data.image_url || undefined,
       is_active: data.is_active !== null ? data.is_active : true,
