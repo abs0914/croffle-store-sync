@@ -33,10 +33,11 @@ export const transferInventoryStock = async (
     const previousSourceQuantity = sourceItem.stock_quantity;
     const newSourceQuantity = previousSourceQuantity - quantity;
     
-    // Begin a transaction for consistency
-    const user = await supabase.auth.getUser();
-    const userId = user.data.user?.id || '';
+    // Get current user for the transaction record
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
     
+    // Call the database function we just created
     const { error: transactionError } = await supabase.rpc('transfer_inventory_stock', {
       p_source_id: sourceId,
       p_target_store_id: targetStoreId,

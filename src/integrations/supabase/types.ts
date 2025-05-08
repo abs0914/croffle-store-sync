@@ -441,7 +441,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      transfer_inventory_stock: {
+        Args: {
+          p_source_id: string
+          p_target_store_id: string
+          p_item: string
+          p_unit: string
+          p_quantity: number
+          p_notes?: string
+          p_user_id?: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
