@@ -15,7 +15,7 @@ import { StoreDisplayProvider } from "./contexts/StoreDisplayContext";
 import Stores from "./pages/Stores";
 import InventoryStock from "./pages/Inventory/InventoryStock";
 import Inventory from "./pages/Inventory"; 
-import Reports from "./pages/Reports"; // Import the new Reports component
+import Reports from "./pages/Reports"; 
 
 function App() {
   return (
@@ -34,7 +34,6 @@ function App() {
                 <Route path="/inventory" element={<MainLayout><Inventory /></MainLayout>} />
                 <Route path="/inventory/stock" element={<MainLayout><InventoryStock /></MainLayout>} />
                 <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
-                <Route path="/sales" element={<MainLayout><Dashboard /></MainLayout>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <Toaster position="top-right" />

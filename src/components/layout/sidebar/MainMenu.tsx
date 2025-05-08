@@ -7,7 +7,6 @@ import {
   Package, 
   Store, 
   Warehouse, 
-  History, 
   Users,
   FileBarChart
 } from "lucide-react";
@@ -46,7 +45,6 @@ export const MainMenu: React.FC = () => {
     { name: "Inventory Stock", path: "/inventory/stock", icon: <Warehouse className="w-5 h-5" /> },
     { name: "Reports", path: "/reports", icon: <FileBarChart className="w-5 h-5" /> },
     { name: "Customers", path: "/customers", icon: <Users className="w-5 h-5" /> },
-    { name: "Sales", path: "/sales", icon: <History className="w-5 h-5" /> },
   ];
 
   return (
