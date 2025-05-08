@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,7 +148,7 @@ export default function ProductGrid({
                         disabled={!isShiftActive || !product.isActive}
                       >
                         {product.image ? (
-                          <div className="w-full h-16 bg-gray-100 rounded-md overflow-hidden mb-2">
+                          <div className="w-full h-24 bg-gray-100 rounded-md overflow-hidden mb-2">
                             <img 
                               src={product.image} 
                               alt={product.name} 
@@ -157,7 +156,7 @@ export default function ProductGrid({
                             />
                           </div>
                         ) : (
-                          <div className="w-full h-16 bg-croffle-background rounded-md flex items-center justify-center mb-2">
+                          <div className="w-full h-24 bg-croffle-background rounded-md flex items-center justify-center mb-2">
                             <span className="text-croffle-primary">No image</span>
                           </div>
                         )}
@@ -166,7 +165,6 @@ export default function ProductGrid({
                           <p className="text-xs text-muted-foreground">
                             {product.category ? product.category.name : getCategoryName(product.category_id)}
                           </p>
-                          <p className="text-croffle-primary font-bold">₱{product.price.toFixed(2)}</p>
                           {!product.isActive && (
                             <span className="inline-block bg-gray-200 text-gray-700 text-xs px-1 rounded mt-1">Inactive</span>
                           )}
