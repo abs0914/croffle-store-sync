@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCategories, createCategory, updateCategory, deleteCategory } from "@/services/categoryService";
+import { createDefaultCategories } from "@/services/product/createDefaultCategories";
 import { Category } from "@/types";
 import { toast } from "sonner";
 import {
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Pencil, Trash2, Plus } from "lucide-react";
+import { Search, Pencil, Trash2, Plus, Package } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
@@ -133,14 +134,30 @@ export default function Categories() {
     }
   };
   
+  const handleCreateDefaultCategories = async () => {
+    if (!currentStore?.id) {
+      toast.error("No store selected");
+      return;
+    }
+    
+    await createDefaultCategories(currentStore.id);
+    refetch();
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-croffle-primary">Product Categories</h1>
-        <Button onClick={handleAdd}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Category
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleCreateDefaultCategories}>
+            <Package className="mr-2 h-4 w-4" />
+            Add Default Categories
+          </Button>
+          <Button onClick={handleAdd}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Category
+          </Button>
+        </div>
       </div>
       
       <div className="relative">
