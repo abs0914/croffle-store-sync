@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 type DisplayMode = "full" | "compact" | "hidden";
@@ -31,7 +31,7 @@ export function StoreDisplayProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   
   // Adjust display modes based on current route
-  useState(() => {
+  useEffect(() => {
     if (location.pathname === '/pos') {
       // In POS, show in content, hide in header
       setConfig({

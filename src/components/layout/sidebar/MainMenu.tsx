@@ -6,12 +6,9 @@ import {
   ShoppingCart, 
   Package, 
   Store, 
-  LayoutDashboard, 
-  Package2, 
   Warehouse, 
   History, 
-  Users, 
-  Menu 
+  Users 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
