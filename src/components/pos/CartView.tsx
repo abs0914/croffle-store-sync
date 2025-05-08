@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem, Customer } from "@/types";
-import CustomerLookup from "./CustomerLookup";
+import { CustomerLookup } from "@/components/pos/customer";
 import DiscountSelector from "./DiscountSelector";
 import PaymentProcessor from "./PaymentProcessor";
 
