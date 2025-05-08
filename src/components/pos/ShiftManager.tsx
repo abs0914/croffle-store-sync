@@ -1,5 +1,5 @@
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,23 @@ export default function ShiftManager() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  // Clean up camera resources when component unmounts
+  useEffect(() => {
+    return () => {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  // Reset camera state when dialogs close
+  useEffect(() => {
+    if (!isStartShiftOpen && !isEndShiftOpen) {
+      stopCamera();
+      setPhoto(null);
+    }
+  }, [isStartShiftOpen, isEndShiftOpen]);
 
   const handleStartShift = async () => {
     const success = await startShift(startingCash, photo || undefined);
@@ -48,12 +65,28 @@ export default function ShiftManager() {
 
   const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
+      // Stop any existing streams first
+      stopCamera();
+      
+      const constraints = { 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current) {
+            videoRef.current.play().catch(err => {
+              console.error("Error playing video:", err);
+            });
+          }
+        };
         mediaStreamRef.current = stream;
       }
       
@@ -69,14 +102,20 @@ export default function ShiftManager() {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
       mediaStreamRef.current = null;
     }
+    
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    
     setShowCamera(false);
   }, []);
 
   const capturePhoto = useCallback(() => {
-    if (videoRef.current && canvasRef.current) {
+    if (videoRef.current && canvasRef.current && videoRef.current.videoWidth > 0) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       
+      // Set canvas dimensions to match video
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       
@@ -102,12 +141,60 @@ export default function ShiftManager() {
         }
         
         // Convert to data URL
-        const dataUrl = canvas.toDataURL('image/jpeg');
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         setPhoto(dataUrl);
         stopCamera();
       }
+    } else {
+      console.error('Video or canvas not properly initialized');
+      toast.error('Could not capture photo, please try again');
     }
   }, [currentStore, stopCamera]);
+
+  // Camera component for reuse
+  const CameraComponent = ({ onCapture }: { onCapture: () => void }) => (
+    <div className="space-y-2">
+      <Label>Capture Photo (Optional)</Label>
+      {showCamera ? (
+        <div className="relative">
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            className="w-full h-48 object-cover rounded-md"
+          />
+          <Button 
+            onClick={onCapture} 
+            className="absolute bottom-2 left-1/2 transform -translate-x-1/2"
+          >
+            Capture
+          </Button>
+        </div>
+      ) : photo ? (
+        <div className="relative">
+          <img 
+            src={photo} 
+            alt="Captured photo" 
+            className="w-full h-48 object-cover rounded-md" 
+          />
+          <Button 
+            onClick={() => { setPhoto(null); startCamera(); }} 
+            variant="outline" 
+            size="sm"
+            className="absolute bottom-2 right-2"
+          >
+            Retake
+          </Button>
+        </div>
+      ) : (
+        <Button onClick={startCamera} variant="outline" className="w-full">
+          <Camera className="mr-2 h-4 w-4" />
+          Take Photo
+        </Button>
+      )}
+      <canvas ref={canvasRef} className="hidden" />
+    </div>
+  );
 
   return (
     <Card className="mb-4">
@@ -148,47 +235,7 @@ export default function ShiftManager() {
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label>Capture Photo (Optional)</Label>
-                    {showCamera ? (
-                      <div className="relative">
-                        <video 
-                          ref={videoRef} 
-                          autoPlay 
-                          playsInline 
-                          className="w-full h-48 object-cover rounded-md"
-                        />
-                        <Button 
-                          onClick={capturePhoto} 
-                          className="absolute bottom-2 left-1/2 transform -translate-x-1/2"
-                        >
-                          Capture
-                        </Button>
-                      </div>
-                    ) : photo ? (
-                      <div className="relative">
-                        <img 
-                          src={photo} 
-                          alt="Captured photo" 
-                          className="w-full h-48 object-cover rounded-md" 
-                        />
-                        <Button 
-                          onClick={() => { setPhoto(null); startCamera(); }} 
-                          variant="outline" 
-                          size="sm"
-                          className="absolute bottom-2 right-2"
-                        >
-                          Retake
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button onClick={startCamera} variant="outline" className="w-full">
-                        <Camera className="mr-2 h-4 w-4" />
-                        Take Photo
-                      </Button>
-                    )}
-                    <canvas ref={canvasRef} className="hidden" />
-                  </div>
+                  <CameraComponent onCapture={capturePhoto} />
                 </div>
                 
                 <DialogFooter>
@@ -235,47 +282,7 @@ export default function ShiftManager() {
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label>Capture Photo (Optional)</Label>
-                    {showCamera ? (
-                      <div className="relative">
-                        <video 
-                          ref={videoRef} 
-                          autoPlay 
-                          playsInline 
-                          className="w-full h-48 object-cover rounded-md"
-                        />
-                        <Button 
-                          onClick={capturePhoto} 
-                          className="absolute bottom-2 left-1/2 transform -translate-x-1/2"
-                        >
-                          Capture
-                        </Button>
-                      </div>
-                    ) : photo ? (
-                      <div className="relative">
-                        <img 
-                          src={photo} 
-                          alt="Captured photo" 
-                          className="w-full h-48 object-cover rounded-md" 
-                        />
-                        <Button 
-                          onClick={() => { setPhoto(null); startCamera(); }} 
-                          variant="outline" 
-                          size="sm"
-                          className="absolute bottom-2 right-2"
-                        >
-                          Retake
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button onClick={startCamera} variant="outline" className="w-full">
-                        <Camera className="mr-2 h-4 w-4" />
-                        Take Photo
-                      </Button>
-                    )}
-                    <canvas ref={canvasRef} className="hidden" />
-                  </div>
+                  <CameraComponent onCapture={capturePhoto} />
                 </div>
                 
                 <DialogFooter>
