@@ -159,13 +159,15 @@ export const fetchCustomerByPhone = async (phone: string): Promise<Customer | nu
     
     if (!data) return null;
     
+    // Create a Customer object with optional fields that match your Customer type
     return {
       id: data.id,
       name: data.name,
       email: data.email,
       phone: data.phone,
-      address: data.address,
-      loyaltyPoints: data.loyalty_points
+      // Use optional chaining to safely handle potentially missing properties
+      address: data.address || undefined,
+      loyaltyPoints: data.loyalty_points || 0
     };
   } catch (error) {
     console.error("Error fetching customer:", error);
@@ -199,8 +201,8 @@ export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { 
         name: data.name,
         email: data.email,
         phone: data.phone,
-        address: data.address,
-        loyaltyPoints: data.loyalty_points
+        address: data.address || undefined,
+        loyaltyPoints: data.loyalty_points || 0
       };
     } else {
       // Create new customer
@@ -224,8 +226,8 @@ export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { 
         name: data.name,
         email: data.email,
         phone: data.phone,
-        address: data.address,
-        loyaltyPoints: data.loyalty_points
+        address: data.address || undefined,
+        loyaltyPoints: data.loyalty_points || 0
       };
     }
   } catch (error) {
