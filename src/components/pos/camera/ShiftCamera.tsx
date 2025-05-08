@@ -42,6 +42,11 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         } 
       };
       
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Browser does not support camera access');
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       if (videoRef.current) {
@@ -50,6 +55,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
           if (videoRef.current) {
             videoRef.current.play().catch(err => {
               console.error("Error playing video:", err);
+              toast.error("Could not start video: " + err.message);
             });
           }
         };
@@ -57,6 +63,9 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
       }
       
       setShowCamera(true);
+      
+      // Debug log to verify camera is starting
+      console.log('Camera started, stream tracks:', stream.getTracks().length);
     } catch (error) {
       console.error('Error accessing camera:', error);
       toast.error('Failed to access camera. Please check permissions.');
@@ -114,6 +123,9 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
       }
     } else {
       console.error('Video or canvas not properly initialized');
+      if (!videoRef.current) console.error('Video ref is null');
+      else if (videoRef.current.videoWidth === 0) console.error('Video has no width/height');
+      if (!canvasRef.current) console.error('Canvas ref is null');
       toast.error('Could not capture photo, please try again');
     }
   }, [currentStore, stopCamera, onCapture]);
@@ -126,6 +138,28 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     }
   };
 
+  // Helper to log video element state for debugging
+  const logVideoState = () => {
+    if (videoRef.current) {
+      console.log('Video element state:', {
+        width: videoRef.current.videoWidth,
+        height: videoRef.current.videoHeight,
+        readyState: videoRef.current.readyState,
+        paused: videoRef.current.paused,
+        error: videoRef.current.error
+      });
+    } else {
+      console.log('Video element is null');
+    }
+  };
+
+  // Auto-start camera when opening dialog if the component requests it
+  useEffect(() => {
+    if (showCamera) {
+      logVideoState();
+    }
+  }, [showCamera]);
+
   return (
     <div className="space-y-2">
       <Label>Capture Photo (Optional)</Label>
@@ -135,7 +169,8 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
             ref={videoRef} 
             autoPlay 
             playsInline 
-            className="w-full h-48 object-cover rounded-md"
+            className="w-full h-48 object-cover rounded-md border border-input bg-muted"
+            onClick={() => logVideoState()}
           />
           <Button 
             onClick={capturePhoto}
