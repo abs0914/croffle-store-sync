@@ -1,200 +1,32 @@
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { useShift } from "@/contexts/ShiftContext";
-import { useStore } from "@/contexts/StoreContext";
 import { format } from "date-fns";
-import { Camera } from "lucide-react";
-import { toast } from "sonner";
+import StartShiftDialog from "./dialogs/StartShiftDialog";
+import EndShiftDialog from "./dialogs/EndShiftDialog";
 
 export default function ShiftManager() {
   const { currentShift, startShift, endShift } = useShift();
-  const { currentStore } = useStore();
   const [isStartShiftOpen, setIsStartShiftOpen] = useState(false);
   const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
-  const [startingCash, setStartingCash] = useState<number>(0);
-  const [endingCash, setEndingCash] = useState<number>(0);
-  const [showCamera, setShowCamera] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
 
-  // Clean up camera resources when component unmounts
-  useEffect(() => {
-    return () => {
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
-
-  // Reset camera state when dialogs close
-  useEffect(() => {
-    if (!isStartShiftOpen && !isEndShiftOpen) {
-      stopCamera();
-      setPhoto(null);
-    }
-  }, [isStartShiftOpen, isEndShiftOpen]);
-
-  const handleStartShift = async () => {
-    const success = await startShift(startingCash, photo || undefined);
+  const handleStartShift = async (startingCash: number, photo?: string) => {
+    const success = await startShift(startingCash, photo);
     if (success) {
       setIsStartShiftOpen(false);
-      setStartingCash(0);
-      setPhoto(null);
-      stopCamera();
     }
   };
 
-  const handleEndShift = async () => {
+  const handleEndShift = async (endingCash: number, photo?: string) => {
     if (!currentShift) return;
     
-    const success = await endShift(endingCash, photo || undefined);
+    const success = await endShift(endingCash, photo);
     if (success) {
       setIsEndShiftOpen(false);
-      setEndingCash(0);
-      setPhoto(null);
-      stopCamera();
     }
   };
-
-  const startCamera = useCallback(async () => {
-    try {
-      // Stop any existing streams first
-      stopCamera();
-      
-      const constraints = { 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      };
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current) {
-            videoRef.current.play().catch(err => {
-              console.error("Error playing video:", err);
-            });
-          }
-        };
-        mediaStreamRef.current = stream;
-      }
-      
-      setShowCamera(true);
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      toast.error('Failed to access camera. Please check permissions.');
-    }
-  }, []);
-
-  const stopCamera = useCallback(() => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      mediaStreamRef.current = null;
-    }
-    
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    
-    setShowCamera(false);
-  }, []);
-
-  const capturePhoto = useCallback(() => {
-    if (videoRef.current && canvasRef.current && videoRef.current.videoWidth > 0) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      
-      // Set canvas dimensions to match video
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        // Draw the video frame to the canvas
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Draw timestamp on the photo
-        const now = new Date();
-        const timestamp = format(now, "yyyy-MM-dd HH:mm:ss");
-        
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
-        
-        ctx.font = '16px Arial';
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'right';
-        ctx.fillText(timestamp, canvas.width - 10, canvas.height - 10);
-        if (currentStore) {
-          ctx.textAlign = 'left';
-          ctx.fillText(currentStore.name, 10, canvas.height - 10);
-        }
-        
-        // Convert to data URL
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        setPhoto(dataUrl);
-        stopCamera();
-      }
-    } else {
-      console.error('Video or canvas not properly initialized');
-      toast.error('Could not capture photo, please try again');
-    }
-  }, [currentStore, stopCamera]);
-
-  // Camera component for reuse
-  const CameraComponent = ({ onCapture }: { onCapture: () => void }) => (
-    <div className="space-y-2">
-      <Label>Capture Photo (Optional)</Label>
-      {showCamera ? (
-        <div className="relative">
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            className="w-full h-48 object-cover rounded-md"
-          />
-          <Button 
-            onClick={onCapture} 
-            className="absolute bottom-2 left-1/2 transform -translate-x-1/2"
-          >
-            Capture
-          </Button>
-        </div>
-      ) : photo ? (
-        <div className="relative">
-          <img 
-            src={photo} 
-            alt="Captured photo" 
-            className="w-full h-48 object-cover rounded-md" 
-          />
-          <Button 
-            onClick={() => { setPhoto(null); startCamera(); }} 
-            variant="outline" 
-            size="sm"
-            className="absolute bottom-2 right-2"
-          >
-            Retake
-          </Button>
-        </div>
-      ) : (
-        <Button onClick={startCamera} variant="outline" className="w-full">
-          <Camera className="mr-2 h-4 w-4" />
-          Take Photo
-        </Button>
-      )}
-      <canvas ref={canvasRef} className="hidden" />
-    </div>
-  );
 
   return (
     <Card className="mb-4">
@@ -210,95 +42,36 @@ export default function ShiftManager() {
               <p>Starting Cash: ₱{currentShift.startingCash.toFixed(2)}</p>
             </div>
             
-            <Dialog open={isEndShiftOpen} onOpenChange={setIsEndShiftOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full mt-2 bg-red-500 hover:bg-red-600">End Shift</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>End Current Shift</DialogTitle>
-                  <DialogDescription>
-                    Please count your cash drawer and enter the ending amount.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="endingCash">Ending Cash Amount</Label>
-                    <Input
-                      id="endingCash"
-                      type="number"
-                      value={endingCash || ''}
-                      onChange={(e) => setEndingCash(Number(e.target.value))}
-                      placeholder="0.00"
-                      className="col-span-3"
-                    />
-                  </div>
-                  
-                  <CameraComponent onCapture={capturePhoto} />
-                </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => {
-                    setIsEndShiftOpen(false);
-                    stopCamera();
-                    setPhoto(null);
-                  }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleEndShift}>
-                    End Shift
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <EndShiftDialog
+              isOpen={isEndShiftOpen}
+              onOpenChange={setIsEndShiftOpen}
+              currentShift={currentShift}
+              onEndShift={handleEndShift}
+            />
+            
+            <Button 
+              className="w-full mt-2 bg-red-500 hover:bg-red-600"
+              onClick={() => setIsEndShiftOpen(true)}
+            >
+              End Shift
+            </Button>
           </div>
         ) : (
           <div>
             <p className="text-muted-foreground mb-2">No active shift. Start a shift to begin processing transactions.</p>
             
-            <Dialog open={isStartShiftOpen} onOpenChange={setIsStartShiftOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full">Start Shift</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Start New Shift</DialogTitle>
-                  <DialogDescription>
-                    Please count your cash drawer and enter the starting amount.
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="startingCash">Starting Cash Amount</Label>
-                    <Input
-                      id="startingCash"
-                      type="number"
-                      value={startingCash || ''}
-                      onChange={(e) => setStartingCash(Number(e.target.value))}
-                      placeholder="0.00"
-                      className="col-span-3"
-                    />
-                  </div>
-                  
-                  <CameraComponent onCapture={capturePhoto} />
-                </div>
-                
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => {
-                    setIsStartShiftOpen(false);
-                    stopCamera();
-                    setPhoto(null);
-                  }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleStartShift}>
-                    Start Shift
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <StartShiftDialog
+              isOpen={isStartShiftOpen}
+              onOpenChange={setIsStartShiftOpen}
+              onStartShift={handleStartShift}
+            />
+            
+            <Button 
+              className="w-full"
+              onClick={() => setIsStartShiftOpen(true)}
+            >
+              Start Shift
+            </Button>
           </div>
         )}
       </CardContent>
