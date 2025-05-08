@@ -102,6 +102,7 @@ export default function ProductForm() {
                 handleInputChange={handleInputChange}
                 handleCheckboxChange={handleCheckboxChange}
                 handleSelectChange={handleSelectChange}
+                handleAdjustStock={handleAdjustStock}
               />
               
               <SizeVariations

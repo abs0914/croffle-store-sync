@@ -20,7 +20,7 @@ export function useProductFormState({ product, isEditing }: {
     barcode: "",
     cost: 0,
     stockQuantity: 0,
-    categoryId: "",
+    categoryId: "uncategorized",
     isActive: true,
   });
 
@@ -56,7 +56,7 @@ export function useProductFormState({ product, isEditing }: {
         barcode: product.barcode || "",
         cost: product.cost || 0,
         stockQuantity: product.stockQuantity,
-        categoryId: product.categoryId || "",
+        categoryId: product.categoryId || "uncategorized",
         isActive: product.isActive,
       });
 
