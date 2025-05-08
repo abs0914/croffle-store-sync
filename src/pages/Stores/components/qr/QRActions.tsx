@@ -23,17 +23,16 @@ export const QRActions = ({ storeId, onDownload }: QRActionsProps) => {
         Back to Stores
       </Button>
       
-      <div className="flex space-x-2">
+      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
         <Button
           variant="outline"
           onClick={() => navigate(`/stores/${storeId}/qr/preview`)}
-          className="flex-grow sm:flex-grow-0"
         >
           <Eye className="mr-2 h-4 w-4" />
           Preview Form
         </Button>
         <Button
-          className="bg-croffle-primary hover:bg-croffle-primary/90 flex-grow sm:flex-grow-0"
+          className="bg-croffle-primary hover:bg-croffle-primary/90"
           onClick={onDownload}
         >
           <Download className="mr-2 h-4 w-4" />

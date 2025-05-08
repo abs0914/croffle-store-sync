@@ -11,11 +11,15 @@ export const useStoreQR = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [store, setStore] = useState<Store | null>(null);
   const [qrValue, setQrValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const appUrl = window.location.origin;
   
   useEffect(() => {
     if (id) {
       fetchStore();
+    } else {
+      setError("Store ID is missing");
+      setIsLoading(false);
     }
   }, [id]);
   
@@ -28,24 +32,29 @@ export const useStoreQR = () => {
   
   const fetchStore = async () => {
     setIsLoading(true);
+    setError(null);
+    
     try {
       const { data, error } = await supabase
         .from("stores")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
         
       if (error) throw error;
       
-      setStore(data as Store);
+      if (data) {
+        setStore(data as Store);
+      } else {
+        setError("Store not found");
+      }
     } catch (error: any) {
       console.error("Error fetching store:", error);
-      toast.error("Failed to load store details");
-      navigate("/stores");
+      setError("Failed to load store information");
     } finally {
       setIsLoading(false);
     }
   };
   
-  return { isLoading, store, qrValue };
+  return { isLoading, store, qrValue, error };
 };

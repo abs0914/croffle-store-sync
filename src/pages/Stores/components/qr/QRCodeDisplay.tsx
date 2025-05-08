@@ -60,7 +60,7 @@ export const QRCodeDisplay = ({ qrValue, storeName }: QRCodeDisplayProps) => {
         </p>
       </div>
       
-      <div className="flex flex-col sm:flex-row w-full max-w-md space-y-2 sm:space-y-0">
+      <div className="flex flex-col sm:flex-row w-full max-w-md space-y-2 sm:space-y-0 sm:space-x-2">
         <div className="flex items-center border rounded-md pl-3 pr-1 py-1 w-full">
           <input
             type="text"
@@ -82,7 +82,7 @@ export const QRCodeDisplay = ({ qrValue, storeName }: QRCodeDisplayProps) => {
           variant="outline"
           size="sm"
           onClick={downloadQRCode}
-          className="ml-0 sm:ml-2 flex items-center justify-center"
+          className="flex items-center justify-center"
         >
           <Download className="mr-1 h-4 w-4" />
           Download
