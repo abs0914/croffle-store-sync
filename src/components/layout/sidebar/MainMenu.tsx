@@ -8,7 +8,8 @@ import {
   Store, 
   Warehouse, 
   History, 
-  Users 
+  Users,
+  FileBarChart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -43,6 +44,7 @@ export const MainMenu: React.FC = () => {
     { name: "Stores", path: "/stores", icon: <Store className="w-5 h-5" /> },
     { name: "Menu Management", path: "/inventory", icon: <Package className="w-5 h-5" /> },
     { name: "Inventory Stock", path: "/inventory/stock", icon: <Warehouse className="w-5 h-5" /> },
+    { name: "Reports", path: "/reports", icon: <FileBarChart className="w-5 h-5" /> },
     { name: "Customers", path: "/customers", icon: <Users className="w-5 h-5" /> },
     { name: "Sales", path: "/sales", icon: <History className="w-5 h-5" /> },
   ];

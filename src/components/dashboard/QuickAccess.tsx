@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Package, Users, Settings } from "lucide-react";
+import { Package, Users, Settings, FileBarChart, Receipt, FileCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
 // Icon components
@@ -71,14 +71,14 @@ export function QuickAccess() {
             </Link>
           </Button>
           <Button variant="outline" className="h-24 flex flex-col gap-2 border-croffle-primary/20" asChild>
-            <Link to="/reports">
-              <FileText className="h-6 w-6 text-green-500" />
+            <Link to="/reports?type=x_reading">
+              <Receipt className="h-6 w-6 text-green-500" />
               <span>X-Reading</span>
             </Link>
           </Button>
           <Button variant="outline" className="h-24 flex flex-col gap-2 border-croffle-primary/20" asChild>
-            <Link to="/reports/z-reading">
-              <FileText className="h-6 w-6 text-red-500" />
+            <Link to="/reports?type=z_reading">
+              <FileCheck className="h-6 w-6 text-red-500" />
               <span>Z-Reading</span>
             </Link>
           </Button>
@@ -89,9 +89,9 @@ export function QuickAccess() {
             </Link>
           </Button>
           <Button variant="outline" className="h-24 flex flex-col gap-2 border-croffle-primary/20" asChild>
-            <Link to="/settings">
-              <Settings className="h-6 w-6 text-gray-500" />
-              <span>Settings</span>
+            <Link to="/reports">
+              <FileBarChart className="h-6 w-6 text-purple-500" />
+              <span>All Reports</span>
             </Link>
           </Button>
         </div>
