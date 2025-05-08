@@ -1,24 +1,39 @@
+
 import { useState, useEffect } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useStore } from "@/contexts/StoreContext";
+import { useShift } from "@/contexts/ShiftContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { fetchProducts, fetchCategories } from "@/services/mockData";
-import { Product, Category } from "@/types";
 import { Separator } from "@/components/ui/separator";
 import { Search, Minus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Product, Category, Customer, Transaction } from "@/types";
+import { createTransaction } from "@/services/transactionService";
+
+// Import POS components
+import ShiftManager from "@/components/pos/ShiftManager";
+import CustomerLookup from "@/components/pos/CustomerLookup";
+import DiscountSelector from "@/components/pos/DiscountSelector";
+import PaymentProcessor from "@/components/pos/PaymentProcessor";
+import ReceiptGenerator from "@/components/pos/ReceiptGenerator";
 
 export default function POS() {
   const { currentStore } = useStore();
+  const { currentShift } = useShift();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [discount, setDiscount] = useState(0);
+  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | undefined>(undefined);
+  const [discountIdNumber, setDiscountIdNumber] = useState<string | undefined>(undefined);
   
   const { 
     items, 
@@ -28,7 +43,8 @@ export default function POS() {
     clearCart, 
     subtotal,
     tax,
-    total
+    total,
+    storeId
   } = useCart();
 
   useEffect(() => {
@@ -43,16 +59,133 @@ export default function POS() {
         }
 
         // In a real implementation, we would pass the store ID to these functions
-        // For now, we're using mock data but logging the store ID for demonstration
-        console.log(`Loading data for store: ${storeId}`);
+        const productsResponse = await fetch(`/api/products?storeId=${storeId}`);
+        const categoriesResponse = await fetch(`/api/categories?storeId=${storeId}`);
         
-        const [productsData, categoriesData] = await Promise.all([
-          fetchProducts(),
-          fetchCategories()
-        ]);
+        if (!productsResponse.ok || !categoriesResponse.ok) {
+          throw new Error("Failed to fetch data");
+        }
         
-        setProducts(productsData);
-        setCategories(categoriesData);
+        const productsData = await productsResponse.json();
+        const categoriesData = await categoriesResponse.json();
+        
+        // Mock data for now
+        const mockProducts: Product[] = [
+          {
+            id: "1",
+            name: "Classic Croffle",
+            description: "Original butter croffle with sugar",
+            price: 129,
+            category_id: "classic",
+            categoryId: "classic",
+            image_url: "https://images.unsplash.com/photo-1596068587619-e4b11c7a3488",
+            image: "https://images.unsplash.com/photo-1596068587619-e4b11c7a3488",
+            is_active: true,
+            isActive: true,
+            stock_quantity: 50,
+            stockQuantity: 50,
+            sku: "CRF-CLS-001"
+          },
+          {
+            id: "2",
+            name: "Chocolate Croffle",
+            description: "Butter croffle with chocolate drizzle",
+            price: 149,
+            category_id: "classic",
+            categoryId: "classic",
+            image_url: "https://images.unsplash.com/photo-1605265036003-3f548c1d5fbe",
+            image: "https://images.unsplash.com/photo-1605265036003-3f548c1d5fbe",
+            is_active: true,
+            isActive: true,
+            stock_quantity: 45,
+            stockQuantity: 45,
+            sku: "CRF-CLS-002"
+          },
+          {
+            id: "3",
+            name: "Strawberry Croffle",
+            description: "Butter croffle with fresh strawberries",
+            price: 159,
+            category_id: "fruity",
+            categoryId: "fruity",
+            image_url: "https://images.unsplash.com/photo-1527515848755-3cd4faffd671",
+            image: "https://images.unsplash.com/photo-1527515848755-3cd4faffd671",
+            is_active: true,
+            isActive: true,
+            stock_quantity: 35,
+            stockQuantity: 35,
+            sku: "CRF-FRT-001"
+          },
+          {
+            id: "4",
+            name: "Blueberry Croffle",
+            description: "Butter croffle with blueberry compote",
+            price: 159,
+            category_id: "fruity",
+            categoryId: "fruity",
+            image_url: "https://images.unsplash.com/photo-1585241938243-379a196fe14e",
+            image: "https://images.unsplash.com/photo-1585241938243-379a196fe14e",
+            is_active: true,
+            isActive: true,
+            stock_quantity: 30,
+            stockQuantity: 30,
+            sku: "CRF-FRT-002"
+          },
+          {
+            id: "5",
+            name: "Premium Nutella Croffle",
+            description: "Butter croffle with premium Nutella and nuts",
+            price: 189,
+            category_id: "premium",
+            categoryId: "premium",
+            image_url: "https://images.unsplash.com/photo-1663149287692-5cb81f1c544c",
+            image: "https://images.unsplash.com/photo-1663149287692-5cb81f1c544c",
+            is_active: true,
+            isActive: true,
+            stock_quantity: 25,
+            stockQuantity: 25,
+            sku: "CRF-PRM-001"
+          },
+          {
+            id: "6",
+            name: "Premium Matcha Croffle",
+            description: "Butter croffle with premium matcha cream",
+            price: 189,
+            category_id: "premium",
+            categoryId: "premium",
+            image_url: "https://images.unsplash.com/photo-1638984496691-fdd2fc3c92ba",
+            image: "https://images.unsplash.com/photo-1638984496691-fdd2fc3c92ba",
+            is_active: true,
+            isActive: true,
+            stock_quantity: 20,
+            stockQuantity: 20,
+            sku: "CRF-PRM-002"
+          }
+        ];
+        
+        const mockCategories: Category[] = [
+          {
+            id: "classic",
+            name: "Classic Croffle",
+            is_active: true,
+            isActive: true
+          },
+          {
+            id: "fruity",
+            name: "Fruity",
+            is_active: true,
+            isActive: true
+          },
+          {
+            id: "premium",
+            name: "Premium Croffle",
+            is_active: true,
+            isActive: true
+          }
+        ];
+        
+        setProducts(mockProducts);
+        setCategories(mockCategories);
       } catch (error) {
         console.error("Error loading data:", error);
         toast.error("Failed to load products");
@@ -66,24 +199,112 @@ export default function POS() {
 
   const filteredProducts = products.filter(product => {
     const matchesCategory = activeCategory === "all" || product.categoryId === activeCategory;
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !searchTerm || 
+                          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
   
-  const handleCheckout = () => {
-    if (!currentStore) {
-      toast.error("Please select a store first");
+  const handleApplyDiscount = (
+    discountAmount: number, 
+    type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo',
+    idNumber?: string
+  ) => {
+    setDiscount(discountAmount);
+    setDiscountType(type);
+    setDiscountIdNumber(idNumber);
+  };
+  
+  const handlePaymentComplete = async (
+    paymentMethod: 'cash' | 'card' | 'e-wallet',
+    amountTendered: number,
+    paymentDetails?: {
+      cardType?: string;
+      cardNumber?: string;
+      eWalletProvider?: string;
+      eWalletReferenceNumber?: string;
+    }
+  ) => {
+    if (!currentStore || !currentShift) {
+      toast.error("Missing store or active shift");
       return;
     }
     
-    // In a real implementation, we would include the store ID in the transaction
-    const storeId = currentStore.id;
-    console.log(`Processing checkout for store: ${storeId}`);
+    // Create transaction objects
+    const transactionItems = items.map(item => ({
+      productId: item.productId,
+      variationId: item.variationId,
+      name: item.variation ? `${item.product.name} (${item.variation.name})` : item.product.name,
+      quantity: item.quantity,
+      unitPrice: item.price,
+      totalPrice: item.price * item.quantity
+    }));
     
-    toast.success(`Checkout completed for store: ${currentStore.name}!`);
+    const transaction: Omit<Transaction, "id" | "createdAt" | "receiptNumber"> = {
+      shiftId: currentShift.id,
+      storeId: currentStore.id,
+      userId: currentShift.userId,
+      customerId: selectedCustomer?.id,
+      customer: selectedCustomer || undefined,
+      items: transactionItems,
+      subtotal,
+      tax,
+      discount,
+      discountType,
+      discountIdNumber,
+      total: total - discount,
+      amountTendered,
+      change: paymentMethod === 'cash' ? amountTendered - (total - discount) : undefined,
+      paymentMethod,
+      paymentDetails,
+      status: 'completed'
+    };
+    
+    // Call the service to create the transaction
+    const result = await createTransaction(transaction);
+    
+    if (result) {
+      setCompletedTransaction(result);
+      clearCart(); // Clear the cart after successful transaction
+    }
+  };
+  
+  const startNewSale = () => {
+    setCompletedTransaction(null);
+    setSelectedCustomer(null);
+    setDiscount(0);
+    setDiscountType(undefined);
+    setDiscountIdNumber(undefined);
     clearCart();
   };
+
+  // If we have a completed transaction, show the receipt
+  if (completedTransaction) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full max-w-md mx-auto">
+        <div className="w-full text-center mb-6">
+          <h1 className="text-2xl font-bold mb-2 text-green-600">Sale Complete!</h1>
+          <p className="text-gray-600 mb-4">Transaction #{completedTransaction.receiptNumber}</p>
+        </div>
+        
+        <Card className="w-full mb-6">
+          <CardContent className="p-4">
+            <ReceiptGenerator 
+              transaction={completedTransaction}
+              customer={selectedCustomer}
+            />
+          </CardContent>
+        </Card>
+        
+        <Button 
+          onClick={startNewSale}
+          className="w-full py-6 text-lg"
+        >
+          New Sale
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -99,6 +320,9 @@ export default function POS() {
       <div className="flex flex-col lg:flex-row gap-4 h-full">
         {/* Product Selection Area */}
         <div className="flex-1">
+          {/* Shift Manager */}
+          <ShiftManager />
+          
           <Card className="h-full border-croffle-primary/20">
             <CardContent className="p-4">
               <div className="mb-4 flex gap-2">
@@ -143,6 +367,7 @@ export default function POS() {
                           variant="outline"
                           className="h-32 p-2 flex flex-col items-center justify-between text-left border-croffle-primary/20 hover:bg-croffle-background hover:border-croffle-primary"
                           onClick={() => addItem(product)}
+                          disabled={!currentShift}
                         >
                           {product.image ? (
                             <div className="w-full h-16 bg-gray-100 rounded-md overflow-hidden mb-2">
@@ -182,9 +407,18 @@ export default function POS() {
                   size="sm"
                   onClick={clearCart}
                   className="text-croffle-accent hover:text-croffle-accent/90 hover:bg-croffle-background"
+                  disabled={items.length === 0 || !currentShift}
                 >
                   Clear All
                 </Button>
+              </div>
+              
+              {/* Customer Selection */}
+              <div className="mb-4">
+                <CustomerLookup 
+                  onSelectCustomer={setSelectedCustomer}
+                  selectedCustomer={selectedCustomer}
+                />
               </div>
               
               {/* Cart Items */}
@@ -218,7 +452,7 @@ export default function POS() {
                             variant="outline" 
                             className="h-8 w-8 rounded-full"
                             onClick={() => updateQuantity(index, item.quantity - 1)}
-                            disabled={item.quantity <= 1}
+                            disabled={item.quantity <= 1 || !currentShift}
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
@@ -228,6 +462,7 @@ export default function POS() {
                             variant="outline" 
                             className="h-8 w-8 rounded-full"
                             onClick={() => updateQuantity(index, item.quantity + 1)}
+                            disabled={!currentShift}
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
@@ -237,6 +472,7 @@ export default function POS() {
                           variant="ghost" 
                           className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                           onClick={() => removeItem(index)}
+                          disabled={!currentShift}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -246,6 +482,15 @@ export default function POS() {
                 )}
               </div>
               
+              {/* Discount Selection */}
+              <DiscountSelector
+                subtotal={subtotal}
+                onApplyDiscount={handleApplyDiscount}
+                currentDiscount={discount}
+                currentDiscountType={discountType}
+                currentDiscountIdNumber={discountIdNumber}
+              />
+              
               {/* Order Summary */}
               <div className="space-y-2 pt-4">
                 <Separator className="bg-croffle-primary/20" />
@@ -253,6 +498,12 @@ export default function POS() {
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className="font-medium">₱{subtotal.toFixed(2)}</span>
                 </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount</span>
+                    <span>-₱{discount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">VAT (12%)</span>
                   <span className="font-medium">₱{tax.toFixed(2)}</span>
@@ -260,16 +511,14 @@ export default function POS() {
                 <Separator className="bg-croffle-primary/20" />
                 <div className="flex justify-between text-lg font-bold">
                   <span className="text-croffle-primary">Total</span>
-                  <span className="text-croffle-primary">₱{total.toFixed(2)}</span>
+                  <span className="text-croffle-primary">₱{(total - discount).toFixed(2)}</span>
                 </div>
                 
-                <Button 
-                  className="w-full mt-4 bg-croffle-accent hover:bg-croffle-accent/90 text-lg py-6"
-                  disabled={items.length === 0}
-                  onClick={handleCheckout}
-                >
-                  Checkout
-                </Button>
+                {/* Payment Processor */}
+                <PaymentProcessor
+                  total={total - discount}
+                  onPaymentComplete={handlePaymentComplete}
+                />
               </div>
             </CardContent>
           </Card>

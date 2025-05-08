@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { StoreProvider } from "@/contexts/StoreContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { ShiftProvider } from "@/contexts/ShiftContext";
 import { MainLayout } from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
@@ -98,13 +100,15 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <StoreProvider>
-          <CartProvider>
-            <Toaster />
-            <Sonner position="top-right" closeButton />
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
-          </CartProvider>
+          <ShiftProvider>
+            <CartProvider>
+              <Toaster />
+              <Sonner position="top-right" closeButton />
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+            </CartProvider>
+          </ShiftProvider>
         </StoreProvider>
       </AuthProvider>
     </TooltipProvider>

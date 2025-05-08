@@ -27,6 +27,10 @@ export interface Shift {
   startingCash: number;
   endingCash?: number;
   status: 'active' | 'closed';
+  startPhoto?: string;
+  endPhoto?: string;
+  startInventoryCount?: Record<string, number>;
+  endInventoryCount?: Record<string, number>;
 }
 
 export interface Transaction {
@@ -35,12 +39,23 @@ export interface Transaction {
   storeId: string;
   userId: string;
   customerId?: string;
+  customer?: Customer;
   items: TransactionItem[];
   subtotal: number;
   tax: number;
   discount: number;
+  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
+  discountIdNumber?: string;
   total: number;
-  paymentMethod: 'cash' | 'card' | 'other';
+  amountTendered?: number;
+  change?: number;
+  paymentMethod: 'cash' | 'card' | 'e-wallet';
+  paymentDetails?: {
+    cardType?: string;
+    cardNumber?: string;
+    eWalletProvider?: string;
+    eWalletReferenceNumber?: string;
+  };
   status: 'completed' | 'voided';
   createdAt: string;
   receiptNumber: string;
