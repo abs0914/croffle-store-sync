@@ -1,10 +1,13 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Camera } from "lucide-react";
 import { format } from "date-fns";
-import { toast } from "sonner";
 import { useStore } from "@/contexts/StoreContext";
+import { useCamera } from "@/hooks/useCamera";
+import TimestampOverlay from "./TimestampOverlay";
+import CaptureButton from "./CaptureButton";
+import PhotoPreview from "./PhotoPreview";
 
 interface ShiftCameraProps {
   onCapture: (photoUrl: string | null) => void;
@@ -13,91 +16,30 @@ interface ShiftCameraProps {
 
 export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   const { currentStore } = useStore();
-  const [showCamera, setShowCamera] = useState(true); // Always show camera by default
-  const [photo, setPhoto] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const [timestamp, setTimestamp] = useState<string>(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
+  const { 
+    videoRef,
+    canvasRef,
+    showCamera,
+    photo,
+    setPhoto,
+    startCamera,
+    stopCamera,
+    logVideoState
+  } = useCamera();
   
-  // Update timestamp every second
-  useEffect(() => {
-    const timerId = setInterval(() => {
-      setTimestamp(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
-    }, 1000);
-    
-    return () => clearInterval(timerId);
-  }, []);
-
   // Start camera automatically when component mounts
   useEffect(() => {
     startCamera();
-    
-    // Clean up camera resources when component unmounts
-    return () => {
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
-
-  const startCamera = useCallback(async () => {
-    try {
-      // Stop any existing streams first
-      stopCamera();
-      
-      const constraints = { 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      };
-      
-      // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Browser does not support camera access');
-      }
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current) {
-            videoRef.current.play().catch(err => {
-              console.error("Error playing video:", err);
-              toast.error("Could not start video: " + err.message);
-            });
-          }
-        };
-        mediaStreamRef.current = stream;
-      }
-      
-      setShowCamera(true);
-      
-      // Debug log to verify camera is starting
-      console.log('Camera started, stream tracks:', stream.getTracks().length);
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      toast.error('Failed to access camera. Please check permissions.');
+  }, [startCamera]);
+  
+  // Log video state when camera is shown
+  useEffect(() => {
+    if (showCamera) {
+      logVideoState();
     }
-  }, []);
-
-  const stopCamera = useCallback(() => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      mediaStreamRef.current = null;
-    }
-    
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    
-    setShowCamera(false);
-  }, []);
-
-  const capturePhoto = useCallback(() => {
+  }, [showCamera, logVideoState]);
+  
+  const capturePhoto = () => {
     if (videoRef.current && canvasRef.current && videoRef.current.videoWidth > 0) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -133,15 +75,9 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         onCapture(dataUrl);
         stopCamera();
       }
-    } else {
-      console.error('Video or canvas not properly initialized');
-      if (!videoRef.current) console.error('Video ref is null');
-      else if (videoRef.current.videoWidth === 0) console.error('Video has no width/height');
-      if (!canvasRef.current) console.error('Canvas ref is null');
-      toast.error('Could not capture photo, please try again');
     }
-  }, [currentStore, stopCamera, onCapture]);
-
+  };
+  
   const resetPhoto = () => {
     setPhoto(null);
     onCapture(null);
@@ -150,29 +86,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
       onReset();
     }
   };
-
-  // Helper to log video element state for debugging
-  const logVideoState = () => {
-    if (videoRef.current) {
-      console.log('Video element state:', {
-        width: videoRef.current.videoWidth,
-        height: videoRef.current.videoHeight,
-        readyState: videoRef.current.readyState,
-        paused: videoRef.current.paused,
-        error: videoRef.current.error
-      });
-    } else {
-      console.log('Video element is null');
-    }
-  };
-
-  // Log video state when camera is shown
-  useEffect(() => {
-    if (showCamera) {
-      logVideoState();
-    }
-  }, [showCamera]);
-
+  
   return (
     <div className="space-y-2">
       <Label>Capture Photo</Label>
@@ -186,35 +100,11 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
             onClick={() => logVideoState()}
           />
           
-          {/* Live timestamp overlay */}
-          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 flex justify-between">
-            <span>{currentStore?.name || ''}</span>
-            <span>{timestamp}</span>
-          </div>
-          
-          <Button 
-            onClick={capturePhoto}
-            className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
-          >
-            Capture
-          </Button>
+          <TimestampOverlay storeName={currentStore?.name} />
+          <CaptureButton onClick={capturePhoto} />
         </div>
       ) : photo ? (
-        <div className="relative">
-          <img 
-            src={photo} 
-            alt="Captured photo" 
-            className="w-full h-48 object-cover rounded-md" 
-          />
-          <Button 
-            onClick={resetPhoto}
-            variant="outline" 
-            size="sm"
-            className="absolute bottom-2 right-2"
-          >
-            Retake
-          </Button>
-        </div>
+        <PhotoPreview photoUrl={photo} onReset={resetPhoto} />
       ) : (
         // This button should never show now, but keeping it as a fallback
         <Button onClick={startCamera} variant="outline" className="w-full">
