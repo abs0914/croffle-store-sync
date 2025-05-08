@@ -31,6 +31,25 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
   // Process the imported products
   for (const product of products) {
     try {
+      // If category_id is specified, check if it exists by name and store_id
+      if (product.category_id) {
+        const categoryName = product.category_id.replace(/"/g, ''); // Remove quotes if present
+        const { data: categoryData } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('name', categoryName)
+          .eq('store_id', storeId)
+          .maybeSingle();
+          
+        if (categoryData) {
+          // Use the actual category ID from the database
+          product.category_id = categoryData.id;
+        } else {
+          // If category doesn't exist, remove the category_id to use default
+          delete product.category_id;
+        }
+      }
+      
       // First check if the product already exists by SKU
       const { data: existingProduct } = await supabase
         .from('products')
@@ -60,7 +79,8 @@ const processExistingProduct = async (existingProduct: any, product: any, storeI
     .from('products')
     .update({ 
       stock_quantity: newQuantity,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      category_id: product.category_id || undefined // Update category if provided
     })
     .eq('id', existingProduct.id);
   
@@ -96,7 +116,8 @@ const createNewProduct = async (product: any, storeId: string) => {
       price: product.regular_price || 0, // Use regular_price as the price
       stock_quantity: product.stock_quantity || 0,
       is_active: product.is_active !== undefined ? product.is_active : true,
-      store_id: storeId
+      store_id: storeId,
+      category_id: product.category_id || null // Add category_id if provided
     })
     .select()
     .single();
