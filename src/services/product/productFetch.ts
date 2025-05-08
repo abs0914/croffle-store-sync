@@ -18,6 +18,9 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       throw new Error(error.message);
     }
     
+    // Log raw data for debugging
+    console.log("Raw product data:", data?.[0]);
+    
     // Map database fields to our TypeScript interface
     return data?.map(item => ({
       id: item.id,
@@ -39,8 +42,8 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       } : undefined,
       image_url: item.image_url || undefined,
       image: item.image_url || undefined,
-      is_active: item.is_active !== null ? item.is_active : true,
-      isActive: item.is_active !== null ? item.is_active : true,
+      is_active: item.is_active !== null ? item.is_active : true, // Ensure is_active has a default value of true
+      isActive: item.is_active !== null ? item.is_active : true, // Ensure isActive has a default value of true
       store_id: item.store_id,
       storeId: item.store_id,
       sku: item.sku,
@@ -95,8 +98,8 @@ export const fetchProduct = async (id: string): Promise<Product | null> => {
       } : undefined,
       image_url: data.image_url || undefined,
       image: data.image_url || undefined,
-      is_active: data.is_active !== null ? data.is_active : true,
-      isActive: data.is_active !== null ? data.is_active : true,
+      is_active: data.is_active !== null ? data.is_active : true, // Ensure is_active has a default value of true
+      isActive: data.is_active !== null ? data.is_active : true, // Ensure isActive has a default value of true
       store_id: data.store_id,
       storeId: data.store_id,
       sku: data.sku,

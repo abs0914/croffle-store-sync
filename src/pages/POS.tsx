@@ -31,6 +31,10 @@ export default function POS() {
   // Load product data from database
   const { products, categories, isLoading } = useProductData(currentStore?.id || null);
   
+  // Check the product activation status - for debugging
+  const activeProductsCount = products.filter(p => p.isActive).length;
+  console.log(`Total products: ${products.length}, Active products: ${activeProductsCount}`);
+  
   // Wrapper for payment processing
   const handlePaymentComplete = async (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
