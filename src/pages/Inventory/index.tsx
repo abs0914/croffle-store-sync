@@ -5,6 +5,8 @@ import InventoryHeader from "./components/InventoryHeader";
 import { SearchFilters } from "./components/SearchFilters";
 import { ProductsTable } from "./components/ProductsTable";
 import { useProductData } from "./hooks/useProductData";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Store } from "lucide-react";
 
 export default function Inventory() {
   const { currentStore } = useStore();
@@ -20,6 +22,26 @@ export default function Inventory() {
     handleImportClick,
     handleDownloadTemplate
   } = useProductData(currentStore?.id);
+  
+  // Return a consistent "no store selected" UI if no store is selected
+  if (!currentStore) {
+    return (
+      <div className="space-y-6">
+        <InventoryHeader
+          title="Menu Management"
+          description="Track and manage your Menu stock levels"
+        />
+        
+        <Alert className="bg-amber-50 border-amber-200">
+          <Store className="h-5 w-5 text-amber-600" />
+          <AlertTitle className="text-amber-800">No store selected</AlertTitle>
+          <AlertDescription className="text-amber-700">
+            Please select a store from the header dropdown to view and manage menu items.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
