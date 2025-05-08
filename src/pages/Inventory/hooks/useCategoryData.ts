@@ -2,7 +2,12 @@
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useQuery } from "@tanstack/react-query";
-import { fetchCategories, createCategory, updateCategory, deleteCategory } from "@/services/categoryService";
+import { 
+  fetchCategories, 
+  createCategory, 
+  updateCategory, 
+  deleteCategory 
+} from "@/services/categoryService";
 import { createDefaultCategories } from "@/services/product/createDefaultCategories";
 import { Category } from "@/types";
 import { toast } from "sonner";
