@@ -4,6 +4,28 @@ import { Transaction, CartItem, Customer } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
+interface TransactionRow {
+  id: string;
+  shift_id: string;
+  store_id: string;
+  user_id: string;
+  customer_id?: string;
+  items: string; // JSONB stored as string
+  subtotal: number;
+  tax: number;
+  discount: number;
+  discount_type?: string;
+  discount_id_number?: string;
+  total: number;
+  amount_tendered?: number;
+  change?: number;
+  payment_method: string;
+  payment_details?: object;
+  status: 'completed' | 'voided';
+  created_at: string;
+  receipt_number: string;
+}
+
 export const createTransaction = async (transaction: Omit<Transaction, "id" | "createdAt" | "receiptNumber">): Promise<Transaction | null> => {
   try {
     // Generate a receipt number based on date and time
@@ -25,18 +47,30 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
     const receiptNumber = `${receiptPrefix}-${String(count! + 1).padStart(4, '0')}-${timestamp}`;
     
     const newTransaction = {
-      ...transaction,
+      shift_id: transaction.shiftId,
+      store_id: transaction.storeId,
+      user_id: transaction.userId,
+      customer_id: transaction.customerId,
+      items: JSON.stringify(transaction.items),
+      subtotal: transaction.subtotal,
+      tax: transaction.tax,
+      discount: transaction.discount,
+      discount_type: transaction.discountType,
+      discount_id_number: transaction.discountIdNumber,
+      total: transaction.total,
+      amount_tendered: transaction.amountTendered,
+      change: transaction.change,
+      payment_method: transaction.paymentMethod,
+      payment_details: transaction.paymentDetails ? JSON.stringify(transaction.paymentDetails) : null,
+      status: transaction.status,
       receipt_number: receiptNumber,
-      created_at: now.toISOString(),
-      items: JSON.stringify(transaction.items)
+      created_at: now.toISOString()
     };
     
     // Remove customer object before sending to Supabase
-    const { customer, ...transactionData } = newTransaction as any;
-    
     const { data, error } = await supabase
       .from("transactions")
-      .insert(transactionData)
+      .insert(newTransaction)
       .select()
       .single();
     
@@ -79,27 +113,30 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
       }
     }
     
+    // Cast the returned data to our custom type
+    const transactionData = data as unknown as TransactionRow;
+
     // Return formatted transaction data
     return {
-      id: data.id,
-      shiftId: data.shift_id,
-      storeId: data.store_id,
-      userId: data.user_id,
-      customerId: data.customer_id,
-      items: JSON.parse(data.items),
-      subtotal: data.subtotal,
-      tax: data.tax,
-      discount: data.discount,
-      discountType: data.discount_type,
-      discountIdNumber: data.discount_id_number,
-      total: data.total,
-      amountTendered: data.amount_tendered,
-      change: data.change,
-      paymentMethod: data.payment_method,
-      paymentDetails: data.payment_details,
-      status: data.status,
-      createdAt: data.created_at,
-      receiptNumber: data.receipt_number
+      id: transactionData.id,
+      shiftId: transactionData.shift_id,
+      storeId: transactionData.store_id,
+      userId: transactionData.user_id,
+      customerId: transactionData.customer_id,
+      items: JSON.parse(transactionData.items),
+      subtotal: transactionData.subtotal,
+      tax: transactionData.tax,
+      discount: transactionData.discount,
+      discountType: transactionData.discount_type as any,
+      discountIdNumber: transactionData.discount_id_number,
+      total: transactionData.total,
+      amountTendered: transactionData.amount_tendered,
+      change: transactionData.change,
+      paymentMethod: transactionData.payment_method as 'cash' | 'card' | 'e-wallet',
+      paymentDetails: transactionData.payment_details,
+      status: transactionData.status,
+      createdAt: transactionData.created_at,
+      receiptNumber: transactionData.receipt_number
     };
   } catch (error) {
     console.error("Error creating transaction:", error);

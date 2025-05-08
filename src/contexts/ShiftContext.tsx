@@ -25,8 +25,8 @@ const initialState: ShiftState = {
 
 const ShiftContext = createContext<ShiftState>(initialState);
 
-// This type ensures we are checking for the shifts table
-type ShiftRow = {
+// This is our custom type for shifts table rows
+interface ShiftRow {
   id: string;
   user_id: string;
   store_id: string;
@@ -39,7 +39,8 @@ type ShiftRow = {
   end_photo: string | null;
   start_inventory_count: Record<string, number> | null;
   end_inventory_count: Record<string, number> | null;
-};
+  created_at: string | null;
+}
 
 export function ShiftProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -63,7 +64,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
 
-      // Update the query to use raw SQL to ensure type compatibility
+      // Query for an active shift with explicit type casting
       const { data, error } = await supabase
         .from('shifts')
         .select('*')
@@ -72,12 +73,13 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         .eq('status', 'active')
         .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         throw error;
       }
       
       if (data) {
-        const shiftData = data as ShiftRow;
+        // Type assertion to ShiftRow
+        const shiftData = data as unknown as ShiftRow;
         setCurrentShift({
           id: shiftData.id,
           userId: shiftData.user_id,
@@ -127,7 +129,8 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       
       if (error) throw error;
       
-      const shiftData = data as ShiftRow;
+      // Type assertion to ShiftRow
+      const shiftData = data as unknown as ShiftRow;
       
       const shift: Shift = {
         id: shiftData.id,

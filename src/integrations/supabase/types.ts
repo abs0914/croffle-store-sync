@@ -309,6 +309,62 @@ export type Database = {
           },
         ]
       }
+      shifts: {
+        Row: {
+          created_at: string | null
+          end_inventory_count: Json | null
+          end_photo: string | null
+          end_time: string | null
+          ending_cash: number | null
+          id: string
+          start_inventory_count: Json | null
+          start_photo: string | null
+          start_time: string
+          starting_cash: number
+          status: string
+          store_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_inventory_count?: Json | null
+          end_photo?: string | null
+          end_time?: string | null
+          ending_cash?: number | null
+          id?: string
+          start_inventory_count?: Json | null
+          start_photo?: string | null
+          start_time?: string
+          starting_cash?: number
+          status?: string
+          store_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          end_inventory_count?: Json | null
+          end_photo?: string | null
+          end_time?: string | null
+          ending_cash?: number | null
+          id?: string
+          start_inventory_count?: Json | null
+          start_photo?: string | null
+          start_time?: string
+          starting_cash?: number
+          status?: string
+          store_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_settings: {
         Row: {
           created_at: string | null
@@ -406,6 +462,94 @@ export type Database = {
           zip_code?: string | null
         }
         Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount_tendered: number | null
+          change: number | null
+          created_at: string | null
+          customer_id: string | null
+          discount: number
+          discount_id_number: string | null
+          discount_type: string | null
+          id: string
+          items: Json
+          payment_details: Json | null
+          payment_method: string
+          receipt_number: string
+          shift_id: string
+          status: string
+          store_id: string
+          subtotal: number
+          tax: number
+          total: number
+          user_id: string
+        }
+        Insert: {
+          amount_tendered?: number | null
+          change?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          discount?: number
+          discount_id_number?: string | null
+          discount_type?: string | null
+          id?: string
+          items: Json
+          payment_details?: Json | null
+          payment_method: string
+          receipt_number: string
+          shift_id: string
+          status?: string
+          store_id: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          user_id: string
+        }
+        Update: {
+          amount_tendered?: number | null
+          change?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          discount?: number
+          discount_id_number?: string | null
+          discount_type?: string | null
+          id?: string
+          items?: Json
+          payment_details?: Json | null
+          payment_method?: string
+          receipt_number?: string
+          shift_id?: string
+          status?: string
+          store_id?: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_stores: {
         Row: {
