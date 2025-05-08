@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,14 +13,27 @@ interface ShiftCameraProps {
 
 export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   const { currentStore } = useStore();
-  const [showCamera, setShowCamera] = useState(false);
+  const [showCamera, setShowCamera] = useState(true); // Always show camera by default
   const [photo, setPhoto] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-
-  // Clean up camera resources when component unmounts
+  const [timestamp, setTimestamp] = useState<string>(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
+  
+  // Update timestamp every second
   useEffect(() => {
+    const timerId = setInterval(() => {
+      setTimestamp(format(new Date(), "yyyy-MM-dd HH:mm:ss"));
+    }, 1000);
+    
+    return () => clearInterval(timerId);
+  }, []);
+
+  // Start camera automatically when component mounts
+  useEffect(() => {
+    startCamera();
+    
+    // Clean up camera resources when component unmounts
     return () => {
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach(track => track.stop());
@@ -133,6 +145,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   const resetPhoto = () => {
     setPhoto(null);
     onCapture(null);
+    startCamera();
     if (onReset) {
       onReset();
     }
@@ -153,7 +166,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     }
   };
 
-  // Auto-start camera when opening dialog if the component requests it
+  // Log video state when camera is shown
   useEffect(() => {
     if (showCamera) {
       logVideoState();
@@ -162,7 +175,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
 
   return (
     <div className="space-y-2">
-      <Label>Capture Photo (Optional)</Label>
+      <Label>Capture Photo</Label>
       {showCamera ? (
         <div className="relative">
           <video 
@@ -172,9 +185,16 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
             className="w-full h-48 object-cover rounded-md border border-input bg-muted"
             onClick={() => logVideoState()}
           />
+          
+          {/* Live timestamp overlay */}
+          <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 flex justify-between">
+            <span>{currentStore?.name || ''}</span>
+            <span>{timestamp}</span>
+          </div>
+          
           <Button 
             onClick={capturePhoto}
-            className="absolute bottom-2 left-1/2 transform -translate-x-1/2"
+            className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
           >
             Capture
           </Button>
@@ -187,7 +207,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
             className="w-full h-48 object-cover rounded-md" 
           />
           <Button 
-            onClick={() => { resetPhoto(); startCamera(); }} 
+            onClick={resetPhoto}
             variant="outline" 
             size="sm"
             className="absolute bottom-2 right-2"
@@ -196,6 +216,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
           </Button>
         </div>
       ) : (
+        // This button should never show now, but keeping it as a fallback
         <Button onClick={startCamera} variant="outline" className="w-full">
           <Camera className="mr-2 h-4 w-4" />
           Take Photo
