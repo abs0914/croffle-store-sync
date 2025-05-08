@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,9 @@ export default function InventoryStock() {
     handleStockAdjustment,
     handleStockTransfer,
     handleDeleteStockItem,
+    handleExportCSV,
+    handleImportClick,
+    handleDownloadTemplate,
     
     openEditModal,
     openStockModal,
@@ -79,6 +83,9 @@ export default function InventoryStock() {
       <InventoryHeader 
         title="Inventory Stock Management" 
         description="Track and manage your raw materials, ingredients, and supplies"
+        onExportCSV={handleExportCSV}
+        onImportClick={handleImportClick}
+        onDownloadTemplate={handleDownloadTemplate}
       />
       
       <div className="flex justify-between items-center mb-4">

@@ -1,0 +1,150 @@
+
+import { InventoryStock } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+// Parse CSV and import inventory stock items
+export const parseInventoryStockCSV = async (csvData: string, storeId: string): Promise<any[]> => {
+  const lines = csvData.split('\n');
+  const headers = lines[0].split(',').map(header => header.trim());
+  
+  const stockItems = lines.slice(1)
+    .filter(line => line.trim())
+    .map(line => {
+      const values = line.split(',').map(value => value.trim());
+      const stockItem: any = {
+        store_id: storeId
+      };
+      
+      headers.forEach((header, i) => {
+        if (header === 'is_active') {
+          stockItem[header] = values[i].toLowerCase() === 'true';
+        } else if (header === 'stock_quantity') {
+          stockItem[header] = parseInt(values[i], 10);
+        } else {
+          stockItem[header] = values[i];
+        }
+      });
+      
+      return stockItem;
+    });
+  
+  // Process the imported stock items
+  for (const stockItem of stockItems) {
+    try {
+      // Check if item already exists by name and unit
+      const { data: existingItem } = await supabase
+        .from('inventory_stock')
+        .select('id, stock_quantity')
+        .eq('item', stockItem.item)
+        .eq('unit', stockItem.unit)
+        .eq('store_id', storeId)
+        .maybeSingle();
+      
+      if (existingItem) {
+        // Update existing item
+        const previousQuantity = existingItem.stock_quantity;
+        const newQuantity = previousQuantity + (stockItem.stock_quantity || 0);
+        
+        await supabase
+          .from('inventory_stock')
+          .update({ 
+            stock_quantity: newQuantity,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingItem.id);
+        
+        // Create inventory transaction record
+        await supabase
+          .from('inventory_transactions')
+          .insert({
+            product_id: existingItem.id,
+            store_id: storeId,
+            transaction_type: 'import',
+            quantity: stockItem.stock_quantity,
+            previous_quantity: previousQuantity,
+            new_quantity: newQuantity,
+            created_by: 'system',
+            notes: 'CSV Import'
+          });
+      } else {
+        // Create new inventory item
+        const { data: newItem, error } = await supabase
+          .from('inventory_stock')
+          .insert({
+            item: stockItem.item,
+            unit: stockItem.unit,
+            stock_quantity: stockItem.stock_quantity || 0,
+            is_active: stockItem.is_active !== undefined ? stockItem.is_active : true,
+            store_id: storeId
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error("Error creating inventory stock item:", error);
+          continue;
+        }
+        
+        // Create inventory transaction record
+        await supabase
+          .from('inventory_transactions')
+          .insert({
+            product_id: newItem.id,
+            store_id: storeId,
+            transaction_type: 'import',
+            quantity: stockItem.stock_quantity || 0,
+            previous_quantity: 0,
+            new_quantity: stockItem.stock_quantity || 0,
+            created_by: 'system',
+            notes: 'Initial stock from CSV import'
+          });
+      }
+    } catch (error) {
+      console.error("Error processing inventory import:", error);
+    }
+  }
+  
+  return stockItems;
+};
+
+// Generate CSV from inventory stock items
+export const generateInventoryStockCSV = (stockItems: InventoryStock[]): string => {
+  const headers = ['item', 'unit', 'stock_quantity', 'is_active'];
+  const csvRows = [headers.join(',')];
+  
+  stockItems.forEach(item => {
+    const row = [
+      `"${item.item.replace(/"/g, '""')}"`,
+      `"${item.unit.replace(/"/g, '""')}"`,
+      item.stock_quantity,
+      item.is_active ? 'true' : 'false'
+    ];
+    
+    csvRows.push(row.join(','));
+  });
+  
+  return csvRows.join('\n');
+};
+
+// Generate inventory stock import template
+export const generateInventoryStockImportTemplate = (): string => {
+  const headers = ['item', 'unit', 'stock_quantity', 'is_active'];
+  const csvContent = headers.join(',');
+  
+  const exampleRow1 = [
+    '"Coffee Beans"',
+    '"kg"',
+    '50',
+    'true'
+  ].join(',');
+  
+  const exampleRow2 = [
+    '"Milk"',
+    '"liter"',
+    '100',
+    'true'
+  ].join(',');
+  
+  return `${csvContent}\n${exampleRow1}\n${exampleRow2}`;
+};

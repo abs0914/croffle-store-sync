@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +11,10 @@ import {
   updateInventoryStockItem,
   adjustInventoryStock,
   deleteInventoryStockItem,
-  transferInventoryStock
+  transferInventoryStock,
+  parseInventoryStockCSV,
+  generateInventoryStockCSV,
+  generateInventoryStockImportTemplate
 } from "@/services/inventoryStock";
 import { useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -208,6 +212,84 @@ export const useInventoryStockData = () => {
     deleteMutation.mutate(stockItem.id);
   }, [deleteMutation]);
 
+  // Export inventory stock to CSV
+  const handleExportCSV = useCallback(() => {
+    try {
+      const csvData = generateInventoryStockCSV(stockItems);
+      const blob = new Blob([csvData], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.setAttribute("hidden", "");
+      a.setAttribute("href", url);
+      a.setAttribute("download", `inventory-stock-${currentStore?.id}-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success("Inventory stock exported successfully");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export inventory stock");
+    }
+  }, [stockItems, currentStore]);
+
+  // Import inventory stock from CSV
+  const handleImportClick = useCallback(() => {
+    if (!currentStore?.id) {
+      toast.error("Please select a store first");
+      return;
+    }
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv";
+    input.onchange = async (event: any) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = async (e: any) => {
+          try {
+            const csvData = e.target.result;
+            toast.loading("Processing inventory stock import...");
+            
+            // Parse CSV and process items
+            const importedItems = await parseInventoryStockCSV(csvData, currentStore.id);
+            
+            toast.dismiss();
+            toast.success(`Successfully processed ${importedItems.length} inventory items`);
+            
+            // Refresh the inventory list
+            queryClient.invalidateQueries({ queryKey: ['inventory-stock', currentStore.id] });
+          } catch (error) {
+            console.error("Import error:", error);
+            toast.error("Failed to import inventory stock");
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  }, [currentStore, queryClient]);
+
+  // Download CSV template
+  const handleDownloadTemplate = useCallback(() => {
+    try {
+      const csvData = generateInventoryStockImportTemplate();
+      const blob = new Blob([csvData], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.setAttribute("hidden", "");
+      a.setAttribute("href", url);
+      a.setAttribute("download", `inventory-stock-import-template.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success("Template downloaded successfully");
+    } catch (error) {
+      console.error("Template download error:", error);
+      toast.error("Failed to download template");
+    }
+  }, []);
+
   const openEditModal = useCallback((stockItem: InventoryStock) => {
     setCurrentStockItem(stockItem);
     setIsEditModalOpen(true);
@@ -261,6 +343,9 @@ export const useInventoryStockData = () => {
     handleStockAdjustment,
     handleStockTransfer,
     handleDeleteStockItem,
+    handleExportCSV,
+    handleImportClick,
+    handleDownloadTemplate,
     
     // Modal openers
     openEditModal,
