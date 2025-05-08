@@ -71,7 +71,7 @@ export default function ProductGrid({
             <div className="flex justify-center items-center h-64">
               <p>Loading products...</p>
             </div>
-          ) : (
+          ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {filteredProducts.map(product => (
                 <Button
@@ -79,7 +79,7 @@ export default function ProductGrid({
                   variant="outline"
                   className="h-32 p-2 flex flex-col items-center justify-between text-left border-croffle-primary/20 hover:bg-croffle-background hover:border-croffle-primary"
                   onClick={() => addItemToCart(product)}
-                  disabled={!isShiftActive}
+                  disabled={!isShiftActive || !product.isActive}
                 >
                   {product.image ? (
                     <div className="w-full h-16 bg-gray-100 rounded-md overflow-hidden mb-2">
@@ -100,6 +100,10 @@ export default function ProductGrid({
                   </div>
                 </Button>
               ))}
+            </div>
+          ) : (
+            <div className="flex justify-center items-center h-64">
+              <p>No products found in this category</p>
             </div>
           )}
         </TabsContent>

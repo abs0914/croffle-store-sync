@@ -1,12 +1,13 @@
 
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
-import { useShift } from "@/contexts/shift"; // Updated import path
+import { useShift } from "@/contexts/shift"; 
 import { useCart } from "@/contexts/CartContext";
 import { useProductData } from "@/hooks/useProductData";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
+import { toast } from "sonner";
 
 export default function POS() {
   const { currentStore } = useStore();
@@ -27,7 +28,7 @@ export default function POS() {
     startNewSale
   } = useTransactionHandler();
 
-  // Load product data
+  // Load product data from database
   const { products, categories, isLoading } = useProductData(currentStore?.id || null);
   
   // Wrapper for payment processing
@@ -41,17 +42,32 @@ export default function POS() {
       eWalletReferenceNumber?: string;
     }
   ) => {
-    await processPayment(
-      currentStore, 
-      currentShift, 
-      items, 
-      subtotal, 
-      tax, 
-      total,
-      paymentMethod,
-      amountTendered,
-      paymentDetails
-    );
+    if (!currentStore) {
+      toast.error("Please select a store first");
+      return;
+    }
+    
+    if (!currentShift) {
+      toast.error("Please start a shift first");
+      return;
+    }
+    
+    try {
+      await processPayment(
+        currentStore, 
+        currentShift, 
+        items, 
+        subtotal, 
+        tax, 
+        total,
+        paymentMethod,
+        amountTendered,
+        paymentDetails
+      );
+    } catch (error) {
+      console.error("Payment processing failed:", error);
+      toast.error("Failed to process payment");
+    }
   };
 
   // If we have a completed transaction, show the receipt
