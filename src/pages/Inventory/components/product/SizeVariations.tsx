@@ -125,7 +125,7 @@ export const SizeVariations = ({
                   id="overloadStock"
                   type="number"
                   value={overloadStock}
-                  onChange={(e) => handleVariationStockChange(e, 'overloadStock')}
+                  onChange={(e) => handleVariationStockChange(e, 'croffle-overload')}
                 />
               </div>
             </div>
