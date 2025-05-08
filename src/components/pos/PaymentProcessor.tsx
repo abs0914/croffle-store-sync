@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Banknote, CreditCard, Wallet } from "lucide-react";
-import { useShift } from "@/contexts/ShiftContext";
+import { useShift } from "@/contexts/shift";
 
 interface PaymentProcessorProps {
   total: number;
