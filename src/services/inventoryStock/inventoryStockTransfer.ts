@@ -34,6 +34,9 @@ export const transferInventoryStock = async (
     const newSourceQuantity = previousSourceQuantity - quantity;
     
     // Begin a transaction for consistency
+    const user = await supabase.auth.getUser();
+    const userId = user.data.user?.id || '';
+    
     const { error: transactionError } = await supabase.rpc('transfer_inventory_stock', {
       p_source_id: sourceId,
       p_target_store_id: targetStoreId,
@@ -41,7 +44,7 @@ export const transferInventoryStock = async (
       p_unit: sourceItem.unit,
       p_quantity: quantity,
       p_notes: notes || "Stock transfer",
-      p_user_id: (await supabase.auth.getUser()).data.user?.id || ''
+      p_user_id: userId
     });
     
     if (transactionError) {
