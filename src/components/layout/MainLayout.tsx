@@ -1,10 +1,11 @@
+
 import { ReactNode, useEffect } from "react";
 import { Header } from "./Header";
 import Sidebar from "./sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Spinner } from "../ui/spinner";
 import { useNavigate } from "react-router-dom";
-import { verifyDesignCompliance } from "@/utils/designSystem";
+import { verifyDesignCompliance } from "@/utils/design";
 
 interface MainLayoutProps {
   children: ReactNode;
