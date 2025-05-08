@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useStore } from "@/contexts/StoreContext";
+import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
 import {
   Select,
   SelectContent,
@@ -35,7 +36,16 @@ export function DashboardHeader() {
             <SelectContent>
               {stores.map((store) => (
                 <SelectItem key={store.id} value={store.id}>
-                  {store.name}
+                  <div className="flex items-center gap-2">
+                    {store.logo_url && (
+                      <img 
+                        src={store.logo_url} 
+                        className="h-4 w-4 object-cover"
+                        alt={store.name}
+                      />
+                    )}
+                    {store.name}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>

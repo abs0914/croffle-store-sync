@@ -12,26 +12,29 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStore } from "@/contexts/StoreContext";
+import { useStoreDisplay } from "@/contexts/StoreDisplayContext";
 import { User, Settings, Store } from "lucide-react";
+import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
 
 export function Header() {
   const { user, logout } = useAuth();
   const { currentStore, stores, setCurrentStore } = useStore();
+  const { config } = useStoreDisplay();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-2">
-          {currentStore?.logo_url && (
-            <img
-              src={currentStore.logo_url}
-              alt={currentStore.name}
-              className="h-8 w-8"
+          {config.headerMode !== "hidden" && currentStore && (
+            <StoreNameDisplay 
+              variant={config.headerMode === "full" ? "title" : "compact"} 
+              size={config.headerMode === "full" ? "lg" : "md"}
+              showLogo={true}
             />
           )}
-          <h2 className="text-lg font-semibold">
-            {currentStore?.name || "PVOSyncPOS"}
-          </h2>
+          {!currentStore && (
+            <h2 className="text-lg font-semibold">PVOSyncPOS</h2>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <DropdownMenu>
@@ -39,7 +42,7 @@ export function Header() {
               <Button variant="outline" size="sm" className="gap-2">
                 <Store className="h-4 w-4" />
                 <span className="hidden md:inline-block">
-                  {currentStore?.name || "Select Store"}
+                  {currentStore ? "Change Store" : "Select Store"}
                 </span>
               </Button>
             </DropdownMenuTrigger>
@@ -51,7 +54,15 @@ export function Header() {
                   <DropdownMenuItem
                     key={store.id}
                     onClick={() => setCurrentStore(store)}
+                    className="flex items-center gap-2"
                   >
+                    {store.logo_url && (
+                      <img 
+                        src={store.logo_url} 
+                        alt={store.name} 
+                        className="h-5 w-5 object-cover rounded"
+                      />
+                    )}
                     {store.name}
                   </DropdownMenuItem>
                 ))}

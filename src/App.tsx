@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import { AuthProvider } from "./contexts/AuthContext";
 import { StoreProvider } from "./contexts/StoreContext";
 import { ShiftProvider } from "./contexts/shift";
+import { StoreDisplayProvider } from "./contexts/StoreDisplayContext";
 import Stores from "./pages/Stores";
 import InventoryStock from "./pages/Inventory/InventoryStock";
 import Inventory from "./pages/Inventory"; // Import the Inventory component
@@ -21,19 +22,21 @@ function App() {
       <StoreProvider>
         <ShiftProvider>
           <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
-              <Route path="/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
-              <Route path="/customers" element={<MainLayout><CustomerManagement /></MainLayout>} />
-              <Route path="/pos" element={<MainLayout><POS /></MainLayout>} />
-              <Route path="/stores" element={<MainLayout><Stores /></MainLayout>} />
-              <Route path="/inventory" element={<MainLayout><Inventory /></MainLayout>} />
-              <Route path="/inventory/stock" element={<MainLayout><InventoryStock /></MainLayout>} />
-              <Route path="/sales" element={<MainLayout><Dashboard /></MainLayout>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster position="top-right" />
+            <StoreDisplayProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
+                <Route path="/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
+                <Route path="/customers" element={<MainLayout><CustomerManagement /></MainLayout>} />
+                <Route path="/pos" element={<MainLayout><POS /></MainLayout>} />
+                <Route path="/stores" element={<MainLayout><Stores /></MainLayout>} />
+                <Route path="/inventory" element={<MainLayout><Inventory /></MainLayout>} />
+                <Route path="/inventory/stock" element={<MainLayout><InventoryStock /></MainLayout>} />
+                <Route path="/sales" element={<MainLayout><Dashboard /></MainLayout>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Toaster position="top-right" />
+            </StoreDisplayProvider>
           </BrowserRouter>
         </ShiftProvider>
       </StoreProvider>
