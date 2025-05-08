@@ -5,13 +5,13 @@ import ShiftManager from "@/components/pos/ShiftManager";
 import CartView from "@/components/pos/CartView";
 import ProductGrid from "@/components/pos/ProductGrid";
 import { useCart } from "@/contexts/CartContext";
-import { Customer } from "@/types";
+import { Product, Category, Customer } from "@/types";
 
 interface POSContentProps {
   activeCategory: string;
   setActiveCategory: (category: string) => void;
-  products: any[];
-  categories: any[];
+  products: Product[];
+  categories: Category[];
   isLoading: boolean;
   currentStore: any;
   currentShift: any;

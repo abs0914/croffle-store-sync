@@ -35,6 +35,13 @@ export default function ProductGrid({
     return matchesCategory && matchesSearch;
   });
 
+  // Get category name by id for display purposes
+  const getCategoryName = (categoryId: string | undefined): string => {
+    if (!categoryId) return "Uncategorized";
+    const category = categories.find(cat => cat.id === categoryId);
+    return category ? category.name : "Uncategorized";
+  };
+
   return (
     <>
       <div className="mb-4 flex gap-2">
@@ -51,7 +58,7 @@ export default function ProductGrid({
       </div>
       
       <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory}>
-        <TabsList className="mb-4 bg-croffle-background">
+        <TabsList className="mb-4 bg-croffle-background overflow-x-auto flex w-full">
           <TabsTrigger value="all" className="data-[state=active]:bg-croffle-primary data-[state=active]:text-white">
             All
           </TabsTrigger>
@@ -59,7 +66,7 @@ export default function ProductGrid({
             <TabsTrigger 
               key={category.id} 
               value={category.id}
-              className="data-[state=active]:bg-croffle-primary data-[state=active]:text-white"
+              className="data-[state=active]:bg-croffle-primary data-[state=active]:text-white whitespace-nowrap"
             >
               {category.name}
             </TabsTrigger>
@@ -77,7 +84,7 @@ export default function ProductGrid({
                 <Button
                   key={product.id}
                   variant="outline"
-                  className="h-32 p-2 flex flex-col items-center justify-between text-left border-croffle-primary/20 hover:bg-croffle-background hover:border-croffle-primary"
+                  className="h-auto p-2 flex flex-col items-center justify-between text-left border-croffle-primary/20 hover:bg-croffle-background hover:border-croffle-primary"
                   onClick={() => addItemToCart(product)}
                   disabled={!isShiftActive || !product.isActive}
                 >
@@ -96,6 +103,9 @@ export default function ProductGrid({
                   )}
                   <div className="w-full">
                     <p className="font-medium text-sm truncate">{product.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {getCategoryName(product.categoryId)}
+                    </p>
                     <p className="text-croffle-primary font-bold">₱{product.price.toFixed(2)}</p>
                   </div>
                 </Button>
