@@ -10,6 +10,7 @@ export interface Product {
   price: number;
   category_id?: string;
   categoryId?: string; // For frontend compatibility
+  category?: Category; // Add full category object
   image_url?: string;
   image?: string; // For frontend compatibility
   is_active: boolean;

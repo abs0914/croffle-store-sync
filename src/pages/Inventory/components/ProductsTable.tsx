@@ -40,6 +40,7 @@ export const ProductsTable = ({ products }: ProductsTableProps) => {
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>SKU</TableHead>
+            <TableHead>Category</TableHead>
             <TableHead className="text-right">Price</TableHead>
             <TableHead className="text-right">Stock</TableHead>
             <TableHead>Variations</TableHead>
@@ -65,6 +66,15 @@ export const ProductsTable = ({ products }: ProductsTableProps) => {
                 </div>
               </TableCell>
               <TableCell>{product.sku}</TableCell>
+              <TableCell>
+                {product.category ? (
+                  <Badge variant="outline" className="capitalize">
+                    {product.category.name}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground text-sm">Uncategorized</span>
+                )}
+              </TableCell>
               <TableCell className="text-right">₱{product.price.toFixed(2)}</TableCell>
               <TableCell className="text-right">
                 <span className={product.stockQuantity < 10 ? "text-red-500 font-medium" : ""}>

@@ -6,7 +6,10 @@ import { SearchFilters } from "./components/SearchFilters";
 import { ProductsTable } from "./components/ProductsTable";
 import { useProductData } from "./hooks/useProductData";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Store } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Store, FolderPlus } from "lucide-react";
+import { createDefaultCategories } from "@/services/product/createDefaultCategories";
+import { toast } from "sonner";
 
 export default function Inventory() {
   const { currentStore } = useStore();
@@ -20,8 +23,25 @@ export default function Inventory() {
     setActiveTab,
     handleExportCSV,
     handleImportClick,
-    handleDownloadTemplate
+    handleDownloadTemplate,
+    refetch
   } = useProductData(currentStore?.id);
+
+  const handleCreateDefaultCategories = async () => {
+    if (!currentStore?.id) {
+      toast.error("Please select a store first");
+      return;
+    }
+
+    try {
+      await createDefaultCategories(currentStore.id);
+      toast.success("Default categories created successfully");
+      refetch();
+    } catch (error) {
+      console.error("Error creating default categories:", error);
+      toast.error("Failed to create default categories");
+    }
+  };
   
   // Return a consistent "no store selected" UI if no store is selected
   if (!currentStore) {
@@ -52,6 +72,13 @@ export default function Inventory() {
         onImportClick={handleImportClick}
         onDownloadTemplate={handleDownloadTemplate}
       />
+      
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={handleCreateDefaultCategories} className="mb-4">
+          <FolderPlus className="h-4 w-4 mr-2" />
+          Create Default Categories
+        </Button>
+      </div>
       
       <SearchFilters
         searchTerm={searchTerm}

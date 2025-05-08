@@ -9,7 +9,7 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       .from("products")
       .select(`
         *,
-        categories:category_id(id, name)
+        category:category_id(id, name)
       `)
       .eq("store_id", storeId)
       .order("name");
@@ -26,6 +26,7 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       price: item.price,
       category_id: item.category_id || undefined,
       categoryId: item.category_id || undefined,
+      category: item.category, // Include the full category object
       image_url: item.image_url || undefined,
       image: item.image_url || undefined,
       is_active: item.is_active !== null ? item.is_active : true,
@@ -51,7 +52,7 @@ export const fetchProduct = async (id: string): Promise<Product | null> => {
       .from("products")
       .select(`
         *,
-        categories:category_id(id, name)
+        category:category_id(id, name)
       `)
       .eq("id", id)
       .single();
@@ -68,6 +69,7 @@ export const fetchProduct = async (id: string): Promise<Product | null> => {
       price: data.price,
       category_id: data.category_id || undefined,
       categoryId: data.category_id || undefined,
+      category: data.category, // Include the full category object
       image_url: data.image_url || undefined,
       image: data.image_url || undefined,
       is_active: data.is_active !== null ? data.is_active : true,

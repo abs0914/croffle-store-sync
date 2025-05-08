@@ -28,10 +28,13 @@ export default function ProductGrid({
   const [searchTerm, setSearchTerm] = useState("");
   
   const filteredProducts = products.filter(product => {
-    const matchesCategory = activeCategory === "all" || product.categoryId === activeCategory;
+    const matchesCategory = activeCategory === "all" || 
+                           (product.category_id === activeCategory);
+    
     const matchesSearch = !searchTerm || 
                           product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    
     return matchesCategory && matchesSearch;
   });
 
@@ -104,7 +107,7 @@ export default function ProductGrid({
                   <div className="w-full">
                     <p className="font-medium text-sm truncate">{product.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {getCategoryName(product.categoryId)}
+                      {product.category ? product.category.name : getCategoryName(product.category_id)}
                     </p>
                     <p className="text-croffle-primary font-bold">₱{product.price.toFixed(2)}</p>
                   </div>
