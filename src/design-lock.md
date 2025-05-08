@@ -22,20 +22,26 @@ Our application uses a warm, inviting color scheme based on croffle (croissant-w
 
 The sidebar follows these specific design guidelines:
 
-1. **Header**
+1. **Logo Area**
+   - Centered logo at the top with "The Croffle Store" branding
+   - App name "PVOSyncPOS" displayed below the logo in primary color
    - Gradient background from `croffle-background` to `croffle-light`
-   - App logo is a square with rounded corners in the accent color
-   - App name in primary color with semi-bold font weight
 
-2. **Menu Items**
+2. **Start Shift Button**
+   - Prominent button in the accent color (#F37A1F)
+   - Full width with white text
+   - Rounded corners (8px radius)
+
+3. **Menu Items**
+   - Text color: Dark brown (#4A3520)
    - Rounded corners (8px radius)
    - Clear spacing between items (8px)
    - Icon aligned left, with consistent sizing
-   - Active state: secondary color background with white text
-   - Hover state: accent color background with white text
-   - Height of 44px for primary menu items, 36px for sub-menu items
+   - Active state: accent color background with white text
+   - Hover state: lighter accent color background with white text
+   - Height of 44px for primary menu items
 
-3. **User Profile Section**
+4. **User Profile Section**
    - Gradient background matching header
    - Avatar with accent color border
    - Username in primary text color
@@ -54,4 +60,5 @@ The sidebar follows these specific design guidelines:
 | Version | Date | Description | Approved By |
 |---------|------|-------------|------------|
 | 1.0 | 2025-05-08 | Initial design lock documentation | Team Lead |
+| 1.1 | 2025-05-08 | Updated sidebar design to match original branding | Team Lead |
 

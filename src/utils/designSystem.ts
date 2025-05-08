@@ -59,6 +59,12 @@ type DesignTokens = {
         hoverBackground: string;
         [key: string]: string;
       };
+      logo: {
+        width: string;
+        height: string;
+        [key: string]: string;
+      };
+      [key: string]: any;
     };
     [key: string]: any;
   };
@@ -98,14 +104,23 @@ export const DESIGN_TOKENS: DesignTokens = {
   components: {
     sidebar: {
       width: "16rem", // 256px
-      background: "var(--background)",
+      background: "var(--croffle-background)",
       menuItem: {
         height: "2.75rem", // 44px
         padding: "0.5rem 1rem", // 8px 16px
         borderRadius: "0.5rem", // 8px
-        activeBackground: "var(--secondary)",
-        hoverBackground: "var(--croffle-accent)",
+        activeBackground: "var(--croffle-accent)",
+        hoverBackground: "var(--croffle-accent-hover)",
       },
+      logo: {
+        width: "9rem", // 144px
+        height: "9rem", // 144px
+      },
+      startShift: {
+        background: "var(--croffle-accent)",
+        color: "white",
+        borderRadius: "0.5rem",
+      }
     },
   },
 };
@@ -131,6 +146,13 @@ export function verifyDesignCompliance(): boolean {
     }
   });
 
+  // Log a message about design compliance
+  console.info(
+    '%c⚠️ Design Lock Active', 
+    'background: #F37A1F; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;',
+    '\nUI elements marked with data-design-locked="true" require approval before modification.'
+  );
+
   return compliant;
 }
 
@@ -155,9 +177,11 @@ export function designClass(component: string, variant: string = 'default'): str
   // This would be expanded to handle more complex class generation
   switch (component) {
     case 'sidebar.menuItem':
-      return `h-11 px-4 rounded-lg ${variant === 'active' ? 'bg-secondary text-white' : 'hover:bg-croffle-accent hover:text-white'}`;
+      return `h-11 px-4 rounded-lg ${variant === 'active' ? 'bg-croffle-accent text-white' : 'hover:bg-croffle-accent/80 hover:text-white text-croffle-text'}`;
     case 'sidebar.header':
-      return 'flex items-center h-16 px-4 border-b bg-gradient-to-r from-croffle-background to-croffle-light';
+      return 'flex flex-col items-center py-6 px-4 border-b bg-gradient-to-r from-croffle-background to-croffle-light';
+    case 'sidebar.startShift':
+      return 'w-full bg-croffle-accent hover:bg-croffle-accent/90 text-white rounded-md py-3';
     default:
       console.warn(`Design System Warning: Component "${component}" not found!`);
       return '';

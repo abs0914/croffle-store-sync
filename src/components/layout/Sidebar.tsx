@@ -25,19 +25,19 @@ import {
   Warehouse,
   History,
   Users,
-  Menu
+  Menu,
 } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { designClass } from "@/utils/designSystem";
 
-// Design lock constants - centralizing design tokens
+// Design constants - centralized in the component
 const DESIGN = {
   colors: {
-    primary: "bg-croffle-primary text-white",
-    active: "bg-secondary text-white",
-    hover: "hover:bg-croffle-accent hover:text-white",
+    active: "bg-croffle-accent text-white",
+    hover: "hover:bg-croffle-accent/80 hover:text-white",
   },
   spacing: {
     menuItem: "h-11 px-4 py-2 mb-1",
@@ -50,7 +50,7 @@ const MainMenu = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentStore } = useStore();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -63,92 +63,39 @@ const MainMenu = () => {
   };
 
   const menuItems = [
-    { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
+    { name: "Dashboard", path: "/dashboard", icon: <Home className="w-5 h-5" /> },
     { name: "Point of Sale", path: "/pos", icon: <ShoppingCart className="w-5 h-5" /> },
+    { name: "Stores", path: "/stores", icon: <Store className="w-5 h-5" /> },
+    { name: "Menu Management", path: "#", icon: <Package className="w-5 h-5" /> },
+    { name: "Inventory Stock", path: "/inventory", icon: <Warehouse className="w-5 h-5" /> },
     { name: "Customers", path: "/customers", icon: <Users className="w-5 h-5" /> },
-    {
-      name: "Products & Inventory",
-      path: "#",
-      icon: <Package className="w-5 h-5" />,
-      submenu: [
-        { name: "Products", path: "/products", icon: <Package2 className="w-4 h-4 mr-2" /> },
-        { name: "Inventory", path: "/inventory", icon: <Warehouse className="w-4 h-4 mr-2" /> },
-        { name: "Stock History", path: "/stock-history", icon: <History className="w-4 h-4 mr-2" /> },
-      ],
-    },
-    { name: "Stores", path: "/stores", icon: <Store className="w-5 h-5" /> }
+    { name: "Sales", path: "#", icon: <History className="w-5 h-5" /> },
   ];
 
   return (
-    <div className="flex flex-col space-y-0.5 px-3 py-2">
+    <div className="flex flex-col space-y-0.5 px-3 py-2" data-design-locked="true">
       {menuItems.map((item) => (
         <div key={item.name}>
-          {item.submenu ? (
-            <>
-              <Button
-                variant="ghost"
-                className={cn(
-                  DESIGN.spacing.menuItem,
-                  DESIGN.radius,
-                  "w-full justify-start font-normal",
-                  DESIGN.colors.hover,
-                  "transition-colors"
-                )}
-                onClick={handleProductsInventoryClick}
-              >
-                <div className="flex items-center">
-                  <span className="w-5 h-5 mr-2 flex items-center justify-center">
-                    {item.icon}
-                  </span>
-                  <span>{item.name}</span>
-                </div>
-              </Button>
-              {isSubMenuOpen && (
-                <div className="flex flex-col mt-1">
-                  {item.submenu.map((subItem) => (
-                    <Button
-                      key={subItem.name}
-                      variant="ghost"
-                      className={cn(
-                        DESIGN.spacing.submenuItem,
-                        DESIGN.radius,
-                        "w-full justify-start font-normal text-sm",
-                        location.pathname === subItem.path 
-                          ? DESIGN.colors.active
-                          : DESIGN.colors.hover,
-                        "transition-colors"
-                      )}
-                      onClick={() => navigate(subItem.path)}
-                    >
-                      {subItem.icon}
-                      <span>{subItem.name}</span>
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <Button
-              variant="ghost"
-              className={cn(
-                DESIGN.spacing.menuItem,
-                DESIGN.radius,
-                "w-full justify-start font-normal",
-                location.pathname === item.path 
-                  ? DESIGN.colors.active
-                  : DESIGN.colors.hover,
-                "transition-colors"
-              )}
-              onClick={() => navigate(item.path)}
-            >
-              <div className="flex items-center">
-                <span className="w-5 h-5 mr-2 flex items-center justify-center">
-                  {item.icon}
-                </span>
-                <span>{item.name}</span>
-              </div>
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            className={cn(
+              DESIGN.spacing.menuItem,
+              DESIGN.radius,
+              "w-full justify-start font-normal",
+              location.pathname === item.path 
+                ? DESIGN.colors.active
+                : DESIGN.colors.hover,
+              "transition-colors text-croffle-text"
+            )}
+            onClick={() => navigate(item.path)}
+          >
+            <div className="flex items-center">
+              <span className="w-5 h-5 mr-2 flex items-center justify-center">
+                {item.icon}
+              </span>
+              <span>{item.name}</span>
+            </div>
+          </Button>
         </div>
       ))}
     </div>
@@ -174,19 +121,31 @@ const Sidebar = () => {
         </Button>
       </div>
 
-      <div className="hidden md:flex h-screen w-64 flex-col bg-background border-r">
+      <div className="hidden md:flex h-screen w-64 flex-col bg-croffle-background border-r">
         {/* Logo and Branding Section */}
-        <div className="flex items-center h-16 px-4 border-b bg-gradient-to-r from-croffle-background to-croffle-light">
-          <div className="flex items-center">
-            <div className="w-8 h-8 rounded-md bg-croffle-accent flex items-center justify-center text-white font-bold mr-2">
-              P
-            </div>
-            <h2 className="text-lg font-semibold text-croffle-primary">PVOSyncPOS</h2>
+        <div className="flex flex-col items-center py-6 px-4 border-b bg-gradient-to-r from-croffle-background to-croffle-light">
+          <div className="w-36 h-36 mb-4">
+            <img 
+              src="/lovable-uploads/842d2338-c44c-4ef3-9af0-180d9a784c65.png" 
+              alt="The Croffle Store" 
+              className="w-full h-full object-contain"
+            />
           </div>
+          <h2 className="text-xl font-semibold text-croffle-primary mt-2">PVOSyncPOS</h2>
+        </div>
+        
+        {/* Start Shift Button */}
+        <div className="px-3 py-4">
+          <Button 
+            className="w-full bg-croffle-accent hover:bg-croffle-accent/90 text-white rounded-md py-3"
+            onClick={() => navigate("/pos")}
+          >
+            Start Shift
+          </Button>
         </div>
         
         {/* Menu Section */}
-        <div className="flex-1 overflow-auto py-4" data-design-locked="true">
+        <div className="flex-1 overflow-auto py-2" data-design-locked="true">
           <MainMenu />
         </div>
         
@@ -224,19 +183,31 @@ const Sidebar = () => {
 
       {/* Mobile Sidebar */}
       <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <SheetContent side="left" className="w-64 p-0 bg-background">
+        <SheetContent side="left" className="w-64 p-0 bg-croffle-background">
           {/* Logo and Branding Section */}
-          <div className="flex items-center h-16 px-4 border-b bg-gradient-to-r from-croffle-background to-croffle-light">
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-md bg-croffle-accent flex items-center justify-center text-white font-bold mr-2">
-                P
-              </div>
-              <h2 className="text-lg font-semibold text-croffle-primary">PVOSyncPOS</h2>
+          <div className="flex flex-col items-center py-6 px-4 border-b bg-gradient-to-r from-croffle-background to-croffle-light">
+            <div className="w-28 h-28 mb-2">
+              <img 
+                src="/lovable-uploads/842d2338-c44c-4ef3-9af0-180d9a784c65.png" 
+                alt="The Croffle Store" 
+                className="w-full h-full object-contain"
+              />
             </div>
+            <h2 className="text-lg font-semibold text-croffle-primary mt-1">PVOSyncPOS</h2>
+          </div>
+          
+          {/* Start Shift Button */}
+          <div className="px-3 py-3">
+            <Button 
+              className="w-full bg-croffle-accent hover:bg-croffle-accent/90 text-white rounded-md py-2"
+              onClick={() => navigate("/pos")}
+            >
+              Start Shift
+            </Button>
           </div>
           
           {/* Menu Section */}
-          <div className="flex-1 overflow-auto py-4" data-design-locked="true">
+          <div className="flex-1 overflow-auto py-2" data-design-locked="true">
             <MainMenu />
           </div>
           
