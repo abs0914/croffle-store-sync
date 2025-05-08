@@ -11,24 +11,40 @@ interface UseReportDataProps {
 }
 
 export function useReportData({ reportType, storeId, from, to }: UseReportDataProps) {
-  const { data, isLoading, error } = useQuery({
+  const queryResult = useQuery({
     queryKey: ['report', reportType, storeId, from, to],
-    queryFn: () => {
+    queryFn: async () => {
       if (!from || !to) return Promise.resolve(null);
       
-      switch (reportType) {
-        case 'sales':
-          return fetchSalesReport(storeId, from, to);
-        case 'inventory':
-          return fetchInventoryReport(storeId, from, to);
-        case 'profit_loss':
-          return fetchProfitLossReport(storeId, from, to);
-        default:
-          return Promise.resolve(null);
+      console.log(`Fetching ${reportType} report for store ${storeId} from ${from} to ${to}`);
+      
+      try {
+        switch (reportType) {
+          case 'sales':
+            return await fetchSalesReport(storeId, from, to);
+          case 'inventory':
+            return await fetchInventoryReport(storeId, from, to);
+          case 'profit_loss':
+            return await fetchProfitLossReport(storeId, from, to);
+          default:
+            return Promise.resolve(null);
+        }
+      } catch (error) {
+        console.error(`Error fetching ${reportType} report:`, error);
+        throw error;
       }
     },
-    enabled: !!storeId && !!from && !!to && ['sales', 'inventory', 'profit_loss'].includes(reportType)
+    enabled: !!storeId && !!from && !!to && ['sales', 'inventory', 'profit_loss'].includes(reportType),
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    refetchOnWindowFocus: false
   });
 
-  return { data, isLoading, error };
+  return {
+    ...queryResult,
+    refetch: () => {
+      console.log("Manually refetching report data...");
+      return queryResult.refetch();
+    }
+  };
 }

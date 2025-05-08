@@ -16,6 +16,27 @@ import Stores from "./pages/Stores";
 import InventoryStock from "./pages/Inventory/InventoryStock";
 import Inventory from "./pages/Inventory"; 
 import Reports from "./pages/Reports"; 
+import { useIsMobile } from "./hooks/use-mobile";
+
+function ToasterWithResponsivePosition() {
+  const isMobile = useIsMobile();
+  return (
+    <Toaster 
+      position={isMobile ? "top-center" : "top-right"}
+      closeButton
+      richColors
+      expand={isMobile}
+      toastOptions={{
+        classNames: {
+          toast: "group toast rounded-md",
+          title: "font-medium text-sm",
+          description: "text-xs",
+        },
+        duration: isMobile ? 4000 : 3000,
+      }}
+    />
+  );
+}
 
 function App() {
   return (
@@ -36,7 +57,7 @@ function App() {
                 <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-              <Toaster position="top-right" />
+              <ToasterWithResponsivePosition />
             </StoreDisplayProvider>
           </BrowserRouter>
         </ShiftProvider>
