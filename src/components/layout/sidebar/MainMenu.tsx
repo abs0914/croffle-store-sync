@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { 
   Home, 
   ShoppingCart, 
-  Store, 
   Package, 
+  Store, 
+  LayoutDashboard, 
+  Package2, 
   Warehouse, 
+  History, 
   Users, 
-  History 
+  Menu 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -41,10 +44,10 @@ export const MainMenu: React.FC = () => {
     { name: "Dashboard", path: "/dashboard", icon: <Home className="w-5 h-5" /> },
     { name: "Point of Sale", path: "/pos", icon: <ShoppingCart className="w-5 h-5" /> },
     { name: "Stores", path: "/stores", icon: <Store className="w-5 h-5" /> },
-    { name: "Menu Management", path: "#", icon: <Package className="w-5 h-5" /> },
-    { name: "Inventory Stock", path: "/inventory", icon: <Warehouse className="w-5 h-5" /> },
+    { name: "Menu Management", path: "/inventory", icon: <Package className="w-5 h-5" /> },
+    { name: "Inventory Stock", path: "/inventory/stock", icon: <Warehouse className="w-5 h-5" /> },
     { name: "Customers", path: "/customers", icon: <Users className="w-5 h-5" /> },
-    { name: "Sales", path: "#", icon: <History className="w-5 h-5" /> },
+    { name: "Sales", path: "/sales", icon: <History className="w-5 h-5" /> },
   ];
 
   return (
