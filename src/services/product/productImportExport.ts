@@ -77,7 +77,7 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
               name: `${product.name} Regular`,
               sku: regularSku,
               price: product.regular_price || 0,
-              stock_quantity: Math.floor(product.stock_quantity / 2),
+              stock_quantity: Math.floor(product.stock_quantity / 3),
               is_active: product.is_active,
               product_id: existingProduct.id,
               size: 'regular'
@@ -91,10 +91,24 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
               name: `${product.name} Mini`,
               sku: miniSku,
               price: product.mini_price || (product.regular_price * 0.7) || 0,
-              stock_quantity: Math.floor(product.stock_quantity / 2),
+              stock_quantity: Math.floor(product.stock_quantity / 3),
               is_active: product.is_active,
               product_id: existingProduct.id,
               size: 'mini'
+            });
+            
+          // Create croffle overload variation
+          const overloadSku = `${product.sku}-OVR`;
+          await supabase
+            .from('product_variations')
+            .upsert({
+              name: `${product.name} Croffle Overload`,
+              sku: overloadSku,
+              price: product.overload_price || (product.regular_price * 1.3) || 0,
+              stock_quantity: Math.floor(product.stock_quantity / 3),
+              is_active: product.is_active,
+              product_id: existingProduct.id,
+              size: 'croffle-overload'
             });
         }
       } else if (product.name && product.sku) {
@@ -140,7 +154,7 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
                 name: `${product.name} Regular`,
                 sku: regularSku,
                 price: product.regular_price || 0,
-                stock_quantity: Math.floor(product.stock_quantity / 2),
+                stock_quantity: Math.floor(product.stock_quantity / 3),
                 is_active: product.is_active,
                 product_id: newProduct.id,
                 size: 'regular'
@@ -154,10 +168,24 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
                 name: `${product.name} Mini`,
                 sku: miniSku,
                 price: product.mini_price || (product.regular_price * 0.7) || 0,
-                stock_quantity: Math.floor(product.stock_quantity / 2),
+                stock_quantity: Math.floor(product.stock_quantity / 3),
                 is_active: product.is_active,
                 product_id: newProduct.id,
                 size: 'mini'
+              });
+              
+            // Create croffle overload variation
+            const overloadSku = `${product.sku}-OVR`;
+            await supabase
+              .from('product_variations')
+              .insert({
+                name: `${product.name} Croffle Overload`,
+                sku: overloadSku,
+                price: product.overload_price || (product.regular_price * 1.3) || 0,
+                stock_quantity: Math.floor(product.stock_quantity / 3),
+                is_active: product.is_active,
+                product_id: newProduct.id,
+                size: 'croffle-overload'
               });
           }
         }
@@ -171,12 +199,13 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
 };
 
 export const generateProductsCSV = (products: Product[]): string => {
-  const headers = ['name', 'sku', 'description', 'stock_quantity', 'is_active', 'has_variations', 'regular_price', 'mini_price'];
+  const headers = ['name', 'sku', 'description', 'stock_quantity', 'is_active', 'has_variations', 'regular_price', 'mini_price', 'overload_price'];
   const csvRows = [headers.join(',')];
   
   products.forEach(product => {
     const regularVariation = product.variations?.find(v => v.size === 'regular');
     const miniVariation = product.variations?.find(v => v.size === 'mini');
+    const overloadVariation = product.variations?.find(v => v.size === 'croffle-overload');
     
     const row = [
       `"${product.name.replace(/"/g, '""')}"`,
@@ -186,7 +215,8 @@ export const generateProductsCSV = (products: Product[]): string => {
       product.isActive || product.is_active ? 'true' : 'false',
       product.variations && product.variations.length > 0 ? 'true' : 'false',
       regularVariation ? regularVariation.price : product.price,
-      miniVariation ? miniVariation.price : (product.price || 0) * 0.7
+      miniVariation ? miniVariation.price : (product.price || 0) * 0.7,
+      overloadVariation ? overloadVariation.price : (product.price || 0) * 1.3
     ];
     
     csvRows.push(row.join(','));
@@ -205,7 +235,8 @@ export const generateProductImportTemplate = (): string => {
     'is_active',
     'has_variations',
     'regular_price',
-    'mini_price'
+    'mini_price',
+    'overload_price'
   ];
   
   // Create the CSV string with headers
@@ -220,18 +251,20 @@ export const generateProductImportTemplate = (): string => {
     'true',
     'false',
     '10.99',
+    '',
     ''
   ].join(',');
   
   const exampleRow2 = [
     '"Product With Size Variations"',
     '"SKU456"',
-    '"Product with Regular and Mini sizes"',
-    '200',
+    '"Product with Regular, Mini, and Overload sizes"',
+    '300',
     'true',
     'true',
     '15.99',
-    '11.99'
+    '11.99',
+    '19.99'
   ].join(',');
   
   return `${csvContent}\n${exampleRow1}\n${exampleRow2}`;

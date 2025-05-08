@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "@/contexts/StoreContext";
@@ -98,8 +97,10 @@ export default function ProductForm() {
   const [hasVariations, setHasVariations] = useState(true);
   const [regularPrice, setRegularPrice] = useState<number>(0);
   const [miniPrice, setMiniPrice] = useState<number>(0);
+  const [overloadPrice, setOverloadPrice] = useState<number>(0);
   const [regularStock, setRegularStock] = useState<number>(0);
   const [miniStock, setMiniStock] = useState<number>(0);
+  const [overloadStock, setOverloadStock] = useState<number>(0);
   
   // Stock adjustment form state
   const [stockAdjustment, setStockAdjustment] = useState({
@@ -147,13 +148,14 @@ export default function ProductForm() {
         
         const regularVariation = product.variations.find(v => v.size === 'regular');
         const miniVariation = product.variations.find(v => v.size === 'mini');
+        const overloadVariation = product.variations.find(v => v.size === 'croffle-overload');
         
         if (regularVariation) {
           setRegularPrice(regularVariation.price);
           setRegularStock(regularVariation.stockQuantity || 0);
         } else {
           setRegularPrice(product.price || 0);
-          setRegularStock(product.stockQuantity || 0);
+          setRegularStock(Math.floor((product.stockQuantity || 0) / 3));
         }
         
         if (miniVariation) {
@@ -161,7 +163,15 @@ export default function ProductForm() {
           setMiniStock(miniVariation.stockQuantity || 0);
         } else {
           setMiniPrice((product.price || 0) * 0.7);
-          setMiniStock(0);
+          setMiniStock(Math.floor((product.stockQuantity || 0) / 3));
+        }
+        
+        if (overloadVariation) {
+          setOverloadPrice(overloadVariation.price);
+          setOverloadStock(overloadVariation.stockQuantity || 0);
+        } else {
+          setOverloadPrice((product.price || 0) * 1.3);
+          setOverloadStock(Math.floor((product.stockQuantity || 0) / 3));
         }
       } else {
         setHasVariations(false);
@@ -169,6 +179,8 @@ export default function ProductForm() {
         setRegularStock(product.stockQuantity || 0);
         setMiniPrice((product.price || 0) * 0.7);
         setMiniStock(0);
+        setOverloadPrice((product.price || 0) * 1.3);
+        setOverloadStock(0);
       }
     }
   }, [product]);
@@ -218,8 +230,10 @@ export default function ProductForm() {
     const value = parseFloat(e.target.value) || 0;
     if (size === 'regular') {
       setRegularPrice(value);
-    } else {
+    } else if (size === 'mini') {
       setMiniPrice(value);
+    } else if (size === 'croffle-overload') {
+      setOverloadPrice(value);
     }
   };
 
@@ -227,8 +241,10 @@ export default function ProductForm() {
     const value = parseInt(e.target.value) || 0;
     if (size === 'regular') {
       setRegularStock(value);
-    } else {
+    } else if (size === 'mini') {
       setMiniStock(value);
+    } else if (size === 'croffle-overload') {
+      setOverloadStock(value);
     }
   };
 
@@ -337,6 +353,17 @@ export default function ProductForm() {
               is_active: true,
               sku: `${savedProduct!.sku}-MINI`,
               size: 'mini' as ProductSize
+            });
+            
+            // Create Croffle Overload variation
+            await module.createProductVariation({
+              product_id: savedProduct!.id,
+              name: `${savedProduct!.name} Croffle Overload`,
+              price: overloadPrice,
+              stock_quantity: overloadStock,
+              is_active: true,
+              sku: `${savedProduct!.sku}-OVR`,
+              size: 'croffle-overload' as ProductSize
             });
             
             toast.success("Size variations added");
@@ -508,13 +535,13 @@ export default function ProductForm() {
                     onChange={handleCheckboxChange}
                     className="rounded border-gray-300 mr-2"
                   />
-                  <Label htmlFor="hasVariations">Add size variations (Regular and Mini)</Label>
+                  <Label htmlFor="hasVariations">Add size variations (Regular, Mini and Croffle Overload)</Label>
                 </div>
                 
                 {hasVariations && (
                   <div className="space-y-4 mt-4 border p-4 rounded-md">
                     <h3 className="font-medium">Size Variations</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {/* Regular Size */}
                       <div className="space-y-3 p-3 border rounded-md">
                         <h4 className="font-medium">Regular Size</h4>
@@ -565,6 +592,33 @@ export default function ProductForm() {
                             type="number"
                             value={miniStock}
                             onChange={(e) => handleVariationStockChange(e, 'mini')}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Croffle Overload Size */}
+                      <div className="space-y-3 p-3 border rounded-md">
+                        <h4 className="font-medium">Croffle Overload</h4>
+                        <div>
+                          <Label htmlFor="overloadSku">SKU: {formData.sku ? `${formData.sku}-OVR` : ''}</Label>
+                        </div>
+                        <div>
+                          <Label htmlFor="overloadPrice">Price</Label>
+                          <Input
+                            id="overloadPrice"
+                            type="number"
+                            step="0.01"
+                            value={overloadPrice}
+                            onChange={(e) => handleVariationPriceChange(e, 'croffle-overload')}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="overloadStock">Stock Quantity</Label>
+                          <Input
+                            id="overloadStock"
+                            type="number"
+                            value={overloadStock}
+                            onChange={(e) => handleVariationStockChange(e, 'croffle-overload')}
                           />
                         </div>
                       </div>
