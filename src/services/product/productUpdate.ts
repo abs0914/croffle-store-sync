@@ -15,8 +15,14 @@ export const updateProduct = async (id: string, product: Partial<Product>): Prom
     if (product.cost !== undefined) dbProduct.cost = product.cost;
     if (product.stock_quantity !== undefined) dbProduct.stock_quantity = product.stock_quantity;
     else if (product.stockQuantity !== undefined) dbProduct.stock_quantity = product.stockQuantity;
-    if (product.category_id !== undefined) dbProduct.category_id = product.category_id;
-    else if (product.categoryId !== undefined) dbProduct.category_id = product.categoryId;
+    
+    // Fix for UUID fields - ensure empty strings are converted to null
+    if (product.category_id !== undefined) {
+      dbProduct.category_id = product.category_id ? product.category_id : null;
+    } else if (product.categoryId !== undefined) {
+      dbProduct.category_id = product.categoryId ? product.categoryId : null;
+    }
+    
     if (product.is_active !== undefined) dbProduct.is_active = product.is_active;
     else if (product.isActive !== undefined) dbProduct.is_active = product.isActive;
     if (product.image_url !== undefined) dbProduct.image_url = product.image_url;
