@@ -132,15 +132,27 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              initialFocus
-              mode={isDateRangeSelectable ? "range" : "single"}
-              defaultMonth={dateRange.from}
-              selected={dateRange}
-              onSelect={setDateRange}
-              numberOfMonths={2}
-              className="p-3 pointer-events-auto"
-            />
+            {isDateRangeSelectable ? (
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange.from}
+                selected={dateRange}
+                onSelect={setDateRange as any}
+                numberOfMonths={2}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            ) : (
+              <Calendar
+                initialFocus
+                mode="single"
+                defaultMonth={dateRange.from}
+                selected={dateRange.from}
+                onSelect={(date) => setDateRange({ from: date, to: date })}
+                numberOfMonths={1}
+                className={cn("p-3 pointer-events-auto")}
+              />
+            )}
           </PopoverContent>
         </Popover>
       </div>

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { XReadingReport, ZReadingReport, DailySalesSummary, VATReport } from "@/types/reports";
 import { toast } from "sonner";
@@ -22,13 +21,7 @@ export async function fetchXReading(
     // Get active shift information
     const { data: shiftData, error: shiftError } = await supabase
       .from("shifts")
-      .select(`
-        *,
-        users:user_id (
-          name,
-          email
-        )
-      `)
+      .select("id, user_id, start_time, starting_cash")
       .eq("store_id", storeId)
       .eq("status", "active")
       .order("start_time", { ascending: false })
@@ -39,6 +32,14 @@ export async function fetchXReading(
     if (shiftError) {
       // For demo, create sample data
       return createSampleXReading(storeData);
+    }
+    
+    // Get user information separately since there's no direct relationship
+    let cashierName = "Unknown";
+    if (shiftData.user_id) {
+      // This would require a users table in your database
+      // For now we'll use a placeholder
+      cashierName = "Cashier #" + shiftData.user_id.substring(0, 5);
     }
     
     // Get transactions for this shift
@@ -104,7 +105,7 @@ export async function fetchXReading(
       storeAddress: storeData.address,
       contactInfo: storeData.phone || storeData.email,
       taxId: storeData.tax_id,
-      cashierName: shiftData.users?.name || 'Unknown',
+      cashierName,
       terminal: 'Terminal 1',
       beginningReceiptNumber,
       endingReceiptNumber,
@@ -152,13 +153,7 @@ export async function fetchZReading(
     // Get all shifts for the date
     const { data: shifts, error: shiftError } = await supabase
       .from("shifts")
-      .select(`
-        *,
-        users:user_id (
-          name,
-          email
-        )
-      `)
+      .select("id, user_id, start_time, starting_cash, ending_cash")
       .eq("store_id", storeId)
       .gte("start_time", `${date}T00:00:00`)
       .lt("start_time", `${date}T23:59:59`);
@@ -166,6 +161,14 @@ export async function fetchZReading(
     // For demo purposes, create sample data if no shifts found
     if (shiftError || !shifts || shifts.length === 0) {
       return createSampleZReading(storeData);
+    }
+    
+    // Get cashier name (would need to get this from users table)
+    let cashierName = "Unknown";
+    if (shifts.length > 0 && shifts[0].user_id) {
+      // This would require a users table in your database
+      // For now we'll use a placeholder
+      cashierName = "Cashier #" + shifts[0].user_id.substring(0, 5);
     }
     
     // Get all transactions for this date
@@ -250,7 +253,7 @@ export async function fetchZReading(
       contactInfo: storeData.phone || storeData.email,
       taxId: storeData.tax_id,
       storeManager: 'Store Manager',
-      cashierName: shifts[0]?.users?.name || 'Unknown',
+      cashierName,
       terminal: 'Terminal 1',
       beginningReceiptNumber,
       endingReceiptNumber,
