@@ -98,7 +98,7 @@ export const useProductData = (storeId: string | undefined) => {
       const a = document.createElement("a");
       a.setAttribute("hidden", "");
       a.setAttribute("href", url);
-      a.setAttribute("download", `inventory-import-template.csv`);
+      a.setAttribute("download", `menu-management-import-template.csv`); // Updated template name
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
