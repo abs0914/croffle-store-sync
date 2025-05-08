@@ -63,29 +63,48 @@ export const fetchCustomerPurchaseHistory = async (customerId: string): Promise<
     if (!data || data.length === 0) return [];
     
     // Map the database transaction data to our Transaction type
-    return data.map(transaction => ({
-      id: transaction.id,
-      shiftId: transaction.shift_id,
-      storeId: transaction.store_id,
-      userId: transaction.user_id,
-      customerId: transaction.customer_id,
-      items: typeof transaction.items === 'string' 
-        ? JSON.parse(transaction.items) 
-        : transaction.items,
-      subtotal: transaction.subtotal,
-      tax: transaction.tax,
-      discount: transaction.discount,
-      discountType: transaction.discount_type as any,
-      discountIdNumber: transaction.discount_id_number,
-      total: transaction.total,
-      amountTendered: transaction.amount_tendered,
-      change: transaction.change,
-      paymentMethod: transaction.payment_method as 'cash' | 'card' | 'e-wallet',
-      paymentDetails: transaction.payment_details,
-      status: transaction.status as 'completed' | 'voided',
-      createdAt: transaction.created_at,
-      receiptNumber: transaction.receipt_number
-    }));
+    return data.map(transaction => {
+      // Parse payment details if it's a string
+      let paymentDetails: any = transaction.payment_details;
+      if (typeof paymentDetails === 'string') {
+        try {
+          paymentDetails = JSON.parse(paymentDetails);
+        } catch (e) {
+          paymentDetails = {};
+        }
+      } else if (paymentDetails === null) {
+        paymentDetails = {};
+      }
+      
+      return {
+        id: transaction.id,
+        shiftId: transaction.shift_id,
+        storeId: transaction.store_id,
+        userId: transaction.user_id,
+        customerId: transaction.customer_id,
+        items: typeof transaction.items === 'string' 
+          ? JSON.parse(transaction.items) 
+          : transaction.items,
+        subtotal: transaction.subtotal,
+        tax: transaction.tax,
+        discount: transaction.discount,
+        discountType: transaction.discount_type as any,
+        discountIdNumber: transaction.discount_id_number,
+        total: transaction.total,
+        amountTendered: transaction.amount_tendered,
+        change: transaction.change,
+        paymentMethod: transaction.payment_method as 'cash' | 'card' | 'e-wallet',
+        paymentDetails: paymentDetails as {
+          cardType?: string;
+          cardNumber?: string;
+          eWalletProvider?: string;
+          eWalletReferenceNumber?: string;
+        },
+        status: transaction.status as 'completed' | 'voided',
+        createdAt: transaction.created_at,
+        receiptNumber: transaction.receipt_number
+      };
+    });
   } catch (error) {
     console.error("Error fetching customer purchase history:", error);
     toast.error("Failed to fetch purchase history");
