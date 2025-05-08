@@ -21,7 +21,7 @@ export const UserProfile = () => {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="w-full justify-start px-2 hover:bg-transparent">
             <Avatar className="h-8 w-8 mr-2">
-              <AvatarImage src={user?.avatarUrl} />
+              <AvatarImage src={user?.avatar} />
               <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col items-start">
