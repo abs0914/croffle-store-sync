@@ -26,6 +26,17 @@ interface TransactionRow {
   receipt_number: string;
 }
 
+// Type definition for customer data from Supabase
+interface CustomerRow {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone: string;
+  store_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 export const createTransaction = async (transaction: Omit<Transaction, "id" | "createdAt" | "receiptNumber">): Promise<Transaction | null> => {
   try {
     // Generate a receipt number based on date and time
@@ -159,15 +170,19 @@ export const fetchCustomerByPhone = async (phone: string): Promise<Customer | nu
     
     if (!data) return null;
     
-    // Create a Customer object with optional fields that match your Customer type
+    // Map the database customer row to our Customer type
+    // Since address and loyalty_points might not exist in the database,
+    // we handle them as optional properties
+    const customerData = data as CustomerRow;
+    
     return {
-      id: data.id,
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      // Use optional chaining to safely handle potentially missing properties
-      address: data.address || undefined,
-      loyaltyPoints: data.loyalty_points || 0
+      id: customerData.id,
+      name: customerData.name,
+      email: customerData.email || undefined,
+      phone: customerData.phone,
+      // These properties might not exist in the database schema
+      address: undefined, // We don't have this field in the DB
+      loyaltyPoints: 0    // We don't have this field in the DB
     };
   } catch (error) {
     console.error("Error fetching customer:", error);
@@ -185,8 +200,8 @@ export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { 
         .update({
           name: customer.name,
           email: customer.email,
-          phone: customer.phone,
-          address: customer.address
+          phone: customer.phone
+          // Not including address as it doesn't exist in the database
         })
         .eq("id", customer.id)
         .select()
@@ -196,13 +211,15 @@ export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { 
       
       toast.success("Customer updated successfully");
       
+      // Map the returned customer data to our Customer type
       return {
         id: data.id,
         name: data.name,
-        email: data.email,
+        email: data.email || undefined,
         phone: data.phone,
-        address: data.address || undefined,
-        loyaltyPoints: data.loyalty_points || 0
+        // These fields don't exist in the database schema
+        address: customer.address, // Keep the value provided by the user
+        loyaltyPoints: 0 // Default value since it doesn't exist in DB
       };
     } else {
       // Create new customer
@@ -211,8 +228,8 @@ export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { 
         .insert({
           name: customer.name,
           email: customer.email,
-          phone: customer.phone,
-          address: customer.address
+          phone: customer.phone
+          // Not including address as it doesn't exist in the database
         })
         .select()
         .single();
@@ -221,13 +238,15 @@ export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { 
       
       toast.success("Customer created successfully");
       
+      // Map the returned customer data to our Customer type
       return {
         id: data.id,
         name: data.name,
-        email: data.email,
+        email: data.email || undefined,
         phone: data.phone,
-        address: data.address || undefined,
-        loyaltyPoints: data.loyalty_points || 0
+        // These fields don't exist in the database schema
+        address: customer.address, // Keep the value provided by the user
+        loyaltyPoints: 0 // Default value since it doesn't exist in DB
       };
     }
   } catch (error) {
