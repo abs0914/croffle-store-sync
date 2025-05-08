@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Cash, CreditCard, Wallet } from "lucide-react";
+import { Banknote, CreditCard, Wallet } from "lucide-react";
 import { useShift } from "@/contexts/ShiftContext";
 
 interface PaymentProcessorProps {
@@ -134,7 +134,7 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
         }}>
           <TabsList className="grid grid-cols-3 mb-4">
             <TabsTrigger value="cash" className="flex items-center">
-              <Cash className="mr-2 h-4 w-4" />
+              <Banknote className="mr-2 h-4 w-4" />
               Cash
             </TabsTrigger>
             <TabsTrigger value="card" className="flex items-center">

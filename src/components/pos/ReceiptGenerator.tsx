@@ -1,375 +1,239 @@
 
-import { useState, useRef } from "react";
+import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { format } from "date-fns";
+import { Printer, Download } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Transaction, Customer } from "@/types";
 import { useStore } from "@/contexts/StoreContext";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { Printer, Bluetooth } from "lucide-react";
-import QRCode from 'qrcode.react';
 
 interface ReceiptGeneratorProps {
   transaction: Transaction;
-  customer: Customer | null;
+  customer?: Customer | null;
 }
 
 export default function ReceiptGenerator({ transaction, customer }: ReceiptGeneratorProps) {
   const { currentStore } = useStore();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false);
-  const [isBluetoothDialogOpen, setIsBluetoothDialogOpen] = useState(false);
-  const [bluetoothDevices, setBluetoothDevices] = useState<any[]>([]);
-  const [selectedDevice, setSelectedDevice] = useState<any>(null);
-  
-  const receiptRef = useRef<HTMLDivElement>(null);
-  
-  const printReceipt = async () => {
-    setIsPrinting(true);
+  const receiptRef = React.useRef<HTMLDivElement>(null);
+
+  const handlePrint = () => {
+    const content = receiptRef.current;
+    if (!content) return;
     
-    try {
-      const receiptContent = receiptRef.current?.innerHTML;
-      
-      if (!receiptContent) {
-        throw new Error("Receipt content not found");
-      }
-      
-      const printWindow = window.open('', '', 'height=800,width=600');
-      
-      if (!printWindow) {
-        throw new Error("Could not open print window");
-      }
-      
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Receipt</title>
-            <style>
-              body {
-                font-family: monospace;
-                font-size: 12px;
-                margin: 0;
-                padding: 10px;
-              }
-              .receipt {
-                width: 80mm;
-                margin: 0 auto;
-              }
-              .header {
-                text-align: center;
-                margin-bottom: 10px;
-              }
-              .item {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 5px;
-              }
-              .divider {
-                border-top: 1px dashed #000;
-                margin: 10px 0;
-              }
-              .total {
-                font-weight: bold;
-              }
-              .footer {
-                text-align: center;
-                margin-top: 10px;
-                font-size: 10px;
-              }
-              .qr-code {
-                text-align: center;
-                margin-top: 15px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="receipt">
-              ${receiptContent}
-            </div>
-            <script>
-              setTimeout(() => {
-                window.print();
-                window.close();
-              }, 500);
-            </script>
-          </body>
-        </html>
-      `);
-      
-      toast.success("Receipt sent to printer");
-    } catch (error) {
-      console.error("Error printing receipt:", error);
-      toast.error("Failed to print receipt");
-    } finally {
-      setIsPrinting(false);
-    }
-  };
-  
-  const scanBluetoothDevices = async () => {
-    try {
-      if (!navigator.bluetooth) {
-        toast.error("Bluetooth is not supported on this device or browser");
-        return;
-      }
-      
-      setBluetoothDevices([]);
-      setSelectedDevice(null);
-      
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [
-          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Common printer service
-          { services: ['49535343-fe7d-4ae5-8fa9-9fafd205e455'] } // Another common printer service
-        ],
-        optionalServices: ['battery_service']
-      });
-      
-      setBluetoothDevices([device]);
-      setSelectedDevice(device);
-      
-      toast.success(`Found printer: ${device.name}`);
-    } catch (error) {
-      console.error("Error scanning for Bluetooth devices:", error);
-      toast.error("Failed to scan for Bluetooth devices");
-    }
-  };
-  
-  const connectBluetoothPrinter = async () => {
-    if (!selectedDevice) {
-      toast.error("No printer selected");
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Failed to open print window. Please check your popup settings.');
       return;
     }
     
-    try {
-      toast.info("Connecting to printer... This might take a moment");
-      
-      // In a real application, we'd connect to the printer and send the receipt data
-      // For now, we'll just simulate a successful connection
-      setTimeout(() => {
-        toast.success("Receipt sent to Bluetooth printer");
-        setIsBluetoothDialogOpen(false);
-      }, 2000);
-      
-    } catch (error) {
-      console.error("Error connecting to Bluetooth printer:", error);
-      toast.error("Failed to connect to Bluetooth printer");
-    }
+    // Add print-specific styling
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt ${transaction.receiptNumber}</title>
+          <style>
+            body {
+              font-family: 'Courier New', monospace;
+              width: 80mm;
+              margin: 0 auto;
+              padding: 5mm;
+              text-align: center;
+            }
+            .receipt-header {
+              text-align: center;
+              margin-bottom: 10px;
+            }
+            .receipt-title {
+              font-size: 16px;
+              font-weight: bold;
+            }
+            .receipt-item {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 5px;
+            }
+            .receipt-total {
+              font-weight: bold;
+              margin-top: 10px;
+              border-top: 1px solid #000;
+              padding-top: 5px;
+            }
+            .receipt-footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 12px;
+            }
+            .divider {
+              border-top: 1px dashed #000;
+              margin: 10px 0;
+            }
+          </style>
+        </head>
+        <body>
+          ${content.innerHTML}
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
-  
-  const discountSection = transaction.discount > 0 ? (
-    <div>
-      <div className="flex justify-between">
-        <span>Discount ({transaction.discountType}):</span>
-        <span>₱{transaction.discount.toFixed(2)}</span>
-      </div>
-      {transaction.discountIdNumber && (
-        <div className="text-xs">ID: {transaction.discountIdNumber}</div>
-      )}
-    </div>
-  ) : null;
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP'
+    }).format(amount);
+  };
+
+  // Generate QR code content
+  const qrContent = `RECEIPT:${transaction.receiptNumber}|STORE:${currentStore?.name || ''}|DATE:${format(new Date(transaction.createdAt), 'yyyy-MM-dd HH:mm')}|TOTAL:${transaction.total}`;
 
   return (
     <div>
-      <div className="flex space-x-2">
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              variant="outline" 
-              className="flex-1"
-              disabled={!transaction}
-            >
-              <Printer className="mr-2 h-4 w-4" />
-              View Receipt
-            </Button>
-          </DialogTrigger>
+      {/* Receipt content */}
+      <div ref={receiptRef} className="text-sm">
+        <div className="receipt-header text-center mb-4">
+          <h2 className="text-xl font-bold">{currentStore?.name || 'Store Name'}</h2>
+          <p className="text-xs">{currentStore?.address || 'Store Address'}</p>
+          {currentStore?.phone && <p className="text-xs">Tel: {currentStore.phone}</p>}
           
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Receipt</DialogTitle>
-            </DialogHeader>
+          <div className="mt-2">
+            <h3 className="font-bold">SALES RECEIPT</h3>
+            <p>Receipt #: {transaction.receiptNumber}</p>
+            <p>Date: {format(new Date(transaction.createdAt), 'MMM dd, yyyy h:mm a')}</p>
             
-            <div className="receipt-container p-4 bg-white border rounded-md" ref={receiptRef}>
-              {currentStore && (
-                <div className="header text-center mb-4">
-                  {currentStore.logo_url && (
-                    <div className="logo mb-2">
-                      <img 
-                        src={currentStore.logo_url} 
-                        alt={currentStore.name} 
-                        className="h-12 mx-auto"
-                      />
-                    </div>
-                  )}
-                  <h2 className="text-lg font-bold">{currentStore.name}</h2>
-                  <p className="text-sm">{currentStore.address}</p>
-                  {currentStore.phone && <p className="text-sm">Tel: {currentStore.phone}</p>}
-                  {currentStore.tax_id && <p className="text-sm">Tax ID: {currentStore.tax_id}</p>}
-                </div>
-              )}
-              
-              <div className="receipt-details space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Receipt No:</span>
-                  <span>{transaction.receiptNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Date:</span>
-                  <span>{format(new Date(transaction.createdAt), "MMM dd, yyyy h:mm a")}</span>
-                </div>
-                
-                {customer && (
-                  <div className="customer-info mt-2">
-                    <div className="font-semibold">Customer:</div>
-                    <div>{customer.name}</div>
-                    {customer.phone && <div>{customer.phone}</div>}
-                  </div>
-                )}
-                
-                <div className="divider my-3 border-t border-dashed"></div>
-                
-                <div className="items space-y-2">
-                  {transaction.items.map((item, index) => (
-                    <div key={index}>
-                      <div className="flex justify-between">
-                        <span className="font-medium">{item.name}</span>
-                        <span>₱{item.totalPrice.toFixed(2)}</span>
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {item.quantity} x ₱{item.unitPrice.toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="divider my-3 border-t border-dashed"></div>
-                
-                <div className="totals space-y-1">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>₱{transaction.subtotal.toFixed(2)}</span>
-                  </div>
-                  
-                  {discountSection}
-                  
-                  <div className="flex justify-between">
-                    <span>VAT (12%):</span>
-                    <span>₱{transaction.tax.toFixed(2)}</span>
-                  </div>
-                  
-                  <div className="divider my-1 border-t border-dashed"></div>
-                  
-                  <div className="flex justify-between font-bold">
-                    <span>TOTAL:</span>
-                    <span>₱{transaction.total.toFixed(2)}</span>
-                  </div>
-                  
-                  {transaction.paymentMethod === 'cash' && transaction.amountTendered && transaction.change !== undefined && (
-                    <div>
-                      <div className="flex justify-between">
-                        <span>Amount Tendered:</span>
-                        <span>₱{transaction.amountTendered.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Change:</span>
-                        <span>₱{transaction.change.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-between mt-2">
-                    <span>Payment Method:</span>
-                    <span className="uppercase">{transaction.paymentMethod}</span>
-                  </div>
-                  
-                  {transaction.paymentMethod === 'card' && transaction.paymentDetails?.cardType && (
-                    <div className="text-xs text-right">
-                      {transaction.paymentDetails.cardType} ****{transaction.paymentDetails.cardNumber}
-                    </div>
-                  )}
-                  
-                  {transaction.paymentMethod === 'e-wallet' && transaction.paymentDetails?.eWalletProvider && (
-                    <div className="text-xs text-right">
-                      {transaction.paymentDetails.eWalletProvider} Ref: {transaction.paymentDetails.eWalletReferenceNumber}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="divider my-3 border-t border-dashed"></div>
-                
-                <div className="qr-code text-center mt-3">
-                  <QRCode value={transaction.id} size={80} renderAs="svg" />
-                  <div className="text-xs mt-1">Transaction ID: {transaction.id}</div>
-                </div>
-                
-                <div className="footer text-center mt-4 text-xs">
-                  <p>Thank you for your purchase!</p>
-                  <p>Please come again</p>
-                </div>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button 
-                variant="outline"
-                onClick={() => setIsBluetoothDialogOpen(true)}
-              >
-                <Bluetooth className="mr-2 h-4 w-4" />
-                Bluetooth Print
-              </Button>
-              <Button 
-                onClick={printReceipt}
-                disabled={isPrinting}
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                {isPrinting ? "Printing..." : "Print"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-      
-      <Dialog open={isBluetoothDialogOpen} onOpenChange={setIsBluetoothDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bluetooth Printing</DialogTitle>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <Button onClick={scanBluetoothDevices} className="w-full">
-              <Bluetooth className="mr-2 h-4 w-4" />
-              Scan for Printers
-            </Button>
-            
-            {bluetoothDevices.length > 0 && (
-              <div className="mt-4">
-                <h4 className="font-medium mb-2">Available Devices:</h4>
-                <ul className="space-y-2">
-                  {bluetoothDevices.map((device, index) => (
-                    <li 
-                      key={index}
-                      className={`p-2 border rounded-md cursor-pointer ${selectedDevice === device ? 'bg-primary/10 border-primary' : ''}`}
-                      onClick={() => setSelectedDevice(device)}
-                    >
-                      {device.name || "Unknown Device"}
-                    </li>
-                  ))}
-                </ul>
+            {customer && (
+              <div className="mt-2">
+                <p className="font-medium">Customer:</p>
+                <p>{customer.name}</p>
+                {customer.phone && <p>Phone: {customer.phone}</p>}
               </div>
             )}
           </div>
+        </div>
+        
+        <Separator className="my-2" />
+        
+        <div>
+          <div className="flex justify-between font-medium">
+            <span>Item</span>
+            <div className="flex">
+              <span className="w-16 text-center">Qty</span>
+              <span className="w-20 text-right">Price</span>
+            </div>
+          </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsBluetoothDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={connectBluetoothPrinter}
-              disabled={!selectedDevice}
-            >
-              Connect & Print
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <Separator className="my-1" />
+          
+          {transaction.items.map((item, index) => (
+            <div key={index} className="mb-1">
+              <div className="font-medium">{item.name}</div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{formatCurrency(item.unitPrice)} each</span>
+                <div className="flex">
+                  <span className="w-16 text-center">{item.quantity}</span>
+                  <span className="w-20 text-right">{formatCurrency(item.totalPrice)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          <Separator className="my-2" />
+          
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span>{formatCurrency(transaction.subtotal)}</span>
+            </div>
+            {transaction.discount > 0 && (
+              <div className="flex justify-between text-green-600">
+                <span>Discount 
+                  {transaction.discountType && ` (${transaction.discountType})`}:
+                </span>
+                <span>-{formatCurrency(transaction.discount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span>VAT (12%):</span>
+              <span>{formatCurrency(transaction.tax)}</span>
+            </div>
+            
+            <Separator className="my-2" />
+            
+            <div className="flex justify-between font-bold">
+              <span>TOTAL:</span>
+              <span>{formatCurrency(transaction.total)}</span>
+            </div>
+            
+            <div className="mt-2">
+              <div className="flex justify-between">
+                <span>Payment Method:</span>
+                <span className="capitalize">{transaction.paymentMethod}</span>
+              </div>
+              
+              {transaction.paymentMethod === 'cash' && (
+                <>
+                  <div className="flex justify-between">
+                    <span>Amount Tendered:</span>
+                    <span>{formatCurrency(transaction.amountTendered || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Change:</span>
+                    <span>{formatCurrency(transaction.change || 0)}</span>
+                  </div>
+                </>
+              )}
+              
+              {transaction.paymentMethod === 'card' && transaction.paymentDetails?.cardType && (
+                <div className="flex justify-between">
+                  <span>Card:</span>
+                  <span>{transaction.paymentDetails.cardType} (xxxx{transaction.paymentDetails.cardNumber})</span>
+                </div>
+              )}
+              
+              {transaction.paymentMethod === 'e-wallet' && transaction.paymentDetails?.eWalletProvider && (
+                <div className="flex justify-between">
+                  <span>E-wallet:</span>
+                  <span>{transaction.paymentDetails.eWalletProvider} (#{transaction.paymentDetails.eWalletReferenceNumber})</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-4 text-center">
+          <div className="flex justify-center mb-2">
+            <QRCodeSVG value={qrContent} size={80} />
+          </div>
+          <p className="text-xs">{transaction.receiptNumber}</p>
+          <p className="text-xs mt-2">Thank you for your purchase!</p>
+        </div>
+      </div>
+
+      {/* Print buttons */}
+      <div className="mt-4 space-y-2">
+        <Button 
+          onClick={handlePrint}
+          className="w-full flex items-center justify-center"
+        >
+          <Printer className="mr-2 h-4 w-4" />
+          Print Receipt
+        </Button>
+        <Button 
+          variant="outline" 
+          className="w-full flex items-center justify-center"
+          onClick={() => toast.info("Download functionality coming soon!")}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Download Receipt
+        </Button>
+      </div>
     </div>
   );
 }

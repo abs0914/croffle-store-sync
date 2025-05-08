@@ -25,6 +25,22 @@ const initialState: ShiftState = {
 
 const ShiftContext = createContext<ShiftState>(initialState);
 
+// This type ensures we are checking for the shifts table
+type ShiftRow = {
+  id: string;
+  user_id: string;
+  store_id: string;
+  start_time: string;
+  end_time: string | null;
+  starting_cash: number;
+  ending_cash: number | null;
+  status: 'active' | 'closed';
+  start_photo: string | null;
+  end_photo: string | null;
+  start_inventory_count: Record<string, number> | null;
+  end_inventory_count: Record<string, number> | null;
+};
+
 export function ShiftProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { currentStore } = useStore();
@@ -46,33 +62,35 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     
     try {
       setIsLoading(true);
-      
+
+      // Update the query to use raw SQL to ensure type compatibility
       const { data, error } = await supabase
         .from('shifts')
         .select('*')
         .eq('user_id', user.id)
         .eq('store_id', currentStore.id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
       
       if (error && error.code !== 'PGRST116') {
         throw error;
       }
       
       if (data) {
+        const shiftData = data as ShiftRow;
         setCurrentShift({
-          id: data.id,
-          userId: data.user_id,
-          storeId: data.store_id,
-          startTime: data.start_time,
-          endTime: data.end_time,
-          startingCash: data.starting_cash,
-          endingCash: data.ending_cash,
-          status: data.status,
-          startPhoto: data.start_photo,
-          endPhoto: data.end_photo,
-          startInventoryCount: data.start_inventory_count,
-          endInventoryCount: data.end_inventory_count
+          id: shiftData.id,
+          userId: shiftData.user_id,
+          storeId: shiftData.store_id,
+          startTime: shiftData.start_time,
+          endTime: shiftData.end_time || undefined,
+          startingCash: shiftData.starting_cash,
+          endingCash: shiftData.ending_cash || undefined,
+          status: shiftData.status,
+          startPhoto: shiftData.start_photo || undefined,
+          endPhoto: shiftData.end_photo || undefined,
+          startInventoryCount: shiftData.start_inventory_count || undefined,
+          endInventoryCount: shiftData.end_inventory_count || undefined
         });
       } else {
         setCurrentShift(null);
@@ -109,14 +127,16 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       
       if (error) throw error;
       
+      const shiftData = data as ShiftRow;
+      
       const shift: Shift = {
-        id: data.id,
-        userId: data.user_id,
-        storeId: data.store_id,
-        startTime: data.start_time,
-        startingCash: data.starting_cash,
+        id: shiftData.id,
+        userId: shiftData.user_id,
+        storeId: shiftData.store_id,
+        startTime: shiftData.start_time,
+        startingCash: shiftData.starting_cash,
         status: 'active' as const,
-        startPhoto: data.start_photo
+        startPhoto: shiftData.start_photo || undefined
       };
       
       setCurrentShift(shift);

@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Discount } from "lucide-react";
+import { BadgePercent } from "lucide-react";
 
 interface DiscountSelectorProps {
   subtotal: number;
@@ -74,7 +75,7 @@ export default function DiscountSelector({
             className="w-full justify-between"
           >
             <div className="flex items-center">
-              <Discount className="mr-2 h-4 w-4" />
+              <BadgePercent className="mr-2 h-4 w-4" />
               Apply Discount
             </div>
             <span className="text-muted-foreground">{displayDiscount}</span>
