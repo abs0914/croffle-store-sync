@@ -65,7 +65,7 @@ export const ProductsTable = ({ products }: ProductsTableProps) => {
                 </div>
               </TableCell>
               <TableCell>{product.sku}</TableCell>
-              <TableCell className="text-right">${product.price.toFixed(2)}</TableCell>
+              <TableCell className="text-right">₱{product.price.toFixed(2)}</TableCell>
               <TableCell className="text-right">
                 <span className={product.stockQuantity < 10 ? "text-red-500 font-medium" : ""}>
                   {product.stockQuantity}

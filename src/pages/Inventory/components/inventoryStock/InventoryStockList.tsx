@@ -1,3 +1,4 @@
+
 import { InventoryStock } from "@/types";
 import { Button } from "@/components/ui/button";
 import { 
@@ -27,7 +28,7 @@ interface InventoryStockListProps {
   onEdit: (stockItem: InventoryStock) => void;
   onStockAdjust: (stockItem: InventoryStock) => void;
   onStockTransfer?: (stockItem: InventoryStock) => void;
-  onDelete?: (stockItem: InventoryStock) => void; // Changed from (id: string) => void to match how it's used
+  onDelete?: (stockItem: InventoryStock) => void;
   hasMultipleStores?: boolean;
 }
 
@@ -118,6 +119,9 @@ export const InventoryStockList = ({
             >
               Stock Quantity {getSortIcon('stock_quantity')}
             </TableHead>
+            <TableHead className="text-right">
+              Cost
+            </TableHead>
             <TableHead>Status</TableHead>
             <TableHead 
               className="cursor-pointer"
@@ -137,6 +141,9 @@ export const InventoryStockList = ({
                 <span className={`font-medium ${stockItem.stock_quantity <= 5 ? 'text-destructive' : ''}`}>
                   {stockItem.stock_quantity}
                 </span>
+              </TableCell>
+              <TableCell className="text-right">
+                {stockItem.cost !== undefined ? `₱${stockItem.cost.toFixed(2)}` : '—'}
               </TableCell>
               <TableCell>
                 {stockItem.is_active ? (
@@ -186,7 +193,7 @@ export const InventoryStockList = ({
                       {onDelete && (
                         <DropdownMenuItem 
                           className="text-destructive" 
-                          onClick={() => onDelete(stockItem)} // Changed from onDelete(stockItem.id) to pass the whole object
+                          onClick={() => onDelete(stockItem)}
                         >
                           Delete Item
                         </DropdownMenuItem>

@@ -24,9 +24,10 @@ export const generateProductImportTemplate = (): string => {
     'stock_quantity',
     'is_active',
     'has_variations',
-    'regular_price',
-    'mini_price',
-    'overload_price'
+    'regular_price (₱)',
+    'mini_price (₱)',
+    'overload_price (₱)',
+    'cost (₱)'
   ];
   
   // Create the CSV string with headers
@@ -41,9 +42,10 @@ export const generateProductImportTemplate = (): string => {
     '100',
     'true',
     'false',
-    '10.99',
+    '129.99',
     '',
-    ''
+    '',
+    '85.00'
   ].join(',');
   
   const exampleRow2 = [
@@ -54,9 +56,10 @@ export const generateProductImportTemplate = (): string => {
     '300',
     'true',
     'true',
-    '15.99',
-    '11.99',
-    '19.99'
+    '179.99',
+    '129.99',
+    '229.99',
+    '120.00'
   ].join(',');
   
   return `${csvContent}\n${exampleRow1}\n${exampleRow2}`;

@@ -65,7 +65,7 @@ export const IngredientList = ({
             <TableCell className="text-right">
               {ingredient.cost_per_unit 
                 ? `₱${ingredient.cost_per_unit.toFixed(2)}` 
-                : "N/A"}
+                : "—"}
             </TableCell>
             <TableCell>
               {ingredient.is_active ? (
