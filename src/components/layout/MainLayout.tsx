@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Spinner } from "../ui/spinner";
 import { useNavigate } from "react-router-dom";
+import { verifyDesignCompliance } from "@/utils/designSystem";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -20,6 +21,13 @@ export function MainLayout({ children }: MainLayoutProps) {
       navigate("/login");
     }
   }, [isLoading, isAuthenticated, navigate]);
+
+  // Verify design compliance in development mode
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      verifyDesignCompliance();
+    }
+  }, []);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -38,7 +46,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Render main layout if authenticated
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background" data-component="main-layout">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />

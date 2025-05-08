@@ -3,10 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
-  SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -34,6 +31,20 @@ import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+
+// Design lock constants - centralizing design tokens
+const DESIGN = {
+  colors: {
+    primary: "bg-croffle-primary text-white",
+    active: "bg-secondary text-white",
+    hover: "hover:bg-croffle-accent hover:text-white",
+  },
+  spacing: {
+    menuItem: "h-11 px-4 py-2 mb-1",
+    submenuItem: "h-9 px-6 py-1.5 mb-1",
+  },
+  radius: "rounded-lg",
+}
 
 const MainMenu = () => {
   const location = useLocation();
@@ -69,28 +80,43 @@ const MainMenu = () => {
   ];
 
   return (
-    <div className="flex flex-col space-y-1">
+    <div className="flex flex-col space-y-0.5 px-3 py-2">
       {menuItems.map((item) => (
         <div key={item.name}>
           {item.submenu ? (
             <>
               <Button
                 variant="ghost"
-                className="w-full h-11 rounded-none justify-start px-4 font-normal text-sm hover:bg-secondary"
+                className={cn(
+                  DESIGN.spacing.menuItem,
+                  DESIGN.radius,
+                  "w-full justify-start font-normal",
+                  DESIGN.colors.hover,
+                  "transition-colors"
+                )}
                 onClick={handleProductsInventoryClick}
               >
-                {item.icon}
-                <span className="ml-2">{item.name}</span>
+                <div className="flex items-center">
+                  <span className="w-5 h-5 mr-2 flex items-center justify-center">
+                    {item.icon}
+                  </span>
+                  <span>{item.name}</span>
+                </div>
               </Button>
               {isSubMenuOpen && (
-                <div className="flex flex-col pl-4">
+                <div className="flex flex-col mt-1">
                   {item.submenu.map((subItem) => (
                     <Button
                       key={subItem.name}
                       variant="ghost"
                       className={cn(
-                        "w-full h-9 rounded-none justify-start px-4 font-normal text-sm hover:bg-secondary",
-                        location.pathname === subItem.path ? "bg-secondary text-white" : ""
+                        DESIGN.spacing.submenuItem,
+                        DESIGN.radius,
+                        "w-full justify-start font-normal text-sm",
+                        location.pathname === subItem.path 
+                          ? DESIGN.colors.active
+                          : DESIGN.colors.hover,
+                        "transition-colors"
                       )}
                       onClick={() => navigate(subItem.path)}
                     >
@@ -105,13 +131,22 @@ const MainMenu = () => {
             <Button
               variant="ghost"
               className={cn(
-                "w-full h-11 rounded-none justify-start px-4 font-normal text-sm hover:bg-secondary",
-                location.pathname === item.path ? "bg-secondary text-white" : ""
+                DESIGN.spacing.menuItem,
+                DESIGN.radius,
+                "w-full justify-start font-normal",
+                location.pathname === item.path 
+                  ? DESIGN.colors.active
+                  : DESIGN.colors.hover,
+                "transition-colors"
               )}
               onClick={() => navigate(item.path)}
             >
-              {item.icon}
-              <span className="ml-2">{item.name}</span>
+              <div className="flex items-center">
+                <span className="w-5 h-5 mr-2 flex items-center justify-center">
+                  {item.icon}
+                </span>
+                <span>{item.name}</span>
+              </div>
             </Button>
           )}
         </div>
@@ -139,30 +174,38 @@ const Sidebar = () => {
         </Button>
       </div>
 
-      <div className="hidden md:flex h-screen w-64 flex-col border-r bg-background">
-        <div className="flex items-center h-16 px-4 border-b">
-          <h2 className="text-lg font-semibold">PVOSyncPOS</h2>
+      <div className="hidden md:flex h-screen w-64 flex-col bg-background border-r">
+        {/* Logo and Branding Section */}
+        <div className="flex items-center h-16 px-4 border-b bg-gradient-to-r from-croffle-background to-croffle-light">
+          <div className="flex items-center">
+            <div className="w-8 h-8 rounded-md bg-croffle-accent flex items-center justify-center text-white font-bold mr-2">
+              P
+            </div>
+            <h2 className="text-lg font-semibold text-croffle-primary">PVOSyncPOS</h2>
+          </div>
         </div>
         
-        <div className="flex-1 overflow-auto py-2">
+        {/* Menu Section */}
+        <div className="flex-1 overflow-auto py-4" data-design-locked="true">
           <MainMenu />
         </div>
         
-        <div className="p-4 border-t">
+        {/* User Profile Section */}
+        <div className="p-4 border-t bg-gradient-to-r from-croffle-background to-croffle-light">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Avatar>
+              <Avatar className="border-2 border-croffle-accent">
                 <AvatarImage src={user?.avatar} />
-                <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                <AvatarFallback className="bg-croffle-primary text-white">{user?.name?.charAt(0) || "U"}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="text-sm font-medium">{user?.name || user?.email}</p>
+                <p className="text-sm font-medium text-croffle-text">{user?.name || user?.email}</p>
                 <p className="text-xs text-muted-foreground">{currentStore?.name || "No store selected"}</p>
               </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-croffle-light hover:text-croffle-primary">
                   <span className="sr-only">Open user menu</span>
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                     <path d="M3 10a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM8.5 10a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM15.5 8.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" />
@@ -181,30 +224,38 @@ const Sidebar = () => {
 
       {/* Mobile Sidebar */}
       <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <SheetContent side="left" className="w-64 p-0">
-          <div className="flex items-center h-16 px-4 border-b">
-            <h2 className="text-lg font-semibold">PVOSyncPOS</h2>
+        <SheetContent side="left" className="w-64 p-0 bg-background">
+          {/* Logo and Branding Section */}
+          <div className="flex items-center h-16 px-4 border-b bg-gradient-to-r from-croffle-background to-croffle-light">
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-md bg-croffle-accent flex items-center justify-center text-white font-bold mr-2">
+                P
+              </div>
+              <h2 className="text-lg font-semibold text-croffle-primary">PVOSyncPOS</h2>
+            </div>
           </div>
           
-          <div className="flex-1 overflow-auto py-2">
+          {/* Menu Section */}
+          <div className="flex-1 overflow-auto py-4" data-design-locked="true">
             <MainMenu />
           </div>
           
-          <div className="p-4 border-t">
+          {/* User Profile Section */}
+          <div className="p-4 border-t bg-gradient-to-r from-croffle-background to-croffle-light">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Avatar>
+                <Avatar className="border-2 border-croffle-accent">
                   <AvatarImage src={user?.avatar} />
-                  <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                  <AvatarFallback className="bg-croffle-primary text-white">{user?.name?.charAt(0) || "U"}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium">{user?.name || user?.email}</p>
+                  <p className="text-sm font-medium text-croffle-text">{user?.name || user?.email}</p>
                   <p className="text-xs text-muted-foreground">{currentStore?.name || "No store selected"}</p>
                 </div>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-croffle-light hover:text-croffle-primary">
                     <span className="sr-only">Open user menu</span>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                       <path d="M3 10a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM8.5 10a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM15.5 8.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" />
