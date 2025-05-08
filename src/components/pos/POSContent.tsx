@@ -64,11 +64,18 @@ export default function POSContent({
     <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-croffle-primary">Point of Sale</h1>
-        {currentStore && (
-          <Badge variant="outline" className="text-sm">
-            Store: {currentStore.name}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {currentStore && (
+            <Badge variant="outline" className="text-sm">
+              Store: {currentStore.name}
+            </Badge>
+          )}
+          {selectedCustomer && (
+            <Badge variant="secondary" className="text-sm">
+              Customer: {selectedCustomer.name}
+            </Badge>
+          )}
+        </div>
       </div>
       
       <div className="flex flex-col lg:flex-row gap-4 h-full">

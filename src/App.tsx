@@ -1,118 +1,69 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { StoreProvider } from "@/contexts/StoreContext";
-import { CartProvider } from "@/contexts/CartContext";
-import { ShiftProvider } from "@/contexts/shift"; // Updated import path
-import { MainLayout } from "./components/layout/MainLayout";
+import Index from "./pages";
 import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Login";
 import POS from "./pages/POS";
-import NotFound from "./pages/NotFound";
-import { useAuth } from "@/contexts/AuthContext";
-import Stores from "./pages/Stores";
-import StoreForm from "./pages/Stores/StoreForm";
-import StoreSettings from "./pages/Stores/StoreSettings";
-import StoreQR from "./pages/Stores/StoreQR";
-import CustomerForm from "./pages/Stores/CustomerForm";
+import Products from "./pages/Products";
+import ProductDetails from "./pages/Products/ProductDetails";
 import Inventory from "./pages/Inventory";
-import Categories from "./pages/Inventory/Categories";
-import ProductForm from "./pages/Inventory/ProductForm";
-import InventoryHistory from "./pages/Inventory/InventoryHistory";
-import Ingredients from "./pages/Inventory/Ingredients";
-import InventoryStock from "./pages/Inventory/InventoryStock";
+import Recipe from "./pages/Recipe";
+import Stores from "./pages/Stores";
+import StoreDetails from "./pages/Stores/StoreDetails";
+import NotFound from "./pages/NotFound";
+import MainLayout from "./components/layout/MainLayout";
+import Login from "./pages/Login";
+import Settings from "./pages/Settings";
+import RequireAuth from "./components/auth/RequireAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import ProductCreate from "./pages/Products/ProductCreate";
+import Category from "./pages/Category";
+import CategoryDetails from "./pages/Category/CategoryDetails";
+import CategoryCreate from "./pages/Category/CategoryCreate";
+import CustomerManagement from "./pages/Customers/CustomerManagement";
 
-const queryClient = new QueryClient();
-
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+function App() {
+  const { authStatus } = useAuth();
   
-  if (isLoading) {
-    return null; // Or a loading spinner
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
-// Auth routes component (redirects to dashboard if logged in)
-const AuthRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return null; // Or a loading spinner
-  }
-  
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
-const AppRoutes = () => {
   return (
-    <Routes>
-      {/* Auth Routes */}
-      <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
-      
-      {/* Public Routes - Customer Form */}
-      <Route path="/customer-form/:storeId" element={<CustomerForm />} />
-      
-      {/* Protected Routes */}
-      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/pos" element={<POS />} />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         
-        {/* Menu Management Routes */}
-        <Route path="/inventory" element={<Inventory />} />
-        <Route path="/inventory/categories" element={<Categories />} />
-        <Route path="/inventory/ingredients" element={<Ingredients />} />
-        <Route path="/inventory/stock" element={<InventoryStock />} />
-        <Route path="/inventory/product/new" element={<ProductForm />} />
-        <Route path="/inventory/product/:id" element={<ProductForm />} />
-        <Route path="/inventory/history" element={<InventoryHistory />} />
+        {/* Authentication */}
+        <Route path="/login" element={<Login />} />
         
-        {/* Store Management Routes */}
-        <Route path="/stores" element={<Stores />} />
-        <Route path="/stores/new" element={<StoreForm />} />
-        <Route path="/stores/:id" element={<StoreForm />} />
-        <Route path="/stores/:id/settings" element={<StoreSettings />} />
-        <Route path="/stores/:id/qr" element={<StoreQR />} />
-      </Route>
-      
-      {/* Catch-all Route */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        {/* Customer Management */}
+        <Route path="/customers" element={<MainLayout><CustomerManagement /></MainLayout>} />
+        
+        {/* Point of Sale */}
+        <Route path="/pos" element={<MainLayout><POS /></MainLayout>} />
+        
+        {/* Products and Inventory */}
+        <Route path="/products" element={<MainLayout><Products /></MainLayout>} />
+        <Route path="/products/create" element={<MainLayout><ProductCreate /></MainLayout>} />
+        <Route path="/products/:id" element={<MainLayout><ProductDetails /></MainLayout>} />
+        <Route path="/inventory" element={<MainLayout><Inventory /></MainLayout>} />
+        <Route path="/recipe" element={<MainLayout><Recipe /></MainLayout>} />
+        
+        {/* Categories */}
+        <Route path="/categories" element={<MainLayout><Category /></MainLayout>} />
+        <Route path="/categories/create" element={<MainLayout><CategoryCreate /></MainLayout>} />
+        <Route path="/categories/:id" element={<MainLayout><CategoryDetails /></MainLayout>} />
+        
+        {/* Stores */}
+        <Route path="/stores" element={<MainLayout><Stores /></MainLayout>} />
+        <Route path="/stores/:id" element={<MainLayout><StoreDetails /></MainLayout>} />
+        
+        {/* Settings */}
+        <Route path="/settings" element={<RequireAuth><MainLayout><Settings /></MainLayout></RequireAuth>} />
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Toaster position="top-right" />
+    </BrowserRouter>
   );
-};
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <StoreProvider>
-          <ShiftProvider>
-            <CartProvider>
-              <Toaster />
-              <Sonner position="top-right" closeButton />
-              <BrowserRouter>
-                <AppRoutes />
-              </BrowserRouter>
-            </CartProvider>
-          </ShiftProvider>
-        </StoreProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+}
 
 export default App;
