@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useShift } from "@/contexts/ShiftContext";
+import { useShift } from "@/contexts/shift"; // Updated import path
 import { format } from "date-fns";
 import StartShiftDialog from "./dialogs/StartShiftDialog";
 import EndShiftDialog from "./dialogs/EndShiftDialog";
