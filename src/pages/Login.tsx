@@ -4,165 +4,122 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCreatingUsers, setIsCreatingUsers] = useState(false);
-  const { login } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  if (isAuthenticated) {
+    navigate("/");
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
+    
+    if (!email || !password) {
+      toast.error("Please enter both email and password");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
     try {
       await login(email, password);
-      toast.success("Login successful!");
+      toast.success("Login successful");
       navigate("/");
-    } catch (error: any) {
+    } catch (error) {
       // Error is already handled in the login function
-      console.error("Login error:", error);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const createTestUsers = async () => {
-    setIsCreatingUsers(true);
-    const testUsers = [
-      { email: "admin@example.com", password: "password123", name: "Admin User" },
-      { email: "owner@example.com", password: "password123", name: "Store Owner" },
-      { email: "manager@example.com", password: "password123", name: "Manager User" },
-      { email: "cashier@example.com", password: "password123", name: "Cashier User" }
-    ];
+  // Demo credentials
+  const demoLogins = [
+    { role: "Admin", email: "admin@example.com", password: "password123" },
+    { role: "Manager", email: "manager@example.com", password: "password123" },
+    { role: "Cashier", email: "cashier@example.com", password: "password123" },
+  ];
 
-    try {
-      let createdCount = 0;
-
-      for (const user of testUsers) {
-        const { data, error } = await supabase.auth.signUp({
-          email: user.email,
-          password: user.password,
-          options: {
-            data: {
-              name: user.name
-            },
-          }
-        });
-
-        if (error) {
-          // If user already exists, that's fine
-          if (error.message.includes("already registered")) {
-            toast.info(`User ${user.email} already exists`);
-            createdCount++;
-          } else {
-            console.error(`Error creating ${user.email}:`, error);
-            toast.error(`Failed to create ${user.email}: ${error.message}`);
-          }
-        } else if (data.user) {
-          createdCount++;
-          toast.success(`Created user: ${user.email}`);
-        }
-      }
-
-      if (createdCount === testUsers.length) {
-        toast.success("All test users created successfully!");
-      } else {
-        toast.info(`Created ${createdCount}/${testUsers.length} test users.`);
-      }
-    } catch (error: any) {
-      console.error("Error creating test users:", error);
-      toast.error("Failed to create test users");
-    } finally {
-      setIsCreatingUsers(false);
-    }
+  const fillDemoCredentials = (email: string, password: string) => {
+    setEmail(email);
+    setPassword(password);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-croffle-background p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="flex flex-col items-center justify-center mb-8">
-          <img 
-            src="/lovable-uploads/e4103c2a-e57f-45f0-9999-1567aeda3f3d.png" 
-            alt="The Croffle Store" 
-            className="h-32 mb-6" 
-          />
-          <h2 className="text-2xl font-bold text-center text-croffle-primary">
-            PVOSyncPOS
-          </h2>
-          <p className="text-croffle-text/70 text-sm mt-2">
-            Point of Sale System for The Croffle Store
-          </p>
-        </div>
-
-        <Card className="border-croffle-primary/20">
-          <CardHeader>
-            <CardTitle className="text-croffle-primary">Login</CardTitle>
-            <CardDescription>
-              Enter your credentials to access the POS system
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your.email@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="border-croffle-primary/30 focus-visible:ring-croffle-accent"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="border-croffle-primary/30 focus-visible:ring-croffle-accent"
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-3">
-              <Button 
-                type="submit" 
-                className="w-full bg-croffle-primary hover:bg-croffle-primary/90 text-white"
-                disabled={isLoading}
-              >
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={createTestUsers}
-                disabled={isCreatingUsers}
-                className="w-full border-croffle-primary/30 text-croffle-primary hover:bg-croffle-primary/10"
-              >
-                {isCreatingUsers ? "Creating test users..." : "Create test users"}
-              </Button>
-            </CardFooter>
+    <div className="flex items-center justify-center min-h-screen bg-croffle-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Sign in</CardTitle>
+          <CardDescription className="text-center">
+            Enter your email and password to access your account
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Input
+                id="email"
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Input
+                id="password"
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Spinner className="mr-2 h-4 w-4" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign in"
+              )}
+            </Button>
           </form>
-        </Card>
-        
-        <div className="text-center text-sm text-croffle-text/70 mt-4">
-          <p>Use one of the test accounts:</p>
-          <p className="mt-1">admin@example.com, owner@example.com, manager@example.com, or cashier@example.com</p>
-          <p className="mt-1">Password: password123</p>
-          <p className="mt-2 text-xs">If test accounts don't exist yet, click the "Create test users" button above.</p>
-        </div>
-      </div>
+        </CardContent>
+        <CardFooter className="flex flex-col">
+          <div className="text-sm text-muted-foreground mb-4">
+            Demo accounts (click to autofill):
+          </div>
+          <div className="grid grid-cols-1 gap-2 w-full">
+            {demoLogins.map((demo) => (
+              <Button
+                key={demo.role}
+                variant="outline"
+                onClick={() => fillDemoCredentials(demo.email, demo.password)}
+                className="w-full justify-start"
+              >
+                <span className="font-semibold">{demo.role}:</span>
+                <span className="ml-2 text-muted-foreground">{demo.email}</span>
+              </Button>
+            ))}
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

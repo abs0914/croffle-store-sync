@@ -1,17 +1,27 @@
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Header } from "./Header";
 import Sidebar from "./Sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Spinner } from "../ui/spinner";
+import { useNavigate } from "react-router-dom";
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { isLoading } = useAuth();
+  const { isLoading, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
+  // Show loading spinner while checking authentication
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-croffle-background">
@@ -21,6 +31,12 @@ export function MainLayout({ children }: MainLayoutProps) {
     );
   }
 
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Render main layout if authenticated
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />

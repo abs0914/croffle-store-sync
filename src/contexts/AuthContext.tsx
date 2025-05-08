@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 interface AuthState {
   user: User | null;
-  session: Session | null; // Add session to the context
+  session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -17,7 +17,7 @@ interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  session: null, // Initialize session as null
+  session: null,
   isLoading: true,
   isAuthenticated: false,
   login: async () => {},
@@ -30,7 +30,7 @@ const AuthContext = createContext<AuthState>(initialState);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null); // Add session state
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   // Map Supabase auth user to our app's User type
@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Only update state with synchronous operations here
         setSession(newSession);
         setUser(newSession?.user ? mapSupabaseUser(newSession.user) : null);
+        setIsLoading(false); // Important: Set loading to false when auth state changes
       }
     );
 
@@ -67,7 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ? mapSupabaseUser(currentSession.user) : null);
-      setIsLoading(false);
+      setIsLoading(false); // Important: Always set loading to false after checking session
+    }).catch(error => {
+      console.error("Error checking session:", error);
+      setIsLoading(false); // Even on error, we need to stop loading
     });
 
     return () => {
