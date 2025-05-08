@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { Customer, Transaction } from "@/types";
-import { createTransaction } from "@/services/transactionService";
+import { createTransaction } from "@/services/transactions";
 import { toast } from "sonner";
 
 export function useTransactionHandler() {
