@@ -13,12 +13,12 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useStore } from "@/contexts/StoreContext";
 import { useStoreDisplay } from "@/contexts/StoreDisplayContext";
-import { User, Settings, Store } from "lucide-react";
+import { User, Settings } from "lucide-react";
 import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
 
 export function Header() {
   const { user, logout } = useAuth();
-  const { currentStore, stores, setCurrentStore } = useStore();
+  const { currentStore } = useStore();
   const { config } = useStoreDisplay();
 
   return (
@@ -37,39 +37,6 @@ export function Header() {
           )}
         </div>
         <div className="flex items-center gap-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Store className="h-4 w-4" />
-                <span className="hidden md:inline-block">
-                  {currentStore ? "Change Store" : "Select Store"}
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Switch Store</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                {stores.map((store) => (
-                  <DropdownMenuItem
-                    key={store.id}
-                    onClick={() => setCurrentStore(store)}
-                    className="flex items-center gap-2"
-                  >
-                    {store.logo_url && (
-                      <img 
-                        src={store.logo_url} 
-                        alt={store.name} 
-                        className="h-5 w-5 object-cover rounded"
-                      />
-                    )}
-                    {store.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
