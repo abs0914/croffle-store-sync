@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { User, UserRole, Session } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
