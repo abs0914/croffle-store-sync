@@ -7,9 +7,7 @@ import { ProductsTable } from "./components/ProductsTable";
 import { useProductData } from "./hooks/useProductData";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Store, FolderPlus, Plus } from "lucide-react";
-import { createDefaultCategories } from "@/services/product/createDefaultCategories";
-import { toast } from "sonner";
+import { Store, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Inventory() {
@@ -27,22 +25,6 @@ export default function Inventory() {
     handleDownloadTemplate,
     refetch
   } = useProductData();
-
-  const handleCreateDefaultCategories = async () => {
-    if (!currentStore?.id) {
-      toast.error("Please select a store first");
-      return;
-    }
-
-    try {
-      await createDefaultCategories(currentStore.id);
-      toast.success("Default categories created successfully");
-      refetch();
-    } catch (error) {
-      console.error("Error creating default categories:", error);
-      toast.error("Failed to create default categories");
-    }
-  };
   
   // Return a consistent "no store selected" UI if no store is selected
   if (!currentStore) {
@@ -75,11 +57,6 @@ export default function Inventory() {
       />
       
       <div className="flex flex-wrap justify-between gap-2">
-        <Button variant="outline" onClick={handleCreateDefaultCategories}>
-          <FolderPlus className="h-4 w-4 mr-2" />
-          Create Default Categories
-        </Button>
-        
         <Link to="/inventory/product/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
