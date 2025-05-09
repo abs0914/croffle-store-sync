@@ -16,8 +16,8 @@ export const createDefaultCategories = async (storeId: string): Promise<void> =>
   const defaultCategories = [
     { name: "Classic", description: "Traditional croffle variations", is_active: true },
     { name: "Fruity", description: "Fruit-flavored croffle variations", is_active: true },
-    { name: "Beverages", description: "Drinks and beverages", is_active: true },
-    { name: "Desserts", description: "Sweet treats and desserts", is_active: true }
+    { name: "Beverages", description: "Drinks and beverages", is_active: true }
+    // "Desserts" category has been removed
   ];
 
   try {
