@@ -47,11 +47,6 @@ export default function CartSummary({
         <span className="font-medium">₱{vatAmount.toFixed(2)}</span>
       </div>
       
-      <div className="flex justify-between font-medium">
-        <span>Subtotal (VAT inclusive)</span>
-        <span>₱{subtotal.toFixed(2)}</span>
-      </div>
-      
       {discount > 0 && (
         <div className="flex justify-between text-green-600">
           <span>Discount</span>
@@ -63,12 +58,12 @@ export default function CartSummary({
       
       <div className="flex justify-between text-lg font-bold">
         <span className="text-croffle-primary">Total Price</span>
-        <span className="text-croffle-primary">₱{(total - discount).toFixed(2)}</span>
+        <span className="text-croffle-primary">₱{(subtotal - discount).toFixed(2)}</span>
       </div>
       
       {/* Payment Processor */}
       <PaymentProcessor
-        total={total - discount}
+        total={subtotal - discount}
         onPaymentComplete={handlePaymentComplete}
       />
     </div>
