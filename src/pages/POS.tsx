@@ -12,7 +12,6 @@ import { toast } from "sonner";
 export default function POS() {
   const { currentStore } = useStore();
   const { currentShift } = useShift();
-  const [activeCategory, setActiveCategory] = useState<string>("all");
   const { items, subtotal, tax, total } = useCart();
   
   // Transaction handler hook
@@ -28,8 +27,14 @@ export default function POS() {
     startNewSale
   } = useTransactionHandler();
 
-  // Load product data from database
-  const { products, categories, isLoading } = useProductData(currentStore?.id || null);
+  // Load product data using consolidated hook
+  const { 
+    products, 
+    categories, 
+    isLoading, 
+    activeCategory, 
+    setActiveCategory 
+  } = useProductData(currentStore?.id || null);
   
   // Check the product activation status - for debugging
   const activeProductsCount = products.filter(p => p.isActive).length;
