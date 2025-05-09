@@ -1,46 +1,48 @@
 
-import { useState, useEffect } from "react";
-import { Product, Category } from "@/types";
-import { fetchProducts } from "@/services/product/productFetch";
-import { fetchCategories } from "@/services/category/categoryFetch";
-import { toast } from "sonner";
+import { useProductFetch } from "./product/useProductFetch";
+import { useProductFilters } from "./product/useProductFilters";
+import { useProductExportImport } from "./product/useProductExportImport";
+import { useCallback } from "react";
 
 export function useProductData(storeId: string | null) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  // Fetch base product data
+  const { products, categories, isLoading, error } = useProductFetch(storeId);
+  
+  // Filter functionality
+  const { 
+    searchTerm, 
+    setSearchTerm, 
+    activeCategory, 
+    setActiveCategory, 
+    filteredProducts 
+  } = useProductFilters(products);
+  
+  // Manual refetch function
+  const refetch = useCallback(async () => {
+    // This is a placeholder - the useProductFetch will handle the actual refetch
+    // based on the storeId dependency
+  }, []);
+  
+  // Export/Import functionality
+  const { 
+    handleExportCSV,
+    handleImportClick,
+    handleDownloadTemplate 
+  } = useProductExportImport(products, storeId, refetch);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        if (!storeId) {
-          setIsLoading(false);
-          return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-        
-        // Fetch both products and categories in parallel
-        const [productsData, categoriesData] = await Promise.all([
-          fetchProducts(storeId),
-          fetchCategories(storeId)
-        ]);
-        
-        setProducts(productsData);
-        setCategories(categoriesData);
-      } catch (error) {
-        console.error("Error loading data:", error);
-        setError(error instanceof Error ? error : new Error("Failed to load data"));
-        toast.error("Failed to load products and categories");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    
-    loadData();
-  }, [storeId]);
-
-  return { products, categories, isLoading, error };
+  return { 
+    products, 
+    categories, 
+    filteredProducts,
+    isLoading,
+    error,
+    searchTerm,
+    setSearchTerm,
+    activeCategory,
+    setActiveCategory,
+    handleExportCSV,
+    handleImportClick,
+    handleDownloadTemplate,
+    refetch
+  };
 }

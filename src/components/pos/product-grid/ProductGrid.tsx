@@ -10,11 +10,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { fetchProductVariations } from "@/services/productService";
-import { Button } from "@/components/ui/button";
 import ProductSearch from "./ProductSearch";
 import ProductCategoryTabs from "./ProductCategoryTabs";
 import ProductCard from "./ProductCard";
 import ProductVariationsList from "./ProductVariationsList";
+import { useProductFilters } from "@/hooks/product/useProductFilters";
 
 interface ProductGridProps {
   products: Product[];
@@ -75,6 +75,7 @@ export default function ProductGrid({
     }
   };
   
+  // Filter products based on category and search term
   const filteredProducts = products.filter(product => {
     const matchesCategory = activeCategory === "all" || 
                            (product.category_id === activeCategory);
