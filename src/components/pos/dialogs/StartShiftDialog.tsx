@@ -18,6 +18,7 @@ import { InventoryStock } from "@/types";
 import { Spinner } from "@/components/ui/spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Camera } from "lucide-react";
 
 interface StartShiftDialogProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export default function StartShiftDialog({
   const [startingCash, setStartingCash] = useState<number>(0);
   const [photo, setPhoto] = useState<string | null>(null);
   const [inventoryCount, setInventoryCount] = useState<Record<string, number>>({});
+  const [showCameraView, setShowCameraView] = useState<boolean>(false);
 
   // Fetch inventory items for this store
   const { data: inventoryItems = [], isLoading: isLoadingInventory } = useQuery({
@@ -49,6 +51,7 @@ export default function StartShiftDialog({
       setStartingCash(0);
       setPhoto(null);
       setInventoryCount({});
+      setShowCameraView(false);
     } else if (isOpen && inventoryItems.length > 0) {
       // Initialize inventory count with current stock quantities
       const initialCount = inventoryItems.reduce((acc, item) => {
@@ -69,10 +72,16 @@ export default function StartShiftDialog({
 
   const handleSubmit = async () => {
     await onStartShift(startingCash, inventoryCount, photo || undefined);
+    setShowCameraView(false);
   };
 
   const handleCancel = () => {
     onOpenChange(false);
+    setShowCameraView(false);
+  };
+
+  const toggleCameraView = () => {
+    setShowCameraView(!showCameraView);
   };
 
   return (
@@ -97,7 +106,43 @@ export default function StartShiftDialog({
             />
           </div>
           
-          <ShiftCamera onCapture={setPhoto} />
+          {showCameraView ? (
+            <ShiftCamera 
+              onCapture={(capturedPhoto) => {
+                setPhoto(capturedPhoto);
+                setShowCameraView(false);
+              }}
+              onReset={() => setShowCameraView(false)}
+            />
+          ) : (
+            <div className="space-y-2">
+              <Label>Shift Photo</Label>
+              <div className="flex items-center space-x-2">
+                {photo ? (
+                  <div className="relative">
+                    <img src={photo} alt="Shift start" className="w-full h-48 object-cover rounded-md border" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="absolute top-2 right-2" 
+                      onClick={() => setPhoto(null)}
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    onClick={toggleCameraView} 
+                    className="w-full"
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    Take Photo
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
           
           <div className="space-y-2">
             <Label>Current Inventory Levels</Label>
@@ -145,8 +190,13 @@ export default function StartShiftDialog({
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>
-            Start Shift
+          <Button 
+            onClick={handleSubmit} 
+            disabled={!photo}
+            className="flex items-center"
+          >
+            <Camera className="mr-2 h-4 w-4" />
+            Start Shift with Photo
           </Button>
         </DialogFooter>
       </DialogContent>
