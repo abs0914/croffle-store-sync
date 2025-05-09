@@ -5,7 +5,7 @@ import ShiftManager from "@/components/pos/ShiftManager";
 import CartView from "@/components/pos/CartView";
 import ProductGrid from "@/components/pos/product-grid";
 import { useCart } from "@/contexts/CartContext";
-import { Product, Category, Customer } from "@/types";
+import { Product, Category, Customer, ProductVariation } from "@/types";
 import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
 import { useStoreDisplay } from "@/contexts/StoreDisplayContext";
 
@@ -33,6 +33,7 @@ interface POSContentProps {
       eWalletReferenceNumber?: string;
     }
   ) => void;
+  addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
 }
 
 export default function POSContent({
@@ -49,14 +50,14 @@ export default function POSContent({
   discountType,
   discountIdNumber,
   handleApplyDiscount,
-  handlePaymentComplete
+  handlePaymentComplete,
+  addItemToCart
 }: POSContentProps) {
   const { 
     items, 
     removeItem, 
     updateQuantity, 
     clearCart, 
-    addItem,
     subtotal,
     tax,
     total,
@@ -96,7 +97,7 @@ export default function POSContent({
                 categories={categories}
                 activeCategory={activeCategory}
                 setActiveCategory={setActiveCategory}
-                addItemToCart={addItem}
+                addItemToCart={addItemToCart}
                 isShiftActive={!!currentShift}
                 isLoading={isLoading}
               />

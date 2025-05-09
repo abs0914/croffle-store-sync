@@ -12,7 +12,7 @@ import { toast } from "sonner";
 export default function POS() {
   const { currentStore } = useStore();
   const { currentShift } = useShift();
-  const { items, subtotal, tax, total } = useCart();
+  const { items, subtotal, tax, total, addItem } = useCart();
   
   // Transaction handler hook
   const {
@@ -37,7 +37,7 @@ export default function POS() {
   } = useProductData(currentStore?.id || null);
   
   // Check the product activation status - for debugging
-  const activeProductsCount = products.filter(p => p.isActive).length;
+  const activeProductsCount = products.filter(p => p.is_active).length;
   console.log(`Total products: ${products.length}, Active products: ${activeProductsCount}`);
   
   // Wrapper for payment processing
@@ -106,6 +106,7 @@ export default function POS() {
       discountIdNumber={discountIdNumber}
       handleApplyDiscount={handleApplyDiscount}
       handlePaymentComplete={handlePaymentComplete}
+      addItemToCart={addItem}
     />
   );
 }

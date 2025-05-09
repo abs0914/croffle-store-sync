@@ -47,6 +47,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (currentStore?.id) {
       setStoreId(currentStore.id);
+      console.log("Current store set:", currentStore.id);
     }
   }, [currentStore]);
 
@@ -59,6 +60,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setTax(newTax);
     setTotal(newSubtotal + newTax);
     setItemCount(items.reduce((sum, item) => sum + item.quantity, 0));
+    
+    // Debug log to check if items are being updated
+    console.log("Cart items updated:", items);
   }, [items]);
 
   const addItem = (product: Product, quantity = 1, variation?: ProductVariation) => {
@@ -69,6 +73,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     const itemPrice = variation ? variation.price : product.price;
+    
+    // Debug log to verify data
+    console.log("Adding item to cart:", {
+      product: product.name,
+      quantity,
+      price: itemPrice,
+      variation: variation ? variation.name : "none"
+    });
     
     // Check if the item already exists in cart
     const existingItemIndex = items.findIndex(item => {
@@ -85,7 +97,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems(newItems);
       
       const displayName = variation ? 
-        `${product.name} (${variation.size})` : 
+        `${product.name} (${variation.name})` : 
         product.name;
       
       toast.success(`Updated quantity for ${displayName}`);
@@ -103,10 +115,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         newItem.variation = variation;
       }
       
-      setItems([...items, newItem]);
+      // Use functional update to guarantee we're working with latest state
+      setItems(prevItems => [...prevItems, newItem]);
       
       const displayName = variation ? 
-        `${product.name} (${variation.size})` : 
+        `${product.name} (${variation.name})` : 
         product.name;
       
       toast.success(`${displayName} added to cart`);
