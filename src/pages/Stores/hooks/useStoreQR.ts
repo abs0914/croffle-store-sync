@@ -35,16 +35,21 @@ export const useStoreQR = () => {
     setError(null);
     
     try {
-      // Use .eq() instead of maybeSingle() to avoid authentication issues
+      // Use the more permissive .select() instead of .maybeSingle()
+      // And make sure to use public data only
       const { data, error } = await supabase
         .from("stores")
-        .select("*")
-        .eq("id", id);
+        .select("id, name, address, phone, email, logo_url")
+        .eq("id", id)
+        .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching store:", error);
+        throw error;
+      }
       
-      if (data && data.length > 0) {
-        setStore(data[0] as Store);
+      if (data) {
+        setStore(data as Store);
       } else {
         setError("Store not found");
       }
