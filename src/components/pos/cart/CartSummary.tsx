@@ -62,7 +62,7 @@ export default function CartSummary({
       <Separator className="bg-croffle-primary/20" />
       
       <div className="flex justify-between text-lg font-bold">
-        <span className="text-croffle-primary">Total</span>
+        <span className="text-croffle-primary">Total Price</span>
         <span className="text-croffle-primary">₱{(total - discount).toFixed(2)}</span>
       </div>
       
