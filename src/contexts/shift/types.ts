@@ -21,7 +21,15 @@ export interface ShiftRow {
 export interface ShiftState {
   currentShift: Shift | null;
   isLoading: boolean;
-  startShift: (startingCash: number, startPhoto?: string) => Promise<boolean>;
-  endShift: (endingCash: number, endPhoto?: string) => Promise<boolean>;
+  startShift: (
+    startingCash: number, 
+    startInventoryCount: Record<string, number>,
+    startPhoto?: string
+  ) => Promise<boolean>;
+  endShift: (
+    endingCash: number, 
+    endInventoryCount: Record<string, number>,
+    endPhoto?: string
+  ) => Promise<boolean>;
   fetchActiveShift: () => Promise<void>;
 }

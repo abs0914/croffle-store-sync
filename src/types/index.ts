@@ -6,3 +6,4 @@ export * from './product';
 export * from './inventory';
 export * from './recipe';
 export * from './transaction';
+export * from './shift';

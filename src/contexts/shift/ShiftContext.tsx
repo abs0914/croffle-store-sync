@@ -46,12 +46,23 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const startShift = async (startingCash: number, startPhoto?: string): Promise<boolean> => {
+  const startShift = async (
+    startingCash: number, 
+    startInventoryCount: Record<string, number>,
+    startPhoto?: string
+  ): Promise<boolean> => {
     if (!user || !currentStore) {
       return false;
     }
     
-    const shift = await createShift(user.id, currentStore.id, startingCash, startPhoto);
+    const shift = await createShift(
+      user.id, 
+      currentStore.id, 
+      startingCash, 
+      startInventoryCount,
+      startPhoto
+    );
+    
     if (shift) {
       setCurrentShift(shift);
       return true;
@@ -59,12 +70,22 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     return false;
   };
   
-  const endShift = async (endingCash: number, endPhoto?: string): Promise<boolean> => {
+  const endShift = async (
+    endingCash: number, 
+    endInventoryCount: Record<string, number>,
+    endPhoto?: string
+  ): Promise<boolean> => {
     if (!currentShift) {
       return false;
     }
     
-    const success = await closeShift(currentShift.id, endingCash, endPhoto);
+    const success = await closeShift(
+      currentShift.id, 
+      endingCash, 
+      endInventoryCount,
+      endPhoto
+    );
+    
     if (success) {
       setCurrentShift(null);
       return true;

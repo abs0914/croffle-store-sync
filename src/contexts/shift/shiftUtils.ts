@@ -27,6 +27,7 @@ export async function createShift(
   userId: string,
   storeId: string,
   startingCash: number,
+  startInventoryCount: Record<string, number>,
   startPhoto?: string
 ): Promise<Shift | null> {
   try {
@@ -36,7 +37,8 @@ export async function createShift(
       start_time: new Date().toISOString(),
       starting_cash: startingCash,
       status: 'active',
-      start_photo: startPhoto
+      start_photo: startPhoto,
+      start_inventory_count: startInventoryCount
     };
     
     const { data, error } = await supabase
@@ -61,6 +63,7 @@ export async function createShift(
 export async function closeShift(
   shiftId: string,
   endingCash: number,
+  endInventoryCount: Record<string, number>,
   endPhoto?: string
 ): Promise<boolean> {
   try {
@@ -70,7 +73,8 @@ export async function closeShift(
         end_time: new Date().toISOString(),
         ending_cash: endingCash,
         status: 'closed',
-        end_photo: endPhoto
+        end_photo: endPhoto,
+        end_inventory_count: endInventoryCount
       })
       .eq('id', shiftId);
     

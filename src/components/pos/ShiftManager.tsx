@@ -2,27 +2,29 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useShift } from "@/contexts/shift"; // Updated import path
+import { useShift } from "@/contexts/shift"; 
+import { useStore } from "@/contexts/StoreContext";
 import { format } from "date-fns";
 import StartShiftDialog from "./dialogs/StartShiftDialog";
 import EndShiftDialog from "./dialogs/EndShiftDialog";
 
 export default function ShiftManager() {
   const { currentShift, startShift, endShift } = useShift();
+  const { currentStore } = useStore();
   const [isStartShiftOpen, setIsStartShiftOpen] = useState(false);
   const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
 
-  const handleStartShift = async (startingCash: number, photo?: string) => {
-    const success = await startShift(startingCash, photo);
+  const handleStartShift = async (startingCash: number, startInventoryCount: Record<string, number>, photo?: string) => {
+    const success = await startShift(startingCash, startInventoryCount, photo);
     if (success) {
       setIsStartShiftOpen(false);
     }
   };
 
-  const handleEndShift = async (endingCash: number, photo?: string) => {
+  const handleEndShift = async (endingCash: number, endInventoryCount: Record<string, number>, photo?: string) => {
     if (!currentShift) return;
     
-    const success = await endShift(endingCash, photo);
+    const success = await endShift(endingCash, endInventoryCount, photo);
     if (success) {
       setIsEndShiftOpen(false);
     }
@@ -64,6 +66,7 @@ export default function ShiftManager() {
               isOpen={isStartShiftOpen}
               onOpenChange={setIsStartShiftOpen}
               onStartShift={handleStartShift}
+              storeId={currentStore?.id || null}
             />
             
             <Button 
