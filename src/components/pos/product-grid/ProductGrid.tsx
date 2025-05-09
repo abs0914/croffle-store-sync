@@ -44,13 +44,14 @@ export default function ProductGrid({
   
   // Handle product selection
   const handleProductClick = async (product: Product) => {
-    if (!isShiftActive || !product.isActive) return;
+    if (!isShiftActive || !(product.is_active || product.isActive)) return;
     
     setSelectedProduct(product);
 
     try {
       setIsLoadingVariations(true);
       const variations = await fetchProductVariations(product.id);
+      console.log("Fetched variations:", variations);
       
       // If there are variations, show the dialog
       if (variations && variations.length > 0) {
@@ -58,6 +59,7 @@ export default function ProductGrid({
         setIsDialogOpen(true);
       } else {
         // If no variations, add the product directly
+        console.log("Adding regular product directly (no variations)");
         addItemToCart(product);
       }
       
@@ -79,6 +81,7 @@ export default function ProductGrid({
   
   // Filter products based on category and search term
   const filteredProducts = products.filter(product => {
+    const isActive = product.is_active || product.isActive;
     const matchesCategory = activeCategory === "all" || 
                            (product.category_id === activeCategory);
     

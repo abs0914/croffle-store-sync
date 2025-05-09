@@ -17,6 +17,9 @@ export default function ProductCard({
   getCategoryName,
   onClick 
 }: ProductCardProps) {
+  // Check if product is active, handling both is_active and isActive properties
+  const isActive = product.is_active || product.isActive;
+  
   return (
     <TooltipProvider>
       <Tooltip>
@@ -24,15 +27,15 @@ export default function ProductCard({
           <Button
             variant="outline"
             className={`h-auto p-2 flex flex-col items-center justify-between text-left border-croffle-primary/20 hover:bg-croffle-background hover:border-croffle-primary ${
-              !isShiftActive || !product.isActive ? 'opacity-70' : ''
+              !isShiftActive || !isActive ? 'opacity-70' : ''
             }`}
             onClick={() => onClick(product)}
-            disabled={!isShiftActive || !product.isActive}
+            disabled={!isShiftActive || !isActive}
           >
-            {product.image ? (
+            {product.image_url || product.image ? (
               <div className="w-full h-24 bg-gray-100 rounded-md overflow-hidden mb-2">
                 <img 
-                  src={product.image} 
+                  src={product.image_url || product.image} 
                   alt={product.name} 
                   className="w-full h-full object-cover"
                 />
@@ -47,7 +50,7 @@ export default function ProductCard({
               <p className="text-xs text-muted-foreground">
                 {product.category ? product.category.name : getCategoryName(product.category_id)}
               </p>
-              {!product.isActive && (
+              {!isActive && (
                 <span className="inline-block bg-gray-200 text-gray-700 text-xs px-1 rounded mt-1">Inactive</span>
               )}
             </div>
@@ -56,7 +59,7 @@ export default function ProductCard({
         <TooltipContent side="top">
           {!isShiftActive 
             ? "Start a shift to add items to cart" 
-            : !product.isActive 
+            : !isActive
               ? "This product is inactive" 
               : `Select ${product.name}`}
         </TooltipContent>

@@ -82,7 +82,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       variation: variation ? variation.name : "none"
     });
     
-    // Check if the item already exists in cart
+    // Check if the item already exists in cart with the same variation or lack thereof
     const existingItemIndex = items.findIndex(item => {
       if (variation) {
         return item.productId === product.id && item.variationId === variation.id;
@@ -105,7 +105,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Add new item
       const newItem: CartItem = {
         productId: product.id,
-        product,
+        product: {
+          ...product,
+          is_active: product.is_active || product.isActive || true,
+          stock_quantity: product.stock_quantity || product.stockQuantity || 0
+        },
         quantity,
         price: itemPrice,
       };

@@ -28,18 +28,22 @@ export default function ProductVariationsList({
 
   return (
     <div className="grid gap-4 py-4">
-      {variations.map(variation => (
-        <Button 
-          key={variation.id}
-          onClick={() => onVariationSelect(variation)}
-          className="w-full justify-between"
-          variant="outline"
-          type="button"
-        >
-          <span>{variation.name}</span>
-          <span className="font-bold">₱{variation.price.toFixed(2)}</span>
-        </Button>
-      ))}
+      {variations.length > 0 ? (
+        variations.map(variation => (
+          <Button 
+            key={variation.id}
+            onClick={() => onVariationSelect(variation)}
+            className="w-full justify-between"
+            variant="outline"
+            type="button"
+          >
+            <span>{variation.name}</span>
+            <span className="font-bold">₱{variation.price.toFixed(2)}</span>
+          </Button>
+        ))
+      ) : (
+        <p className="text-center text-muted-foreground">No variations available</p>
+      )}
       
       {/* Option to add base product without variation */}
       {selectedProduct && (
