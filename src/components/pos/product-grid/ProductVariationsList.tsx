@@ -26,13 +26,19 @@ export default function ProductVariationsList({
     );
   }
 
+  // Log the variations to help debug
+  console.log("ProductVariationsList: Available variations", variations);
+
   return (
     <div className="grid gap-4 py-4">
       {variations.length > 0 ? (
         variations.map(variation => (
           <Button 
             key={variation.id}
-            onClick={() => onVariationSelect(variation)}
+            onClick={() => {
+              console.log("Selected variation:", variation);
+              onVariationSelect(variation);
+            }}
             className="w-full justify-between"
             variant="outline"
             type="button"
@@ -48,7 +54,10 @@ export default function ProductVariationsList({
       {/* Option to add base product without variation */}
       {selectedProduct && (
         <Button
-          onClick={onRegularSelect}
+          onClick={() => {
+            console.log("Selected regular product (no variation)");
+            onRegularSelect();
+          }}
           className="w-full justify-between mt-2"
           type="button"
         >

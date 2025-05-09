@@ -47,7 +47,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (currentStore?.id) {
       setStoreId(currentStore.id);
-      console.log("Current store set:", currentStore.id);
+      console.log("Current store set in CartContext:", currentStore.id);
     }
   }, [currentStore]);
 
@@ -62,7 +62,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItemCount(items.reduce((sum, item) => sum + item.quantity, 0));
     
     // Debug log to check if items are being updated
-    console.log("Cart items updated:", items);
+    console.log("Cart items updated in CartContext:", items);
   }, [items]);
 
   const addItem = (product: Product, quantity = 1, variation?: ProductVariation) => {
@@ -75,7 +75,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const itemPrice = variation ? variation.price : product.price;
     
     // Debug log to verify data
-    console.log("Adding item to cart:", {
+    console.log("CartContext: Adding item to cart:", {
       product: product.name,
       quantity,
       price: itemPrice,
@@ -101,6 +101,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         product.name;
       
       toast.success(`Updated quantity for ${displayName}`);
+      console.log("CartContext: Updated existing item in cart", displayName);
     } else {
       // Add new item
       const newItem: CartItem = {
@@ -127,6 +128,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         product.name;
       
       toast.success(`${displayName} added to cart`);
+      console.log("CartContext: Added new item to cart", displayName);
     }
   };
   
@@ -136,6 +138,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     newItems.splice(itemIndex, 1);
     setItems(newItems);
     toast.info(`${removedItem.product.name} removed from cart`);
+    console.log("CartContext: Removed item from cart", removedItem.product.name);
   };
   
   const updateQuantity = (itemIndex: number, quantity: number) => {
@@ -144,11 +147,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const newItems = [...items];
     newItems[itemIndex].quantity = quantity;
     setItems(newItems);
+    console.log("CartContext: Updated quantity for item", {
+      product: newItems[itemIndex].product.name,
+      newQuantity: quantity
+    });
   };
   
   const clearCart = () => {
     setItems([]);
     toast.info('Cart cleared');
+    console.log("CartContext: Cart cleared");
   };
 
   return (
