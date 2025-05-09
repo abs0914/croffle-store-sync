@@ -50,21 +50,6 @@ export default function ProductVariationsList({
       ) : (
         <p className="text-center text-muted-foreground">No variations available</p>
       )}
-      
-      {/* Option to add base product without variation */}
-      {selectedProduct && (
-        <Button
-          onClick={() => {
-            console.log("Selected regular product (no variation)");
-            onRegularSelect();
-          }}
-          className="w-full justify-between mt-2"
-          type="button"
-        >
-          <span>Regular (No variation)</span>
-          <span className="font-bold">₱{selectedProduct.price.toFixed(2)}</span>
-        </Button>
-      )}
     </div>
   );
 }
