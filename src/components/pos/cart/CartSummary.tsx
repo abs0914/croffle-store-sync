@@ -33,7 +33,7 @@ export default function CartSummary({
       <Separator className="bg-croffle-primary/20" />
       
       <div className="flex justify-between">
-        <span className="text-muted-foreground">Subtotal (VAT inclusive)</span>
+        <span className="text-muted-foreground">Subtotal</span>
         <span className="font-medium">₱{subtotal.toFixed(2)}</span>
       </div>
       
@@ -45,8 +45,8 @@ export default function CartSummary({
       )}
       
       <div className="flex justify-between">
-        <span className="text-muted-foreground">VAT (12% included)</span>
-        <span className="font-medium">₱{tax.toFixed(2)}</span>
+        <span className="text-muted-foreground">VAT (12%)</span>
+        <span className="font-medium">-₱{tax.toFixed(2)}</span>
       </div>
       
       <Separator className="bg-croffle-primary/20" />
