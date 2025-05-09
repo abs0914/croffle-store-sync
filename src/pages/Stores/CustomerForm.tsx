@@ -33,16 +33,16 @@ export default function CustomerForm() {
       }
       
       try {
+        // Use .eq() instead of .single() to avoid authentication issues
         const { data, error } = await supabase
           .from("stores")
           .select("*")
-          .eq("id", storeId)
-          .single();
+          .eq("id", storeId);
           
         if (error) throw error;
         
-        if (data) {
-          setStore(data as Store);
+        if (data && data.length > 0) {
+          setStore(data[0] as Store);
         } else {
           setError("Store not found");
         }

@@ -35,16 +35,16 @@ export const useStoreQR = () => {
     setError(null);
     
     try {
+      // Use .eq() instead of maybeSingle() to avoid authentication issues
       const { data, error } = await supabase
         .from("stores")
         .select("*")
-        .eq("id", id)
-        .maybeSingle();
+        .eq("id", id);
         
       if (error) throw error;
       
-      if (data) {
-        setStore(data as Store);
+      if (data && data.length > 0) {
+        setStore(data[0] as Store);
       } else {
         setError("Store not found");
       }
