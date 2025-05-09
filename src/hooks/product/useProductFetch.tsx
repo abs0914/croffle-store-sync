@@ -29,7 +29,13 @@ export function useProductFetch(storeId: string | null) {
         ]);
         
         setProducts(productsData);
-        setCategories(categoriesData);
+        
+        // Filter out the "Desserts" category
+        const filteredCategories = categoriesData.filter(
+          category => category.name.toLowerCase() !== "desserts"
+        );
+        
+        setCategories(filteredCategories);
       } catch (error) {
         console.error("Error loading data:", error);
         setError(error instanceof Error ? error : new Error("Failed to load data"));

@@ -14,6 +14,11 @@ export default function ProductCategoryTabs({
   activeCategory, 
   setActiveCategory 
 }: ProductCategoryTabsProps) {
+  // Filter out any "Desserts" category from the tabs
+  const filteredCategories = categories.filter(
+    category => category.name.toLowerCase() !== "desserts"
+  );
+  
   return (
     <TabsList className="mb-4 bg-croffle-background overflow-x-auto flex w-full">
       <TabsTrigger 
@@ -22,7 +27,7 @@ export default function ProductCategoryTabs({
       >
         All
       </TabsTrigger>
-      {categories.map(category => (
+      {filteredCategories.map(category => (
         <TabsTrigger 
           key={category.id} 
           value={category.id}

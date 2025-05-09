@@ -27,6 +27,11 @@ export const ProductBasicInfo = ({
   handleSelectChange,
   handleAdjustStock
 }: ProductBasicInfoProps) => {
+  // Filter out "Desserts" category if it exists
+  const filteredCategories = categories.filter(
+    category => category.name.toLowerCase() !== "desserts"
+  );
+  
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -67,14 +72,14 @@ export const ProductBasicInfo = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="uncategorized">Uncategorized</SelectItem>
-              {categories.map(category => (
+              {filteredCategories.map(category => (
                 <SelectItem key={category.id} value={category.id}>
                   {category.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {categories.length === 0 && (
+          {filteredCategories.length === 0 && (
             <FormDescription>
               No categories found. You can create categories from the Categories page.
             </FormDescription>

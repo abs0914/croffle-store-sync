@@ -28,11 +28,16 @@ export default function ProductForm() {
   });
 
   // Fetch categories
-  const { data: categories = [] } = useQuery({
+  const { data: categoriesData = [] } = useQuery({
     queryKey: ["categories", currentStore?.id],
     queryFn: () => currentStore?.id ? fetchCategories(currentStore.id) : Promise.resolve([]),
     enabled: !!currentStore?.id,
   });
+  
+  // Filter out "Desserts" category
+  const categories = categoriesData.filter(
+    category => category.name.toLowerCase() !== "desserts"
+  );
 
   // Use our product form hook
   const {
