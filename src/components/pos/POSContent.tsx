@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import ShiftManager from "@/components/pos/ShiftManager";
 import CartView from "@/components/pos/CartView";
-import ProductGrid from "@/components/pos/ProductGrid";
+import ProductGrid from "@/components/pos/product-grid";
 import { useCart } from "@/contexts/CartContext";
 import { Product, Category, Customer } from "@/types";
 import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
