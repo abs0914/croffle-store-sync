@@ -35,7 +35,7 @@ export const useStoreQR = () => {
     setError(null);
     
     try {
-      // Use the more permissive .select() without auth.anon() for authenticated users
+      // For authenticated users viewing their own store QR
       const { data, error } = await supabase
         .from("stores")
         .select("id, name, address, phone, email, logo_url")

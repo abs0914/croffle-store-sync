@@ -35,7 +35,7 @@ export default function CustomerForm() {
   
   const fetchStore = async () => {
     try {
-      // Use the auth.anon() method to create an anonymous session for public access
+      // Create a client specifically for public access
       const { data, error } = await supabase
         .from("stores")
         .select("id, name, logo_url")
@@ -68,13 +68,15 @@ export default function CustomerForm() {
     setIsSubmitting(true);
     
     try {
-      // Insert customer data
-      const { error } = await supabase.from("customers").insert({
-        name,
-        phone,
-        email: email || null,
-        store_id: storeId,
-      });
+      // Insert customer data using anonymous access
+      const { error } = await supabase
+        .from("customers")
+        .insert({
+          name,
+          phone,
+          email: email || null,
+          store_id: storeId,
+        });
       
       if (error) throw error;
       
@@ -95,6 +97,7 @@ export default function CustomerForm() {
     }
   };
   
+  // Loading state
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -108,6 +111,7 @@ export default function CustomerForm() {
     );
   }
   
+  // Error state
   if (error || !store) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -126,6 +130,7 @@ export default function CustomerForm() {
     );
   }
   
+  // Success state
   if (isSuccess) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -152,6 +157,7 @@ export default function CustomerForm() {
     );
   }
   
+  // Default form view
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
