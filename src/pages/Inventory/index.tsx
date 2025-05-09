@@ -26,7 +26,7 @@ export default function Inventory() {
     handleImportClick,
     handleDownloadTemplate,
     refetch
-  } = useProductData(currentStore?.id);
+  } = useProductData();
 
   const handleCreateDefaultCategories = async () => {
     if (!currentStore?.id) {

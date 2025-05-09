@@ -2,20 +2,37 @@
 import { useProductFetch } from "./product/useProductFetch";
 import { useProductFilters } from "./product/useProductFilters";
 import { useProductExportImport } from "./product/useProductExportImport";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 export function useProductData(storeId: string | null) {
   // Fetch base product data
   const { products, categories, isLoading, error } = useProductFetch(storeId);
   
-  // Filter functionality
+  // Filter functionality with search term and category filter
   const { 
     searchTerm, 
     setSearchTerm, 
     activeCategory, 
     setActiveCategory, 
-    filteredProducts 
+    filteredProducts: categoryFilteredProducts 
   } = useProductFilters(products);
+  
+  // Tab filtering (active, inactive, low-stock)
+  const [activeTab, setActiveTab] = useState("all");
+  
+  // Further filter products based on active tab
+  const filteredProducts = categoryFilteredProducts.filter(product => {
+    switch (activeTab) {
+      case "active":
+        return product.is_active || product.isActive;
+      case "inactive":
+        return !(product.is_active || product.isActive);
+      case "low-stock":
+        return (product.stock_quantity || product.stockQuantity || 0) <= 10;
+      default:
+        return true;
+    }
+  });
   
   // Manual refetch function
   const refetch = useCallback(async () => {
@@ -40,6 +57,8 @@ export function useProductData(storeId: string | null) {
     setSearchTerm,
     activeCategory,
     setActiveCategory,
+    activeTab,
+    setActiveTab,
     handleExportCSV,
     handleImportClick,
     handleDownloadTemplate,
