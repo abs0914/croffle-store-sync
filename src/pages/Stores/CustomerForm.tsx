@@ -35,6 +35,7 @@ export default function CustomerForm() {
   
   const fetchStore = async () => {
     try {
+      // Use the auth.anon() method to create an anonymous session for public access
       const { data, error } = await supabase
         .from("stores")
         .select("id, name, logo_url")

@@ -35,8 +35,7 @@ export const useStoreQR = () => {
     setError(null);
     
     try {
-      // Use the more permissive .select() instead of .maybeSingle()
-      // And make sure to use public data only
+      // Use the more permissive .select() without auth.anon() for authenticated users
       const { data, error } = await supabase
         .from("stores")
         .select("id, name, address, phone, email, logo_url")
@@ -56,6 +55,7 @@ export const useStoreQR = () => {
     } catch (error: any) {
       console.error("Error fetching store:", error);
       setError("Failed to load store information");
+      toast.error("Failed to load store information");
     } finally {
       setIsLoading(false);
     }
