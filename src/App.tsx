@@ -21,6 +21,7 @@ import CustomerFormPreview from "./pages/Stores/CustomerFormPreview";
 import InventoryStock from "./pages/Inventory/InventoryStock";
 import Inventory from "./pages/Inventory"; 
 import Reports from "./pages/Reports"; 
+import ProductForm from "./pages/Inventory/ProductForm";
 import { useIsMobile } from "./hooks/use-mobile";
 
 function ToasterWithResponsivePosition() {
@@ -63,6 +64,7 @@ function App() {
                 <Route path="/stores/:id/qr/preview" element={<MainLayout><CustomerFormPreview /></MainLayout>} />
                 <Route path="/customer-form/:storeId" element={<CustomerForm />} />
                 <Route path="/inventory" element={<MainLayout><Inventory /></MainLayout>} />
+                <Route path="/inventory/product/:id" element={<MainLayout><ProductForm /></MainLayout>} />
                 <Route path="/inventory/stock" element={<MainLayout><InventoryStock /></MainLayout>} />
                 <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
                 <Route path="*" element={<NotFound />} />

@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useNavigate } from "react-router-dom";
 import { Product } from "@/types";
@@ -45,12 +44,12 @@ export function useProductSubmit({
         imageUrl = await uploadProductImage(imageFile);
       }
       
-      // Set the price based on the regular size price
+      // Set the price based on the selected price (regular size price if variations enabled)
       const productData = {
         ...formData,
         storeId: currentStore.id,
         image: imageUrl,
-        price: regularPrice // Use regular variation price as the base product price
+        price: hasVariations ? regularPrice : formData.price // Use regular variation price if variations are enabled
       };
       
       let savedProduct: Product | null = null;
@@ -61,7 +60,7 @@ export function useProductSubmit({
         savedProduct = await createProduct(productData as Omit<Product, "id">);
       }
       
-      // Create variations if hasVariations is checked
+      // Create variations if hasVariations is checked and product was saved successfully
       if (savedProduct && hasVariations) {
         try {
           // Create Regular size variation

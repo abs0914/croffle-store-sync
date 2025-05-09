@@ -7,9 +7,10 @@ import { ProductsTable } from "./components/ProductsTable";
 import { useProductData } from "./hooks/useProductData";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Store, FolderPlus } from "lucide-react";
+import { Store, FolderPlus, Plus } from "lucide-react";
 import { createDefaultCategories } from "@/services/product/createDefaultCategories";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 export default function Inventory() {
   const { currentStore } = useStore();
@@ -73,11 +74,18 @@ export default function Inventory() {
         onDownloadTemplate={handleDownloadTemplate}
       />
       
-      <div className="flex justify-end">
-        <Button variant="outline" onClick={handleCreateDefaultCategories} className="mb-4">
+      <div className="flex flex-wrap justify-between gap-2">
+        <Button variant="outline" onClick={handleCreateDefaultCategories}>
           <FolderPlus className="h-4 w-4 mr-2" />
           Create Default Categories
         </Button>
+        
+        <Link to="/inventory/product/new">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Product
+          </Button>
+        </Link>
       </div>
       
       <SearchFilters

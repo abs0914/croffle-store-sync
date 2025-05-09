@@ -2,6 +2,7 @@
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { ProductSize } from "@/types";
 
 interface SizeVariationsProps {
@@ -20,8 +21,6 @@ interface SizeVariationsProps {
 
 export const SizeVariations = ({
   hasVariations,
-  handleCheckboxChange,
-  formData,
   regularPrice,
   miniPrice,
   overloadPrice,
@@ -31,107 +30,113 @@ export const SizeVariations = ({
   handleVariationPriceChange,
   handleVariationStockChange
 }: SizeVariationsProps) => {
+  if (!hasVariations) {
+    return null;
+  }
+  
   return (
-    <div className="border-t pt-4">
-      <div className="flex items-center mb-4">
-        <input
-          type="checkbox"
-          id="hasVariations"
-          name="hasVariations"
-          checked={hasVariations}
-          onChange={handleCheckboxChange}
-          className="rounded border-gray-300 mr-2"
-        />
-        <Label htmlFor="hasVariations">Add size variations (Regular, Mini and Croffle Overload)</Label>
-      </div>
-      
-      {hasVariations && (
-        <div className="space-y-4 mt-4 border p-4 rounded-md">
-          <h3 className="font-medium">Size Variations</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Regular Size */}
-            <div className="space-y-3 p-3 border rounded-md">
-              <h4 className="font-medium">Regular Size</h4>
-              <div>
-                <Label htmlFor="regularSku">SKU: {formData.sku ? `${formData.sku}-REG` : ''}</Label>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-medium mb-2">Size Variations</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Set prices and stock levels for different size options of this product.
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Regular Size */}
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-lg font-medium mb-2">Regular</div>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="regular-price">Price</Label>
+                  <Input
+                    id="regular-price"
+                    type="number"
+                    value={regularPrice || 0}
+                    onChange={(e) => handleVariationPriceChange(e, 'regular')}
+                    min={0}
+                    step={0.01}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="regular-stock">Stock Quantity</Label>
+                  <Input
+                    id="regular-stock"
+                    type="number"
+                    value={regularStock || 0}
+                    onChange={(e) => handleVariationStockChange(e, 'regular')}
+                    min={0}
+                    step={1}
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="regularPrice">Price</Label>
-                <Input
-                  id="regularPrice"
-                  type="number"
-                  step="0.01"
-                  value={regularPrice}
-                  onChange={(e) => handleVariationPriceChange(e, 'regular')}
-                />
+            </CardContent>
+          </Card>
+          
+          {/* Mini Size */}
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-lg font-medium mb-2">Mini</div>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="mini-price">Price</Label>
+                  <Input
+                    id="mini-price"
+                    type="number"
+                    value={miniPrice || 0}
+                    onChange={(e) => handleVariationPriceChange(e, 'mini')}
+                    min={0}
+                    step={0.01}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="mini-stock">Stock Quantity</Label>
+                  <Input
+                    id="mini-stock"
+                    type="number"
+                    value={miniStock || 0}
+                    onChange={(e) => handleVariationStockChange(e, 'mini')}
+                    min={0}
+                    step={1}
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="regularStock">Stock Quantity</Label>
-                <Input
-                  id="regularStock"
-                  type="number"
-                  value={regularStock}
-                  onChange={(e) => handleVariationStockChange(e, 'regular')}
-                />
+            </CardContent>
+          </Card>
+          
+          {/* Croffle Overload Size */}
+          <Card>
+            <CardContent className="pt-4">
+              <div className="text-lg font-medium mb-2">Croffle Overload</div>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="overload-price">Price</Label>
+                  <Input
+                    id="overload-price"
+                    type="number"
+                    value={overloadPrice || 0}
+                    onChange={(e) => handleVariationPriceChange(e, 'croffle-overload')}
+                    min={0}
+                    step={0.01}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="overload-stock">Stock Quantity</Label>
+                  <Input
+                    id="overload-stock"
+                    type="number"
+                    value={overloadStock || 0}
+                    onChange={(e) => handleVariationStockChange(e, 'croffle-overload')}
+                    min={0}
+                    step={1}
+                  />
+                </div>
               </div>
-            </div>
-            
-            {/* Mini Size */}
-            <div className="space-y-3 p-3 border rounded-md">
-              <h4 className="font-medium">Mini Size</h4>
-              <div>
-                <Label htmlFor="miniSku">SKU: {formData.sku ? `${formData.sku}-MINI` : ''}</Label>
-              </div>
-              <div>
-                <Label htmlFor="miniPrice">Price</Label>
-                <Input
-                  id="miniPrice"
-                  type="number"
-                  step="0.01"
-                  value={miniPrice}
-                  onChange={(e) => handleVariationPriceChange(e, 'mini')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="miniStock">Stock Quantity</Label>
-                <Input
-                  id="miniStock"
-                  type="number"
-                  value={miniStock}
-                  onChange={(e) => handleVariationStockChange(e, 'mini')}
-                />
-              </div>
-            </div>
-            
-            {/* Croffle Overload Size */}
-            <div className="space-y-3 p-3 border rounded-md">
-              <h4 className="font-medium">Croffle Overload</h4>
-              <div>
-                <Label htmlFor="overloadSku">SKU: {formData.sku ? `${formData.sku}-OVR` : ''}</Label>
-              </div>
-              <div>
-                <Label htmlFor="overloadPrice">Price</Label>
-                <Input
-                  id="overloadPrice"
-                  type="number"
-                  step="0.01"
-                  value={overloadPrice}
-                  onChange={(e) => handleVariationPriceChange(e, 'croffle-overload')}
-                />
-              </div>
-              <div>
-                <Label htmlFor="overloadStock">Stock Quantity</Label>
-                <Input
-                  id="overloadStock"
-                  type="number"
-                  value={overloadStock}
-                  onChange={(e) => handleVariationStockChange(e, 'croffle-overload')}
-                />
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
-      )}
+      </div>
     </div>
   );
 };

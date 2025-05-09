@@ -1,7 +1,7 @@
 
 import { Recipe } from './recipe';
 
-export type ProductSize = 'regular' | 'mini' | 'croffle-overload';
+export type ProductSize = 'regular' | 'mini' | 'croffle-overload' | 'small' | 'medium' | 'large';
 
 export interface Product {
   id: string;

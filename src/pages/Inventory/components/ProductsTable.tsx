@@ -1,115 +1,101 @@
 
+import React from "react";
 import { Link } from "react-router-dom";
-import { Product, ProductVariation } from "@/types";
+import { Product } from "@/types";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Edit, Trash2 } from "lucide-react";
 
 interface ProductsTableProps {
   products: Product[];
+  onDeleteProduct?: (product: Product) => void;
 }
 
-export const ProductsTable = ({ products }: ProductsTableProps) => {
-  if (products.length === 0) {
-    return (
-      <div className="border rounded-lg p-8 text-center">
-        <Package className="h-12 w-12 mx-auto text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-medium">No products found</h3>
-        <p className="text-muted-foreground mt-2">
-          Try adjusting your search term or filters.
-        </p>
-        <Button className="mt-4" asChild>
-          <Link to="/inventory/product/new">Add Product</Link>
-        </Button>
-      </div>
-    );
-  }
-
+export const ProductsTable = ({ products, onDeleteProduct }: ProductsTableProps) => {
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-[100px]">Image</TableHead>
             <TableHead>Name</TableHead>
-            <TableHead>SKU</TableHead>
             <TableHead>Category</TableHead>
             <TableHead className="text-right">Price</TableHead>
-            <TableHead className="text-right">Stock</TableHead>
-            <TableHead>Variations</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-[100px] text-right">Actions</TableHead>
+            <TableHead className="text-center">Stock</TableHead>
+            <TableHead className="text-center">Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {products.map((product) => (
-            <TableRow key={product.id}>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  {product.image ? (
-                    <div className="h-8 w-8 rounded overflow-hidden">
-                      <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  )}
-                  <span className="font-medium">{product.name}</span>
-                </div>
-              </TableCell>
-              <TableCell>{product.sku}</TableCell>
-              <TableCell>
-                {product.category ? (
-                  <Badge variant="outline" className="capitalize">
-                    {product.category.name}
-                  </Badge>
-                ) : (
-                  <span className="text-muted-foreground text-sm">Uncategorized</span>
-                )}
-              </TableCell>
-              <TableCell className="text-right">₱{product.price.toFixed(2)}</TableCell>
-              <TableCell className="text-right">
-                <span className={product.stockQuantity < 10 ? "text-red-500 font-medium" : ""}>
-                  {product.stockQuantity}
-                </span>
-              </TableCell>
-              <TableCell>
-                {product.variations && product.variations.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {product.variations.map((variation: ProductVariation) => (
-                      <Badge key={variation.id} variant="outline" className="capitalize">
-                        {variation.size || 'regular'}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground text-sm">None</span>
-                )}
-              </TableCell>
-              <TableCell>
-                {product.isActive ? (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">Inactive</Badge>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to={`/inventory/product/${product.id}`}>Edit</Link>
-                </Button>
+          {products.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="h-24 text-center">
+                No products found
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            products.map((product) => (
+              <TableRow key={product.id}>
+                <TableCell>
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-10 w-10 rounded-md object-cover"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center text-xs">
+                      No image
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="font-medium">{product.name}</TableCell>
+                <TableCell>
+                  {product.category?.name || "Uncategorized"}
+                </TableCell>
+                <TableCell className="text-right">
+                  ₱{product.price.toFixed(2)}
+                </TableCell>
+                <TableCell className="text-center">
+                  {product.stock_quantity || product.stockQuantity || 0}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge
+                    variant={product.is_active || product.isActive ? "default" : "secondary"}
+                    className={
+                      product.is_active || product.isActive
+                        ? "bg-green-100 text-green-800 hover:bg-green-100"
+                        : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                    }
+                  >
+                    {product.is_active || product.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Link to={`/inventory/product/${product.id}`}>
+                      <Button variant="outline" size="sm">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    {onDeleteProduct && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDeleteProduct(product)}
+                        className="text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>
   );
-}
+};
