@@ -34,6 +34,7 @@ export default function ProductVariationsList({
           onClick={() => onVariationSelect(variation)}
           className="w-full justify-between"
           variant="outline"
+          type="button"
         >
           <span>{variation.name}</span>
           <span className="font-bold">₱{variation.price.toFixed(2)}</span>
@@ -45,6 +46,7 @@ export default function ProductVariationsList({
         <Button
           onClick={onRegularSelect}
           className="w-full justify-between mt-2"
+          type="button"
         >
           <span>Regular (No variation)</span>
           <span className="font-bold">₱{selectedProduct.price.toFixed(2)}</span>

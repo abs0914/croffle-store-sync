@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { fetchProductVariations } from "@/services/productService";
 import ProductSearch from "./ProductSearch";
@@ -70,6 +71,7 @@ export default function ProductGrid({
   // Handle variation selection
   const handleVariationSelect = (variation: ProductVariation) => {
     if (selectedProduct) {
+      console.log("Adding variation to cart:", variation.name, "for product:", selectedProduct.name);
       addItemToCart(selectedProduct, 1, variation);
       setIsDialogOpen(false);
     }
@@ -96,6 +98,7 @@ export default function ProductGrid({
 
   const handleRegularProductSelect = () => {
     if (selectedProduct) {
+      console.log("Adding regular product to cart:", selectedProduct.name);
       addItemToCart(selectedProduct);
       setIsDialogOpen(false);
     }
@@ -151,6 +154,9 @@ export default function ProductGrid({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{selectedProduct?.name} - Select Size</DialogTitle>
+            <DialogDescription>
+              Choose a variation or select regular size
+            </DialogDescription>
           </DialogHeader>
           
           <ProductVariationsList 
