@@ -55,7 +55,7 @@ export default function CustomerLookup({ onSelectCustomer, selectedCustomer }: C
         <DialogTrigger asChild>
           <Button variant="outline" className="w-full justify-start">
             <User className="mr-2 h-4 w-4" />
-            {selectedCustomer ? selectedCustomer.name : "Select Customer"}
+            {selectedCustomer ? selectedCustomer.name : "Customer (Optional)"}
           </Button>
         </DialogTrigger>
         <DialogContent>
