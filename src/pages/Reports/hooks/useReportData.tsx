@@ -1,7 +1,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ReportType } from "..";
-import { fetchSalesReport, fetchInventoryReport, fetchProfitLossReport, fetchStockReport } from "@/services/reports";
+import { 
+  fetchSalesReport, 
+  fetchInventoryReport, 
+  fetchProfitLossReport, 
+  fetchStockReport,
+  fetchCashierReport 
+} from "@/services/reports";
 
 interface UseReportDataProps {
   reportType: ReportType;
@@ -28,6 +34,8 @@ export function useReportData({ reportType, storeId, from, to }: UseReportDataPr
             return await fetchProfitLossReport(storeId, from, to);
           case 'stock':
             return await fetchStockReport(storeId, from, to);
+          case 'cashier':
+            return await fetchCashierReport(storeId, from, to);
           default:
             return Promise.resolve(null);
         }
@@ -36,7 +44,7 @@ export function useReportData({ reportType, storeId, from, to }: UseReportDataPr
         throw error;
       }
     },
-    enabled: !!storeId && !!from && !!to && ['sales', 'inventory', 'profit_loss', 'stock'].includes(reportType),
+    enabled: !!storeId && !!from && !!to && ['sales', 'inventory', 'profit_loss', 'stock', 'cashier'].includes(reportType),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     refetchOnWindowFocus: false

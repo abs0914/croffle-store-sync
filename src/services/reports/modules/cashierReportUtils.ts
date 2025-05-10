@@ -1,75 +1,83 @@
 
 import { CashierReport } from "@/types/reports";
 
-// Helper function to create sample data for demo purposes
-export function createSampleCashierReport(): CashierReport {
-  return {
-    cashierCount: 3,
-    totalTransactions: 145,
-    averageTransactionValue: 185.25,
-    averageTransactionTime: 2.7,
-    cashiers: [
-      {
-        name: "John Doe",
-        avatar: "https://github.com/shadcn.png",
-        transactionCount: 58,
-        totalSales: 10946.50,
-        averageTransactionValue: 188.73,
-        averageTransactionTime: 2.3
-      },
-      {
-        name: "Jane Smith",
-        avatar: undefined,
-        transactionCount: 52,
-        totalSales: 9685.00,
-        averageTransactionValue: 186.25,
-        averageTransactionTime: 2.8
-      },
-      {
-        name: "Alex Johnson",
-        avatar: undefined,
-        transactionCount: 35,
-        totalSales: 6230.75,
-        averageTransactionValue: 178.02,
-        averageTransactionTime: 3.1
-      }
-    ],
-    hourlyData: [
-      { hour: "08:00", sales: 1250.50, transactions: 7 },
-      { hour: "09:00", sales: 2350.75, transactions: 12 },
-      { hour: "10:00", sales: 3125.25, transactions: 16 },
-      { hour: "11:00", sales: 4010.00, transactions: 22 },
-      { hour: "12:00", sales: 4550.50, transactions: 25 },
-      { hour: "13:00", sales: 3850.75, transactions: 21 },
-      { hour: "14:00", sales: 2780.25, transactions: 15 },
-      { hour: "15:00", sales: 2150.50, transactions: 12 },
-      { hour: "16:00", sales: 1875.75, transactions: 10 },
-      { hour: "17:00", sales: 1550.00, transactions: 8 }
-    ]
-  };
-}
-
-// Utility function to simulate user data
-export function createSimulatedUsers(userIds: string[]): Record<string, { name: string, avatar?: string }> {
+// Create sample user data for simulating cashiers when real data is not available
+export function createSimulatedUsers(userIds: string[]) {
+  const names = ["John Smith", "Maria Garcia", "David Chen", "Sarah Johnson", "Alex Wong", "Emily Brown"];
   const simulatedUsers: Record<string, { name: string, avatar?: string }> = {};
   
-  userIds.forEach((userId, index) => {
-    const names = ['John Doe', 'Jane Smith', 'Alex Johnson'];
-    simulatedUsers[userId] = {
-      name: names[index % names.length] || `Cashier #${index + 1}`,
-      avatar: index === 0 ? 'https://github.com/shadcn.png' : undefined
+  userIds.forEach((id, index) => {
+    simulatedUsers[id] = {
+      name: names[index % names.length],
+      avatar: index % 3 === 0 ? `https://ui-avatars.com/api/?name=${encodeURIComponent(names[index % names.length])}` : undefined
     };
   });
   
   return simulatedUsers;
 }
 
-// Initialize hour data for tracking hourly performance
-export function initializeHourlyData(): Record<string, { sales: number, transactions: number }> {
+// Initialize hourly data structure for a 24-hour period
+export function initializeHourlyData() {
   const hourlyData: Record<string, { sales: number, transactions: number }> = {};
+  
   for (let i = 0; i < 24; i++) {
     const hour = i.toString().padStart(2, '0');
     hourlyData[hour] = { sales: 0, transactions: 0 };
   }
+  
   return hourlyData;
+}
+
+// Create sample cashier report data for demo purposes
+export function createSampleCashierReport(): CashierReport {
+  const cashiers = [
+    {
+      name: "John Smith",
+      avatar: "https://ui-avatars.com/api/?name=John+Smith",
+      transactionCount: 45,
+      totalSales: 24650.75,
+      averageTransactionValue: 547.79,
+      averageTransactionTime: 2.3
+    },
+    {
+      name: "Maria Garcia",
+      avatar: "https://ui-avatars.com/api/?name=Maria+Garcia",
+      transactionCount: 38,
+      totalSales: 19825.50,
+      averageTransactionValue: 521.72,
+      averageTransactionTime: 1.8
+    },
+    {
+      name: "David Chen",
+      transactionCount: 42,
+      totalSales: 22345.25,
+      averageTransactionValue: 532.03,
+      averageTransactionTime: 2.1
+    }
+  ];
+  
+  const totalTransactions = cashiers.reduce((sum, c) => sum + c.transactionCount, 0);
+  const totalSales = cashiers.reduce((sum, c) => sum + c.totalSales, 0);
+  
+  const hourlyData = [
+    { hour: "08:00", sales: 3250.50, transactions: 12 },
+    { hour: "09:00", sales: 4125.75, transactions: 15 },
+    { hour: "10:00", sales: 5680.25, transactions: 22 },
+    { hour: "11:00", sales: 7890.50, transactions: 24 },
+    { hour: "12:00", sales: 9350.00, transactions: 18 },
+    { hour: "13:00", sales: 7250.50, transactions: 16 },
+    { hour: "14:00", sales: 6125.25, transactions: 12 },
+    { hour: "15:00", sales: 5340.00, transactions: 10 },
+    { hour: "16:00", sales: 8700.75, transactions: 14 },
+    { hour: "17:00", sales: 9760.00, transactions: 22 }
+  ];
+  
+  return {
+    cashierCount: cashiers.length,
+    totalTransactions,
+    averageTransactionValue: totalSales / totalTransactions,
+    averageTransactionTime: 2.1,
+    cashiers,
+    hourlyData
+  };
 }
