@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CashierReport } from "@/types/reports";
 import { createSimulatedUsers, initializeHourlyData, createSampleCashierReport } from "./cashierReportUtils";
@@ -49,7 +48,11 @@ export async function fetchCashierReport(
       // Handle cashier data
       const userId = tx.user_id as string;
       if (!cashierData[userId]) {
-        const cashierName = tx.cashier?.name || null;
+        // Check if cashier object exists and has a name property
+        const cashierName = tx.cashier && typeof tx.cashier === 'object' && 'name' in tx.cashier 
+          ? tx.cashier.name 
+          : null;
+        
         cashierData[userId] = {
           userId,
           name: cashierName,
@@ -146,7 +149,9 @@ export async function fetchCashierReport(
       };
     }).sort((a, b) => b.totalSales - a.totalSales);
     
-    const avgTransactionTime = cashiers.reduce((sum, c) => sum + c.averageTransactionTime, 0) / cashiers.length || 0;
+    const avgTransactionTime = cashiers.length > 0 
+      ? cashiers.reduce((sum, c) => sum + c.averageTransactionTime, 0) / cashiers.length 
+      : 0;
 
     return {
       cashierCount: cashiers.length,
