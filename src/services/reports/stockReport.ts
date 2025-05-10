@@ -47,19 +47,15 @@ export async function fetchStockReport(
       throw shiftsError;
     }
 
-    // Get user information for shifts
+    // Since we don't have direct access to a profiles table, we'll use user IDs directly
+    // and create a simple mapping function to format them
     const userIds = [...new Set(shifts.map(shift => shift.user_id))];
-    const { data: users, error: usersError } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", userIds);
+    const userMap: Record<string, string> = {};
     
-    // If no profiles table exists, we'll just use user IDs
-    const userMap = usersError ? {} : 
-      (users || []).reduce((map: Record<string, string>, user) => {
-        map[user.id] = user.full_name || `User ${user.id.substring(0, 5)}`;
-        return map;
-      }, {});
+    userIds.forEach(userId => {
+      // Create a simple formatted user ID when we don't have access to names
+      userMap[userId] = `User ${userId.substring(0, 5)}`;
+    });
 
     // Process stock items with their transactions
     const stockItemsData = stockItems.map(item => {
@@ -106,16 +102,29 @@ export async function fetchStockReport(
       };
     });
 
-    // Process shift data with inventory counts
-    const shiftData = shifts.map(shift => ({
-      shiftId: shift.id,
-      userId: shift.user_id,
-      userName: userMap[shift.user_id] || `User ${shift.user_id.substring(0, 5)}`,
-      startTime: format(parseISO(shift.start_time), 'yyyy-MM-dd HH:mm'),
-      endTime: shift.end_time ? format(parseISO(shift.end_time), 'yyyy-MM-dd HH:mm') : null,
-      startInventory: shift.start_inventory_count || {},
-      endInventory: shift.end_inventory_count || null
-    }));
+    // Process shift data with inventory counts - ensuring we cast JSON to appropriate types
+    const shiftData = shifts.map(shift => {
+      // Ensure the inventory counts are properly cast to Record<string, number>
+      const startInventory: Record<string, number> = shift.start_inventory_count ? 
+        (typeof shift.start_inventory_count === 'object' ? 
+          Object.fromEntries(Object.entries(shift.start_inventory_count).map(([key, value]) => 
+            [key, typeof value === 'number' ? value : Number(value)])) : {}) : {};
+      
+      const endInventory: Record<string, number> | null = shift.end_inventory_count ? 
+        (typeof shift.end_inventory_count === 'object' ? 
+          Object.fromEntries(Object.entries(shift.end_inventory_count).map(([key, value]) => 
+            [key, typeof value === 'number' ? value : Number(value)])) : null) : null;
+
+      return {
+        shiftId: shift.id,
+        userId: shift.user_id,
+        userName: userMap[shift.user_id] || `User ${shift.user_id.substring(0, 5)}`,
+        startTime: format(parseISO(shift.start_time), 'yyyy-MM-dd HH:mm'),
+        endTime: shift.end_time ? format(parseISO(shift.end_time), 'yyyy-MM-dd HH:mm') : null,
+        startInventory,
+        endInventory
+      };
+    });
 
     // Calculate summary statistics
     const totalItems = stockItemsData.length;

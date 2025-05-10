@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, FileChart, Warehouse } from "lucide-react";
+import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse } from "lucide-react";
 import { ReportType } from "..";
 
 interface ReportsNavigationProps {
@@ -23,7 +23,7 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
     
     // BIR Reports
     { id: 'x_reading' as ReportType, name: 'X-Reading Report', icon: <Receipt className="h-4 w-4" /> },
-    { id: 'z_reading' as ReportType, name: 'Z-Reading Report', icon: <FileCheck className="h-4 w-4" /> },
+    { id: 'z_reading' as ReportType, name: 'Z-Reading Report', icon: <Receipt className="h-4 w-4" /> },
     { id: 'daily_summary' as ReportType, name: 'Daily Sales Summary', icon: <FileText className="h-4 w-4" /> },
     { id: 'vat' as ReportType, name: 'VAT Report', icon: <FileText className="h-4 w-4" /> },
   ];
