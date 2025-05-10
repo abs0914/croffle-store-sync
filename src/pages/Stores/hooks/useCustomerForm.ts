@@ -30,7 +30,7 @@ export const useCustomerForm = ({ storeId }: UseCustomerFormProps) => {
     }
     
     try {
-      // Create a client specifically for public access
+      // Use the correct column selection and avoid user-specific tables
       const { data, error } = await supabase
         .from("stores")
         .select("id, name, logo_url")
