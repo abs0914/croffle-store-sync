@@ -133,7 +133,7 @@ export async function fetchCashierReport(
         ? c.transactionTimes.reduce((sum, time) => sum + time, 0) / c.transactionTimes.length
         : 2.5; // Default value if no transactions
       
-      // Generate avatar from name if available - Fixed with null check
+      // Generate avatar from name if available - With proper null checking
       const avatar = c.name 
         ? `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}`
         : undefined;
