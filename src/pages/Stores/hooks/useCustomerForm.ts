@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Store } from "@/types";
@@ -8,10 +8,11 @@ interface UseCustomerFormProps {
   storeId: string | undefined;
 }
 
-interface CustomerFormState {
+interface CustomerFormData {
   name: string;
   phone: string;
-  email: string;
+  email?: string;
+  address?: string;
 }
 
 export const useCustomerForm = ({ storeId }: UseCustomerFormProps) => {
@@ -21,26 +22,13 @@ export const useCustomerForm = ({ storeId }: UseCustomerFormProps) => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Form state
-  const [formData, setFormData] = useState<CustomerFormState>({
-    name: "",
-    phone: "",
-    email: "",
-  });
-  
-  const updateFormField = (field: keyof CustomerFormState, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-  
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      phone: "",
-      email: "",
-    });
-  };
-
-  const fetchStore = async () => {
+  const fetchStore = useCallback(async () => {
+    if (!storeId) {
+      setError("Store ID is required");
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       // Create a client specifically for public access
       const { data, error } = await supabase
@@ -62,13 +50,11 @@ export const useCustomerForm = ({ storeId }: UseCustomerFormProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [storeId]);
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name || !formData.phone) {
-      toast.error("Please fill in required fields");
+  const handleSubmit = async (formData: CustomerFormData) => {
+    if (!storeId) {
+      toast.error("Store ID is required");
       return;
     }
     
@@ -91,9 +77,6 @@ export const useCustomerForm = ({ storeId }: UseCustomerFormProps) => {
       setIsSuccess(true);
       toast.success("Thank you for joining our loyalty program!");
       
-      // Reset form
-      resetForm();
-      
     } catch (error: any) {
       console.error("Error submitting form:", error);
       toast.error("Failed to submit form. Please try again.");
@@ -108,8 +91,6 @@ export const useCustomerForm = ({ storeId }: UseCustomerFormProps) => {
     isSubmitting,
     isSuccess,
     error,
-    formData,
-    updateFormField,
     fetchStore,
     handleSubmit,
     setIsSuccess,
