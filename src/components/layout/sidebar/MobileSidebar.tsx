@@ -18,11 +18,11 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
 }) => {
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-64 p-0 bg-croffle-background">
+      <SheetContent side="left" className="w-64 p-0 bg-croffle-background pt-14">
         <BrandHeader isMobile={true} />
         <StartShiftButton />
         <StoreSelector />
-        <div className="flex-1 overflow-auto py-2" data-design-locked="true">
+        <div className="flex-1 overflow-auto py-3" data-design-locked="true">
           <MainMenu />
         </div>
         <UserProfile />

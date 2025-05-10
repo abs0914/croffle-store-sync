@@ -72,14 +72,14 @@ export function MainMenu() {
   };
   
   return (
-    <div className="flex flex-col space-y-1">
+    <div className="flex flex-col space-y-1 px-2">
       <nav className="space-y-1">
         {menuItems.map((item) => (
           <Link 
             key={item.name} 
             to={item.href} 
             className={cn(
-              "py-2 px-3 flex items-center space-x-2 rounded-lg text-sm transition-colors", 
+              "py-2 px-4 flex items-center space-x-2 rounded-lg text-sm transition-colors", 
               isActive(item.href) 
                 ? "bg-croffle-dark/80 text-white font-medium" 
                 : "hover:bg-croffle-dark/30 text-croffle-foreground"
@@ -92,14 +92,14 @@ export function MainMenu() {
       </nav>
       
       <div className="pt-6 border-t border-gray-700 mt-4">
-        <p className="text-xs font-medium pl-3 mb-2 text-muted-foreground">Settings</p>
+        <p className="text-xs font-medium px-4 mb-2 text-muted-foreground">Settings</p>
         <nav className="space-y-1">
           {settingsItems.map((item) => (
             <Link 
               key={item.name} 
               to={item.href} 
               className={cn(
-                "py-2 px-3 flex items-center space-x-2 rounded-lg text-sm transition-colors", 
+                "py-2 px-4 flex items-center space-x-2 rounded-lg text-sm transition-colors", 
                 isActive(item.href) 
                   ? "bg-croffle-dark/80 text-white font-medium" 
                   : "hover:bg-croffle-dark/30 text-croffle-foreground"

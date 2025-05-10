@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,12 @@ export const StoreNameDisplay: React.FC<StoreNameDisplayProps> = ({
           <span>{currentStore.name}</span>
         </Badge>;
     case "title":
-      return;
+      return <h2 className={cn("font-semibold truncate", 
+                               size === "sm" ? "text-base" : size === "md" ? "text-lg" : "text-xl", 
+                               className)}>
+               {showLogo && currentStore.logo_url && <img src={currentStore.logo_url} alt={currentStore.name} className="inline-block mr-2 h-5 w-5 object-cover" />}
+               {currentStore.name}
+             </h2>;
     case "compact":
       return <div className={cn("flex items-center gap-1", className)}>
           {showLogo && currentStore.logo_url && <img src={currentStore.logo_url} alt={currentStore.name} className="h-4 w-4 object-cover" />}
