@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,8 +12,12 @@ import { StockAdjustmentModal } from "./components/inventoryStock/StockAdjustmen
 import { StockTransferModal } from "./components/inventoryStock/StockTransferModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function InventoryStock() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
   const {
     currentStore,
     stockItems,
@@ -68,6 +73,14 @@ export default function InventoryStock() {
     }
   });
 
+  const handleNavigationTabChange = (value: string) => {
+    if (value === "menu") {
+      navigate("/inventory");
+    } else if (value === "stock") {
+      navigate("/inventory/stock");
+    }
+  };
+
   if (!currentStore) {
     return (
       <div className="container mx-auto p-4">
@@ -78,7 +91,7 @@ export default function InventoryStock() {
   }
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="space-y-6">
       <InventoryHeader 
         title="Inventory Stock Management" 
         description="Track and manage your raw materials, ingredients, and supplies"
@@ -86,6 +99,13 @@ export default function InventoryStock() {
         onImportClick={handleImportClick}
         onDownloadTemplate={handleDownloadTemplate}
       />
+      
+      <Tabs defaultValue="stock" value="stock" onValueChange={handleNavigationTabChange} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="menu" className="flex-1 py-2">Menu Management</TabsTrigger>
+          <TabsTrigger value="stock" className="flex-1 py-2">Inventory Stock</TabsTrigger>
+        </TabsList>
+      </Tabs>
       
       <div className="flex justify-between items-center mb-4">
         <Tabs defaultValue="all" value={filterTab} onValueChange={(v) => setFilterTab(v as any)}>

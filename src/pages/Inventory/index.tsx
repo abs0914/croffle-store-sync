@@ -9,9 +9,13 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Store, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Inventory() {
   const { currentStore } = useStore();
+  const navigate = useNavigate();
+  const location = useLocation();
   
   const {
     filteredProducts,
@@ -25,6 +29,16 @@ export default function Inventory() {
     handleDownloadTemplate,
     refetch
   } = useProductData();
+  
+  const handleTabChange = (value: string) => {
+    if (value === "menu") {
+      navigate("/inventory");
+    } else if (value === "stock") {
+      navigate("/inventory/stock");
+    }
+  };
+
+  const currentTab = location.pathname === "/inventory/stock" ? "stock" : "menu";
   
   // Return a consistent "no store selected" UI if no store is selected
   if (!currentStore) {
@@ -55,6 +69,13 @@ export default function Inventory() {
         onImportClick={handleImportClick}
         onDownloadTemplate={handleDownloadTemplate}
       />
+      
+      <Tabs defaultValue={currentTab} value={currentTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="menu" className="flex-1 py-2">Menu Management</TabsTrigger>
+          <TabsTrigger value="stock" className="flex-1 py-2">Inventory Stock</TabsTrigger>
+        </TabsList>
+      </Tabs>
       
       <div className="flex flex-wrap justify-between gap-2">
         <Link to="/inventory/product/new">

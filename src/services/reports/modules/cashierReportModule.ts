@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CashierReport } from "@/types/reports";
 import { createSimulatedUsers, initializeHourlyData, createSampleCashierReport } from "./cashierReportUtils";
@@ -49,7 +50,7 @@ export async function fetchCashierReport(
       const userId = tx.user_id as string;
       if (!cashierData[userId]) {
         // Check if cashier object exists and has a name property
-        const cashierName = tx.cashier && typeof tx.cashier === 'object' && 'name' in tx.cashier 
+        const cashierName = tx.cashier && typeof tx.cashier === 'object' && tx.cashier !== null && 'name' in tx.cashier 
           ? tx.cashier.name 
           : null;
         

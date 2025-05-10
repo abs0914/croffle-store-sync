@@ -9,7 +9,9 @@ import {
   BarChart, 
   Package, 
   FileSpreadsheet,
-  UserCircle
+  UserCircle,
+  Menu,
+  Boxes
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,9 +32,14 @@ const menuItems = [
     icon: Users
   },
   {
-    name: "Inventory",
+    name: "Menu Management",
     href: "/inventory",
-    icon: Package
+    icon: Menu
+  },
+  {
+    name: "Inventory Stock",
+    href: "/inventory/stock",
+    icon: Boxes
   },
   {
     name: "Stores",
