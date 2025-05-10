@@ -12,7 +12,6 @@ interface CustomerFormData {
   name: string;
   phone: string;
   email?: string;
-  address?: string;
 }
 
 export const useCustomerForm = ({ storeId }: UseCustomerFormProps) => {
