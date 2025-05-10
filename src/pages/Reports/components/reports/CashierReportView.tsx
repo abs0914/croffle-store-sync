@@ -149,29 +149,53 @@ export function CashierReportView({ storeId, dateRange }: CashierReportViewProps
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Hourly Performance</CardTitle>
+          <CardTitle className="text-lg">Cashier Attendance</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={data.hourlyData}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="hour" />
-                <YAxis />
-                <Tooltip formatter={(value) => `₱${Number(value).toFixed(2)}`} />
-                <Legend />
-                <Bar dataKey="sales" name="Sales Amount" fill="#8884d8" />
-                <Bar dataKey="transactions" name="Transaction Count" fill="#82ca9d" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cashier</TableHead>
+                  <TableHead>Shift Start</TableHead>
+                  <TableHead>Shift End</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead className="text-right">Sales</TableHead>
+                  <TableHead className="text-right">Transactions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.cashiers.map((cashier, index) => {
+                  // Simulate shift data (this would come from the actual data in a real implementation)
+                  const shiftStart = new Date(dateRange.from || new Date());
+                  shiftStart.setHours(8 + index % 3, 0, 0);
+                  
+                  const shiftEnd = new Date(shiftStart);
+                  shiftEnd.setHours(shiftStart.getHours() + 8);
+                  
+                  const durationHours = 8;
+                  
+                  return (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={cashier.avatar} />
+                            <AvatarFallback>{cashier.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span>{cashier.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{format(shiftStart, 'hh:mm a')}</TableCell>
+                      <TableCell>{format(shiftEnd, 'hh:mm a')}</TableCell>
+                      <TableCell>{durationHours} hours</TableCell>
+                      <TableCell className="text-right">₱{cashier.totalSales.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{cashier.transactionCount}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
