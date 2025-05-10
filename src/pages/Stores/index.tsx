@@ -2,6 +2,7 @@
 import { useStoresData } from "./hooks/useStoresData";
 import { StoresHeader } from "./components/StoresHeader";
 import { StoresList } from "./components/StoresList";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Stores() {
   const {
@@ -12,6 +13,8 @@ export default function Stores() {
     isLoading,
     handleDeleteStore
   } = useStoresData();
+  
+  const isMobile = useIsMobile();
   
   return (
     <div className="container mx-auto py-6">
@@ -27,6 +30,7 @@ export default function Stores() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onDeleteStore={handleDeleteStore}
+        isMobile={isMobile}
       />
     </div>
   );

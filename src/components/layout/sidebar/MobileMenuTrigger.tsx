@@ -13,7 +13,7 @@ export const MobileMenuTrigger: React.FC<MobileMenuTriggerProps> = ({ onClick })
   const { currentStore } = useStore();
   
   return (
-    <div className="md:hidden flex items-center fixed top-0 left-0 right-0 z-40 bg-croffle-background/95 backdrop-blur-sm px-4 py-3 border-b">
+    <div className="md:hidden flex items-center fixed top-0 left-0 right-0 z-50 bg-croffle-background/95 backdrop-blur-sm px-4 py-3 border-b shadow-sm">
       <Button 
         variant="ghost" 
         size="icon" 
