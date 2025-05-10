@@ -11,6 +11,7 @@ interface StoresListProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onDeleteStore: (storeId: string) => void;
+  isMobile?: boolean; // Add the isMobile prop as optional
 }
 
 export const StoresList = ({ 
@@ -19,7 +20,8 @@ export const StoresList = ({
   isLoading,
   searchQuery,
   setSearchQuery,
-  onDeleteStore
+  onDeleteStore,
+  isMobile
 }: StoresListProps) => {
   if (isLoading) {
     return (
