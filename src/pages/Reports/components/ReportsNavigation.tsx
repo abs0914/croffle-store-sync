@@ -13,7 +13,7 @@ interface ReportsNavigationProps {
 export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavigationProps) {
   const navItems = [
     { id: 'sales' as ReportType, name: 'Sales Report', icon: <FileBarChart className="h-4 w-4" /> },
-    { id: 'inventory' as ReportType, name: 'Inventory Report', icon: <FileBox className="h-4 w-4" /> },
+    { id: 'inventory' as ReportType, name: 'Menu Report', icon: <FileBox className="h-4 w-4" /> },
     { id: 'profit_loss' as ReportType, name: 'Profit & Loss', icon: <FileSpreadsheet className="h-4 w-4" /> },
     { id: 'cashier' as ReportType, name: 'Cashier Performance', icon: <UserRound className="h-4 w-4" /> },
     
