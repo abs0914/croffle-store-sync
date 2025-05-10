@@ -1,3 +1,4 @@
+
 export interface SalesReport {
   totalSales: number;
   totalTransactions: number;
