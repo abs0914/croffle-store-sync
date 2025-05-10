@@ -1,221 +1,162 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { CashierReport } from "@/types/reports";
-import { toast } from "sonner";
-import { 
-  createSampleCashierReport, 
-  createSimulatedUsers, 
-  initializeHourlyData
-} from "./cashierReportUtils";
+import { createSimulatedUsers, initializeHourlyData, createSampleCashierReport } from "./cashierReportUtils";
+import { handleReportError } from "../utils/reportUtils";
+import { format } from "date-fns";
 
-// Main function to fetch cashier report data
 export async function fetchCashierReport(
   storeId: string,
   from: string,
-  to: string
+  to: string,
+  useSampleData = false
 ): Promise<CashierReport | null> {
   try {
-    // Get transactions for the date range with cashier information
+    if (useSampleData) {
+      // For demo purposes, return sample data when requested
+      return createSampleCashierReport();
+    }
+
+    // Get all transactions for the date range
     const { data: transactions, error: txError } = await supabase
       .from("transactions")
-      .select(`
-        *,
-        shifts!inner (
-          id,
-          cashier_id,
-          user_id
-        )
-      `)
+      .select("*, cashier:user_id(*)")
       .eq("store_id", storeId)
       .eq("status", "completed")
       .gte("created_at", `${from}T00:00:00`)
-      .lte("created_at", `${to}T23:59:59`)
-      .order("created_at");
+      .lte("created_at", `${to}T23:59:59`);
     
     if (txError) throw txError;
     
     if (!transactions || transactions.length === 0) {
-      // For demo purposes, return sample data
+      console.info("No transaction data found, using sample data");
       return createSampleCashierReport();
     }
-    
-    // Process cashier data from shifts
-    const { cashiers, shiftToUserMap } = await processCashierData(transactions, storeId);
-    
-    if (Object.keys(cashiers).length === 0) {
-      return createSampleCashierReport();
-    }
-    
-    // Process transactions and create report data
-    return processTransactionData(transactions, cashiers);
-  } catch (error) {
-    console.error("Error fetching cashier report:", error);
-    toast.error("Failed to generate cashier performance report");
-    return null;
-  }
-}
 
-// Helper function to process shift data and extract cashier info
-async function processCashierData(transactions: any[], storeId: string) {
-  // Extract shift IDs from transactions
-  const shiftIds = transactions.map(tx => tx.shifts?.id).filter(Boolean);
-  
-  // Create a map of shift IDs to user IDs
-  const shiftToUserMap: Record<string, string> = {};
-  transactions.forEach(tx => {
-    if (tx.shifts?.id) {
-      shiftToUserMap[tx.shifts.id] = tx.shifts.user_id;
-    }
-  });
-  
-  // Create a set of cashier IDs from the transactions
-  const cashierIdSet = new Set<string>();
-  transactions.forEach(tx => {
-    if (tx.shifts?.cashier_id) {
-      cashierIdSet.add(tx.shifts.cashier_id);
-    }
-  });
-  
-  const cashierIds = Array.from(cashierIdSet);
-  
-  // Fetch actual cashier data if available
-  let cashiers: Record<string, { 
-    id: string,
-    name: string, 
-    avatar?: string,
-    transactions: Array<{ time: number, amount: number, hour: string }>,
-    transactionCount: number,
-    totalSales: number,
-    totalTime: number
-  }> = {};
-  
-  if (cashierIds.length > 0) {
-    const { data: cashierData, error: cashierError } = await supabase
-      .from("cashiers")
-      .select("id, first_name, last_name")
-      .in("id", cashierIds);
+    // Initialize structures for data processing
+    const cashierData: Record<string, {
+      userId: string;
+      name: string | null;
+      transactionCount: number;
+      totalSales: number;
+      transactionTimes: number[];
+    }> = {};
     
-    if (!cashierError && cashierData) {
-      cashierData.forEach(cashier => {
-        cashiers[cashier.id] = {
-          id: cashier.id,
-          name: `${cashier.first_name} ${cashier.last_name}`,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(`${cashier.first_name} ${cashier.last_name}`)}`,
-          transactions: [],
+    const hourlyData = initializeHourlyData();
+    
+    // Process all transactions
+    for (const tx of transactions) {
+      // Handle cashier data
+      const userId = tx.user_id as string;
+      if (!cashierData[userId]) {
+        const cashierName = tx.cashier?.name || null;
+        cashierData[userId] = {
+          userId,
+          name: cashierName,
           transactionCount: 0,
           totalSales: 0,
-          totalTime: 0
+          transactionTimes: []
         };
-      });
+      }
+      
+      cashierData[userId].transactionCount += 1;
+      cashierData[userId].totalSales += tx.total || 0;
+      
+      // We're approximating transaction time as 2-5 minutes based on transaction amount
+      const txItems = typeof tx.items === 'string' ? JSON.parse(tx.items) : tx.items;
+      const itemCount = txItems?.length || 1;
+      const estimatedTime = Math.min(Math.max(itemCount * 0.5, 1), 10); // Between 1-10 minutes
+      cashierData[userId].transactionTimes.push(estimatedTime);
+      
+      // Process hourly data
+      const txDate = new Date(tx.created_at);
+      const hour = txDate.getHours().toString().padStart(2, '0');
+      
+      if (hourlyData[hour]) {
+        hourlyData[hour].sales += tx.total || 0;
+        hourlyData[hour].transactions += 1;
+      }
     }
-  }
-  
-  // If no cashier data was found, fall back to user IDs
-  if (Object.keys(cashiers).length === 0) {
-    // Get unique user IDs from the shifts
-    const userIds = Array.from(new Set(Object.values(shiftToUserMap)));
     
-    // Create simulated users as fallback
-    const simulatedUsers = createSimulatedUsers(userIds);
+    // If no cashier data found in transactions, try to fetch cashiers directly
+    let cashierIds = Object.keys(cashierData);
     
-    // Use user IDs for transactions instead of cashier IDs
-    transactions.forEach(tx => {
-      if (tx.shifts?.user_id && !tx.shifts?.cashier_id) {
-        const userId = tx.shifts.user_id;
-        if (simulatedUsers[userId] && !cashiers[userId]) {
-          cashiers[userId] = {
-            id: userId,
-            name: simulatedUsers[userId].name,
-            avatar: simulatedUsers[userId].avatar,
-            transactions: [],
+    // If no cashier data found, create simulated data for demo purposes
+    if (cashierIds.length === 0) {
+      const { data: cashiers } = await supabase
+        .from("cashiers")
+        .select("user_id, first_name, last_name")
+        .eq("store_id", storeId)
+        .eq("is_active", true);
+      
+      if (cashiers && cashiers.length > 0) {
+        const simulatedUsers = createSimulatedUsers(
+          cashiers.map(c => c.user_id)
+        );
+        
+        cashiers.forEach(c => {
+          const userId = c.user_id;
+          cashierData[userId] = {
+            userId,
+            name: `${c.first_name} ${c.last_name}`,
             transactionCount: 0,
             totalSales: 0,
-            totalTime: 0
+            transactionTimes: []
           };
-        }
+        });
+        
+        cashierIds = Object.keys(cashierData);
+      } else {
+        console.info("No cashier data found, using sample data");
+        return createSampleCashierReport();
       }
-    });
-  }
-  
-  return { cashiers, shiftToUserMap };
-}
-
-// Process transactions and generate the cashier report
-function processTransactionData(
-  transactions: any[], 
-  cashiers: Record<string, { 
-    id: string, 
-    name: string, 
-    avatar?: string,
-    transactions: Array<{ time: number, amount: number, hour: string }>,
-    transactionCount: number,
-    totalSales: number,
-    totalTime: number
-  }>
-): CashierReport {
-  // Initialize hour data
-  const hourlyData = initializeHourlyData();
-  
-  // Process each transaction
-  transactions.forEach(tx => {
-    const cashierId = tx.shifts?.cashier_id || tx.shifts?.user_id;
-    const hour = new Date(tx.created_at).getHours().toString().padStart(2, '0');
+    }
     
-    // Update hourly data
-    hourlyData[hour].sales += tx.total;
-    hourlyData[hour].transactions += 1;
-    
-    if (!cashierId || !cashiers[cashierId]) return;
-    
-    // Simulate transaction time (between 1-5 minutes)
-    const transactionTime = 1 + Math.floor(Math.random() * 4);
-    
-    cashiers[cashierId].transactionCount += 1;
-    cashiers[cashierId].totalSales += tx.total;
-    cashiers[cashierId].totalTime += transactionTime;
-    cashiers[cashierId].transactions.push({
-      time: transactionTime,
-      amount: tx.total,
-      hour
-    });
-  });
-  
-  // Convert to array and calculate averages
-  const cashierArray = Object.values(cashiers).map(data => ({
-    id: data.id,
-    name: data.name,
-    avatar: data.avatar,
-    transactionCount: data.transactionCount,
-    totalSales: data.totalSales,
-    averageTransactionValue: data.transactionCount > 0 ? data.totalSales / data.transactionCount : 0,
-    averageTransactionTime: data.transactionCount > 0 ? Math.round((data.totalTime / data.transactionCount) * 10) / 10 : 0
-  }));
-  
-  // Convert hourly data to array
-  const hourlyDataArray = Object.entries(hourlyData)
-    .filter(([_, data]) => data.transactions > 0)
-    .map(([hour, data]) => ({
+    // Convert hourly data to array format
+    const hourlyDataArray = Object.entries(hourlyData).map(([hour, data]) => ({
       hour: `${hour}:00`,
       sales: data.sales,
       transactions: data.transactions
-    }));
-  
-  // Calculate overall report metrics
-  const totalTransactions = transactions.length;
-  const totalSales = transactions.reduce((sum, tx) => sum + tx.total, 0);
-  const averageTransactionValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
-  
-  // Calculate average transaction time across all cashiers
-  const totalTransactionTime = cashierArray.reduce((sum, cashier) => 
-    sum + (cashier.averageTransactionTime * cashier.transactionCount), 0);
-  const averageTransactionTime = totalTransactions > 0 ? totalTransactionTime / totalTransactions : 0;
+    })).filter(h => h.transactions > 0);
+    
+    // Calculate totals
+    const totalTransactions = Object.values(cashierData).reduce((sum, c) => sum + c.transactionCount, 0);
+    const totalSales = Object.values(cashierData).reduce((sum, c) => sum + c.totalSales, 0);
+    const averageTransactionValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+    
+    // Convert cashier data to array format with calculated averages
+    const cashiers = Object.values(cashierData).map(c => {
+      const avgTxValue = c.transactionCount > 0 ? c.totalSales / c.transactionCount : 0;
+      const avgTxTime = c.transactionTimes.length > 0
+        ? c.transactionTimes.reduce((sum, time) => sum + time, 0) / c.transactionTimes.length
+        : 2.5; // Default value if no transactions
+      
+      // Generate avatar from name if available
+      const avatar = c.name 
+        ? `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}`
+        : undefined;
+      
+      return {
+        name: c.name || "Unknown Cashier", 
+        avatar,
+        transactionCount: c.transactionCount,
+        totalSales: c.totalSales,
+        averageTransactionValue: avgTxValue,
+        averageTransactionTime: avgTxTime
+      };
+    }).sort((a, b) => b.totalSales - a.totalSales);
+    
+    const avgTransactionTime = cashiers.reduce((sum, c) => sum + c.averageTransactionTime, 0) / cashiers.length || 0;
 
-  return {
-    cashierCount: cashierArray.length,
-    totalTransactions,
-    averageTransactionValue,
-    averageTransactionTime,
-    cashiers: cashierArray,
-    hourlyData: hourlyDataArray
-  };
+    return {
+      cashierCount: cashiers.length,
+      totalTransactions,
+      averageTransactionValue,
+      averageTransactionTime: avgTransactionTime,
+      cashiers,
+      hourlyData: hourlyDataArray
+    };
+  } catch (error) {
+    return handleReportError("Cashier Report", error);
+  }
 }
