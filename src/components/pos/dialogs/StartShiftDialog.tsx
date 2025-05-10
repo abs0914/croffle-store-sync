@@ -1,8 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -11,16 +9,16 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
-import ShiftCamera from "../camera/ShiftCamera";
 import { useQuery } from "@tanstack/react-query";
 import { fetchInventoryStock } from "@/services/inventoryStock";
-import { InventoryStock } from "@/types";
-import { Spinner } from "@/components/ui/spinner";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Camera } from "lucide-react";
 import { getPreviousShiftEndingCash } from "@/contexts/shift/shiftUtils";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Import the new components
+import StartingCashSection from "./shift/StartingCashSection";
+import ShiftPhotoSection from "./shift/ShiftPhotoSection";
+import InventoryCountSection from "./shift/InventoryCountSection";
 
 interface StartShiftDialogProps {
   isOpen: boolean;
@@ -97,10 +95,6 @@ export default function StartShiftDialog({
     setShowCameraView(false);
   };
 
-  const toggleCameraView = () => {
-    setShowCameraView(!showCameraView);
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -112,109 +106,29 @@ export default function StartShiftDialog({
         </DialogHeader>
         
         <div className="space-y-4 py-4 flex-1 overflow-hidden">
-          <div className="space-y-2">
-            <Label htmlFor="startingCash">
-              Starting Cash Amount 
-              {previousEndingCash !== null && (
-                <span className="text-sm text-muted-foreground ml-2">
-                  (Previous ending cash: {previousEndingCash.toFixed(2)})
-                </span>
-              )}
-            </Label>
-            {isLoading ? (
-              <div className="flex items-center space-x-2">
-                <Spinner className="h-4 w-4" />
-                <span className="text-sm">Loading previous cash amount...</span>
-              </div>
-            ) : (
-              <Input
-                id="startingCash"
-                type="number"
-                value={startingCash || ''}
-                onChange={(e) => setStartingCash(Number(e.target.value))}
-                placeholder="0.00"
-              />
-            )}
-          </div>
+          {/* Cash Section */}
+          <StartingCashSection 
+            startingCash={startingCash}
+            setStartingCash={setStartingCash}
+            previousEndingCash={previousEndingCash}
+            isLoading={isLoading}
+          />
           
-          {showCameraView ? (
-            <ShiftCamera 
-              onCapture={(capturedPhoto) => {
-                setPhoto(capturedPhoto);
-                setShowCameraView(false);
-              }}
-              onReset={() => setShowCameraView(false)}
-            />
-          ) : (
-            <div className="space-y-2">
-              <Label>Shift Photo</Label>
-              <div className="flex items-center space-x-2">
-                {photo ? (
-                  <div className="relative">
-                    <img src={photo} alt="Shift start" className="w-full h-48 object-cover rounded-md border" />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="absolute top-2 right-2" 
-                      onClick={() => setPhoto(null)}
-                    >
-                      Reset
-                    </Button>
-                  </div>
-                ) : (
-                  <Button 
-                    variant="outline" 
-                    onClick={toggleCameraView} 
-                    className="w-full"
-                  >
-                    <Camera className="mr-2 h-4 w-4" />
-                    Take Photo
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Photo Section */}
+          <ShiftPhotoSection 
+            photo={photo}
+            setPhoto={setPhoto}
+            showCameraView={showCameraView}
+            setShowCameraView={setShowCameraView}
+          />
           
-          <div className="space-y-2">
-            <Label>Current Inventory Levels</Label>
-            {isLoadingInventory ? (
-              <div className="flex items-center justify-center p-4">
-                <Spinner className="h-8 w-8 text-croffle-accent" />
-                <span className="ml-2">Loading inventory items...</span>
-              </div>
-            ) : inventoryItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No inventory items found.</p>
-            ) : (
-              <ScrollArea className="h-[300px] border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead>Unit</TableHead>
-                      <TableHead className="w-[150px] text-right">Current Count</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {inventoryItems.map((item: InventoryStock) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.item}</TableCell>
-                        <TableCell>{item.unit}</TableCell>
-                        <TableCell className="text-right">
-                          <Input
-                            type="number"
-                            min="0"
-                            value={inventoryCount[item.id] || 0}
-                            onChange={(e) => handleInventoryCountChange(item.id, Number(e.target.value))}
-                            className="w-24 ml-auto"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
-            )}
-          </div>
+          {/* Inventory Section */}
+          <InventoryCountSection 
+            inventoryItems={inventoryItems}
+            inventoryCount={inventoryCount}
+            handleInventoryCountChange={handleInventoryCountChange}
+            isLoadingInventory={isLoadingInventory}
+          />
         </div>
         
         <DialogFooter>
