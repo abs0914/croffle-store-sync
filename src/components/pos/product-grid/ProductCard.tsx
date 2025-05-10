@@ -26,33 +26,36 @@ export default function ProductCard({
         <TooltipTrigger asChild>
           <Button
             variant="outline"
-            className={`h-auto p-2 flex flex-col items-center justify-between text-left border-croffle-primary/20 hover:bg-croffle-background hover:border-croffle-primary ${
+            className={`h-auto p-0 flex flex-col items-center justify-between text-left border border-croffle-primary/20 overflow-hidden rounded-lg ${
               !isShiftActive || !isActive ? 'opacity-70' : ''
             }`}
             onClick={() => onClick(product)}
             disabled={!isShiftActive || !isActive}
           >
-            {product.image_url || product.image ? (
-              <div className="w-full h-24 bg-gray-100 rounded-md overflow-hidden mb-2">
-                <img 
-                  src={product.image_url || product.image} 
-                  alt={product.name} 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="w-full h-24 bg-croffle-background rounded-md flex items-center justify-center mb-2">
-                <span className="text-croffle-primary">No image</span>
-              </div>
-            )}
             <div className="w-full">
-              <p className="font-medium text-sm truncate">{product.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {product.category ? product.category.name : getCategoryName(product.category_id)}
-              </p>
-              {!isActive && (
-                <span className="inline-block bg-gray-200 text-gray-700 text-xs px-1 rounded mt-1">Inactive</span>
+              {product.image_url || product.image ? (
+                <div className="w-full h-36 overflow-hidden bg-white">
+                  <img 
+                    src={product.image_url || product.image} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-36 bg-croffle-background flex items-center justify-center">
+                  <span className="text-croffle-primary">No image</span>
+                </div>
               )}
+              
+              <div className="w-full p-3 bg-white">
+                <p className="font-medium text-sm truncate">{product.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {product.category ? product.category.name : getCategoryName(product.category_id)}
+                </p>
+                {!isActive && (
+                  <span className="inline-block bg-gray-200 text-gray-700 text-xs px-1 rounded mt-1">Inactive</span>
+                )}
+              </div>
             </div>
           </Button>
         </TooltipTrigger>
