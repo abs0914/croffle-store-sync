@@ -49,10 +49,13 @@ export async function fetchCashierReport(
       // Handle cashier data
       const userId = tx.user_id as string;
       if (!cashierData[userId]) {
-        // Safely access cashier name with null checking
-        const cashierName = tx.cashier && typeof tx.cashier === 'object' && 'name' in tx.cashier 
-          ? tx.cashier.name 
-          : null;
+        // Safely access cashier name with proper null checking
+        const cashierName = tx.cashier && 
+          typeof tx.cashier === 'object' && 
+          tx.cashier !== null && 
+          'name' in tx.cashier ? 
+          tx.cashier.name : 
+          null;
         
         cashierData[userId] = {
           userId,
