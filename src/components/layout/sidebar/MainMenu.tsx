@@ -10,7 +10,7 @@ import {
   Package, 
   FileSpreadsheet,
   UserCircle,
-  Menu,
+  Utensils,
   Boxes
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,7 @@ const menuItems = [
   {
     name: "Menu Management",
     href: "/inventory",
-    icon: Menu
+    icon: Utensils
   },
   {
     name: "Inventory Stock",
