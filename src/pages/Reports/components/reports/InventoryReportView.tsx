@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { InventoryReport } from "@/types/reports";
 import { useState } from "react";
 import { format } from "date-fns";
+
 interface InventoryReportViewProps {
   data: InventoryReport | null;
   dateRange: {
@@ -64,7 +65,7 @@ export function InventoryReportView({
         <CardContent>
           <div className="relative mb-4">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Search inventory items..." className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            <Input type="search" placeholder="Search Menu Items.." className="pl-8" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
 
           <div className="border rounded-lg overflow-hidden">
