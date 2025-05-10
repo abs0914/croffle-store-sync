@@ -1,4 +1,3 @@
-
 export interface SalesReport {
   totalSales: number;
   totalTransactions: number;
@@ -148,5 +147,37 @@ export interface CashierReport {
     hour: string;
     sales: number;
     transactions: number;
+  }>;
+}
+
+export interface StockReport {
+  totalItems: number;
+  lowStockItems: number;
+  outOfStockItems: number;
+  stockItems: Array<{
+    id: string;
+    name: string;
+    unit: string;
+    currentStock: number;
+    initialStock: number;
+    consumed: number;
+    threshold: number;
+    lastUpdated: string;
+    transactions: Array<{
+      date: string;
+      type: string;
+      quantity: number;
+      previousStock: number;
+      newStock: number;
+    }>;
+  }>;
+  shiftData: Array<{
+    shiftId: string;
+    userId: string;
+    userName: string;
+    startTime: string;
+    endTime: string | null;
+    startInventory: Record<string, number>;
+    endInventory: Record<string, number> | null;
   }>;
 }

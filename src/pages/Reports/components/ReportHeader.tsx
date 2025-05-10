@@ -15,6 +15,8 @@ export function ReportHeader({ storeId, reportType }: ReportHeaderProps) {
         return 'Sales Report';
       case 'inventory':
         return 'Menu Report';
+      case 'stock':
+        return 'Stock Report';
       case 'profit_loss':
         return 'Profit & Loss Analysis';
       case 'x_reading':

@@ -8,6 +8,7 @@ import { ZReadingView } from "./reports/ZReadingView";
 import { DailySummaryView } from "./reports/DailySummaryView";
 import { VATReportView } from "./reports/VATReportView";
 import { CashierReportView } from "./reports/CashierReportView";
+import { StockReportView } from "./reports/StockReportView";
 
 interface ReportViewProps {
   reportType: ReportType;
@@ -25,6 +26,8 @@ export function ReportView({ reportType, data, storeId, dateRange }: ReportViewP
       return <SalesReportView data={data} dateRange={dateRange} />;
     case 'inventory':
       return <InventoryReportView data={data} dateRange={dateRange} />;
+    case 'stock':
+      return <StockReportView data={data} dateRange={dateRange} />;
     case 'profit_loss':
       return <ProfitLossReportView data={data} dateRange={dateRange} />;
     case 'x_reading':

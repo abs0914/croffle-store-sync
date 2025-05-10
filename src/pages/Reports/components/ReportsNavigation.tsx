@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { FileBarChart, FileBox, FileCheck, FileSpreadsheet, FileText, Receipt, UserRound } from "lucide-react";
+import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, FileChart, Warehouse } from "lucide-react";
 import { ReportType } from "..";
 
 interface ReportsNavigationProps {
@@ -14,6 +14,7 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
   const navItems = [
     { id: 'sales' as ReportType, name: 'Sales Report', icon: <FileBarChart className="h-4 w-4" /> },
     { id: 'inventory' as ReportType, name: 'Menu Report', icon: <FileBox className="h-4 w-4" /> },
+    { id: 'stock' as ReportType, name: 'Stock Report', icon: <Warehouse className="h-4 w-4" /> },
     { id: 'profit_loss' as ReportType, name: 'Profit & Loss', icon: <FileSpreadsheet className="h-4 w-4" /> },
     { id: 'cashier' as ReportType, name: 'Cashier Performance', icon: <UserRound className="h-4 w-4" /> },
     
