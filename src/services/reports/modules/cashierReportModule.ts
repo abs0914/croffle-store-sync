@@ -49,13 +49,14 @@ export async function fetchCashierReport(
       // Handle cashier data
       const userId = tx.user_id as string;
       if (!cashierData[userId]) {
-        // Safely handle cashier data with proper null checking
-        // First check if cashier exists and is not null before checking if it's an object
+        // Safely extract name if cashier exists and has a name property
         let cashierName: string | null = null;
+        
+        // First check if cashier exists before attempting to access any property
         if (tx.cashier !== null && tx.cashier !== undefined) {
-          // Now check if it's an object and has the name property
-          if (typeof tx.cashier === 'object' && 'name' in tx.cashier) {
-            cashierName = tx.cashier.name;
+          // Then check if it's an object with a name property
+          if (typeof tx.cashier === 'object' && tx.cashier && 'name' in tx.cashier) {
+            cashierName = tx.cashier.name as string;
           }
         }
         
