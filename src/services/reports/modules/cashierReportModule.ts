@@ -49,8 +49,9 @@ export async function fetchCashierReport(
       // Handle cashier data
       const userId = tx.user_id as string;
       if (!cashierData[userId]) {
-        // Use optional chaining for accessing potentially null values
-        const cashierName = tx.cashier?.name ?? null;
+        // Make sure we're checking that cashier exists and is not an error before accessing name
+        const cashierName = tx.cashier && typeof tx.cashier === 'object' && 'name' in tx.cashier ? 
+          tx.cashier.name : null;
         
         cashierData[userId] = {
           userId,
@@ -133,7 +134,7 @@ export async function fetchCashierReport(
         ? c.transactionTimes.reduce((sum, time) => sum + time, 0) / c.transactionTimes.length
         : 2.5; // Default value if no transactions
       
-      // Generate avatar from name if available - With proper null checking
+      // Generate avatar from name if available - With proper type checking
       const avatar = c.name 
         ? `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}`
         : undefined;
