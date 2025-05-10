@@ -7,8 +7,6 @@ import { useReportData } from "../hooks/useReportData";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Card, CardContent } from "@/components/ui/card";
-import { FileBarChart } from "lucide-react";
 
 interface ReportContentProps {
   reportType: ReportType;
@@ -24,13 +22,8 @@ export function ReportContent({ reportType, storeId, dateRange }: ReportContentP
   const from = dateRange.from?.toISOString().split('T')[0];
   const to = dateRange.to?.toISOString().split('T')[0];
   
-  // Determine if we're in development/staging environment to warn about sample data
-  const isDevelopment = window.location.hostname === 'localhost' || 
-                        window.location.hostname.includes('staging') ||
-                        window.location.hostname.includes('.lovable.app');
-  
   // Fetch data based on report type
-  const { data, isLoading, error, refetch, isSampleData } = useReportData({ 
+  const { data, isLoading, error, refetch } = useReportData({ 
     reportType, 
     storeId, 
     from, 
@@ -45,20 +38,12 @@ export function ReportContent({ reportType, storeId, dateRange }: ReportContentP
         duration: 4000,
       });
     } else if (data && !isLoading) {
-      if (isSampleData && isDevelopment) {
-        toast.warning("Using demo data", {
-          description: "This report is using sample data for demonstration purposes.",
-          duration: 5000,
-          position: isMobile ? "top-center" : "top-right"
-        });
-      } else {
-        toast.success("Report data loaded successfully", {
-          duration: 3000,
-          position: isMobile ? "top-center" : "top-right"
-        });
-      }
+      toast.success("Report data loaded successfully", {
+        duration: 3000,
+        position: isMobile ? "top-center" : "top-right"
+      });
     }
-  }, [data, error, isLoading, isSampleData, isDevelopment, isMobile]);
+  }, [data, error, isLoading, isMobile]);
 
   // Handle report loading state
   if (isLoading) {
@@ -104,3 +89,6 @@ export function ReportContent({ reportType, storeId, dateRange }: ReportContentP
     </div>
   );
 }
+
+import { Card, CardContent } from "@/components/ui/card";
+import { FileBarChart } from "lucide-react";

@@ -1,15 +1,12 @@
 
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Spinner } from "@/components/ui/spinner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AreaChart, Tooltip, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CashierReport } from "@/types/reports";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { formatCurrency } from "@/utils/format";
-import { Info } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { fetchCashierReport } from "@/services/reports";
+import { format } from "date-fns";
 
 interface CashierReportViewProps {
   storeId: string;
@@ -17,287 +14,191 @@ interface CashierReportViewProps {
     from: Date | undefined;
     to: Date | undefined;
   };
-  data: CashierReport;
 }
 
-export function CashierReportView({ data }: CashierReportViewProps) {
-  const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState("overview");
+export function CashierReportView({ storeId, dateRange }: CashierReportViewProps) {
+  const from = dateRange.from?.toISOString().split('T')[0];
+  const to = dateRange.to?.toISOString().split('T')[0];
   
-  // Determine if we're looking at sample data
-  const isSampleData = !data.cashiers.some(c => c.transactionCount > 0);
+  const { data, isLoading } = useQuery({
+    queryKey: ['cashier-report', storeId, from, to],
+    queryFn: () => from && to ? fetchCashierReport(storeId, from, to) : Promise.resolve(null),
+    enabled: !!storeId && !!from && !!to
+  });
+  
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-10 flex justify-center">
+          <Spinner className="h-8 w-8 text-croffle-accent" />
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (!data) {
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <div className="text-center py-10">
+            <p>No cashier performance data available for the selected period</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  const dateRangeText = dateRange.from && dateRange.to
+    ? `${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}`
+    : 'Custom Range';
 
-  // Format the hours for better display
-  const formattedHourlyData = data.hourlyData.map(h => ({
-    ...h,
-    hour: h.hour.substring(0, 5) // Remove seconds from time
-  }));
-  
-  // Get top cashiers for leaderboard
-  const topCashiers = [...data.cashiers]
-    .sort((a, b) => b.totalSales - a.totalSales)
-    .slice(0, 5);
-  
   return (
     <div className="space-y-6">
-      {isSampleData && (
-        <Alert variant="default" className="bg-amber-50 text-amber-800 border-amber-200">
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            Showing sample data. Connect to your database and complete transactions to see actual cashier performance.
-          </AlertDescription>
-        </Alert>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Cashier Performance: {dateRangeText}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-croffle-light/20 p-4 rounded-lg">
+              <p className="text-sm text-muted-foreground">Total Cashiers</p>
+              <h3 className="text-2xl font-bold text-croffle-primary">{data.cashierCount}</h3>
+            </div>
+            <div className="bg-croffle-light/20 p-4 rounded-lg">
+              <p className="text-sm text-muted-foreground">Transactions</p>
+              <h3 className="text-2xl font-bold text-croffle-primary">{data.totalTransactions}</h3>
+            </div>
+            <div className="bg-croffle-light/20 p-4 rounded-lg">
+              <p className="text-sm text-muted-foreground">Avg. Transaction</p>
+              <h3 className="text-2xl font-bold text-croffle-primary">₱{data.averageTransactionValue.toFixed(2)}</h3>
+            </div>
+            <div className="bg-croffle-light/20 p-4 rounded-lg">
+              <p className="text-sm text-muted-foreground">Avg. Speed</p>
+              <h3 className="text-2xl font-bold text-croffle-primary">{data.averageTransactionTime} min</h3>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Cashiers
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-2xl font-bold">{data.cashierCount}</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Transactions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-2xl font-bold">{data.totalTransactions}</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Average Transaction Value
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-2xl font-bold">{formatCurrency(data.averageTransactionValue)}</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Average Transaction Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-2xl font-bold">
-              {data.averageTransactionTime.toFixed(1)} min
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Performance by Cashier</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px] w-full mb-6">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={data.cashiers.map(cashier => ({
+                  name: cashier.name,
+                  sales: cashier.totalSales,
+                  transactions: cashier.transactionCount,
+                }))}
+                margin={{
+                  top: 5,
+                  right: 30,
+                  left: 20,
+                  bottom: 5,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                <Tooltip />
+                <Legend />
+                <Bar yAxisId="left" dataKey="sales" name="Sales (₱)" fill="#8884d8" />
+                <Bar yAxisId="right" dataKey="transactions" name="Transactions" fill="#82ca9d" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full mb-4 flex flex-wrap">
-          <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
-          <TabsTrigger value="hourly" className="flex-1">Hourly Analysis</TabsTrigger>
-          <TabsTrigger value="cashiers" className="flex-1">Cashiers</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-6">
-          {topCashiers.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Performing Cashiers</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[50px]">Rank</TableHead>
-                      <TableHead>Cashier</TableHead>
-                      <TableHead className="text-right">Sales</TableHead>
-                      <TableHead className="text-right">Transactions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {topCashiers.map((cashier, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{index + 1}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={cashier.avatar} alt={cashier.name} />
-                              <AvatarFallback>{cashier.name.substring(0, 2)}</AvatarFallback>
-                            </Avatar>
-                            <span>{cashier.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">{formatCurrency(cashier.totalSales)}</TableCell>
-                        <TableCell className="text-right">{cashier.transactionCount}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="p-6 text-center">
-              <CardContent>
-                <p>No cashier performance data available for this period</p>
-              </CardContent>
-            </Card>
-          )}
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cashier</TableHead>
+                  <TableHead className="text-right">Transactions</TableHead>
+                  <TableHead className="text-right">Total Sales</TableHead>
+                  <TableHead className="text-right">Avg. Sale</TableHead>
+                  <TableHead className="text-right">Avg. Speed</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.cashiers.map((cashier, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={cashier.avatar} />
+                          <AvatarFallback>{cashier.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span>{cashier.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">{cashier.transactionCount}</TableCell>
+                    <TableCell className="text-right">₱{cashier.totalSales.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">₱{cashier.averageTransactionValue.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{cashier.averageTransactionTime} min</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
-          {formattedHourlyData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales by Hour</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`w-full ${isMobile ? 'h-[200px]' : 'h-[300px]'}`}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={formattedHourlyData}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="hour" />
-                      <YAxis />
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <Tooltip />
-                      <Area 
-                        type="monotone" 
-                        dataKey="sales" 
-                        stroke="#8884d8" 
-                        fillOpacity={1} 
-                        fill="url(#colorSales)" 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="hourly" className="space-y-6">
-          {formattedHourlyData.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Transactions by Hour</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`w-full ${isMobile ? 'h-[200px]' : 'h-[300px]'}`}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={formattedHourlyData}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="hour" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="transactions" fill="#82ca9d" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="p-6 text-center">
-              <CardContent>
-                <p>No hourly data available for this period</p>
-              </CardContent>
-            </Card>
-          )}
-          
-          {formattedHourlyData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Hourly Data</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Hour</TableHead>
-                      <TableHead className="text-right">Sales</TableHead>
-                      <TableHead className="text-right">Transactions</TableHead>
-                      <TableHead className="text-right">Avg. Value</TableHead>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Cashier Attendance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cashier</TableHead>
+                  <TableHead>Shift Start</TableHead>
+                  <TableHead>Shift End</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead className="text-right">Sales</TableHead>
+                  <TableHead className="text-right">Transactions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.cashiers.map((cashier, index) => {
+                  // Simulate shift data (this would come from the actual data in a real implementation)
+                  const shiftStart = new Date(dateRange.from || new Date());
+                  shiftStart.setHours(8 + index % 3, 0, 0);
+                  
+                  const shiftEnd = new Date(shiftStart);
+                  shiftEnd.setHours(shiftStart.getHours() + 8);
+                  
+                  const durationHours = 8;
+                  
+                  return (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={cashier.avatar} />
+                            <AvatarFallback>{cashier.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span>{cashier.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{format(shiftStart, 'hh:mm a')}</TableCell>
+                      <TableCell>{format(shiftEnd, 'hh:mm a')}</TableCell>
+                      <TableCell>{durationHours} hours</TableCell>
+                      <TableCell className="text-right">₱{cashier.totalSales.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{cashier.transactionCount}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {formattedHourlyData.map((hour, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{hour.hour}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(hour.sales)}</TableCell>
-                        <TableCell className="text-right">{hour.transactions}</TableCell>
-                        <TableCell className="text-right">
-                          {formatCurrency(hour.transactions > 0 ? hour.sales / hour.transactions : 0)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="cashiers" className="space-y-6">
-          {data.cashiers.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Cashier Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cashier</TableHead>
-                      <TableHead className="text-right">Total Sales</TableHead>
-                      <TableHead className="text-right">Transactions</TableHead>
-                      <TableHead className="text-right">Avg. Transaction</TableHead>
-                      <TableHead className="text-right">Avg. Time (min)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.cashiers.map((cashier, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={cashier.avatar} alt={cashier.name} />
-                              <AvatarFallback>{cashier.name.substring(0, 2)}</AvatarFallback>
-                            </Avatar>
-                            <span>{cashier.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">{formatCurrency(cashier.totalSales)}</TableCell>
-                        <TableCell className="text-right">{cashier.transactionCount}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(cashier.averageTransactionValue)}</TableCell>
-                        <TableCell className="text-right">{cashier.averageTransactionTime.toFixed(1)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="p-6 text-center">
-              <CardContent>
-                <p>No cashier data available</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

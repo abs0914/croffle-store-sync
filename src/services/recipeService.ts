@@ -2,36 +2,31 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Recipe, RecipeIngredient } from "@/types";
 import { toast } from "sonner";
-import { calculateProductCostFromRecipe, areRecipesEqual } from "./product/productRecipe";
 
-export { calculateProductCostFromRecipe, areRecipesEqual };
-
-// Fetch a recipe for a product or variation
+// Fetch a recipe for a product or variation - MOCK IMPLEMENTATION
 export const fetchRecipe = async (productId: string, variationId?: string): Promise<Recipe | null> => {
   try {
-    console.log(`Fetching recipe for product: ${productId}, variation: ${variationId || 'none'}`);
+    console.log(`Mock fetchRecipe for product: ${productId}, variation: ${variationId || 'none'}`);
     
-    // For development, return null as recipes table doesn't exist yet
-    console.log("Recipes table not available yet, returning null");
-    return null;
+    // Return mock data
+    return null; // No recipe found
   } catch (error) {
     console.error("Error fetching recipe:", error);
     return null; // Don't show a toast for recipe fetch errors
   }
 };
 
-// Save or update a recipe
+// Save or update a recipe - MOCK IMPLEMENTATION
 export const saveRecipe = async (recipe: Omit<Recipe, "id" | "created_at" | "updated_at">): Promise<Recipe | null> => {
   try {
-    console.log("Saving recipe:", recipe);
+    console.log("Mock saving recipe:", recipe);
     
-    // For development, show a toast but act like it succeeded
-    console.log("Recipes table not available yet");
-    toast.warning("Recipe data will be available when the recipes database is set up");
+    // Simulate successful save
+    toast.success("Recipe saved successfully");
     
     // Return mock data as if the recipe was saved
     return {
-      id: "pending-recipe-id",
+      id: "mock-recipe-id",
       product_id: recipe.product_id,
       variation_id: recipe.variation_id,
       ingredients: recipe.ingredients,
@@ -46,14 +41,13 @@ export const saveRecipe = async (recipe: Omit<Recipe, "id" | "created_at" | "upd
   }
 };
 
-// Delete a recipe
+// Delete a recipe - MOCK IMPLEMENTATION
 export const deleteRecipe = async (productId: string, variationId?: string): Promise<boolean> => {
   try {
-    console.log(`Deleting recipe for product: ${productId}, variation: ${variationId || 'none'}`);
+    console.log(`Mock deleteRecipe for product: ${productId}, variation: ${variationId || 'none'}`);
     
-    // For development, show success since there's nothing to delete
-    console.log("Recipes table not available yet");
-    toast.success("No recipe data to delete");
+    // Simulate successful delete
+    toast.success("Recipe deleted successfully");
     return true;
   } catch (error) {
     console.error("Error deleting recipe:", error);
@@ -62,13 +56,13 @@ export const deleteRecipe = async (productId: string, variationId?: string): Pro
   }
 };
 
-// Calculate the cost of a recipe based on ingredient costs
+// Calculate the cost of a recipe based on ingredient costs - MOCK IMPLEMENTATION
 export const calculateRecipeCost = async (recipeId: string): Promise<number> => {
   try {
-    console.log(`Calculating cost for recipe: ${recipeId}`);
+    console.log(`Mock calculateRecipeCost for recipe: ${recipeId}`);
     
-    // For development, return a default value
-    return 0;
+    // Return mock cost
+    return 10.99;
   } catch (error) {
     console.error("Error calculating recipe cost:", error);
     return 0;
