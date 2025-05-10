@@ -39,7 +39,7 @@ export function ReportView({ reportType, data, storeId, dateRange }: ReportViewP
     case 'vat':
       return <VATReportView storeId={storeId} dateRange={dateRange} />;
     case 'cashier':
-      return <CashierReportView storeId={storeId} dateRange={dateRange} />;
+      return <CashierReportView data={data} storeId={storeId} dateRange={dateRange} />;
     default:
       return null;
   }

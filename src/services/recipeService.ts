@@ -11,21 +11,14 @@ export const fetchRecipe = async (productId: string, variationId?: string): Prom
   try {
     console.log(`Fetching recipe for product: ${productId}, variation: ${variationId || 'none'}`);
     
-    // First check if we have recipes table available
-    const { error: tableCheckError } = await supabase
-      .from('recipes')
-      .select('id')
-      .limit(1);
+    // For development, return null as recipes table doesn't exist yet
+    console.log("Recipes table not available yet, returning null");
+    return null;
     
-    // If table doesn't exist yet, return mock data for development
-    if (tableCheckError) {
-      console.log("Recipes table not available yet, returning null");
-      return null;
-    }
-    
-    // Query for recipe
+    // The following code will be used once the recipes table is created
+    /*
     const { data, error } = await supabase
-      .from('recipes')
+      .from("recipes")
       .select(`
         id, 
         product_id,
@@ -42,6 +35,7 @@ export const fetchRecipe = async (productId: string, variationId?: string): Prom
     if (error) throw error;
     
     return data;
+    */
   } catch (error) {
     console.error("Error fetching recipe:", error);
     return null; // Don't show a toast for recipe fetch errors
@@ -53,32 +47,26 @@ export const saveRecipe = async (recipe: Omit<Recipe, "id" | "created_at" | "upd
   try {
     console.log("Saving recipe:", recipe);
     
-    // First check if we have recipes table available
-    const { error: tableCheckError } = await supabase
-      .from('recipes')
-      .select('id')
-      .limit(1);
+    // For development, show a toast but act like it succeeded
+    console.log("Recipes table not available yet");
+    toast.warning("Recipe data will be available when the recipes database is set up");
     
-    // If table doesn't exist yet, show a toast but act like it succeeded
-    if (tableCheckError) {
-      console.log("Recipes table not available yet");
-      toast.warning("Recipe data will be available when the recipes database is set up");
-      
-      // Return mock data as if the recipe was saved
-      return {
-        id: "pending-recipe-id",
-        product_id: recipe.product_id,
-        variation_id: recipe.variation_id,
-        ingredients: recipe.ingredients,
-        store_id: recipe.store_id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-    }
+    // Return mock data as if the recipe was saved
+    return {
+      id: "pending-recipe-id",
+      product_id: recipe.product_id,
+      variation_id: recipe.variation_id,
+      ingredients: recipe.ingredients,
+      store_id: recipe.store_id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
     
+    // The following code will be used once the recipes table is created
+    /*
     // Check if recipe already exists to update it
     const { data: existingRecipe } = await supabase
-      .from('recipes')
+      .from("recipes")
       .select('id')
       .eq('product_id', recipe.product_id)
       .eq(recipe.variation_id ? 'variation_id' : 'is_null', recipe.variation_id || true)
@@ -89,7 +77,7 @@ export const saveRecipe = async (recipe: Omit<Recipe, "id" | "created_at" | "upd
     if (existingRecipe) {
       // Update existing recipe
       const { data, error } = await supabase
-        .from('recipes')
+        .from("recipes")
         .update({
           ingredients: recipe.ingredients,
           updated_at: new Date().toISOString()
@@ -104,7 +92,7 @@ export const saveRecipe = async (recipe: Omit<Recipe, "id" | "created_at" | "upd
     } else {
       // Create new recipe
       const { data, error } = await supabase
-        .from('recipes')
+        .from("recipes")
         .insert({
           product_id: recipe.product_id,
           variation_id: recipe.variation_id,
@@ -120,6 +108,7 @@ export const saveRecipe = async (recipe: Omit<Recipe, "id" | "created_at" | "upd
     }
     
     return result;
+    */
   } catch (error) {
     console.error("Error saving recipe:", error);
     toast.error("Failed to save recipe");
@@ -132,21 +121,15 @@ export const deleteRecipe = async (productId: string, variationId?: string): Pro
   try {
     console.log(`Deleting recipe for product: ${productId}, variation: ${variationId || 'none'}`);
     
-    // First check if we have recipes table available
-    const { error: tableCheckError } = await supabase
-      .from('recipes')
-      .select('id')
-      .limit(1);
+    // For development, show success since there's nothing to delete
+    console.log("Recipes table not available yet");
+    toast.success("No recipe data to delete");
+    return true;
     
-    // If table doesn't exist yet, show success since there's nothing to delete
-    if (tableCheckError) {
-      console.log("Recipes table not available yet");
-      toast.success("No recipe data to delete");
-      return true;
-    }
-    
+    // The following code will be used once the recipes table is created
+    /*
     const { error } = await supabase
-      .from('recipes')
+      .from("recipes")
       .delete()
       .eq('product_id', productId)
       .eq(variationId ? 'variation_id' : 'is_null', variationId || true);
@@ -154,6 +137,8 @@ export const deleteRecipe = async (productId: string, variationId?: string): Pro
     if (error) throw error;
     
     toast.success("Recipe deleted successfully");
+    */
+    
     return true;
   } catch (error) {
     console.error("Error deleting recipe:", error);
@@ -167,20 +152,14 @@ export const calculateRecipeCost = async (recipeId: string): Promise<number> => 
   try {
     console.log(`Calculating cost for recipe: ${recipeId}`);
     
-    // First check if we have recipes table available
-    const { error: tableCheckError } = await supabase
-      .from('recipes')
-      .select('id')
-      .limit(1);
+    // For development, return a default value
+    return 0;
     
-    // If table doesn't exist yet, return a default value
-    if (tableCheckError) {
-      return 0;
-    }
-    
+    // The following code will be used once the recipes table is created
+    /*
     // Get recipe data
     const { data: recipe, error } = await supabase
-      .from('recipes')
+      .from("recipes")
       .select('ingredients')
       .eq('id', recipeId)
       .single();
@@ -200,6 +179,7 @@ export const calculateRecipeCost = async (recipeId: string): Promise<number> => 
     }
     
     return totalCost;
+    */
   } catch (error) {
     console.error("Error calculating recipe cost:", error);
     return 0;

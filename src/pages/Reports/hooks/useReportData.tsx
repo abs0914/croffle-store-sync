@@ -8,6 +8,7 @@ import {
   fetchStockReport,
   fetchCashierReport 
 } from "@/services/reports";
+import { formatCurrency } from "@/utils/format";
 
 interface UseReportDataProps {
   reportType: ReportType;
@@ -34,6 +35,21 @@ export function useReportData({ reportType, storeId, from, to }: UseReportDataPr
             // Check if this is sample data
             isSampleData = result && result.salesByDate?.length > 0 && 
                           result.salesByDate.every(d => d.amount % 10 === 0);
+            
+            // Format currency values
+            if (result) {
+              result.totalSales = parseFloat(result.totalSales);
+              if (result.topProducts) {
+                result.topProducts.forEach(product => {
+                  product.revenue = parseFloat(product.revenue.toString());
+                });
+              }
+              if (result.paymentMethods) {
+                result.paymentMethods.forEach(method => {
+                  method.amount = parseFloat(method.amount.toString());
+                });
+              }
+            }
             break;
           case 'inventory':
             result = await fetchInventoryReport(storeId, from, to);
@@ -46,6 +62,15 @@ export function useReportData({ reportType, storeId, from, to }: UseReportDataPr
             // Check for sample data markers
             isSampleData = result && result.profitByDate?.length > 0 &&
                           result.profitByDate.every(d => d.profit % 5 === 0);
+            
+            // Format currency values
+            if (result) {
+              result.totalRevenue = parseFloat(result.totalRevenue.toString());
+              result.costOfGoods = parseFloat(result.costOfGoods.toString());
+              result.grossProfit = parseFloat(result.grossProfit.toString());
+              result.expenses = parseFloat(result.expenses.toString());
+              result.netProfit = parseFloat(result.netProfit.toString());
+            }
             break;
           case 'stock':
             result = await fetchStockReport(storeId, from, to);
