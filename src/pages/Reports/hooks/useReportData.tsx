@@ -8,6 +8,7 @@ import {
   fetchStockReport,
   fetchCashierReport 
 } from "@/services/reports";
+import { formatCurrency } from "@/utils/format";
 
 interface UseReportDataProps {
   reportType: ReportType;
@@ -25,33 +26,85 @@ export function useReportData({ reportType, storeId, from, to }: UseReportDataPr
       console.log(`Fetching ${reportType} report for store ${storeId} from ${from} to ${to}`);
       
       try {
+        let result = null;
+        let isSampleData = false;
+        
         switch (reportType) {
           case 'sales':
-            return await fetchSalesReport(storeId, from, to);
+            result = await fetchSalesReport(storeId, from, to);
+            // Check if this is sample data
+            isSampleData = result && result.salesByDate?.length > 0 && 
+                          result.salesByDate.every(d => d.amount % 10 === 0);
+            
+            // Format currency values
+            if (result) {
+              result.totalSales = parseFloat(result.totalSales);
+              if (result.topProducts) {
+                result.topProducts.forEach(product => {
+                  product.revenue = parseFloat(product.revenue.toString());
+                });
+              }
+              if (result.paymentMethods) {
+                result.paymentMethods.forEach(method => {
+                  method.amount = parseFloat(method.amount.toString());
+                });
+              }
+            }
+            break;
           case 'inventory':
-            return await fetchInventoryReport(storeId, from, to);
+            result = await fetchInventoryReport(storeId, from, to);
+            // Check for sample data markers
+            isSampleData = result && result.inventoryItems?.length > 0 && 
+                          result.inventoryItems.every(item => item.soldUnits % 5 === 0);
+            break;
           case 'profit_loss':
-            return await fetchProfitLossReport(storeId, from, to);
+            result = await fetchProfitLossReport(storeId, from, to);
+            // Check for sample data markers
+            isSampleData = result && result.profitByDate?.length > 0 &&
+                          result.profitByDate.every(d => d.profit % 5 === 0);
+            
+            // Format currency values
+            if (result) {
+              result.totalRevenue = parseFloat(result.totalRevenue.toString());
+              result.costOfGoods = parseFloat(result.costOfGoods.toString());
+              result.grossProfit = parseFloat(result.grossProfit.toString());
+              result.expenses = parseFloat(result.expenses.toString());
+              result.netProfit = parseFloat(result.netProfit.toString());
+            }
+            break;
           case 'stock':
-            return await fetchStockReport(storeId, from, to);
+            result = await fetchStockReport(storeId, from, to);
+            isSampleData = result && result.stockItems?.length > 0 &&
+                          result.stockItems.every(item => item.initialStock % 10 === 0);
+            break;
           case 'cashier':
-            return await fetchCashierReport(storeId, from, to);
+            result = await fetchCashierReport(storeId, from, to);
+            isSampleData = result && result.cashiers?.length > 0 && 
+                          result.cashiers.every(c => c.transactionCount % 5 === 0);
+            break;
           default:
-            return Promise.resolve(null);
+            result = Promise.resolve(null);
+            break;
         }
+
+        return { data: result, isSampleData };
       } catch (error) {
         console.error(`Error fetching ${reportType} report:`, error);
         throw error;
       }
     },
-    enabled: !!storeId && !!from && !!to && ['sales', 'inventory', 'profit_loss', 'stock', 'cashier'].includes(reportType),
+    enabled: !!storeId && !!from && !!to && 
+            ['sales', 'inventory', 'profit_loss', 'stock', 'cashier'].includes(reportType),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     refetchOnWindowFocus: false
   });
 
   return {
-    ...queryResult,
+    data: queryResult.data?.data || null,
+    isLoading: queryResult.isLoading,
+    error: queryResult.error,
+    isSampleData: queryResult.data?.isSampleData || false,
     refetch: () => {
       console.log("Manually refetching report data...");
       return queryResult.refetch();
