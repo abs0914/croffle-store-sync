@@ -116,3 +116,28 @@ export async function getActiveShift(
     return null;
   }
 }
+
+// Get the previous shift's ending cash for a store and user
+export async function getPreviousShiftEndingCash(
+  userId: string,
+  storeId: string
+): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from('shifts')
+      .select('ending_cash')
+      .eq('user_id', userId)
+      .eq('store_id', storeId)
+      .eq('status', 'closed')
+      .order('end_time', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    if (error) throw error;
+    
+    return data?.ending_cash || 0;
+  } catch (error) {
+    console.error('Error fetching previous shift ending cash:', error);
+    return 0;
+  }
+}

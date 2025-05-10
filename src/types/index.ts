@@ -1,4 +1,5 @@
 
+
 // Re-export all types from domain-specific files
 export * from './user';
 export * from './store';
@@ -13,11 +14,9 @@ export type {
   Transaction, 
   Customer,
   // Remove references to types that don't exist in transaction.ts
-  // Payment,
-  // DiscountType,
-  // ProductVariation
 } from './transaction';
 
 // Export the needed types from product.ts again to make them available
 // where they're being imported from transaction.ts
 export type { ProductVariation } from './product';
+

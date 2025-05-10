@@ -19,6 +19,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Camera } from "lucide-react";
+import { getPreviousShiftEndingCash } from "@/contexts/shift/shiftUtils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StartShiftDialogProps {
   isOpen: boolean;
@@ -33,10 +35,13 @@ export default function StartShiftDialog({
   onStartShift,
   storeId
 }: StartShiftDialogProps) {
+  const { user } = useAuth();
   const [startingCash, setStartingCash] = useState<number>(0);
+  const [previousEndingCash, setPreviousEndingCash] = useState<number | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [inventoryCount, setInventoryCount] = useState<Record<string, number>>({});
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Fetch inventory items for this store
   const { data: inventoryItems = [], isLoading: isLoadingInventory } = useQuery({
@@ -45,10 +50,22 @@ export default function StartShiftDialog({
     enabled: isOpen && !!storeId,
   });
 
+  // Fetch previous shift ending cash when dialog opens
+  useEffect(() => {
+    if (isOpen && storeId && user) {
+      setIsLoading(true);
+      getPreviousShiftEndingCash(user.id, storeId)
+        .then(cash => {
+          setPreviousEndingCash(cash);
+          setStartingCash(cash); // Set starting cash to previous ending cash
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [isOpen, storeId, user]);
+
   // Reset state when dialog closes
   useEffect(() => {
     if (!isOpen) {
-      setStartingCash(0);
       setPhoto(null);
       setInventoryCount({});
       setShowCameraView(false);
@@ -96,14 +113,28 @@ export default function StartShiftDialog({
         
         <div className="space-y-4 py-4 flex-1 overflow-hidden">
           <div className="space-y-2">
-            <Label htmlFor="startingCash">Starting Cash Amount</Label>
-            <Input
-              id="startingCash"
-              type="number"
-              value={startingCash || ''}
-              onChange={(e) => setStartingCash(Number(e.target.value))}
-              placeholder="0.00"
-            />
+            <Label htmlFor="startingCash">
+              Starting Cash Amount 
+              {previousEndingCash !== null && (
+                <span className="text-sm text-muted-foreground ml-2">
+                  (Previous ending cash: {previousEndingCash.toFixed(2)})
+                </span>
+              )}
+            </Label>
+            {isLoading ? (
+              <div className="flex items-center space-x-2">
+                <Spinner className="h-4 w-4" />
+                <span className="text-sm">Loading previous cash amount...</span>
+              </div>
+            ) : (
+              <Input
+                id="startingCash"
+                type="number"
+                value={startingCash || ''}
+                onChange={(e) => setStartingCash(Number(e.target.value))}
+                placeholder="0.00"
+              />
+            )}
           </div>
           
           {showCameraView ? (

@@ -18,6 +18,8 @@ import { fetchInventoryStock } from "@/services/inventoryStock";
 import { Spinner } from "@/components/ui/spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, Camera } from "lucide-react";
 
 interface EndShiftDialogProps {
   isOpen: boolean;
@@ -35,6 +37,8 @@ export default function EndShiftDialog({
   const [endingCash, setEndingCash] = useState<number>(0);
   const [photo, setPhoto] = useState<string | null>(null);
   const [inventoryCount, setInventoryCount] = useState<Record<string, number>>({});
+  const [showCameraView, setShowCameraView] = useState<boolean>(false);
+  const [cashError, setCashError] = useState<string | null>(null);
 
   // Fetch inventory items for this store
   const { data: inventoryItems = [], isLoading: isLoadingInventory } = useQuery({
@@ -49,6 +53,8 @@ export default function EndShiftDialog({
       setEndingCash(0);
       setPhoto(null);
       setInventoryCount({});
+      setShowCameraView(false);
+      setCashError(null);
     } else if (isOpen && inventoryItems.length > 0) {
       // Initialize inventory count with current stock quantities
       const initialCount = inventoryItems.reduce((acc, item) => {
@@ -57,8 +63,22 @@ export default function EndShiftDialog({
       }, {} as Record<string, number>);
       
       setInventoryCount(initialCount);
+      
+      // Set ending cash to at least the starting cash amount
+      if (currentShift?.startingCash) {
+        setEndingCash(currentShift.startingCash);
+      }
     }
-  }, [isOpen, inventoryItems]);
+  }, [isOpen, inventoryItems, currentShift]);
+
+  // Validate ending cash amount whenever it changes
+  useEffect(() => {
+    if (currentShift && endingCash < currentShift.startingCash) {
+      setCashError(`Ending cash must be at least ${currentShift.startingCash.toFixed(2)} (starting cash amount)`);
+    } else {
+      setCashError(null);
+    }
+  }, [endingCash, currentShift]);
 
   const handleInventoryCountChange = (itemId: string, value: number) => {
     setInventoryCount(prev => ({
@@ -69,11 +89,24 @@ export default function EndShiftDialog({
 
   const handleSubmit = async () => {
     if (!currentShift) return;
+    
+    // Double check cash validation
+    if (endingCash < currentShift.startingCash) {
+      setCashError(`Ending cash must be at least ${currentShift.startingCash.toFixed(2)} (starting cash amount)`);
+      return;
+    }
+    
     await onEndShift(endingCash, inventoryCount, photo || undefined);
+    setShowCameraView(false);
   };
 
   const handleCancel = () => {
     onOpenChange(false);
+    setShowCameraView(false);
+  };
+
+  const toggleCameraView = () => {
+    setShowCameraView(!showCameraView);
   };
 
   return (
@@ -88,17 +121,68 @@ export default function EndShiftDialog({
         
         <div className="space-y-4 py-4 flex-1 overflow-hidden">
           <div className="space-y-2">
-            <Label htmlFor="endingCash">Ending Cash Amount</Label>
+            <Label htmlFor="endingCash">
+              Ending Cash Amount
+              {currentShift && (
+                <span className="text-sm text-muted-foreground ml-2">
+                  (Starting cash: {currentShift.startingCash.toFixed(2)})
+                </span>
+              )}
+            </Label>
             <Input
               id="endingCash"
               type="number"
               value={endingCash || ''}
               onChange={(e) => setEndingCash(Number(e.target.value))}
               placeholder="0.00"
+              className={cashError ? "border-red-500" : ""}
             />
+            
+            {cashError && (
+              <Alert variant="destructive" className="py-2 mt-1">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{cashError}</AlertDescription>
+              </Alert>
+            )}
           </div>
           
-          <ShiftCamera onCapture={setPhoto} />
+          {showCameraView ? (
+            <ShiftCamera 
+              onCapture={(capturedPhoto) => {
+                setPhoto(capturedPhoto);
+                setShowCameraView(false);
+              }}
+              onReset={() => setShowCameraView(false)}
+            />
+          ) : (
+            <div className="space-y-2">
+              <Label>Shift Photo</Label>
+              <div className="flex items-center space-x-2">
+                {photo ? (
+                  <div className="relative">
+                    <img src={photo} alt="Shift end" className="w-full h-48 object-cover rounded-md border" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="absolute top-2 right-2" 
+                      onClick={() => setPhoto(null)}
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    onClick={toggleCameraView} 
+                    className="w-full"
+                  >
+                    <Camera className="mr-2 h-4 w-4" />
+                    Take Photo
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
           
           <div className="space-y-2">
             <Label>Current Inventory Levels</Label>
@@ -153,8 +237,13 @@ export default function EndShiftDialog({
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>
-            End Shift
+          <Button 
+            onClick={handleSubmit} 
+            disabled={!!cashError || !photo}
+            className="flex items-center"
+          >
+            <Camera className="mr-2 h-4 w-4" />
+            End Shift with Photo
           </Button>
         </DialogFooter>
       </DialogContent>
