@@ -74,8 +74,8 @@ export function MainMenu() {
             className={cn(
               "py-2 px-3 flex items-center space-x-2 rounded-lg text-sm transition-colors", 
               isActive(item.href) 
-                ? "bg-croffle-light/10 text-white font-medium" 
-                : "hover:bg-muted-foreground/5 text-croffle-foreground"
+                ? "bg-croffle-dark/80 text-white font-medium" 
+                : "hover:bg-croffle-dark/30 text-croffle-foreground"
             )}
           >
             <item.icon className={cn("h-5 w-5", isActive(item.href) ? "text-white" : "text-croffle-foreground")} />
@@ -94,8 +94,8 @@ export function MainMenu() {
               className={cn(
                 "py-2 px-3 flex items-center space-x-2 rounded-lg text-sm transition-colors", 
                 isActive(item.href) 
-                  ? "bg-croffle-light/10 text-white font-medium" 
-                  : "hover:bg-muted-foreground/5 text-croffle-foreground"
+                  ? "bg-croffle-dark/80 text-white font-medium" 
+                  : "hover:bg-croffle-dark/30 text-croffle-foreground"
               )}
             >
               <item.icon className={cn("h-5 w-5", isActive(item.href) ? "text-white" : "text-croffle-foreground")} />
