@@ -49,7 +49,8 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   const startShift = async (
     startingCash: number, 
     startInventoryCount: Record<string, number>,
-    startPhoto?: string
+    startPhoto?: string,
+    cashierId?: string
   ): Promise<boolean> => {
     if (!user || !currentStore) {
       return false;
@@ -60,7 +61,8 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       currentStore.id, 
       startingCash, 
       startInventoryCount,
-      startPhoto
+      startPhoto,
+      cashierId
     );
     
     if (shift) {

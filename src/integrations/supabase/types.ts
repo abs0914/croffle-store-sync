@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      cashiers: {
+        Row: {
+          contact_number: string | null
+          created_at: string | null
+          first_name: string
+          id: string
+          is_active: boolean | null
+          last_name: string
+          store_id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          contact_number?: string | null
+          created_at?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean | null
+          last_name: string
+          store_id: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          contact_number?: string | null
+          created_at?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean | null
+          last_name?: string
+          store_id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashiers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string | null
@@ -311,6 +355,7 @@ export type Database = {
       }
       shifts: {
         Row: {
+          cashier_id: string | null
           created_at: string | null
           end_inventory_count: Json | null
           end_photo: string | null
@@ -326,6 +371,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cashier_id?: string | null
           created_at?: string | null
           end_inventory_count?: Json | null
           end_photo?: string | null
@@ -341,6 +387,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cashier_id?: string | null
           created_at?: string | null
           end_inventory_count?: Json | null
           end_photo?: string | null
@@ -356,6 +403,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "shifts_cashier_id_fkey"
+            columns: ["cashier_id"]
+            isOneToOne: false
+            referencedRelation: "cashiers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shifts_store_id_fkey"
             columns: ["store_id"]

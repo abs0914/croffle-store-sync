@@ -18,7 +18,8 @@ export function mapShiftRowToShift(shiftData: ShiftRow): Shift {
     startPhoto: shiftData.start_photo || undefined,
     endPhoto: shiftData.end_photo || undefined,
     startInventoryCount: shiftData.start_inventory_count || undefined,
-    endInventoryCount: shiftData.end_inventory_count || undefined
+    endInventoryCount: shiftData.end_inventory_count || undefined,
+    cashierId: shiftData.cashier_id || undefined
   };
 }
 
@@ -28,7 +29,8 @@ export async function createShift(
   storeId: string,
   startingCash: number,
   startInventoryCount: Record<string, number>,
-  startPhoto?: string
+  startPhoto?: string,
+  cashierId?: string
 ): Promise<Shift | null> {
   try {
     const newShift = {
@@ -38,7 +40,8 @@ export async function createShift(
       starting_cash: startingCash,
       status: 'active',
       start_photo: startPhoto,
-      start_inventory_count: startInventoryCount
+      start_inventory_count: startInventoryCount,
+      cashier_id: cashierId || null
     };
     
     const { data, error } = await supabase

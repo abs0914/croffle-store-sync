@@ -1,78 +1,105 @@
 
-import React, { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Link, useLocation } from "react-router-dom";
 import { 
-  Home, 
-  ShoppingCart, 
-  Package, 
+  LayoutDashboard, 
   Store, 
-  Warehouse, 
-  Users,
-  FileBarChart
+  ShoppingBasket, 
+  Users, 
+  Settings, 
+  BarChart, 
+  Package, 
+  FileSpreadsheet,
+  UserCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLocation, useNavigate } from "react-router-dom";
-import { designClass } from "@/utils/designSystem";
 
-// Design constants - centralized in the component
-const DESIGN = {
-  colors: {
-    active: "bg-croffle-accent text-white",
-    hover: "hover:bg-croffle-accent/80 hover:text-white",
+const menuItems = [
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard
   },
-  spacing: {
-    menuItem: "h-11 px-4 py-2 mb-1",
-    submenuItem: "h-9 px-6 py-1.5 mb-1",
+  {
+    name: "POS",
+    href: "/pos",
+    icon: ShoppingBasket
   },
-  radius: "rounded-lg",
-}
+  {
+    name: "Customers",
+    href: "/customers",
+    icon: Users
+  },
+  {
+    name: "Inventory",
+    href: "/inventory",
+    icon: Package
+  },
+  {
+    name: "Stores",
+    href: "/stores",
+    icon: Store
+  },
+  {
+    name: "Reports",
+    href: "/reports",
+    icon: BarChart
+  }
+];
 
-export const MainMenu: React.FC = () => {
+const settingsItems = [
+  {
+    name: "Cashiers",
+    href: "/settings/cashiers",
+    icon: UserCircle
+  }
+];
+
+export function MainMenu() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
-
-  useEffect(() => {
-    // Close the submenu when the route changes
-    setIsSubMenuOpen(false);
-  }, [location.pathname]);
-
-  const menuItems = [
-    { name: "Dashboard", path: "/dashboard", icon: <Home className="w-5 h-5" /> },
-    { name: "Point of Sale", path: "/pos", icon: <ShoppingCart className="w-5 h-5" /> },
-    { name: "Stores", path: "/stores", icon: <Store className="w-5 h-5" /> },
-    { name: "Menu Management", path: "/inventory", icon: <Package className="w-5 h-5" /> },
-    { name: "Inventory Stock", path: "/inventory/stock", icon: <Warehouse className="w-5 h-5" /> },
-    { name: "Reports", path: "/reports", icon: <FileBarChart className="w-5 h-5" /> },
-    { name: "Customers", path: "/customers", icon: <Users className="w-5 h-5" /> },
-  ];
-
+  
+  const isActive = (href: string) => {
+    if (href === "/dashboard" && location.pathname === "/") {
+      return true;
+    }
+    return location.pathname.startsWith(href);
+  };
+  
   return (
-    <div className="flex flex-col space-y-0.5 px-3 py-2" data-design-locked="true">
-      {menuItems.map((item) => (
-        <div key={item.name}>
-          <Button
-            variant="ghost"
+    <div className="flex flex-col space-y-1">
+      <nav className="space-y-1">
+        {menuItems.map((item) => (
+          <Link 
+            key={item.name} 
+            to={item.href} 
             className={cn(
-              DESIGN.spacing.menuItem,
-              DESIGN.radius,
-              "w-full justify-start font-normal",
-              location.pathname === item.path 
-                ? DESIGN.colors.active
-                : DESIGN.colors.hover,
-              "transition-colors text-croffle-text"
+              "py-2 px-3 flex items-center space-x-2 rounded-lg text-sm transition-colors", 
+              isActive(item.href) ? "bg-croffle-light/10 text-croffle-light" : "hover:bg-muted-foreground/5"
             )}
-            onClick={() => navigate(item.path)}
           >
-            <div className="flex items-center">
-              <span className="w-5 h-5 mr-2 flex items-center justify-center">
-                {item.icon}
-              </span>
+            <item.icon className="h-5 w-5" />
+            <span>{item.name}</span>
+          </Link>
+        ))}
+      </nav>
+      
+      <div className="pt-6 border-t border-gray-700 mt-4">
+        <p className="text-xs font-medium pl-3 mb-2 text-muted-foreground">Settings</p>
+        <nav className="space-y-1">
+          {settingsItems.map((item) => (
+            <Link 
+              key={item.name} 
+              to={item.href} 
+              className={cn(
+                "py-2 px-3 flex items-center space-x-2 rounded-lg text-sm transition-colors", 
+                isActive(item.href) ? "bg-croffle-light/10 text-croffle-light" : "hover:bg-muted-foreground/5"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
               <span>{item.name}</span>
-            </div>
-          </Button>
-        </div>
-      ))}
+            </Link>
+          ))}
+        </nav>
+      </div>
     </div>
   );
-};
+}

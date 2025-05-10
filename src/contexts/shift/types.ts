@@ -16,6 +16,7 @@ export interface ShiftRow {
   start_inventory_count: Record<string, number> | null;
   end_inventory_count: Record<string, number> | null;
   created_at: string | null;
+  cashier_id: string | null;
 }
 
 export interface ShiftState {
@@ -24,7 +25,8 @@ export interface ShiftState {
   startShift: (
     startingCash: number, 
     startInventoryCount: Record<string, number>,
-    startPhoto?: string
+    startPhoto?: string,
+    cashierId?: string
   ) => Promise<boolean>;
   endShift: (
     endingCash: number, 

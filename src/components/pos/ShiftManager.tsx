@@ -1,12 +1,14 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useShift } from "@/contexts/shift"; 
 import { useStore } from "@/contexts/StoreContext";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import StartShiftDialog from "./dialogs/StartShiftDialog";
 import EndShiftDialog from "./dialogs/EndShiftDialog";
+import { fetchCashierById } from "@/services/cashier";
 
 export default function ShiftManager() {
   const { currentShift, startShift, endShift } = useShift();
@@ -14,14 +16,30 @@ export default function ShiftManager() {
   const [isStartShiftOpen, setIsStartShiftOpen] = useState(false);
   const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
 
-  const handleStartShift = async (startingCash: number, startInventoryCount: Record<string, number>, photo?: string) => {
-    const success = await startShift(startingCash, startInventoryCount, photo);
+  // Fetch cashier details if available
+  const { data: cashier } = useQuery({
+    queryKey: ["cashier", currentShift?.cashierId],
+    queryFn: () => currentShift?.cashierId ? fetchCashierById(currentShift.cashierId) : Promise.resolve(null),
+    enabled: !!currentShift?.cashierId
+  });
+
+  const handleStartShift = async (
+    startingCash: number, 
+    startInventoryCount: Record<string, number>, 
+    photo?: string,
+    cashierId?: string
+  ) => {
+    const success = await startShift(startingCash, startInventoryCount, photo, cashierId);
     if (success) {
       setIsStartShiftOpen(false);
     }
   };
 
-  const handleEndShift = async (endingCash: number, endInventoryCount: Record<string, number>, photo?: string) => {
+  const handleEndShift = async (
+    endingCash: number, 
+    endInventoryCount: Record<string, number>, 
+    photo?: string
+  ) => {
     if (!currentShift) return;
     
     const success = await endShift(endingCash, endInventoryCount, photo);
@@ -42,6 +60,9 @@ export default function ShiftManager() {
               <p className="font-medium text-sm">Active Shift</p>
               <p>Started: {format(new Date(currentShift.startTime), "MMM dd, yyyy h:mm a")}</p>
               <p>Starting Cash: ₱{currentShift.startingCash.toFixed(2)}</p>
+              {cashier && (
+                <p>Cashier: {cashier.fullName}</p>
+              )}
             </div>
             
             <EndShiftDialog

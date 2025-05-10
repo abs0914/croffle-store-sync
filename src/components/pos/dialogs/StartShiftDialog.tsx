@@ -11,19 +11,22 @@ import {
 } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { fetchInventoryStock } from "@/services/inventoryStock";
+import { fetchActiveCashiers } from "@/services/cashier";
 import { Camera } from "lucide-react";
 import { getPreviousShiftEndingCash } from "@/contexts/shift/shiftUtils";
 import { useAuth } from "@/contexts/AuthContext";
+import { Cashier } from "@/types/cashier";
 
-// Import the new components
+// Import the components
 import StartingCashSection from "./shift/StartingCashSection";
 import ShiftPhotoSection from "./shift/ShiftPhotoSection";
 import InventoryCountSection from "./shift/InventoryCountSection";
+import CashierSelectSection from "./shift/CashierSelectSection";
 
 interface StartShiftDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onStartShift: (startingCash: number, startInventoryCount: Record<string, number>, photo?: string) => Promise<void>;
+  onStartShift: (startingCash: number, startInventoryCount: Record<string, number>, photo?: string, cashierId?: string) => Promise<void>;
   storeId: string | null;
 }
 
@@ -40,11 +43,19 @@ export default function StartShiftDialog({
   const [inventoryCount, setInventoryCount] = useState<Record<string, number>>({});
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [selectedCashierId, setSelectedCashierId] = useState<string | null>(null);
 
   // Fetch inventory items for this store
   const { data: inventoryItems = [], isLoading: isLoadingInventory } = useQuery({
     queryKey: ["inventory-stock", storeId],
     queryFn: () => storeId ? fetchInventoryStock(storeId) : Promise.resolve([]),
+    enabled: isOpen && !!storeId,
+  });
+
+  // Fetch cashiers for this store
+  const { data: cashiers = [], isLoading: isLoadingCashiers } = useQuery({
+    queryKey: ["active-cashiers", storeId],
+    queryFn: () => storeId ? fetchActiveCashiers(storeId) : Promise.resolve([]),
     enabled: isOpen && !!storeId,
   });
 
@@ -67,6 +78,7 @@ export default function StartShiftDialog({
       setPhoto(null);
       setInventoryCount({});
       setShowCameraView(false);
+      setSelectedCashierId(null);
     } else if (isOpen && inventoryItems.length > 0) {
       // Initialize inventory count with current stock quantities
       const initialCount = inventoryItems.reduce((acc, item) => {
@@ -86,7 +98,7 @@ export default function StartShiftDialog({
   };
 
   const handleSubmit = async () => {
-    await onStartShift(startingCash, inventoryCount, photo || undefined);
+    await onStartShift(startingCash, inventoryCount, photo || undefined, selectedCashierId || undefined);
     setShowCameraView(false);
   };
 
@@ -105,13 +117,21 @@ export default function StartShiftDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4 flex-1 overflow-hidden">
+        <div className="space-y-4 py-4 flex-1 overflow-auto">
           {/* Cash Section */}
           <StartingCashSection 
             startingCash={startingCash}
             setStartingCash={setStartingCash}
             previousEndingCash={previousEndingCash}
             isLoading={isLoading}
+          />
+          
+          {/* Cashier Selection Section */}
+          <CashierSelectSection 
+            cashiers={cashiers}
+            selectedCashierId={selectedCashierId}
+            setSelectedCashierId={setSelectedCashierId}
+            isLoading={isLoadingCashiers}
           />
           
           {/* Photo Section */}
