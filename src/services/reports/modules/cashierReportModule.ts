@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CashierReport } from "@/types/reports";
 import { createSimulatedUsers, initializeHourlyData, createSampleCashierReport } from "./cashierReportUtils";
@@ -49,14 +48,21 @@ export async function fetchCashierReport(
       // Handle cashier data
       const userId = tx.user_id as string;
       if (!cashierData[userId]) {
-        // Safely extract name if cashier exists and has a name property
+        // Safely extract cashier name
         let cashierName: string | null = null;
         
-        // First check if cashier exists before attempting to access any property
-        if (tx.cashier !== null && tx.cashier !== undefined) {
-          // Then check if it's an object with a name property
-          if (typeof tx.cashier === 'object' && tx.cashier && 'name' in tx.cashier) {
-            cashierName = tx.cashier.name as string;
+        // Define the expected shape of the cashier object 
+        interface CashierObject {
+          name?: string;
+          [key: string]: any;
+        }
+        
+        // Check if cashier exists and is an object with expected properties
+        if (tx.cashier && typeof tx.cashier === 'object') {
+          // Safely typecast to our expected shape
+          const cashierObj = tx.cashier as CashierObject;
+          if (cashierObj && 'name' in cashierObj) {
+            cashierName = cashierObj.name || null;
           }
         }
         
