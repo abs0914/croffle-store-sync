@@ -11,9 +11,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Store } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const StoreSelector: React.FC = () => {
   const { currentStore, stores, setCurrentStore } = useStore();
+  const { user } = useAuth();
+  
+  // Hide store selector for cashier users
+  if (user?.role === 'cashier') {
+    return null;
+  }
   
   return (
     <div className="px-3 py-2 border-b">

@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useStore } from "@/contexts/StoreContext";
-import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Select,
   SelectContent,
@@ -13,6 +13,7 @@ import {
 
 export function DashboardHeader() {
   const { stores, currentStore, setCurrentStore, isLoading } = useStore();
+  const { user } = useAuth();
 
   const handleStoreChange = (storeId: string) => {
     const selectedStore = stores.find((store) => store.id === storeId);
@@ -25,7 +26,8 @@ export function DashboardHeader() {
     <div className="flex justify-between items-center">
       <div className="flex items-center gap-4">
         <h1 className="text-2xl font-bold text-croffle-primary">Dashboard</h1>
-        {!isLoading && stores.length > 0 && (
+        {/* Only show store selector for non-cashier users */}
+        {!isLoading && stores.length > 0 && user?.role !== 'cashier' && (
           <Select
             value={currentStore?.id}
             onValueChange={handleStoreChange}
