@@ -1,11 +1,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { CameraOff } from "lucide-react";
-import { useStore } from "@/contexts/StoreContext";
-import { useCamera } from "@/hooks/camera";  // Updated import path
+import { useCamera } from "@/hooks/camera";  
 import CameraContainer from "./CameraContainer";
+import { toast } from "sonner";
 
 interface ShiftCameraProps {
   onCapture: (photoUrl: string | null) => void;
@@ -34,7 +32,12 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   // Mark component as mounted after render
   useEffect(() => {
     setMountComplete(true);
-  }, []);
+    
+    // Clean up on unmount
+    return () => {
+      stopCamera();
+    };
+  }, [stopCamera]);
   
   // Start camera after component is fully mounted
   useEffect(() => {
@@ -46,16 +49,14 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         initCamera();
       }, 300);
     }
-    
-    // Clean up on unmount
-    return () => {
-      stopCamera();
-    };
-  }, [mountComplete, stopCamera]);
+  }, [mountComplete]);
 
   const initCamera = () => {
     logVideoState(); // Log before starting
-    startCamera();
+    startCamera().catch(error => {
+      toast.error("Failed to start camera: " + error.message);
+    });
+    
     // Log video state after starting for debugging
     setTimeout(() => {
       logVideoState();
@@ -66,6 +67,8 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     const photoUrl = capturePhoto();
     if (photoUrl) {
       onCapture(photoUrl);
+    } else {
+      toast.error("Failed to capture photo");
     }
   };
   
@@ -82,7 +85,9 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     logVideoState();
     stopCamera();
     setTimeout(() => {
-      startCamera();
+      startCamera().catch(error => {
+        toast.error("Failed to retry camera: " + error.message);
+      });
     }, 300);
   };
   

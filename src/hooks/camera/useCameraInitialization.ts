@@ -98,12 +98,16 @@ export function useCameraInitialization({
       setIsStartingCamera(false);
       
       console.log('Camera started, stream tracks:', stream.getTracks().length);
+      return true;
     } catch (error: any) {
       console.error('Error accessing camera:', error);
       setCameraError(error.message || 'Failed to access camera');
       toast.error('Camera access failed. Please check permissions.');
       setShowCamera(false);
       setIsStartingCamera(false);
+      
+      // Re-throw the error so the caller can handle it
+      throw error;
     }
   }, [
     videoRef, 

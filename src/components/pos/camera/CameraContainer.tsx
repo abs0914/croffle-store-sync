@@ -31,17 +31,18 @@ export default function CameraContainer({
   initCamera,
   handleRetry
 }: CameraContainerProps) {
-  const videoContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   return (
     <div 
-      ref={videoContainerRef}
+      ref={containerRef}
       className="w-full h-48 bg-black rounded-md relative overflow-hidden"
     >
       {showCamera ? (
         <CameraView 
           videoRef={videoRef}
           cameraInitialized={cameraInitialized}
+          isStartingCamera={isStartingCamera}
           logVideoState={logVideoState}
           onCaptureClick={handleCaptureClick}
         />

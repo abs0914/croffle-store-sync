@@ -1,7 +1,8 @@
 
 import { Button } from "@/components/ui/button";
-import { Camera, RefreshCcw } from "lucide-react";
+import { Camera, RefreshCcw, AlertCircle } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CameraInitializerProps {
   initCamera: () => void;
@@ -38,29 +39,32 @@ export default function CameraInitializer({
       )}
       
       {cameraError && (
-        <div className="text-xs text-red-500 text-center px-4 mt-2 max-w-[90%]">
-          <p className="mb-1">{cameraError}</p>
-          <div className="flex gap-2 justify-center mt-1">
-            <Button 
-              variant="link" 
-              size="sm" 
-              className="text-xs p-0 h-auto flex items-center" 
-              onClick={() => logVideoState()}
-            >
-              <span>Check status</span>
-            </Button>
-            <Button 
-              variant="link" 
-              size="sm" 
-              className="text-xs p-0 h-auto flex items-center" 
-              onClick={handleRetry}
-              disabled={isStartingCamera}
-            >
-              <RefreshCcw className="mr-1 h-3 w-3" />
-              <span>Retry</span>
-            </Button>
-          </div>
-        </div>
+        <Alert variant="destructive" className="mt-3 mx-auto max-w-[90%]">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            <p className="mb-1">{cameraError}</p>
+            <div className="flex gap-2 justify-start mt-1">
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="text-xs p-0 h-auto flex items-center" 
+                onClick={() => logVideoState()}
+              >
+                <span>Check status</span>
+              </Button>
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="text-xs p-0 h-auto flex items-center" 
+                onClick={handleRetry}
+                disabled={isStartingCamera}
+              >
+                <RefreshCcw className="mr-1 h-3 w-3" />
+                <span>Retry</span>
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );
