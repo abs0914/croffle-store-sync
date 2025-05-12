@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Camera, CameraOff } from "lucide-react";
+import { Camera, CameraOff, RefreshCcw } from "lucide-react";
 import { format } from "date-fns";
 import { useStore } from "@/contexts/StoreContext";
 import { useCamera } from "@/hooks/useCamera";
@@ -18,6 +18,9 @@ interface ShiftCameraProps {
 export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   const { currentStore } = useStore();
   const initRef = useRef<boolean>(false);
+  const initTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+  
   const { 
     videoRef,
     canvasRef,
@@ -27,7 +30,8 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     startCamera,
     stopCamera,
     logVideoState,
-    cameraError
+    cameraError,
+    cameraInitialized
   } = useCamera();
   
   // Start camera automatically when component mounts
@@ -35,22 +39,31 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     // Only try to initialize camera once
     if (!initRef.current) {
       initRef.current = true;
-      const initCamera = async () => {
-        await startCamera();
-        // Add a small delay and then log video state for debugging
-        setTimeout(() => {
-          logVideoState();
-        }, 500);
-      };
       
-      initCamera();
+      // Add a small delay before initializing camera
+      // This helps ensure the video element is properly mounted in the DOM
+      initTimerRef.current = setTimeout(() => {
+        initCamera();
+      }, 500);
     }
     
     // Clean up on unmount
     return () => {
       stopCamera();
+      if (initTimerRef.current) {
+        clearTimeout(initTimerRef.current);
+      }
     };
-  }, [startCamera, stopCamera, logVideoState]);
+  }, [stopCamera]);
+
+  const initCamera = async () => {
+    logVideoState(); // Log before starting
+    await startCamera();
+    // Log video state after starting for debugging
+    setTimeout(() => {
+      logVideoState();
+    }, 500);
+  };
   
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current && videoRef.current.videoWidth > 0) {
@@ -103,11 +116,22 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     }
   };
   
+  const handleRetry = () => {
+    logVideoState();
+    stopCamera();
+    setTimeout(() => {
+      startCamera();
+    }, 300);
+  };
+  
   return (
     <div className="space-y-2">
       <Label>Capture Photo</Label>
       
-      <div className="w-full h-48 bg-black rounded-md relative overflow-hidden">
+      <div 
+        ref={videoContainerRef}
+        className="w-full h-48 bg-black rounded-md relative overflow-hidden"
+      >
         {showCamera ? (
           <>
             <video 
@@ -117,8 +141,19 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
               className="w-full h-full object-cover"
               onClick={() => logVideoState()}
             />
-            <TimestampOverlay storeName={currentStore?.name} />
-            <CaptureButton onClick={capturePhoto} />
+            {cameraInitialized ? (
+              <>
+                <TimestampOverlay storeName={currentStore?.name} />
+                <CaptureButton onClick={capturePhoto} />
+              </>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-white text-center">
+                  <div className="animate-spin h-8 w-8 rounded-full border-t-2 border-white mx-auto mb-2" />
+                  <p>Initializing camera...</p>
+                </div>
+              </div>
+            )}
           </>
         ) : photo ? (
           <PhotoPreview photoUrl={photo} onReset={resetPhoto} />
@@ -134,16 +169,27 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
             </Button>
             
             {cameraError && (
-              <div className="text-xs text-red-500 text-center px-4 mt-2">
-                {cameraError}
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="text-xs p-0 h-auto mt-1" 
-                  onClick={() => logVideoState()}
-                >
-                  Check camera status
-                </Button>
+              <div className="text-xs text-red-500 text-center px-4 mt-2 max-w-[90%]">
+                <p className="mb-1">{cameraError}</p>
+                <div className="flex gap-2 justify-center mt-1">
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="text-xs p-0 h-auto flex items-center" 
+                    onClick={() => logVideoState()}
+                  >
+                    <span>Check status</span>
+                  </Button>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="text-xs p-0 h-auto flex items-center" 
+                    onClick={handleRetry}
+                  >
+                    <RefreshCcw className="mr-1 h-3 w-3" />
+                    <span>Retry</span>
+                  </Button>
+                </div>
               </div>
             )}
           </div>

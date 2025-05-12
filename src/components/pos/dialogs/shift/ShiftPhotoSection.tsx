@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Camera, CameraOff } from "lucide-react";
+import { Camera, CameraOff, RefreshCcw } from "lucide-react";
 import ShiftCamera from "../../camera/ShiftCamera";
 import { useState } from "react";
 
@@ -40,12 +40,27 @@ export default function ShiftPhotoSection({
               if (capturedPhoto) {
                 setPhoto(capturedPhoto);
                 setShowCameraView(false);
+                setCameraError(null);
               } else {
                 handleCameraError("Failed to capture photo");
               }
             }}
-            onReset={() => setShowCameraView(false)}
+            onReset={() => {
+              setShowCameraView(false);
+              setCameraError(null);
+            }}
           />
+          
+          <div className="mt-2 flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowCameraView(false)}
+            >
+              <CameraOff className="mr-2 h-4 w-4" />
+              Cancel
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="flex items-center space-x-2">
@@ -53,7 +68,7 @@ export default function ShiftPhotoSection({
             <div className="relative w-full">
               <img 
                 src={photo} 
-                alt="Shift start" 
+                alt="Shift photo" 
                 className="w-full h-48 object-cover rounded-md border" 
               />
               <div className="absolute top-2 right-2 flex space-x-2">
@@ -86,9 +101,18 @@ export default function ShiftPhotoSection({
               </Button>
               
               {cameraError && (
-                <p className="text-red-500 text-xs mt-1">
-                  {cameraError}
-                </p>
+                <div className="text-red-500 text-xs mt-1 flex items-center justify-center gap-2">
+                  <span>{cameraError}</span>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="text-xs p-0 h-auto" 
+                    onClick={toggleCameraView}
+                  >
+                    <RefreshCcw className="mr-1 h-3 w-3" />
+                    <span>Retry</span>
+                  </Button>
+                </div>
               )}
             </div>
           )}

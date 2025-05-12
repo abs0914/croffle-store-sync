@@ -10,6 +10,7 @@ export function useCamera() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const attemptCount = useRef<number>(0);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraInitialized, setCameraInitialized] = useState(false);
 
   // Clear any previous errors when starting camera
   const resetCameraState = useCallback(() => {
@@ -18,6 +19,7 @@ export function useCamera() {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
       mediaStreamRef.current = null;
     }
+    setCameraInitialized(false);
   }, []);
 
   const startCamera = useCallback(async () => {
@@ -34,6 +36,12 @@ export function useCamera() {
         throw new Error('Browser does not support camera access');
       }
       
+      // Check if video element exists before proceeding
+      if (!videoRef.current) {
+        console.error('Video element reference is null');
+        throw new Error('Camera initialization failed - video element not found');
+      }
+      
       // Define camera constraints
       const constraints = { 
         video: { 
@@ -47,8 +55,8 @@ export function useCamera() {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       if (!videoRef.current) {
-        console.error('Video element reference is null');
-        throw new Error('Camera initialization failed - video element not found');
+        console.error('Video element lost after camera initialization');
+        throw new Error('Video element disappeared during camera setup');
       }
       
       // Set the stream as the video source
@@ -61,6 +69,7 @@ export function useCamera() {
             console.error("Error playing video:", err);
             setCameraError(`Could not start video: ${err.message}`);
           });
+          setCameraInitialized(true);
         }
       };
       
@@ -90,10 +99,12 @@ export function useCamera() {
     }
     
     setShowCamera(false);
+    setCameraInitialized(false);
   }, []);
 
   // Log video element state for debugging
   const logVideoState = useCallback(() => {
+    console.log('Video element:', videoRef.current);
     if (videoRef.current) {
       console.log('Video element state:', {
         width: videoRef.current.videoWidth,
@@ -129,6 +140,7 @@ export function useCamera() {
     stopCamera,
     logVideoState,
     cameraError,
-    setCameraError
+    setCameraError,
+    cameraInitialized
   };
 }
