@@ -12,7 +12,7 @@ export interface CameraActions {
   setShowCamera: (show: boolean) => void;
   setPhoto: (photo: string | null) => void;
   setCameraError: (error: string | null) => void;
-  startCamera: () => Promise<void>;
+  startCamera: () => Promise<boolean | void>;
   stopCamera: () => void;
   capturePhoto: () => string | null;
   logVideoState: () => void;
