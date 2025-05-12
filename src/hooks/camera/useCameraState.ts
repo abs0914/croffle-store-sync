@@ -1,7 +1,8 @@
 
 import { useState, useRef } from "react";
+import { UseCameraStateReturn } from "./types";
 
-export function useCameraState() {
+export function useCameraState(): UseCameraStateReturn {
   // Basic camera state
   const [showCamera, setShowCamera] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
