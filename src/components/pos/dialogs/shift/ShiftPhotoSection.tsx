@@ -1,8 +1,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Camera } from "lucide-react";
+import { Camera, CameraOff } from "lucide-react";
 import ShiftCamera from "../../camera/ShiftCamera";
+import { useState } from "react";
 
 interface ShiftPhotoSectionProps {
   photo: string | null;
@@ -17,8 +18,16 @@ export default function ShiftPhotoSection({
   showCameraView,
   setShowCameraView
 }: ShiftPhotoSectionProps) {
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  
   const toggleCameraView = () => {
     setShowCameraView(!showCameraView);
+    setCameraError(null); // Reset error state when toggling
+  };
+
+  const handleCameraError = (message: string) => {
+    setCameraError(message);
+    setShowCameraView(false);
   };
 
   return (
@@ -28,8 +37,12 @@ export default function ShiftPhotoSection({
         <div className="border rounded-md p-2 bg-muted/10">
           <ShiftCamera 
             onCapture={(capturedPhoto) => {
-              setPhoto(capturedPhoto);
-              setShowCameraView(false);
+              if (capturedPhoto) {
+                setPhoto(capturedPhoto);
+                setShowCameraView(false);
+              } else {
+                handleCameraError("Failed to capture photo");
+              }
             }}
             onReset={() => setShowCameraView(false)}
           />
@@ -43,24 +56,41 @@ export default function ShiftPhotoSection({
                 alt="Shift start" 
                 className="w-full h-48 object-cover rounded-md border" 
               />
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="absolute top-2 right-2" 
-                onClick={() => setPhoto(null)}
-              >
-                Reset
-              </Button>
+              <div className="absolute top-2 right-2 flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={toggleCameraView}
+                >
+                  <Camera className="mr-2 h-4 w-4" />
+                  Retake
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPhoto(null)}
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
           ) : (
-            <Button 
-              variant="outline" 
-              onClick={toggleCameraView} 
-              className="w-full"
-            >
-              <Camera className="mr-2 h-4 w-4" />
-              Take Photo
-            </Button>
+            <div className="w-full">
+              <Button 
+                variant="outline" 
+                onClick={toggleCameraView} 
+                className="w-full"
+              >
+                <Camera className="mr-2 h-4 w-4" />
+                Take Photo
+              </Button>
+              
+              {cameraError && (
+                <p className="text-red-500 text-xs mt-1">
+                  {cameraError}
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}

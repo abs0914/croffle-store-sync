@@ -9,16 +9,32 @@ export function useCamera() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const attemptCount = useRef<number>(0);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  // Clear any previous errors when starting camera
+  const resetCameraState = useCallback(() => {
+    setCameraError(null);
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+  }, []);
 
   const startCamera = useCallback(async () => {
     try {
-      // Stop any existing streams first
-      stopCamera();
+      // Reset camera state
+      resetCameraState();
       
       // Increment attempt counter
       attemptCount.current += 1;
       console.log(`Attempting to start camera (attempt ${attemptCount.current})`);
       
+      // Check if browser supports getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Browser does not support camera access');
+      }
+      
+      // Define camera constraints
       const constraints = { 
         video: { 
           facingMode: 'environment',
@@ -27,56 +43,48 @@ export function useCamera() {
         } 
       };
       
-      // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Browser does not support camera access');
-      }
-      
+      // Request camera access
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current) {
-            videoRef.current.play().catch(err => {
-              console.error("Error playing video:", err);
-              toast.error("Could not start video: " + err.message);
-            });
-          }
-        };
-        
-        mediaStreamRef.current = stream;
-        setShowCamera(true);
-        
-        // Debug log to verify camera is starting
-        console.log('Camera started, stream tracks:', stream.getTracks().length);
-        
-        // Force a repaint to ensure video element is properly displayed
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.style.display = "none";
-            setTimeout(() => {
-              if (videoRef.current) {
-                videoRef.current.style.display = "block";
-              }
-            }, 10);
-          }
-        }, 100);
+      if (!videoRef.current) {
+        console.error('Video element reference is null');
+        throw new Error('Camera initialization failed - video element not found');
       }
-    } catch (error) {
+      
+      // Set the stream as the video source
+      videoRef.current.srcObject = stream;
+      
+      // Set up event listeners for the video element
+      videoRef.current.onloadedmetadata = () => {
+        if (videoRef.current) {
+          videoRef.current.play().catch(err => {
+            console.error("Error playing video:", err);
+            setCameraError(`Could not start video: ${err.message}`);
+          });
+        }
+      };
+      
+      // Store the stream reference for cleanup
+      mediaStreamRef.current = stream;
+      setShowCamera(true);
+      
+      console.log('Camera started, stream tracks:', stream.getTracks().length);
+    } catch (error: any) {
       console.error('Error accessing camera:', error);
-      toast.error('Failed to access camera. Please check permissions.');
+      setCameraError(error.message || 'Failed to access camera');
+      toast.error('Camera access failed. Please check permissions.');
       setShowCamera(false);
     }
-  }, []);
+  }, [resetCameraState]);
 
   const stopCamera = useCallback(() => {
+    // Stop all media tracks
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
       mediaStreamRef.current = null;
     }
     
+    // Clear video source
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
@@ -119,6 +127,8 @@ export function useCamera() {
     setPhoto,
     startCamera,
     stopCamera,
-    logVideoState
+    logVideoState,
+    cameraError,
+    setCameraError
   };
 }

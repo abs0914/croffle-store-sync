@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Camera } from "lucide-react";
+import { Camera, CameraOff } from "lucide-react";
 import { format } from "date-fns";
 import { useStore } from "@/contexts/StoreContext";
 import { useCamera } from "@/hooks/useCamera";
@@ -17,6 +17,7 @@ interface ShiftCameraProps {
 
 export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   const { currentStore } = useStore();
+  const initRef = useRef<boolean>(false);
   const { 
     videoRef,
     canvasRef,
@@ -25,20 +26,25 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     setPhoto,
     startCamera,
     stopCamera,
-    logVideoState
+    logVideoState,
+    cameraError
   } = useCamera();
   
   // Start camera automatically when component mounts
   useEffect(() => {
-    const initCamera = async () => {
-      await startCamera();
-      // Add a small delay and then log video state for debugging
-      setTimeout(() => {
-        logVideoState();
-      }, 500);
-    };
-    
-    initCamera();
+    // Only try to initialize camera once
+    if (!initRef.current) {
+      initRef.current = true;
+      const initCamera = async () => {
+        await startCamera();
+        // Add a small delay and then log video state for debugging
+        setTimeout(() => {
+          logVideoState();
+        }, 500);
+      };
+      
+      initCamera();
+    }
     
     // Clean up on unmount
     return () => {
@@ -117,11 +123,29 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         ) : photo ? (
           <PhotoPreview photoUrl={photo} onReset={resetPhoto} />
         ) : (
-          <div className="flex items-center justify-center h-full">
-            <Button onClick={startCamera} variant="outline">
+          <div className="flex flex-col items-center justify-center h-full">
+            <Button 
+              onClick={startCamera} 
+              variant="outline"
+              className="mb-2"
+            >
               <Camera className="mr-2 h-4 w-4" />
               Enable Camera
             </Button>
+            
+            {cameraError && (
+              <div className="text-xs text-red-500 text-center px-4 mt-2">
+                {cameraError}
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="text-xs p-0 h-auto mt-1" 
+                  onClick={() => logVideoState()}
+                >
+                  Check camera status
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
