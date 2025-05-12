@@ -3,16 +3,21 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 
 export function useCamera() {
-  const [showCamera, setShowCamera] = useState(true);
+  const [showCamera, setShowCamera] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const attemptCount = useRef<number>(0);
 
   const startCamera = useCallback(async () => {
     try {
       // Stop any existing streams first
       stopCamera();
+      
+      // Increment attempt counter
+      attemptCount.current += 1;
+      console.log(`Attempting to start camera (attempt ${attemptCount.current})`);
       
       const constraints = { 
         video: { 
@@ -31,6 +36,7 @@ export function useCamera() {
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        
         videoRef.current.onloadedmetadata = () => {
           if (videoRef.current) {
             videoRef.current.play().catch(err => {
@@ -39,16 +45,29 @@ export function useCamera() {
             });
           }
         };
+        
         mediaStreamRef.current = stream;
+        setShowCamera(true);
+        
+        // Debug log to verify camera is starting
+        console.log('Camera started, stream tracks:', stream.getTracks().length);
+        
+        // Force a repaint to ensure video element is properly displayed
+        setTimeout(() => {
+          if (videoRef.current) {
+            videoRef.current.style.display = "none";
+            setTimeout(() => {
+              if (videoRef.current) {
+                videoRef.current.style.display = "block";
+              }
+            }, 10);
+          }
+        }, 100);
       }
-      
-      setShowCamera(true);
-      
-      // Debug log to verify camera is starting
-      console.log('Camera started, stream tracks:', stream.getTracks().length);
     } catch (error) {
       console.error('Error accessing camera:', error);
       toast.error('Failed to access camera. Please check permissions.');
+      setShowCamera(false);
     }
   }, []);
 
@@ -73,7 +92,9 @@ export function useCamera() {
         height: videoRef.current.videoHeight,
         readyState: videoRef.current.readyState,
         paused: videoRef.current.paused,
-        error: videoRef.current.error
+        error: videoRef.current.error,
+        visibility: document.visibilityState,
+        streamActive: mediaStreamRef.current?.active
       });
     } else {
       console.log('Video element is null');

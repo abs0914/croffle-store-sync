@@ -25,18 +25,24 @@ export default function ShiftPhotoSection({
     <div className="space-y-2">
       <Label>Shift Photo</Label>
       {showCameraView ? (
-        <ShiftCamera 
-          onCapture={(capturedPhoto) => {
-            setPhoto(capturedPhoto);
-            setShowCameraView(false);
-          }}
-          onReset={() => setShowCameraView(false)}
-        />
+        <div className="border rounded-md p-2 bg-muted/10">
+          <ShiftCamera 
+            onCapture={(capturedPhoto) => {
+              setPhoto(capturedPhoto);
+              setShowCameraView(false);
+            }}
+            onReset={() => setShowCameraView(false)}
+          />
+        </div>
       ) : (
         <div className="flex items-center space-x-2">
           {photo ? (
-            <div className="relative">
-              <img src={photo} alt="Shift start" className="w-full h-48 object-cover rounded-md border" />
+            <div className="relative w-full">
+              <img 
+                src={photo} 
+                alt="Shift start" 
+                className="w-full h-48 object-cover rounded-md border" 
+              />
               <Button 
                 variant="outline" 
                 size="sm" 

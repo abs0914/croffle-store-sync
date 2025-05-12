@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+
+import { useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Camera } from "lucide-react";
@@ -29,15 +30,21 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   
   // Start camera automatically when component mounts
   useEffect(() => {
-    startCamera();
-  }, [startCamera]);
-  
-  // Log video state when camera is shown
-  useEffect(() => {
-    if (showCamera) {
-      logVideoState();
-    }
-  }, [showCamera, logVideoState]);
+    const initCamera = async () => {
+      await startCamera();
+      // Add a small delay and then log video state for debugging
+      setTimeout(() => {
+        logVideoState();
+      }, 500);
+    };
+    
+    initCamera();
+    
+    // Clean up on unmount
+    return () => {
+      stopCamera();
+    };
+  }, [startCamera, stopCamera, logVideoState]);
   
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current && videoRef.current.videoWidth > 0) {
@@ -75,6 +82,9 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         onCapture(dataUrl);
         stopCamera();
       }
+    } else {
+      console.error("Video not ready yet:", videoRef.current?.readyState);
+      logVideoState();
     }
   };
   
@@ -90,28 +100,32 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   return (
     <div className="space-y-2">
       <Label>Capture Photo</Label>
-      {showCamera ? (
-        <div className="relative">
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            className="w-full h-48 object-cover rounded-md border border-input bg-muted"
-            onClick={() => logVideoState()}
-          />
-          
-          <TimestampOverlay storeName={currentStore?.name} />
-          <CaptureButton onClick={capturePhoto} />
-        </div>
-      ) : photo ? (
-        <PhotoPreview photoUrl={photo} onReset={resetPhoto} />
-      ) : (
-        // This button should never show now, but keeping it as a fallback
-        <Button onClick={startCamera} variant="outline" className="w-full">
-          <Camera className="mr-2 h-4 w-4" />
-          Take Photo
-        </Button>
-      )}
+      
+      <div className="w-full h-48 bg-black rounded-md relative overflow-hidden">
+        {showCamera ? (
+          <>
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              className="w-full h-full object-cover"
+              onClick={() => logVideoState()}
+            />
+            <TimestampOverlay storeName={currentStore?.name} />
+            <CaptureButton onClick={capturePhoto} />
+          </>
+        ) : photo ? (
+          <PhotoPreview photoUrl={photo} onReset={resetPhoto} />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <Button onClick={startCamera} variant="outline">
+              <Camera className="mr-2 h-4 w-4" />
+              Enable Camera
+            </Button>
+          </div>
+        )}
+      </div>
+      
       <canvas ref={canvasRef} className="hidden" />
     </div>
   );
