@@ -1,8 +1,7 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCashiers, createCashier, updateCashier, deleteCashier } from "@/services/cashier";
+import { fetchCashiers, createCashier, updateCashier, deleteCashier, createCashierWithAuth } from "@/services/cashier";
 import { CashierFormData, Cashier } from "@/types/cashier";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,8 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PencilIcon, TrashIcon, PlusCircleIcon, XCircleIcon } from "lucide-react";
+import { PencilIcon, TrashIcon, PlusCircleIcon, XCircleIcon, UserPlusIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 
 export default function CashiersPage() {
   const { currentStore } = useStore();
@@ -42,6 +42,7 @@ export default function CashiersPage() {
     contactNumber: "",
     isActive: true
   });
+  const [isCreatingDemoCashiers, setIsCreatingDemoCashiers] = useState(false);
 
   // Fetch cashiers for the current store
   const { data: cashiers = [], isLoading } = useQuery({
@@ -158,6 +159,51 @@ export default function CashiersPage() {
     }));
   };
 
+  // Create demo cashiers
+  const createDemoCashiers = async () => {
+    if (!currentStore) return;
+    
+    setIsCreatingDemoCashiers(true);
+    try {
+      // Create the first cashier
+      const maraResult = await createCashierWithAuth({
+        email: 'marasabaras@croffle.com',
+        password: 'M4ra$bara$',
+        firstName: 'Mara',
+        lastName: 'Sabaras',
+        storeId: currentStore.id,
+        contactNumber: '09123456789'
+      });
+      
+      // Create the second cashier
+      const robinsonResult = await createCashierWithAuth({
+        email: 'robinsons.north@croffle.com',
+        password: 'Rbns0nN0rt8',
+        firstName: 'Robinson',
+        lastName: 'North',
+        storeId: currentStore.id,
+        contactNumber: '09987654321'
+      });
+      
+      if (maraResult && robinsonResult) {
+        toast.success('Demo cashiers created successfully');
+        queryClient.invalidateQueries({ queryKey: ["cashiers", currentStore.id] });
+      }
+    } catch (error: any) {
+      toast.error(`Failed to create demo cashiers: ${error.message}`);
+    } finally {
+      setIsCreatingDemoCashiers(false);
+    }
+  };
+
+  // Add an effect to automatically create the demo cashiers once when the component loads
+  useEffect(() => {
+    if (currentStore) {
+      createDemoCashiers();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStore]);
+
   if (!currentStore) {
     return (
       <Card>
@@ -173,10 +219,25 @@ export default function CashiersPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xl font-bold">Cashier Management</CardTitle>
-          <Button onClick={handleAddCashier}>
-            <PlusCircleIcon className="mr-2 h-4 w-4" />
-            Add Cashier
-          </Button>
+          <div className="flex space-x-2">
+            <Button disabled={isCreatingDemoCashiers} onClick={createDemoCashiers} variant="outline">
+              {isCreatingDemoCashiers ? (
+                <>
+                  <Spinner className="mr-2 h-4 w-4" />
+                  Creating Demo Cashiers...
+                </>
+              ) : (
+                <>
+                  <UserPlusIcon className="mr-2 h-4 w-4" />
+                  Create Demo Cashiers
+                </>
+              )}
+            </Button>
+            <Button onClick={handleAddCashier}>
+              <PlusCircleIcon className="mr-2 h-4 w-4" />
+              Add Cashier
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
