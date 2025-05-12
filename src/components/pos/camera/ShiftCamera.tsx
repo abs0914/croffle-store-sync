@@ -31,10 +31,14 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   
   // Mark component as mounted after render
   useEffect(() => {
-    setMountComplete(true);
+    // Set mount complete on next tick to ensure DOM is ready
+    const timer = setTimeout(() => {
+      setMountComplete(true);
+    }, 100);
     
     // Clean up on unmount
     return () => {
+      clearTimeout(timer);
       stopCamera();
     };
   }, [stopCamera]);
@@ -44,23 +48,28 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     if (mountComplete && !initRef.current) {
       initRef.current = true;
       
-      // Short delay to ensure DOM is ready
+      // Delay camera initialization to ensure DOM is fully ready
       setTimeout(() => {
         initCamera();
-      }, 300);
+      }, 500);
     }
   }, [mountComplete]);
 
-  const initCamera = () => {
-    logVideoState(); // Log before starting
-    startCamera().catch(error => {
+  const initCamera = async () => {
+    try {
+      console.log("Initializing camera, video element exists:", videoRef.current !== null);
+      logVideoState(); // Log before starting
+      
+      await startCamera();
+      
+      // Log video state after starting for debugging
+      setTimeout(() => {
+        logVideoState();
+      }, 500);
+    } catch (error: any) {
+      console.error("Camera init error:", error);
       toast.error("Failed to start camera: " + error.message);
-    });
-    
-    // Log video state after starting for debugging
-    setTimeout(() => {
-      logVideoState();
-    }, 500);
+    }
   };
   
   const handleCaptureClick = () => {
@@ -85,10 +94,8 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     logVideoState();
     stopCamera();
     setTimeout(() => {
-      startCamera().catch(error => {
-        toast.error("Failed to retry camera: " + error.message);
-      });
-    }, 300);
+      initCamera();
+    }, 500);
   };
   
   return (
