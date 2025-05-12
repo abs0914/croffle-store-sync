@@ -27,7 +27,7 @@ export default function ShiftPhotoSection({
 
   const handleCameraError = (message: string) => {
     setCameraError(message);
-    setShowCameraView(false);
+    // Don't automatically hide camera here to allow for retries
   };
 
   return (
