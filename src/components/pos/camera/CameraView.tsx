@@ -24,57 +24,55 @@ export default function CameraView({
   const containerRef = useRef<HTMLDivElement>(null);
   const [videoMounted, setVideoMounted] = useState(false);
   
-  // Create and mount the video element
+  // Create and mount the video element immediately when component renders
   useEffect(() => {
     if (!containerRef.current) return;
     
-    // Create a new video element if one doesn't exist yet
-    if (!videoRef.current) {
-      const videoElement = document.createElement('video');
-      videoElement.autoplay = true;
-      videoElement.playsInline = true;
-      videoElement.muted = true; // Adding muted to help with autoplay policies
-      videoElement.className = "w-full h-full object-cover";
-      
-      // Add click handler for debugging
-      videoElement.addEventListener('click', logVideoState);
-      
-      // Clean up the container first
-      const container = containerRef.current;
-      const existingVideo = container.querySelector('video');
-      if (existingVideo) {
-        container.removeChild(existingVideo);
-      }
-      
-      // Append the new video element
-      container.appendChild(videoElement);
-      
-      // Set the ref
-      if ('current' in videoRef) {
-        (videoRef as any).current = videoElement;
-      }
-      
-      // Mark as mounted
-      console.log("Video element created and mounted to DOM");
-      setVideoMounted(true);
-      
-      // Debug
-      setTimeout(() => {
-        console.log("Video element check after mounting:", !!videoRef.current);
-      }, 100);
+    // Always create a new video element
+    const videoElement = document.createElement('video');
+    videoElement.autoplay = true;
+    videoElement.playsInline = true;
+    videoElement.muted = true; // Adding muted to help with autoplay policies
+    videoElement.className = "w-full h-full object-cover";
+    
+    // Add click handler for debugging
+    videoElement.addEventListener('click', logVideoState);
+    
+    // Clean up the container first
+    const container = containerRef.current;
+    const existingVideo = container.querySelector('video');
+    if (existingVideo) {
+      container.removeChild(existingVideo);
     }
     
+    // Append the new video element
+    container.appendChild(videoElement);
+    
+    // Set the ref
+    if ('current' in videoRef) {
+      (videoRef as any).current = videoElement;
+    }
+    
+    // Mark as mounted
+    console.log("[CameraView] Video element created and mounted to DOM");
+    setVideoMounted(true);
+    
+    // Debug
+    setTimeout(() => {
+      console.log("[CameraView] Video element check after mounting:", !!videoRef.current);
+    }, 100);
+    
     return () => {
-      if (videoRef.current && containerRef.current?.contains(videoRef.current)) {
+      if (videoElement && container.contains(videoElement)) {
         try {
-          containerRef.current.removeChild(videoRef.current);
-          console.log("Video element removed during cleanup");
+          container.removeChild(videoElement);
+          console.log("[CameraView] Video element removed during cleanup");
         } catch (e) {
-          console.log("Error removing video element:", e);
+          console.log("[CameraView] Error removing video element:", e);
         }
       }
     };
-  }, [videoRef, logVideoState]);
+  }, [videoRef, logVideoState]); // Re-run only if refs change
 
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black">

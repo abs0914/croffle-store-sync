@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Camera, CameraOff, RefreshCcw } from "lucide-react";
 import ShiftCamera from "../../camera/ShiftCamera";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ShiftPhotoSectionProps {
   photo: string | null;
@@ -20,10 +20,12 @@ export default function ShiftPhotoSection({
 }: ShiftPhotoSectionProps) {
   const [cameraError, setCameraError] = useState<string | null>(null);
   
-  const toggleCameraView = () => {
-    setShowCameraView(!showCameraView);
-    setCameraError(null); // Reset error state when toggling
-  };
+  // Automatically show camera when component mounts if no photo is selected
+  useEffect(() => {
+    if (!photo) {
+      setShowCameraView(true);
+    }
+  }, [photo, setShowCameraView]);
 
   const handleCameraError = (message: string) => {
     setCameraError(message);
@@ -75,7 +77,7 @@ export default function ShiftPhotoSection({
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={toggleCameraView}
+                  onClick={() => setShowCameraView(true)}
                 >
                   <Camera className="mr-2 h-4 w-4" />
                   Retake
@@ -93,7 +95,7 @@ export default function ShiftPhotoSection({
             <div className="w-full">
               <Button 
                 variant="outline" 
-                onClick={toggleCameraView} 
+                onClick={() => setShowCameraView(true)} 
                 className="w-full"
               >
                 <Camera className="mr-2 h-4 w-4" />
@@ -107,7 +109,7 @@ export default function ShiftPhotoSection({
                     variant="link" 
                     size="sm" 
                     className="text-xs p-0 h-auto" 
-                    onClick={toggleCameraView}
+                    onClick={() => setShowCameraView(true)}
                   >
                     <RefreshCcw className="mr-1 h-3 w-3" />
                     <span>Retry</span>

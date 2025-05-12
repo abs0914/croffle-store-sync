@@ -72,15 +72,22 @@ export default function StartShiftDialog({
     }
   }, [isOpen, storeId, user]);
 
-  // Reset state when dialog closes
+  // Reset state when dialog closes and automatically show camera when dialog opens
   useEffect(() => {
     if (!isOpen) {
       setPhoto(null);
       setInventoryCount({});
       setShowCameraView(false);
       setSelectedCashierId(null);
-    } else if (isOpen && inventoryItems.length > 0) {
-      // Initialize inventory count with current stock quantities
+    } else {
+      // Automatically show camera view when dialog opens
+      setShowCameraView(true);
+    }
+  }, [isOpen]);
+
+  // Initialize inventory count with current stock quantities
+  useEffect(() => {
+    if (isOpen && inventoryItems.length > 0) {
       const initialCount = inventoryItems.reduce((acc, item) => {
         acc[item.id] = item.stock_quantity || 0;
         return acc;

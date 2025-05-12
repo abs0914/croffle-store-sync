@@ -45,6 +45,14 @@ export function useCameraInitialization({
       // Verify video element before proceeding
       if (!videoRef.current) {
         console.error('[Camera] Video element reference is null');
+        
+        // If we haven't hit max retries, don't throw an error yet
+        if (attemptCount.current < maxRetries) {
+          console.log(`[Camera] Waiting for video element (attempt ${attemptCount.current}/${maxRetries})`);
+          setIsStartingCamera(false);
+          return false; // Return false to indicate we should retry
+        }
+        
         throw new Error('Video element not found');
       }
       
@@ -102,13 +110,13 @@ export function useCameraInitialization({
       setShowCamera(false);
       setIsStartingCamera(false);
       
-      // Re-throw the error so the caller can handle it
-      throw error;
+      return false;
     }
   }, [
     videoRef, 
     mediaStreamRef, 
     attemptCount, 
+    maxRetries,
     resetCameraState, 
     setShowCamera, 
     setCameraError, 
