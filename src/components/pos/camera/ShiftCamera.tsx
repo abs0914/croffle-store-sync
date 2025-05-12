@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CameraOff } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
-import { useCamera } from "@/hooks/useCamera";
+import { useCamera } from "@/hooks/camera";  // Updated import path
 import CameraContainer from "./CameraContainer";
 
 interface ShiftCameraProps {
