@@ -35,29 +35,17 @@ export function useCameraInitialization({
       
       // Increment attempt counter
       attemptCount.current += 1;
-      console.log(`Attempting to start camera (attempt ${attemptCount.current})`);
+      console.log(`[Camera] Attempting to start camera (attempt ${attemptCount.current})`);
       
       // Check if browser supports getUserMedia
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Browser does not support camera access');
       }
       
-      // Check if video element exists before proceeding
+      // Verify video element before proceeding
       if (!videoRef.current) {
-        console.log('Video element reference is null');
-        
-        // If we haven't hit max retries, schedule another attempt
-        if (attemptCount.current < maxRetries) {
-          const retryDelay = Math.min(1000 * attemptCount.current, 3000); // Exponential backoff up to 3 seconds
-          console.log(`Scheduling retry in ${retryDelay}ms`);
-          
-          retryTimeoutRef.current = setTimeout(() => {
-            startCamera();
-          }, retryDelay);
-          
-          return;
-        }
-        throw new Error('Camera initialization failed - video element not found');
+        console.error('[Camera] Video element reference is null');
+        throw new Error('Video element not found');
       }
       
       // Define camera constraints
@@ -66,41 +54,49 @@ export function useCameraInitialization({
           facingMode: 'environment',
           width: { ideal: 1280 },
           height: { ideal: 720 }
-        } 
+        },
+        audio: false
       };
       
       // Request camera access
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
+      // Check if video element is still available
       if (!videoRef.current) {
-        console.log('Video element lost after camera initialization');
+        console.error('[Camera] Video element disappeared during initialization');
         stream.getTracks().forEach(track => track.stop());
-        throw new Error('Video element disappeared during camera setup');
+        throw new Error('Video element lost during camera setup');
       }
       
-      // Set the stream as the video source
+      // Connect the stream to the video element
       videoRef.current.srcObject = stream;
       
       // Set up event listeners for the video element
       videoRef.current.onloadedmetadata = () => {
-        if (videoRef.current) {
-          videoRef.current.play().catch(err => {
-            console.error("Error playing video:", err);
-            setCameraError(`Could not start video: ${err.message}`);
-          });
-          setCameraInitialized(true);
-        }
+        if (!videoRef.current) return;
+        
+        console.log('[Camera] Video metadata loaded, playing video');
+        videoRef.current.play().catch(err => {
+          console.error("[Camera] Error playing video:", err);
+          setCameraError(`Could not start video: ${err.message}`);
+        });
+      };
+      
+      // Additional event to make sure we know when video is actually playing
+      videoRef.current.onplaying = () => {
+        console.log('[Camera] Video is now playing');
+        setCameraInitialized(true);
+        setIsStartingCamera(false);
       };
       
       // Store the stream reference for cleanup
       mediaStreamRef.current = stream;
       setShowCamera(true);
-      setIsStartingCamera(false);
       
-      console.log('Camera started, stream tracks:', stream.getTracks().length);
+      console.log('[Camera] Stream attached to video element, tracks:', stream.getTracks().length);
       return true;
     } catch (error: any) {
-      console.error('Error accessing camera:', error);
+      console.error('[Camera] Error accessing camera:', error);
       setCameraError(error.message || 'Failed to access camera');
       toast.error('Camera access failed. Please check permissions.');
       setShowCamera(false);
@@ -113,13 +109,11 @@ export function useCameraInitialization({
     videoRef, 
     mediaStreamRef, 
     attemptCount, 
-    retryTimeoutRef, 
     resetCameraState, 
     setShowCamera, 
     setCameraError, 
     setCameraInitialized, 
-    setIsStartingCamera, 
-    maxRetries
+    setIsStartingCamera
   ]);
   
   return { startCamera };
