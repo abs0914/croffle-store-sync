@@ -15,7 +15,7 @@ import EditCashierDialog from "./components/EditCashierDialog";
 import DeleteCashierDialog from "./components/DeleteCashierDialog";
 
 export default function CashiersPage() {
-  const { currentStore } = useStore();
+  const { currentStore, stores } = useStore();
   const queryClient = useQueryClient();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -47,27 +47,39 @@ export default function CashiersPage() {
 
   // Create demo cashiers
   const createDemoCashiers = async () => {
-    if (!currentStore) return;
+    if (!currentStore || stores.length < 2) {
+      toast.error("You need at least two stores to create demo cashiers");
+      return;
+    }
     
     setIsCreatingDemoCashiers(true);
     try {
-      // Create the first cashier
+      // Find store IDs for specific stores
+      const marasbarasStore = stores.find(store => store.name.includes("Marasbaras"));
+      const northStore = stores.find(store => store.name.includes("North"));
+      
+      if (!marasbarasStore || !northStore) {
+        toast.error("Couldn't find 'Robinsons Marasbaras' or 'Robinsons North' stores");
+        return;
+      }
+      
+      // Create the first cashier for Marasbaras
       const maraResult = await createCashierWithAuth({
         email: 'marasabaras@croffle.com',
         password: 'M4ra$bara$',
         firstName: 'Mara',
         lastName: 'Sabaras',
-        storeId: currentStore.id,
+        storeId: marasbarasStore.id,
         contactNumber: '09123456789'
       });
       
-      // Create the second cashier
+      // Create the second cashier for North
       const robinsonResult = await createCashierWithAuth({
         email: 'robinsons.north@croffle.com',
         password: 'Rbns0nN0rt8',
         firstName: 'Robinson',
         lastName: 'North',
-        storeId: currentStore.id,
+        storeId: northStore.id,
         contactNumber: '09987654321'
       });
       
@@ -82,13 +94,8 @@ export default function CashiersPage() {
     }
   };
 
-  // Add an effect to automatically create the demo cashiers once when the component loads
-  useEffect(() => {
-    if (currentStore) {
-      createDemoCashiers();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStore]);
+  // We'll remove the automatic creation of demo cashiers to avoid duplicate users
+  // and allow manual creation instead
 
   if (!currentStore) {
     return (
@@ -106,7 +113,7 @@ export default function CashiersPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xl font-bold">Cashier Management</CardTitle>
           <div className="flex space-x-2">
-            <Button disabled={isCreatingDemoCashiers} onClick={createDemoCashiers} variant="outline">
+            <Button disabled={isCreatingDemoCashiers || stores.length < 2} onClick={createDemoCashiers} variant="outline">
               {isCreatingDemoCashiers ? (
                 <>
                   <Spinner className="mr-2 h-4 w-4" />

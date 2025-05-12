@@ -34,13 +34,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   
   // Map Supabase auth user to our app's User type
-  const mapSupabaseUser = (supabaseUser: any): User => {
+  const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
+    // Get email to determine initial role mapping
+    const email = supabaseUser.email;
+    let role: UserRole = mapUserRole(email);
+    
+    // For cashier users, fetch associated store IDs from the cashiers table
+    let storeIds: string[] = ['1']; // Default store ID
+    
+    if (role === 'cashier') {
+      try {
+        const { data } = await supabase
+          .from('cashiers')
+          .select('store_id')
+          .eq('user_id', supabaseUser.id);
+        
+        if (data && data.length > 0) {
+          storeIds = data.map(item => item.store_id);
+        }
+      } catch (error) {
+        console.error('Error fetching cashier store assignments:', error);
+      }
+    } else {
+      // For non-cashiers (admins, owners, managers), fetch from user_stores or give access to all
+      try {
+        const { data } = await supabase
+          .from('stores')
+          .select('id');
+          
+        if (data && data.length > 0) {
+          storeIds = data.map(store => store.id);
+        }
+      } catch (error) {
+        console.error('Error fetching store IDs:', error);
+      }
+    }
+
     return {
       id: supabaseUser.id,
       email: supabaseUser.email,
       name: supabaseUser.user_metadata?.name || supabaseUser.email.split('@')[0],
-      role: mapUserRole(supabaseUser.email),
-      storeIds: ['1'], // Default store ID for now
+      role: role,
+      storeIds: storeIds,
       avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
     };
   };
@@ -50,28 +85,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (email === 'admin@example.com') return 'admin';
     if (email === 'owner@example.com') return 'owner';
     if (email === 'manager@example.com') return 'manager';
+    if (email === 'marasabaras@croffle.com' || email === 'robinsons.north@croffle.com') return 'cashier';
     return 'cashier'; // Default role
   };
 
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        // Only update state with synchronous operations here
+      async (event, newSession) => {
+        // Only update session state synchronously
         setSession(newSession);
-        setUser(newSession?.user ? mapSupabaseUser(newSession.user) : null);
-        setIsLoading(false); // Important: Set loading to false when auth state changes
+        
+        if (newSession?.user) {
+          // Use setTimeout to avoid recursive auth state changes
+          setTimeout(async () => {
+            const mappedUser = await mapSupabaseUser(newSession.user);
+            setUser(mappedUser);
+            setIsLoading(false);
+          }, 0);
+        } else {
+          setUser(null);
+          setIsLoading(false);
+        }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       setSession(currentSession);
-      setUser(currentSession?.user ? mapSupabaseUser(currentSession.user) : null);
-      setIsLoading(false); // Important: Always set loading to false after checking session
+      if (currentSession?.user) {
+        const mappedUser = await mapSupabaseUser(currentSession.user);
+        setUser(mappedUser);
+      }
+      setIsLoading(false);
     }).catch(error => {
       console.error("Error checking session:", error);
-      setIsLoading(false); // Even on error, we need to stop loading
+      setIsLoading(false);
     });
 
     return () => {
@@ -92,7 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       if (data.user) {
-        setUser(mapSupabaseUser(data.user));
+        const mappedUser = await mapSupabaseUser(data.user);
+        setUser(mappedUser);
         setSession(data.session);
       }
     } catch (error: any) {
