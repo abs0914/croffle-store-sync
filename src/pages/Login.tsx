@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 
@@ -42,22 +42,17 @@ export default function Login() {
     }
   };
 
-  // Demo credentials
-  const demoLogins = [
-    { role: "Admin", email: "admin@example.com", password: "password123" },
-    { role: "Manager", email: "manager@example.com", password: "password123" },
-    { role: "Cashier", email: "cashier@example.com", password: "password123" },
-  ];
-
-  const fillDemoCredentials = (email: string, password: string) => {
-    setEmail(email);
-    setPassword(password);
-  };
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-croffle-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+        <CardHeader className="space-y-1 items-center">
+          <div className="w-36 h-36 mb-2">
+            <img 
+              src="/lovable-uploads/219a46e3-821b-4c87-9ea1-38a510c6d8bd.png" 
+              alt="The Croffle Store" 
+              className="w-full h-full object-contain"
+            />
+          </div>
           <CardTitle className="text-2xl font-bold text-center">Sign in</CardTitle>
           <CardDescription className="text-center">
             Enter your email and password to access your account
@@ -101,24 +96,6 @@ export default function Login() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col">
-          <div className="text-sm text-muted-foreground mb-4">
-            Demo accounts (click to autofill):
-          </div>
-          <div className="grid grid-cols-1 gap-2 w-full">
-            {demoLogins.map((demo) => (
-              <Button
-                key={demo.role}
-                variant="outline"
-                onClick={() => fillDemoCredentials(demo.email, demo.password)}
-                className="w-full justify-start"
-              >
-                <span className="font-semibold">{demo.role}:</span>
-                <span className="ml-2 text-muted-foreground">{demo.email}</span>
-              </Button>
-            ))}
-          </div>
-        </CardFooter>
       </Card>
     </div>
   );
