@@ -20,12 +20,15 @@ export function useCameraCleanup({
 }: UseCameraCleanupProps) {
   // Track whether we've completed initial setup
   const initializedRef = useRef(false);
+  const cleanupCountRef = useRef(0);
   
   // Set initialization status after delay
   useEffect(() => {
     const timer = setTimeout(() => {
       initializedRef.current = true;
-    }, 500);
+      console.log('[CameraCleanup] Hook marked as fully initialized');
+    }, 1000); // Increased from 500ms to 1000ms
+    
     return () => clearTimeout(timer);
   }, []);
   
@@ -69,9 +72,12 @@ export function useCameraCleanup({
 
   // Stop camera function
   const stopCamera = useCallback(() => {
+    cleanupCountRef.current += 1;
+    console.log(`[CameraCleanup] Stop camera called (count: ${cleanupCountRef.current})`);
+    
     // Only perform full cleanup if we're past initialization phase
     if (initializedRef.current) {
-      console.log('[CameraCleanup] Stopping camera');
+      console.log('[CameraCleanup] Stopping camera (fully initialized)');
       
       // Clear any pending retry attempts
       if (retryTimeoutRef.current) {
@@ -84,23 +90,36 @@ export function useCameraCleanup({
         console.log('[CameraCleanup] Stopping media tracks');
         mediaStreamRef.current.getTracks().forEach(track => {
           try {
-            track.stop();
-            console.log('[CameraCleanup] Track stopped:', track.kind, track.readyState);
+            // Only stop track if it's active
+            if (track.readyState === 'live') {
+              track.stop();
+              console.log('[CameraCleanup] Track stopped:', track.kind, track.readyState);
+            } else {
+              console.log('[CameraCleanup] Track already inactive:', track.kind, track.readyState);
+            }
           } catch (err) {
             console.error('[CameraCleanup] Error stopping track:', err);
           }
         });
         mediaStreamRef.current = null;
+      } else {
+        console.log('[CameraCleanup] No media stream to stop');
       }
       
       // Clear video source
       if (videoRef.current) {
         try {
-          console.log('[CameraCleanup] Clearing video element srcObject');
-          videoRef.current.srcObject = null;
+          if (videoRef.current.srcObject) {
+            console.log('[CameraCleanup] Clearing video element srcObject');
+            videoRef.current.srcObject = null;
+          } else {
+            console.log('[CameraCleanup] Video element has no srcObject');
+          }
         } catch (err) {
           console.error('[CameraCleanup] Error clearing video srcObject:', err);
         }
+      } else {
+        console.log('[CameraCleanup] No video element to clear');
       }
       
       setShowCamera(false);
@@ -118,11 +137,15 @@ export function useCameraCleanup({
   // Clean up camera resources when component unmounts
   useEffect(() => {
     return () => {
+      cleanupCountRef.current += 1;
+      console.log(`[CameraCleanup] Unmount cleanup triggered (count: ${cleanupCountRef.current})`);
+      
       // Only perform unmount cleanup if we're fully initialized
       if (initializedRef.current) {
         console.log('[CameraCleanup] Component unmounting, cleaning up resources');
         if (retryTimeoutRef.current) {
           clearTimeout(retryTimeoutRef.current);
+          retryTimeoutRef.current = null;
         }
         
         if (mediaStreamRef.current) {
@@ -134,6 +157,7 @@ export function useCameraCleanup({
               console.error('[CameraCleanup] Error stopping track on unmount:', err);
             }
           });
+          mediaStreamRef.current = null;
         }
       } else {
         console.log('[CameraCleanup] Skipping unmount cleanup during initialization phase');

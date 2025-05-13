@@ -1,5 +1,5 @@
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 
 interface UseCameraInitializationProps {
@@ -26,9 +26,13 @@ export function useCameraInitialization({
   setIsStartingCamera
 }: UseCameraInitializationProps) {
   const maxRetries = 3;
+  const initCountRef = useRef(0);
   
   const startCamera = useCallback(async () => {
     try {
+      initCountRef.current += 1;
+      console.log(`[Camera] Starting camera initialization (count: ${initCountRef.current})`);
+      
       // Reset camera state and set starting flag
       resetCameraState();
       setIsStartingCamera(true);
@@ -48,7 +52,7 @@ export function useCameraInitialization({
         console.log('[Camera] Video element not immediately available, waiting briefly...');
         
         // Longer timeout to allow ref to connect
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 500)); // Increased from 300ms to 500ms
         videoElement = videoRef.current;
         
         if (!videoElement) {
@@ -94,8 +98,8 @@ export function useCameraInitialization({
       let timeoutId: NodeJS.Timeout;
       const timeoutPromise = new Promise<MediaStream>((_, reject) => {
         timeoutId = setTimeout(() => {
-          reject(new Error('Camera access request timed out after 10 seconds'));
-        }, 10000);
+          reject(new Error('Camera access request timed out after 15 seconds'));
+        }, 15000); // Increased from 10s to 15s
       });
       
       // Request camera with timeout
@@ -123,7 +127,7 @@ export function useCameraInitialization({
       // Clear timeout if stream was obtained
       clearTimeout(timeoutId!);
       
-      console.log('[Camera] Camera access granted, attaching stream');
+      console.log('[Camera] Camera access granted, attaching stream, tracks:', stream.getTracks().length);
       
       // Double-check video element is still available
       videoElement = videoRef.current;
@@ -133,41 +137,78 @@ export function useCameraInitialization({
         throw new Error('Video element lost during camera setup');
       }
       
-      // Connect the stream to the video element
-      videoElement.srcObject = stream;
+      // Store the stream reference for cleanup before attaching to video
+      mediaStreamRef.current = stream;
       
-      console.log('[Camera] Stream attached to video element, setting up events');
+      // Connect the stream to the video element
+      try {
+        videoElement.srcObject = stream;
+        console.log('[Camera] Stream attached to video element');
+      } catch (err) {
+        console.error('[Camera] Error attaching stream to video:', err);
+        throw new Error(`Could not attach video stream: ${err.message}`);
+      }
+      
+      console.log('[Camera] Setting up video element events');
       
       // Set up event listeners for the video element
-      videoElement.onloadedmetadata = () => {
-        videoElement = videoRef.current;
-        if (!videoElement) return;
+      const playPromise = new Promise<void>((resolve, reject) => {
+        if (!videoElement) {
+          reject(new Error('Video element disappeared'));
+          return;
+        }
         
-        console.log('[Camera] Video metadata loaded, playing video');
-        videoElement.play().catch(err => {
-          console.error("[Camera] Error playing video:", err);
-          setCameraError(`Could not start video: ${err.message}`);
-        });
-      };
+        videoElement.onloadedmetadata = () => {
+          if (!videoElement) return;
+          
+          console.log('[Camera] Video metadata loaded, playing video');
+          try {
+            videoElement.play()
+              .then(() => {
+                console.log('[Camera] Video playback started successfully');
+                resolve();
+              })
+              .catch(err => {
+                console.error("[Camera] Error playing video:", err);
+                setCameraError(`Could not start video: ${err.message}`);
+                reject(err);
+              });
+          } catch (err) {
+            console.error("[Camera] Exception during play():", err);
+            setCameraError(`Exception during video play: ${err.message}`);
+            reject(err);
+          }
+        };
+        
+        videoElement.onerror = (event) => {
+          console.error('[Camera] Video element error:', event);
+          setCameraError('Video playback error occurred');
+          reject(new Error('Video element error'));
+        };
+      });
+      
+      // Wait for play promise to resolve with timeout
+      const playTimeoutPromise = new Promise<void>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Video play timed out'));
+        }, 5000);
+      });
+      
+      // Wait for video to start playing
+      await Promise.race([playPromise, playTimeoutPromise]);
       
       // Additional event to make sure we know when video is actually playing
-      videoElement.onplaying = () => {
-        console.log('[Camera] Video is now playing');
-        setCameraInitialized(true);
-        setIsStartingCamera(false);
-      };
+      if (videoElement) {
+        videoElement.onplaying = () => {
+          console.log('[Camera] Video is now playing');
+          setCameraInitialized(true);
+          setIsStartingCamera(false);
+        };
+      }
       
-      // Add error event handler
-      videoElement.onerror = (event) => {
-        console.error('[Camera] Video element error:', event);
-        setCameraError('Video playback error occurred');
-      };
-      
-      // Store the stream reference for cleanup
-      mediaStreamRef.current = stream;
       setShowCamera(true);
       
-      console.log('[Camera] Stream attached to video element, tracks:', stream.getTracks().length);
+      console.log('[Camera] Camera initialization successful');
       return true;
     } catch (error: any) {
       console.error('[Camera] Error accessing camera:', error);
@@ -175,6 +216,19 @@ export function useCameraInitialization({
       toast.error('Camera access failed. Please check permissions.');
       setShowCamera(false);
       setIsStartingCamera(false);
+      
+      // Clean up any partial resources
+      if (mediaStreamRef.current) {
+        console.log('[Camera] Cleaning up stream after error');
+        mediaStreamRef.current.getTracks().forEach(track => {
+          try {
+            track.stop();
+          } catch (err) {
+            console.error('[Camera] Error stopping track after initialization error:', err);
+          }
+        });
+        mediaStreamRef.current = null;
+      }
       
       return false;
     }

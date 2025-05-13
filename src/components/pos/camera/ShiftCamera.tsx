@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { useCamera } from "@/hooks/camera";  
 import CameraContainer from "./CameraContainer";
@@ -14,6 +14,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   const [attemptedInit, setAttemptedInit] = useState(false);
   const [initTimerRef, setInitTimerRef] = useState<NodeJS.Timeout | null>(null);
   const [isCommitted, setIsCommitted] = useState(false);
+  const mountCountRef = useRef(0);
   
   const { 
     videoRef,
@@ -32,12 +33,20 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     setShowCamera
   } = useCamera();
   
-  // Mark component as committed after initial render
+  // Mark component as committed after initial render with increased delay
   useEffect(() => {
+    mountCountRef.current += 1;
+    console.log(`[ShiftCamera] Mounting count: ${mountCountRef.current}, setting up commit timer`);
+    
     const timer = setTimeout(() => {
+      console.log('[ShiftCamera] Component committed');
       setIsCommitted(true);
-    }, 300);
-    return () => clearTimeout(timer);
+    }, 800); // Increased from 300ms to 800ms
+    
+    return () => {
+      console.log(`[ShiftCamera] Clearing commit timer on unmount`);
+      clearTimeout(timer);
+    };
   }, []);
   
   // Clean up resources when component unmounts
@@ -50,12 +59,16 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         if (initTimerRef) {
           clearTimeout(initTimerRef);
         }
+      } else {
+        console.log('[ShiftCamera] Component unmounting during setup phase, skipping full cleanup');
       }
     };
   }, [stopCamera, initTimerRef, isCommitted]);
   
-  // Initialize camera after a short delay to ensure component is stable
+  // Initialize camera after a longer delay to ensure component is stable
   useEffect(() => {
+    console.log(`[ShiftCamera] Init effect running - attemptedInit: ${attemptedInit}, isCommitted: ${isCommitted}`);
+    
     if (!attemptedInit && isCommitted) {
       console.log("[ShiftCamera] Auto-initializing camera on component mount");
       setAttemptedInit(true);
@@ -63,16 +76,18 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
       
       // Longer delay to ensure DOM is ready and component is stable
       const timer = setTimeout(() => {
+        console.log("[ShiftCamera] Starting camera after delay");
         startCamera().catch(error => {
           console.error("[ShiftCamera] Auto-init failed:", error);
           setCameraError(error.message || "Failed to initialize camera");
         });
-      }, 500); // Increased from 100ms to 500ms
+      }, 1000); // Increased from 500ms to 1000ms
       
       setInitTimerRef(timer);
       
       return () => {
         if (timer) {
+          console.log("[ShiftCamera] Clearing camera init timer");
           clearTimeout(timer);
         }
       };
@@ -106,13 +121,17 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
       // Retry initialization after a longer delay
       const timer = setTimeout(() => {
         setShowCamera(true);
+        console.log("[ShiftCamera] Starting camera after retry delay");
         startCamera().catch(error => {
           console.error("[ShiftCamera] Retry failed:", error);
           setCameraError(error.message || "Failed to initialize camera");
         });
-      }, 500); // Increased from 100ms to 500ms
+      }, 1000); // Increased from 500ms to 1000ms
       
       setInitTimerRef(timer);
+    } else {
+      console.log("[ShiftCamera] Not committed yet, delaying retry");
+      setTimeout(() => handleRetry(), 500);
     }
   };
   
@@ -134,6 +153,9 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
           if (isCommitted) {
             setAttemptedInit(false);
             handleRetry();
+          } else {
+            console.log("[ShiftCamera] Not committed yet, delaying camera init");
+            setTimeout(() => handleRetry(), 500);
           }
         }}
         handleRetry={handleRetry}
