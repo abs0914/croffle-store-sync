@@ -39,10 +39,15 @@ export default function EndShiftDialog({
   const [cashError, setCashError] = useState<string | null>(null);
 
   // Fetch inventory items for this store
-  const { data: inventoryItems = [], isLoading: isLoadingInventory } = useQuery({
+  const { 
+    data: inventoryItems = [], 
+    isLoading: isLoadingInventory,
+    error: inventoryError
+  } = useQuery({
     queryKey: ["inventory-stock", currentShift?.storeId],
     queryFn: () => currentShift?.storeId ? fetchInventoryStock(currentShift.storeId) : Promise.resolve([]),
     enabled: isOpen && !!currentShift?.storeId,
+    retry: 2
   });
 
   // Reset state when dialog closes
@@ -137,6 +142,7 @@ export default function EndShiftDialog({
             handleInventoryCountChange={handleInventoryCountChange}
             isLoadingInventory={isLoadingInventory}
             currentShift={currentShift}
+            error={inventoryError}
           />
         </div>
         

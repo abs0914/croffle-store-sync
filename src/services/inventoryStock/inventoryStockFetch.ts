@@ -14,6 +14,7 @@ export const fetchInventoryStock = async (storeId: string): Promise<InventorySto
       .order("item");
     
     if (error) {
+      console.error("Error fetching inventory stock:", error.message);
       throw new Error(error.message);
     }
     
@@ -36,6 +37,7 @@ export const fetchInventoryStockItem = async (id: string): Promise<InventoryStoc
       .single();
     
     if (error) {
+      console.error("Error fetching inventory stock item:", error.message);
       throw new Error(error.message);
     }
     

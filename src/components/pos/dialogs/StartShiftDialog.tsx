@@ -9,85 +9,62 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
+import { Store, Cashier, InventoryStock } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { fetchInventoryStock } from "@/services/inventoryStock";
-import { fetchActiveCashiers } from "@/services/cashier";
 import { Camera } from "lucide-react";
-import { getPreviousShiftEndingCash } from "@/contexts/shift/shiftUtils";
-import { useAuth } from "@/contexts/AuthContext";
-import { Cashier } from "@/types/cashier";
 
-// Import the components
-import StartingCashSection from "./shift/StartingCashSection";
+// Import the refactored components
 import ShiftPhotoSection from "./shift/ShiftPhotoSection";
-import InventoryCountSection from "./shift/InventoryCountSection";
+import StartingCashSection from "./shift/StartingCashSection";
 import CashierSelectSection from "./shift/CashierSelectSection";
+import InventoryCountSection from "./shift/InventoryCountSection";
 
 interface StartShiftDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onStartShift: (startingCash: number, startInventoryCount: Record<string, number>, photo?: string, cashierId?: string) => Promise<void>;
-  storeId: string | null;
+  currentStore: Store | null;
+  cashiers: Cashier[];
+  onStartShift: (startingCash: number, cashierId: string | null, inventoryCount: Record<string, number>, photo?: string) => Promise<void>;
+  loading: boolean;
 }
 
 export default function StartShiftDialog({
   isOpen,
   onOpenChange,
+  currentStore,
+  cashiers,
   onStartShift,
-  storeId
+  loading
 }: StartShiftDialogProps) {
-  const { user } = useAuth();
   const [startingCash, setStartingCash] = useState<number>(0);
-  const [previousEndingCash, setPreviousEndingCash] = useState<number | null>(null);
+  const [selectedCashierId, setSelectedCashierId] = useState<string | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [inventoryCount, setInventoryCount] = useState<Record<string, number>>({});
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [selectedCashierId, setSelectedCashierId] = useState<string | null>(null);
 
   // Fetch inventory items for this store
-  const { data: inventoryItems = [], isLoading: isLoadingInventory } = useQuery({
-    queryKey: ["inventory-stock", storeId],
-    queryFn: () => storeId ? fetchInventoryStock(storeId) : Promise.resolve([]),
-    enabled: isOpen && !!storeId,
+  const { 
+    data: inventoryItems = [], 
+    isLoading: isLoadingInventory,
+    error: inventoryError
+  } = useQuery({
+    queryKey: ["inventory-stock", currentStore?.id],
+    queryFn: () => currentStore?.id ? fetchInventoryStock(currentStore.id) : Promise.resolve([]),
+    enabled: isOpen && !!currentStore?.id,
+    retry: 2
   });
 
-  // Fetch cashiers for this store - we'll use this to find the current cashier based on auth user ID
-  const { data: cashiers = [], isLoading: isLoadingCashiers } = useQuery({
-    queryKey: ["active-cashiers", storeId],
-    queryFn: () => storeId ? fetchActiveCashiers(storeId) : Promise.resolve([]),
-    enabled: isOpen && !!storeId,
-  });
-
-  // Fetch previous shift ending cash when dialog opens
-  useEffect(() => {
-    if (isOpen && storeId && user) {
-      setIsLoading(true);
-      getPreviousShiftEndingCash(user.id, storeId)
-        .then(cash => {
-          setPreviousEndingCash(cash);
-          setStartingCash(cash); // Set starting cash to previous ending cash
-        })
-        .finally(() => setIsLoading(false));
-    }
-  }, [isOpen, storeId, user]);
-
-  // Reset state when dialog closes and automatically show camera when dialog opens
+  // Reset state when dialog closes
   useEffect(() => {
     if (!isOpen) {
+      setStartingCash(0);
+      setSelectedCashierId(null);
       setPhoto(null);
       setInventoryCount({});
       setShowCameraView(false);
-      setSelectedCashierId(null);
-    } else {
-      // Automatically show camera view when dialog opens
-      setShowCameraView(true);
-    }
-  }, [isOpen]);
-
-  // Initialize inventory count with current stock quantities
-  useEffect(() => {
-    if (isOpen && inventoryItems.length > 0) {
+    } else if (isOpen && inventoryItems.length > 0) {
+      // Initialize inventory count with current stock quantities
       const initialCount = inventoryItems.reduce((acc, item) => {
         acc[item.id] = item.stock_quantity || 0;
         return acc;
@@ -105,7 +82,7 @@ export default function StartShiftDialog({
   };
 
   const handleSubmit = async () => {
-    await onStartShift(startingCash, inventoryCount, photo || undefined, selectedCashierId || undefined);
+    await onStartShift(startingCash, selectedCashierId, inventoryCount, photo || undefined);
     setShowCameraView(false);
   };
 
@@ -120,26 +97,25 @@ export default function StartShiftDialog({
         <DialogHeader>
           <DialogTitle>Start New Shift</DialogTitle>
           <DialogDescription>
-            Please count your cash drawer and inventory levels before starting your shift.
+            Please enter your starting cash and take a photo of the cash drawer
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4 flex-1 overflow-auto">
+        <div className="space-y-4 py-4 flex-1 overflow-hidden">
           {/* Cash Section */}
           <StartingCashSection 
             startingCash={startingCash}
             setStartingCash={setStartingCash}
-            previousEndingCash={previousEndingCash}
-            isLoading={isLoading}
           />
           
-          {/* Cashier Section - now shows current user */}
-          <CashierSelectSection 
-            cashiers={cashiers}
-            selectedCashierId={selectedCashierId}
-            setSelectedCashierId={setSelectedCashierId}
-            isLoading={isLoadingCashiers}
-          />
+          {/* Cashier Selection - if multiple cashiers */}
+          {cashiers.length > 0 && (
+            <CashierSelectSection 
+              cashiers={cashiers}
+              selectedCashierId={selectedCashierId}
+              setSelectedCashierId={setSelectedCashierId}
+            />
+          )}
           
           {/* Photo Section */}
           <ShiftPhotoSection 
@@ -155,6 +131,7 @@ export default function StartShiftDialog({
             inventoryCount={inventoryCount}
             handleInventoryCountChange={handleInventoryCountChange}
             isLoadingInventory={isLoadingInventory}
+            error={inventoryError}
           />
         </div>
         
@@ -164,7 +141,7 @@ export default function StartShiftDialog({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!photo || !selectedCashierId}
+            disabled={loading || !photo}
             className="flex items-center"
           >
             <Camera className="mr-2 h-4 w-4" />
