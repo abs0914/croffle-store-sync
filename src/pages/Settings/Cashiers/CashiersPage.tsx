@@ -86,16 +86,16 @@ const CashiersPage = () => {
         <CardContent>
           <CashiersTable
             cashiers={cashiers}
-            loading={loading}
-            onCashierUpdated={handleCashierUpdated}
-            onCashierDeleted={handleCashierDeleted}
-            isAdminOrOwner={isAdminOrOwner}
+            isLoading={loading} // Fixed: Changed 'loading' to 'isLoading'
+            onAdd={() => setIsDialogOpen(true)}
+            onEdit={handleCashierUpdated}
+            onDelete={handleCashierDeleted}
           />
         </CardContent>
       </Card>
 
       <AddCashierDialog
-        open={isDialogOpen}
+        isOpen={isDialogOpen} // Fixed: Changed 'open' to 'isOpen'
         onOpenChange={setIsDialogOpen}
         storeId={currentStore.id}
         onCashierAdded={handleCashierAdded}

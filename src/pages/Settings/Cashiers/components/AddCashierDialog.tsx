@@ -20,9 +20,10 @@ interface AddCashierDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   storeId: string;
+  onCashierAdded: () => void;
 }
 
-export default function AddCashierDialog({ isOpen, onOpenChange, storeId }: AddCashierDialogProps) {
+export default function AddCashierDialog({ isOpen, onOpenChange, storeId, onCashierAdded }: AddCashierDialogProps) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<CashierFormData>({
     firstName: "",
@@ -42,6 +43,7 @@ export default function AddCashierDialog({ isOpen, onOpenChange, storeId }: AddC
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashiers", storeId] });
       resetForm();
+      onCashierAdded();
       onOpenChange(false);
     }
   });
