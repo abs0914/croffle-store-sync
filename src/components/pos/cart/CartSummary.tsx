@@ -1,6 +1,6 @@
 
 import { Separator } from "@/components/ui/separator";
-import { PaymentProcessor } from "../payment";
+import PaymentProcessor from "../payment/PaymentProcessor";
 
 interface CartSummaryProps {
   subtotal: number;
