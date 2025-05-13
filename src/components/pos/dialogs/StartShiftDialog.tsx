@@ -25,19 +25,21 @@ import InventoryCountSection from "./shift/InventoryCountSection";
 interface StartShiftDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  currentStore: Store | null;
-  cashiers: Cashier[];
   onStartShift: (startingCash: number, cashierId: string | null, inventoryCount: Record<string, number>, photo?: string) => Promise<void>;
-  loading: boolean;
+  storeId: string | null;
+  currentStore?: Store | null;
+  cashiers?: Cashier[];
+  loading?: boolean;
 }
 
 export default function StartShiftDialog({
   isOpen,
   onOpenChange,
-  currentStore,
-  cashiers,
   onStartShift,
-  loading
+  storeId,
+  currentStore,
+  cashiers = [],
+  loading = false
 }: StartShiftDialogProps) {
   const [startingCash, setStartingCash] = useState<number>(0);
   const [selectedCashierId, setSelectedCashierId] = useState<string | null>(null);
@@ -53,9 +55,9 @@ export default function StartShiftDialog({
     isLoading: isLoadingInventory,
     error: inventoryError
   } = useQuery({
-    queryKey: ["inventory-stock", currentStore?.id],
-    queryFn: () => currentStore?.id ? fetchInventoryStock(currentStore.id) : Promise.resolve([]),
-    enabled: isOpen && !!currentStore?.id,
+    queryKey: ["inventory-stock", storeId],
+    queryFn: () => storeId ? fetchInventoryStock(storeId) : Promise.resolve([]),
+    enabled: isOpen && !!storeId,
     retry: 2
   });
 
