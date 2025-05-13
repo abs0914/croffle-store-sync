@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchCashiersByStoreId } from "@/services/cashier/cashierFetch";
+import { fetchCashiers } from "@/services/cashier";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStore } from "@/contexts/StoreContext";
 import { Cashier } from "@/types/cashier";
@@ -11,8 +11,8 @@ import { CashiersTable, AddCashierDialog, EditCashierDialog, DeleteCashierDialog
 import { Plus } from "lucide-react";
 
 export default function CashiersPage() {
-  const { selectedStore } = useStore();
-  const storeId = selectedStore?.id || '';
+  const { currentStore } = useStore();
+  const storeId = currentStore?.id || '';
   const { user } = useAuth();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -22,7 +22,7 @@ export default function CashiersPage() {
 
   const { data: cashiers = [], isLoading } = useQuery({
     queryKey: ["cashiers", storeId],
-    queryFn: () => fetchCashiersByStoreId(storeId),
+    queryFn: () => fetchCashiers(storeId),
     enabled: !!storeId,
   });
 
@@ -58,6 +58,7 @@ export default function CashiersPage() {
         isLoading={isLoading}
         onEdit={handleEditCashier}
         onDelete={handleDeleteCashier}
+        onAdd={() => setIsAddDialogOpen(true)}
       />
 
       <AddCashierDialog 

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 interface StoreState {
   stores: Store[];
   currentStore: Store | null;
+  selectedStore: Store | null;
   isLoading: boolean;
   setCurrentStore: (store: Store) => void;
 }
@@ -15,6 +16,7 @@ interface StoreState {
 const initialState: StoreState = {
   stores: [],
   currentStore: null,
+  selectedStore: null,
   isLoading: true,
   setCurrentStore: () => {},
 };
@@ -74,6 +76,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       value={{
         stores,
         currentStore,
+        selectedStore: currentStore, // Add selectedStore as an alias for currentStore
         isLoading,
         setCurrentStore,
       }}
