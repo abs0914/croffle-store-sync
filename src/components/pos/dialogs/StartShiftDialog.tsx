@@ -52,7 +52,7 @@ export default function StartShiftDialog({
     enabled: isOpen && !!storeId,
   });
 
-  // Fetch cashiers for this store
+  // Fetch cashiers for this store - we'll use this to find the current cashier based on auth user ID
   const { data: cashiers = [], isLoading: isLoadingCashiers } = useQuery({
     queryKey: ["active-cashiers", storeId],
     queryFn: () => storeId ? fetchActiveCashiers(storeId) : Promise.resolve([]),
@@ -133,7 +133,7 @@ export default function StartShiftDialog({
             isLoading={isLoading}
           />
           
-          {/* Cashier Selection Section */}
+          {/* Cashier Section - now shows current user */}
           <CashierSelectSection 
             cashiers={cashiers}
             selectedCashierId={selectedCashierId}
@@ -164,7 +164,7 @@ export default function StartShiftDialog({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!photo}
+            disabled={!photo || !selectedCashierId}
             className="flex items-center"
           >
             <Camera className="mr-2 h-4 w-4" />

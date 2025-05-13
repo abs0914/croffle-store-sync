@@ -1,8 +1,8 @@
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
 import { Cashier } from "@/types/cashier";
 
 interface CashierSelectSectionProps {
@@ -18,35 +18,38 @@ export default function CashierSelectSection({
   setSelectedCashierId,
   isLoading
 }: CashierSelectSectionProps) {
+  const { user } = useAuth();
+  
+  // Find the cashier record matching the authenticated user
+  const currentCashier = user && cashiers.length > 0 
+    ? cashiers.find(cashier => cashier.userId === user.id) 
+    : null;
+  
+  // Update the selected cashier ID when the current cashier is found
+  useEffect(() => {
+    if (currentCashier) {
+      setSelectedCashierId(currentCashier.id);
+    }
+  }, [currentCashier, setSelectedCashierId]);
+
   return (
     <div className="space-y-2">
       <Label htmlFor="cashier">
-        Select Cashier
+        Cashier
       </Label>
       {isLoading ? (
         <div className="flex items-center space-x-2">
           <Spinner className="h-4 w-4" />
-          <span className="text-sm">Loading cashiers...</span>
+          <span className="text-sm">Loading cashier information...</span>
         </div>
-      ) : cashiers.length > 0 ? (
-        <Select
-          value={selectedCashierId || ''}
-          onValueChange={(value) => setSelectedCashierId(value)}
-        >
-          <SelectTrigger id="cashier" className="w-full">
-            <SelectValue placeholder="Select a cashier" />
-          </SelectTrigger>
-          <SelectContent>
-            {cashiers.map((cashier) => (
-              <SelectItem key={cashier.id} value={cashier.id}>
-                {cashier.fullName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      ) : currentCashier ? (
+        <div className="p-2 border rounded-md bg-background">
+          <p className="font-medium">{currentCashier.fullName}</p>
+          <p className="text-xs text-muted-foreground">Logged in as cashier</p>
+        </div>
       ) : (
         <div className="text-sm text-amber-600">
-          No active cashiers found. Please add cashiers to your store in the settings.
+          No cashier account found for your user. Please contact your administrator.
         </div>
       )}
     </div>
