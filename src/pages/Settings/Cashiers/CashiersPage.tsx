@@ -1,107 +1,83 @@
 
-import { useState, useEffect } from 'react';
-import { useStore } from '@/contexts/StoreContext';
-import { CashiersTable, AddCashierDialog } from './components';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Cashier } from '@/types/cashier';
-import { fetchCashiers } from '@/services/cashier';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle } from 'lucide-react';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchCashiersByStoreId } from "@/services/cashier/cashierFetch";
+import { useAuth } from "@/contexts/AuthContext";
+import { useStore } from "@/contexts/StoreContext";
+import { Cashier } from "@/types/cashier";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { CashiersTable, AddCashierDialog, EditCashierDialog, DeleteCashierDialog } from "./components";
+import { Plus } from "lucide-react";
 
-const CashiersPage = () => {
-  const { currentStore } = useStore();
+export default function CashiersPage() {
+  const { selectedStore } = useStore();
+  const storeId = selectedStore?.id || '';
   const { user } = useAuth();
-  const [cashiers, setCashiers] = useState<Cashier[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isAdminOrOwner, setIsAdminOrOwner] = useState(false);
 
-  useEffect(() => {
-    if (user && user.role) {
-      setIsAdminOrOwner(['admin', 'owner'].includes(user.role));
-    }
-  }, [user]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedCashier, setSelectedCashier] = useState<Cashier | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  useEffect(() => {
-    loadCashiers();
-  }, [currentStore]);
+  const { data: cashiers = [], isLoading } = useQuery({
+    queryKey: ["cashiers", storeId],
+    queryFn: () => fetchCashiersByStoreId(storeId),
+    enabled: !!storeId,
+  });
 
-  const loadCashiers = async () => {
-    if (!currentStore) return;
-    
-    try {
-      setLoading(true);
-      const cashiersList = await fetchCashiers(currentStore.id);
-      setCashiers(cashiersList);
-    } catch (error) {
-      console.error("Error loading cashiers:", error);
-      toast.error("Failed to load cashiers. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  const handleEditCashier = (cashier: Cashier) => {
+    setSelectedCashier(cashier);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteCashier = (cashier: Cashier) => {
+    setSelectedCashier(cashier);
+    setIsDeleteDialogOpen(true);
   };
 
   const handleCashierAdded = () => {
-    loadCashiers();
-    setIsDialogOpen(false);
-    toast.success("Cashier added successfully");
+    // Additional logic after cashier is added if needed
   };
-
-  const handleCashierUpdated = () => {
-    loadCashiers();
-    toast.success("Cashier updated successfully");
-  };
-
-  const handleCashierDeleted = () => {
-    loadCashiers();
-    toast.success("Cashier deleted successfully");
-  };
-
-  if (!currentStore) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-4">
-        <p className="text-lg text-gray-500">Please select a store to manage cashiers</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Cashiers Management</h1>
-        {isAdminOrOwner && (
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Cashier
-          </Button>
-        )}
+    <div className="container py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <PageHeader 
+          heading="Cashier Management" 
+          subheading="Add and manage cashiers for your store" 
+        />
+        <Button onClick={() => setIsAddDialogOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Add Cashier
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Cashiers for {currentStore.name}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CashiersTable
-            cashiers={cashiers}
-            isLoading={loading} // Fixed: Changed 'loading' to 'isLoading'
-            onAdd={() => setIsDialogOpen(true)}
-            onEdit={handleCashierUpdated}
-            onDelete={handleCashierDeleted}
-          />
-        </CardContent>
-      </Card>
+      <CashiersTable 
+        cashiers={cashiers} 
+        isLoading={isLoading}
+        onEdit={handleEditCashier}
+        onDelete={handleDeleteCashier}
+      />
 
-      <AddCashierDialog
-        isOpen={isDialogOpen} // Fixed: Changed 'open' to 'isOpen'
-        onOpenChange={setIsDialogOpen}
-        storeId={currentStore.id}
+      <AddCashierDialog 
+        isOpen={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        storeId={storeId}
         onCashierAdded={handleCashierAdded}
+      />
+
+      <EditCashierDialog 
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        cashier={selectedCashier}
+      />
+
+      <DeleteCashierDialog 
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        cashier={selectedCashier}
       />
     </div>
   );
-};
-
-export default CashiersPage;
+}
