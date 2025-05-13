@@ -1,6 +1,6 @@
 
 import { Separator } from "@/components/ui/separator";
-import PaymentProcessor from "../PaymentProcessor";
+import { PaymentProcessor } from "../payment";
 
 interface CartSummaryProps {
   subtotal: number;
@@ -62,10 +62,7 @@ export default function CartSummary({
       </div>
       
       {/* Payment Processor */}
-      <PaymentProcessor
-        total={subtotal - discount}
-        onPaymentComplete={handlePaymentComplete}
-      />
+      <PaymentProcessor />
     </div>
   );
 }
