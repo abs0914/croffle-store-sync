@@ -20,11 +20,32 @@ export function useCameraCleanup({
 }: UseCameraCleanupProps) {
   // Reset camera state function
   const resetCameraState = useCallback(() => {
+    console.log('[CameraCleanup] Resetting camera state');
+    
     // Clear any previous errors and camera resources
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      console.log('[CameraCleanup] Stopping tracks from reset function');
+      mediaStreamRef.current.getTracks().forEach(track => {
+        try {
+          track.stop();
+          console.log('[CameraCleanup] Track stopped:', track.kind, track.id);
+        } catch (err) {
+          console.error('[CameraCleanup] Error stopping track:', err);
+        }
+      });
       mediaStreamRef.current = null;
     }
+    
+    // Clear video source
+    if (videoRef.current && videoRef.current.srcObject) {
+      try {
+        console.log('[CameraCleanup] Clearing video srcObject');
+        videoRef.current.srcObject = null;
+      } catch (err) {
+        console.error('[CameraCleanup] Error clearing video srcObject:', err);
+      }
+    }
+    
     setCameraInitialized(false);
     setIsStartingCamera(false);
     
@@ -33,10 +54,12 @@ export function useCameraCleanup({
       clearTimeout(retryTimeoutRef.current);
       retryTimeoutRef.current = null;
     }
-  }, [mediaStreamRef, retryTimeoutRef, setCameraInitialized, setIsStartingCamera]);
+  }, [mediaStreamRef, videoRef, retryTimeoutRef, setCameraInitialized, setIsStartingCamera]);
 
   // Stop camera function
   const stopCamera = useCallback(() => {
+    console.log('[CameraCleanup] Stopping camera');
+    
     // Clear any pending retry attempts
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
@@ -45,13 +68,26 @@ export function useCameraCleanup({
     
     // Stop all media tracks
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      console.log('[CameraCleanup] Stopping media tracks');
+      mediaStreamRef.current.getTracks().forEach(track => {
+        try {
+          track.stop();
+          console.log('[CameraCleanup] Track stopped:', track.kind, track.readyState);
+        } catch (err) {
+          console.error('[CameraCleanup] Error stopping track:', err);
+        }
+      });
       mediaStreamRef.current = null;
     }
     
     // Clear video source
     if (videoRef.current) {
-      videoRef.current.srcObject = null;
+      try {
+        console.log('[CameraCleanup] Clearing video element srcObject');
+        videoRef.current.srcObject = null;
+      } catch (err) {
+        console.error('[CameraCleanup] Error clearing video srcObject:', err);
+      }
     }
     
     setShowCamera(false);
@@ -62,11 +98,20 @@ export function useCameraCleanup({
   // Clean up camera resources when component unmounts
   useEffect(() => {
     return () => {
+      console.log('[CameraCleanup] Component unmounting, cleaning up resources');
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
       }
+      
       if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current.getTracks().forEach(track => {
+          try {
+            track.stop();
+            console.log('[CameraCleanup] Track stopped on unmount:', track.kind);
+          } catch (err) {
+            console.error('[CameraCleanup] Error stopping track on unmount:', err);
+          }
+        });
       }
     };
   }, [mediaStreamRef, retryTimeoutRef]);

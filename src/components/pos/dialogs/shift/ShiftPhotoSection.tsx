@@ -22,8 +22,17 @@ export default function ShiftPhotoSection({
   
   // Automatically show camera when component mounts - this is key to auto-starting camera
   useEffect(() => {
-    setShowCameraView(true);
-  }, [setShowCameraView]);
+    if (!photo) {
+      console.log("[ShiftPhotoSection] Auto-showing camera on mount");
+      setShowCameraView(true);
+    }
+    
+    // Clean up function - hide camera when component unmounts
+    return () => {
+      console.log("[ShiftPhotoSection] Component unmounting, hiding camera");
+      setShowCameraView(false);
+    };
+  }, [setShowCameraView, photo]);
 
   const handleCameraError = (message: string) => {
     setCameraError(message);
@@ -54,7 +63,10 @@ export default function ShiftPhotoSection({
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => setShowCameraView(false)}
+              onClick={() => {
+                console.log("[ShiftPhotoSection] Manually hiding camera view");
+                setShowCameraView(false);
+              }}
             >
               <CameraOff className="mr-2 h-4 w-4" />
               Cancel
@@ -74,7 +86,10 @@ export default function ShiftPhotoSection({
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => setShowCameraView(true)}
+                  onClick={() => {
+                    console.log("[ShiftPhotoSection] Retaking photo, showing camera");
+                    setShowCameraView(true);
+                  }}
                 >
                   <Camera className="mr-2 h-4 w-4" />
                   Retake
@@ -92,7 +107,11 @@ export default function ShiftPhotoSection({
             <div className="w-full">
               <Button 
                 variant="outline" 
-                onClick={() => setShowCameraView(true)} 
+                onClick={() => {
+                  console.log("[ShiftPhotoSection] Manual camera trigger clicked");
+                  setCameraError(null);
+                  setShowCameraView(true);
+                }}
                 className="w-full"
               >
                 <Camera className="mr-2 h-4 w-4" />
@@ -106,7 +125,11 @@ export default function ShiftPhotoSection({
                     variant="link" 
                     size="sm" 
                     className="text-xs p-0 h-auto" 
-                    onClick={() => setShowCameraView(true)}
+                    onClick={() => {
+                      console.log("[ShiftPhotoSection] Retrying from error state");
+                      setCameraError(null);
+                      setShowCameraView(true);
+                    }}
                   >
                     <RefreshCcw className="mr-1 h-3 w-3" />
                     <span>Retry</span>

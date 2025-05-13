@@ -59,6 +59,27 @@ export function useCameraInitialization({
       
       console.log('[Camera] Video element found, requesting camera access');
       
+      // Check if there are any existing tracks and stop them
+      if (mediaStreamRef.current) {
+        console.log('[Camera] Stopping existing media tracks before requesting new ones');
+        mediaStreamRef.current.getTracks().forEach(track => {
+          try {
+            track.stop();
+          } catch (err) {
+            console.error('[Camera] Error stopping track:', err);
+          }
+        });
+        mediaStreamRef.current = null;
+      }
+
+      // Additional check for active camera usage across all browser tabs
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        console.log('[Camera] Available devices:', devices.length);
+      } catch (err) {
+        console.warn('[Camera] Could not enumerate devices:', err);
+      }
+      
       // Define camera constraints
       const constraints = { 
         video: { 
@@ -70,7 +91,24 @@ export function useCameraInitialization({
       };
       
       // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+        .catch(error => {
+          console.error('[Camera] MediaDevices error:', error.name, error.message);
+          
+          // Device in use error handling
+          if (error.name === 'NotReadableError' || error.message.includes('in use') || error.message.includes('is already in use')) {
+            throw new Error('Camera is already in use by another application or browser tab. Please close other apps using the camera and try again.');
+          }
+          
+          // Permission denied handling
+          if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            throw new Error('Camera access denied. Please allow camera access in your browser settings.');
+          }
+          
+          // Re-throw the error if it's something else
+          throw error;
+        });
+      
       console.log('[Camera] Camera access granted, attaching stream');
       
       // Double-check video element is still available

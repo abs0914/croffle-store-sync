@@ -12,7 +12,7 @@ interface ShiftCameraProps {
 
 export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   const [attemptedInit, setAttemptedInit] = useState(false);
-  const initTimerRef = useState<NodeJS.Timeout | null>(null)[0];
+  const [initTimerRef, setInitTimerRef] = useState<NodeJS.Timeout | null>(null);
   
   const { 
     videoRef,
@@ -34,6 +34,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   // Clean up resources when component unmounts
   useEffect(() => {
     return () => {
+      console.log('[ShiftCamera] Component unmounting, cleaning up resources');
       stopCamera();
       if (initTimerRef) {
         clearTimeout(initTimerRef);
@@ -49,12 +50,20 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
       setShowCamera(true);
       
       // Small delay to ensure DOM is ready
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         startCamera().catch(error => {
           console.error("[ShiftCamera] Auto-init failed:", error);
           setCameraError(error.message || "Failed to initialize camera");
         });
       }, 100);
+      
+      setInitTimerRef(timer);
+      
+      return () => {
+        if (timer) {
+          clearTimeout(timer);
+        }
+      };
     }
   }, [attemptedInit, startCamera, setShowCamera, setCameraError]);
 
@@ -76,18 +85,21 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   };
   
   const handleRetry = () => {
+    console.log("[ShiftCamera] Retrying camera initialization");
     stopCamera();
     setAttemptedInit(false);
     setCameraError(null);
     
     // Retry initialization after a short delay
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setShowCamera(true);
       startCamera().catch(error => {
         console.error("[ShiftCamera] Retry failed:", error);
         setCameraError(error.message || "Failed to initialize camera");
       });
     }, 100);
+    
+    setInitTimerRef(timer);
   };
   
   return (
