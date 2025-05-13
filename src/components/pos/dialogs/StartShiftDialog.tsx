@@ -9,7 +9,9 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
-import { Store, Cashier, InventoryStock } from "@/types";
+import { Store } from "@/types";
+import { Cashier } from "@/types/cashier";
+import { InventoryStock } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { fetchInventoryStock } from "@/services/inventoryStock";
 import { Camera } from "lucide-react";
@@ -42,6 +44,8 @@ export default function StartShiftDialog({
   const [photo, setPhoto] = useState<string | null>(null);
   const [inventoryCount, setInventoryCount] = useState<Record<string, number>>({});
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
+  const [previousEndingCash, setPreviousEndingCash] = useState<number | null>(null);
+  const [isLoadingPreviousCash, setIsLoadingPreviousCash] = useState<boolean>(false);
 
   // Fetch inventory items for this store
   const { 
@@ -106,6 +110,8 @@ export default function StartShiftDialog({
           <StartingCashSection 
             startingCash={startingCash}
             setStartingCash={setStartingCash}
+            previousEndingCash={previousEndingCash}
+            isLoading={isLoadingPreviousCash}
           />
           
           {/* Cashier Selection - if multiple cashiers */}
@@ -114,6 +120,7 @@ export default function StartShiftDialog({
               cashiers={cashiers}
               selectedCashierId={selectedCashierId}
               setSelectedCashierId={setSelectedCashierId}
+              isLoading={loading}
             />
           )}
           

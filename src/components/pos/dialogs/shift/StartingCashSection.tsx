@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 
-interface StartingCashSectionProps {
+export interface StartingCashSectionProps {
   startingCash: number;
   setStartingCash: (cash: number) => void;
   previousEndingCash: number | null;

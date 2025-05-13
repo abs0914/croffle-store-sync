@@ -5,7 +5,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Cashier } from "@/types/cashier";
 
-interface CashierSelectSectionProps {
+export interface CashierSelectSectionProps {
   cashiers: Cashier[];
   selectedCashierId: string | null;
   setSelectedCashierId: (id: string | null) => void;
