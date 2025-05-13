@@ -10,9 +10,9 @@ export const fetchCashiersByStoreId = async (storeId: string): Promise<Cashier[]
   const { data, error } = await supabase
     .from('cashiers')
     .select('*')
-    .eq('storeId', storeId)
-    .eq('isActive', true)
-    .order('lastName', { ascending: true });
+    .eq('store_id', storeId)
+    .eq('is_active', true)
+    .order('last_name', { ascending: true });
 
   if (error) {
     console.error('Error fetching cashiers:', error);
@@ -21,8 +21,14 @@ export const fetchCashiersByStoreId = async (storeId: string): Promise<Cashier[]
 
   // Transform database rows to include fullName
   return (data || []).map(cashier => ({
-    ...cashier,
-    fullName: `${cashier.firstName} ${cashier.lastName}`
+    id: cashier.id,
+    userId: cashier.user_id,
+    storeId: cashier.store_id,
+    firstName: cashier.first_name,
+    lastName: cashier.last_name,
+    contactNumber: cashier.contact_number,
+    isActive: cashier.is_active,
+    fullName: `${cashier.first_name} ${cashier.last_name}`
   })) as Cashier[];
 };
 
@@ -50,7 +56,18 @@ export const fetchCashierById = async (id: string): Promise<Cashier | null> => {
 
   // Add fullName to cashier data
   return {
-    ...data,
-    fullName: `${data.firstName} ${data.lastName}`
+    id: data.id,
+    userId: data.user_id,
+    storeId: data.store_id,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    contactNumber: data.contact_number,
+    isActive: data.is_active,
+    fullName: `${data.first_name} ${data.last_name}`
   } as Cashier;
 };
+
+/**
+ * Alias for fetchCashiersByStoreId to maintain backward compatibility
+ */
+export const fetchCashiers = fetchCashiersByStoreId;
