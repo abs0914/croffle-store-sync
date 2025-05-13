@@ -132,47 +132,6 @@ export type Database = {
           },
         ]
       }
-      inventory_stock: {
-        Row: {
-          created_at: string | null
-          id: string
-          is_active: boolean
-          item: string
-          stock_quantity: number
-          store_id: string
-          unit: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          is_active?: boolean
-          item: string
-          stock_quantity?: number
-          store_id: string
-          unit: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          is_active?: boolean
-          item?: string
-          stock_quantity?: number
-          store_id?: string
-          unit?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_stock_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       inventory_transactions: {
         Row: {
           created_at: string | null
@@ -640,16 +599,18 @@ export type Database = {
     }
     Functions: {
       transfer_inventory_stock: {
-        Args: {
-          p_source_id: string
-          p_target_store_id: string
-          p_item: string
-          p_unit: string
-          p_quantity: number
-          p_notes?: string
-          p_user_id?: string
-        }
-        Returns: boolean
+        Args:
+          | Record<PropertyKey, never>
+          | {
+              p_source_id: string
+              p_target_store_id: string
+              p_item: string
+              p_unit: string
+              p_quantity: number
+              p_notes?: string
+              p_user_id?: string
+            }
+        Returns: undefined
       }
     }
     Enums: {

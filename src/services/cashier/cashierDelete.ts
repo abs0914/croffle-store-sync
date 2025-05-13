@@ -4,6 +4,8 @@ import { toast } from "sonner";
 
 export const deleteCashier = async (id: string): Promise<boolean> => {
   try {
+    // Begin transaction with delete operation
+    // The database trigger we created will handle the auth user deletion
     const { error } = await supabase
       .from('cashiers')
       .delete()
