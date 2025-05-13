@@ -62,7 +62,10 @@ export default function CartSummary({
       </div>
       
       {/* Payment Processor */}
-      <PaymentProcessor />
+      <PaymentProcessor 
+        total={total - discount} 
+        onPaymentComplete={handlePaymentComplete} 
+      />
     </div>
   );
 }
