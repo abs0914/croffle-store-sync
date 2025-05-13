@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchCashiers } from "@/services/cashier";
+import { fetchCashiers } from "@/services/cashier/cashierFetch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStore } from "@/contexts/StoreContext";
 import { Cashier } from "@/types/cashier";

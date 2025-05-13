@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createCashier } from "@/services/cashier";
+import { createCashier } from "@/services/cashier/cashierCreate";
 import { CashierFormData } from "@/types/cashier";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
