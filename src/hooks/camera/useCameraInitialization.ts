@@ -47,8 +47,8 @@ export function useCameraInitialization({
       if (!videoElement) {
         console.log('[Camera] Video element not immediately available, waiting briefly...');
         
-        // Short timeout to allow ref to connect
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Longer timeout to allow ref to connect
+        await new Promise(resolve => setTimeout(resolve, 300));
         videoElement = videoRef.current;
         
         if (!videoElement) {
@@ -90,24 +90,38 @@ export function useCameraInitialization({
         audio: false
       };
       
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-        .catch(error => {
-          console.error('[Camera] MediaDevices error:', error.name, error.message);
-          
-          // Device in use error handling
-          if (error.name === 'NotReadableError' || error.message.includes('in use') || error.message.includes('is already in use')) {
-            throw new Error('Camera is already in use by another application or browser tab. Please close other apps using the camera and try again.');
-          }
-          
-          // Permission denied handling
-          if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-            throw new Error('Camera access denied. Please allow camera access in your browser settings.');
-          }
-          
-          // Re-throw the error if it's something else
-          throw error;
-        });
+      // Request camera access with a timeout
+      let timeoutId: NodeJS.Timeout;
+      const timeoutPromise = new Promise<MediaStream>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Camera access request timed out after 10 seconds'));
+        }, 10000);
+      });
+      
+      // Request camera with timeout
+      const stream = await Promise.race([
+        navigator.mediaDevices.getUserMedia(constraints)
+          .catch(error => {
+            console.error('[Camera] MediaDevices error:', error.name, error.message);
+            
+            // Device in use error handling
+            if (error.name === 'NotReadableError' || error.message.includes('in use') || error.message.includes('is already in use')) {
+              throw new Error('Camera is already in use by another application or browser tab. Please close other apps using the camera and try again.');
+            }
+            
+            // Permission denied handling
+            if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+              throw new Error('Camera access denied. Please allow camera access in your browser settings.');
+            }
+            
+            // Re-throw the error if it's something else
+            throw error;
+          }),
+        timeoutPromise
+      ]) as MediaStream;
+      
+      // Clear timeout if stream was obtained
+      clearTimeout(timeoutId!);
       
       console.log('[Camera] Camera access granted, attaching stream');
       
@@ -141,6 +155,12 @@ export function useCameraInitialization({
         console.log('[Camera] Video is now playing');
         setCameraInitialized(true);
         setIsStartingCamera(false);
+      };
+      
+      // Add error event handler
+      videoElement.onerror = (event) => {
+        console.error('[Camera] Video element error:', event);
+        setCameraError('Video playback error occurred');
       };
       
       // Store the stream reference for cleanup

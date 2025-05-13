@@ -13,6 +13,7 @@ interface ShiftCameraProps {
 export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   const [attemptedInit, setAttemptedInit] = useState(false);
   const [initTimerRef, setInitTimerRef] = useState<NodeJS.Timeout | null>(null);
+  const [isCommitted, setIsCommitted] = useState(false);
   
   const { 
     videoRef,
@@ -31,31 +32,42 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     setShowCamera
   } = useCamera();
   
+  // Mark component as committed after initial render
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsCommitted(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
+  
   // Clean up resources when component unmounts
   useEffect(() => {
     return () => {
-      console.log('[ShiftCamera] Component unmounting, cleaning up resources');
-      stopCamera();
-      if (initTimerRef) {
-        clearTimeout(initTimerRef);
+      // Only perform cleanup if component is fully committed (past initial render phase)
+      if (isCommitted) {
+        console.log('[ShiftCamera] Component unmounting, cleaning up resources');
+        stopCamera();
+        if (initTimerRef) {
+          clearTimeout(initTimerRef);
+        }
       }
     };
-  }, [stopCamera, initTimerRef]);
+  }, [stopCamera, initTimerRef, isCommitted]);
   
-  // Initialize camera as soon as component mounts
+  // Initialize camera after a short delay to ensure component is stable
   useEffect(() => {
-    if (!attemptedInit) {
+    if (!attemptedInit && isCommitted) {
       console.log("[ShiftCamera] Auto-initializing camera on component mount");
       setAttemptedInit(true);
       setShowCamera(true);
       
-      // Small delay to ensure DOM is ready
+      // Longer delay to ensure DOM is ready and component is stable
       const timer = setTimeout(() => {
         startCamera().catch(error => {
           console.error("[ShiftCamera] Auto-init failed:", error);
           setCameraError(error.message || "Failed to initialize camera");
         });
-      }, 100);
+      }, 500); // Increased from 100ms to 500ms
       
       setInitTimerRef(timer);
       
@@ -65,7 +77,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         }
       };
     }
-  }, [attemptedInit, startCamera, setShowCamera, setCameraError]);
+  }, [attemptedInit, startCamera, setShowCamera, setCameraError, isCommitted]);
 
   const handleCaptureClick = () => {
     const photoUrl = capturePhoto();
@@ -86,20 +98,22 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   
   const handleRetry = () => {
     console.log("[ShiftCamera] Retrying camera initialization");
-    stopCamera();
-    setAttemptedInit(false);
-    setCameraError(null);
-    
-    // Retry initialization after a short delay
-    const timer = setTimeout(() => {
-      setShowCamera(true);
-      startCamera().catch(error => {
-        console.error("[ShiftCamera] Retry failed:", error);
-        setCameraError(error.message || "Failed to initialize camera");
-      });
-    }, 100);
-    
-    setInitTimerRef(timer);
+    if (isCommitted) {
+      stopCamera();
+      setAttemptedInit(false);
+      setCameraError(null);
+      
+      // Retry initialization after a longer delay
+      const timer = setTimeout(() => {
+        setShowCamera(true);
+        startCamera().catch(error => {
+          console.error("[ShiftCamera] Retry failed:", error);
+          setCameraError(error.message || "Failed to initialize camera");
+        });
+      }, 500); // Increased from 100ms to 500ms
+      
+      setInitTimerRef(timer);
+    }
   };
   
   return (
@@ -117,8 +131,10 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         handleCaptureClick={handleCaptureClick}
         resetPhoto={resetPhoto}
         initCamera={() => {
-          setAttemptedInit(false);
-          handleRetry();
+          if (isCommitted) {
+            setAttemptedInit(false);
+            handleRetry();
+          }
         }}
         handleRetry={handleRetry}
       />

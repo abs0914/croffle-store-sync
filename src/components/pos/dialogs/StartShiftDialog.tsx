@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -48,6 +48,10 @@ export default function StartShiftDialog({
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
   const [previousEndingCash, setPreviousEndingCash] = useState<number | null>(null);
   const [isLoadingPreviousCash, setIsLoadingPreviousCash] = useState<boolean>(false);
+  
+  // Add dialog stability tracking
+  const [dialogStable, setDialogStable] = useState<boolean>(false);
+  const initialDataProcessedRef = useRef<boolean>(false);
 
   // Fetch inventory items for this store
   const { 
@@ -61,6 +65,19 @@ export default function StartShiftDialog({
     retry: 2
   });
 
+  // Mark dialog as stable after a delay
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        setDialogStable(true);
+      }, 300);
+      return () => clearTimeout(timer);
+    } else {
+      setDialogStable(false);
+      initialDataProcessedRef.current = false;
+    }
+  }, [isOpen]);
+
   // Reset state when dialog closes
   useEffect(() => {
     if (!isOpen) {
@@ -69,7 +86,12 @@ export default function StartShiftDialog({
       setPhoto(null);
       setInventoryCount({});
       setShowCameraView(false);
-    } else if (isOpen && inventoryItems.length > 0) {
+    }
+  }, [isOpen]);
+
+  // Process inventory data when it loads, but only once
+  useEffect(() => {
+    if (dialogStable && isOpen && inventoryItems.length > 0 && !initialDataProcessedRef.current) {
       // Initialize inventory count with current stock quantities
       const initialCount = inventoryItems.reduce((acc, item) => {
         acc[item.id] = item.stock_quantity || 0;
@@ -77,8 +99,9 @@ export default function StartShiftDialog({
       }, {} as Record<string, number>);
       
       setInventoryCount(initialCount);
+      initialDataProcessedRef.current = true;
     }
-  }, [isOpen, inventoryItems]);
+  }, [dialogStable, isOpen, inventoryItems]);
 
   const handleInventoryCountChange = (itemId: string, value: number) => {
     setInventoryCount(prev => ({
@@ -127,12 +150,14 @@ export default function StartShiftDialog({
           )}
           
           {/* Photo Section */}
-          <ShiftPhotoSection 
-            photo={photo}
-            setPhoto={setPhoto}
-            showCameraView={showCameraView}
-            setShowCameraView={setShowCameraView}
-          />
+          {dialogStable && (
+            <ShiftPhotoSection 
+              photo={photo}
+              setPhoto={setPhoto}
+              showCameraView={showCameraView}
+              setShowCameraView={setShowCameraView}
+            />
+          )}
           
           {/* Inventory Section */}
           <InventoryCountSection 

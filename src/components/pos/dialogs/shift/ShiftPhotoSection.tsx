@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Camera, CameraOff, RefreshCcw } from "lucide-react";
 import ShiftCamera from "../../camera/ShiftCamera";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface ShiftPhotoSectionProps {
   photo: string | null;
@@ -19,12 +19,32 @@ export default function ShiftPhotoSection({
   setShowCameraView
 }: ShiftPhotoSectionProps) {
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isStable, setIsStable] = useState(false);
+  const initialRenderRef = useRef(true);
   
-  // Automatically show camera when component mounts - this is key to auto-starting camera
+  // Mark component as stable after a delay
   useEffect(() => {
-    if (!photo) {
-      console.log("[ShiftPhotoSection] Auto-showing camera on mount");
-      setShowCameraView(true);
+    const timer = setTimeout(() => {
+      setIsStable(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Automatically show camera when component mounts, but with a delay
+  useEffect(() => {
+    if (!photo && isStable) {
+      // Only auto-show camera on initial render
+      if (initialRenderRef.current) {
+        console.log("[ShiftPhotoSection] Auto-showing camera after stability delay");
+        initialRenderRef.current = false;
+        
+        // Delay showing camera to ensure component is stable
+        const timer = setTimeout(() => {
+          setShowCameraView(true);
+        }, 500);
+        
+        return () => clearTimeout(timer);
+      }
     }
     
     // Clean up function - hide camera when component unmounts
@@ -32,7 +52,7 @@ export default function ShiftPhotoSection({
       console.log("[ShiftPhotoSection] Component unmounting, hiding camera");
       setShowCameraView(false);
     };
-  }, [setShowCameraView, photo]);
+  }, [setShowCameraView, photo, isStable]);
 
   const handleCameraError = (message: string) => {
     setCameraError(message);
@@ -88,7 +108,9 @@ export default function ShiftPhotoSection({
                   size="sm" 
                   onClick={() => {
                     console.log("[ShiftPhotoSection] Retaking photo, showing camera");
-                    setShowCameraView(true);
+                    setCameraError(null);
+                    // Add delay before showing camera
+                    setTimeout(() => setShowCameraView(true), 300);
                   }}
                 >
                   <Camera className="mr-2 h-4 w-4" />
@@ -110,7 +132,8 @@ export default function ShiftPhotoSection({
                 onClick={() => {
                   console.log("[ShiftPhotoSection] Manual camera trigger clicked");
                   setCameraError(null);
-                  setShowCameraView(true);
+                  // Add delay before showing camera
+                  setTimeout(() => setShowCameraView(true), 300);
                 }}
                 className="w-full"
               >
@@ -128,7 +151,8 @@ export default function ShiftPhotoSection({
                     onClick={() => {
                       console.log("[ShiftPhotoSection] Retrying from error state");
                       setCameraError(null);
-                      setShowCameraView(true);
+                      // Add delay before showing camera
+                      setTimeout(() => setShowCameraView(true), 300);
                     }}
                   >
                     <RefreshCcw className="mr-1 h-3 w-3" />
