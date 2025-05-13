@@ -6,6 +6,7 @@ import { toast } from "sonner";
 // Update an inventory stock item
 export const updateInventoryStockItem = async (id: string, updates: Partial<InventoryStock>): Promise<InventoryStock | null> => {
   try {
+    // Use type assertion to handle the inventory_stock table
     const { data, error } = await supabase
       .from('inventory_stock')
       .update(updates)
@@ -18,7 +19,7 @@ export const updateInventoryStockItem = async (id: string, updates: Partial<Inve
     }
     
     toast.success("Inventory item updated successfully");
-    return data as InventoryStock;
+    return data as unknown as InventoryStock;
   } catch (error) {
     console.error("Error updating inventory stock item:", error);
     toast.error("Failed to update inventory item");

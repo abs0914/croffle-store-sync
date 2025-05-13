@@ -132,6 +132,53 @@ export type Database = {
           },
         ]
       }
+      inventory_stock: {
+        Row: {
+          cost: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          item: string
+          sku: string | null
+          stock_quantity: number
+          store_id: string
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          item: string
+          sku?: string | null
+          stock_quantity?: number
+          store_id: string
+          unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          item?: string
+          sku?: string | null
+          stock_quantity?: number
+          store_id?: string
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_stock_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_transactions: {
         Row: {
           created_at: string | null

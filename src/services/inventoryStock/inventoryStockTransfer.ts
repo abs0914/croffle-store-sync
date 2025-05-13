@@ -12,7 +12,7 @@ export const transferInventoryStock = async (
   try {
     // Get current stock item first
     const { data: sourceItem, error: fetchError } = await supabase
-      .from("inventory_stock")
+      .from('inventory_stock')
       .select("stock_quantity, item, unit, store_id")
       .eq("id", sourceId)
       .single();
@@ -21,28 +21,35 @@ export const transferInventoryStock = async (
       throw new Error(fetchError.message);
     }
     
-    if (!sourceItem) {
+    // Type assertion
+    const typedSourceItem = sourceItem as unknown as { 
+      stock_quantity: number; 
+      item: string; 
+      unit: string; 
+      store_id: string 
+    };
+    
+    if (!typedSourceItem) {
       throw new Error("Source inventory item not found");
     }
     
-    if (sourceItem.stock_quantity < quantity) {
+    if (typedSourceItem.stock_quantity < quantity) {
       toast.error("Not enough stock available for transfer");
       return false;
     }
 
-    const previousSourceQuantity = sourceItem.stock_quantity;
-    const newSourceQuantity = previousSourceQuantity - quantity;
+    const previousSourceQuantity = typedSourceItem.stock_quantity;
     
     // Get current user for the transaction record
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id || null;
     
-    // Call the database function we just created
+    // Call the database function we created during migration
     const { error: transactionError } = await supabase.rpc('transfer_inventory_stock', {
       p_source_id: sourceId,
       p_target_store_id: targetStoreId,
-      p_item: sourceItem.item,
-      p_unit: sourceItem.unit,
+      p_item: typedSourceItem.item,
+      p_unit: typedSourceItem.unit,
       p_quantity: quantity,
       p_notes: notes || "Stock transfer",
       p_user_id: userId

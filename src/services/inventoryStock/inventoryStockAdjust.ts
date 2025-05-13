@@ -9,10 +9,10 @@ export const adjustInventoryStock = async (
   notes?: string
 ): Promise<boolean> => {
   try {
-    // Get current quantity first
+    // Get current quantity first - use type assertion to handle inventory_stock table
     const { data: stockItem, error: fetchError } = await supabase
-      .from("inventory_stock")
-      .select("stock_quantity")
+      .from('inventory_stock')
+      .select("stock_quantity, store_id")
       .eq("id", id)
       .single();
     
@@ -20,11 +20,14 @@ export const adjustInventoryStock = async (
       throw new Error(fetchError.message);
     }
     
-    const previousQuantity = stockItem?.stock_quantity || 0;
+    // Type assertion
+    const typedStockItem = stockItem as unknown as { stock_quantity: number; store_id: string };
+    const previousQuantity = typedStockItem?.stock_quantity || 0;
+    const storeId = typedStockItem?.store_id;
     
     // Update the stock quantity
     const { error: updateError } = await supabase
-      .from("inventory_stock")
+      .from('inventory_stock')
       .update({ stock_quantity: newQuantity, updated_at: new Date().toISOString() })
       .eq("id", id);
     
@@ -37,13 +40,13 @@ export const adjustInventoryStock = async (
       .from("inventory_transactions")
       .insert({
         product_id: id, // Using the inventory stock item's ID
-        store_id: (await supabase.from("inventory_stock").select("store_id").eq("id", id).single()).data?.store_id,
+        store_id: storeId,
         transaction_type: 'adjustment',
         quantity: Math.abs(newQuantity - previousQuantity),
         previous_quantity: previousQuantity,
         new_quantity: newQuantity,
-        created_by: (await supabase.auth.getUser()).data.user?.id,
-        notes
+        created_by: (await supabase.auth.getUser()).data.user?.id || 'system',
+        notes: notes || 'Manual stock adjustment'
       });
     
     if (transactionError) {
