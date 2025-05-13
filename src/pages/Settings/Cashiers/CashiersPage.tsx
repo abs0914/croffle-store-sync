@@ -1,30 +1,35 @@
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchCashiers } from "@/services/cashier/cashierFetch";
-import { useAuth } from "@/contexts/AuthContext";
 import { useStore } from "@/contexts/StoreContext";
+import { useQuery } from "@tanstack/react-query";
+import { fetchCashiers } from "@/services/cashier";
 import { Cashier } from "@/types/cashier";
-import { PageHeader } from "@/components/ui/page-header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CashiersTable, AddCashierDialog, EditCashierDialog, DeleteCashierDialog } from "./components";
-import { Plus } from "lucide-react";
+import { UserPlusIcon } from "lucide-react";
+import CashiersTable from "./components/CashiersTable";
+import AddCashierDialog from "./components/AddCashierDialog";
+import EditCashierDialog from "./components/EditCashierDialog";
+import DeleteCashierDialog from "./components/DeleteCashierDialog";
 
 export default function CashiersPage() {
   const { currentStore } = useStore();
-  const storeId = currentStore?.id || '';
-  const { user } = useAuth();
-
+  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [selectedCashier, setSelectedCashier] = useState<Cashier | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedCashier, setSelectedCashier] = useState<Cashier | null>(null);
 
+  // Fetch cashiers for the current store
   const { data: cashiers = [], isLoading } = useQuery({
-    queryKey: ["cashiers", storeId],
-    queryFn: () => fetchCashiers(storeId),
-    enabled: !!storeId,
+    queryKey: ["cashiers", currentStore?.id],
+    queryFn: () => currentStore ? fetchCashiers(currentStore.id) : Promise.resolve([]),
+    enabled: !!currentStore
   });
+
+  const handleAddCashier = () => {
+    setIsAddDialogOpen(true);
+  };
 
   const handleEditCashier = (cashier: Cashier) => {
     setSelectedCashier(cashier);
@@ -36,36 +41,43 @@ export default function CashiersPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleCashierAdded = () => {
-    // Additional logic after cashier is added if needed
-  };
+  if (!currentStore) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center">Please select a store first</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <PageHeader 
-          heading="Cashier Management" 
-          subheading="Add and manage cashiers for your store" 
-        />
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Cashier
-        </Button>
-      </div>
-
-      <CashiersTable 
-        cashiers={cashiers} 
-        isLoading={isLoading}
-        onEdit={handleEditCashier}
-        onDelete={handleDeleteCashier}
-        onAdd={() => setIsAddDialogOpen(true)}
-      />
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-xl font-bold">Cashier Management</CardTitle>
+          <div className="flex space-x-2">
+            <Button onClick={handleAddCashier}>
+              <UserPlusIcon className="mr-2 h-4 w-4" />
+              Add Cashier
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <CashiersTable 
+            cashiers={cashiers}
+            isLoading={isLoading}
+            onAdd={handleAddCashier}
+            onEdit={handleEditCashier}
+            onDelete={handleDeleteCashier}
+          />
+        </CardContent>
+      </Card>
 
       <AddCashierDialog 
         isOpen={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        storeId={storeId}
-        onCashierAdded={handleCashierAdded}
+        storeId={currentStore.id}
       />
 
       <EditCashierDialog 

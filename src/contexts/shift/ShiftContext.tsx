@@ -4,8 +4,7 @@ import { Shift } from "@/types";
 import { useAuth } from "../AuthContext";
 import { useStore } from "../StoreContext";
 import { ShiftState } from "./types";
-import { createShift, closeShift, getActiveShift, getPreviousShiftEndingCash } from "./shiftUtils";
-import { toast } from "sonner";
+import { createShift, closeShift, getActiveShift } from "./shiftUtils";
 
 const initialState: ShiftState = {
   currentShift: null,
@@ -22,7 +21,6 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   const { currentStore } = useStore();
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Fetch active shift when user or store changes
   useEffect(() => {
@@ -35,21 +33,14 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   }, [user, currentStore]);
 
   const fetchActiveShift = async () => {
-    if (!user || !currentStore) {
-      setError("No user or store selected");
-      setIsLoading(false);
-      return;
-    }
+    if (!user || !currentStore) return;
     
     try {
       setIsLoading(true);
-      setError(null);
       const shift = await getActiveShift(user.id, currentStore.id);
       setCurrentShift(shift);
     } catch (error) {
       console.error('Error fetching active shift:', error);
-      setError("Failed to retrieve active shift status");
-      toast.error("Failed to retrieve active shift status");
     } finally {
       setIsLoading(false);
     }
@@ -62,38 +53,23 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     cashierId?: string
   ): Promise<boolean> => {
     if (!user || !currentStore) {
-      toast.error("No user or store selected");
       return false;
     }
     
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const shift = await createShift(
-        user.id, 
-        currentStore.id, 
-        startingCash, 
-        startInventoryCount,
-        startPhoto,
-        cashierId
-      );
-      
-      if (shift) {
-        setCurrentShift(shift);
-        toast.success("Shift started successfully");
-        return true;
-      }
-      
-      throw new Error("Failed to start shift");
-    } catch (error: any) {
-      console.error('Error starting shift:', error);
-      setError(error?.message || "Failed to start shift");
-      toast.error(error?.message || "Failed to start shift");
-      return false;
-    } finally {
-      setIsLoading(false);
+    const shift = await createShift(
+      user.id, 
+      currentStore.id, 
+      startingCash, 
+      startInventoryCount,
+      startPhoto,
+      cashierId
+    );
+    
+    if (shift) {
+      setCurrentShift(shift);
+      return true;
     }
+    return false;
   };
   
   const endShift = async (
@@ -102,36 +78,21 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     endPhoto?: string
   ): Promise<boolean> => {
     if (!currentShift) {
-      toast.error("No active shift to end");
       return false;
     }
     
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const success = await closeShift(
-        currentShift.id, 
-        endingCash, 
-        endInventoryCount,
-        endPhoto
-      );
-      
-      if (success) {
-        setCurrentShift(null);
-        toast.success("Shift ended successfully");
-        return true;
-      }
-      
-      throw new Error("Failed to end shift");
-    } catch (error: any) {
-      console.error('Error ending shift:', error);
-      setError(error?.message || "Failed to end shift");
-      toast.error(error?.message || "Failed to end shift");
-      return false;
-    } finally {
-      setIsLoading(false);
+    const success = await closeShift(
+      currentShift.id, 
+      endingCash, 
+      endInventoryCount,
+      endPhoto
+    );
+    
+    if (success) {
+      setCurrentShift(null);
+      return true;
     }
+    return false;
   };
 
   return (
@@ -139,7 +100,6 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       value={{
         currentShift,
         isLoading,
-        error,
         startShift,
         endShift,
         fetchActiveShift

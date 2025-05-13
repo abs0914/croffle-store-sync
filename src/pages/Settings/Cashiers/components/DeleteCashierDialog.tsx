@@ -1,6 +1,6 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteCashier } from "@/services/cashier/cashierDelete";
+import { deleteCashier } from "@/services/cashier";
 import { Cashier } from "@/types/cashier";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";

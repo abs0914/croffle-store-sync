@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createCashier } from "@/services/cashier/cashierCreate";
+import { createCashier } from "@/services/cashier";
 import { CashierFormData } from "@/types/cashier";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,10 +20,9 @@ interface AddCashierDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   storeId: string;
-  onCashierAdded: () => void;
 }
 
-export default function AddCashierDialog({ isOpen, onOpenChange, storeId, onCashierAdded }: AddCashierDialogProps) {
+export default function AddCashierDialog({ isOpen, onOpenChange, storeId }: AddCashierDialogProps) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<CashierFormData>({
     firstName: "",
@@ -43,7 +42,6 @@ export default function AddCashierDialog({ isOpen, onOpenChange, storeId, onCash
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashiers", storeId] });
       resetForm();
-      onCashierAdded();
       onOpenChange(false);
     }
   });

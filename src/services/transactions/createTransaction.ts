@@ -71,7 +71,7 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
       created_at: now.toISOString()
     };
     
-    // Start a transaction to ensure data consistency
+    // Remove customer object before sending to Supabase
     const { data, error } = await supabase
       .from("transactions")
       .insert(newTransaction)
@@ -84,8 +84,8 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
     
     toast.success("Transaction completed successfully");
     
-    // Create inventory transactions for each product to trigger the stock updates
-    await createInventoryTransactionsForSale(transaction);
+    // Update inventory for each product
+    await updateInventoryStockForTransaction(transaction.items);
     
     // Cast the returned data to our custom type
     const transactionData = data as unknown as TransactionRow;
@@ -120,55 +120,38 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
 };
 
 /**
- * Creates inventory transactions for each product in a sale to trigger stock updates
+ * Updates inventory stock after a transaction is completed
  */
-const createInventoryTransactionsForSale = async (transaction: Omit<Transaction, "id" | "createdAt" | "receiptNumber">) => {
-  try {
-    for (const item of transaction.items) {
-      // First fetch the current quantity
-      let currentQuantity: number;
-      let productId: string = item.productId;
-      let variationId: string | null = null;
-      
-      if (item.variationId) {
-        // Get variation stock
-        const { data: variation } = await supabase
+const updateInventoryStockForTransaction = async (items: any[]) => {
+  for (const item of items) {
+    if (item.variationId) {
+      // Update variation stock
+      const { data: variation } = await supabase
+        .from("product_variations")
+        .select("stock_quantity")
+        .eq("id", item.variationId)
+        .single();
+        
+      if (variation) {
+        await supabase
           .from("product_variations")
-          .select("stock_quantity")
-          .eq("id", item.variationId)
-          .single();
-          
-        if (!variation) continue;
-        currentQuantity = variation.stock_quantity;
-        variationId = item.variationId;
-      } else {
-        // Get product stock
-        const { data: product } = await supabase
-          .from("products")
-          .select("stock_quantity")
-          .eq("id", item.productId)
-          .single();
-          
-        if (!product) continue;
-        currentQuantity = product.stock_quantity;
+          .update({ stock_quantity: Math.max(0, variation.stock_quantity - item.quantity) })
+          .eq("id", item.variationId);
       }
-      
-      // Create inventory transaction that will trigger stock update
-      await supabase.from("inventory_transactions").insert({
-        store_id: transaction.storeId,
-        product_id: productId,
-        variation_id: variationId,
-        transaction_type: 'sale',
-        quantity: item.quantity,
-        previous_quantity: currentQuantity,
-        new_quantity: Math.max(0, currentQuantity - item.quantity),
-        reference_id: transaction.shiftId, // Reference to the shift
-        created_by: transaction.userId
-      });
+    } else {
+      // Update product stock
+      const { data: product } = await supabase
+        .from("products")
+        .select("stock_quantity")
+        .eq("id", item.productId)
+        .single();
+        
+      if (product) {
+        await supabase
+          .from("products")
+          .update({ stock_quantity: Math.max(0, product.stock_quantity - item.quantity) })
+          .eq("id", item.productId);
+      }
     }
-  } catch (error) {
-    console.error("Error updating inventory for transaction:", error);
-    // We don't throw here to avoid failing the transaction if inventory update fails
-    // But we log the error and could implement a retry mechanism or notification system
   }
 };

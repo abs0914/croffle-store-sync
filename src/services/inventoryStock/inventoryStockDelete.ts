@@ -5,7 +5,6 @@ import { toast } from "sonner";
 // Delete an inventory stock item
 export const deleteInventoryStockItem = async (id: string): Promise<boolean> => {
   try {
-    // Use type assertion to handle the inventory_stock table
     const { error } = await supabase
       .from('inventory_stock')
       .delete()

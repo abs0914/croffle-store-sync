@@ -1,8 +1,8 @@
 
 import { Button } from "@/components/ui/button";
-import { Camera, RefreshCcw, AlertCircle, XCircle } from "lucide-react";
+import { Camera, RefreshCcw, AlertCircle } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CameraInitializerProps {
   initCamera: () => void;
@@ -19,10 +19,6 @@ export default function CameraInitializer({
   logVideoState,
   handleRetry
 }: CameraInitializerProps) {
-  const isDeviceInUseError = cameraError?.toLowerCase().includes('in use') || false;
-  const isPermissionError = cameraError?.toLowerCase().includes('permission') || 
-                           cameraError?.toLowerCase().includes('denied') || false;
-
   return (
     <div className="flex flex-col items-center justify-center h-full">
       {isStartingCamera ? (
@@ -44,27 +40,9 @@ export default function CameraInitializer({
       
       {cameraError && (
         <Alert variant="destructive" className="mt-3 mx-auto max-w-[90%]">
-          {isDeviceInUseError ? (
-            <XCircle className="h-4 w-4" />
-          ) : (
-            <AlertCircle className="h-4 w-4" />
-          )}
-          
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-xs">
-            {isDeviceInUseError ? (
-              <>
-                <AlertTitle className="text-sm font-semibold">Camera In Use</AlertTitle>
-                <p className="mb-1">The camera is being used by another application. Please close other apps or browser tabs using the camera.</p>
-              </>
-            ) : isPermissionError ? (
-              <>
-                <AlertTitle className="text-sm font-semibold">Permission Denied</AlertTitle>
-                <p className="mb-1">Please allow camera access in your browser settings.</p>
-              </>
-            ) : (
-              <p className="mb-1">{cameraError}</p>
-            )}
-            
+            <p className="mb-1">{cameraError}</p>
             <div className="flex gap-2 justify-start mt-1">
               <Button 
                 variant="link" 

@@ -55,12 +55,9 @@ export const parseInventoryStockCSV = async (csvData: string, storeId: string): 
         .eq('store_id', storeId)
         .maybeSingle();
       
-      // Type assertion for existingItem
-      const typedExistingItem = existingItem as unknown as { id: string; stock_quantity: number } | null;
-      
-      if (typedExistingItem) {
+      if (existingItem) {
         // Update existing item
-        const previousQuantity = typedExistingItem.stock_quantity;
+        const previousQuantity = existingItem.stock_quantity;
         const newQuantity = previousQuantity + (stockItem.stock_quantity || 0);
         
         await supabase
@@ -69,13 +66,13 @@ export const parseInventoryStockCSV = async (csvData: string, storeId: string): 
             stock_quantity: newQuantity,
             updated_at: new Date().toISOString()
           })
-          .eq('id', typedExistingItem.id);
+          .eq('id', existingItem.id);
         
         // Create inventory transaction record
         await supabase
           .from('inventory_transactions')
           .insert({
-            product_id: typedExistingItem.id,
+            product_id: existingItem.id,
             store_id: storeId,
             transaction_type: 'import',
             quantity: stockItem.stock_quantity,
@@ -103,14 +100,11 @@ export const parseInventoryStockCSV = async (csvData: string, storeId: string): 
           continue;
         }
         
-        // Type assertion for newItem
-        const typedNewItem = newItem as unknown as { id: string };
-        
         // Create inventory transaction record
         await supabase
           .from('inventory_transactions')
           .insert({
-            product_id: typedNewItem.id,
+            product_id: newItem.id,
             store_id: storeId,
             transaction_type: 'import',
             quantity: stockItem.stock_quantity || 0,

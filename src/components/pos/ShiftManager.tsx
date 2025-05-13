@@ -25,9 +25,9 @@ export default function ShiftManager() {
 
   const handleStartShift = async (
     startingCash: number, 
-    cashierId: string | null, 
     startInventoryCount: Record<string, number>, 
-    photo?: string
+    photo?: string,
+    cashierId?: string
   ) => {
     const success = await startShift(startingCash, startInventoryCount, photo, cashierId);
     if (success) {

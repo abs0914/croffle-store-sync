@@ -4,11 +4,11 @@ import { toast } from "sonner";
 import { Cashier } from "@/types/cashier";
 
 export interface CashierCreateData {
+  user_id?: string;
   store_id: string;
   first_name: string;
   last_name: string;
   contact_number?: string;
-  user_id?: string; // Add this property to match the usage
 }
 
 export const createCashier = async (data: CashierCreateData): Promise<Cashier | null> => {

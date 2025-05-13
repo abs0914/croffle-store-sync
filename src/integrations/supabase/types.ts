@@ -134,36 +134,30 @@ export type Database = {
       }
       inventory_stock: {
         Row: {
-          cost: number | null
           created_at: string | null
           id: string
-          is_active: boolean | null
+          is_active: boolean
           item: string
-          sku: string | null
           stock_quantity: number
           store_id: string
           unit: string
           updated_at: string | null
         }
         Insert: {
-          cost?: number | null
           created_at?: string | null
           id?: string
-          is_active?: boolean | null
+          is_active?: boolean
           item: string
-          sku?: string | null
           stock_quantity?: number
           store_id: string
           unit: string
           updated_at?: string | null
         }
         Update: {
-          cost?: number | null
           created_at?: string | null
           id?: string
-          is_active?: boolean | null
+          is_active?: boolean
           item?: string
-          sku?: string | null
           stock_quantity?: number
           store_id?: string
           unit?: string
@@ -646,18 +640,16 @@ export type Database = {
     }
     Functions: {
       transfer_inventory_stock: {
-        Args:
-          | Record<PropertyKey, never>
-          | {
-              p_source_id: string
-              p_target_store_id: string
-              p_item: string
-              p_unit: string
-              p_quantity: number
-              p_notes?: string
-              p_user_id?: string
-            }
-        Returns: undefined
+        Args: {
+          p_source_id: string
+          p_target_store_id: string
+          p_item: string
+          p_unit: string
+          p_quantity: number
+          p_notes?: string
+          p_user_id?: string
+        }
+        Returns: boolean
       }
     }
     Enums: {

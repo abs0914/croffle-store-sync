@@ -6,7 +6,6 @@ import { toast } from "sonner";
 // Fetch all inventory stock items for a store
 export const fetchInventoryStock = async (storeId: string): Promise<InventoryStock[]> => {
   try {
-    // Use type assertion to handle the inventory_stock table
     const { data, error } = await supabase
       .from('inventory_stock')
       .select("*")
@@ -14,11 +13,10 @@ export const fetchInventoryStock = async (storeId: string): Promise<InventorySto
       .order("item");
     
     if (error) {
-      console.error("Error fetching inventory stock:", error.message);
       throw new Error(error.message);
     }
     
-    return data as unknown as InventoryStock[];
+    return data as InventoryStock[];
   } catch (error) {
     console.error("Error fetching inventory stock:", error);
     toast.error("Failed to load inventory stock");
@@ -29,7 +27,6 @@ export const fetchInventoryStock = async (storeId: string): Promise<InventorySto
 // Fetch a single inventory stock item
 export const fetchInventoryStockItem = async (id: string): Promise<InventoryStock | null> => {
   try {
-    // Use type assertion to handle the inventory_stock table
     const { data, error } = await supabase
       .from('inventory_stock')
       .select("*")
@@ -37,11 +34,10 @@ export const fetchInventoryStockItem = async (id: string): Promise<InventoryStoc
       .single();
     
     if (error) {
-      console.error("Error fetching inventory stock item:", error.message);
       throw new Error(error.message);
     }
     
-    return data as unknown as InventoryStock;
+    return data as InventoryStock;
   } catch (error) {
     console.error("Error fetching inventory stock item:", error);
     toast.error("Failed to load inventory stock item details");

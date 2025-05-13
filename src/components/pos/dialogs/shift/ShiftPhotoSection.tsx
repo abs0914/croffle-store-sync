@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Camera, CameraOff, RefreshCcw } from "lucide-react";
 import ShiftCamera from "../../camera/ShiftCamera";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 interface ShiftPhotoSectionProps {
   photo: string | null;
@@ -19,77 +19,14 @@ export default function ShiftPhotoSection({
   setShowCameraView
 }: ShiftPhotoSectionProps) {
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isStable, setIsStable] = useState(false);
-  const initialRenderRef = useRef(true);
-  const showCameraTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mountCountRef = useRef(0);
   
-  // Mark component as stable after a delay
+  // Automatically show camera when component mounts - this is key to auto-starting camera
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsStable(true);
-      console.log("[ShiftPhotoSection] Component marked as stable");
-    }, 500); // Increased from 300ms to 500ms
-    
-    mountCountRef.current += 1;
-    console.log(`[ShiftPhotoSection] Mounting count: ${mountCountRef.current}`);
-    
-    return () => {
-      clearTimeout(timer);
-      if (showCameraTimerRef.current) {
-        clearTimeout(showCameraTimerRef.current);
-        showCameraTimerRef.current = null;
-      }
-    };
-  }, []);
-  
-  // Automatically show camera when component mounts, but with a longer delay
-  useEffect(() => {
-    if (!photo && isStable) {
-      // Only auto-show camera on initial render
-      if (initialRenderRef.current) {
-        console.log("[ShiftPhotoSection] Auto-showing camera after stability delay");
-        initialRenderRef.current = false;
-        
-        // Delay showing camera to ensure component is stable
-        showCameraTimerRef.current = setTimeout(() => {
-          setShowCameraView(true);
-          showCameraTimerRef.current = null;
-        }, 800); // Increased from 500ms to 800ms
-        
-        return () => {
-          if (showCameraTimerRef.current) {
-            clearTimeout(showCameraTimerRef.current);
-            showCameraTimerRef.current = null;
-          }
-        };
-      }
-    }
-    
-    // Clean up function - hide camera when component unmounts
-    return () => {
-      if (showCameraTimerRef.current) {
-        clearTimeout(showCameraTimerRef.current);
-        showCameraTimerRef.current = null;
-      }
-      console.log("[ShiftPhotoSection] Component unmounting, hiding camera");
-      setShowCameraView(false);
-    };
-  }, [setShowCameraView, photo, isStable]);
+    setShowCameraView(true);
+  }, [setShowCameraView]);
 
   const handleCameraError = (message: string) => {
     setCameraError(message);
-  };
-
-  const showCamera = () => {
-    console.log("[ShiftPhotoSection] Manual camera trigger clicked");
-    setCameraError(null);
-    
-    // Add delay before showing camera
-    showCameraTimerRef.current = setTimeout(() => {
-      setShowCameraView(true);
-      showCameraTimerRef.current = null;
-    }, 500);
   };
 
   return (
@@ -117,10 +54,7 @@ export default function ShiftPhotoSection({
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => {
-                console.log("[ShiftPhotoSection] Manually hiding camera view");
-                setShowCameraView(false);
-              }}
+              onClick={() => setShowCameraView(false)}
             >
               <CameraOff className="mr-2 h-4 w-4" />
               Cancel
@@ -140,7 +74,7 @@ export default function ShiftPhotoSection({
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={showCamera}
+                  onClick={() => setShowCameraView(true)}
                 >
                   <Camera className="mr-2 h-4 w-4" />
                   Retake
@@ -158,7 +92,7 @@ export default function ShiftPhotoSection({
             <div className="w-full">
               <Button 
                 variant="outline" 
-                onClick={showCamera}
+                onClick={() => setShowCameraView(true)} 
                 className="w-full"
               >
                 <Camera className="mr-2 h-4 w-4" />
@@ -172,7 +106,7 @@ export default function ShiftPhotoSection({
                     variant="link" 
                     size="sm" 
                     className="text-xs p-0 h-auto" 
-                    onClick={showCamera}
+                    onClick={() => setShowCameraView(true)}
                   >
                     <RefreshCcw className="mr-1 h-3 w-3" />
                     <span>Retry</span>
