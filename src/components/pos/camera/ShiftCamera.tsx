@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useCamera } from "@/hooks/camera";  
 import CameraContainer from "./CameraContainer";
@@ -11,9 +11,8 @@ interface ShiftCameraProps {
 }
 
 export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
-  const [initialized, setInitialized] = useState(false);
-  const initAttemptRef = useRef(0);
-  const initTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [attemptedInit, setAttemptedInit] = useState(false);
+  const initTimerRef = useState<NodeJS.Timeout | null>(null)[0];
   
   const { 
     videoRef,
@@ -28,83 +27,37 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     setCameraError,
     cameraInitialized,
     isStartingCamera,
-    capturePhoto
+    capturePhoto,
+    setShowCamera
   } = useCamera();
   
   // Clean up resources when component unmounts
   useEffect(() => {
     return () => {
       stopCamera();
-      setInitialized(false);
-      initAttemptRef.current = 0;
-      if (initTimerRef.current) {
-        clearTimeout(initTimerRef.current);
-        initTimerRef.current = null;
+      if (initTimerRef) {
+        clearTimeout(initTimerRef);
       }
     };
-  }, [stopCamera]);
+  }, [stopCamera, initTimerRef]);
   
-  // Try to initialize the camera as soon as component mounts
+  // Initialize camera as soon as component mounts
   useEffect(() => {
-    // Only attempt initialization once
-    if (initialized || isStartingCamera) return;
-    
-    console.log("[ShiftCamera] Starting camera initialization");
-    setInitialized(true);
-    
-    // Small delay to ensure DOM is ready
-    initTimerRef.current = setTimeout(() => {
-      initCamera();
-    }, 200);
-    
-    return () => {
-      if (initTimerRef.current) {
-        clearTimeout(initTimerRef.current);
-        initTimerRef.current = null;
-      }
-    };
-  }, [isStartingCamera, initialized]);
-
-  const initCamera = async () => {
-    try {
-      if (!videoRef.current) {
-        console.log("[ShiftCamera] Video element not ready yet, starting polling");
-        pollForVideoElement();
-        return;
-      }
+    if (!attemptedInit) {
+      console.log("[ShiftCamera] Auto-initializing camera on component mount");
+      setAttemptedInit(true);
+      setShowCamera(true);
       
-      console.log("[ShiftCamera] Starting camera with video element:", !!videoRef.current);
-      await startCamera();
-      console.log("[ShiftCamera] Camera started successfully");
-    } catch (error: any) {
-      console.error("[ShiftCamera] Initialization error:", error);
-      toast.error("Failed to access camera: " + error.message);
-      setCameraError(error.message || "Camera initialization failed");
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        startCamera().catch(error => {
+          console.error("[ShiftCamera] Auto-init failed:", error);
+          setCameraError(error.message || "Failed to initialize camera");
+        });
+      }, 100);
     }
-  };
-  
-  const pollForVideoElement = () => {
-    // Max retry count to avoid infinite loops
-    if (initAttemptRef.current >= 10) {
-      setCameraError("Failed to initialize camera after multiple attempts");
-      return;
-    }
-    
-    initAttemptRef.current++;
-    console.log(`[ShiftCamera] Polling attempt ${initAttemptRef.current} for video element`);
-    
-    if (videoRef.current) {
-      console.log("[ShiftCamera] Video element found, initializing camera");
-      startCamera().catch(error => {
-        console.error("[ShiftCamera] Camera start error:", error);
-        setCameraError(error.message);
-      });
-    } else {
-      // Try again after a delay
-      initTimerRef.current = setTimeout(pollForVideoElement, 300);
-    }
-  };
-  
+  }, [attemptedInit, startCamera, setShowCamera, setCameraError]);
+
   const handleCaptureClick = () => {
     const photoUrl = capturePhoto();
     if (photoUrl) {
@@ -117,8 +70,6 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   const resetPhoto = () => {
     setPhoto(null);
     onCapture(null);
-    setInitialized(false);
-    initAttemptRef.current = 0;
     if (onReset) {
       onReset();
     }
@@ -126,17 +77,17 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   
   const handleRetry = () => {
     stopCamera();
-    setInitialized(false);
-    initAttemptRef.current = 0;
-    if (initTimerRef.current) {
-      clearTimeout(initTimerRef.current);
-    }
+    setAttemptedInit(false);
     setCameraError(null);
     
     // Retry initialization after a short delay
-    initTimerRef.current = setTimeout(() => {
-      initCamera();
-    }, 200);
+    setTimeout(() => {
+      setShowCamera(true);
+      startCamera().catch(error => {
+        console.error("[ShiftCamera] Retry failed:", error);
+        setCameraError(error.message || "Failed to initialize camera");
+      });
+    }, 100);
   };
   
   return (
@@ -153,9 +104,8 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         logVideoState={logVideoState}
         handleCaptureClick={handleCaptureClick}
         resetPhoto={resetPhoto}
-        initCamera={() => { 
-          setInitialized(false); 
-          initAttemptRef.current = 0; 
+        initCamera={() => {
+          setAttemptedInit(false);
           handleRetry();
         }}
         handleRetry={handleRetry}

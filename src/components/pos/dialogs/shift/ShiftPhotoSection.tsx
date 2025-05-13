@@ -20,16 +20,13 @@ export default function ShiftPhotoSection({
 }: ShiftPhotoSectionProps) {
   const [cameraError, setCameraError] = useState<string | null>(null);
   
-  // Automatically show camera when component mounts if no photo is selected
+  // Automatically show camera when component mounts - this is key to auto-starting camera
   useEffect(() => {
-    if (!photo) {
-      setShowCameraView(true);
-    }
-  }, [photo, setShowCameraView]);
+    setShowCameraView(true);
+  }, [setShowCameraView]);
 
   const handleCameraError = (message: string) => {
     setCameraError(message);
-    // Don't automatically hide camera here to allow for retries
   };
 
   return (
