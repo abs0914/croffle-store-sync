@@ -16,6 +16,8 @@ export interface Customer {
   phone?: string;
   address?: string;
   loyaltyPoints?: number;
+  storeId?: string;
+  storeName?: string;
 }
 
 export interface Shift {
