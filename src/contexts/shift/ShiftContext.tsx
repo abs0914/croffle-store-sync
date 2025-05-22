@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Shift } from "@/types";
 import { useAuth } from "../AuthContext";
@@ -61,7 +62,10 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     
     try {
       console.log(`Starting shift for store: ${currentStore.id} with user: ${user.id}`);
-      console.log("Authorization status:", supabase?.auth?.session ? "Authenticated" : "Not authenticated");
+      
+      // Check authentication status using the correct API
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Authorization status:", sessionData.session ? "Authenticated" : "Not authenticated");
       
       const shift = await createShift(
         user.id, 
