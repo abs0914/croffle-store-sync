@@ -14,27 +14,51 @@ export interface ManagerSignupData {
 
 export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Manager | null> => {
   try {
-    // First create the auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        data: {
-          name: `${data.firstName} ${data.lastName}`,
-          role: 'manager'
-        },
+    // First check if user already exists
+    const { data: existingUsers, error: lookupError } = await supabase.auth.admin.listUsers({
+      filter: {
+        email: data.email
       }
     });
 
-    if (authError) {
-      console.error('Error creating auth user:', authError);
-      toast.error(`Failed to create manager account: ${authError.message}`);
+    if (lookupError) {
+      console.error('Error looking up user:', lookupError);
+      toast.error(`Error checking if user exists: ${lookupError.message}`);
       return null;
     }
 
-    if (!authData.user) {
-      toast.error('Failed to create user account');
-      return null;
+    let userId;
+
+    // If user doesn't exist, create them
+    if (!existingUsers || existingUsers.users.length === 0) {
+      // Create the auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: `${data.firstName} ${data.lastName}`,
+            role: 'manager'
+          },
+        }
+      });
+
+      if (authError) {
+        console.error('Error creating auth user:', authError);
+        toast.error(`Failed to create manager account: ${authError.message}`);
+        return null;
+      }
+
+      if (!authData.user) {
+        toast.error('Failed to create user account');
+        return null;
+      }
+
+      userId = authData.user.id;
+    } else {
+      // User exists, use the existing user ID
+      userId = existingUsers.users[0].id;
+      toast.info('User already exists, linking manager record to existing user');
     }
 
     // Then create the manager record linked to the user
@@ -48,7 +72,7 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
         contact_number: data.contactNumber,
         store_ids: data.storeIds,
         is_active: true,
-        user_id: authData.user.id  // Link the manager to the auth user
+        user_id: userId  // Link the manager to the auth user
       })
       .select()
       .single();
