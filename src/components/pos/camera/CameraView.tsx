@@ -1,5 +1,5 @@
 
-import { RefObject, useEffect, useRef, useState } from "react";
+import { RefObject, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import TimestampOverlay from "./TimestampOverlay";
 import CaptureButton from "./CaptureButton";
@@ -50,16 +50,18 @@ export default function CameraView({
   }, [videoRef, logVideoState]);
 
   return (
-    <div className="relative w-full h-full bg-black">
-      <AspectRatio ratio={2/3} className="w-full h-full">
-        <video 
-          ref={videoRef}
-          className="w-full h-full object-cover"
-          autoPlay
-          playsInline
-          muted
-        />
-      </AspectRatio>
+    <div className="relative w-full h-full bg-black overflow-hidden">
+      <div className="w-full h-full flex items-center justify-center">
+        <AspectRatio ratio={2/3} className="w-full max-h-full">
+          <video 
+            ref={videoRef}
+            className="w-full h-full object-cover"
+            autoPlay
+            playsInline
+            muted
+          />
+        </AspectRatio>
+      </div>
       
       {!cameraInitialized && isStartingCamera && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
