@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SalesReport } from "@/types/reports";
@@ -11,9 +10,10 @@ interface SalesReportViewProps {
     from: Date | undefined;
     to: Date | undefined;
   };
+  isAllStores?: boolean;
 }
 
-export function SalesReportView({ data, dateRange }: SalesReportViewProps) {
+export function SalesReportView({ data, dateRange, isAllStores }: SalesReportViewProps) {
   if (!data) {
     return (
       <Card>
@@ -34,7 +34,9 @@ export function SalesReportView({ data, dateRange }: SalesReportViewProps) {
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Sales Overview: {dateRangeText}</CardTitle>
+          <CardTitle className="text-lg">
+            Sales Overview: {isAllStores ? "All Stores - " : ""}{dateRangeText}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

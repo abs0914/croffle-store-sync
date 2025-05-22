@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ProfitLossReport } from "@/types/reports";
@@ -11,9 +10,10 @@ interface ProfitLossReportViewProps {
     from: Date | undefined;
     to: Date | undefined;
   };
+  isAllStores?: boolean;
 }
 
-export function ProfitLossReportView({ data, dateRange }: ProfitLossReportViewProps) {
+export function ProfitLossReportView({ data, dateRange, isAllStores }: ProfitLossReportViewProps) {
   if (!data) {
     return (
       <Card>
@@ -34,7 +34,9 @@ export function ProfitLossReportView({ data, dateRange }: ProfitLossReportViewPr
     <div className="space-y-6">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Profit & Loss Summary: {dateRangeText}</CardTitle>
+          <CardTitle className="text-lg">
+            Profit & Loss Summary: {isAllStores ? "All Stores - " : ""}{dateRangeText}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

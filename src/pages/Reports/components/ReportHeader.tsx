@@ -6,9 +6,10 @@ import { ReportType } from "..";
 interface ReportHeaderProps {
   storeId: string;
   reportType: ReportType;
+  isAllStores?: boolean;
 }
 
-export function ReportHeader({ storeId, reportType }: ReportHeaderProps) {
+export function ReportHeader({ storeId, reportType, isAllStores }: ReportHeaderProps) {
   const getReportTitle = (type: ReportType) => {
     switch (type) {
       case 'sales':
@@ -48,7 +49,9 @@ export function ReportHeader({ storeId, reportType }: ReportHeaderProps) {
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b">
       <div>
         <h1 className="text-2xl font-bold text-croffle-primary">{getReportTitle(reportType)}</h1>
-        <p className="text-sm text-muted-foreground">Generate and analyze your business data</p>
+        <p className="text-sm text-muted-foreground">
+          {isAllStores ? 'All Stores - ' : ''}Generate and analyze your business data
+        </p>
       </div>
       
       <div className="flex items-center gap-2">

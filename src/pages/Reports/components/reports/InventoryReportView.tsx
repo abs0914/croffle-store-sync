@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -14,12 +13,16 @@ interface InventoryReportViewProps {
     from: Date | undefined;
     to: Date | undefined;
   };
+  isAllStores?: boolean;
 }
+
 export function InventoryReportView({
   data,
-  dateRange
+  dateRange,
+  isAllStores
 }: InventoryReportViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  
   if (!data) {
     return <Card>
         <CardContent className="p-4">
@@ -29,17 +32,27 @@ export function InventoryReportView({
         </CardContent>
       </Card>;
   }
-  const filteredItems = data.inventoryItems.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  
+  const filteredItems = data.inventoryItems.filter(item => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
   const getStockStatusColor = (quantity: number, threshold: number) => {
     if (quantity <= 0) return "bg-red-50 text-red-600 border-red-200";
     if (quantity <= threshold) return "bg-yellow-50 text-yellow-600 border-yellow-200";
     return "bg-green-50 text-green-600 border-green-200";
   };
-  const dateRangeText = dateRange.from && dateRange.to ? `${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}` : 'Custom Range';
+  
+  const dateRangeText = dateRange.from && dateRange.to ? 
+    `${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}` : 
+    'Custom Range';
+  
   return <div className="space-y-6">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Menu Status: {dateRangeText}</CardTitle>
+          <CardTitle className="text-lg">
+            Menu Status: {isAllStores ? "All Stores - " : ""}{dateRangeText}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
