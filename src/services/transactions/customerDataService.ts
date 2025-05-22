@@ -11,9 +11,15 @@ export const searchCustomers = async (
   storeId?: string | null
 ): Promise<Customer[]> => {
   try {
+    // First, build the query
     let queryBuilder = supabase
       .from("customers")
-      .select("*");
+      .select(`
+        *,
+        stores:store_id (
+          name
+        )
+      `);
     
     // If storeId is provided, filter by store
     if (storeId) {
@@ -21,7 +27,9 @@ export const searchCustomers = async (
     }
     
     // Search by name or phone
-    queryBuilder = queryBuilder.or(`name.ilike.%${query}%,phone.ilike.%${query}%`);
+    if (query) {
+      queryBuilder = queryBuilder.or(`name.ilike.%${query}%,phone.ilike.%${query}%`);
+    }
     
     // Limit results and order by name
     const { data, error } = await queryBuilder
@@ -38,7 +46,9 @@ export const searchCustomers = async (
       email: customer.email || undefined,
       phone: customer.phone,
       address: undefined, // Not in the database schema
-      loyaltyPoints: 0 // Not in the database schema yet
+      loyaltyPoints: 0, // Not in the database schema yet
+      storeId: customer.store_id || undefined,
+      storeName: customer.stores?.name || undefined
     }));
   } catch (error) {
     console.error("Error searching customers:", error);
@@ -121,6 +131,13 @@ export const registerStoreCustomer = async (
   storeId: string
 ): Promise<Customer | null> => {
   try {
+    // Get the store name for the response
+    const { data: storeData } = await supabase
+      .from("stores")
+      .select("name")
+      .eq("id", storeId)
+      .single();
+
     // Insert customer with store_id
     const { data, error } = await supabase
       .from("customers")
@@ -143,7 +160,9 @@ export const registerStoreCustomer = async (
       email: data.email || undefined,
       phone: data.phone,
       address: customerData.address,
-      loyaltyPoints: 0
+      loyaltyPoints: 0,
+      storeId: storeId,
+      storeName: storeData?.name
     };
   } catch (error) {
     console.error("Error registering customer:", error);

@@ -21,7 +21,12 @@ export const fetchCustomerByPhone = async (phone: string): Promise<Customer | nu
   try {
     const { data, error } = await supabase
       .from("customers")
-      .select("*")
+      .select(`
+        *,
+        stores:store_id (
+          name
+        )
+      `)
       .eq("phone", phone)
       .single();
     
@@ -32,13 +37,15 @@ export const fetchCustomerByPhone = async (phone: string): Promise<Customer | nu
     if (!data) return null;
     
     // Map the database customer row to our Customer type
-    const customerData = data as CustomerRow;
+    const customerData = data as CustomerRow & { stores: { name: string } | null };
     
     return {
       id: customerData.id,
       name: customerData.name,
       email: customerData.email || undefined,
       phone: customerData.phone,
+      storeId: customerData.store_id || undefined,
+      storeName: customerData.stores?.name,
       // These properties might not exist in the database schema
       address: undefined, // We don't have this field in the DB
       loyaltyPoints: 0    // We don't have this field in the DB
@@ -55,6 +62,28 @@ export const fetchCustomerByPhone = async (phone: string): Promise<Customer | nu
  */
 export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { id?: string }): Promise<Customer | null> => {
   try {
+    const { currentStore } = await import("@/contexts/StoreContext").then(m => m.useStore());
+    const storeId = currentStore?.id || customer.storeId;
+
+    if (!storeId) {
+      toast.error("Store ID is required to create or update a customer");
+      return null;
+    }
+
+    // Get the store name for the response if possible
+    let storeName = customer.storeName;
+    if (storeId && !storeName) {
+      const { data: storeData } = await supabase
+        .from("stores")
+        .select("name")
+        .eq("id", storeId)
+        .single();
+      
+      if (storeData) {
+        storeName = storeData.name;
+      }
+    }
+
     if (customer.id) {
       // Update existing customer
       const { data, error } = await supabase
@@ -62,8 +91,8 @@ export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { 
         .update({
           name: customer.name,
           email: customer.email,
-          phone: customer.phone
-          // Not including address as it doesn't exist in the database
+          phone: customer.phone,
+          store_id: storeId // Ensure we keep the store_id when updating
         })
         .eq("id", customer.id)
         .select()
@@ -79,6 +108,8 @@ export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { 
         name: data.name,
         email: data.email || undefined,
         phone: data.phone,
+        storeId: data.store_id || undefined,
+        storeName,
         // These fields don't exist in the database schema
         address: customer.address, // Keep the value provided by the user
         loyaltyPoints: 0 // Default value since it doesn't exist in DB
@@ -90,8 +121,8 @@ export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { 
         .insert({
           name: customer.name,
           email: customer.email,
-          phone: customer.phone
-          // Not including address as it doesn't exist in the database
+          phone: customer.phone,
+          store_id: storeId // Set the store_id when creating
         })
         .select()
         .single();
@@ -106,6 +137,8 @@ export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { 
         name: data.name,
         email: data.email || undefined,
         phone: data.phone,
+        storeId: data.store_id || undefined,
+        storeName,
         // These fields don't exist in the database schema
         address: customer.address, // Keep the value provided by the user
         loyaltyPoints: 0 // Default value since it doesn't exist in DB

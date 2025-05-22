@@ -13,6 +13,9 @@ export default function CustomerDisplay({ customer, onClear }: CustomerDisplayPr
       <p className="font-medium">{customer.name}</p>
       <p className="text-sm text-muted-foreground">{customer.phone}</p>
       {customer.email && <p className="text-sm text-muted-foreground">{customer.email}</p>}
+      {customer.storeName && (
+        <p className="text-xs text-muted-foreground">Registered at: {customer.storeName}</p>
+      )}
       <Button 
         variant="ghost" 
         size="sm" 

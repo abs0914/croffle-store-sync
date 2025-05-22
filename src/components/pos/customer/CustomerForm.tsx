@@ -17,7 +17,8 @@ export default function CustomerForm({ initialData, onSubmit, onBack }: Customer
       name: initialData?.name || "",
       phone: initialData?.phone || "",
       email: initialData?.email || "",
-      address: initialData?.address || ""
+      address: initialData?.address || "",
+      storeId: initialData?.storeId
     }
   });
 
