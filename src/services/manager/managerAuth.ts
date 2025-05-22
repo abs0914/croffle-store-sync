@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Manager } from "@/types/manager";
@@ -15,10 +14,7 @@ export interface ManagerSignupData {
 export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Manager | null> => {
   try {
     // First check if user already exists
-    const { data: existingUsers, error: lookupError } = await supabase.auth.admin.listUsers({
-      // The filter param is not supported in the TypeScript definition
-      // We need to use a different approach to find existing users
-    });
+    const { data: existingUsers, error: lookupError } = await supabase.auth.admin.listUsers();
 
     if (lookupError) {
       console.error('Error looking up user:', lookupError);
@@ -28,7 +24,7 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
 
     // Find user with matching email if they exist
     const existingUser = existingUsers?.users.find(user => 
-      user.email?.toLowerCase() === data.email.toLowerCase()
+      user.email && user.email.toLowerCase() === data.email.toLowerCase()
     );
     
     let userId;
