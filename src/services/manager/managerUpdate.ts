@@ -5,7 +5,7 @@ import { ManagerFormData } from "@/types/manager";
 export async function updateManager({ id, ...data }: ManagerFormData & { id: string }) {
   try {
     const { error } = await supabase
-      .from('managers')
+      .from('managers' as any)
       .update({
         first_name: data.firstName,
         last_name: data.lastName,

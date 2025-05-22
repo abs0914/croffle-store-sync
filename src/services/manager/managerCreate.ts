@@ -4,7 +4,8 @@ import { ManagerFormData } from "@/types/manager";
 
 export async function createManager(data: ManagerFormData) {
   try {
-    const { error } = await supabase.from('managers').insert({
+    // We need to use the any type here since the managers table is not yet in the generated types
+    const { error } = await supabase.from('managers' as any).insert({
       first_name: data.firstName,
       last_name: data.lastName,
       contact_number: data.contactNumber,

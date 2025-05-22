@@ -246,6 +246,42 @@ export type Database = {
           },
         ]
       }
+      managers: {
+        Row: {
+          contact_number: string | null
+          created_at: string | null
+          email: string | null
+          first_name: string
+          id: string
+          is_active: boolean | null
+          last_name: string
+          store_ids: string[]
+          updated_at: string | null
+        }
+        Insert: {
+          contact_number?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean | null
+          last_name: string
+          store_ids?: string[]
+          updated_at?: string | null
+        }
+        Update: {
+          contact_number?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean | null
+          last_name?: string
+          store_ids?: string[]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       product_variations: {
         Row: {
           created_at: string | null

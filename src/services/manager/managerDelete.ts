@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export async function deleteManager(id: string) {
   try {
     const { error } = await supabase
-      .from('managers')
+      .from('managers' as any)
       .delete()
       .eq('id', id);
     

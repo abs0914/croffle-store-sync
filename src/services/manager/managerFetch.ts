@@ -5,7 +5,7 @@ import { Manager } from "@/types/manager";
 export async function fetchManagers(storeId?: string): Promise<Manager[]> {
   try {
     let query = supabase
-      .from('managers')
+      .from('managers' as any)
       .select('*');
 
     // If storeId is provided, filter by that store
@@ -21,7 +21,7 @@ export async function fetchManagers(storeId?: string): Promise<Manager[]> {
       throw error;
     }
     
-    return data.map(manager => ({
+    return data.map((manager: any) => ({
       id: manager.id,
       fullName: `${manager.first_name} ${manager.last_name}`,
       storeIds: manager.store_ids || [],

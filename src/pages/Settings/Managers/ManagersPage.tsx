@@ -7,10 +7,12 @@ import { Manager } from "@/types/manager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UserPlusIcon } from "lucide-react";
-import ManagersTable from "./components/ManagersTable";
-import AddManagerDialog from "./components/AddManagerDialog";
-import EditManagerDialog from "./components/EditManagerDialog";
-import DeleteManagerDialog from "./components/DeleteManagerDialog";
+import { 
+  ManagersTable, 
+  AddManagerDialog, 
+  EditManagerDialog, 
+  DeleteManagerDialog 
+} from "./components";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function ManagersPage() {
