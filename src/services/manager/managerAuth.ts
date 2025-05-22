@@ -16,9 +16,8 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
   try {
     // First check if user already exists
     const { data: existingUsers, error: lookupError } = await supabase.auth.admin.listUsers({
-      filter: {
-        email: data.email
-      }
+      // The filter param is not supported in the TypeScript definition
+      // We need to use a different approach to find existing users
     });
 
     if (lookupError) {
@@ -27,10 +26,15 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
       return null;
     }
 
+    // Find user with matching email if they exist
+    const existingUser = existingUsers?.users.find(user => 
+      user.email?.toLowerCase() === data.email.toLowerCase()
+    );
+    
     let userId;
 
     // If user doesn't exist, create them
-    if (!existingUsers || existingUsers.users.length === 0) {
+    if (!existingUser) {
       // Create the auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
@@ -57,7 +61,7 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
       userId = authData.user.id;
     } else {
       // User exists, use the existing user ID
-      userId = existingUsers.users[0].id;
+      userId = existingUser.id;
       toast.info('User already exists, linking manager record to existing user');
     }
 
