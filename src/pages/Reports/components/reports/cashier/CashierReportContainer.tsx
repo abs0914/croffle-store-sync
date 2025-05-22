@@ -9,7 +9,7 @@ import {
   CashierHourlyTab,
   CashierPerformanceTab,
   CashierAttendanceTab
-} from "./cashier";
+} from "./index";
 
 interface CashierReportContainerProps {
   storeId: string;
