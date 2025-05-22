@@ -65,8 +65,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Error fetching cashier store assignments:', error);
       }
+    } else if (role === 'manager') {
+      // For managers, fetch assigned stores from the managers table
+      try {
+        const { data } = await supabase
+          .from('managers')
+          .select('store_ids')
+          .eq('email', supabaseUser.email)
+          .single();
+        
+        if (data && data.store_ids) {
+          storeIds = data.store_ids;
+        }
+      } catch (error) {
+        console.error('Error fetching manager store assignments:', error);
+      }
     } else {
-      // For non-cashiers (admins, owners, managers), fetch from user_stores or give access to all
+      // For admins and owners, fetch from all stores
       try {
         const { data } = await supabase
           .from('stores')
@@ -94,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const mapUserRole = (email: string): UserRole => {
     if (email === 'admin@example.com') return 'admin';
     if (email === 'owner@example.com') return 'owner';
-    if (email === 'manager@example.com') return 'manager';
+    if (email.includes('manager') || email === 'rbsons.north.manager@croffle.com') return 'manager';
     if (email === 'marasabaras@croffle.com' || email === 'robinsons.north@croffle.com') return 'cashier';
     return 'cashier'; // Default role
   };

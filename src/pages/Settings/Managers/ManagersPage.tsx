@@ -17,8 +17,9 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function ManagersPage() {
   const { currentStore, stores } = useStore();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const isAdmin = hasPermission('admin');
+  const isManager = user?.role === 'manager';
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -47,6 +48,20 @@ export default function ManagersPage() {
     setSelectedManager(manager);
     setIsDeleteDialogOpen(true);
   };
+
+  // Manager should not access this page at all
+  if (isManager) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <h2 className="text-xl font-medium mb-2">Access Restricted</h2>
+            <p className="text-muted-foreground">You do not have permission to manage managers.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!currentStore && !isAdmin) {
     return (

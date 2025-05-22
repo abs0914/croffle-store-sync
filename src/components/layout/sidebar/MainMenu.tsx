@@ -66,7 +66,7 @@ const settingsItems = [
     name: "Cashiers",
     href: "/settings/cashiers",
     icon: UserCircle,
-    roles: ["admin", "owner"]
+    roles: ["admin", "owner", "manager"]
   },
   {
     name: "Managers",
