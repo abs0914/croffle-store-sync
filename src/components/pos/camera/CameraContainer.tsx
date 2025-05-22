@@ -36,7 +36,7 @@ export default function CameraContainer({
   return (
     <div 
       ref={containerRef}
-      className="w-full h-48 bg-black rounded-md relative overflow-hidden"
+      className="w-full h-80 bg-black rounded-md relative overflow-hidden" /* Increased height from h-48 to h-80 */
     >
       {showCamera ? (
         <CameraView 
