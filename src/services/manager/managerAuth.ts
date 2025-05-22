@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Manager } from "@/types/manager";
@@ -23,7 +24,8 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
     }
 
     // Find user with matching email if they exist
-    const existingUser = existingUsers?.users.find(user => 
+    // Fix: Add type assertions to ensure TypeScript recognizes the user object structure
+    const existingUser = existingUsers?.users.find((user: any) => 
       user.email && user.email.toLowerCase() === data.email.toLowerCase()
     );
     
