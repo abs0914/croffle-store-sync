@@ -9,12 +9,15 @@ import { useQuery } from "@tanstack/react-query";
 import StartShiftDialog from "./dialogs/StartShiftDialog";
 import EndShiftDialog from "./dialogs/EndShiftDialog";
 import { fetchCashierById } from "@/services/cashier";
+import { toast } from "sonner";
 
 export default function ShiftManager() {
   const { currentShift, startShift, endShift } = useShift();
   const { currentStore } = useStore();
   const [isStartShiftOpen, setIsStartShiftOpen] = useState(false);
   const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
+  const [isStartingShift, setIsStartingShift] = useState(false);
+  const [isEndingShift, setIsEndingShift] = useState(false);
 
   // Fetch cashier details if available
   const { data: cashier } = useQuery({
@@ -29,9 +32,33 @@ export default function ShiftManager() {
     photo?: string,
     cashierId?: string
   ) => {
-    const success = await startShift(startingCash, startInventoryCount, photo, cashierId);
-    if (success) {
-      setIsStartShiftOpen(false);
+    if (!currentStore) {
+      toast.error("Please select a store first");
+      return;
+    }
+    
+    try {
+      setIsStartingShift(true);
+      console.log("About to call startShift with", {
+        cashValue: startingCash, 
+        inventoryCount: Object.keys(startInventoryCount).length + " items",
+        hasPhoto: !!photo,
+        cashierId
+      });
+      
+      const success = await startShift(startingCash, startInventoryCount, photo, cashierId);
+      
+      if (success) {
+        setIsStartShiftOpen(false);
+        toast.success("Shift started successfully");
+      } else {
+        toast.error("Failed to start shift - please try again");
+      }
+    } catch (error) {
+      console.error("Error in handleStartShift:", error);
+      toast.error(`Failed to start shift: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsStartingShift(false);
     }
   };
 
@@ -42,9 +69,21 @@ export default function ShiftManager() {
   ) => {
     if (!currentShift) return;
     
-    const success = await endShift(endingCash, endInventoryCount, photo);
-    if (success) {
-      setIsEndShiftOpen(false);
+    try {
+      setIsEndingShift(true);
+      const success = await endShift(endingCash, endInventoryCount, photo);
+      
+      if (success) {
+        setIsEndShiftOpen(false);
+        toast.success("Shift ended successfully");
+      } else {
+        toast.error("Failed to end shift - please try again");
+      }
+    } catch (error) {
+      console.error("Error ending shift:", error);
+      toast.error(`Failed to end shift: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsEndingShift(false);
     }
   };
 
@@ -75,8 +114,9 @@ export default function ShiftManager() {
             <Button 
               className="w-full mt-2 bg-red-500 hover:bg-red-600"
               onClick={() => setIsEndShiftOpen(true)}
+              disabled={isEndingShift}
             >
-              End Shift
+              {isEndingShift ? "Processing..." : "End Shift"}
             </Button>
           </div>
         ) : (
@@ -93,8 +133,9 @@ export default function ShiftManager() {
             <Button 
               className="w-full"
               onClick={() => setIsStartShiftOpen(true)}
+              disabled={isStartingShift || !currentStore}
             >
-              Start Shift
+              {isStartingShift ? "Processing..." : "Start Shift"}
             </Button>
           </div>
         )}

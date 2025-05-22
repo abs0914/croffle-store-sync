@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Shift } from "@/types";
 import { ShiftRow } from "./types";
@@ -33,6 +32,11 @@ export async function createShift(
   cashierId?: string
 ): Promise<Shift | null> {
   try {
+    console.log("Creating shift with params:", { 
+      userId, storeId, startingCash, cashierId,
+      inventoryCount: Object.keys(startInventoryCount).length + " items"
+    });
+    
     const newShift = {
       user_id: userId,
       store_id: storeId,
@@ -50,7 +54,22 @@ export async function createShift(
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error creating shift:", error);
+      if (error.code === '42501' || error.message.includes('violates row-level security policy')) {
+        toast.error('Permission denied: You do not have access to create shifts');
+        return null;
+      }
+      throw error;
+    }
+    
+    if (!data) {
+      console.error("No data returned when creating shift");
+      toast.error('No data returned when creating shift');
+      return null;
+    }
+    
+    console.log("Shift created successfully:", data);
     
     // Type assertion to ShiftRow
     const shiftData = data as unknown as ShiftRow;

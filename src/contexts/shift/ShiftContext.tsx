@@ -5,6 +5,7 @@ import { useAuth } from "../AuthContext";
 import { useStore } from "../StoreContext";
 import { ShiftState } from "./types";
 import { createShift, closeShift, getActiveShift } from "./shiftUtils";
+import { toast } from "sonner";
 
 const initialState: ShiftState = {
   currentShift: null,
@@ -41,6 +42,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       setCurrentShift(shift);
     } catch (error) {
       console.error('Error fetching active shift:', error);
+      toast.error('Failed to fetch active shift');
     } finally {
       setIsLoading(false);
     }
@@ -53,23 +55,34 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     cashierId?: string
   ): Promise<boolean> => {
     if (!user || !currentStore) {
+      toast.error("Missing user or store information");
       return false;
     }
     
-    const shift = await createShift(
-      user.id, 
-      currentStore.id, 
-      startingCash, 
-      startInventoryCount,
-      startPhoto,
-      cashierId
-    );
-    
-    if (shift) {
-      setCurrentShift(shift);
-      return true;
+    try {
+      console.log(`Starting shift for store: ${currentStore.id} with user: ${user.id}`);
+      const shift = await createShift(
+        user.id, 
+        currentStore.id, 
+        startingCash, 
+        startInventoryCount,
+        startPhoto,
+        cashierId
+      );
+      
+      if (shift) {
+        setCurrentShift(shift);
+        toast.success("Shift started successfully");
+        return true;
+      } else {
+        toast.error("Failed to create shift");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error in startShift:", error);
+      toast.error(`Failed to start shift: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
     }
-    return false;
   };
   
   const endShift = async (
@@ -78,21 +91,31 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     endPhoto?: string
   ): Promise<boolean> => {
     if (!currentShift) {
+      toast.error("No active shift to end");
       return false;
     }
     
-    const success = await closeShift(
-      currentShift.id, 
-      endingCash, 
-      endInventoryCount,
-      endPhoto
-    );
-    
-    if (success) {
-      setCurrentShift(null);
-      return true;
+    try {
+      const success = await closeShift(
+        currentShift.id, 
+        endingCash, 
+        endInventoryCount,
+        endPhoto
+      );
+      
+      if (success) {
+        setCurrentShift(null);
+        toast.success("Shift ended successfully");
+        return true;
+      } else {
+        toast.error("Failed to end shift");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error ending shift:", error);
+      toast.error(`Failed to end shift: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
     }
-    return false;
   };
 
   return (

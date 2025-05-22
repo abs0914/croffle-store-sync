@@ -15,7 +15,7 @@ import { fetchActiveCashiers } from "@/services/cashier";
 import { Camera } from "lucide-react";
 import { getPreviousShiftEndingCash } from "@/contexts/shift/shiftUtils";
 import { useAuth } from "@/contexts/AuthContext";
-import { Cashier } from "@/types/cashier";
+import { toast } from "sonner";
 
 // Import the components
 import StartingCashSection from "./shift/StartingCashSection";
@@ -43,6 +43,7 @@ export default function StartShiftDialog({
   const [inventoryCount, setInventoryCount] = useState<Record<string, number>>({});
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [selectedCashierId, setSelectedCashierId] = useState<string | null>(null);
 
   // Fetch inventory items for this store
@@ -52,7 +53,7 @@ export default function StartShiftDialog({
     enabled: isOpen && !!storeId,
   });
 
-  // Fetch cashiers for this store - we'll use this to find the current cashier based on auth user ID
+  // Fetch cashiers for this store
   const { data: cashiers = [], isLoading: isLoadingCashiers } = useQuery({
     queryKey: ["active-cashiers", storeId],
     queryFn: () => storeId ? fetchActiveCashiers(storeId) : Promise.resolve([]),
@@ -79,6 +80,7 @@ export default function StartShiftDialog({
       setInventoryCount({});
       setShowCameraView(false);
       setSelectedCashierId(null);
+      setIsSubmitting(false);
     } else {
       // Automatically show camera view when dialog opens
       setShowCameraView(true);
@@ -105,8 +107,38 @@ export default function StartShiftDialog({
   };
 
   const handleSubmit = async () => {
-    await onStartShift(startingCash, inventoryCount, photo || undefined, selectedCashierId || undefined);
-    setShowCameraView(false);
+    if (!storeId) {
+      toast.error("No store selected");
+      return;
+    }
+    
+    if (!selectedCashierId) {
+      toast.error("Please select a cashier");
+      return;
+    }
+    
+    if (!photo) {
+      toast.error("Please take a photo of your cash drawer");
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      console.log("Starting shift with params:", {
+        startingCash,
+        inventoryCount: Object.keys(inventoryCount).length,
+        storeId,
+        cashierId: selectedCashierId
+      });
+      
+      await onStartShift(startingCash, inventoryCount, photo, selectedCashierId);
+      setShowCameraView(false);
+    } catch (error) {
+      console.error("Error starting shift:", error);
+      toast.error(`Failed to start shift: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -133,7 +165,7 @@ export default function StartShiftDialog({
             isLoading={isLoading}
           />
           
-          {/* Cashier Section - now shows current user */}
+          {/* Cashier Section */}
           <CashierSelectSection 
             cashiers={cashiers}
             selectedCashierId={selectedCashierId}
@@ -159,16 +191,22 @@ export default function StartShiftDialog({
         </div>
         
         <DialogFooter>
-          <Button variant="outline" onClick={handleCancel}>
+          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!photo || !selectedCashierId}
+            disabled={!photo || !selectedCashierId || isSubmitting}
             className="flex items-center"
           >
-            <Camera className="mr-2 h-4 w-4" />
-            Start Shift with Photo
+            {isSubmitting ? (
+              <>Submitting...</>
+            ) : (
+              <>
+                <Camera className="mr-2 h-4 w-4" />
+                Start Shift with Photo
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
