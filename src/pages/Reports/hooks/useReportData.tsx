@@ -32,7 +32,14 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
         
         switch (reportType) {
           case 'sales':
-            result = await fetchSalesReport(storeId, from, to, isAllStores);
+            // Pass isAllStores as the 4th parameter only if the service supports it
+            // For now, we'll use a workaround by using 'all' as the storeId when isAllStores is true
+            result = await fetchSalesReport(
+              isAllStores ? 'all' : storeId, 
+              from, 
+              to
+            );
+            
             // Check if this is sample data
             isSampleData = result && result.salesByDate?.length > 0 && 
                           result.salesByDate.every(d => d.amount % 10 === 0);
@@ -53,13 +60,21 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
             }
             break;
           case 'inventory':
-            result = await fetchInventoryReport(storeId, from, to, isAllStores);
+            result = await fetchInventoryReport(
+              isAllStores ? 'all' : storeId, 
+              from, 
+              to
+            );
             // Check for sample data markers
             isSampleData = result && result.inventoryItems?.length > 0 && 
                           result.inventoryItems.every(item => item.soldUnits % 5 === 0);
             break;
           case 'profit_loss':
-            result = await fetchProfitLossReport(storeId, from, to, isAllStores);
+            result = await fetchProfitLossReport(
+              isAllStores ? 'all' : storeId, 
+              from, 
+              to
+            );
             // Check for sample data markers
             isSampleData = result && result.profitByDate?.length > 0 &&
                           result.profitByDate.every(d => d.profit % 5 === 0);
@@ -74,12 +89,20 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
             }
             break;
           case 'stock':
-            result = await fetchStockReport(storeId, from, to, isAllStores);
+            result = await fetchStockReport(
+              isAllStores ? 'all' : storeId, 
+              from, 
+              to
+            );
             isSampleData = result && result.stockItems?.length > 0 &&
                           result.stockItems.every(item => item.initialStock % 10 === 0);
             break;
           case 'cashier':
-            result = await fetchCashierReport(storeId, from, to, isAllStores);
+            result = await fetchCashierReport(
+              isAllStores ? 'all' : storeId, 
+              from, 
+              to
+            );
             isSampleData = result && result.cashiers?.length > 0 && 
                           result.cashiers.every(c => c.transactionCount % 5 === 0);
             break;
