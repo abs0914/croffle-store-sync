@@ -19,23 +19,23 @@ const initialState: ShiftState = {
 const ShiftContext = createContext<ShiftState>(initialState);
 
 export function ShiftProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { currentStore } = useStore();
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch active shift when user or store changes
   useEffect(() => {
-    if (user && currentStore) {
+    if (user && currentStore && session) {
       fetchActiveShift();
     } else {
       setCurrentShift(null);
       setIsLoading(false);
     }
-  }, [user, currentStore]);
+  }, [user, currentStore, session]);
 
   const fetchActiveShift = async () => {
-    if (!user || !currentStore) return;
+    if (!user || !currentStore || !session) return;
     
     try {
       setIsLoading(true);
@@ -62,9 +62,9 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     
     try {
       // Verify authentication status before attempting to create a shift
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
       
-      if (!session) {
+      if (!currentSession) {
         toast.error("Authentication required - please log in again");
         return false;
       }
@@ -93,7 +93,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       
       // Provide more specific error messages based on the error type
       if (error instanceof Error) {
-        if (error.message.includes('JWT')) {
+        if (error.message.includes('JWT') || error.message.includes('auth') || error.message.includes('token')) {
           toast.error("Authentication expired - please log in again");
         } else if (error.message.includes('permission denied') || error.message.includes('403')) {
           toast.error("Permission denied - you don't have access to create shifts");
@@ -119,6 +119,14 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     }
     
     try {
+      // Verify authentication status before attempting to end the shift
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      if (!currentSession) {
+        toast.error("Authentication required - please log in again");
+        return false;
+      }
+      
       const success = await closeShift(
         currentShift.id, 
         endingCash, 
@@ -137,10 +145,16 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Error ending shift:", error);
       
-      if (error instanceof Error && error.message.includes('permission denied')) {
-        toast.error("Permission denied - you don't have access to end this shift");
+      if (error instanceof Error) {
+        if (error.message.includes('JWT') || error.message.includes('auth') || error.message.includes('token')) {
+          toast.error("Authentication expired - please log in again");
+        } else if (error.message.includes('permission denied')) {
+          toast.error("Permission denied - you don't have access to end this shift");
+        } else {
+          toast.error(`Failed to end shift: ${error.message}`);
+        }
       } else {
-        toast.error(`Failed to end shift: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        toast.error("Failed to end shift: unknown error");
       }
       
       return false;

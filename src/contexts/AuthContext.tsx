@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from "react";
 import { User, UserRole, Session } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,6 +31,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const authErrorHandledRef = useRef(false);
+  
+  // Clear any existing timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // Map Supabase auth user to our app's User type
   const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
@@ -89,10 +99,92 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return 'cashier'; // Default role
   };
 
+  // Setup cross-tab session synchronization through localStorage events
   useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key?.includes('supabase.auth') && event.newValue !== event.oldValue) {
+        console.log('Auth state changed in another tab, synchronizing...');
+        
+        // Refresh the session state from storage
+        supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+          if (currentSession?.user) {
+            console.log('Session found in another tab, updating local state');
+            const mappedUser = await mapSupabaseUser(currentSession.user);
+            setSession(currentSession);
+            setUser(mappedUser);
+          } else if (session) {
+            // User logged out in another tab
+            console.log('User logged out in another tab');
+            setSession(null);
+            setUser(null);
+          }
+        }).catch(error => {
+          console.error("Error syncing session across tabs:", error);
+        });
+      }
+    };
+
+    // Add storage event listener for cross-tab synchronization
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [session]);
+
+  // Handle token refresh and session recovery
+  const setupTokenRefresh = (currentSession: Session | null) => {
+    // Clear any existing timeout
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    
+    if (currentSession?.expires_at) {
+      const expiresAt = currentSession.expires_at * 1000; // Convert to milliseconds
+      const now = Date.now();
+      
+      // Calculate time until token needs refresh (5 minutes before expiry)
+      const timeUntilRefresh = Math.max(0, expiresAt - now - 5 * 60 * 1000);
+      
+      console.log(`Session token will refresh in ${Math.floor(timeUntilRefresh / 60000)} minutes`);
+      
+      // Set timeout to refresh token before it expires
+      refreshTimeoutRef.current = setTimeout(async () => {
+        console.log('Refreshing auth token...');
+        try {
+          const { data, error } = await supabase.auth.refreshSession();
+          
+          if (error) {
+            console.error('Error refreshing token:', error);
+            if (!authErrorHandledRef.current) {
+              authErrorHandledRef.current = true;
+              toast.error('Your session has expired. Please log in again.');
+              setSession(null);
+              setUser(null);
+            }
+          } else if (data.session) {
+            console.log('Token refreshed successfully');
+            setSession(data.session);
+            setupTokenRefresh(data.session);
+          }
+        } catch (err) {
+          console.error('Exception during token refresh:', err);
+        }
+      }, timeUntilRefresh);
+    }
+  };
+
+  // Main auth initialization effect
+  useEffect(() => {
+    // Reset error handling flag on mount
+    authErrorHandledRef.current = false;
+    setIsLoading(true);
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        console.log(`Auth state changed: ${event}`);
+        
         // Only update session state synchronously
         setSession(newSession);
         
@@ -102,6 +194,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const mappedUser = await mapSupabaseUser(newSession.user);
             setUser(mappedUser);
             setIsLoading(false);
+            
+            // Setup token refresh for the new session
+            setupTokenRefresh(newSession);
           }, 0);
         } else {
           setUser(null);
@@ -112,10 +207,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-      setSession(currentSession);
       if (currentSession?.user) {
+        console.log('Existing session found');
         const mappedUser = await mapSupabaseUser(currentSession.user);
+        setSession(currentSession);
         setUser(mappedUser);
+        
+        // Setup token refresh
+        setupTokenRefresh(currentSession);
+      } else {
+        console.log('No existing session found');
       }
       setIsLoading(false);
     }).catch(error => {
@@ -123,10 +224,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     });
 
+    // Clean up on unmount
     return () => {
       subscription.unsubscribe();
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
     };
   }, []);
+
+  // Handle network status changes
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('Network connection restored');
+      
+      // Check if we have a user but need to refresh the session
+      if (user && !session) {
+        console.log('Attempting to restore session after network reconnection');
+        supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+          if (currentSession) {
+            setSession(currentSession);
+            setupTokenRefresh(currentSession);
+          }
+        });
+      }
+    };
+    
+    const handleOffline = () => {
+      console.log('Network connection lost');
+      // We keep the current user/session state when offline
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [user, session]);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -144,6 +280,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const mappedUser = await mapSupabaseUser(data.user);
         setUser(mappedUser);
         setSession(data.session);
+        
+        // Setup token refresh
+        setupTokenRefresh(data.session);
       }
     } catch (error: any) {
       console.error("Login error:", error);
@@ -161,8 +300,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         throw error;
       }
+      
+      // Clear any token refresh timeout
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+      
       setUser(null);
       setSession(null);
+      
+      // Reset error handling flag on logout
+      authErrorHandledRef.current = false;
+      
     } catch (error: any) {
       console.error("Logout error:", error);
       toast.error(error.message || "Failed to logout");
