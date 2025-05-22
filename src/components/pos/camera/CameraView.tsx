@@ -4,6 +4,7 @@ import { useStore } from "@/contexts/StoreContext";
 import TimestampOverlay from "./TimestampOverlay";
 import CaptureButton from "./CaptureButton";
 import { Spinner } from "@/components/ui/spinner";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface CameraViewProps {
   videoRef: RefObject<HTMLVideoElement>;
@@ -50,13 +51,15 @@ export default function CameraView({
 
   return (
     <div className="relative w-full h-full bg-black">
-      <video 
-        ref={videoRef}
-        className="w-full h-full object-cover"
-        autoPlay
-        playsInline
-        muted
-      />
+      <AspectRatio ratio={16/9} className="w-full h-full">
+        <video 
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          autoPlay
+          playsInline
+          muted
+        />
+      </AspectRatio>
       
       {!cameraInitialized && isStartingCamera && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
