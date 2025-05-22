@@ -7,7 +7,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -20,6 +19,7 @@ import {
 import ManagerFormFields from "./ManagerFormFields";
 import { useManagerForm } from "../hooks/useManagerForm";
 import AuthFormFields from "@/components/shared/AuthFormFields";
+import { resetManagerPassword } from "@/services/manager";
 
 interface EditManagerDialogProps {
   isOpen: boolean;
@@ -65,18 +65,13 @@ export default function EditManagerDialog({
     setIsResettingPassword(true);
     
     try {
-      // We can't directly query auth.users, so we'll use admin API instead
-      const { error } = await supabase.auth.admin.updateUserById(
-        // We don't have the user ID directly, so we'll need to use the password reset flow
-        manager.id,  // This works if manager.id is the auth user id
-        { password: newPassword }
-      );
+      const success = await resetManagerPassword(manager.id, newPassword);
       
-      if (error) throw error;
-      
-      toast.success("Password reset successfully");
-      setNewPassword("");
-      setShowPasswordSection(false);
+      if (success) {
+        toast.success("Password reset successfully");
+        setNewPassword("");
+        setShowPasswordSection(false);
+      }
     } catch (error: any) {
       console.error("Error resetting password:", error);
       toast.error(`Failed to reset password: ${error.message}`);

@@ -38,6 +38,7 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
     }
 
     // Then create the manager record linked to the user
+    // Use the service role client for this operation to bypass RLS
     const { data: managerData, error: managerError } = await supabase
       .from('managers')
       .insert({
@@ -46,7 +47,8 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
         email: data.email,
         contact_number: data.contactNumber,
         store_ids: data.storeIds,
-        is_active: true
+        is_active: true,
+        user_id: authData.user.id  // Link the manager to the auth user
       })
       .select()
       .single();
