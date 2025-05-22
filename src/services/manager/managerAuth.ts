@@ -32,51 +32,48 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
       if (authError.message.includes('already registered')) {
         toast.info('User already exists, linking manager record to existing user');
         
-        // Get the existing user ID through a lookup
-        const { data: userData, error: userError } = await supabase
+        // Get the existing manager record through a lookup by email
+        const { data: managerData, error: managerLookupError } = await supabase
           .from('managers')
-          .select('user_id')
+          .select('*')
           .eq('email', data.email)
           .single();
         
-        if (userError || !userData?.user_id) {
-          console.error('Error finding existing user:', userError);
-          toast.error(`Unable to link to existing user: ${userError?.message || 'User not found'}`);
+        if (managerLookupError) {
+          console.error('Error finding existing manager:', managerLookupError);
+          toast.error(`Unable to link to existing user: ${managerLookupError?.message || 'Manager not found'}`);
           return null;
         }
         
-        // Use the existing user ID
-        const userId = userData.user_id;
-        
-        // Update the existing manager record or create a new one
-        const { data: managerData, error: managerError } = await supabase
+        // Update the existing manager record
+        const { data: updatedManagerData, error: managerUpdateError } = await supabase
           .from('managers')
-          .upsert({
+          .update({
             first_name: data.firstName,
             last_name: data.lastName,
             email: data.email,
             contact_number: data.contactNumber,
             store_ids: data.storeIds,
-            is_active: true,
-            user_id: userId
+            is_active: true
           })
+          .eq('email', data.email)
           .select()
           .single();
         
-        if (managerError) {
-          console.error('Error updating manager:', managerError);
-          toast.error(`Failed to update manager record: ${managerError.message}`);
+        if (managerUpdateError) {
+          console.error('Error updating manager:', managerUpdateError);
+          toast.error(`Failed to update manager record: ${managerUpdateError.message}`);
           return null;
         }
         
         toast.success('Manager updated successfully');
         return {
-          id: managerData.id,
-          fullName: `${managerData.first_name} ${managerData.last_name}`,
-          email: managerData.email,
-          contactNumber: managerData.contact_number,
-          storeIds: managerData.store_ids,
-          isActive: managerData.is_active
+          id: updatedManagerData.id,
+          fullName: `${updatedManagerData.first_name} ${updatedManagerData.last_name}`,
+          email: updatedManagerData.email,
+          contactNumber: updatedManagerData.contact_number,
+          storeIds: updatedManagerData.store_ids,
+          isActive: updatedManagerData.is_active
         };
       } else {
         // If the error is not about an existing user, it's a genuine error
@@ -104,8 +101,7 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
         email: data.email,
         contact_number: data.contactNumber,
         store_ids: data.storeIds,
-        is_active: true,
-        user_id: userId  // Link the manager to the auth user
+        is_active: true
       })
       .select()
       .single();
@@ -135,32 +131,30 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
 // Update the reset manager password function
 export const resetManagerPassword = async (managerId: string, newPassword: string): Promise<boolean> => {
   try {
-    // Instead of directly accessing auth.users, we'll use a different approach
-    // First, get the user_id associated with this manager
+    // Get the manager's email
     const { data: managerData, error: managerError } = await supabase
       .from('managers')
-      .select('user_id')
+      .select('email')
       .eq('id', managerId)
       .single();
     
-    if (managerError || !managerData?.user_id) {
+    if (managerError || !managerData?.email) {
       throw new Error(managerError?.message || 'Manager not found');
     }
     
     // Generate a password reset link for the user
-    const { error } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email: managerData.email,
-      options: {
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      managerData.email,
+      {
         redirectTo: window.location.origin + '/password-reset'
       }
-    });
+    );
     
     if (error) {
       throw error;
     }
     
-    toast.success('Password reset link has been generated and sent to the manager\'s email');
+    toast.success('Password reset link has been sent to the manager\'s email');
     return true;
   } catch (error: any) {
     console.error('Error resetting manager password:', error);

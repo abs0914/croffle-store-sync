@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Manager } from "@/types/manager";
 import { Store } from "@/types/store";
@@ -56,6 +55,7 @@ export default function EditManagerDialog({
     setIsResettingPassword(true);
     
     try {
+      // We now use an empty string for newPassword as we're using email reset flow
       const success = await resetManagerPassword(manager.id, "");
       
       if (success) {
