@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Shift } from "@/types";
 import { ShiftRow } from "./types";
@@ -32,6 +33,12 @@ export async function createShift(
   cashierId?: string
 ): Promise<Shift | null> {
   try {
+    // Verify authentication status
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('Authentication required');
+    }
+    
     console.log("Creating shift with params:", { 
       userId, storeId, startingCash, cashierId,
       inventoryCount: Object.keys(startInventoryCount).length + " items"
@@ -48,8 +55,6 @@ export async function createShift(
       cashier_id: cashierId || null
     };
     
-    console.log("Sending request to create shift with payload:", JSON.stringify(newShift));
-    
     const { data, error } = await supabase
       .from('shifts')
       .insert(newShift)
@@ -59,7 +64,6 @@ export async function createShift(
     if (error) {
       console.error("Supabase error creating shift:", error);
       
-      // Handle specific error cases
       if (error.code === '42501' || error.message.includes('permission denied') || error.message.includes('violates row-level security policy')) {
         console.error("Permission denied error details:", {
           code: error.code,
@@ -67,8 +71,7 @@ export async function createShift(
           details: error.details,
           hint: error.hint
         });
-        toast.error('Permission denied: You do not have access to create shifts');
-        return null;
+        throw new Error('Permission denied: You do not have access to create shifts');
       }
       
       throw error;
@@ -76,8 +79,7 @@ export async function createShift(
     
     if (!data) {
       console.error("No data returned when creating shift");
-      toast.error('No data returned when creating shift');
-      return null;
+      throw new Error('No data returned when creating shift');
     }
     
     console.log("Shift created successfully:", data);
@@ -87,8 +89,8 @@ export async function createShift(
     return mapShiftRowToShift(shiftData);
   } catch (error) {
     console.error('Error creating shift:', error);
-    toast.error('Failed to create shift. Please check your permissions and try again.');
-    return null;
+    // Let the calling function handle the error
+    throw error;
   }
 }
 
@@ -100,6 +102,12 @@ export async function closeShift(
   endPhoto?: string
 ): Promise<boolean> {
   try {
+    // Verify authentication status
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('Authentication required');
+    }
+    
     const { error } = await supabase
       .from('shifts')
       .update({
@@ -115,8 +123,8 @@ export async function closeShift(
     return true;
   } catch (error) {
     console.error('Error closing shift:', error);
-    toast.error('Failed to close shift');
-    return false;
+    // Let the calling function handle the error
+    throw error;
   }
 }
 
@@ -145,8 +153,7 @@ export async function getActiveShift(
     return null;
   } catch (error) {
     console.error('Error fetching active shift:', error);
-    toast.error('Failed to fetch active shift');
-    return null;
+    throw error;
   }
 }
 

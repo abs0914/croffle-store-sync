@@ -61,11 +61,15 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     }
     
     try {
-      console.log(`Starting shift for store: ${currentStore.id} with user: ${user.id}`);
+      // Verify authentication status before attempting to create a shift
+      const { data: { session } } = await supabase.auth.getSession();
       
-      // Check authentication status using the correct API
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log("Authorization status:", sessionData.session ? "Authenticated" : "Not authenticated");
+      if (!session) {
+        toast.error("Authentication required - please log in again");
+        return false;
+      }
+      
+      console.log(`Starting shift for store: ${currentStore.id} with user: ${user.id}`);
       
       const shift = await createShift(
         user.id, 
@@ -81,13 +85,25 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         toast.success("Shift started successfully");
         return true;
       } else {
-        toast.error("Failed to create shift - check database permissions");
-        console.error("Create shift returned null");
+        toast.error("Failed to create shift - check your permissions");
         return false;
       }
     } catch (error) {
       console.error("Error in startShift:", error);
-      toast.error(`Failed to start shift: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Provide more specific error messages based on the error type
+      if (error instanceof Error) {
+        if (error.message.includes('JWT')) {
+          toast.error("Authentication expired - please log in again");
+        } else if (error.message.includes('permission denied') || error.message.includes('403')) {
+          toast.error("Permission denied - you don't have access to create shifts");
+        } else {
+          toast.error(`Failed to start shift: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to start shift - unknown error");
+      }
+      
       return false;
     }
   };
@@ -120,7 +136,13 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Error ending shift:", error);
-      toast.error(`Failed to end shift: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      if (error instanceof Error && error.message.includes('permission denied')) {
+        toast.error("Permission denied - you don't have access to end this shift");
+      } else {
+        toast.error(`Failed to end shift: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      
       return false;
     }
   };
