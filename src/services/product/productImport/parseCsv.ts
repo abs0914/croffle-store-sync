@@ -20,6 +20,14 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
         } else if (header === 'stock_quantity') {
           // Convert string numbers to actual numbers
           product[header] = parseFloat(values[i]);
+        } else if (header === 'has_variations') {
+          // Convert string boolean to actual boolean
+          product[header] = values[i].toLowerCase() === 'true';
+        } else if (header === 'regular_price' || header === 'mini_price' || header === 'overload_price') {
+          // Convert string prices to numbers if they exist
+          if (values[i]) {
+            product[header] = parseFloat(values[i]);
+          }
         } else {
           product[header] = values[i];
         }
@@ -45,8 +53,20 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
           // Use the actual category ID from the database
           product.category_id = categoryData.id;
         } else {
-          // If category doesn't exist, remove the category_id to use default
-          delete product.category_id;
+          // If category doesn't exist, create it
+          const { data: newCategory } = await supabase
+            .from('categories')
+            .insert({
+              name: categoryName,
+              store_id: storeId,
+              is_active: true
+            })
+            .select()
+            .single();
+            
+          if (newCategory) {
+            product.category_id = newCategory.id;
+          }
         }
       }
       
@@ -56,7 +76,7 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
         .select('id, stock_quantity')
         .eq('sku', product.sku)
         .eq('store_id', storeId)
-        .single();
+        .maybeSingle();
       
       if (existingProduct) {
         await processExistingProduct(existingProduct, product, storeId);
@@ -73,14 +93,15 @@ export const parseProductsCSV = async (csvData: string, storeId: string): Promis
 
 // Helper function for processing existing products
 const processExistingProduct = async (existingProduct: any, product: any, storeId: string) => {
-  // Update existing product stock
-  const newQuantity = existingProduct.stock_quantity + (product.stock_quantity || 0);
+  // Update existing product
   await supabase
     .from('products')
     .update({ 
-      stock_quantity: newQuantity,
+      stock_quantity: product.stock_quantity || 0,
       updated_at: new Date().toISOString(),
-      category_id: product.category_id || undefined // Update category if provided
+      category_id: product.category_id || undefined, // Update category if provided
+      is_active: product.is_active !== undefined ? product.is_active : true,
+      price: product.regular_price || undefined
     })
     .eq('id', existingProduct.id);
   
@@ -90,17 +111,17 @@ const processExistingProduct = async (existingProduct: any, product: any, storeI
     .insert({
       product_id: existingProduct.id,
       store_id: storeId,
-      transaction_type: 'purchase',
-      quantity: product.stock_quantity,
+      transaction_type: 'import',
+      quantity: product.stock_quantity - existingProduct.stock_quantity,
       previous_quantity: existingProduct.stock_quantity,
-      new_quantity: newQuantity,
+      new_quantity: product.stock_quantity,
       created_by: 'system',
       notes: 'CSV Import'
     });
     
-  // Check if size variations need to be created
-  if (product.has_variations === 'true' && product.name && product.sku) {
-    await createProductVariations(existingProduct.id, product, storeId);
+  // Check if size variations need to be created or updated
+  if (product.has_variations === true) {
+    await createOrUpdateProductVariations(existingProduct.id, product, storeId);
   }
 };
 
@@ -144,54 +165,110 @@ const createNewProduct = async (product: any, storeId: string) => {
     });
     
   // Check if size variations need to be created
-  if (product.has_variations === 'true') {
-    await createProductVariations(newProduct.id, product, storeId);
+  if (product.has_variations === true) {
+    await createOrUpdateProductVariations(newProduct.id, product, storeId);
   }
 };
 
-// Helper function for creating product variations
-const createProductVariations = async (productId: string, product: any, storeId: string) => {
+// Helper function for creating or updating product variations
+const createOrUpdateProductVariations = async (productId: string, product: any, storeId: string) => {
+  // Calculate stock distribution if not specifically provided
   const stockPerVariation = Math.floor(product.stock_quantity / 3);
   
-  // Create regular size variation
+  // Get existing variations if any
+  const { data: existingVariations } = await supabase
+    .from('product_variations')
+    .select('id, size, sku')
+    .eq('product_id', productId);
+  
+  // Create/update regular size variation
   const regularSku = `${product.sku}-REG`;
-  await supabase
-    .from('product_variations')
-    .upsert({
-      name: `${product.name} Regular`,
-      sku: regularSku,
-      price: product.regular_price || 0,
-      stock_quantity: stockPerVariation,
-      is_active: product.is_active,
-      product_id: productId,
-      size: 'regular'
-    });
+  const existingRegular = existingVariations?.find(v => v.size === 'regular' || v.sku === regularSku);
+  
+  if (existingRegular) {
+    // Update existing variation
+    await supabase
+      .from('product_variations')
+      .update({
+        price: product.regular_price || 0,
+        stock_quantity: stockPerVariation,
+        is_active: product.is_active
+      })
+      .eq('id', existingRegular.id);
+  } else {
+    // Create new variation
+    await supabase
+      .from('product_variations')
+      .insert({
+        name: `${product.name} Regular`,
+        sku: regularSku,
+        price: product.regular_price || 0,
+        stock_quantity: stockPerVariation,
+        is_active: product.is_active,
+        product_id: productId,
+        size: 'regular'
+      });
+  }
     
-  // Create mini size variation
-  const miniSku = `${product.sku}-MINI`;
-  await supabase
-    .from('product_variations')
-    .upsert({
-      name: `${product.name} Mini`,
-      sku: miniSku,
-      price: product.mini_price || (product.regular_price * 0.7) || 0,
-      stock_quantity: stockPerVariation,
-      is_active: product.is_active,
-      product_id: productId,
-      size: 'mini'
-    });
+  // Create/update mini size variation if mini_price exists
+  if (product.mini_price) {
+    const miniSku = `${product.sku}-MINI`;
+    const existingMini = existingVariations?.find(v => v.size === 'mini' || v.sku === miniSku);
     
-  // Create croffle overload variation
-  const overloadSku = `${product.sku}-OVR`;
-  await supabase
-    .from('product_variations')
-    .upsert({
-      name: `${product.name} Croffle Overload`,
-      sku: overloadSku,
-      price: product.overload_price || (product.regular_price * 1.3) || 0,
-      stock_quantity: stockPerVariation,
-      is_active: product.is_active,
-      product_id: productId,
-      size: 'croffle-overload'
-    });
+    if (existingMini) {
+      // Update existing variation
+      await supabase
+        .from('product_variations')
+        .update({
+          price: product.mini_price,
+          stock_quantity: stockPerVariation,
+          is_active: product.is_active
+        })
+        .eq('id', existingMini.id);
+    } else {
+      // Create new variation
+      await supabase
+        .from('product_variations')
+        .insert({
+          name: `${product.name} Mini`,
+          sku: miniSku,
+          price: product.mini_price,
+          stock_quantity: stockPerVariation,
+          is_active: product.is_active,
+          product_id: productId,
+          size: 'mini'
+        });
+    }
+  }
+    
+  // Create/update croffle overload variation if overload_price exists
+  if (product.overload_price) {
+    const overloadSku = `${product.sku}-OVR`;
+    const existingOverload = existingVariations?.find(v => v.size === 'croffle-overload' || v.sku === overloadSku);
+    
+    if (existingOverload) {
+      // Update existing variation
+      await supabase
+        .from('product_variations')
+        .update({
+          price: product.overload_price,
+          stock_quantity: stockPerVariation,
+          is_active: product.is_active
+        })
+        .eq('id', existingOverload.id);
+    } else {
+      // Create new variation
+      await supabase
+        .from('product_variations')
+        .insert({
+          name: `${product.name} Croffle Overload`,
+          sku: overloadSku,
+          price: product.overload_price,
+          stock_quantity: stockPerVariation,
+          is_active: product.is_active,
+          product_id: productId,
+          size: 'croffle-overload'
+        });
+    }
+  }
 };

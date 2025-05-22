@@ -1,10 +1,19 @@
 
 import { useCallback } from "react";
-import { Product } from "@/types";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { 
+  parseProductsCSV,
+  generateProductsCSV,
+  generateProductImportTemplate
+} from "@/services/productService";
+import { useStore } from "@/contexts/StoreContext";
 
-export function useProductExportImport(products: Product[], storeId: string | null, refetch?: () => void) {
-  // Handle export to CSV
+export function useProductExportImport(products: any[], storeId: string | null, refetch?: () => void) {
+  const { currentStore } = useStore();
+  const queryClient = useQueryClient();
+  
+  // Export inventory stock to CSV
   const handleExportCSV = useCallback(() => {
     if (!storeId) {
       toast.error("Please select a store first");
@@ -12,105 +21,84 @@ export function useProductExportImport(products: Product[], storeId: string | nu
     }
     
     try {
-      // Generate CSV content
-      const headers = ['Name', 'SKU', 'Price', 'Stock Quantity', 'Status'];
-      const csvContent = [
-        headers.join(','),
-        ...products.map(product => [
-          `"${product.name}"`,
-          `"${product.sku}"`,
-          product.price,
-          product.stock_quantity || product.stockQuantity || 0,
-          product.is_active || product.isActive ? 'Active' : 'Inactive'
-        ].join(','))
-      ].join('\n');
-      
-      // Create and trigger download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `products-${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success("Products exported to CSV");
+      const csvData = generateProductsCSV(products);
+      const blob = new Blob([csvData], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.setAttribute("hidden", "");
+      a.setAttribute("href", url);
+      a.setAttribute("download", `products-${currentStore?.id}-${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success("Products exported successfully");
     } catch (error) {
-      console.error("Error exporting products to CSV:", error);
+      console.error("Export error:", error);
       toast.error("Failed to export products");
     }
-  }, [products, storeId]);
-  
-  // Handle import click
+  }, [products, storeId, currentStore]);
+
+  // Import inventory stock from CSV
   const handleImportClick = useCallback(() => {
     if (!storeId) {
       toast.error("Please select a store first");
       return;
     }
-    
-    // Create file input and trigger click
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = '.csv';
-    fileInput.onchange = (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files[0]) {
-        const file = target.files[0];
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv";
+    input.onchange = async (event: any) => {
+      const file = event.target.files[0];
+      if (file) {
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (e: any) => {
           try {
-            // Process CSV file
-            const csvData = event.target?.result as string;
-            // Here we would typically send this data to the backend
-            console.log("CSV data to import:", csvData);
-            toast.success("Product import started");
-            // In a real app, we would process this data and update the state
+            const csvData = e.target.result;
+            console.info("CSV data to import:", csvData);
+            toast.loading("Processing product import...");
+            
+            // Parse CSV and process items
+            const importedItems = await parseProductsCSV(csvData, storeId);
+            
+            toast.dismiss();
+            toast.success(`Successfully processed ${importedItems.length} products`);
+            
+            // Refresh the product list
+            queryClient.invalidateQueries({ queryKey: ['products', storeId] });
             if (refetch) {
-              setTimeout(refetch, 2000);
+              refetch();
             }
           } catch (error) {
-            console.error("Error importing products:", error);
+            console.error("Import error:", error);
             toast.error("Failed to import products");
           }
         };
         reader.readAsText(file);
       }
     };
-    fileInput.click();
-  }, [storeId, refetch]);
-  
-  // Handle template download
+    input.click();
+  }, [storeId, queryClient, refetch]);
+
+  // Download CSV template
   const handleDownloadTemplate = useCallback(() => {
-    if (!storeId) {
-      toast.error("Please select a store first");
-      return;
-    }
-    
     try {
-      // Generate template CSV
-      const headers = ['Name', 'Description', 'Category', 'Price', 'SKU', 'Stock Quantity'];
-      const exampleRow = ['"Classic Croffle"', '"Original butter croffle with sugar"', '"Classic"', '129', '"CRF-001"', '50'];
-      const csvContent = `${headers.join(',')}\n${exampleRow.join(',')}`;
-      
-      // Create and trigger download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', 'product-import-template.csv');
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
+      const csvData = generateProductImportTemplate();
+      const blob = new Blob([csvData], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.setAttribute("hidden", "");
+      a.setAttribute("href", url);
+      a.setAttribute("download", `product-import-template.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       toast.success("Product import template downloaded");
     } catch (error) {
-      console.error("Error downloading template:", error);
+      console.error("Template download error:", error);
       toast.error("Failed to download template");
     }
-  }, [storeId]);
+  }, []);
 
   return {
     handleExportCSV,

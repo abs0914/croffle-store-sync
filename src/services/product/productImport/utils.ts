@@ -36,15 +36,18 @@ export const mapProductToCSVRow = (product: Product): string[] => {
   const miniVariation = product.variations?.find(v => v.size === 'mini');
   const overloadVariation = product.variations?.find(v => v.size === 'croffle-overload');
   
+  const hasVariations = product.variations && product.variations.length > 0;
+  
   return [
-    stringifyForCSV(product.name),
-    stringifyForCSV(product.sku),
-    stringifyForCSV(product.description || ''),
-    product.stockQuantity || product.stock_quantity,
-    product.isActive || product.is_active ? 'true' : 'false',
-    product.variations && product.variations.length > 0 ? 'true' : 'false',
-    regularVariation ? regularVariation.price : product.price,
-    miniVariation ? miniVariation.price : (product.price || 0) * 0.7,
-    overloadVariation ? overloadVariation.price : (product.price || 0) * 1.3
-  ].map(item => String(item));
+    product.name,
+    product.sku,
+    product.description || '',
+    product.category?.name || '',
+    String(product.stockQuantity || product.stock_quantity || 0),
+    (product.isActive || product.is_active) ? 'TRUE' : 'FALSE',
+    hasVariations ? 'TRUE' : 'FALSE',
+    String(regularVariation ? regularVariation.price : product.price),
+    String(miniVariation ? miniVariation.price : ''),
+    String(overloadVariation ? overloadVariation.price : '')
+  ];
 };
