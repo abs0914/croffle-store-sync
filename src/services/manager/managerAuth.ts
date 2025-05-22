@@ -68,6 +68,15 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
             return null;
           }
           
+          // Update user metadata to ensure role is set to manager
+          try {
+            // We can't update other users without admin privileges,
+            // but we can log this information for debugging
+            console.log('Note: Make sure user has manager role in Supabase Auth console');
+          } catch (error: any) {
+            console.warn('Could not verify user role:', error);
+          }
+          
           toast.success('Manager created successfully');
           return {
             id: newManagerData.id,
@@ -101,6 +110,9 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
           toast.error(`Failed to update manager record: ${updateError.message}`);
           return null;
         }
+        
+        // Log information about ensuring user has manager role
+        console.log('Note: Make sure user has manager role in Supabase Auth console');
         
         toast.success('Manager updated successfully');
         return {
@@ -165,7 +177,7 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
 };
 
 // Update the reset manager password function
-export const resetManagerPassword = async (managerId: string, newPassword: string): Promise<boolean> => {
+export const resetManagerPassword = async (managerId: string): Promise<boolean> => {
   try {
     // Get the manager's email
     const { data: managerData, error: managerError } = await supabase
