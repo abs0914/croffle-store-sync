@@ -59,13 +59,13 @@ export function useCameraInitialization({
       
       console.log('[Camera] Video element found, requesting camera access');
       
-      // Define camera constraints for 16:9 aspect ratio - standard HD resolutions
+      // Define camera constraints for 2:3 aspect ratio
       const constraints = { 
         video: { 
           facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          aspectRatio: { ideal: 16/9 }
+          width: { ideal: 1080 },
+          height: { ideal: 1620 }, // 2:3 ratio (1080 * 1.5)
+          aspectRatio: { ideal: 2/3 }
         },
         audio: false
       };

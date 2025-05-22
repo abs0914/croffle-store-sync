@@ -48,6 +48,8 @@ export async function createShift(
       cashier_id: cashierId || null
     };
     
+    console.log("Sending request to create shift with payload:", JSON.stringify(newShift));
+    
     const { data, error } = await supabase
       .from('shifts')
       .insert(newShift)
@@ -56,10 +58,19 @@ export async function createShift(
     
     if (error) {
       console.error("Supabase error creating shift:", error);
-      if (error.code === '42501' || error.message.includes('violates row-level security policy')) {
+      
+      // Handle specific error cases
+      if (error.code === '42501' || error.message.includes('permission denied') || error.message.includes('violates row-level security policy')) {
+        console.error("Permission denied error details:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         toast.error('Permission denied: You do not have access to create shifts');
         return null;
       }
+      
       throw error;
     }
     
@@ -76,7 +87,7 @@ export async function createShift(
     return mapShiftRowToShift(shiftData);
   } catch (error) {
     console.error('Error creating shift:', error);
-    toast.error('Failed to create shift');
+    toast.error('Failed to create shift. Please check your permissions and try again.');
     return null;
   }
 }

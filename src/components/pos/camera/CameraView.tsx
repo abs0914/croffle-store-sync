@@ -51,7 +51,7 @@ export default function CameraView({
 
   return (
     <div className="relative w-full h-full bg-black">
-      <AspectRatio ratio={16/9} className="w-full h-full">
+      <AspectRatio ratio={2/3} className="w-full h-full">
         <video 
           ref={videoRef}
           className="w-full h-full object-cover"

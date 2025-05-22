@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Shift } from "@/types";
 import { useAuth } from "../AuthContext";
@@ -6,6 +5,7 @@ import { useStore } from "../StoreContext";
 import { ShiftState } from "./types";
 import { createShift, closeShift, getActiveShift } from "./shiftUtils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const initialState: ShiftState = {
   currentShift: null,
@@ -61,6 +61,8 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     
     try {
       console.log(`Starting shift for store: ${currentStore.id} with user: ${user.id}`);
+      console.log("Authorization status:", supabase?.auth?.session ? "Authenticated" : "Not authenticated");
+      
       const shift = await createShift(
         user.id, 
         currentStore.id, 
@@ -75,7 +77,8 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         toast.success("Shift started successfully");
         return true;
       } else {
-        toast.error("Failed to create shift");
+        toast.error("Failed to create shift - check database permissions");
+        console.error("Create shift returned null");
         return false;
       }
     } catch (error) {
