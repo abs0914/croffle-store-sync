@@ -33,6 +33,9 @@ export default function CartSummary({
   // Calculate the VAT amount (12% of net amount)
   const vatAmount = subtotal - netAmount;
   
+  // Calculate final total after discount
+  const finalTotal = total - discount;
+  
   return (
     <div className="space-y-2 pt-4">
       <Separator className="bg-croffle-primary/20" />
@@ -58,12 +61,12 @@ export default function CartSummary({
       
       <div className="flex justify-between text-lg font-bold">
         <span className="text-croffle-primary">Total Price</span>
-        <span className="text-croffle-primary">₱{(subtotal - discount).toFixed(2)}</span>
+        <span className="text-croffle-primary">₱{finalTotal.toFixed(2)}</span>
       </div>
       
       {/* Payment Processor */}
       <PaymentProcessor 
-        total={total - discount} 
+        total={finalTotal}
         onPaymentComplete={handlePaymentComplete} 
       />
     </div>
