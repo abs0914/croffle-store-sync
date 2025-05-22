@@ -1,8 +1,14 @@
 
+import { useState } from "react";
 import { Manager } from "@/types/manager";
 import { Store } from "@/types/store";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +33,12 @@ export default function EditManagerDialog({
   manager, 
   stores 
 }: EditManagerDialogProps) {
+  const { hasPermission } = useAuth();
+  const isAdmin = hasPermission('admin');
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  
   const {
     formData,
     isPending,
@@ -35,6 +47,52 @@ export default function EditManagerDialog({
     handleActiveChange,
     handleSubmit
   } = useManagerForm(manager, onOpenChange);
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!manager || !manager.email) {
+      toast.error("Cannot reset password: No email address linked to this manager");
+      return;
+    }
+    
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    
+    setIsResettingPassword(true);
+    
+    try {
+      // Find user by email first
+      const { data: userData, error: userError } = await supabase
+        .from('auth.users')
+        .select('id')
+        .eq('email', manager.email)
+        .single();
+        
+      if (userError) {
+        console.error("Error finding user:", userError);
+        throw new Error("Could not find user account for this manager");
+      }
+      
+      const { error } = await supabase.auth.admin.updateUserById(
+        userData.id,
+        { password: newPassword }
+      );
+      
+      if (error) throw error;
+      
+      toast.success("Password reset successfully");
+      setNewPassword("");
+      setShowPasswordSection(false);
+    } catch (error: any) {
+      console.error("Error resetting password:", error);
+      toast.error(`Failed to reset password: ${error.message}`);
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -54,7 +112,63 @@ export default function EditManagerDialog({
               onInputChange={handleInputChange}
               onStoreChange={handleStoreChange}
               onActiveChange={handleActiveChange}
+              isEditMode={true}
             />
+            
+            {/* Password Reset Section - Only visible to admins */}
+            {isAdmin && manager.email && (
+              <div className="border-t pt-4 mt-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-medium">Password Management</h4>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    type="button"
+                    onClick={() => setShowPasswordSection(!showPasswordSection)}
+                  >
+                    {showPasswordSection ? "Cancel" : "Reset Password"}
+                  </Button>
+                </div>
+                
+                {showPasswordSection && (
+                  <div className="mt-3 space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="managerNewPassword">New Password</Label>
+                      <Input
+                        id="managerNewPassword"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        className="w-full"
+                        minLength={6}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Password must be at least 6 characters long
+                      </p>
+                    </div>
+                    
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      size="sm"
+                      disabled={isResettingPassword || !newPassword || newPassword.length < 6}
+                      onClick={handlePasswordReset}
+                      className="w-full"
+                    >
+                      {isResettingPassword ? (
+                        <>
+                          <Spinner className="mr-2 h-4 w-4" />
+                          Resetting Password...
+                        </>
+                      ) : (
+                        "Reset Password"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
             
             <DialogFooter className="pt-4">
               <Button

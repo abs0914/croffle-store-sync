@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import ManagerFormFields from "./ManagerFormFields";
 import { useAddManagerForm } from "../hooks/useAddManagerForm";
+import { toast } from "sonner";
 
 interface AddManagerDialogProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export default function AddManagerDialog({ isOpen, onOpenChange, stores }: AddMa
         <DialogHeader>
           <DialogTitle>Add New Manager</DialogTitle>
           <DialogDescription>
-            Add a new manager and assign them to stores.
+            Add a new manager and assign them to stores. The manager will be able to log into the system.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>

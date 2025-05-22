@@ -5,14 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import AuthFormFields from "@/components/shared/AuthFormFields";
+import { ManagerFormDataWithAuth } from "../hooks/useAddManagerForm";
 
 interface ManagerFormFieldsProps {
-  formData: ManagerFormData;
+  formData: ManagerFormData | ManagerFormDataWithAuth;
   stores: Store[];
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onStoreChange: (storeId: string, checked: boolean) => void;
   onActiveChange: (checked: boolean) => void;
+  isEditMode?: boolean;
 }
 
 export default function ManagerFormFields({
@@ -20,8 +22,12 @@ export default function ManagerFormFields({
   stores,
   onInputChange,
   onStoreChange,
-  onActiveChange
+  onActiveChange,
+  isEditMode = false
 }: ManagerFormFieldsProps) {
+  // Check if formData has password field (ManagerFormDataWithAuth)
+  const hasAuthFields = 'password' in formData;
+
   return (
     <div className="space-y-4 py-2">
       <div className="grid grid-cols-2 gap-4">
@@ -47,27 +53,14 @@ export default function ManagerFormFields({
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="contactNumber">Contact Number</Label>
-          <Input
-            id="contactNumber"
-            name="contactNumber"
-            value={formData.contactNumber}
-            onChange={onInputChange}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={onInputChange}
-            required
-          />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="contactNumber">Contact Number</Label>
+        <Input
+          id="contactNumber"
+          name="contactNumber"
+          value={formData.contactNumber}
+          onChange={onInputChange}
+        />
       </div>
       
       <div className="space-y-2">
@@ -101,6 +94,16 @@ export default function ManagerFormFields({
         />
         <Label htmlFor="active">Active</Label>
       </div>
+
+      {/* Display auth fields for new managers */}
+      {hasAuthFields && (
+        <AuthFormFields
+          email={(formData as ManagerFormDataWithAuth).email}
+          password={(formData as ManagerFormDataWithAuth).password}
+          onInputChange={onInputChange}
+          isEditMode={isEditMode}
+        />
+      )}
     </div>
   );
 }

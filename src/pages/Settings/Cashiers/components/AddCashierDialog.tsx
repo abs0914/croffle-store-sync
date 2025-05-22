@@ -1,12 +1,13 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createCashier } from "@/services/cashier";
-import { CashierFormData } from "@/types/cashier";
+import { createCashierWithAuth } from "@/services/cashier";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
+import AuthFormFields from "@/components/shared/AuthFormFields";
 import {
   Dialog,
   DialogContent,
@@ -22,22 +23,35 @@ interface AddCashierDialogProps {
   storeId: string;
 }
 
+interface CashierFormDataWithAuth {
+  firstName: string;
+  lastName: string;
+  contactNumber: string;
+  email: string;
+  password: string;
+  isActive: boolean;
+}
+
 export default function AddCashierDialog({ isOpen, onOpenChange, storeId }: AddCashierDialogProps) {
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<CashierFormData>({
+  const [formData, setFormData] = useState<CashierFormDataWithAuth>({
     firstName: "",
     lastName: "",
     contactNumber: "",
+    email: "",
+    password: "",
     isActive: true
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: CashierFormData) => 
-      createCashier({
-        store_id: storeId,
-        first_name: data.firstName,
-        last_name: data.lastName,
-        contact_number: data.contactNumber
+    mutationFn: (data: CashierFormDataWithAuth) => 
+      createCashierWithAuth({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        storeId: storeId,
+        contactNumber: data.contactNumber
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashiers", storeId] });
@@ -51,6 +65,8 @@ export default function AddCashierDialog({ isOpen, onOpenChange, storeId }: AddC
       firstName: "",
       lastName: "",
       contactNumber: "",
+      email: "",
+      password: "",
       isActive: true
     });
   };
@@ -65,6 +81,17 @@ export default function AddCashierDialog({ isOpen, onOpenChange, storeId }: AddC
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.email || !formData.password) {
+      toast.error("Email and password are required");
+      return;
+    }
+    
+    if (formData.password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+    
     createMutation.mutate(formData);
   };
 
@@ -74,7 +101,7 @@ export default function AddCashierDialog({ isOpen, onOpenChange, storeId }: AddC
         <DialogHeader>
           <DialogTitle>Add New Cashier</DialogTitle>
           <DialogDescription>
-            Add a new cashier to this store.
+            Add a new cashier to this store. The cashier will be able to log into the system.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -110,6 +137,12 @@ export default function AddCashierDialog({ isOpen, onOpenChange, storeId }: AddC
                 onChange={handleInputChange}
               />
             </div>
+            
+            <AuthFormFields
+              email={formData.email}
+              password={formData.password}
+              onInputChange={handleInputChange}
+            />
           </div>
           <DialogFooter className="pt-4">
             <Button 
