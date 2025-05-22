@@ -9,4 +9,4 @@ export * from './modules/xReadingReport';
 export * from './modules/zReadingReport';
 export * from './modules/dailySummaryReport';
 export * from './modules/vatReport';
-export * from './modules/cashierReportModule';
+export * from './modules/cashier';
