@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CashierReport } from "@/types/reports";
 import { createSimulatedUsers, initializeHourlyData, createSampleCashierReport } from "./cashierReportUtils";
@@ -27,8 +28,19 @@ export async function fetchCashierReport(
     
     if (txError) throw txError;
     
-    if (!transactions || transactions.length === 0) {
-      console.info("No transaction data found, using sample data");
+    // Get all shifts for the date range
+    const { data: shifts, error: shiftsError } = await supabase
+      .from("shifts")
+      .select("*, cashier:cashier_id(*)")
+      .eq("store_id", storeId)
+      .gte("start_time", `${from}T00:00:00`)
+      .lte("start_time", `${to}T23:59:59`);
+    
+    if (shiftsError) throw shiftsError;
+    
+    // If no data found, return sample data
+    if ((!transactions || transactions.length === 0) && (!shifts || shifts.length === 0)) {
+      console.info("No transaction or shift data found, using sample data");
       return createSampleCashierReport();
     }
 
@@ -91,6 +103,59 @@ export async function fetchCashierReport(
       if (hourlyData[hour]) {
         hourlyData[hour].sales += tx.total || 0;
         hourlyData[hour].transactions += 1;
+      }
+    }
+    
+    // Process shifts data to get attendance information
+    const attendanceData: CashierReport['attendance'] = [];
+    
+    if (shifts && shifts.length > 0) {
+      for (const shift of shifts) {
+        // Extract cashier information
+        let cashierName = "Unknown";
+        let cashierId = shift.cashier_id || shift.user_id;
+        
+        // Try to get name from the cashier object if it exists
+        if (shift.cashier && typeof shift.cashier === 'object') {
+          if (shift.cashier.first_name && shift.cashier.last_name) {
+            cashierName = `${shift.cashier.first_name} ${shift.cashier.last_name}`;
+          } else if (shift.cashier.name) {
+            cashierName = shift.cashier.name;
+          }
+        }
+        
+        // If we couldn't get the name from the cashier relation, try to find it in our cashier data
+        if (cashierName === "Unknown" && cashierId) {
+          const foundCashier = Object.values(cashierData).find(c => c.userId === cashierId);
+          if (foundCashier && foundCashier.name) {
+            cashierName = foundCashier.name;
+          }
+          
+          // If still not found, try to get it from cashiers table
+          if (cashierName === "Unknown") {
+            const { data: cashierInfo } = await supabase
+              .from("cashiers")
+              .select("first_name, last_name")
+              .eq("user_id", cashierId)
+              .single();
+              
+            if (cashierInfo) {
+              cashierName = `${cashierInfo.first_name} ${cashierInfo.last_name}`;
+            }
+          }
+        }
+        
+        // Add to attendance data
+        attendanceData.push({
+          name: cashierName,
+          userId: cashierId || "",
+          startTime: shift.start_time,
+          endTime: shift.end_time || null,
+          startPhoto: shift.start_photo || null,
+          endPhoto: shift.end_photo || null,
+          startingCash: shift.starting_cash || 0,
+          endingCash: shift.ending_cash || null,
+        });
       }
     }
     
@@ -172,7 +237,8 @@ export async function fetchCashierReport(
       averageTransactionValue,
       averageTransactionTime: avgTransactionTime,
       cashiers,
-      hourlyData: hourlyDataArray
+      hourlyData: hourlyDataArray,
+      attendance: attendanceData
     };
   } catch (error) {
     return handleReportError("Cashier Report", error);

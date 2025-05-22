@@ -149,6 +149,16 @@ export interface CashierReport {
     sales: number;
     transactions: number;
   }>;
+  attendance?: Array<{
+    name: string;
+    userId: string;
+    startTime: string;
+    endTime: string | null;
+    startPhoto: string | null;
+    endPhoto: string | null;
+    startingCash: number;
+    endingCash: number | null;
+  }>;
 }
 
 export interface StockReport {
