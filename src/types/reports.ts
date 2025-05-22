@@ -1,4 +1,3 @@
-
 export interface SalesReport {
   totalSales: number;
   totalTransactions: number;
@@ -17,6 +16,14 @@ export interface SalesReport {
     amount: number;
     percentage: number;
   }>;
+  // For multi-store support
+  storeBreakdown?: Array<{
+    storeId: string;
+    storeName: string;
+    totalSales: number;
+    totalTransactions: number;
+    percentage: number;
+  }>;
 }
 
 export interface InventoryReport {
@@ -30,6 +37,9 @@ export interface InventoryReport {
     currentStock: number;
     soldUnits: number;
     threshold: number;
+    // For multi-store support
+    storeId?: string;
+    storeName?: string;
   }>;
 }
 
@@ -51,6 +61,15 @@ export interface ProfitLossReport {
     cost: number;
     profit: number;
     margin: number;
+  }>;
+  // For multi-store support
+  storeBreakdown?: Array<{
+    storeId: string;
+    storeName: string;
+    revenue: number;
+    cost: number;
+    profit: number;
+    percentage: number;
   }>;
 }
 
@@ -122,6 +141,9 @@ export interface VATReport {
     vatAmount: number;
     vatExemptSales: number;
     vatZeroRatedSales: number;
+    // For multi-store support
+    storeId?: string;
+    storeName?: string;
   }>;
   totals: {
     vatableSales: number;
@@ -143,6 +165,9 @@ export interface CashierReport {
     totalSales: number;
     averageTransactionValue: number; 
     averageTransactionTime: number; // in minutes
+    // For multi-store support
+    storeId?: string;
+    storeName?: string;
   }>;
   hourlyData: Array<{
     hour: string;
@@ -158,6 +183,9 @@ export interface CashierReport {
     endPhoto: string | null;
     startingCash: number;
     endingCash: number | null;
+    // For multi-store support
+    storeId?: string;
+    storeName?: string;
   }>;
 }
 
@@ -174,6 +202,9 @@ export interface StockReport {
     consumed: number;
     threshold: number;
     lastUpdated: string;
+    // For multi-store support
+    storeId?: string;
+    storeName?: string;
     transactions: Array<{
       date: string;
       type: string;
@@ -190,5 +221,16 @@ export interface StockReport {
     endTime: string | null;
     startInventory: Record<string, number>;
     endInventory: Record<string, number> | null;
+    // For multi-store support
+    storeId?: string;
+    storeName?: string;
+  }>;
+  // For multi-store support
+  storeBreakdown?: Array<{
+    storeId: string;
+    storeName: string;
+    totalItems: number;
+    lowStockItems: number;
+    outOfStockItems: number;
   }>;
 }

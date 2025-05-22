@@ -12,7 +12,8 @@ interface CashierDataRecord {
 
 export async function processAttendanceData(
   shifts: any[],
-  cashierData: Record<string, CashierDataRecord>
+  cashierData: Record<string, CashierDataRecord>,
+  includeStoreName = false
 ): Promise<CashierReport['attendance']> {
   // Process shifts data to get attendance information
   const attendanceData: CashierReport['attendance'] = [];
@@ -58,10 +59,30 @@ export async function processAttendanceData(
         }
       }
       
+      // Get store name if requested (for multi-store reports)
+      let storeName = null;
+      if (includeStoreName && shift.store_id) {
+        try {
+          const { data: storeInfo } = await supabase
+            .from("stores")
+            .select("name")
+            .eq("id", shift.store_id)
+            .single();
+            
+          if (storeInfo) {
+            storeName = storeInfo.name;
+          }
+        } catch (error) {
+          console.error("Error fetching store name:", error);
+        }
+      }
+      
       // Add to attendance data
       attendanceData.push({
         name: cashierName || "Unknown",
         userId: cashierId || "",
+        storeId: shift.store_id || "",
+        storeName: storeName || "",
         startTime: shift.start_time,
         endTime: shift.end_time || null,
         startPhoto: shift.start_photo || null,

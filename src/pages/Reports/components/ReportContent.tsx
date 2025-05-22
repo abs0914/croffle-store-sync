@@ -13,13 +13,14 @@ import { FileBarChart } from "lucide-react";
 interface ReportContentProps {
   reportType: ReportType;
   storeId: string;
+  selectedStoreId: string; // Added for multi-store support
   dateRange: {
     from: Date | undefined;
     to: Date | undefined;
   };
 }
 
-export function ReportContent({ reportType, storeId, dateRange }: ReportContentProps) {
+export function ReportContent({ reportType, storeId, selectedStoreId, dateRange }: ReportContentProps) {
   const isMobile = useIsMobile();
   const from = dateRange.from?.toISOString().split('T')[0];
   const to = dateRange.to?.toISOString().split('T')[0];
@@ -32,7 +33,8 @@ export function ReportContent({ reportType, storeId, dateRange }: ReportContentP
   // Fetch data based on report type
   const { data, isLoading, error, refetch, isSampleData } = useReportData({ 
     reportType, 
-    storeId, 
+    storeId: selectedStoreId, // Use the selected store ID for fetching data
+    isAllStores: selectedStoreId === 'all',
     from, 
     to 
   });
@@ -99,6 +101,8 @@ export function ReportContent({ reportType, storeId, dateRange }: ReportContentP
         reportType={reportType}
         data={data}
         storeId={storeId}
+        selectedStoreId={selectedStoreId} // Pass the selected store ID to the report view
+        isAllStores={selectedStoreId === 'all'} // Indicate if we're viewing all stores
         dateRange={dateRange}
       />
     </div>

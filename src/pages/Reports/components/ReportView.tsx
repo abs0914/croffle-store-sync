@@ -14,32 +14,40 @@ interface ReportViewProps {
   reportType: ReportType;
   data: any;
   storeId: string;
+  selectedStoreId: string;
+  isAllStores?: boolean;
   dateRange: {
     from: Date | undefined;
     to: Date | undefined;
   };
 }
 
-export function ReportView({ reportType, data, storeId, dateRange }: ReportViewProps) {
+export function ReportView({ reportType, data, storeId, selectedStoreId, isAllStores, dateRange }: ReportViewProps) {
   switch (reportType) {
     case 'sales':
-      return <SalesReportView data={data} dateRange={dateRange} />;
+      return <SalesReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
     case 'inventory':
-      return <InventoryReportView data={data} dateRange={dateRange} />;
+      return <InventoryReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
     case 'stock':
-      return <StockReportView data={data} dateRange={dateRange} />;
+      return <StockReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
     case 'profit_loss':
-      return <ProfitLossReportView data={data} dateRange={dateRange} />;
+      return <ProfitLossReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
     case 'x_reading':
-      return <XReadingView storeId={storeId} date={dateRange.from} />;
+      return <XReadingView storeId={selectedStoreId} date={dateRange.from} />;
     case 'z_reading':
-      return <ZReadingView storeId={storeId} date={dateRange.from} />;
+      return <ZReadingView storeId={selectedStoreId} date={dateRange.from} />;
     case 'daily_summary':
-      return <DailySummaryView storeId={storeId} date={dateRange.from} />;
+      return <DailySummaryView storeId={selectedStoreId} date={dateRange.from} />;
     case 'vat':
-      return <VATReportView storeId={storeId} dateRange={dateRange} />;
+      return <VATReportView storeId={selectedStoreId} dateRange={dateRange} />;
     case 'cashier':
-      return <CashierReportView data={data} storeId={storeId} dateRange={dateRange} />;
+      return <CashierReportView 
+        data={data} 
+        storeId={storeId} 
+        selectedStoreId={selectedStoreId} 
+        isAllStores={isAllStores} 
+        dateRange={dateRange} 
+      />;
     default:
       return null;
   }

@@ -1,9 +1,12 @@
-import { useState, useCallback } from 'react';
+
+import { useState, useCallback, useEffect } from 'react';
 import { useStore } from '@/contexts/StoreContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ReportHeader } from './components/ReportHeader';
 import { DateRangeSelector } from './components/DateRangeSelector';
 import { ReportsNavigation } from './components/ReportsNavigation';
 import { ReportContent } from './components/ReportContent';
+import { StoreSelector } from './components/StoreSelector';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Store } from 'lucide-react';
@@ -15,6 +18,7 @@ export type ReportType = 'sales' | 'inventory' | 'profit_loss' | 'x_reading' | '
 
 export default function Reports() {
   const { currentStore, isLoading: storeLoading } = useStore();
+  const { user } = useAuth();
   const [reportType, setReportType] = useState<ReportType>('sales');
   const [dateRange, setDateRange] = useState<{
     from: Date | undefined;
@@ -24,7 +28,16 @@ export default function Reports() {
     to: new Date(),
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("");
   const isMobile = useIsMobile();
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+
+  // Set initial store selection
+  useEffect(() => {
+    if (currentStore && !selectedStoreId) {
+      setSelectedStoreId(currentStore.id);
+    }
+  }, [currentStore, selectedStoreId]);
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(prev => !prev);
@@ -60,8 +73,9 @@ export default function Reports() {
   return (
     <div className="container mx-auto p-2 sm:p-4 space-y-4 sm:space-y-6">
       <ReportHeader 
-        storeId={currentStore.id}
+        storeId={selectedStoreId || currentStore.id}
         reportType={reportType}
+        isAllStores={selectedStoreId === 'all'}
       />
       
       <div className="flex flex-col lg:flex-row gap-4">
@@ -100,7 +114,20 @@ export default function Reports() {
           )}
           
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-4 space-y-4">
+              {/* Store Selector (visible for admin users) */}
+              {isAdmin && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-medium mb-2 text-muted-foreground">
+                    Select Store
+                  </h3>
+                  <StoreSelector
+                    selectedStoreId={selectedStoreId}
+                    onSelectStore={setSelectedStoreId}
+                  />
+                </div>
+              )}
+              
               <DateRangeSelector 
                 dateRange={dateRange} 
                 setDateRange={setDateRange}
@@ -112,6 +139,7 @@ export default function Reports() {
           <ReportContent 
             reportType={reportType}
             storeId={currentStore.id} 
+            selectedStoreId={selectedStoreId}
             dateRange={dateRange}
           />
         </div>

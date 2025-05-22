@@ -13,17 +13,18 @@ import { formatCurrency } from "@/utils/format";
 interface UseReportDataProps {
   reportType: ReportType;
   storeId: string;
+  isAllStores?: boolean;
   from?: string;
   to?: string;
 }
 
-export function useReportData({ reportType, storeId, from, to }: UseReportDataProps) {
+export function useReportData({ reportType, storeId, isAllStores = false, from, to }: UseReportDataProps) {
   const queryResult = useQuery({
-    queryKey: ['report', reportType, storeId, from, to],
+    queryKey: ['report', reportType, storeId, isAllStores, from, to],
     queryFn: async () => {
       if (!from || !to) return Promise.resolve(null);
       
-      console.log(`Fetching ${reportType} report for store ${storeId} from ${from} to ${to}`);
+      console.log(`Fetching ${reportType} report for ${isAllStores ? 'all stores' : `store ${storeId}`} from ${from} to ${to}`);
       
       try {
         let result = null;
@@ -31,7 +32,7 @@ export function useReportData({ reportType, storeId, from, to }: UseReportDataPr
         
         switch (reportType) {
           case 'sales':
-            result = await fetchSalesReport(storeId, from, to);
+            result = await fetchSalesReport(storeId, from, to, isAllStores);
             // Check if this is sample data
             isSampleData = result && result.salesByDate?.length > 0 && 
                           result.salesByDate.every(d => d.amount % 10 === 0);
@@ -52,13 +53,13 @@ export function useReportData({ reportType, storeId, from, to }: UseReportDataPr
             }
             break;
           case 'inventory':
-            result = await fetchInventoryReport(storeId, from, to);
+            result = await fetchInventoryReport(storeId, from, to, isAllStores);
             // Check for sample data markers
             isSampleData = result && result.inventoryItems?.length > 0 && 
                           result.inventoryItems.every(item => item.soldUnits % 5 === 0);
             break;
           case 'profit_loss':
-            result = await fetchProfitLossReport(storeId, from, to);
+            result = await fetchProfitLossReport(storeId, from, to, isAllStores);
             // Check for sample data markers
             isSampleData = result && result.profitByDate?.length > 0 &&
                           result.profitByDate.every(d => d.profit % 5 === 0);
@@ -73,12 +74,12 @@ export function useReportData({ reportType, storeId, from, to }: UseReportDataPr
             }
             break;
           case 'stock':
-            result = await fetchStockReport(storeId, from, to);
+            result = await fetchStockReport(storeId, from, to, isAllStores);
             isSampleData = result && result.stockItems?.length > 0 &&
                           result.stockItems.every(item => item.initialStock % 10 === 0);
             break;
           case 'cashier':
-            result = await fetchCashierReport(storeId, from, to);
+            result = await fetchCashierReport(storeId, from, to, isAllStores);
             isSampleData = result && result.cashiers?.length > 0 && 
                           result.cashiers.every(c => c.transactionCount % 5 === 0);
             break;
