@@ -72,3 +72,25 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
     return null;
   }
 };
+
+// Add a function to reset manager password
+export const resetManagerPassword = async (managerId: string, newPassword: string): Promise<boolean> => {
+  try {
+    // For security, we don't directly access auth.users
+    // Instead we use the admin API which requires the service role key
+    const { error } = await supabase.auth.admin.updateUserById(
+      managerId,
+      { password: newPassword }
+    );
+    
+    if (error) {
+      throw error;
+    }
+    
+    return true;
+  } catch (error: any) {
+    console.error('Error resetting manager password:', error);
+    toast.error(`Password reset failed: ${error.message}`);
+    return false;
+  }
+};

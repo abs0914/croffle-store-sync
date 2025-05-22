@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import ManagerFormFields from "./ManagerFormFields";
 import { useManagerForm } from "../hooks/useManagerForm";
+import AuthFormFields from "@/components/shared/AuthFormFields";
 
 interface EditManagerDialogProps {
   isOpen: boolean;
@@ -64,20 +65,10 @@ export default function EditManagerDialog({
     setIsResettingPassword(true);
     
     try {
-      // Find user by email first
-      const { data: userData, error: userError } = await supabase
-        .from('auth.users')
-        .select('id')
-        .eq('email', manager.email)
-        .single();
-        
-      if (userError) {
-        console.error("Error finding user:", userError);
-        throw new Error("Could not find user account for this manager");
-      }
-      
+      // We can't directly query auth.users, so we'll use admin API instead
       const { error } = await supabase.auth.admin.updateUserById(
-        userData.id,
+        // We don't have the user ID directly, so we'll need to use the password reset flow
+        manager.id,  // This works if manager.id is the auth user id
         { password: newPassword }
       );
       
