@@ -32,37 +32,73 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
       if (authError.message.includes('already registered')) {
         toast.info('User already exists, linking manager record to existing user');
         
-        // Get the existing manager record through a lookup by email
-        const { data: managerData, error: managerLookupError } = await supabase
+        // Try to find an existing manager record by email
+        const { data: existingManagers, error: lookupError } = await supabase
           .from('managers')
           .select('*')
-          .eq('email', data.email)
-          .single();
+          .eq('email', data.email);
         
-        if (managerLookupError) {
-          console.error('Error finding existing manager:', managerLookupError);
-          toast.error(`Unable to link to existing user: ${managerLookupError?.message || 'Manager not found'}`);
+        if (lookupError) {
+          console.error('Error finding existing managers:', lookupError);
+          toast.error(`Database lookup error: ${lookupError.message}`);
           return null;
         }
         
+        // Check if we found any manager records
+        if (!existingManagers || existingManagers.length === 0) {
+          console.log('No existing manager record found, creating new one');
+          
+          // Create a new manager record since one doesn't exist
+          const { data: newManagerData, error: createError } = await supabase
+            .from('managers')
+            .insert({
+              first_name: data.firstName,
+              last_name: data.lastName,
+              email: data.email,
+              contact_number: data.contactNumber,
+              store_ids: data.storeIds,
+              is_active: true
+            })
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error('Error creating manager:', createError);
+            toast.error(`Failed to create manager record: ${createError.message}`);
+            return null;
+          }
+          
+          toast.success('Manager created successfully');
+          return {
+            id: newManagerData.id,
+            fullName: `${newManagerData.first_name} ${newManagerData.last_name}`,
+            email: newManagerData.email,
+            contactNumber: newManagerData.contact_number,
+            storeIds: newManagerData.store_ids,
+            isActive: newManagerData.is_active
+          };
+        } 
+        
+        // If we have more than one manager with this email, use the first one
+        const managerToUpdate = existingManagers[0];
+        
         // Update the existing manager record
-        const { data: updatedManagerData, error: managerUpdateError } = await supabase
+        const { data: updatedManagerData, error: updateError } = await supabase
           .from('managers')
           .update({
             first_name: data.firstName,
             last_name: data.lastName,
-            email: data.email,
             contact_number: data.contactNumber,
             store_ids: data.storeIds,
             is_active: true
           })
-          .eq('email', data.email)
+          .eq('id', managerToUpdate.id)
           .select()
           .single();
         
-        if (managerUpdateError) {
-          console.error('Error updating manager:', managerUpdateError);
-          toast.error(`Failed to update manager record: ${managerUpdateError.message}`);
+        if (updateError) {
+          console.error('Error updating manager:', updateError);
+          toast.error(`Failed to update manager record: ${updateError.message}`);
           return null;
         }
         
