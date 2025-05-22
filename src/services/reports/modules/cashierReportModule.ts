@@ -65,7 +65,8 @@ export async function fetchCashierReport(
         
         // Define the expected shape of the cashier object 
         interface CashierObject {
-          name?: string;
+          first_name?: string;
+          last_name?: string;
           [key: string]: any;
         }
         
@@ -73,8 +74,8 @@ export async function fetchCashierReport(
         if (tx.cashier && typeof tx.cashier === 'object') {
           // Safely typecast to our expected shape
           const cashierObj = tx.cashier as CashierObject;
-          if (cashierObj && 'name' in cashierObj) {
-            cashierName = cashierObj.name || null;
+          if (cashierObj && 'first_name' in cashierObj && 'last_name' in cashierObj) {
+            cashierName = `${cashierObj.first_name} ${cashierObj.last_name}`;
           }
         }
         
@@ -117,10 +118,11 @@ export async function fetchCashierReport(
         
         // Try to get name from the cashier object if it exists
         if (shift.cashier && typeof shift.cashier === 'object') {
-          if (shift.cashier.first_name && shift.cashier.last_name) {
-            cashierName = `${shift.cashier.first_name} ${shift.cashier.last_name}`;
-          } else if (shift.cashier.name) {
-            cashierName = shift.cashier.name;
+          if ('first_name' in shift.cashier && 'last_name' in shift.cashier) {
+            const cashierObj = shift.cashier as { first_name?: string; last_name?: string };
+            if (cashierObj.first_name && cashierObj.last_name) {
+              cashierName = `${cashierObj.first_name} ${cashierObj.last_name}`;
+            }
           }
         }
         
