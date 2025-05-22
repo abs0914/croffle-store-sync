@@ -18,26 +18,38 @@ export async function fetchCashierReport(
       return createSampleCashierReport();
     }
 
-    // Get all transactions for the date range
+    // Get all transactions for the date range with proper cashier information
     const { data: transactions, error: txError } = await supabase
       .from("transactions")
-      .select("*, cashier:user_id(*)")
+      .select(`
+        *,
+        cashier:user_id(id, first_name, last_name)
+      `)
       .eq("store_id", storeId)
       .eq("status", "completed")
       .gte("created_at", `${from}T00:00:00`)
       .lte("created_at", `${to}T23:59:59`);
     
-    if (txError) throw txError;
+    if (txError) {
+      console.error("Transaction fetch error:", txError);
+      throw txError;
+    }
     
     // Get all shifts for the date range
     const { data: shifts, error: shiftsError } = await supabase
       .from("shifts")
-      .select("*, cashier:cashier_id(*)")
+      .select(`
+        *,
+        cashier:cashier_id(id, first_name, last_name)
+      `)
       .eq("store_id", storeId)
       .gte("start_time", `${from}T00:00:00`)
       .lte("start_time", `${to}T23:59:59`);
     
-    if (shiftsError) throw shiftsError;
+    if (shiftsError) {
+      console.error("Shifts fetch error:", shiftsError);
+      throw shiftsError;
+    }
     
     // If no data found, return sample data
     if ((!transactions || transactions.length === 0) && (!shifts || shifts.length === 0)) {
@@ -91,6 +103,7 @@ export async function fetchCashierReport(
       attendance: attendanceData
     };
   } catch (error) {
+    console.error("Cashier report generation error:", error);
     return handleReportError("Cashier Report", error);
   }
 }
