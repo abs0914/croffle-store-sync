@@ -59,17 +59,13 @@ export function useCameraInitialization({
       
       console.log('[Camera] Video element found, requesting camera access');
       
-      // Define camera constraints for 3:4 aspect ratio (taller) with slightly "zoomed out" view
+      // Define camera constraints for 3:4 aspect ratio (taller) without the problematic advanced property
       const constraints = { 
         video: { 
           facingMode: 'environment', // Use back camera on mobile
           width: { ideal: 1080 },
           height: { ideal: 1440 }, // 3:4 ratio (1080 * 4/3)
-          aspectRatio: { ideal: 3/4 },
-          // Adding zoom level if available through advanced constraints (not supported on all browsers)
-          advanced: [
-            { zoom: 0.9 } // Zoom out slightly if supported
-          ]
+          aspectRatio: { ideal: 3/4 }
         },
         audio: false
       };
