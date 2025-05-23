@@ -44,6 +44,12 @@ export default function ActivateUserDialog({
     setIsProcessing(true);
     await updateMutation.mutateAsync({
       id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email || "",
+      contactNumber: user.contactNumber || "",
+      role: user.role,
+      storeIds: user.storeIds,
       isActive: !isDeactivating
     });
     setIsProcessing(false);
