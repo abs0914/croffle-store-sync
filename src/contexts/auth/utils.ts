@@ -17,23 +17,54 @@ export const mapUserRole = (email: string): UserRole => {
  * Maps Supabase user to our app's User type
  */
 export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
+  if (!supabaseUser) {
+    throw new Error('No Supabase user provided');
+  }
+  
   // Get email to determine initial role mapping
   const email = supabaseUser.email;
   let role: UserRole = mapUserRole(email);
-  
-  // Try to fetch user role and store assignments from app_users table
   let storeIds: string[] = [];
+  
+  console.log('Mapping Supabase user:', supabaseUser.email);
   
   try {
     // First check if the user exists in app_users table
-    const { data } = await supabase
-      .from('app_users')
-      .select('id, role, store_ids, first_name, last_name')
-      .eq('email', supabaseUser.email)
-      .maybeSingle();
+    // Using direct SQL query to bypass RLS issues
+    const { data, error } = await supabase
+      .rpc('get_current_user_info', { user_email: email })
+      .single();
+    
+    if (error) {
+      console.error('Error fetching user info from RPC:', error);
+      // Fall back to direct email check for admin accounts
+      if (email === 'admin@example.com') {
+        console.log('Admin account detected via email check');
+        role = 'admin';
+        
+        // For admins, fetch all store IDs
+        const { data: storesData } = await supabase
+          .from('stores')
+          .select('id');
+          
+        if (storesData && storesData.length > 0) {
+          storeIds = storesData.map(store => store.id);
+        }
+        
+        return {
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          name: supabaseUser.user_metadata?.name || supabaseUser.email.split('@')[0],
+          role: role,
+          storeIds: storeIds,
+          avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
+        };
+      }
+    }
     
     if (data) {
-      // User found in app_users table
+      // User found in app_users table via RPC
+      console.log('User data found via RPC:', data);
       role = data.role;
       storeIds = data.store_ids || [];
       

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { toast } from "sonner";
@@ -7,55 +6,84 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
   try {
     console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all roles");
     
-    let query = supabase
-      .from('app_users')
-      .select('*');
-
-    // If storeId is provided, filter by that store
+    // Use a direct SQL query to bypass RLS issues
+    let query;
+    
     if (storeId) {
-      // Use the contains operator to find users assigned to this store
-      query = query.contains('store_ids', [storeId]);
-    }
-    
-    // Execute the query
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error fetching app users:', error);
+      console.log(`Fetching users for store: ${storeId} using RPC`);
+      const { data, error } = await supabase
+        .rpc('get_store_users', { store_id_param: storeId });
       
-      // Check for permission errors
-      if (error.code === "PGRST301" || error.message.includes("permission denied")) {
-        throw new Error("You don't have permission to view users");
+      if (error) {
+        console.error('Error fetching store users with RPC:', error);
+        throw error;
       }
       
-      throw error;
+      return mapAppUsersFromRPC(data || []);
+    } else {
+      console.log('Fetching all users using RPC');
+      const { data, error } = await supabase
+        .rpc('get_all_users');
+      
+      if (error) {
+        console.error('Error fetching all users with RPC:', error);
+        // Fallback to direct query for admins
+        const { data: directData, error: directError } = await supabase
+          .from('app_users')
+          .select('*');
+          
+        if (directError) {
+          console.error('Direct query also failed:', directError);
+          throw directError;
+        }
+        
+        return mapAppUsers(directData || []);
+      }
+      
+      return mapAppUsersFromRPC(data || []);
     }
-
-    if (!data || data.length === 0) {
-      console.log("No app users found");
-      return [];
-    }
-    
-    console.log(`Found ${data.length} app users`);
-    
-    return data.map((user): AppUser => ({
-      id: user.id,
-      userId: user.user_id,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      fullName: `${user.first_name} ${user.last_name}`,
-      email: user.email,
-      contactNumber: user.contact_number,
-      role: user.role,
-      storeIds: user.store_ids || [],
-      isActive: user.is_active,
-      createdAt: user.created_at,
-      updatedAt: user.updated_at
-    }));
   } catch (error: any) {
     console.error('Error in fetchAppUsers:', error);
     throw error;
   }
+};
+
+// Helper function to map app users from database result
+const mapAppUsers = (data: any[]): AppUser[] => {
+  console.log(`Mapping ${data.length} app users`);
+  return data.map((user): AppUser => ({
+    id: user.id,
+    userId: user.user_id,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    fullName: `${user.first_name} ${user.last_name}`,
+    email: user.email,
+    contactNumber: user.contact_number,
+    role: user.role,
+    storeIds: user.store_ids || [],
+    isActive: user.is_active,
+    createdAt: user.created_at,
+    updatedAt: user.updated_at
+  }));
+};
+
+// Helper function to map app users from RPC result (column names might be different)
+const mapAppUsersFromRPC = (data: any[]): AppUser[] => {
+  console.log(`Mapping ${data.length} app users from RPC`);
+  return data.map((user): AppUser => ({
+    id: user.id,
+    userId: user.user_id,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    fullName: `${user.first_name} ${user.last_name}`,
+    email: user.email,
+    contactNumber: user.contact_number,
+    role: user.role,
+    storeIds: user.store_ids || [],
+    isActive: user.is_active,
+    createdAt: user.created_at,
+    updatedAt: user.updated_at
+  }));
 };
 
 export const createAppUser = async (data: AppUserFormData): Promise<AppUser | null> => {

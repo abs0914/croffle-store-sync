@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useQuery } from "@tanstack/react-query";
 import { fetchAppUsers } from "@/services/appUser";
@@ -37,19 +36,34 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [roleFilter, setRoleFilter] = useState<UserRole[]>([]);
 
-  // Debug permissions
-  console.log("User role:", user?.role);
-  console.log("Is admin:", isAdmin);
-  console.log("Can manage users:", canManageUsers);
+  // Enhanced debug permissions
+  useEffect(() => {
+    console.log("=== Users Page Authentication Debug ===");
+    console.log("Current user:", user);
+    console.log("User role:", user?.role);
+    console.log("Is admin:", isAdmin);
+    console.log("Is owner:", isOwner);
+    console.log("Can manage users:", canManageUsers);
+    console.log("Store IDs access:", user?.storeIds);
+    console.log("Current store:", currentStore);
+  }, [user, isAdmin, isOwner, canManageUsers, currentStore]);
   
   // Fetch users for the current store or all stores if admin/owner
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ["app_users", canManageUsers ? "all" : currentStore?.id, roleFilter],
-    queryFn: () => canManageUsers 
-      ? fetchAppUsers() 
-      : (currentStore ? fetchAppUsers(currentStore.id) : Promise.resolve([])),
+    queryFn: () => {
+      console.log("Fetching users with params:", {
+        canManageUsers,
+        storeId: currentStore?.id,
+        userRole: user?.role
+      });
+      
+      return canManageUsers 
+        ? fetchAppUsers() 
+        : (currentStore ? fetchAppUsers(currentStore.id) : Promise.resolve([]));
+    },
     enabled: !!user && (canManageUsers || !!currentStore),
-    retry: false,
+    retry: 1,
     meta: {
       onError: (err: any) => {
         console.error("Error fetching users:", err);
@@ -85,7 +99,14 @@ export default function UsersPage() {
     );
   };
 
+  useEffect(() => {
+    if (users.length > 0) {
+      console.log("Successfully loaded users:", users.length);
+    }
+  }, [users]);
+
   if (error) {
+    console.error("Rendering error state:", error);
     return (
       <Card>
         <CardContent className="pt-6">
@@ -94,6 +115,9 @@ export default function UsersPage() {
             <p className="text-muted-foreground">
               {error instanceof Error ? error.message : "You may not have permission to view users"}
             </p>
+            <pre className="mt-4 text-xs text-left bg-muted p-2 rounded overflow-auto max-h-32">
+              {JSON.stringify(error, null, 2)}
+            </pre>
           </div>
         </CardContent>
       </Card>
