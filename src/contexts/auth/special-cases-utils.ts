@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types";
 import { createAppUserRecord } from "./record-creation-utils";
 import type { User } from "@supabase/supabase-js";
-import type { PostgrestError } from "@supabase/supabase-js"; // Good for explicit error typing if needed
+import type { PostgrestError } from "@supabase/supabase-js";
 
 // Define return type for our special cases function
 interface SpecialCaseResult {
@@ -17,9 +17,9 @@ interface StoreData {
 }
 
 interface ManagerData {
-  store_ids?: string[]; // store_ids is optional as per original
-  first_name?: string;  // first_name is optional
-  last_name?: string;   // last_name is optional
+  store_ids?: string[];
+  first_name?: string;
+  last_name?: string;
 }
 
 interface CashierData {
@@ -28,9 +28,9 @@ interface CashierData {
   last_name: string;
 }
 
-// Interface for the app_users existence check
+// Interface for the app_users existence check - ensure this is simple
 interface ExistingAppUser {
-  id: string; // Assuming 'id' is sufficient for the existence check
+  id: string; // Or the actual type of your id column
 }
 
 /**
@@ -48,29 +48,16 @@ export async function handleSpecialCases(
   if (email === 'admin@example.com') {
     console.log('Admin account detected via email check');
     resultRole = 'admin';
-
-    // For admins, fetch all store IDs
     const { data: storesData, error: storesError } = await supabase
       .from('stores')
-      .select('id'); // No .maybeSingle() here, result is an array or null
-
+      .select('id');
     if (storesError) {
       console.error('Error fetching stores for admin:', storesError);
     } else if (storesData && storesData.length > 0) {
       resultStoreIds = storesData.map((store: StoreData) => store.id);
     }
-
-    // Create app_user record for admin since it doesn't exist yet
     try {
-      await createAppUserRecord(
-        supabaseUser.id,
-        email,
-        'Admin',
-        'User',
-        resultRole,
-        resultStoreIds,
-        true
-      );
+      await createAppUserRecord(supabaseUser.id, email, 'Admin', 'User', resultRole, resultStoreIds, true);
     } catch (err) {
       console.error('Failed to create app_user for admin:', err);
     }
@@ -80,35 +67,20 @@ export async function handleSpecialCases(
       try {
         const { data: managerData, error: managerError } = await supabase
           .from('managers')
-          .select('store_ids, first_name, last_name') // Ensure this matches ManagerData
+          .select('store_ids, first_name, last_name')
           .eq('email', email)
-          .maybeSingle<ManagerData>(); // Applied explicit type
+          .maybeSingle<ManagerData>(); // Retain explicit generic here
 
         if (managerError) {
           console.error('Error fetching manager data:', managerError);
-        } else if (managerData) { // managerData is now ManagerData | null
+        } else if (managerData) {
           console.log('Found manager record:', managerData);
-
-          // `managerData` is already typed as ManagerData here (if not null)
-          // The `as unknown as ManagerData` cast is no longer strictly necessary for type safety
-          // but can be kept if it serves a specific purpose or for consistency with old patterns.
-          // For cleaner code, access properties directly:
           resultStoreIds = managerData.store_ids || [];
-
           const names = supabaseUser.user_metadata?.name?.split(' ') || [];
           const firstName = managerData.first_name || names[0] || email.split('@')[0];
           const lastName = managerData.last_name || names.slice(1).join(' ') || '';
-
           try {
-            await createAppUserRecord(
-              supabaseUser.id,
-              email,
-              firstName,
-              lastName,
-              resultRole,
-              resultStoreIds,
-              true
-            );
+            await createAppUserRecord(supabaseUser.id, email, firstName, lastName, resultRole, resultStoreIds, true);
           } catch (insertErr) {
             console.error('Failed to create app_user for manager:', insertErr);
           }
@@ -121,28 +93,17 @@ export async function handleSpecialCases(
       try {
         const { data: cashiersData, error: cashiersError } = await supabase
           .from('cashiers')
-          .select('store_id, first_name, last_name') // Ensure this matches CashierData
+          .select('store_id, first_name, last_name')
           .eq('email', email)
-          .maybeSingle<CashierData>(); // Applied explicit type
+          .maybeSingle<CashierData>(); // Retain explicit generic here
 
         if (cashiersError) {
           console.error('Error fetching cashier data:', cashiersError);
-        } else if (cashiersData) { // cashiersData is now CashierData | null
+        } else if (cashiersData) {
           console.log('Found cashier record:', cashiersData);
-
-          // `cashiersData` is already typed as CashierData here (if not null)
           resultStoreIds = [cashiersData.store_id];
-
           try {
-            await createAppUserRecord(
-              supabaseUser.id,
-              email,
-              cashiersData.first_name,
-              cashiersData.last_name,
-              resultRole,
-              resultStoreIds,
-              true
-            );
+            await createAppUserRecord(supabaseUser.id, email, cashiersData.first_name, cashiersData.last_name, resultRole, resultStoreIds, true);
           } catch (insertErr) {
             console.error('Failed to create app_user for cashier:', insertErr);
           }
@@ -153,33 +114,37 @@ export async function handleSpecialCases(
     }
 
     // Create a new default app_user if we haven't created one yet
-    // This was the block where the error occurred around line 112 originally.
-    if (email) { // This if(email) was in your original code.
+    // THIS IS LIKELY WHERE LINE 122 IS LOCATED
+    if (email) {
       try {
         const names = supabaseUser.user_metadata?.name?.split(' ') || [];
         const firstName = names[0] || email.split('@')[0];
         const lastName = names.slice(1).join(' ') || '';
 
         // Check if we already have an app_user record for this email
-        const { data: existingUser, error: existingUserError } = await supabase
+        // Applying the "as unknown as Type" pattern due to persistent TS2589
+        const { data: rawExistingUserData, error: existingUserError } = await supabase
           .from('app_users')
-          .select('id') // Minimal selection for existence check
+          .select('id') // Keep selection minimal
           .eq('email', email)
-          .maybeSingle<ExistingAppUser>(); // Applied explicit type
+          .maybeSingle(); // Removed <ExistingAppUser> generic to use the cast below
+
+        // Force cast the data part of the result
+        const existingUser = rawExistingUserData as unknown as (ExistingAppUser | null);
 
         if (existingUserError) {
           console.error('Error checking for existing app_user:', existingUserError);
+          // Potentially throw or return to prevent further execution on error
         }
-
-        // existingUser is now ExistingAppUser | null
-        if (!existingUser && !existingUserError) { // Create only if no user and no error fetching
+        
+        if (!existingUser && !existingUserError) {
           await createAppUserRecord(
             supabaseUser.id,
             email,
             firstName,
             lastName,
-            resultRole, // This role might be 'manager', 'cashier', or the initial role if not modified
-            resultStoreIds, // This might be populated by manager/cashier logic or empty
+            resultRole,
+            resultStoreIds,
             true
           );
         }
