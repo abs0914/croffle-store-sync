@@ -727,6 +727,18 @@ export type Database = {
         Args: { target_user_id: string; target_store_ids: string[] }
         Returns: boolean
       }
+      create_app_user: {
+        Args: {
+          user_id: string
+          user_email: string
+          first_name: string
+          last_name: string
+          user_role: string
+          store_ids: string[]
+          is_active: boolean
+        }
+        Returns: string
+      }
       get_current_user_info: {
         Args: Record<PropertyKey, never>
         Returns: {

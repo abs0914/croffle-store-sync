@@ -16,6 +16,7 @@ export async function createAppUserRecord(
   isActive: boolean
 ): Promise<void> {
   try {
+    // Use the create_app_user RPC function
     const { data, error } = await supabase.rpc('create_app_user', {
       user_id: userId,
       user_email: email,
