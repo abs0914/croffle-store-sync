@@ -727,6 +727,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_user_admin_or_owner: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       transfer_inventory_stock: {
         Args:
           | Record<PropertyKey, never>
