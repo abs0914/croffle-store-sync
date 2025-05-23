@@ -29,16 +29,18 @@ export const areRecipesEqual = (recipe1: Recipe | null, recipe2: Recipe | null):
   }
   
   const sortedIngredients1 = [...recipe1.ingredients].sort((a, b) => 
-    a.ingredient_id.localeCompare(b.ingredient_id)
+    (a.ingredientId || a.ingredient_id || '').localeCompare(b.ingredientId || b.ingredient_id || '')
   );
   
   const sortedIngredients2 = [...recipe2.ingredients].sort((a, b) => 
-    a.ingredient_id.localeCompare(b.ingredient_id)
+    (a.ingredientId || a.ingredient_id || '').localeCompare(b.ingredientId || b.ingredient_id || '')
   );
   
   for (let i = 0; i < sortedIngredients1.length; i++) {
-    if (sortedIngredients1[i].ingredient_id !== sortedIngredients2[i].ingredient_id ||
-        sortedIngredients1[i].quantity !== sortedIngredients2[i].quantity) {
+    const id1 = sortedIngredients1[i].ingredientId || sortedIngredients1[i].ingredient_id || '';
+    const id2 = sortedIngredients2[i].ingredientId || sortedIngredients2[i].ingredient_id || '';
+    
+    if (id1 !== id2 || sortedIngredients1[i].quantity !== sortedIngredients2[i].quantity) {
       return false;
     }
   }
@@ -52,7 +54,7 @@ export const fetchRecipe = async (productId: string, variationId?: string): Prom
   return null; // Return null as if no recipe exists yet
 };
 
-export const saveRecipe = async (recipe: Omit<Recipe, "id" | "created_at" | "updated_at">): Promise<Recipe | null> => {
+export const saveRecipe = async (recipe: Omit<Recipe, "id" | "createdAt" | "updatedAt">): Promise<Recipe | null> => {
   console.log("Mocked saveRecipe called with:", recipe);
   return null; // Mock implementation
 };
