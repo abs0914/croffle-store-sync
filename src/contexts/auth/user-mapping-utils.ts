@@ -4,7 +4,6 @@ import { User as AppUser } from "@/types";
 import { mapUserRole } from "./role-utils";
 import { handleSpecialCases } from "./special-cases-utils";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
-import type { PostgrestError } from "@supabase/supabase-js";
 
 interface AppUserData {
   role: string;
@@ -30,9 +29,12 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
   console.log('Mapping Supabase user:', supabaseUser.email);
   
   try {
-    // Try to get user info from the app_users table using RPC function
+    // Try to get user info from the app_users table directly
     const { data, error } = await supabase
-      .rpc('get_current_user_info', { user_email: email });
+      .from('app_users')
+      .select('*')
+      .eq('email', email)
+      .single();
 
     if (error) { 
       console.error('Error fetching user info from database:', error);

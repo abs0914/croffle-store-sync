@@ -10,15 +10,20 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
     let data;
     let error;
     
-    // Use the appropriate RPC function based on the parameters
+    // Use direct queries instead of RPC functions
     if (storeId) {
-      // Use get_store_users RPC function for store-specific users
-      const response = await supabase.rpc('get_store_users', { store_id_param: storeId });
+      // Query for users with access to specific store
+      const response = await supabase
+        .from('app_users')
+        .select('*')
+        .containedBy('store_ids', [storeId]);
       data = response.data;
       error = response.error;
     } else {
-      // Use get_all_users RPC function for all users (admin access)
-      const response = await supabase.rpc('get_all_users');
+      // Query for all users (admin access)
+      const response = await supabase
+        .from('app_users')
+        .select('*');
       data = response.data;
       error = response.error;
     }
@@ -49,8 +54,12 @@ export const fetchCurrentUserInfo = async (email: string): Promise<AppUser | nul
   try {
     console.log(`Fetching user info for: ${email}`);
     
-    // Use get_current_user_info RPC function
-    const { data, error } = await supabase.rpc('get_current_user_info', { user_email: email });
+    // Direct query instead of RPC function
+    const { data, error } = await supabase
+      .from('app_users')
+      .select('*')
+      .eq('email', email)
+      .single();
     
     if (error) {
       console.error('Error fetching current user info:', error);
