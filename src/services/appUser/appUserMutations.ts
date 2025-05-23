@@ -100,18 +100,41 @@ export const updateAppUser = async (data: AppUserFormData): Promise<AppUser | nu
 
 export const deleteAppUser = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    console.log('Attempting to delete app user with ID:', id);
+    
+    // First, check if this user has a user_id (linked to auth)
+    const { data: userData, error: fetchError } = await supabase
+      .from('app_users')
+      .select('user_id, email')
+      .eq('id', id)
+      .single();
+      
+    if (fetchError) {
+      console.error('Error fetching user data for deletion:', fetchError);
+      toast.error(`Failed to delete user: ${fetchError.message}`);
+      return false;
+    }
+    
+    // Delete the app_users entry first
+    const { error: deleteError } = await supabase
       .from('app_users')
       .delete()
       .eq('id', id);
 
-    if (error) {
-      console.error('Error deleting app user:', error);
-      toast.error(`Failed to delete user: ${error.message}`);
+    if (deleteError) {
+      console.error('Error deleting app user:', deleteError);
+      toast.error(`Failed to delete user: ${deleteError.message}`);
       return false;
     }
-
-    toast.success('User deleted successfully');
+    
+    // If the user has an auth account, inform the admin they need to delete it separately
+    if (userData?.user_id) {
+      toast.success('User record deleted successfully');
+      toast.info('Note: The associated auth account must be deleted from the Supabase dashboard');
+    } else {
+      toast.success('User deleted successfully');
+    }
+    
     return true;
   } catch (error: any) {
     console.error('Error in deleteAppUser:', error);
