@@ -15,7 +15,8 @@ import {
   UserProfile,
   UserListView,
   ErrorView,
-  LoadingView
+  LoadingView,
+  ActivateUserDialog
 } from "./components";
 import useUserDebug from "./hooks/useUserDebug";
 
@@ -30,7 +31,9 @@ export default function UsersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isActivateDialogOpen, setIsActivateDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
+  const [isDeactivating, setIsDeactivating] = useState(false);
 
   // Use the debug hook
   useUserDebug({ user, isAdmin, isOwner, canManageUsers, currentStore });
@@ -103,6 +106,18 @@ export default function UsersPage() {
     setSelectedUser(user);
     setIsDeleteDialogOpen(true);
   };
+  
+  const handleActivateUser = (user: AppUser) => {
+    setSelectedUser(user);
+    setIsDeactivating(false);
+    setIsActivateDialogOpen(true);
+  };
+  
+  const handleDeactivateUser = (user: AppUser) => {
+    setSelectedUser(user);
+    setIsDeactivating(true);
+    setIsActivateDialogOpen(true);
+  };
 
   if (error) {
     return <ErrorView error={error} onRetry={refetch} />;
@@ -148,6 +163,8 @@ export default function UsersPage() {
         onAddUser={handleAddUser}
         onEditUser={handleEditUser}
         onDeleteUser={handleDeleteUser}
+        onActivateUser={handleActivateUser}
+        onDeactivateUser={handleDeactivateUser}
         onRefresh={refetch}
       />
 
@@ -168,6 +185,13 @@ export default function UsersPage() {
         isOpen={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         user={selectedUser}
+      />
+      
+      <ActivateUserDialog
+        isOpen={isActivateDialogOpen}
+        onOpenChange={setIsActivateDialogOpen}
+        user={selectedUser}
+        isDeactivating={isDeactivating}
       />
     </div>
   );

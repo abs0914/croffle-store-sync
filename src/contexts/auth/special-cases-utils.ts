@@ -10,7 +10,7 @@ interface SpecialCaseResult {
   storeIds: string[];
 }
 
-// Define interfaces for DB query results
+// Define simplified interfaces for DB query results
 interface StoreData {
   id: string;
 }
@@ -118,7 +118,7 @@ export async function handleSpecialCases(
           .eq('email', email)
           .maybeSingle();
 
-        // Explicitly cast the returned data to our simplified type
+        // Use safe type casting to avoid deep instantiation issues
         const cashiersData = data as CashierData | null;
         const cashiersError = error;
 
@@ -154,14 +154,14 @@ export async function handleSpecialCases(
         const lastName = names.slice(1).join(' ') || '';
 
         // Check if we already have an app_user record for this email
-        // Using simplified query and type approach
+        // Use a simplified approach to avoid type instantiation issues
         const { data, error } = await supabase
           .from('app_users')
           .select('id') // Only select the id column
           .eq('email', email)
           .maybeSingle();
 
-        // Explicitly cast to our simple ExistingAppUser type
+        // Simple type casting
         const existingUser = data as ExistingAppUser | null;
         const existingUserError = error;
 

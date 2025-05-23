@@ -42,6 +42,7 @@ export default function ActivateUserDialog({
     if (!user) return;
 
     setIsProcessing(true);
+    // Ensure we pass all required properties of AppUserFormData
     await updateMutation.mutateAsync({
       id: user.id,
       firstName: user.firstName,

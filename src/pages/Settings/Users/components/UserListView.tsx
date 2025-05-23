@@ -6,7 +6,7 @@ import UsersTable from "./UsersTable";
 import EmptyUsersView from "./EmptyUsersView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, RefreshCwIcon } from "lucide-react";
+import { PlusIcon, RefreshCwIcon, DownloadIcon, UploadIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 
 interface UserListViewProps {
@@ -17,6 +17,8 @@ interface UserListViewProps {
   onAddUser: () => void;
   onEditUser: (user: AppUser) => void;
   onDeleteUser: (user: AppUser) => void;
+  onActivateUser?: (user: AppUser) => void;
+  onDeactivateUser?: (user: AppUser) => void;
   onRefresh: () => void;
   error?: any;
 }
@@ -29,6 +31,8 @@ export default function UserListView({
   onAddUser,
   onEditUser,
   onDeleteUser,
+  onActivateUser,
+  onDeactivateUser,
   onRefresh,
   error
 }: UserListViewProps) {
@@ -85,6 +89,8 @@ export default function UserListView({
         onAdd={onAddUser}
         onEdit={onEditUser}
         onDelete={onDeleteUser}
+        onActivate={onActivateUser}
+        onDeactivate={onDeactivateUser}
         allStores={stores}
       />
     );
@@ -100,10 +106,12 @@ export default function UserListView({
             Refresh
           </Button>
           {canManageUsers && (
-            <Button size="sm" onClick={onAddUser} disabled={isLoading}>
-              <PlusIcon className="h-4 w-4 mr-1" />
-              Add User
-            </Button>
+            <>
+              <Button size="sm" onClick={onAddUser} disabled={isLoading}>
+                <PlusIcon className="h-4 w-4 mr-1" />
+                Add User
+              </Button>
+            </>
           )}
         </div>
       </CardHeader>
