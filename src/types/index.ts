@@ -2,7 +2,8 @@
 export * from './user';
 export * from './product';
 export * from './store';
-export * from './shift';
+// Explicitly re-export to avoid ambiguity with the Shift type
+export { Shift as ShiftType } from './shift';
 export * from './transaction';
 export * from './inventory';
 export * from './recipe';

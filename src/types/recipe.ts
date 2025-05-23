@@ -1,18 +1,19 @@
 
-export interface Recipe {
+// Recipe type definitions
+export interface RecipeIngredient {
   id: string;
-  product_id: string;
-  variation_id?: string;
-  ingredients: RecipeIngredient[];
-  store_id: string;
-  created_at?: string;
-  updated_at?: string;
+  recipeId: string;
+  ingredientId: string;
+  quantity: number;
+  unit: string;
 }
 
-export interface RecipeIngredient {
-  ingredient_id: string;
-  ingredient_name?: string;
-  quantity: number;
-  unit_type?: string;
-  cost_per_unit?: number;
+export interface Recipe {
+  id: string;
+  productId: string;
+  name: string;
+  instructions: string;
+  ingredients: RecipeIngredient[];
+  createdAt: string;
+  updatedAt: string;
 }

@@ -11,6 +11,23 @@ interface SpecialCaseResult {
   storeIds: string[];
 }
 
+// Define interfaces for DB query results
+interface StoreData {
+  id: string;
+}
+
+interface ManagerData {
+  store_ids?: string[];
+  first_name?: string;
+  last_name?: string;
+}
+
+interface CashierData {
+  store_id: string;
+  first_name: string;
+  last_name: string;
+}
+
 /**
  * Handle special user cases and account creation
  */
@@ -33,7 +50,7 @@ export async function handleSpecialCases(
       .select('id');
       
     if (storesData && storesData.length > 0) {
-      resultStoreIds = storesData.map(store => store.id);
+      resultStoreIds = storesData.map((store: StoreData) => store.id);
     }
     
     // Create app_user record for admin since it doesn't exist yet
@@ -54,12 +71,6 @@ export async function handleSpecialCases(
     // For managers, check managers table as fallback
     if (role === 'manager') {
       try {
-        interface ManagerData {
-          store_ids?: string[];
-          first_name?: string;
-          last_name?: string;
-        }
-        
         const { data: managerData, error: managerError } = await supabase
           .from('managers')
           .select('store_ids, first_name, last_name')
@@ -68,12 +79,12 @@ export async function handleSpecialCases(
         
         if (managerData) {
           console.log('Found manager record:', managerData);
-          resultStoreIds = managerData.store_ids || [];
+          resultStoreIds = (managerData as ManagerData).store_ids || [];
           
           // Create app_user record since it doesn't exist yet
           const names = supabaseUser.user_metadata?.name?.split(' ') || [];
-          const firstName = managerData.first_name || names[0] || email.split('@')[0];
-          const lastName = managerData.last_name || names.slice(1).join(' ') || '';
+          const firstName = (managerData as ManagerData).first_name || names[0] || email.split('@')[0];
+          const lastName = (managerData as ManagerData).last_name || names.slice(1).join(' ') || '';
           
           try {
             await createAppUserRecord(
@@ -95,12 +106,6 @@ export async function handleSpecialCases(
     } else if (role === 'cashier') {
       // Similar handling for cashiers
       try {
-        interface CashierData {
-          store_id: string;
-          first_name: string;
-          last_name: string;
-        }
-        
         const { data: cashiersData, error: cashiersError } = await supabase
           .from('cashiers')
           .select('store_id, first_name, last_name')
@@ -108,15 +113,15 @@ export async function handleSpecialCases(
           .maybeSingle();
           
         if (cashiersData) {
-          resultStoreIds = [cashiersData.store_id];
+          resultStoreIds = [(cashiersData as CashierData).store_id];
           
           // Create app_user record
           try {
             await createAppUserRecord(
               supabaseUser.id,
               email,
-              cashiersData.first_name,
-              cashiersData.last_name,
+              (cashiersData as CashierData).first_name,
+              (cashiersData as CashierData).last_name,
               resultRole,
               resultStoreIds,
               true
