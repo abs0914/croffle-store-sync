@@ -148,13 +148,14 @@ export async function handleSpecialCases(
         const lastName = names.slice(1).join(' ') || '';
         
         // Check if we already have an app_user record for this email
-        const { data: existingUser } = await supabase
+        // Fix: Change select('*') to select('id') to prevent deep type recursion
+        const { data: existingUser, error: existingUserError } = await supabase
           .from('app_users')
-          .select('*')
+          .select('id') // Changed from '*' to just 'id'
           .eq('email', email)
           .maybeSingle();
           
-        if (!existingUser) {
+        if (!existingUser && !existingUserError) {
           await createAppUserRecord(
             supabaseUser.id,
             email,
