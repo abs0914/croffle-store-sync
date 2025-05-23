@@ -41,7 +41,7 @@ export default function UserTableFilters({
           <SelectValue placeholder="Filter by role" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All roles</SelectItem>
+          <SelectItem value="all">All roles</SelectItem>
           <SelectItem value="admin">Admin</SelectItem>
           <SelectItem value="owner">Owner</SelectItem>
           <SelectItem value="manager">Manager</SelectItem>
@@ -53,7 +53,7 @@ export default function UserTableFilters({
           <SelectValue placeholder="Filter by store" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All stores</SelectItem>
+          <SelectItem value="all">All stores</SelectItem>
           <SelectItem value="none">No store</SelectItem>
           {allStores.map(store => (
             <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
@@ -65,7 +65,7 @@ export default function UserTableFilters({
           <SelectValue placeholder="Filter by status" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All status</SelectItem>
+          <SelectItem value="all">All status</SelectItem>
           <SelectItem value="active">Active</SelectItem>
           <SelectItem value="inactive">Inactive</SelectItem>
         </SelectContent>

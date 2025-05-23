@@ -27,9 +27,9 @@ export default function UsersTable({
 }: UsersTableProps) {
   const [filters, setFilters] = useState<UserFilters>({
     name: '',
-    role: '',
-    store: '',
-    status: ''
+    role: 'all',
+    store: 'all',
+    status: 'all'
   });
 
   const handleFilterChange = (field: keyof UserFilters, value: string) => {
@@ -45,13 +45,15 @@ export default function UsersTable({
       const nameMatch = !filters.name || 
         `${user.firstName} ${user.lastName}`.toLowerCase().includes(filters.name.toLowerCase());
       
-      const roleMatch = !filters.role || user.role === filters.role;
+      const roleMatch = filters.role === 'all' || user.role === filters.role;
       
-      const storeMatch = !filters.store || 
+      const storeMatch = 
+        filters.store === 'all' || 
         (filters.store === 'none' && (!user.storeIds || user.storeIds.length === 0)) ||
         user.storeIds?.some(id => id === filters.store);
       
-      const statusMatch = !filters.status || 
+      const statusMatch = 
+        filters.status === 'all' || 
         (filters.status === 'active' && user.isActive) || 
         (filters.status === 'inactive' && !user.isActive);
       
