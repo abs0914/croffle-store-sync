@@ -13,7 +13,7 @@ import {
   EditManagerDialog, 
   DeleteManagerDialog 
 } from "./components";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 export default function ManagersPage() {
   const { currentStore, stores } = useStore();

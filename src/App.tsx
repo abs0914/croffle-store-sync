@@ -8,7 +8,7 @@ import POS from "./pages/POS";
 import NotFound from "./pages/NotFound";
 import { MainLayout } from "./components/layout/MainLayout";
 import Login from "./pages/Login";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider } from "./contexts/auth";
 import { StoreProvider } from "./contexts/StoreContext";
 import { ShiftProvider } from "./contexts/shift";
 import { StoreDisplayProvider } from "./contexts/StoreDisplayContext";

@@ -14,7 +14,7 @@ import {
   Boxes
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 const menuItems = [
   {

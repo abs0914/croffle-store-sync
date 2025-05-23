@@ -1,7 +1,7 @@
 
 import { ReactNode, useEffect } from "react";
 import Sidebar from "./sidebar";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { Spinner } from "../ui/spinner";
 import { useNavigate } from "react-router-dom";
 import { verifyDesignCompliance } from "@/utils/design";
