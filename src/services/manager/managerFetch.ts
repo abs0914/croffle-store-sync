@@ -1,9 +1,12 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Manager } from "@/types/manager";
+import { toast } from "sonner";
 
 export async function fetchManagers(storeId?: string): Promise<Manager[]> {
   try {
+    console.log("Fetching managers", storeId ? `for store: ${storeId}` : "for all stores");
+    
     let query = supabase
       .from('managers')
       .select('*');
@@ -18,8 +21,21 @@ export async function fetchManagers(storeId?: string): Promise<Manager[]> {
     
     if (error) {
       console.error('Error fetching managers:', error);
+      
+      // Check for permission errors (403)
+      if (error.code === "PGRST301" || error.message.includes("permission denied")) {
+        throw new Error("You don't have permission to view managers");
+      }
+      
       throw error;
     }
+
+    if (!data || data.length === 0) {
+      console.log("No managers found");
+      return [];
+    }
+    
+    console.log(`Found ${data.length} managers`);
     
     return data.map((manager: any) => ({
       id: manager.id,
@@ -31,7 +47,7 @@ export async function fetchManagers(storeId?: string): Promise<Manager[]> {
       email: manager.email,
       isActive: manager.is_active
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in fetchManagers:', error);
     throw error;
   }

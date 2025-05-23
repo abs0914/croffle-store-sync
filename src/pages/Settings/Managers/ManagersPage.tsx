@@ -20,32 +20,42 @@ export default function ManagersPage() {
   const { currentStore, stores } = useStore();
   const { hasPermission, user } = useAuth();
   const isAdmin = hasPermission('admin');
+  const isOwner = hasPermission('owner');
   const isManager = user?.role === 'manager';
+  const canManageManagers = isAdmin || isOwner;
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
 
-  // Fetch managers for the current store or all stores if admin
+  // Fetch managers for the current store or all stores if admin/owner
   const { data: managers = [], isLoading, error } = useQuery({
-    queryKey: ["managers", isAdmin ? "all" : currentStore?.id],
-    queryFn: () => isAdmin 
+    queryKey: ["managers", canManageManagers ? "all" : currentStore?.id],
+    queryFn: () => canManageManagers 
       ? fetchManagers() 
       : (currentStore ? fetchManagers(currentStore.id) : Promise.resolve([])),
-    enabled: isAdmin || !!currentStore,
-    // Add error handling for RLS policy issues
+    enabled: canManageManagers || !!currentStore,
+    retry: false, // Don't retry on permission errors
     meta: {
       onError: (err: any) => {
         console.error("Error fetching managers:", err);
-        toast.error("You don't have permission to view managers");
+        toast.error(err?.message || "Failed to load managers data");
       }
     }
   });
 
   if (error) {
-    console.error("Error fetching managers:", error);
-    toast.error("Failed to load managers");
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <h2 className="text-xl font-medium mb-2">Error Loading Managers</h2>
+            <p className="text-muted-foreground">{error instanceof Error ? error.message : "You may not have permission to view managers"}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   const handleAddManager = () => {
@@ -62,8 +72,8 @@ export default function ManagersPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  // Manager should not access this page at all - except their own profile
-  if (isManager && !isAdmin) {
+  // Manager should only see their own profile
+  if (isManager && !canManageManagers) {
     const currentManagerData = managers.find(manager => manager.email === user?.email);
     
     if (!currentManagerData) {
@@ -125,7 +135,7 @@ export default function ManagersPage() {
     );
   }
 
-  if (!currentStore && !isAdmin) {
+  if (!currentStore && !canManageManagers) {
     return (
       <Card>
         <CardContent className="pt-6">
