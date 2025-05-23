@@ -3,7 +3,6 @@ import { AppUser } from "@/types/appUser";
 import { Store } from "@/types/store";
 import { Button } from "@/components/ui/button";
 import { PencilIcon, TrashIcon, PlusCircleIcon, KeyIcon } from "lucide-react";
-import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { UserRole } from "@/types/user";
 import {
@@ -52,7 +51,7 @@ export default function UsersTable({
   };
 
   const getStoreNames = (storeIds: string[]) => {
-    if (!storeIds.length) return "None";
+    if (!storeIds?.length) return "None";
     
     const storeNames = storeIds.map(id => {
       const store = allStores.find(s => s.id === id);
@@ -65,26 +64,6 @@ export default function UsersTable({
     
     return `${storeNames[0]}, ${storeNames[1]} +${storeNames.length - 2}`;
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center p-8">
-        <Spinner className="h-8 w-8" />
-      </div>
-    );
-  }
-
-  if (users.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No users found.</p>
-        <Button onClick={onAdd} variant="outline" className="mt-4">
-          <PlusCircleIcon className="mr-2 h-4 w-4" />
-          Add your first user
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="border rounded-md overflow-hidden">
@@ -103,7 +82,7 @@ export default function UsersTable({
         <TableBody>
           {users.map((user) => (
             <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.fullName}</TableCell>
+              <TableCell className="font-medium">{user.fullName || `${user.firstName} ${user.lastName}`}</TableCell>
               <TableCell>{getUserRoleBadge(user.role)}</TableCell>
               <TableCell>{user.email || "N/A"}</TableCell>
               <TableCell>{user.contactNumber || "N/A"}</TableCell>

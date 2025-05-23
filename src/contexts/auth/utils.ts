@@ -34,9 +34,9 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
       .from('app_users')
       .select('*')
       .eq('email', email)
-      .maybeSingle();
-    
-    if (error) {
+      .maybeSingle(); // Use maybeSingle instead of single to avoid 406 errors
+
+    if (error && error.code !== 'PGRST116') { // Ignoring "no rows returned" error
       console.error('Error fetching user info from database:', error);
     } 
 
@@ -72,15 +72,42 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
       if (storesData && storesData.length > 0) {
         storeIds = storesData.map(store => store.id);
       }
+      
+      // Create app_user record for admin since it doesn't exist yet
+      try {
+        const { error: createError } = await supabase
+          .from('app_users')
+          .insert({
+            user_id: supabaseUser.id,
+            email: email,
+            first_name: 'Admin',
+            last_name: 'User',
+            role: role,
+            store_ids: storeIds,
+            is_active: true
+          });
+          
+        if (createError) {
+          console.error('Error creating admin app_user record:', createError);
+        } else {
+          console.log('Created new app_user for admin account');
+        }
+      } catch (err) {
+        console.error('Failed to create app_user for admin:', err);
+      }
     } else {
       // For manager emails, check managers table as fallback
       if (role === 'manager') {
         try {
-          const { data: managerData } = await supabase
+          const { data: managerData, error: managerError } = await supabase
             .from('managers')
             .select('store_ids, first_name, last_name')
             .eq('email', supabaseUser.email)
             .maybeSingle();
+          
+          if (managerError && managerError.code !== 'PGRST116') {
+            console.error('Error checking managers data:', managerError);
+          }
           
           if (managerData) {
             console.log('Found manager record:', managerData);
@@ -109,10 +136,54 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
               console.error('Error creating app_user record:', createError);
             } else {
               console.log('Created new app_user from manager record:', newAppUser);
+              
+              // Use the newly created app_user data
+              return {
+                id: supabaseUser.id,
+                email: supabaseUser.email,
+                name: `${firstName} ${lastName}`.trim(),
+                role: role,
+                storeIds: storeIds,
+                avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
+              };
             }
           }
         } catch (error) {
           console.error('Error checking managers data:', error);
+        }
+      } else if (role === 'cashier') {
+        // Similar handling for cashiers
+        try {
+          const { data: cashiersData } = await supabase
+            .from('cashiers')
+            .select('store_id, first_name, last_name')
+            .eq('email', email)
+            .maybeSingle();
+            
+          if (cashiersData) {
+            storeIds = [cashiersData.store_id];
+            
+            // Create app_user record
+            const { error: createError } = await supabase
+              .from('app_users')
+              .insert({
+                user_id: supabaseUser.id,
+                email: email,
+                first_name: cashiersData.first_name,
+                last_name: cashiersData.last_name,
+                role: role,
+                store_ids: storeIds,
+                is_active: true
+              });
+              
+            if (createError) {
+              console.error('Error creating app_user record for cashier:', createError);
+            } else {
+              console.log('Created new app_user from cashier record');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking cashier data:', error);
         }
       }
     }
@@ -120,46 +191,32 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
     console.error('Error checking app_users data:', error);
   }
 
-  // If we've reached here, we need to use derived/fallback data
-  // Try legacy tables if needed
-  if (role === 'cashier') {
+  // Create a new default app_user if we haven't created one yet
+  if (email && !storeIds.length) {
     try {
-      const { data: cashierData } = await supabase
-        .from('cashiers')
-        .select('store_id')
-        .eq('user_id', supabaseUser.id);
+      const names = supabaseUser.user_metadata?.name?.split(' ') || [];
+      const firstName = names[0] || email.split('@')[0];
+      const lastName = names.slice(1).join(' ') || '';
       
-      if (cashierData && cashierData.length > 0) {
-        storeIds = cashierData.map(item => item.store_id);
-      }
-    } catch (error) {
-      console.error('Error fetching cashier store assignments:', error);
-    }
-  } else if (role === 'manager') {
-    try {
-      const { data: managerData } = await supabase
-        .from('managers')
-        .select('store_ids')
-        .eq('email', supabaseUser.email)
-        .maybeSingle();
-      
-      if (managerData && managerData.store_ids) {
-        storeIds = managerData.store_ids;
-      }
-    } catch (error) {
-      console.error('Error fetching manager store assignments:', error);
-    }
-  } else if (role === 'admin' || role === 'owner') {
-    try {
-      const { data: storesData } = await supabase
-        .from('stores')
-        .select('id');
+      const { error: createError } = await supabase
+        .from('app_users')
+        .insert({
+          user_id: supabaseUser.id,
+          email: email,
+          first_name: firstName,
+          last_name: lastName,
+          role: role,
+          store_ids: [],
+          is_active: true
+        });
         
-      if (storesData && storesData.length > 0) {
-        storeIds = storesData.map(store => store.id);
+      if (createError) {
+        console.error('Error creating default app_user record:', createError);
+      } else {
+        console.log('Created default app_user record for:', email);
       }
-    } catch (error) {
-      console.error('Error fetching store IDs:', error);
+    } catch (err) {
+      console.error('Failed to create default app_user:', err);
     }
   }
 

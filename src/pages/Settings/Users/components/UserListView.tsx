@@ -5,7 +5,7 @@ import { Store } from "@/types/store";
 import { UserRole } from "@/types/user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FilterIcon, UserPlusIcon, RefreshCwIcon } from "lucide-react";
+import { FilterIcon, UserPlusIcon, RefreshCwIcon, UsersIcon } from "lucide-react";
 import { UsersTable } from "./";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -68,7 +68,7 @@ export default function UserListView({
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={isLoading}>
+              <Button variant="outline" size="sm" disabled={isLoading || users.length === 0}>
                 <FilterIcon className="mr-2 h-4 w-4" />
                 Filter
               </Button>
@@ -107,14 +107,38 @@ export default function UserListView({
         </div>
       </CardHeader>
       <CardContent>
-        <UsersTable 
-          users={filteredUsers}
-          isLoading={isLoading}
-          onAdd={onAddUser}
-          onEdit={onEditUser}
-          onDelete={onDeleteUser}
-          allStores={stores}
-        />
+        {isLoading ? (
+          <div className="flex justify-center p-8">
+            <Spinner className="h-8 w-8" />
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="rounded-full bg-muted p-3 mb-4">
+              <UsersIcon className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-medium">No users found</h3>
+            <p className="text-muted-foreground text-center max-w-sm mt-2 mb-6">
+              {users.length === 0 
+                ? "You haven't added any users yet. Add your first user to get started."
+                : "No users match your current filter criteria. Try changing the filters."}
+            </p>
+            {users.length === 0 && canManageUsers && (
+              <Button onClick={onAddUser}>
+                <UserPlusIcon className="mr-2 h-4 w-4" />
+                Add your first user
+              </Button>
+            )}
+          </div>
+        ) : (
+          <UsersTable 
+            users={filteredUsers}
+            isLoading={isLoading}
+            onAdd={onAddUser}
+            onEdit={onEditUser}
+            onDelete={onDeleteUser}
+            allStores={stores}
+          />
+        )}
       </CardContent>
     </Card>
   );
