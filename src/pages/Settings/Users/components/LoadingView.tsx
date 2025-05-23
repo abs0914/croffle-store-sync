@@ -5,13 +5,10 @@ import { Spinner } from "@/components/ui/spinner";
 export default function LoadingView() {
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="text-center py-8">
-          <h2 className="text-xl font-medium mb-2">Loading your profile...</h2>
-          <p className="text-muted-foreground">Please wait while we retrieve your information.</p>
-          <div className="flex justify-center mt-4">
-            <Spinner className="h-8 w-8" />
-          </div>
+      <CardContent className="flex justify-center items-center p-12">
+        <div className="text-center">
+          <Spinner className="h-8 w-8 mb-4" />
+          <p className="text-muted-foreground">Loading user data...</p>
         </div>
       </CardContent>
     </Card>

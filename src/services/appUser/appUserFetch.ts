@@ -21,6 +21,12 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
     const { data, error } = await query;
     
     if (error) {
+      // Handle specific Postgres REST error codes
+      if (error.code === 'PGRST116') {
+        console.log('No app users found matching criteria');
+        return [];
+      }
+      
       console.error('Error fetching app users:', error);
       throw error;
     }
@@ -28,6 +34,10 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
     return mapAppUsers(data || []);
   } catch (error: any) {
     console.error('Error in fetchAppUsers:', error);
+    if (error.status === 406) { // Not Acceptable error
+      console.log('Query format issue - returning empty results');
+      return [];
+    }
     throw error;
   }
 };

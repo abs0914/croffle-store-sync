@@ -723,6 +723,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_user_record: {
+        Args: { target_user_id: string; target_store_ids: string[] }
+        Returns: boolean
+      }
+      get_current_user_info: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_role: Database["public"]["Enums"]["app_role"]
+          user_store_ids: string[]
+        }[]
+      }
       is_admin_or_owner: {
         Args: Record<PropertyKey, never>
         Returns: boolean

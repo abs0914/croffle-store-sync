@@ -29,32 +29,20 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
   console.log('Mapping Supabase user:', supabaseUser.email);
   
   try {
-    // Try to get user info from the app_users table using RLS
+    // Try to get user info from the app_users table
     const { data, error } = await supabase
       .from('app_users')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle();
     
     if (error) {
       console.error('Error fetching user info from database:', error);
-      
-      // Special handling for admin accounts
-      if (email === 'admin@example.com') {
-        console.log('Admin account detected via email check');
-        role = 'admin';
-        
-        // For admins, fetch all store IDs
-        const { data: storesData } = await supabase
-          .from('stores')
-          .select('id');
-          
-        if (storesData && storesData.length > 0) {
-          storeIds = storesData.map(store => store.id);
-        }
-      }
-    } else if (data) {
-      // User found via direct query
+    } 
+
+    // If user exists in app_users, use that data
+    if (data) {
+      console.log('Found existing app_user record:', data.email);
       role = data.role as UserRole;
       storeIds = data.store_ids || [];
       
@@ -69,12 +57,71 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
         storeIds: storeIds,
         avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
       };
+    } 
+    
+    // Special handling for admin accounts
+    if (email === 'admin@example.com') {
+      console.log('Admin account detected via email check');
+      role = 'admin';
+      
+      // For admins, fetch all store IDs
+      const { data: storesData } = await supabase
+        .from('stores')
+        .select('id');
+        
+      if (storesData && storesData.length > 0) {
+        storeIds = storesData.map(store => store.id);
+      }
+    } else {
+      // For manager emails, check managers table as fallback
+      if (role === 'manager') {
+        try {
+          const { data: managerData } = await supabase
+            .from('managers')
+            .select('store_ids, first_name, last_name')
+            .eq('email', supabaseUser.email)
+            .maybeSingle();
+          
+          if (managerData) {
+            console.log('Found manager record:', managerData);
+            storeIds = managerData.store_ids || [];
+            
+            // Create app_user record since it doesn't exist yet
+            const names = supabaseUser.user_metadata?.name?.split(' ') || [];
+            const firstName = managerData.first_name || names[0] || email.split('@')[0];
+            const lastName = managerData.last_name || names.slice(1).join(' ') || '';
+            
+            const { data: newAppUser, error: createError } = await supabase
+              .from('app_users')
+              .insert({
+                user_id: supabaseUser.id,
+                email: email,
+                first_name: firstName,
+                last_name: lastName,
+                role: role,
+                store_ids: storeIds,
+                is_active: true
+              })
+              .select()
+              .single();
+              
+            if (createError) {
+              console.error('Error creating app_user record:', createError);
+            } else {
+              console.log('Created new app_user from manager record:', newAppUser);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking managers data:', error);
+        }
+      }
     }
   } catch (error) {
     console.error('Error checking app_users data:', error);
   }
 
-  // If no data found in app_users or error occurred, try legacy tables
+  // If we've reached here, we need to use derived/fallback data
+  // Try legacy tables if needed
   if (role === 'cashier') {
     try {
       const { data: cashierData } = await supabase
@@ -94,7 +141,7 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
         .from('managers')
         .select('store_ids')
         .eq('email', supabaseUser.email)
-        .single();
+        .maybeSingle();
       
       if (managerData && managerData.store_ids) {
         storeIds = managerData.store_ids;
