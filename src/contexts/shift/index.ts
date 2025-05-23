@@ -1,4 +1,4 @@
 
 export { ShiftProvider, useShift } from './ShiftContext';
-export * from './types';
+export type { ShiftState, ShiftRow } from './types';
 export * from './shiftUtils';

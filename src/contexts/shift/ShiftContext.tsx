@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { Shift } from "@/types";
+import { ShiftType } from "@/types";
 import { useAuth } from "@/contexts/auth";
 import { useStore } from "@/contexts/StoreContext";
 import { ShiftState } from "./types";
@@ -21,7 +21,7 @@ const ShiftContext = createContext<ShiftState>(initialState);
 export function ShiftProvider({ children }: { children: ReactNode }) {
   const { user, session } = useAuth();
   const { currentStore } = useStore();
-  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [currentShift, setCurrentShift] = useState<ShiftType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch active shift when user or store changes

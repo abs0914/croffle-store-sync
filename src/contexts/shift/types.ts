@@ -1,5 +1,5 @@
 
-import { Shift } from "@/types";
+import { ShiftType } from "@/types";
 
 // This is our custom type for shifts table rows
 export interface ShiftRow {
@@ -20,7 +20,7 @@ export interface ShiftRow {
 }
 
 export interface ShiftState {
-  currentShift: Shift | null;
+  currentShift: ShiftType | null;
   isLoading: boolean;
   startShift: (
     startingCash: number, 

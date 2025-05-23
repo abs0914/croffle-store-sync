@@ -1,11 +1,10 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { Shift } from "@/types";
+import { ShiftType } from "@/types";
 import { ShiftRow } from "./types";
 import { toast } from "sonner";
 
 // Map from ShiftRow to Shift model
-export function mapShiftRowToShift(shiftData: ShiftRow): Shift {
+export function mapShiftRowToShift(shiftData: ShiftRow): ShiftType {
   return {
     id: shiftData.id,
     userId: shiftData.user_id,
@@ -31,7 +30,7 @@ export async function createShift(
   startInventoryCount: Record<string, number>,
   startPhoto?: string,
   cashierId?: string
-): Promise<Shift | null> {
+): Promise<ShiftType | null> {
   try {
     // Verify authentication status
     const { data: { session } } = await supabase.auth.getSession();
@@ -132,7 +131,7 @@ export async function closeShift(
 export async function getActiveShift(
   userId: string,
   storeId: string
-): Promise<Shift | null> {
+): Promise<ShiftType | null> {
   try {
     const { data, error } = await supabase
       .from('shifts')
