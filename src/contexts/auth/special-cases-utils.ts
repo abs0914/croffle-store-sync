@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types";
 import { createAppUserRecord } from "./record-creation-utils";
 import type { User } from "@supabase/supabase-js";
-import type { PostgrestError } from "@supabase/supabase-js";
 
 // Define return type for our special cases function
 interface SpecialCaseResult {
@@ -30,7 +29,7 @@ interface CashierData {
 
 // Interface for the app_users existence check - ensure this is simple
 interface ExistingAppUser {
-  id: string; // Or the actual type of your id column
+  id: string;
 }
 
 /**
@@ -56,8 +55,19 @@ export async function handleSpecialCases(
     } else if (storesData && storesData.length > 0) {
       resultStoreIds = storesData.map((store: StoreData) => store.id);
     }
+    
+    // Let this skip the direct insert and use the RPC function that's exempt from RLS
+    // We'll implement this function later
     try {
-      await createAppUserRecord(supabaseUser.id, email, 'Admin', 'User', resultRole, resultStoreIds, true);
+      await createAppUserViaRPC(
+        supabaseUser.id,
+        email,
+        'Admin',
+        'User',
+        resultRole,
+        resultStoreIds,
+        true
+      );
     } catch (err) {
       console.error('Failed to create app_user for admin:', err);
     }
@@ -80,7 +90,15 @@ export async function handleSpecialCases(
           const firstName = managerData.first_name || names[0] || email.split('@')[0];
           const lastName = managerData.last_name || names.slice(1).join(' ') || '';
           try {
-            await createAppUserRecord(supabaseUser.id, email, firstName, lastName, resultRole, resultStoreIds, true);
+            await createAppUserViaRPC(
+              supabaseUser.id,
+              email,
+              firstName,
+              lastName,
+              resultRole,
+              resultStoreIds,
+              true
+            );
           } catch (insertErr) {
             console.error('Failed to create app_user for manager:', insertErr);
           }
@@ -103,7 +121,15 @@ export async function handleSpecialCases(
           console.log('Found cashier record:', cashiersData);
           resultStoreIds = [cashiersData.store_id];
           try {
-            await createAppUserRecord(supabaseUser.id, email, cashiersData.first_name, cashiersData.last_name, resultRole, resultStoreIds, true);
+            await createAppUserViaRPC(
+              supabaseUser.id,
+              email,
+              cashiersData.first_name,
+              cashiersData.last_name,
+              resultRole,
+              resultStoreIds,
+              true
+            );
           } catch (insertErr) {
             console.error('Failed to create app_user for cashier:', insertErr);
           }
@@ -136,7 +162,7 @@ export async function handleSpecialCases(
         }
         
         if (!existingUser && !existingUserError) {
-          await createAppUserRecord(
+          await createAppUserViaRPC(
             supabaseUser.id,
             email,
             firstName,
@@ -153,4 +179,39 @@ export async function handleSpecialCases(
   }
 
   return { role: resultRole, storeIds: resultStoreIds };
+}
+
+/**
+ * Create app_user via RPC function to bypass RLS
+ * This uses our new create_app_user RPC function that we'll define in SQL
+ */
+async function createAppUserViaRPC(
+  userId: string,
+  email: string,
+  firstName: string,
+  lastName: string,
+  role: UserRole,
+  storeIds: string[],
+  isActive: boolean
+): Promise<void> {
+  try {
+    const { data, error } = await supabase.rpc('create_app_user', {
+      user_id: userId,
+      user_email: email,
+      first_name: firstName,
+      last_name: lastName,
+      user_role: role,
+      store_ids: storeIds,
+      is_active: isActive
+    });
+    
+    if (error) {
+      console.error('Error creating app_user via RPC:', error);
+    } else {
+      console.log('Created new app_user record via RPC for:', email);
+    }
+  } catch (err) {
+    console.error('Failed to call create_app_user RPC function:', err);
+    throw err;
+  }
 }

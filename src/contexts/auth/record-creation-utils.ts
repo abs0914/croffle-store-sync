@@ -1,10 +1,10 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types";
-import type { PostgrestError } from "@supabase/supabase-js";
 
 /**
  * Helper function to create app_user records and avoid duplicate code
+ * Now delegates to createAppUserViaRPC
  */
 export async function createAppUserRecord(
   userId: string,
@@ -16,20 +16,18 @@ export async function createAppUserRecord(
   isActive: boolean
 ): Promise<void> {
   try {
-    const { error: createError } = await supabase
-      .from('app_users')
-      .insert({
-        user_id: userId,
-        email: email,
-        first_name: firstName,
-        last_name: lastName,
-        role: role,
-        store_ids: storeIds,
-        is_active: isActive
-      });
-      
-    if (createError) {
-      console.error('Error creating app_user record:', createError);
+    const { data, error } = await supabase.rpc('create_app_user', {
+      user_id: userId,
+      user_email: email,
+      first_name: firstName,
+      last_name: lastName,
+      user_role: role,
+      store_ids: storeIds,
+      is_active: isActive
+    });
+    
+    if (error) {
+      console.error('Error creating app_user record via RPC:', error);
     } else {
       console.log('Created new app_user record for:', email);
     }
