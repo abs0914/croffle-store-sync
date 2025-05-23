@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -63,14 +62,8 @@ const menuItems = [
 
 const settingsItems = [
   {
-    name: "Cashiers",
-    href: "/settings/cashiers",
-    icon: UserCircle,
-    roles: ["admin", "owner", "manager"]
-  },
-  {
-    name: "Managers",
-    href: "/settings/managers",
+    name: "Users",
+    href: "/settings/users",
     icon: UserCircle,
     roles: ["admin", "owner"]
   }
