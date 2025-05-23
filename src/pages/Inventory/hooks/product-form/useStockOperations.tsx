@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -57,7 +58,7 @@ export const useStockOperations = ({ productId }: UseStockOperationsProps) => {
     }
 
     try {
-      const { error } = await supabase.rpc('adjust_product_stock', {
+      const { error } = await supabase.rpc('transfer_inventory_stock', {
         product_id: productId,
         transaction_type: type,
         quantity: quantityNumber,

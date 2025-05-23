@@ -34,9 +34,7 @@ export const useProductForm = ({ product, isEditing, productId }: UseProductForm
   
   // Stock operations
   const stockOps = useStockOperations({ 
-    product, 
-    productId,
-    setFormData: state.setFormData
+    productId: product?.id || productId
   });
   
   // Form submission
@@ -57,10 +55,7 @@ export const useProductForm = ({ product, isEditing, productId }: UseProductForm
   
   // Handle stock adjustment save
   const handleSaveStockAdjustment = () => {
-    return stockOps.handleSaveStockAdjustment(
-      state.stockAdjustment,
-      state.setIsAdjustmentDialogOpen
-    );
+    return stockOps.handleSaveStockAdjustment();
   };
   
   return {
