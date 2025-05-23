@@ -2,13 +2,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { AppUser } from "@/types/appUser";
 import { mapAppUsers } from "./appUserHelpers";
-import { toast } from "sonner";
 
 export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
   try {
     console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all stores");
     
-    // Build query - use the authenticated user's permissions via RLS
+    // Build query - let RLS handle permissions
     let query = supabase.from('app_users').select('*');
     
     // If a store ID is provided, filter by that store
@@ -20,8 +19,13 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
     const { data, error } = await query;
     
     if (error) {
-      console.error('Error fetching app users:', error);
-      throw new Error(error.message || 'Failed to load users');
+      if (error.message.includes('infinite recursion')) {
+        console.error('RLS policy recursion error - please contact support');
+        throw new Error('Database permission error - please contact support');
+      } else {
+        console.error('Error fetching app users:', error);
+        throw new Error(error.message || 'Failed to load users');
+      }
     }
 
     // Successful query but no results
@@ -36,7 +40,6 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
     return mappedUsers;
   } catch (error: any) {
     console.error('Error in fetchAppUsers:', error);
-    // Don't show toast here - let the calling component handle the error
-    return [];
+    throw error; // Let the calling function handle the error display
   }
 };

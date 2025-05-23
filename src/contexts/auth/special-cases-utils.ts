@@ -5,7 +5,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types";
-import { mapUserRole } from './role-utils';
 
 interface SpecialCaseResult {
   role: UserRole;
@@ -49,7 +48,7 @@ export const handleSpecialCases = async (userData: any = null, email: string = '
       const firstName = email.split('@')[0].split('.')[0] || '';
       const lastName = email.split('@')[0].split('.')[1] || '';
       
-      // Use RPC call for creating app_user
+      // Call the create_app_user function to avoid ambiguous column error
       const { data, error } = await supabase.rpc('create_app_user', {
         user_id: userData?.id || null,
         user_email: email,

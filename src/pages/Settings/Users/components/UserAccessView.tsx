@@ -30,28 +30,13 @@ export default function UserAccessView({
   stores,
   refetch
 }: UserAccessViewProps) {
-  // Manager view - only see their own profile
-  if (isManager) {
-    const currentUserData = users.find(u => u.email === currentUserEmail);
-    
-    if (!currentUserData && !isLoading) {
-      return (
-        <ErrorView 
-          error={new Error("Unable to load your user profile")} 
-          onRetry={refetch} 
-        />
-      );
-    }
-    
-    if (!currentUserData) {
-      return <LoadingView />;
-    }
-
-    return <UserProfile user={currentUserData} stores={stores} />;
+  // Show loading view while data is being fetched
+  if (isLoading) {
+    return <LoadingView />;
   }
 
   // Handle permission errors specifically
-  if (error && error.message.includes('policy')) {
+  if (error && (error.message.includes('policy') || error.message.includes('permission'))) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center p-12">
@@ -69,6 +54,31 @@ export default function UserAccessView({
         </CardContent>
       </Card>
     );
+  }
+  
+  // Handle other errors
+  if (error) {
+    return <ErrorView error={error} onRetry={refetch} />;
+  }
+
+  // Manager view - only see their own profile
+  if (isManager) {
+    const currentUserData = users.find(u => u.email === currentUserEmail);
+    
+    if (!currentUserData) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-12">
+            <p className="text-muted-foreground mb-4">Your user profile was not found.</p>
+            <Button onClick={refetch} variant="outline">
+              Refresh
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return <UserProfile user={currentUserData} stores={stores} />;
   }
 
   // Store selection required

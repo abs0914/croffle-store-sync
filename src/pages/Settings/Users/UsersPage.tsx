@@ -28,28 +28,28 @@ export default function UsersPage() {
   // Debug hook
   useUserDebug({ user, isAdmin, isOwner, canManageUsers, currentStore });
   
-  // Handle error state
-  if (error) {
-    return <ErrorView error={error} onRetry={refetch} />;
+  // Handle loading state
+  if (isLoading && !error) {
+    return <LoadingView />;
+  }
+  
+  // Handle restricted access views for managers or errors
+  if (isManager && !canManageUsers || error) {
+    return (
+      <UserAccessView
+        isManager={isManager && !canManageUsers}
+        isLoading={isLoading}
+        error={error ? (error as Error) : null}
+        currentStoreExists={!!currentStore || canManageUsers}
+        users={users}
+        currentUserEmail={user?.email}
+        stores={stores}
+        refetch={refetch}
+      />
+    );
   }
 
-  // Handle restricted access views
-  const accessView = (
-    <UserAccessView
-      isManager={isManager && !canManageUsers}
-      isLoading={isLoading}
-      error={error ? (error as Error) : null}
-      currentStoreExists={!!currentStore || canManageUsers}
-      users={users}
-      currentUserEmail={user?.email}
-      stores={stores}
-      refetch={refetch}
-    />
-  );
-
-  if (accessView) return accessView;
-
-  // Main user management view
+  // Main user management view for admins and owners
   return (
     <div className="space-y-6">
       <UserListView
