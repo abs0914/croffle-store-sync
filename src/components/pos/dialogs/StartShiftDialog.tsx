@@ -14,7 +14,7 @@ import { fetchInventoryStock } from "@/services/inventoryStock";
 import { fetchActiveCashiers } from "@/services/cashier";
 import { Camera } from "lucide-react";
 import { getPreviousShiftEndingCash } from "@/contexts/shift/shiftUtils";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 
 // Import the components

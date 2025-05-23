@@ -1,58 +1,93 @@
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/auth';
+import { toast } from 'sonner';
 
-import { useState } from "react";
-import { useStore } from "@/contexts/StoreContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { createInventoryTransaction } from "@/services/productService";
-import { toast } from "sonner";
-import { StockAdjustment } from "./useProductFormState";
+interface StockAdjustment {
+  type: 'adjustment' | 'purchase' | 'sale' | 'return' | 'transfer';
+  quantity: number;
+  notes: string;
+}
 
-export function useStockOperations({ 
-  product,
-  productId,
-  setFormData 
-}: {
-  product?: any; 
-  productId?: string;
-  setFormData: (formData: any) => any;
-}) {
-  const { currentStore } = useStore();
+interface UseStockOperationsProps {
+  productId: string | undefined;
+}
+
+export const useStockOperations = ({ productId }: UseStockOperationsProps) => {
+  const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [stockAdjustment, setStockAdjustment] = useState<StockAdjustment>({
+    type: 'adjustment',
+    quantity: 0,
+    notes: '',
+  });
 
-  const handleSaveStockAdjustment = async (
-    stockAdjustment: StockAdjustment, 
-    setIsAdjustmentDialogOpen: (isOpen: boolean) => void
-  ) => {
-    if (!currentStore?.id || !user?.id || !product) return;
-    
+  const handleStockAdjustmentInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setStockAdjustment(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSaveStockAdjustment = async () => {
+    if (!productId) {
+      toast.error('Product ID is missing.');
+      return;
+    }
+
+    if (!user?.id) {
+      toast.error('User information is missing.');
+      return;
+    }
+
+    const { type, quantity, notes } = stockAdjustment;
+
+    if (!type || !quantity) {
+      toast.error('Please specify both type and quantity.');
+      return;
+    }
+
+    const quantityNumber = Number(quantity);
+
+    if (isNaN(quantityNumber)) {
+      toast.error('Invalid quantity.');
+      return;
+    }
+
     try {
-      const currentQuantity = product.stockQuantity || 0;
-      const newQuantity = stockAdjustment.type === "add" 
-        ? currentQuantity + stockAdjustment.quantity
-        : stockAdjustment.type === "remove"
-          ? currentQuantity - stockAdjustment.quantity
-          : stockAdjustment.quantity;
-      
-      await createInventoryTransaction({
-        store_id: currentStore.id,
-        product_id: productId!,
-        transaction_type: "adjustment",
-        quantity: stockAdjustment.quantity,
-        previous_quantity: currentQuantity,
-        new_quantity: newQuantity,
-        notes: stockAdjustment.notes,
-        created_by: user.id
+      const { error } = await supabase.rpc('adjust_product_stock', {
+        product_id: productId,
+        transaction_type: type,
+        quantity: quantityNumber,
+        user_id: user.id,
+        notes: notes,
       });
-      
-      setFormData((prev: any) => ({ ...prev, stockQuantity: newQuantity }));
-      setIsAdjustmentDialogOpen(false);
-      toast.success("Stock adjusted successfully");
-    } catch (error) {
-      console.error("Error adjusting stock:", error);
-      toast.error("Failed to adjust stock");
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Stock adjusted successfully!');
+      // Invalidate relevant queries to update the UI
+      queryClient.invalidateQueries({ queryKey: ['product', productId] });
+      queryClient.invalidateQueries({ queryKey: ['inventoryTransactions'] });
+      // Reset the stock adjustment state
+      setStockAdjustment({
+        type: 'adjustment',
+        quantity: 0,
+        notes: '',
+      });
+    } catch (error: any) {
+      console.error('Stock adjustment failed:', error);
+      toast.error(`Failed to adjust stock: ${error.message}`);
     }
   };
 
   return {
-    handleSaveStockAdjustment
+    stockAdjustment,
+    handleStockAdjustmentInputChange,
+    handleSaveStockAdjustment,
   };
-}
+};

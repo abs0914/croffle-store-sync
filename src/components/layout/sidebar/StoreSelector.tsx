@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Store } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 export const StoreSelector: React.FC = () => {
   const { currentStore, stores, setCurrentStore } = useStore();

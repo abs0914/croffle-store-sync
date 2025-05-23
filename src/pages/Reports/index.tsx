@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useStore } from '@/contexts/StoreContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { ReportHeader } from './components/ReportHeader';
 import { DateRangeSelector } from './components/DateRangeSelector';
 import { ReportsNavigation } from './components/ReportsNavigation';

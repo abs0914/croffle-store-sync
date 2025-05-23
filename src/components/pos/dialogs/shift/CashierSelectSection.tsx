@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { Cashier } from "@/types/cashier";
 
 interface CashierSelectSectionProps {

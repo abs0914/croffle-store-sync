@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { useQuery } from "@tanstack/react-query";
 import { fetchInventoryStock } from "@/services/inventoryStock";
 import { supabase } from "@/integrations/supabase/client";

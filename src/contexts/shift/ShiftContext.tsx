@@ -1,8 +1,8 @@
 
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Shift } from "@/types";
-import { useAuth } from "../AuthContext";
-import { useStore } from "../StoreContext";
+import { useAuth } from "@/contexts/auth";
+import { useStore } from "@/contexts/StoreContext";
 import { ShiftState } from "./types";
 import { createShift, closeShift, getActiveShift } from "./shiftUtils";
 import { toast } from "sonner";
