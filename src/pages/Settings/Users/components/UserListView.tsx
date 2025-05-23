@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FilterIcon, UserPlusIcon, RefreshCwIcon } from "lucide-react";
 import { UsersTable } from "./";
+import { Spinner } from "@/components/ui/spinner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,13 +58,17 @@ export default function UserListView({
         <div className="flex space-x-2">
           {onRefresh && (
             <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
-              <RefreshCwIcon className="mr-2 h-4 w-4" />
+              {isLoading ? (
+                <Spinner className="mr-2 h-4 w-4" />
+              ) : (
+                <RefreshCwIcon className="mr-2 h-4 w-4" />
+              )}
               Refresh
             </Button>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" disabled={isLoading}>
                 <FilterIcon className="mr-2 h-4 w-4" />
                 Filter
               </Button>
@@ -95,7 +100,7 @@ export default function UserListView({
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={onAddUser} disabled={!canManageUsers}>
+          <Button onClick={onAddUser} disabled={!canManageUsers || isLoading}>
             <UserPlusIcon className="mr-2 h-4 w-4" />
             Add User
           </Button>

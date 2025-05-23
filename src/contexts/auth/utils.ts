@@ -29,12 +29,15 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
   console.log('Mapping Supabase user:', supabaseUser.email);
   
   try {
-    // Try to get user info using the new RPC function which avoids RLS recursion
+    // Try to get user info from the app_users table directly
     const { data, error } = await supabase
-      .rpc('get_my_user_info');
+      .from('app_users')
+      .select('*')
+      .eq('email', email)
+      .single();
     
     if (error) {
-      console.error('Error fetching user info from RPC function:', error);
+      console.error('Error fetching user info from database:', error);
       // Fallback to direct query with special handling for admin accounts
       if (email === 'admin@example.com') {
         console.log('Admin account detected via email check');
@@ -73,14 +76,13 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
         role = userData.role as UserRole;
         storeIds = userData.store_ids || [];
       }
-    } else if (data && data.length > 0) {
-      // User found via RPC function
-      const userData = data[0];
-      role = userData.role as UserRole;
-      storeIds = userData.store_ids || [];
+    } else if (data) {
+      // User found via direct query
+      role = data.role as UserRole;
+      storeIds = data.store_ids || [];
       
       // Use the name from app_users if available
-      const name = `${userData.first_name} ${userData.last_name}`.trim();
+      const name = `${data.first_name} ${data.last_name}`.trim();
       
       return {
         id: supabaseUser.id,

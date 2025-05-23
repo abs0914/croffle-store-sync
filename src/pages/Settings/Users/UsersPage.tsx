@@ -60,7 +60,7 @@ export default function UsersPage() {
     },
     enabled: !!user && (canManageUsers || !!currentStore),
     retry: 3,
-    retryDelay: 1000
+    retryDelay: 1000,
   });
 
   useEffect(() => {
