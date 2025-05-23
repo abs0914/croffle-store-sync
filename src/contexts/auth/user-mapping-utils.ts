@@ -65,9 +65,9 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
   }
 
   // Handle special cases and create default app_user record if needed
-  const result = await handleSpecialCases(supabaseUser, email, role);
-  role = result.role;
-  storeIds = result.storeIds;
+  const specialCaseResult = await handleSpecialCases(supabaseUser, email, role);
+  role = specialCaseResult.role;
+  storeIds = specialCaseResult.storeIds;
 
   // Return the user with the determined role and store access
   return {
