@@ -33,7 +33,14 @@ export default function ManagersPage() {
     queryFn: () => isAdmin 
       ? fetchManagers() 
       : (currentStore ? fetchManagers(currentStore.id) : Promise.resolve([])),
-    enabled: isAdmin || !!currentStore
+    enabled: isAdmin || !!currentStore,
+    // Add error handling for RLS policy issues
+    meta: {
+      onError: (err: any) => {
+        console.error("Error fetching managers:", err);
+        toast.error("You don't have permission to view managers");
+      }
+    }
   });
 
   if (error) {
@@ -55,14 +62,63 @@ export default function ManagersPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  // Manager should not access this page at all
-  if (isManager) {
+  // Manager should not access this page at all - except their own profile
+  if (isManager && !isAdmin) {
+    const currentManagerData = managers.find(manager => manager.email === user?.email);
+    
+    if (!currentManagerData) {
+      return (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <h2 className="text-xl font-medium mb-2">Loading your profile...</h2>
+              <p className="text-muted-foreground">Please wait while we retrieve your information.</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
       <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-8">
-            <h2 className="text-xl font-medium mb-2">Access Restricted</h2>
-            <p className="text-muted-foreground">You do not have permission to manage managers.</p>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-xl font-bold">Manager Profile</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Name</p>
+                <p>{currentManagerData.first_name} {currentManagerData.last_name}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Email</p>
+                <p>{currentManagerData.email || "Not provided"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Contact</p>
+                <p>{currentManagerData.contactNumber || "Not provided"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <p className={currentManagerData.isActive ? "text-green-600" : "text-red-600"}>
+                  {currentManagerData.isActive ? "Active" : "Inactive"}
+                </p>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2">Assigned Stores</p>
+              <div className="flex flex-wrap gap-2">
+                {currentManagerData.storeIds.map(storeId => {
+                  const store = stores.find(s => s.id === storeId);
+                  return (
+                    <span key={storeId} className="px-2 py-1 bg-muted rounded-md text-sm">
+                      {store?.name || "Unknown Store"}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
