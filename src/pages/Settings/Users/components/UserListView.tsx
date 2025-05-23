@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { AppUser } from "@/types/appUser";
 import { Store } from "@/types/store";

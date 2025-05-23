@@ -1,19 +1,29 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@/types";
+import { User as AppUser } from "@/types";
 import { mapUserRole } from "./role-utils";
 import { handleSpecialCases } from "./special-cases-utils";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+import type { PostgrestError } from "@supabase/supabase-js";
+
+interface AppUserData {
+  role: string;
+  store_ids: string[];
+  first_name: string;
+  last_name: string;
+  email: string;
+}
 
 /**
  * Maps Supabase user to our app's User type
  */
-export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
+export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUser> => {
   if (!supabaseUser) {
     throw new Error('No Supabase user provided');
   }
   
   // Get email to determine initial role mapping
-  const email = supabaseUser.email;
+  const email = supabaseUser.email || '';
   let role = mapUserRole(email);
   let storeIds: string[] = [];
   
@@ -21,7 +31,10 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
   
   try {
     // Try to get user info from the app_users table
-    const { data, error } = await supabase
+    const { data, error }: { 
+      data: AppUserData | null; 
+      error: PostgrestError | null 
+    } = await supabase
       .from('app_users')
       .select('*')
       .eq('email', email)
@@ -34,7 +47,7 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
     // If user exists in app_users, use that data
     if (data) {
       console.log('Found existing app_user record:', data.email);
-      role = data.role;
+      role = data.role as any;
       storeIds = data.store_ids || [];
       
       // Use the name from app_users if available
@@ -42,8 +55,8 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
       
       return {
         id: supabaseUser.id,
-        email: supabaseUser.email,
-        name: name || supabaseUser.user_metadata?.name || supabaseUser.email.split('@')[0],
+        email: supabaseUser.email || '',
+        name: name || supabaseUser.user_metadata?.name || (supabaseUser.email || '').split('@')[0],
         role: role,
         storeIds: storeIds,
         avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
@@ -61,8 +74,8 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
   // Return the user with the determined role and store access
   return {
     id: supabaseUser.id,
-    email: supabaseUser.email,
-    name: supabaseUser.user_metadata?.name || supabaseUser.email.split('@')[0],
+    email: supabaseUser.email || '',
+    name: supabaseUser.user_metadata?.name || (supabaseUser.email || '').split('@')[0],
     role: role,
     storeIds: storeIds,
     avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',

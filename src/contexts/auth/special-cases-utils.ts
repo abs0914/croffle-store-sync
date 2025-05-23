@@ -2,15 +2,23 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types";
 import { createAppUserRecord } from "./record-creation-utils";
+import type { PostgrestError, User } from "@supabase/supabase-js";
+import type { SupabaseQueryResult } from "@/types";
+
+// Define return type for our special cases function
+interface SpecialCaseResult {
+  role: UserRole;
+  storeIds: string[];
+}
 
 /**
  * Handle special user cases and account creation
  */
 export async function handleSpecialCases(
-  supabaseUser: any, 
-  email: string, 
+  supabaseUser: User,
+  email: string,
   role: UserRole
-): Promise<{ role: UserRole, storeIds: string[] }> {
+): Promise<SpecialCaseResult> {
   let resultRole = role;
   let resultStoreIds: string[] = [];
   
@@ -20,7 +28,7 @@ export async function handleSpecialCases(
     resultRole = 'admin';
     
     // For admins, fetch all store IDs
-    const { data: storesData } = await supabase
+    const { data: storesData }: { data: any[] | null; error: PostgrestError | null } = await supabase
       .from('stores')
       .select('id');
       
@@ -46,7 +54,13 @@ export async function handleSpecialCases(
     // For managers, check managers table as fallback
     if (role === 'manager') {
       try {
-        const { data: managerData } = await supabase
+        interface ManagerData {
+          store_ids?: string[];
+          first_name?: string;
+          last_name?: string;
+        }
+        
+        const { data: managerData }: { data: ManagerData | null; error: PostgrestError | null } = await supabase
           .from('managers')
           .select('store_ids, first_name, last_name')
           .eq('email', email)
@@ -81,7 +95,13 @@ export async function handleSpecialCases(
     } else if (role === 'cashier') {
       // Similar handling for cashiers
       try {
-        const { data: cashiersData } = await supabase
+        interface CashierData {
+          store_id: string;
+          first_name: string;
+          last_name: string;
+        }
+        
+        const { data: cashiersData }: { data: CashierData | null; error: PostgrestError | null } = await supabase
           .from('cashiers')
           .select('store_id, first_name, last_name')
           .eq('email', email)

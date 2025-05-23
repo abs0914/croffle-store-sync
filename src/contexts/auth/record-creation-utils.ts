@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 /**
  * Helper function to create app_user records and avoid duplicate code
@@ -15,7 +16,7 @@ export async function createAppUserRecord(
   isActive: boolean
 ): Promise<void> {
   try {
-    const { error: createError } = await supabase
+    const { error: createError }: { error: PostgrestError | null } = await supabase
       .from('app_users')
       .insert({
         user_id: userId,
