@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useQuery } from "@tanstack/react-query";
@@ -51,25 +52,28 @@ export default function UsersPage() {
   // Fetch users for the current store or all stores if admin/owner
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ["app_users", canManageUsers ? "all" : currentStore?.id, roleFilter],
-    queryFn: () => {
+    queryFn: async () => {
       console.log("Fetching users with params:", {
         canManageUsers,
         storeId: currentStore?.id,
         userRole: user?.role
       });
       
-      return canManageUsers 
-        ? fetchAppUsers() 
-        : (currentStore ? fetchAppUsers(currentStore.id) : Promise.resolve([]));
+      try {
+        const users = canManageUsers 
+          ? await fetchAppUsers() 
+          : (currentStore ? await fetchAppUsers(currentStore.id) : []);
+          
+        console.log(`Successfully fetched ${users.length} users`);
+        return users;
+      } catch (fetchError) {
+        console.error("Error in users query function:", fetchError);
+        toast.error("Failed to load users. Please check your permissions and try again.");
+        throw fetchError;
+      }
     },
     enabled: !!user && (canManageUsers || !!currentStore),
-    retry: 1,
-    meta: {
-      onError: (err: any) => {
-        console.error("Error fetching users:", err);
-        toast.error(err?.message || "Failed to load user data");
-      }
-    }
+    retry: 1
   });
 
   // Filter users by role if filter is active
@@ -118,6 +122,15 @@ export default function UsersPage() {
             <pre className="mt-4 text-xs text-left bg-muted p-2 rounded overflow-auto max-h-32">
               {JSON.stringify(error, null, 2)}
             </pre>
+            
+            {/* Add retry button */}
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              className="mt-4"
+            >
+              Retry
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -241,7 +254,7 @@ export default function UsersPage() {
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={handleAddUser}>
+            <Button onClick={handleAddUser} disabled={!canManageUsers}>
               <UserPlusIcon className="mr-2 h-4 w-4" />
               Add User
             </Button>

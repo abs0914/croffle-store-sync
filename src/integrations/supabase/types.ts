@@ -723,6 +723,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_admin_or_owner: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       transfer_inventory_stock: {
         Args:
           | Record<PropertyKey, never>

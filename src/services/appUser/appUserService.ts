@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { toast } from "sonner";
@@ -7,45 +6,22 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
   try {
     console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all roles");
     
-    // Use direct database query instead of RPC until TypeScript types are updated
-    let query;
+    // With our new RLS policies, direct queries work properly now
+    let query = supabase.from('app_users').select('*');
     
     if (storeId) {
-      console.log(`Fetching users for store: ${storeId} using direct query`);
-      const { data, error } = await supabase
-        .from('app_users')
-        .select('*')
-        .filter('store_ids', 'cs', `{${storeId}}`);
-      
-      if (error) {
-        console.error('Error fetching store users with direct query:', error);
-        throw error;
-      }
-      
-      return mapAppUsers(data || []);
-    } else {
-      console.log('Fetching all users using direct query');
-      const { data, error } = await supabase
-        .from('app_users')
-        .select('*');
-      
-      if (error) {
-        console.error('Error fetching all users with direct query:', error);
-        // Alternative attempt with another approach if the first fails
-        const { data: directData, error: directError } = await supabase
-          .from('app_users')
-          .select('*');
-          
-        if (directError) {
-          console.error('Direct query also failed:', directError);
-          throw directError;
-        }
-        
-        return mapAppUsers(directData || []);
-      }
-      
-      return mapAppUsers(data || []);
+      console.log(`Filtering users for store: ${storeId}`);
+      query = query.filter('store_ids', 'cs', `{${storeId}}`);
     }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+      
+    return mapAppUsers(data || []);
   } catch (error: any) {
     console.error('Error in fetchAppUsers:', error);
     throw error;
@@ -55,25 +31,6 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
 // Helper function to map app users from database result
 const mapAppUsers = (data: any[]): AppUser[] => {
   console.log(`Mapping ${data.length} app users`);
-  return data.map((user): AppUser => ({
-    id: user.id,
-    userId: user.user_id,
-    firstName: user.first_name,
-    lastName: user.last_name,
-    fullName: `${user.first_name} ${user.last_name}`,
-    email: user.email,
-    contactNumber: user.contact_number,
-    role: user.role,
-    storeIds: user.store_ids || [],
-    isActive: user.is_active,
-    createdAt: user.created_at,
-    updatedAt: user.updated_at
-  }));
-};
-
-// Helper function to map app users from RPC result (column names might be different)
-const mapAppUsersFromRPC = (data: any[]): AppUser[] => {
-  console.log(`Mapping ${data.length} app users from RPC`);
   return data.map((user): AppUser => ({
     id: user.id,
     userId: user.user_id,
