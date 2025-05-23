@@ -78,7 +78,8 @@ export default function UserAccessView({
       );
     }
 
-    return <UserProfile user={currentUserData} stores={stores} />;
+    // Pass the user prop directly without wrapping in additional props object
+    return <UserProfile />;
   }
 
   // Store selection required

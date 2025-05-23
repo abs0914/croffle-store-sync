@@ -101,7 +101,8 @@ export const resetAppUserPassword = async (email: string): Promise<boolean> => {
 export const setUserPassword = async (email: string, password: string): Promise<boolean> => {
   try {
     // For security, this should only be allowed by admins or the user themselves
-    const { error } = await supabase.auth.updateUserById(email, {
+    const { error } = await supabase.auth.updateUser({
+      email: email,
       password: password
     });
     
