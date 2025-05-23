@@ -1,7 +1,9 @@
 
 export interface Manager {
   id: string;
-  fullName: string;
+  first_name: string;
+  last_name: string;
+  fullName?: string; // Maintained for backward compatibility
   storeIds: string[];
   contactNumber?: string;
   email?: string;

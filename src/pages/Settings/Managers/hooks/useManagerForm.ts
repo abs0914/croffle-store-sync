@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateManager } from "@/services/manager";
 import { Manager, ManagerFormData } from "@/types/manager";
+import { toast } from "sonner";
 
 export function useManagerForm(manager: Manager | null, onOpenChange: (open: boolean) => void) {
   const queryClient = useQueryClient();
@@ -17,10 +18,9 @@ export function useManagerForm(manager: Manager | null, onOpenChange: (open: boo
 
   useEffect(() => {
     if (manager) {
-      const [firstName, lastName] = manager.fullName.split(' ');
       setFormData({
-        firstName: firstName || "",
-        lastName: lastName || "",
+        firstName: manager.first_name || "",
+        lastName: manager.last_name || "",
         contactNumber: manager.contactNumber || "",
         email: manager.email || "",
         storeIds: manager.storeIds || [],
@@ -33,7 +33,12 @@ export function useManagerForm(manager: Manager | null, onOpenChange: (open: boo
     mutationFn: (data: ManagerFormData & { id: string }) => updateManager(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["managers"] });
+      toast.success("Manager updated successfully");
       onOpenChange(false);
+    },
+    onError: (error) => {
+      console.error("Failed to update manager:", error);
+      toast.error("Failed to update manager");
     }
   });
 
@@ -66,7 +71,7 @@ export function useManagerForm(manager: Manager | null, onOpenChange: (open: boo
     if (!manager) return;
 
     if (formData.storeIds.length === 0) {
-      alert("Please assign at least one store to the manager.");
+      toast.error("Please assign at least one store to the manager.");
       return;
     }
 

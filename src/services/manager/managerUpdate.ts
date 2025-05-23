@@ -1,11 +1,12 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { ManagerFormData } from "@/types/manager";
+import { toast } from "sonner";
 
 export async function updateManager({ id, ...data }: ManagerFormData & { id: string }) {
   try {
     const { error } = await supabase
-      .from('managers' as any)
+      .from('managers')
       .update({
         first_name: data.firstName,
         last_name: data.lastName,

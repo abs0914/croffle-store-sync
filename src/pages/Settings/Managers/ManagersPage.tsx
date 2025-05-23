@@ -14,6 +14,7 @@ import {
   DeleteManagerDialog 
 } from "./components";
 import { useAuth } from "@/contexts/auth";
+import { toast } from "sonner";
 
 export default function ManagersPage() {
   const { currentStore, stores } = useStore();
@@ -27,13 +28,18 @@ export default function ManagersPage() {
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
 
   // Fetch managers for the current store or all stores if admin
-  const { data: managers = [], isLoading } = useQuery({
+  const { data: managers = [], isLoading, error } = useQuery({
     queryKey: ["managers", isAdmin ? "all" : currentStore?.id],
     queryFn: () => isAdmin 
       ? fetchManagers() 
       : (currentStore ? fetchManagers(currentStore.id) : Promise.resolve([])),
     enabled: isAdmin || !!currentStore
   });
+
+  if (error) {
+    console.error("Error fetching managers:", error);
+    toast.error("Failed to load managers");
+  }
 
   const handleAddManager = () => {
     setIsAddDialogOpen(true);

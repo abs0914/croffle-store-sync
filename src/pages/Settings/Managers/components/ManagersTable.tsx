@@ -75,7 +75,7 @@ export default function ManagersTable({
         <TableBody>
           {managers.map((manager) => (
             <TableRow key={manager.id}>
-              <TableCell className="font-medium">{manager.fullName}</TableCell>
+              <TableCell className="font-medium">{manager.fullName || `${manager.first_name} ${manager.last_name}`}</TableCell>
               <TableCell>{manager.contactNumber || "N/A"}</TableCell>
               <TableCell>{manager.email || "N/A"}</TableCell>
               <TableCell>
