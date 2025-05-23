@@ -80,6 +80,8 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
           toast.success('Manager created successfully');
           return {
             id: newManagerData.id,
+            first_name: newManagerData.first_name,
+            last_name: newManagerData.last_name,
             fullName: `${newManagerData.first_name} ${newManagerData.last_name}`,
             email: newManagerData.email,
             contactNumber: newManagerData.contact_number,
@@ -117,6 +119,8 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
         toast.success('Manager updated successfully');
         return {
           id: updatedManagerData.id,
+          first_name: updatedManagerData.first_name,
+          last_name: updatedManagerData.last_name,
           fullName: `${updatedManagerData.first_name} ${updatedManagerData.last_name}`,
           email: updatedManagerData.email,
           contactNumber: updatedManagerData.contact_number,
@@ -163,6 +167,8 @@ export const createManagerWithAuth = async (data: ManagerSignupData): Promise<Ma
     toast.success('Manager created successfully');
     return {
       id: managerData.id,
+      first_name: managerData.first_name,
+      last_name: managerData.last_name,
       fullName: `${managerData.first_name} ${managerData.last_name}`,
       email: managerData.email,
       contactNumber: managerData.contact_number,
