@@ -48,20 +48,16 @@ export const handleSpecialCases = async (userData: any = null, email: string = '
       const firstName = email.split('@')[0].split('.')[0] || '';
       const lastName = email.split('@')[0].split('.')[1] || '';
       
-      // Use insert directly instead of RPC
-      const { data, error } = await supabase
-        .from('app_users')
-        .insert({
-          user_id: userData?.id || null,
-          email: email,
-          first_name: firstName,
-          last_name: lastName,
-          role: role,
-          store_ids: storeIds,
-          is_active: true
-        })
-        .select()
-        .single();
+      // Call the create_app_user function to avoid ambiguous column error
+      const { data, error } = await supabase.rpc('create_app_user', {
+        user_id: userData?.id || null,
+        user_email: email,
+        first_name: firstName,
+        last_name: lastName,
+        user_role: role,
+        store_ids: storeIds,
+        is_active: true
+      });
       
       if (error) {
         console.error('Error creating app_user record:', error);

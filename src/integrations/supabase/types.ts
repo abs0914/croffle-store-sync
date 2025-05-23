@@ -739,11 +739,50 @@ export type Database = {
         }
         Returns: string
       }
-      get_current_user_info: {
+      get_all_users: {
         Args: Record<PropertyKey, never>
         Returns: {
-          user_role: Database["public"]["Enums"]["app_role"]
-          user_store_ids: string[]
+          id: string
+          user_id: string
+          first_name: string
+          last_name: string
+          email: string
+          contact_number: string
+          role: string
+          store_ids: string[]
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_current_user_info: {
+        Args: Record<PropertyKey, never> | { user_email: string }
+        Returns: {
+          id: string
+          user_id: string
+          first_name: string
+          last_name: string
+          email: string
+          contact_number: string
+          role: string
+          store_ids: string[]
+          is_active: boolean
+        }[]
+      }
+      get_store_users: {
+        Args: { store_id_param: string }
+        Returns: {
+          id: string
+          user_id: string
+          first_name: string
+          last_name: string
+          email: string
+          contact_number: string
+          role: string
+          store_ids: string[]
+          is_active: boolean
+          created_at: string
+          updated_at: string
         }[]
       }
       is_admin_or_owner: {

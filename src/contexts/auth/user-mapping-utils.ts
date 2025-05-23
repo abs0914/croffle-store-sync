@@ -29,20 +29,17 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
   console.log('Mapping Supabase user:', supabaseUser.email);
   
   try {
-    // Try to get user info from the app_users table directly
+    // Try to get user info from the app_users table using RPC function
     const { data, error } = await supabase
-      .from('app_users')
-      .select('*')
-      .eq('email', email)
-      .single();
+      .rpc('get_current_user_info', { user_email: email });
 
     if (error) { 
       console.error('Error fetching user info from database:', error);
     } 
 
     // If user exists in app_users, use that data
-    if (data) {
-      const appUserData = data as AppUserData;
+    if (data && data.length > 0) {
+      const appUserData = data[0] as AppUserData;
       console.log('Found existing app_user record:', appUserData.email);
       role = appUserData.role as any;
       storeIds = appUserData.store_ids || [];
