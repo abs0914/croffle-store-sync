@@ -74,11 +74,15 @@ export async function handleSpecialCases(
     // For managers, check managers table as fallback
     if (role === 'manager') {
       try {
-        const { data: managerData, error: managerError } = await supabase
+        const { data, error } = await supabase
           .from('managers')
           .select('store_ids, first_name, last_name')
           .eq('email', email)
-          .maybeSingle<ManagerData>();
+          .maybeSingle();
+
+        // Explicitly cast the returned data to our simplified type
+        const managerData = data as ManagerData | null;
+        const managerError = error;
 
         if (managerError) {
           console.error('Error fetching manager data:', managerError);
@@ -108,11 +112,15 @@ export async function handleSpecialCases(
     } else if (role === 'cashier') {
       // Similar handling for cashiers
       try {
-        const { data: cashiersData, error: cashiersError } = await supabase
+        const { data, error } = await supabase
           .from('cashiers')
           .select('store_id, first_name, last_name')
           .eq('email', email)
-          .maybeSingle<CashierData>();
+          .maybeSingle();
+
+        // Explicitly cast the returned data to our simplified type
+        const cashiersData = data as CashierData | null;
+        const cashiersError = error;
 
         if (cashiersError) {
           console.error('Error fetching cashier data:', cashiersError);
@@ -146,15 +154,16 @@ export async function handleSpecialCases(
         const lastName = names.slice(1).join(' ') || '';
 
         // Check if we already have an app_user record for this email
-        // Using simplified type approach to avoid deep type instantiation
-        const { data: fetchedData, error: existingUserError } = await supabase
+        // Using simplified query and type approach
+        const { data, error } = await supabase
           .from('app_users')
           .select('id') // Only select the id column
           .eq('email', email)
-          .maybeSingle<{ id: string }>();
+          .maybeSingle();
 
         // Explicitly cast to our simple ExistingAppUser type
-        const existingUser = fetchedData as ExistingAppUser | null;
+        const existingUser = data as ExistingAppUser | null;
+        const existingUserError = error;
 
         if (existingUserError) {
           console.error('Error checking for existing app_user:', existingUserError);
