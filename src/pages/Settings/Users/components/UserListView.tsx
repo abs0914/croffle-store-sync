@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { AppUser } from "@/types/appUser";
 import { Store } from "@/types/store";
@@ -47,7 +46,7 @@ export default function UserListView({
       return (
         <Card>
           <CardContent className="flex items-center justify-center p-12">
-            <Spinner size="lg" />
+            <Spinner className="h-8 w-8" />
           </CardContent>
         </Card>
       );
