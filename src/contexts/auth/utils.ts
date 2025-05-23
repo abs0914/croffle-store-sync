@@ -96,18 +96,14 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
         console.error('Failed to create app_user for admin:', err);
       }
     } else {
-      // For manager emails, check managers table as fallback
+      // For managers, check managers table as fallback
       if (role === 'manager') {
         try {
-          const { data: managerData, error: managerError } = await supabase
+          const { data: managerData } = await supabase
             .from('managers')
             .select('store_ids, first_name, last_name')
-            .eq('email', supabaseUser.email)
+            .eq('email', email)
             .maybeSingle();
-          
-          if (managerError && managerError.code !== 'PGRST116') {
-            console.error('Error checking managers data:', managerError);
-          }
           
           if (managerData) {
             console.log('Found manager record:', managerData);
@@ -118,34 +114,26 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
             const firstName = managerData.first_name || names[0] || email.split('@')[0];
             const lastName = managerData.last_name || names.slice(1).join(' ') || '';
             
-            const { data: newAppUser, error: createError } = await supabase
-              .from('app_users')
-              .insert({
-                user_id: supabaseUser.id,
-                email: email,
-                first_name: firstName,
-                last_name: lastName,
-                role: role,
-                store_ids: storeIds,
-                is_active: true
-              })
-              .select()
-              .single();
-              
-            if (createError) {
-              console.error('Error creating app_user record:', createError);
-            } else {
-              console.log('Created new app_user from manager record:', newAppUser);
-              
-              // Use the newly created app_user data
-              return {
-                id: supabaseUser.id,
-                email: supabaseUser.email,
-                name: `${firstName} ${lastName}`.trim(),
-                role: role,
-                storeIds: storeIds,
-                avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
-              };
+            try {
+              const { error: createError } = await supabase
+                .from('app_users')
+                .insert({
+                  user_id: supabaseUser.id,
+                  email: email,
+                  first_name: firstName,
+                  last_name: lastName,
+                  role: role,
+                  store_ids: storeIds,
+                  is_active: true
+                });
+                
+              if (createError) {
+                console.error('Error creating app_user record:', createError);
+              } else {
+                console.log('Created new app_user from manager record');
+              }
+            } catch (insertErr) {
+              console.error('Failed to create app_user:', insertErr);
             }
           }
         } catch (error) {
@@ -164,22 +152,26 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
             storeIds = [cashiersData.store_id];
             
             // Create app_user record
-            const { error: createError } = await supabase
-              .from('app_users')
-              .insert({
-                user_id: supabaseUser.id,
-                email: email,
-                first_name: cashiersData.first_name,
-                last_name: cashiersData.last_name,
-                role: role,
-                store_ids: storeIds,
-                is_active: true
-              });
-              
-            if (createError) {
-              console.error('Error creating app_user record for cashier:', createError);
-            } else {
-              console.log('Created new app_user from cashier record');
+            try {
+              const { error: createError } = await supabase
+                .from('app_users')
+                .insert({
+                  user_id: supabaseUser.id,
+                  email: email,
+                  first_name: cashiersData.first_name,
+                  last_name: cashiersData.last_name,
+                  role: role,
+                  store_ids: storeIds,
+                  is_active: true
+                });
+                
+              if (createError) {
+                console.error('Error creating app_user record for cashier:', createError);
+              } else {
+                console.log('Created new app_user from cashier record');
+              }
+            } catch (insertErr) {
+              console.error('Failed to create app_user for cashier:', insertErr);
             }
           }
         } catch (error) {
@@ -192,7 +184,7 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
   }
 
   // Create a new default app_user if we haven't created one yet
-  if (email && !storeIds.length) {
+  if (email) {
     try {
       const names = supabaseUser.user_metadata?.name?.split(' ') || [];
       const firstName = names[0] || email.split('@')[0];

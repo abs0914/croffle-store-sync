@@ -1,19 +1,13 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppUser } from "@/types/appUser";
 import { Store } from "@/types/store";
-import { UserRole } from "@/types/user";
+import UsersTable from "./UsersTable";
+import EmptyUsersView from "./EmptyUsersView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FilterIcon, UserPlusIcon, RefreshCwIcon, UsersIcon } from "lucide-react";
-import { UsersTable } from "./";
+import { PlusIcon, RefreshCwIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface UserListViewProps {
   users: AppUser[];
@@ -23,122 +17,98 @@ interface UserListViewProps {
   onAddUser: () => void;
   onEditUser: (user: AppUser) => void;
   onDeleteUser: (user: AppUser) => void;
-  onRefresh?: () => void;
+  onRefresh: () => void;
+  error?: any;
 }
 
-export default function UserListView({ 
-  users, 
-  isLoading, 
+export default function UserListView({
+  users,
+  isLoading,
   stores,
   canManageUsers,
-  onAddUser, 
-  onEditUser, 
+  onAddUser,
+  onEditUser,
   onDeleteUser,
-  onRefresh
+  onRefresh,
+  error
 }: UserListViewProps) {
-  const [roleFilter, setRoleFilter] = useState<UserRole[]>([]);
+  const [permissionIssue, setPermissionIssue] = useState(false);
 
-  const toggleRoleFilter = (role: UserRole) => {
-    setRoleFilter(current => 
-      current.includes(role)
-        ? current.filter(r => r !== role)
-        : [...current, role]
+  useEffect(() => {
+    if (error?.message?.includes('policy') || error?.code === 'PGRST109') {
+      setPermissionIssue(true);
+    } else {
+      setPermissionIssue(false);
+    }
+  }, [error]);
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <Card>
+          <CardContent className="flex items-center justify-center p-12">
+            <Spinner size="lg" />
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (error && !permissionIssue) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-12">
+            <p className="text-red-500 mb-4">{error.message || "An error occurred while loading users"}</p>
+            <Button variant="outline" onClick={onRefresh}>
+              <RefreshCwIcon className="mr-2 h-4 w-4" />
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (users.length === 0) {
+      return (
+        <EmptyUsersView 
+          onAddUser={onAddUser} 
+          onRefresh={onRefresh}
+          canManageUsers={canManageUsers} 
+          hasRlsPermission={!permissionIssue}
+        />
+      );
+    }
+
+    return (
+      <UsersTable
+        users={users}
+        isLoading={isLoading}
+        onAdd={onAddUser}
+        onEdit={onEditUser}
+        onDelete={onDeleteUser}
+        allStores={stores}
+      />
     );
   };
 
-  // Filter users by role if filter is active
-  const filteredUsers = roleFilter.length > 0
-    ? users.filter(user => roleFilter.includes(user.role as UserRole))
-    : users;
-
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xl font-bold">User Management</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>User Management</CardTitle>
         <div className="flex space-x-2">
-          {onRefresh && (
-            <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
-              {isLoading ? (
-                <Spinner className="mr-2 h-4 w-4" />
-              ) : (
-                <RefreshCwIcon className="mr-2 h-4 w-4" />
-              )}
-              Refresh
+          <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
+            <RefreshCwIcon className="h-4 w-4 mr-1" />
+            Refresh
+          </Button>
+          {canManageUsers && (
+            <Button size="sm" onClick={onAddUser} disabled={isLoading}>
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Add User
             </Button>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={isLoading || users.length === 0}>
-                <FilterIcon className="mr-2 h-4 w-4" />
-                Filter
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuCheckboxItem
-                checked={roleFilter.includes('admin')}
-                onCheckedChange={() => toggleRoleFilter('admin')}
-              >
-                Admins
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={roleFilter.includes('owner')}
-                onCheckedChange={() => toggleRoleFilter('owner')}
-              >
-                Owners
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={roleFilter.includes('manager')}
-                onCheckedChange={() => toggleRoleFilter('manager')}
-              >
-                Managers
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={roleFilter.includes('cashier')}
-                onCheckedChange={() => toggleRoleFilter('cashier')}
-              >
-                Cashiers
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button onClick={onAddUser} disabled={!canManageUsers || isLoading}>
-            <UserPlusIcon className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <div className="flex justify-center p-8">
-            <Spinner className="h-8 w-8" />
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="rounded-full bg-muted p-3 mb-4">
-              <UsersIcon className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-medium">No users found</h3>
-            <p className="text-muted-foreground text-center max-w-sm mt-2 mb-6">
-              {users.length === 0 
-                ? "You haven't added any users yet. Add your first user to get started."
-                : "No users match your current filter criteria. Try changing the filters."}
-            </p>
-            {users.length === 0 && canManageUsers && (
-              <Button onClick={onAddUser}>
-                <UserPlusIcon className="mr-2 h-4 w-4" />
-                Add your first user
-              </Button>
-            )}
-          </div>
-        ) : (
-          <UsersTable 
-            users={filteredUsers}
-            isLoading={isLoading}
-            onAdd={onAddUser}
-            onEdit={onEditUser}
-            onDelete={onDeleteUser}
-            allStores={stores}
-          />
-        )}
+        {renderContent()}
       </CardContent>
     </Card>
   );

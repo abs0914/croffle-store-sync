@@ -8,29 +8,15 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
   try {
     console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all users");
     
-    // Use our functions that provide proper security and avoid RLS recursion
-    let { data, error } = storeId
-      ? await supabase.rpc('get_store_users', { store_id_param: storeId })
-      : await supabase.rpc('get_all_users');
+    // Use standard query instead of RPC functions to avoid type issues
+    const query = supabase.from('app_users').select('*');
     
-    // If we have permission errors or RPC functions aren't working, 
-    // fall back to basic query with filters
-    if (error) {
-      console.warn('RPC function error:', error.message);
-      console.log('Falling back to direct query');
-      
-      // Direct query to app_users table
-      const query = supabase.from('app_users').select('*');
-      
-      // If a store ID is provided, filter by that store
-      if (storeId) {
-        query.filter('store_ids', 'cs', `{${storeId}}`);
-      }
-      
-      const result = await query;
-      data = result.data;
-      error = result.error;
+    // If a store ID is provided, filter by that store
+    if (storeId) {
+      query.filter('store_ids', 'cs', `{${storeId}}`);
     }
+    
+    const { data, error } = await query;
     
     if (error) {
       // Handle specific Postgres REST error codes
@@ -40,7 +26,7 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
       }
       
       // For 406 errors (Not Acceptable)
-      if (error.status === 406) {
+      if (error.code === '406') {
         console.log('Query format issue - returning empty results');
         return [];
       }
@@ -52,14 +38,9 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
 
     // If we have no data, check if we need to sync from auth system
     if (!data || data.length === 0) {
-      console.log('No app_users found, attempting to sync from auth system');
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
-      
-      if (authUsers && authUsers.users && authUsers.users.length > 0) {
-        console.log(`Found ${authUsers.users.length} auth users to sync`);
-        // If we're admin and have access to auth system, we could sync here
-        // but this would require separate implementation
-      }
+      console.log('No app_users found, could attempt to sync from auth system');
+      // Note: We're simplifying by not attempting to access auth system
+      // as it requires special privileges
     }
       
     return mapAppUsers(data || []);
