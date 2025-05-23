@@ -1,6 +1,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AlertTriangle } from "lucide-react";
 
 interface AuthFormFieldsProps {
   email: string;
@@ -31,7 +32,7 @@ export default function AuthFormFields({
           placeholder="email@example.com"
         />
         <p className="text-xs text-muted-foreground">
-          This email will be used for login
+          This email will be used for login and password resets
         </p>
       </div>
       
@@ -46,11 +47,15 @@ export default function AuthFormFields({
             onChange={onInputChange}
             required
             placeholder="••••••••"
-            minLength={6}
+            minLength={8}
           />
-          <p className="text-xs text-muted-foreground">
-            Password must be at least 6 characters long
-          </p>
+          <div className="flex items-start gap-2 mt-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
+            <p className="text-xs text-muted-foreground">
+              Password should be at least 8 characters and include uppercase, lowercase letters and numbers.
+              The user will be able to reset this password later.
+            </p>
+          </div>
         </div>
       )}
     </div>

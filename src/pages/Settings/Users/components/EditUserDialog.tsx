@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AlertTriangle, Key, RefreshCw } from "lucide-react";
 
 interface EditUserDialogProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["app_users"] });
       onOpenChange(false);
+      toast.success("User updated successfully");
     }
   });
 
@@ -54,9 +56,11 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
     mutationFn: resetAppUserPassword,
     onSuccess: () => {
       setIsResettingPassword(false);
+      toast.success(`Password reset email sent to ${user?.email}`);
     },
-    onError: () => {
+    onError: (error: any) => {
       setIsResettingPassword(false);
+      toast.error(`Failed to send password reset email: ${error.message}`);
     }
   });
 
@@ -123,31 +127,50 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
           {isAdmin && user?.email && user?.userId && (
             <div className="border-t pt-4 mt-4">
               <div className="flex justify-between items-center">
-                <h4 className="text-sm font-medium">Password Management</h4>
+                <div>
+                  <h4 className="text-sm font-medium flex items-center gap-1">
+                    <Key className="h-4 w-4" />
+                    Password Management
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Send a password reset link to the user's email
+                  </p>
+                </div>
                 <Button 
                   variant="outline" 
                   size="sm" 
                   type="button"
                   onClick={handlePasswordReset}
                   disabled={isResettingPassword}
+                  className="gap-1"
                 >
                   {isResettingPassword ? (
                     <>
-                      <Spinner className="mr-2 h-4 w-4" />
+                      <Spinner className="h-4 w-4" />
                       Sending email...
                     </>
                   ) : (
-                    "Reset Password"
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Reset Password
+                    </>
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                This will send a password reset link to the user's email
-              </p>
+              
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md p-3 mt-3">
+                <div className="flex gap-2 text-amber-800 dark:text-amber-300">
+                  <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+                  <p className="text-xs">
+                    The user will need to click the reset link sent to their email and create a new password.
+                    The reset link will expire after 24 hours.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
           
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 mt-4">
             <Button 
               variant="outline" 
               type="button" 

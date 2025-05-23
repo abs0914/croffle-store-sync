@@ -97,3 +97,23 @@ export const resetAppUserPassword = async (email: string): Promise<boolean> => {
     return false;
   }
 };
+
+export const setUserPassword = async (email: string, password: string): Promise<boolean> => {
+  try {
+    // For security, this should only be allowed by admins or the user themselves
+    const { error } = await supabase.auth.updateUserById(email, {
+      password: password
+    });
+    
+    if (error) {
+      throw error;
+    }
+    
+    toast.success('Password updated successfully');
+    return true;
+  } catch (error: any) {
+    console.error('Error updating user password:', error);
+    toast.error(`Password update failed: ${error.message}`);
+    return false;
+  }
+};
