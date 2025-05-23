@@ -30,13 +30,15 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
   
   try {
     // First check if the user exists in app_users table
-    // Using direct SQL query to bypass RLS issues
+    // Using direct database query since RPC functions aren't in TypeScript types yet
     const { data, error } = await supabase
-      .rpc('get_current_user_info', { user_email: email })
+      .from('app_users')
+      .select('*')
+      .eq('email', email)
       .single();
     
     if (error) {
-      console.error('Error fetching user info from RPC:', error);
+      console.error('Error fetching user info from database:', error);
       // Fall back to direct email check for admin accounts
       if (email === 'admin@example.com') {
         console.log('Admin account detected via email check');
@@ -63,9 +65,9 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
     }
     
     if (data) {
-      // User found in app_users table via RPC
-      console.log('User data found via RPC:', data);
-      role = data.role;
+      // User found in app_users table via direct query
+      console.log('User data found in database:', data);
+      role = data.role as UserRole;
       storeIds = data.store_ids || [];
       
       // Use the name from app_users if available

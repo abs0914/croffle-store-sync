@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { toast } from "sonner";
@@ -6,28 +7,31 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
   try {
     console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all roles");
     
-    // Use a direct SQL query to bypass RLS issues
+    // Use direct database query instead of RPC until TypeScript types are updated
     let query;
     
     if (storeId) {
-      console.log(`Fetching users for store: ${storeId} using RPC`);
+      console.log(`Fetching users for store: ${storeId} using direct query`);
       const { data, error } = await supabase
-        .rpc('get_store_users', { store_id_param: storeId });
+        .from('app_users')
+        .select('*')
+        .filter('store_ids', 'cs', `{${storeId}}`);
       
       if (error) {
-        console.error('Error fetching store users with RPC:', error);
+        console.error('Error fetching store users with direct query:', error);
         throw error;
       }
       
-      return mapAppUsersFromRPC(data || []);
+      return mapAppUsers(data || []);
     } else {
-      console.log('Fetching all users using RPC');
+      console.log('Fetching all users using direct query');
       const { data, error } = await supabase
-        .rpc('get_all_users');
+        .from('app_users')
+        .select('*');
       
       if (error) {
-        console.error('Error fetching all users with RPC:', error);
-        // Fallback to direct query for admins
+        console.error('Error fetching all users with direct query:', error);
+        // Alternative attempt with another approach if the first fails
         const { data: directData, error: directError } = await supabase
           .from('app_users')
           .select('*');
@@ -40,7 +44,7 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
         return mapAppUsers(directData || []);
       }
       
-      return mapAppUsersFromRPC(data || []);
+      return mapAppUsers(data || []);
     }
   } catch (error: any) {
     console.error('Error in fetchAppUsers:', error);
