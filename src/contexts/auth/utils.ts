@@ -29,17 +29,13 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
   console.log('Mapping Supabase user:', supabaseUser.email);
   
   try {
-    // First check if the user exists in app_users table
-    // Using direct database query which now works with our new RLS policies
+    // Try to get user info using the new RPC function which avoids RLS recursion
     const { data, error } = await supabase
-      .from('app_users')
-      .select('*')
-      .eq('email', email)
-      .single();
+      .rpc('get_my_user_info');
     
     if (error) {
-      console.error('Error fetching user info from database:', error);
-      // Handle special admin accounts via hardcoded check
+      console.error('Error fetching user info from RPC function:', error);
+      // Fallback to direct query with special handling for admin accounts
       if (email === 'admin@example.com') {
         console.log('Admin account detected via email check');
         role = 'admin';
@@ -62,16 +58,29 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
           avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
         };
       }
-    }
-    
-    if (data) {
-      // User found in app_users table via direct query
-      console.log('User data found in database:', data);
-      role = data.role as UserRole;
-      storeIds = data.store_ids || [];
+      
+      // Fallback to direct query which might work if the user has the right permissions
+      const { data: userData, error: userError } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('email', email)
+        .single();
+      
+      if (userError) {
+        console.error('Error fetching user info from database:', userError);
+        // Use default role mapping from email
+      } else if (userData) {
+        role = userData.role as UserRole;
+        storeIds = userData.store_ids || [];
+      }
+    } else if (data && data.length > 0) {
+      // User found via RPC function
+      const userData = data[0];
+      role = userData.role as UserRole;
+      storeIds = userData.store_ids || [];
       
       // Use the name from app_users if available
-      const name = `${data.first_name} ${data.last_name}`.trim();
+      const name = `${userData.first_name} ${userData.last_name}`.trim();
       
       return {
         id: supabaseUser.id,
@@ -83,7 +92,7 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
       };
     }
   } catch (error) {
-    console.error('Error checking app_users table:', error);
+    console.error('Error checking app_users data:', error);
   }
 
   // If no data found in app_users or error occurred, try legacy tables

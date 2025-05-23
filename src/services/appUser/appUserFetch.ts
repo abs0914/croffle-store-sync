@@ -7,43 +7,61 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
   try {
     console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all roles");
     
-    // First check if the current user is admin/owner via email
-    const { data: userData } = await supabase.auth.getUser();
-    const userEmail = userData?.user?.email;
-    
     let data;
     let error;
     
-    if (userEmail === 'admin@example.com' || userEmail === 'owner@example.com') {
-      // Admin/owner can directly query all users
-      const query = supabase.from('app_users').select('*');
-      
-      if (storeId) {
-        query.filter('store_ids', 'cs', `{${storeId}}`);
-      }
-      
-      const response = await query;
+    if (storeId) {
+      // Use the RPC function to get users for a specific store
+      const response = await supabase.rpc('get_store_app_users', { 
+        store_id_param: storeId 
+      });
       data = response.data;
       error = response.error;
     } else {
-      // For non-admins, limit to their own user record
-      const { data: authData } = await supabase.auth.getUser();
-      if (authData?.user?.id) {
-        const response = await supabase
-          .from('app_users')
-          .select('*')
-          .eq('user_id', authData.user.id);
-          
-        data = response.data;
-        error = response.error;
-      } else {
-        throw new Error('User not authenticated');
-      }
+      // Use the RPC function to get all users or just the current user
+      const response = await supabase.rpc('get_all_app_users');
+      data = response.data;
+      error = response.error;
     }
     
     if (error) {
-      console.error('Error fetching users:', error);
-      throw error;
+      // If RPC functions fail (they might not exist yet after migration error),
+      // fall back to direct query method with error handling
+      console.error('RPC function error, falling back to direct query:', error);
+      
+      const { data: authData } = await supabase.auth.getUser();
+      const email = authData?.user?.email;
+      
+      if (email === 'admin@example.com' || email === 'owner@example.com') {
+        // Admin/owner can directly query all users
+        const query = supabase.from('app_users').select('*');
+        
+        if (storeId) {
+          query.filter('store_ids', 'cs', `{${storeId}}`);
+        }
+        
+        const fallbackResponse = await query;
+        data = fallbackResponse.data;
+        error = fallbackResponse.error;
+      } else {
+        // For non-admins, limit to their own user record
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user?.id) {
+          const fallbackResponse = await supabase
+            .from('app_users')
+            .select('*')
+            .eq('user_id', userData.user.id);
+            
+          data = fallbackResponse.data;
+          error = fallbackResponse.error;
+        } else {
+          throw new Error('User not authenticated');
+        }
+      }
+      
+      if (error) {
+        throw error;
+      }
     }
       
     return mapAppUsers(data || []);

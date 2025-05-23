@@ -1,33 +1,33 @@
 
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { AlertTriangleIcon } from "lucide-react";
 
 interface ErrorViewProps {
   error: Error | unknown;
+  onRetry?: () => void;
 }
 
-export default function ErrorView({ error }: ErrorViewProps) {
+export default function ErrorView({ error, onRetry }: ErrorViewProps) {
+  const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+  
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="text-center py-8">
-          <h2 className="text-xl font-medium mb-2">Error Loading Users</h2>
-          <p className="text-muted-foreground">
-            {error instanceof Error ? error.message : "You may not have permission to view users"}
-          </p>
-          <pre className="mt-4 text-xs text-left bg-muted p-2 rounded overflow-auto max-h-32">
-            {JSON.stringify(error, null, 2)}
-          </pre>
-          
-          <Button 
-            onClick={() => window.location.reload()} 
-            variant="outline"
-            className="mt-4"
-          >
-            Retry
-          </Button>
-        </div>
+    <Card className="border-destructive/50">
+      <CardContent className="pt-6 flex flex-col items-center text-center">
+        <AlertTriangleIcon className="h-10 w-10 text-destructive mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Error Loading Users</h3>
+        <p className="text-muted-foreground mb-2">{errorMessage}</p>
+        <p className="text-sm text-muted-foreground">
+          This might be due to a temporary database issue or permission problem.
+        </p>
       </CardContent>
+      {onRetry && (
+        <CardFooter className="justify-center">
+          <Button onClick={onRetry}>
+            Try Again
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

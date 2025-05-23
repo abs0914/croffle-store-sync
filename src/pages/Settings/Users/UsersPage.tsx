@@ -36,7 +36,7 @@ export default function UsersPage() {
   useUserDebug({ user, isAdmin, isOwner, canManageUsers, currentStore });
   
   // Fetch users for the current store or all stores if admin/owner
-  const { data: users = [], isLoading, error } = useQuery({
+  const { data: users = [], isLoading, error, refetch } = useQuery({
     queryKey: ["app_users", canManageUsers ? "all" : currentStore?.id],
     queryFn: async () => {
       console.log("Fetching users with params:", {
@@ -52,14 +52,15 @@ export default function UsersPage() {
           
         console.log(`Successfully fetched ${users.length} users`);
         return users;
-      } catch (fetchError) {
+      } catch (fetchError: any) {
         console.error("Error in users query function:", fetchError);
-        toast.error("Failed to load users. Please check your permissions and try again.");
+        toast.error("Failed to load users: " + (fetchError.message || "Unknown error"));
         throw fetchError;
       }
     },
     enabled: !!user && (canManageUsers || !!currentStore),
-    retry: 1
+    retry: 3,
+    retryDelay: 1000
   });
 
   useEffect(() => {
@@ -67,6 +68,25 @@ export default function UsersPage() {
       console.log("Successfully loaded users:", users.length);
     }
   }, [users]);
+
+  // Force refresh when coming back to this page or when auth changes
+  useEffect(() => {
+    const refreshData = () => {
+      if (user) {
+        refetch();
+      }
+    };
+
+    // Refresh on page visibility change (user coming back to tab)
+    document.addEventListener('visibilitychange', refreshData);
+    
+    // Initial refresh
+    refreshData();
+    
+    return () => {
+      document.removeEventListener('visibilitychange', refreshData);
+    };
+  }, [refetch, user]);
 
   const handleAddUser = () => {
     setIsAddDialogOpen(true);
@@ -83,12 +103,21 @@ export default function UsersPage() {
   };
 
   if (error) {
-    return <ErrorView error={error} />;
+    return <ErrorView error={error} onRetry={refetch} />;
   }
 
   // Manager should only see their own profile
   if (isManager && !canManageUsers) {
     const currentUserData = users.find(u => u.email === user?.email);
+    
+    if (!currentUserData && !isLoading) {
+      return (
+        <ErrorView 
+          error={new Error("Unable to load your user profile")} 
+          onRetry={refetch} 
+        />
+      );
+    }
     
     if (!currentUserData) {
       return <LoadingView />;
@@ -117,6 +146,7 @@ export default function UsersPage() {
         onAddUser={handleAddUser}
         onEditUser={handleEditUser}
         onDeleteUser={handleDeleteUser}
+        onRefresh={refetch}
       />
 
       <AddUserDialog 

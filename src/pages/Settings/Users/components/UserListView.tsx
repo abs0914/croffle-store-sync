@@ -5,7 +5,7 @@ import { Store } from "@/types/store";
 import { UserRole } from "@/types/user";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FilterIcon, UserPlusIcon } from "lucide-react";
+import { FilterIcon, UserPlusIcon, RefreshCwIcon } from "lucide-react";
 import { UsersTable } from "./";
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ interface UserListViewProps {
   onAddUser: () => void;
   onEditUser: (user: AppUser) => void;
   onDeleteUser: (user: AppUser) => void;
+  onRefresh?: () => void;
 }
 
 export default function UserListView({ 
@@ -31,7 +32,8 @@ export default function UserListView({
   canManageUsers,
   onAddUser, 
   onEditUser, 
-  onDeleteUser 
+  onDeleteUser,
+  onRefresh
 }: UserListViewProps) {
   const [roleFilter, setRoleFilter] = useState<UserRole[]>([]);
 
@@ -53,6 +55,12 @@ export default function UserListView({
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-xl font-bold">User Management</CardTitle>
         <div className="flex space-x-2">
+          {onRefresh && (
+            <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
+              <RefreshCwIcon className="mr-2 h-4 w-4" />
+              Refresh
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
