@@ -5,6 +5,7 @@ export * from './store';
 export * from './shift';
 export * from './transaction';
 export * from './inventory';
+export * from './recipe';
 
 // Common Supabase query result type to help with TypeScript inference
 export interface SupabaseQueryResult<T> {

@@ -31,10 +31,7 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
   
   try {
     // Try to get user info from the app_users table
-    const { data, error }: { 
-      data: AppUserData | null; 
-      error: PostgrestError | null 
-    } = await supabase
+    const { data, error } = await supabase
       .from('app_users')
       .select('*')
       .eq('email', email)
@@ -46,12 +43,13 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
 
     // If user exists in app_users, use that data
     if (data) {
-      console.log('Found existing app_user record:', data.email);
-      role = data.role as any;
-      storeIds = data.store_ids || [];
+      const appUserData = data as AppUserData;
+      console.log('Found existing app_user record:', appUserData.email);
+      role = appUserData.role as any;
+      storeIds = appUserData.store_ids || [];
       
       // Use the name from app_users if available
-      const name = `${data.first_name} ${data.last_name}`.trim();
+      const name = `${appUserData.first_name} ${appUserData.last_name}`.trim();
       
       return {
         id: supabaseUser.id,

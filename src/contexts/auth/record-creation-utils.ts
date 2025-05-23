@@ -16,7 +16,7 @@ export async function createAppUserRecord(
   isActive: boolean
 ): Promise<void> {
   try {
-    const { error: createError }: { error: PostgrestError | null } = await supabase
+    const { error: createError } = await supabase
       .from('app_users')
       .insert({
         user_id: userId,

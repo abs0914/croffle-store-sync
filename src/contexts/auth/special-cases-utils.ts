@@ -2,8 +2,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types";
 import { createAppUserRecord } from "./record-creation-utils";
-import type { PostgrestError, User } from "@supabase/supabase-js";
-import type { SupabaseQueryResult } from "@/types";
+import type { User } from "@supabase/supabase-js";
+import type { PostgrestError } from "@supabase/supabase-js";
 
 // Define return type for our special cases function
 interface SpecialCaseResult {
@@ -28,7 +28,7 @@ export async function handleSpecialCases(
     resultRole = 'admin';
     
     // For admins, fetch all store IDs
-    const { data: storesData }: { data: any[] | null; error: PostgrestError | null } = await supabase
+    const { data: storesData, error: storesError } = await supabase
       .from('stores')
       .select('id');
       
@@ -60,7 +60,7 @@ export async function handleSpecialCases(
           last_name?: string;
         }
         
-        const { data: managerData }: { data: ManagerData | null; error: PostgrestError | null } = await supabase
+        const { data: managerData, error: managerError } = await supabase
           .from('managers')
           .select('store_ids, first_name, last_name')
           .eq('email', email)
@@ -101,7 +101,7 @@ export async function handleSpecialCases(
           last_name: string;
         }
         
-        const { data: cashiersData }: { data: CashierData | null; error: PostgrestError | null } = await supabase
+        const { data: cashiersData, error: cashiersError } = await supabase
           .from('cashiers')
           .select('store_id, first_name, last_name')
           .eq('email', email)
@@ -137,15 +137,24 @@ export async function handleSpecialCases(
         const firstName = names[0] || email.split('@')[0];
         const lastName = names.slice(1).join(' ') || '';
         
-        await createAppUserRecord(
-          supabaseUser.id,
-          email,
-          firstName,
-          lastName,
-          resultRole,
-          resultStoreIds,
-          true
-        );
+        // Check if we already have an app_user record for this email
+        const { data: existingUser } = await supabase
+          .from('app_users')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+          
+        if (!existingUser) {
+          await createAppUserRecord(
+            supabaseUser.id,
+            email,
+            firstName,
+            lastName,
+            resultRole,
+            resultStoreIds,
+            true
+          );
+        }
       } catch (err) {
         console.error('Failed to create default app_user:', err);
       }
