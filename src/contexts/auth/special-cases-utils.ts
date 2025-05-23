@@ -69,7 +69,7 @@ export async function handleSpecialCases(
           .from('managers')
           .select('store_ids, first_name, last_name')
           .eq('email', email)
-          .maybeSingle<ManagerData>(); // Retain explicit generic here
+          .maybeSingle<ManagerData>();
 
         if (managerError) {
           console.error('Error fetching manager data:', managerError);
@@ -95,7 +95,7 @@ export async function handleSpecialCases(
           .from('cashiers')
           .select('store_id, first_name, last_name')
           .eq('email', email)
-          .maybeSingle<CashierData>(); // Retain explicit generic here
+          .maybeSingle<CashierData>();
 
         if (cashiersError) {
           console.error('Error fetching cashier data:', cashiersError);
@@ -114,7 +114,6 @@ export async function handleSpecialCases(
     }
 
     // Create a new default app_user if we haven't created one yet
-    // THIS IS LIKELY WHERE LINE 122 IS LOCATED
     if (email) {
       try {
         const names = supabaseUser.user_metadata?.name?.split(' ') || [];
@@ -122,19 +121,18 @@ export async function handleSpecialCases(
         const lastName = names.slice(1).join(' ') || '';
 
         // Check if we already have an app_user record for this email
-        // Applying the "as unknown as Type" pattern due to persistent TS2589
-        const { data: rawExistingUserData, error: existingUserError } = await supabase
+        // Using simplified type approach to avoid deep type instantiation
+        const { data: fetchedData, error: existingUserError } = await supabase
           .from('app_users')
-          .select('id') // Keep selection minimal
+          .select('id') // Only select the id column
           .eq('email', email)
-          .maybeSingle(); // Removed <ExistingAppUser> generic to use the cast below
+          .maybeSingle<{ id: string }>();
 
-        // Force cast the data part of the result
-        const existingUser = rawExistingUserData as unknown as (ExistingAppUser | null);
+        // Explicitly cast to our simple ExistingAppUser type
+        const existingUser = fetchedData as ExistingAppUser | null;
 
         if (existingUserError) {
           console.error('Error checking for existing app_user:', existingUserError);
-          // Potentially throw or return to prevent further execution on error
         }
         
         if (!existingUser && !existingUserError) {
