@@ -64,10 +64,10 @@ export const useStockOperations = ({ productId }: UseStockOperationsProps) => {
       // For the product inventory adjustment, we'll use a direct update instead
       // since the transfer_inventory_stock function doesn't match our needs
       if (type === 'adjustment') {
-        // Get current product data
+        // Get current product data - make sure to select both stock_quantity AND store_id
         const { data: product, error: fetchError } = await supabase
           .from('products')
-          .select('stock_quantity')
+          .select('stock_quantity, store_id')
           .eq('id', productId)
           .single();
         
@@ -85,7 +85,7 @@ export const useStockOperations = ({ productId }: UseStockOperationsProps) => {
         const { error: transactionError } = await supabase
           .from('inventory_transactions')
           .insert({
-            store_id: product ? product.store_id : '', // This would need to be available
+            store_id: product ? product.store_id : '', // Now store_id will be available
             product_id: productId,
             transaction_type: 'adjustment',
             quantity: Math.abs(quantityNumber - (product?.stock_quantity || 0)),
