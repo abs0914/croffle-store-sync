@@ -33,6 +33,16 @@ export default function UsersPage() {
     return <LoadingView />;
   }
   
+  // Handle specific database permission errors
+  if (error && error instanceof Error && error.message.includes('Database permission error')) {
+    return (
+      <ErrorView 
+        error={new Error('Database permission error - Please contact support')} 
+        onRetry={refetch} 
+      />
+    );
+  }
+  
   // Handle restricted access views for managers or errors
   if (isManager && !canManageUsers || error) {
     return (

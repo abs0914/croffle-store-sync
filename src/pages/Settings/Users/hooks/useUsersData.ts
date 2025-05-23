@@ -1,6 +1,7 @@
+
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchAppUsers } from "@/services/appUser";
+import { fetchAppUsers, fetchCurrentUserInfo } from "@/services/appUser";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
@@ -31,25 +32,31 @@ export default function useUsersData() {
       
       try {
         // Determine whether to fetch all users or store-specific users
-        let result;
         if (user.role === 'admin' || user.role === 'owner') {
           // Admins and owners can see all users
           console.log("Fetching all users (admin/owner access)");
-          result = await fetchAppUsers();
+          return await fetchAppUsers();
         } else if (currentStore) {
           // Other roles see only users from their current store
           console.log(`Fetching users for store: ${currentStore.id}`);
-          result = await fetchAppUsers(currentStore.id);
+          return await fetchAppUsers(currentStore.id);
+        } else if (user.email) {
+          // No store selected, just fetch the current user's info
+          console.log("Fetching only current user info");
+          const currentUserInfo = await fetchCurrentUserInfo(user.email);
+          return currentUserInfo ? [currentUserInfo] : [];
         } else {
-          console.log("No store selected for non-admin user");
+          console.log("No store selected and no email for user");
           return [];
         }
-          
-        console.log(`Successfully fetched ${result.length} users`);
-        return result;
       } catch (fetchError: any) {
         console.error("Error in users query function:", fetchError);
-        toast.error("Failed to load users: " + (fetchError.message || "Unknown error"));
+        // Check for specific errors
+        if (fetchError.message.includes('Database permission error')) {
+          toast.error("Database permission error - Please contact support");
+        } else {
+          toast.error("Failed to load users: " + (fetchError.message || "Unknown error"));
+        }
         throw fetchError;
       }
     },

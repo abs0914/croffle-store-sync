@@ -30,14 +30,11 @@ export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUs
   console.log('Mapping Supabase user:', supabaseUser.email);
   
   try {
-    // Try to get user info from the app_users table
+    // Try to get user info from the app_users table using RPC function
     const { data, error } = await supabase
-      .from('app_users')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle(); // Use maybeSingle instead of single to avoid 406 errors
+      .rpc('get_current_user_info', { user_email: email });
 
-    if (error && error.code !== 'PGRST116') { // Ignoring "no rows returned" error
+    if (error) { 
       console.error('Error fetching user info from database:', error);
     } 
 
