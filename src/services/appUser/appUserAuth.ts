@@ -76,28 +76,6 @@ export const createAppUserWithAuth = async (
   }
 };
 
-export const resetAppUserPassword = async (email: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase.auth.resetPasswordForEmail(
-      email,
-      {
-        redirectTo: window.location.origin + '/password-reset'
-      }
-    );
-    
-    if (error) {
-      throw error;
-    }
-    
-    toast.success('Password reset link has been sent to the user\'s email');
-    return true;
-  } catch (error: any) {
-    console.error('Error resetting user password:', error);
-    toast.error(`Password reset failed: ${error.message}`);
-    return false;
-  }
-};
-
 export const setUserPassword = async (email: string, password: string): Promise<boolean> => {
   try {
     // For security, this should only be allowed by admins or the user themselves

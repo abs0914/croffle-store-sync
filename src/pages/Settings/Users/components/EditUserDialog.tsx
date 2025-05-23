@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateAppUser, resetAppUserPassword, setUserPassword } from "@/services/appUser";
+import { updateAppUser, setUserPassword } from "@/services/appUser";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { Store } from "@/types/store";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertTriangle, Key, RefreshCw } from "lucide-react";
+import { AlertTriangle, Key } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface EditUserDialogProps {
@@ -49,7 +49,6 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
     password: ""
   });
 
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isSettingPassword, setIsSettingPassword] = useState(false);
 
   const updateMutation = useMutation({
@@ -58,18 +57,6 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
       queryClient.invalidateQueries({ queryKey: ["app_users"] });
       onOpenChange(false);
       toast.success("User updated successfully");
-    }
-  });
-
-  const resetPasswordMutation = useMutation({
-    mutationFn: resetAppUserPassword,
-    onSuccess: () => {
-      setIsResettingPassword(false);
-      toast.success(`Password reset email sent to ${user?.email}`);
-    },
-    onError: (error: any) => {
-      setIsResettingPassword(false);
-      toast.error(`Failed to send password reset email: ${error.message}`);
     }
   });
 
@@ -120,16 +107,6 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
       ...prev,
       [e.target.name]: e.target.value
     }));
-  };
-
-  const handlePasswordReset = () => {
-    if (!user?.email) {
-      toast.error("User has no email address");
-      return;
-    }
-    
-    setIsResettingPassword(true);
-    resetPasswordMutation.mutate(user.email);
   };
 
   const handleSetPassword = (e: React.FormEvent) => {
@@ -191,41 +168,12 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
             
             <TabsContent value="password" className="mt-4">
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="text-sm font-medium flex items-center gap-1">
-                      <Key className="h-4 w-4" />
-                      Password Reset
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Send a password reset link to the user's email
-                    </p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    type="button"
-                    onClick={handlePasswordReset}
-                    disabled={isResettingPassword}
-                    className="gap-1"
-                  >
-                    {isResettingPassword ? (
-                      <>
-                        <Spinner className="h-4 w-4" />
-                        Sending email...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4" />
-                        Send Reset Link
-                      </>
-                    )}
-                  </Button>
-                </div>
-                
                 <div className="border-t pt-4 mt-4">
-                  <h4 className="text-sm font-medium">Set New Password</h4>
-                  <p className="text-xs text-muted-foreground mt-1 mb-4">
+                  <h4 className="text-sm font-medium flex items-center gap-1 mb-2">
+                    <Key className="h-4 w-4" />
+                    Set New Password
+                  </h4>
+                  <p className="text-xs text-muted-foreground mb-4">
                     Directly set a new password for this user
                   </p>
                   
