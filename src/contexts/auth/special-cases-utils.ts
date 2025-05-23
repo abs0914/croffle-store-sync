@@ -79,8 +79,9 @@ export async function handleSpecialCases(
         
         if (managerData) {
           console.log('Found manager record:', managerData);
-          // Use explicit type cast to avoid recursion
-          const manager = managerData as ManagerData;
+          
+          // Fix: Use explicit type assertion with interface to prevent recursion
+          const manager = managerData as unknown as ManagerData;
           resultStoreIds = manager.store_ids || [];
           
           // Create app_user record since it doesn't exist yet
@@ -115,8 +116,8 @@ export async function handleSpecialCases(
           .maybeSingle();
           
         if (cashiersData) {
-          // Use explicit type cast to avoid recursion
-          const cashier = cashiersData as CashierData;
+          // Fix: Use explicit type assertion with interface to prevent recursion
+          const cashier = cashiersData as unknown as CashierData;
           resultStoreIds = [cashier.store_id];
           
           // Create app_user record
