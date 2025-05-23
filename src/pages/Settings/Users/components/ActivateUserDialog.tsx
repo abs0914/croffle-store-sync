@@ -5,6 +5,7 @@ import { updateAppUser } from "@/services/appUser";
 import { AppUser } from "@/types/appUser";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -33,8 +34,17 @@ export default function ActivateUserDialog({
   const updateMutation = useMutation({
     mutationFn: updateAppUser,
     onSuccess: () => {
+      toast.success(
+        isDeactivating 
+          ? `${user?.firstName} ${user?.lastName} has been deactivated`
+          : `${user?.firstName} ${user?.lastName} has been activated`
+      );
       queryClient.invalidateQueries({ queryKey: ["app_users"] });
       onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast.error(`Error: ${error.message || "Failed to update user status"}`);
+      console.error("Error updating user status:", error);
     }
   });
 
@@ -42,7 +52,7 @@ export default function ActivateUserDialog({
     if (!user) return;
 
     setIsProcessing(true);
-    // Ensure we pass all required properties of AppUserFormData
+    // Ensure we pass all required properties
     await updateMutation.mutateAsync({
       id: user.id,
       firstName: user.firstName,
@@ -51,7 +61,7 @@ export default function ActivateUserDialog({
       contactNumber: user.contactNumber || "",
       role: user.role,
       storeIds: user.storeIds,
-      isActive: !isDeactivating
+      isActive: !isDeactivating // Set to true when activating, false when deactivating
     });
     setIsProcessing(false);
   };

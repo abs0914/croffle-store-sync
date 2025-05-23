@@ -10,25 +10,8 @@ interface SpecialCaseResult {
   storeIds: string[];
 }
 
-// Define simplified interfaces for DB query results
+// Define simple interfaces for DB query results
 interface StoreData {
-  id: string;
-}
-
-interface ManagerData {
-  store_ids?: string[];
-  first_name?: string;
-  last_name?: string;
-}
-
-interface CashierData {
-  store_id: string;
-  first_name: string;
-  last_name: string;
-}
-
-// Interface for the app_users existence check - ensure this is simple
-interface ExistingAppUser {
   id: string;
 }
 
@@ -50,6 +33,7 @@ export async function handleSpecialCases(
     const { data: storesData, error: storesError } = await supabase
       .from('stores')
       .select('id');
+    
     if (storesError) {
       console.error('Error fetching stores for admin:', storesError);
     } else if (storesData && storesData.length > 0) {
@@ -80,18 +64,14 @@ export async function handleSpecialCases(
           .eq('email', email)
           .maybeSingle();
 
-        // Explicitly cast the returned data to our simplified type
-        const managerData = data as ManagerData | null;
-        const managerError = error;
-
-        if (managerError) {
-          console.error('Error fetching manager data:', managerError);
-        } else if (managerData) {
-          console.log('Found manager record:', managerData);
-          resultStoreIds = managerData.store_ids || [];
+        if (error) {
+          console.error('Error fetching manager data:', error);
+        } else if (data) {
+          console.log('Found manager record:', data);
+          resultStoreIds = data.store_ids || [];
           const names = supabaseUser.user_metadata?.name?.split(' ') || [];
-          const firstName = managerData.first_name || names[0] || email.split('@')[0];
-          const lastName = managerData.last_name || names.slice(1).join(' ') || '';
+          const firstName = data.first_name || names[0] || email.split('@')[0];
+          const lastName = data.last_name || names.slice(1).join(' ') || '';
           try {
             await createAppUserRecord(
               supabaseUser.id,
@@ -118,21 +98,17 @@ export async function handleSpecialCases(
           .eq('email', email)
           .maybeSingle();
 
-        // Use safe type casting to avoid deep instantiation issues
-        const cashiersData = data as CashierData | null;
-        const cashiersError = error;
-
-        if (cashiersError) {
-          console.error('Error fetching cashier data:', cashiersError);
-        } else if (cashiersData) {
-          console.log('Found cashier record:', cashiersData);
-          resultStoreIds = [cashiersData.store_id];
+        if (error) {
+          console.error('Error fetching cashier data:', error);
+        } else if (data) {
+          console.log('Found cashier record:', data);
+          resultStoreIds = [data.store_id];
           try {
             await createAppUserRecord(
               supabaseUser.id,
               email,
-              cashiersData.first_name,
-              cashiersData.last_name,
+              data.first_name,
+              data.last_name,
               resultRole,
               resultStoreIds,
               true
@@ -154,22 +130,17 @@ export async function handleSpecialCases(
         const lastName = names.slice(1).join(' ') || '';
 
         // Check if we already have an app_user record for this email
-        // Use a simplified approach to avoid type instantiation issues
         const { data, error } = await supabase
           .from('app_users')
-          .select('id') // Only select the id column
+          .select('id')
           .eq('email', email)
           .maybeSingle();
-
-        // Simple type casting
-        const existingUser = data as ExistingAppUser | null;
-        const existingUserError = error;
-
-        if (existingUserError) {
-          console.error('Error checking for existing app_user:', existingUserError);
+        
+        if (error) {
+          console.error('Error checking for existing app_user:', error);
         }
         
-        if (!existingUser && !existingUserError) {
+        if (!data && !error) {
           await createAppUserRecord(
             supabaseUser.id,
             email,

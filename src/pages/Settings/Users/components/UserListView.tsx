@@ -1,12 +1,11 @@
 
-import { useEffect, useState } from "react";
 import { AppUser } from "@/types/appUser";
 import { Store } from "@/types/store";
 import UsersTable from "./UsersTable";
 import EmptyUsersView from "./EmptyUsersView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, RefreshCwIcon, DownloadIcon, UploadIcon } from "lucide-react";
+import { PlusIcon, RefreshCwIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 
 interface UserListViewProps {
@@ -36,15 +35,7 @@ export default function UserListView({
   onRefresh,
   error
 }: UserListViewProps) {
-  const [permissionIssue, setPermissionIssue] = useState(false);
-
-  useEffect(() => {
-    if (error?.message?.includes('policy') || error?.code === 'PGRST109') {
-      setPermissionIssue(true);
-    } else {
-      setPermissionIssue(false);
-    }
-  }, [error]);
+  const hasPermissionIssue = error?.message?.includes('policy') || error?.code === 'PGRST109';
 
   const renderContent = () => {
     if (isLoading) {
@@ -57,7 +48,7 @@ export default function UserListView({
       );
     }
 
-    if (error && !permissionIssue) {
+    if (error && !hasPermissionIssue) {
       return (
         <Card>
           <CardContent className="flex flex-col items-center justify-center p-12">
@@ -77,7 +68,7 @@ export default function UserListView({
           onAddUser={onAddUser} 
           onRefresh={onRefresh}
           canManageUsers={canManageUsers} 
-          hasRlsPermission={!permissionIssue}
+          hasRlsPermission={!hasPermissionIssue}
         />
       );
     }
@@ -106,12 +97,10 @@ export default function UserListView({
             Refresh
           </Button>
           {canManageUsers && (
-            <>
-              <Button size="sm" onClick={onAddUser} disabled={isLoading}>
-                <PlusIcon className="h-4 w-4 mr-1" />
-                Add User
-              </Button>
-            </>
+            <Button size="sm" onClick={onAddUser} disabled={isLoading}>
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Add User
+            </Button>
           )}
         </div>
       </CardHeader>

@@ -35,12 +35,16 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [isDeactivating, setIsDeactivating] = useState(false);
 
-  // Use the debug hook
+  // Debug hook
   useUserDebug({ user, isAdmin, isOwner, canManageUsers, currentStore });
   
-  // Fetch users based on the user's role
-  // RLS policies will automatically restrict data access accordingly
-  const { data: users = [], isLoading, error, refetch } = useQuery({
+  // Fetch users with React Query
+  const { 
+    data: users = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery({
     queryKey: ["app_users", currentStore?.id],
     queryFn: async () => {
       console.log("Fetching users with params:", {
@@ -49,8 +53,7 @@ export default function UsersPage() {
       });
       
       try {
-        // For all roles, we just need one query approach now
-        // The RLS policies will handle the appropriate filtering
+        // The RLS policies will handle appropriate filtering
         const users = currentStore 
           ? await fetchAppUsers(currentStore.id) 
           : await fetchAppUsers();
@@ -68,13 +71,7 @@ export default function UsersPage() {
     retryDelay: 1000,
   });
 
-  useEffect(() => {
-    if (users.length > 0) {
-      console.log("Successfully loaded users:", users.length);
-    }
-  }, [users]);
-
-  // Force refresh when coming back to this page or when auth changes
+  // Auto refresh when visibility changes or user changes
   useEffect(() => {
     const refreshData = () => {
       if (user) {
@@ -93,6 +90,7 @@ export default function UsersPage() {
     };
   }, [refetch, user]);
 
+  // Handler functions
   const handleAddUser = () => {
     setIsAddDialogOpen(true);
   };
@@ -119,11 +117,12 @@ export default function UsersPage() {
     setIsActivateDialogOpen(true);
   };
 
+  // Handle error state
   if (error) {
     return <ErrorView error={error} onRetry={refetch} />;
   }
 
-  // Manager should only see their own profile
+  // Manager view - only see their own profile
   if (isManager && !canManageUsers) {
     const currentUserData = users.find(u => u.email === user?.email);
     
@@ -143,6 +142,7 @@ export default function UsersPage() {
     return <UserProfile user={currentUserData} stores={stores} />;
   }
 
+  // Store selection required
   if (!currentStore && !canManageUsers) {
     return (
       <Card>
@@ -153,6 +153,7 @@ export default function UsersPage() {
     );
   }
 
+  // Main user management view
   return (
     <div className="space-y-6">
       <UserListView
@@ -168,6 +169,7 @@ export default function UsersPage() {
         onRefresh={refetch}
       />
 
+      {/* Dialogs */}
       <AddUserDialog 
         isOpen={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
