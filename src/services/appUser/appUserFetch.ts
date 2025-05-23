@@ -6,34 +6,37 @@ import { toast } from "sonner";
 
 export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
   try {
-    console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all users");
+    console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all stores");
     
-    // Use standard query instead of RPC functions to avoid type issues
-    const query = supabase.from('app_users').select('*');
+    // Build query - use the authenticated user's permissions via RLS
+    let query = supabase.from('app_users').select('*');
     
     // If a store ID is provided, filter by that store
     if (storeId) {
-      query.filter('store_ids', 'cs', `{${storeId}}`);
+      query = query.filter('store_ids', 'cs', `{${storeId}}`);
     }
     
+    // Execute query
     const { data, error } = await query;
     
     if (error) {
       console.error('Error fetching app users:', error);
-      toast.error(`Failed to load users: ${error.message || 'Unknown error'}`);
-      return [];
+      throw new Error(error.message || 'Failed to load users');
     }
 
-    // If we have no data, check if we need to sync from auth system
+    // Successful query but no results
     if (!data || data.length === 0) {
-      console.log('No app_users found, could attempt to sync from auth system');
-      // We're simplifying by not attempting to access auth system
+      console.log('No app_users found in query results');
+      return [];
     }
       
-    return mapAppUsers(data || []);
+    // Map and return the users
+    const mappedUsers = mapAppUsers(data);
+    console.log(`Successfully mapped ${mappedUsers.length} users`);
+    return mappedUsers;
   } catch (error: any) {
     console.error('Error in fetchAppUsers:', error);
-    toast.error(`Failed to load users: ${error.message || 'Unknown error'}`);
+    // Don't show toast here - let the calling component handle the error
     return [];
   }
 };

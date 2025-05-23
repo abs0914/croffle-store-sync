@@ -17,15 +17,16 @@ export default function useUsersData() {
     error, 
     refetch 
   } = useQuery({
-    queryKey: ["app_users", currentStore?.id],
+    queryKey: ["app_users", currentStore?.id, user?.id],
     queryFn: async () => {
       console.log("Fetching users with params:", {
         userRole: user?.role,
+        userId: user?.id,
         storeId: currentStore?.id
       });
       
       try {
-        // The new RLS policies will handle appropriate filtering
+        // The new RLS policies will handle appropriate filtering based on role
         const users = currentStore 
           ? await fetchAppUsers(currentStore.id) 
           : await fetchAppUsers();
@@ -39,11 +40,11 @@ export default function useUsersData() {
       }
     },
     enabled: !!user,
-    retry: 3,
+    retry: 1,
     retryDelay: 1000,
   });
 
-  // Auto refresh when visibility changes or user changes
+  // Auto refresh when visibility changes or user/store changes
   useEffect(() => {
     const refreshData = () => {
       if (user) {
@@ -60,7 +61,7 @@ export default function useUsersData() {
     return () => {
       document.removeEventListener('visibilitychange', refreshData);
     };
-  }, [refetch, user]);
+  }, [refetch, user, currentStore]);
 
   return {
     users,

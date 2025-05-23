@@ -46,11 +46,11 @@ export const handleSpecialCases = async (userData: any = null, email: string = '
   // Create the user record if it doesn't exist yet
   if (!userData?.app_user_id && email) {
     try {
-      const firstName = email.split('@')[0].split('.')[0];
+      const firstName = email.split('@')[0].split('.')[0] || '';
       const lastName = email.split('@')[0].split('.')[1] || '';
       
-      // Use RPC call or direct insert depending on your needs
-      await supabase.rpc('create_app_user', {
+      // Use RPC call for creating app_user
+      const { data, error } = await supabase.rpc('create_app_user', {
         user_id: userData?.id || null,
         user_email: email,
         first_name: firstName,
@@ -60,9 +60,13 @@ export const handleSpecialCases = async (userData: any = null, email: string = '
         is_active: true
       });
       
-      console.log('Created new app_user record for:', email);
+      if (error) {
+        console.error('Error creating app_user record:', error);
+      } else {
+        console.log('Created new app_user record for:', email, data);
+      }
     } catch (error) {
-      console.error('Error creating app_user record:', error);
+      console.error('Exception creating app_user record:', error);
     }
   }
   
