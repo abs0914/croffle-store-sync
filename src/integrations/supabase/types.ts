@@ -9,6 +9,48 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      app_users: {
+        Row: {
+          contact_number: string | null
+          created_at: string | null
+          email: string | null
+          first_name: string
+          id: string
+          is_active: boolean | null
+          last_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          store_ids: string[] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          contact_number?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean | null
+          last_name: string
+          role: Database["public"]["Enums"]["app_role"]
+          store_ids?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          contact_number?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean | null
+          last_name?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          store_ids?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       cashiers: {
         Row: {
           contact_number: string | null
@@ -695,9 +737,13 @@ export type Database = {
             }
         Returns: undefined
       }
+      user_has_store_access: {
+        Args: { user_id: string; store_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "owner" | "manager" | "cashier"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -812,6 +858,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "owner", "manager", "cashier"],
+    },
   },
 } as const

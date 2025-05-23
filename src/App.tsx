@@ -23,8 +23,7 @@ import InventoryStock from "./pages/Inventory/InventoryStock";
 import Inventory from "./pages/Inventory"; 
 import Reports from "./pages/Reports"; 
 import ProductForm from "./pages/Inventory/ProductForm";
-import Cashiers from "./pages/Settings/Cashiers";
-import Managers from "./pages/Settings/Managers";
+import Users from "./pages/Settings/Users";
 import { useIsMobile } from "./hooks/use-mobile";
 
 function ToasterWithResponsivePosition() {
@@ -71,8 +70,7 @@ function App() {
                   <Route path="/inventory/product/:id" element={<MainLayout><ProductForm /></MainLayout>} />
                   <Route path="/inventory/stock" element={<MainLayout><InventoryStock /></MainLayout>} />
                   <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
-                  <Route path="/settings/cashiers" element={<MainLayout><Cashiers /></MainLayout>} />
-                  <Route path="/settings/managers" element={<MainLayout><Managers /></MainLayout>} />
+                  <Route path="/settings/users" element={<MainLayout><Users /></MainLayout>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <ToasterWithResponsivePosition />

@@ -21,50 +21,66 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
   const email = supabaseUser.email;
   let role: UserRole = mapUserRole(email);
   
-  // For cashier users, fetch associated store IDs from the cashiers table
+  // Try to fetch user role and store assignments from app_users table
   let storeIds: string[] = ['1']; // Default store ID
   
-  if (role === 'cashier') {
-    try {
-      const { data } = await supabase
-        .from('cashiers')
-        .select('store_id')
-        .eq('user_id', supabaseUser.id);
-      
-      if (data && data.length > 0) {
-        storeIds = data.map(item => item.store_id);
+  try {
+    const { data } = await supabase
+      .from('app_users')
+      .select('role, store_ids')
+      .eq('email', supabaseUser.email)
+      .maybeSingle();
+    
+    if (data) {
+      role = data.role;
+      storeIds = data.store_ids || [];
+    } else {
+      // Fall back to checking legacy tables if no app_user record found
+      if (role === 'cashier') {
+        try {
+          const { data: cashierData } = await supabase
+            .from('cashiers')
+            .select('store_id')
+            .eq('user_id', supabaseUser.id);
+          
+          if (cashierData && cashierData.length > 0) {
+            storeIds = cashierData.map(item => item.store_id);
+          }
+        } catch (error) {
+          console.error('Error fetching cashier store assignments:', error);
+        }
+      } else if (role === 'manager') {
+        // For managers, fetch assigned stores from the managers table
+        try {
+          const { data: managerData } = await supabase
+            .from('managers')
+            .select('store_ids')
+            .eq('email', supabaseUser.email)
+            .single();
+          
+          if (managerData && managerData.store_ids) {
+            storeIds = managerData.store_ids;
+          }
+        } catch (error) {
+          console.error('Error fetching manager store assignments:', error);
+        }
+      } else if (role === 'admin' || role === 'owner') {
+        // For admins and owners, fetch all stores
+        try {
+          const { data: storesData } = await supabase
+            .from('stores')
+            .select('id');
+            
+          if (storesData && storesData.length > 0) {
+            storeIds = storesData.map(store => store.id);
+          }
+        } catch (error) {
+          console.error('Error fetching store IDs:', error);
+        }
       }
-    } catch (error) {
-      console.error('Error fetching cashier store assignments:', error);
     }
-  } else if (role === 'manager') {
-    // For managers, fetch assigned stores from the managers table
-    try {
-      const { data } = await supabase
-        .from('managers')
-        .select('store_ids')
-        .eq('email', supabaseUser.email)
-        .single();
-      
-      if (data && data.store_ids) {
-        storeIds = data.store_ids;
-      }
-    } catch (error) {
-      console.error('Error fetching manager store assignments:', error);
-    }
-  } else {
-    // For admins and owners, fetch from all stores
-    try {
-      const { data } = await supabase
-        .from('stores')
-        .select('id');
-        
-      if (data && data.length > 0) {
-        storeIds = data.map(store => store.id);
-      }
-    } catch (error) {
-      console.error('Error fetching store IDs:', error);
-    }
+  } catch (error) {
+    console.error('Error checking app_users table:', error);
   }
 
   return {
