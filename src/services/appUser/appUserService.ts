@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { toast } from "sonner";
@@ -6,15 +7,59 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
   try {
     console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all roles");
     
-    // With our new RLS policies, direct queries work properly now
-    let query = supabase.from('app_users').select('*');
-    
+    let data;
+    let error;
+
+    // Try to use the RPC function if available, fall back to direct query with modified approach
     if (storeId) {
-      console.log(`Filtering users for store: ${storeId}`);
-      query = query.filter('store_ids', 'cs', `{${storeId}}`);
+      // Use stored function to get users for a specific store
+      const response = await supabase.rpc('get_store_users', { 
+        store_id_param: storeId 
+      });
+      data = response.data;
+      error = response.error;
+    } else {
+      // Use stored function to get all users
+      const response = await supabase.rpc('get_all_users');
+      data = response.data;
+      error = response.error;
     }
     
-    const { data, error } = await query;
+    // If the RPC approach fails, try a different method
+    if (error && error.code === '42883') { // Function does not exist
+      console.warn('RPC function not found, falling back to direct query with auth check');
+      
+      // First check if the current user is admin/owner via email
+      const { data: userData } = await supabase.auth.getUser();
+      const userEmail = userData?.user?.email;
+      
+      if (userEmail === 'admin@example.com' || userEmail === 'owner@example.com') {
+        // Admin/owner can directly query all users
+        const query = supabase.from('app_users').select('*');
+        
+        if (storeId) {
+          query.filter('store_ids', 'cs', `{${storeId}}`);
+        }
+        
+        const response = await query;
+        data = response.data;
+        error = response.error;
+      } else {
+        // For non-admins, limit to their own user record
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user?.id) {
+          const response = await supabase
+            .from('app_users')
+            .select('*')
+            .eq('user_id', authData.user.id);
+            
+          data = response.data;
+          error = response.error;
+        } else {
+          throw new Error('User not authenticated');
+        }
+      }
+    }
     
     if (error) {
       console.error('Error fetching users:', error);
