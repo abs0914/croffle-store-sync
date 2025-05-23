@@ -79,12 +79,14 @@ export async function handleSpecialCases(
         
         if (managerData) {
           console.log('Found manager record:', managerData);
-          resultStoreIds = (managerData as ManagerData).store_ids || [];
+          // Use explicit type cast to avoid recursion
+          const manager = managerData as ManagerData;
+          resultStoreIds = manager.store_ids || [];
           
           // Create app_user record since it doesn't exist yet
           const names = supabaseUser.user_metadata?.name?.split(' ') || [];
-          const firstName = (managerData as ManagerData).first_name || names[0] || email.split('@')[0];
-          const lastName = (managerData as ManagerData).last_name || names.slice(1).join(' ') || '';
+          const firstName = manager.first_name || names[0] || email.split('@')[0];
+          const lastName = manager.last_name || names.slice(1).join(' ') || '';
           
           try {
             await createAppUserRecord(
@@ -113,15 +115,17 @@ export async function handleSpecialCases(
           .maybeSingle();
           
         if (cashiersData) {
-          resultStoreIds = [(cashiersData as CashierData).store_id];
+          // Use explicit type cast to avoid recursion
+          const cashier = cashiersData as CashierData;
+          resultStoreIds = [cashier.store_id];
           
           // Create app_user record
           try {
             await createAppUserRecord(
               supabaseUser.id,
               email,
-              (cashiersData as CashierData).first_name,
-              (cashiersData as CashierData).last_name,
+              cashier.first_name,
+              cashier.last_name,
               resultRole,
               resultStoreIds,
               true
