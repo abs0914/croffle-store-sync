@@ -25,7 +25,7 @@ export default function useUsersData() {
       });
       
       try {
-        // The RLS policies will handle appropriate filtering
+        // The new RLS policies will handle appropriate filtering
         const users = currentStore 
           ? await fetchAppUsers(currentStore.id) 
           : await fetchAppUsers();
