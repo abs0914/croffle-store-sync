@@ -10,7 +10,7 @@ interface SpecialCaseResult {
   storeIds: string[];
 }
 
-// Define simple interfaces for DB query results
+// Define simple interface for DB query results
 interface StoreData {
   id: string;
 }
