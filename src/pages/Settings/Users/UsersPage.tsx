@@ -37,13 +37,18 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
   const [roleFilter, setRoleFilter] = useState<UserRole[]>([]);
 
+  // Debug permissions
+  console.log("User role:", user?.role);
+  console.log("Is admin:", isAdmin);
+  console.log("Can manage users:", canManageUsers);
+  
   // Fetch users for the current store or all stores if admin/owner
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ["app_users", canManageUsers ? "all" : currentStore?.id, roleFilter],
     queryFn: () => canManageUsers 
       ? fetchAppUsers() 
       : (currentStore ? fetchAppUsers(currentStore.id) : Promise.resolve([])),
-    enabled: canManageUsers || !!currentStore,
+    enabled: !!user && (canManageUsers || !!currentStore),
     retry: false,
     meta: {
       onError: (err: any) => {

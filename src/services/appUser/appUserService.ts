@@ -17,6 +17,7 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
       query = query.contains('store_ids', [storeId]);
     }
     
+    // Execute the query
     const { data, error } = await query;
     
     if (error) {
