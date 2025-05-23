@@ -35,20 +35,22 @@ export default function UsersPage() {
   // Use the debug hook
   useUserDebug({ user, isAdmin, isOwner, canManageUsers, currentStore });
   
-  // Fetch users for the current store or all stores if admin/owner
+  // Fetch users based on the user's role
+  // RLS policies will automatically restrict data access accordingly
   const { data: users = [], isLoading, error, refetch } = useQuery({
-    queryKey: ["app_users", canManageUsers ? "all" : currentStore?.id],
+    queryKey: ["app_users", currentStore?.id],
     queryFn: async () => {
       console.log("Fetching users with params:", {
-        canManageUsers,
-        storeId: currentStore?.id,
-        userRole: user?.role
+        userRole: user?.role,
+        storeId: currentStore?.id
       });
       
       try {
-        const users = canManageUsers 
-          ? await fetchAppUsers() 
-          : (currentStore ? await fetchAppUsers(currentStore.id) : []);
+        // For all roles, we just need one query approach now
+        // The RLS policies will handle the appropriate filtering
+        const users = currentStore 
+          ? await fetchAppUsers(currentStore.id) 
+          : await fetchAppUsers();
           
         console.log(`Successfully fetched ${users.length} users`);
         return users;
@@ -58,7 +60,7 @@ export default function UsersPage() {
         throw fetchError;
       }
     },
-    enabled: !!user && (canManageUsers || !!currentStore),
+    enabled: !!user,
     retry: 3,
     retryDelay: 1000,
   });

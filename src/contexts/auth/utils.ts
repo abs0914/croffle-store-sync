@@ -29,7 +29,7 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
   console.log('Mapping Supabase user:', supabaseUser.email);
   
   try {
-    // Try to get user info from the app_users table directly
+    // Try to get user info from the app_users table using RLS
     const { data, error } = await supabase
       .from('app_users')
       .select('*')
@@ -38,7 +38,8 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
     
     if (error) {
       console.error('Error fetching user info from database:', error);
-      // Fallback to direct query with special handling for admin accounts
+      
+      // Special handling for admin accounts
       if (email === 'admin@example.com') {
         console.log('Admin account detected via email check');
         role = 'admin';
@@ -51,30 +52,6 @@ export const mapSupabaseUser = async (supabaseUser: any): Promise<User> => {
         if (storesData && storesData.length > 0) {
           storeIds = storesData.map(store => store.id);
         }
-        
-        return {
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          name: supabaseUser.user_metadata?.name || supabaseUser.email.split('@')[0],
-          role: role,
-          storeIds: storeIds,
-          avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
-        };
-      }
-      
-      // Fallback to direct query which might work if the user has the right permissions
-      const { data: userData, error: userError } = await supabase
-        .from('app_users')
-        .select('*')
-        .eq('email', email)
-        .single();
-      
-      if (userError) {
-        console.error('Error fetching user info from database:', userError);
-        // Use default role mapping from email
-      } else if (userData) {
-        role = userData.role as UserRole;
-        storeIds = userData.store_ids || [];
       }
     } else if (data) {
       // User found via direct query

@@ -5,10 +5,12 @@ import { mapAppUsers } from "./appUserHelpers";
 
 export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
   try {
-    console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all roles");
+    console.log("Fetching app users", storeId ? `for store: ${storeId}` : "for all users");
     
-    // First, try using the direct RLS-protected query
-    // The RLS policies will handle permissions automatically
+    // The query will automatically respect RLS policies based on the user's role
+    // - Admins/owners will see all users (or filtered by storeId if provided)
+    // - Managers will see users in their stores
+    // - Regular users will only see themselves
     const query = supabase.from('app_users').select('*');
     
     // If a store ID is provided, filter by that store
