@@ -10,17 +10,24 @@ export const createAppUserWithAuth = async (
   try {
     // First check if user already exists in auth system
     const { data: existingAuthUsers, error: checkError } = await supabase.auth.admin.listUsers({
-      filter: {
-        email: data.email
-      }
+      page: 1,
+      perPage: 1000
     });
     
     let authUser = null;
+    let existingAuthUser = null;
+    
+    // If we successfully got auth users, find if the user already exists
+    if (!checkError && existingAuthUsers) {
+      existingAuthUser = existingAuthUsers.users.find(user => 
+        user.email?.toLowerCase() === data.email.toLowerCase()
+      );
+    }
     
     // If user already exists in auth
-    if (!checkError && existingAuthUsers && existingAuthUsers.users.length > 0) {
+    if (existingAuthUser) {
       console.log('User already exists in auth system:', data.email);
-      authUser = existingAuthUsers.users[0];
+      authUser = existingAuthUser;
       toast.info('User already exists in authentication system');
       
       // Try to sign in to verify credentials
@@ -113,9 +120,8 @@ export const setUserPassword = async (email: string, password: string): Promise<
   try {
     // First check if user exists in auth system
     const { data: existingUsers, error: checkError } = await supabase.auth.admin.listUsers({
-      filter: {
-        email: email
-      }
+      page: 1,
+      perPage: 1000
     });
     
     if (checkError) {
@@ -124,13 +130,18 @@ export const setUserPassword = async (email: string, password: string): Promise<
       return false;
     }
     
+    // Find the user with the matching email
+    const matchingUser = existingUsers?.users.find(user => 
+      user.email?.toLowerCase() === email.toLowerCase()
+    );
+    
     // If user doesn't exist in auth system
-    if (!existingUsers || existingUsers.users.length === 0) {
+    if (!matchingUser) {
       toast.error('User does not exist in authentication system');
       return false;
     }
     
-    const userId = existingUsers.users[0].id;
+    const userId = matchingUser.id;
     
     // Use admin API to update user password
     const { error } = await supabase.auth.admin.updateUserById(

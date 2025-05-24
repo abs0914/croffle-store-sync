@@ -1,11 +1,10 @@
-
 import { AppUser } from "@/types/appUser";
 import { Store } from "@/types/store";
 import UsersTable from "./UsersTable";
 import EmptyUsersView from "./EmptyUsersView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, RefreshCwIcon, SyncIcon } from "lucide-react";
+import { PlusIcon, RefreshCwIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 
 interface UserListViewProps {
@@ -101,7 +100,7 @@ export default function UserListView({
           
           {canManageUsers && onSyncUsers && (
             <Button variant="outline" size="sm" onClick={onSyncUsers} disabled={isLoading}>
-              <SyncIcon className="h-4 w-4 mr-1" />
+              <RefreshCwIcon className="h-4 w-4 mr-1" />
               Sync Users
             </Button>
           )}

@@ -3,21 +3,32 @@ import { supabase } from "@/integrations/supabase/client";
 import { createAppUser, updateAppUser } from "./appUserMutations";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { toast } from "sonner";
+import { User } from '@supabase/supabase-js';
+
+interface SyncResult {
+  created: number;
+  errors: string[];
+}
 
 /**
  * Synchronizes Auth users with app_users table
  * Checks for Auth users that don't have corresponding app_users entries and creates them
  */
-export const syncAuthWithAppUsers = async (): Promise<{ created: number; errors: string[] }> => {
+export const syncAuthWithAppUsers = async (): Promise<SyncResult> => {
   try {
     // Get all auth users
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    const { data: authUsersData, error: authError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000
+    });
     
     if (authError) {
       console.error("Failed to fetch auth users:", authError);
       toast.error("Failed to fetch auth users");
       return { created: 0, errors: [authError.message] };
     }
+
+    const authUsers = authUsersData?.users || [];
 
     // Get all app_users
     const { data: appUsers, error: appUsersError } = await supabase.rpc('get_all_users');
@@ -29,7 +40,7 @@ export const syncAuthWithAppUsers = async (): Promise<{ created: number; errors:
     }
 
     // Create a map of existing app_users by email for quick lookup
-    const existingAppUsersByEmail = new Map();
+    const existingAppUsersByEmail = new Map<string, any>();
     appUsers.forEach((user) => {
       if (user.email) {
         existingAppUsersByEmail.set(user.email.toLowerCase(), user);
@@ -37,15 +48,21 @@ export const syncAuthWithAppUsers = async (): Promise<{ created: number; errors:
     });
 
     // Find auth users without corresponding app_users
-    const missingUsers = authUsers.users.filter(
+    const missingUsers = authUsers.filter(
       (authUser) => authUser.email && !existingAppUsersByEmail.has(authUser.email.toLowerCase())
     );
 
     console.log(`Found ${missingUsers.length} auth users without app_user records`);
 
     // Create app_user entries for missing users
-    const results = await Promise.all(
-      missingUsers.map(async (authUser) => {
+    type SyncResultItem = {
+      success: boolean;
+      email?: string;
+      error: string | null;
+    };
+
+    const results: SyncResultItem[] = await Promise.all(
+      missingUsers.map(async (authUser: User) => {
         try {
           if (!authUser.email) return { success: false, error: "Missing email" };
 
@@ -94,7 +111,7 @@ export const syncAuthWithAppUsers = async (): Promise<{ created: number; errors:
     const created = results.filter(result => result.success).length;
     const errors = results
       .filter(result => !result.success && result.error)
-      .map(result => `User ${result.email}: ${result.error}`);
+      .map(result => `User ${result.email || 'unknown'}: ${result.error}`);
 
     if (created > 0) {
       toast.success(`Created ${created} missing app user records`);
@@ -115,12 +132,17 @@ export const syncAuthWithAppUsers = async (): Promise<{ created: number; errors:
 export const updateAppUsersFromAuthMetadata = async (): Promise<{ updated: number; errors: string[] }> => {
   try {
     // Get all auth users
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    const { data: authUsersData, error: authError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000
+    });
     
     if (authError) {
       console.error("Failed to fetch auth users:", authError);
       return { updated: 0, errors: [authError.message] };
     }
+
+    const authUsers = authUsersData?.users || [];
 
     // Get all app_users
     const { data: appUsers, error: appUsersError } = await supabase.rpc('get_all_users');
@@ -131,19 +153,26 @@ export const updateAppUsersFromAuthMetadata = async (): Promise<{ updated: numbe
     }
 
     // Create a map of app_users by user_id for quick lookup
-    const appUsersByUserId = new Map();
+    const appUsersByUserId = new Map<string, any>();
     appUsers.forEach((user) => {
       if (user.user_id) {
         appUsersByUserId.set(user.user_id, user);
       }
     });
 
+    type UpdateResult = {
+      success: boolean;
+      updated: boolean;
+      email?: string;
+      error: string | null;
+    };
+
     // Update app_users with auth metadata
-    const results = await Promise.all(
-      authUsers.users.map(async (authUser) => {
+    const results: UpdateResult[] = await Promise.all(
+      authUsers.map(async (authUser: User) => {
         try {
           const appUser = appUsersByUserId.get(authUser.id);
-          if (!appUser) return { success: false, error: "No matching app_user" };
+          if (!appUser) return { success: false, updated: false, error: "No matching app_user" };
 
           // Check if we need to update metadata
           const metadata = authUser.user_metadata || {};
@@ -151,7 +180,7 @@ export const updateAppUsersFromAuthMetadata = async (): Promise<{ updated: numbe
             (metadata.name && `${appUser.first_name} ${appUser.last_name}`.trim() !== metadata.name) ||
             (metadata.role && appUser.role !== metadata.role);
 
-          if (!needsUpdate) return { success: true, updated: false };
+          if (!needsUpdate) return { success: true, updated: false, error: null };
 
           // Update app_user with auth metadata
           const updatedData: AppUserFormData = {
@@ -191,7 +220,7 @@ export const updateAppUsersFromAuthMetadata = async (): Promise<{ updated: numbe
     const updated = results.filter(result => result.success && result.updated).length;
     const errors = results
       .filter(result => !result.success && result.error)
-      .map(result => `User ${result.email}: ${result.error}`);
+      .map(result => `User ${result.email || 'unknown'}: ${result.error}`);
 
     if (updated > 0) {
       toast.success(`Updated ${updated} app users with auth metadata`);
