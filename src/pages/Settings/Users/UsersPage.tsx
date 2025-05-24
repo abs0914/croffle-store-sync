@@ -40,6 +40,7 @@ export default function UsersPage() {
     const loadingToast = toast.loading("Synchronizing users...");
     
     try {
+      // First try to synchronize any auth users that don't have app_user records
       const result = await syncAuthWithAppUsers();
       
       if (result.errors.length > 0) {
@@ -48,7 +49,7 @@ export default function UsersPage() {
       } else if (result.created > 0) {
         toast.success(`Successfully synchronized ${result.created} users`);
       } else {
-        toast.success("User synchronization complete");
+        toast.success("All users are already synchronized");
       }
       
       // Also update existing users from auth metadata
@@ -59,9 +60,9 @@ export default function UsersPage() {
       
       // Refresh the user list after synchronization
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to synchronize users:", error);
-      toast.error("Failed to synchronize users");
+      toast.error(`Synchronization error: ${error.message}`);
     } finally {
       toast.dismiss(loadingToast);
     }

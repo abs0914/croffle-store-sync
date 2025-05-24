@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Synchronizes Auth users with app_users table
- * Uses standard auth API instead of admin APIs
+ * Uses simplified approach that works well for small user bases
  */
 export const syncAuthWithAppUsers = async (): Promise<SyncResult> => {
   try {
@@ -29,12 +29,11 @@ export const syncAuthWithAppUsers = async (): Promise<SyncResult> => {
     // Create a map of existing app_users by email for quick lookup
     const existingAppUsersByEmail = mapAppUsersByEmail(appUsers);
     
-    // Get auth users that need to be synced using our custom RPC function
+    // Get auth users that need to be synced
     const authUsersToSync = await fetchAuthUsers();
     
     if (!authUsersToSync || !Array.isArray(authUsersToSync) || authUsersToSync.length === 0) {
       console.log("No users to synchronize");
-      toast.success("All users are already synchronized");
       return { created: 0, errors: [] };
     }
     
@@ -50,16 +49,17 @@ export const syncAuthWithAppUsers = async (): Promise<SyncResult> => {
           }
 
           // Extract user metadata
-          const firstName = authUser.user_metadata?.name
-            ? authUser.user_metadata.name.split(' ')[0]
+          const userMetadata = authUser.user_metadata || {};
+          const firstName = userMetadata?.name
+            ? userMetadata.name.split(' ')[0]
             : authUser.email.split('@')[0];
           
-          const lastName = authUser.user_metadata?.name && authUser.user_metadata.name.includes(' ')
-            ? authUser.user_metadata.name.split(' ').slice(1).join(' ')
+          const lastName = userMetadata?.name && userMetadata.name.includes(' ')
+            ? userMetadata.name.split(' ').slice(1).join(' ')
             : "";
           
           // Default to 'cashier' role unless specified in user metadata
-          const role = authUser.user_metadata?.role || "cashier";
+          const role = userMetadata?.role || "cashier";
           
           // Create new app user
           const userData: AppUserFormData = {
