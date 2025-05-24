@@ -1,11 +1,10 @@
-
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/auth";
 import { UserListView, ErrorView, LoadingView } from "./components";
 import { useUserDebug, useUsersData, useUserDialogs } from "./hooks";
 import UserAccessView from "./components/UserAccessView";
 import UserDialogs from "./components/UserDialogs";
-import { syncAuthWithAppUsers } from "@/services/appUser/sync";
+import { syncAuthWithAppUsers, updateAppUsersFromAuthMetadata } from "@/services/appUser/sync";
 import { toast } from "sonner";
 
 export default function UsersPage() {
@@ -37,7 +36,7 @@ export default function UsersPage() {
       return;
     }
     
-    toast.loading("Synchronizing users...");
+    const loadingToast = toast.loading("Synchronizing users...");
     
     try {
       const result = await syncAuthWithAppUsers();
@@ -45,6 +44,16 @@ export default function UsersPage() {
       if (result.errors.length > 0) {
         console.error("Errors during user sync:", result.errors);
         toast.error(`Some users couldn't be synchronized: ${result.errors.length} errors`);
+      } else if (result.created > 0) {
+        toast.success(`Successfully synchronized ${result.created} users`);
+      } else {
+        toast.success("User synchronization complete");
+      }
+      
+      // Also update existing users from auth metadata
+      const updateResult = await updateAppUsersFromAuthMetadata();
+      if (updateResult.updated > 0) {
+        toast.success(`Updated ${updateResult.updated} users with auth metadata`);
       }
       
       // Refresh the user list after synchronization
@@ -53,7 +62,7 @@ export default function UsersPage() {
       console.error("Failed to synchronize users:", error);
       toast.error("Failed to synchronize users");
     } finally {
-      toast.dismiss();
+      toast.dismiss(loadingToast);
     }
   };
   

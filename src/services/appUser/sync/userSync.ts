@@ -1,48 +1,69 @@
 
-import { User } from '@supabase/supabase-js';
 import { AppUserFormData } from "@/types/appUser";
 import { createAppUser } from "../appUserMutations";
 import { toast } from "sonner";
 import { SyncResult, SyncResultItem } from "./types";
-import { fetchAppUsers, fetchAuthUsers, mapAppUsersByEmail } from "./fetchUsers";
+import { fetchAppUsers } from "./fetchUsers";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Synchronizes Auth users with app_users table
- * Checks for Auth users that don't have corresponding app_users entries and creates them
+ * Uses standard auth API instead of admin APIs
  */
 export const syncAuthWithAppUsers = async (): Promise<SyncResult> => {
   try {
-    // Get all auth users
-    const authUsers = await fetchAuthUsers();
-    if (authUsers.length === 0) {
-      return { created: 0, errors: ["Failed to fetch auth users"] };
+    // Get current session to check permissions
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) {
+      return { created: 0, errors: ["Not authenticated"] };
     }
-
-    // Get all app_users
-    const appUsers = await fetchAppUsers();
-    if (appUsers.length === 0 && authUsers.length > 0) {
-      // This might be an error state or just a new system
-      console.log("No app users found but auth users exist. Will create app users.");
+    
+    // Get all app_users using the secure RPC function
+    const { data: appUsers, error: appUsersError } = await supabase.rpc('get_all_users');
+    
+    if (appUsersError) {
+      console.error("Error fetching app users:", appUsersError);
+      toast.error("Error fetching app users");
+      return { created: 0, errors: [appUsersError.message] };
     }
-
+    
     // Create a map of existing app_users by email for quick lookup
-    const existingAppUsersByEmail = mapAppUsersByEmail(appUsers);
-
-    // Find auth users without corresponding app_users (ensuring email exists)
-    const missingUsers = authUsers.filter(
-      (authUser) => {
-        return authUser && typeof authUser.email === 'string' && 
-          !existingAppUsersByEmail.has(authUser.email.toLowerCase());
-      }
+    const existingAppUsersByEmail = new Map<string, any>();
+    if (Array.isArray(appUsers)) {
+      appUsers.forEach((user) => {
+        if (user.email) {
+          existingAppUsersByEmail.set(user.email.toLowerCase(), user);
+        }
+      });
+    }
+    
+    // Get auth users that we need to sync (using a secure RPC function)
+    const { data: authUsersToSync, error: authError } = await supabase.rpc(
+      'get_users_needing_sync'
     );
-
-    console.log(`Found ${missingUsers.length} auth users without app_user records`);
-
-    // Create app_user entries for missing users
+    
+    if (authError) {
+      console.error("Error fetching auth users to sync:", authError);
+      toast.error("Failed to fetch users that need synchronization");
+      return { created: 0, errors: [authError.message] };
+    }
+    
+    if (!authUsersToSync || !Array.isArray(authUsersToSync) || authUsersToSync.length === 0) {
+      console.log("No users to synchronize");
+      toast.success("All users are already synchronized");
+      return { created: 0, errors: [] };
+    }
+    
+    console.log(`Found ${authUsersToSync.length} auth users that need app_user records`);
+    
+    // Create app_user entries for users that need sync
     const results: SyncResultItem[] = await Promise.all(
-      missingUsers.map(async (authUser: User) => {
+      authUsersToSync.map(async (authUser: any) => {
         try {
           if (!authUser.email) return { success: false, error: "Missing email" };
+          if (existingAppUsersByEmail.has(authUser.email.toLowerCase())) {
+            return { success: true, email: authUser.email, error: null };
+          }
 
           // Extract user metadata
           const firstName = authUser.user_metadata?.name

@@ -9,31 +9,24 @@ export const createAppUserWithAuth = async (
   data: AppUserFormData & { password: string }
 ): Promise<AppUser | null> => {
   try {
-    // First check if user already exists in auth system
-    const { data: existingAuthUsers, error: checkError } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000
-    });
+    // First check if user already exists by email (using RPC function instead of admin API)
+    const { data: existingUsers, error: lookupError } = await supabase
+      .from('app_users')
+      .select('*')
+      .eq('email', data.email)
+      .maybeSingle();
     
+    // Initialize variables
     let authUser: User | null = null;
-    let existingAuthUser: User | null = null;
     
-    // If we successfully got auth users, find if the user already exists
-    if (!checkError && existingAuthUsers && existingAuthUsers.users && Array.isArray(existingAuthUsers.users)) {
-      // Type assertion to tell TypeScript that users have email property
-      existingAuthUser = existingAuthUsers.users.find(user => {
-        // Check if user exists and has an email property before comparing
-        return user && typeof user.email === 'string' && 
-          user.email.toLowerCase() === data.email.toLowerCase();
-      }) || null;
+    if (lookupError) {
+      console.error('Error checking for existing user:', lookupError);
+      toast.error(`Database lookup error: ${lookupError.message}`);
+      return null;
     }
     
-    // If user already exists in auth
-    if (existingAuthUser) {
-      console.log('User already exists in auth system:', existingAuthUser.email);
-      authUser = existingAuthUser;
-      toast.info('User already exists in authentication system');
-      
+    // If we found a matching user in app_users, they might exist in auth
+    if (existingUsers && existingUsers.user_id) {
       // Try to sign in to verify credentials
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: data.email,
@@ -49,6 +42,8 @@ export const createAppUserWithAuth = async (
       // Successfully signed in, update the user with provided data
       if (signInData?.user) {
         authUser = signInData.user;
+        console.log('User already exists in auth system:', data.email);
+        toast.info('User already exists in authentication system');
       }
     } else {
       // First create the auth user
@@ -83,20 +78,14 @@ export const createAppUserWithAuth = async (
     }
     
     // Check if this auth user already has an app_user record
-    const { data: existingUsers, error: lookupError } = await supabase
+    const { data: existingAppUser } = await supabase
       .from('app_users')
       .select('*')
       .eq('email', data.email)
       .maybeSingle();
     
-    if (lookupError) {
-      console.error('Error finding existing users:', lookupError);
-      toast.error(`Database lookup error: ${lookupError.message}`);
-      return null;
-    }
-    
     // Check if we found a user record
-    if (!existingUsers) {
+    if (!existingAppUser) {
       console.log('No existing user record found, creating new one');
       
       // Create a new app_user record linked to the auth user
@@ -110,7 +99,7 @@ export const createAppUserWithAuth = async (
     console.log('Existing user found, updating record');
     return updateAppUser({
       ...data,
-      id: existingUsers.id,
+      id: existingAppUser.id,
       userId: authUser.id
     });
   } catch (error: any) {
@@ -122,49 +111,32 @@ export const createAppUserWithAuth = async (
 
 export const setUserPassword = async (email: string, password: string): Promise<boolean> => {
   try {
-    // First check if user exists in auth system
-    const { data: existingUsersData, error: checkError } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000
-    });
+    // Check if the user exists in app_users to get their user_id
+    const { data: appUser, error: userError } = await supabase
+      .from('app_users')
+      .select('user_id')
+      .eq('email', email)
+      .maybeSingle();
     
-    if (checkError) {
-      console.error('Error checking for existing user:', checkError);
-      toast.error(`Authentication error: ${checkError.message}`);
+    if (userError || !appUser || !appUser.user_id) {
+      console.error('Error finding user:', userError || 'No user found');
+      toast.error('User not found in the system');
       return false;
     }
     
-    // Properly type the users array and check for undefined
-    const existingUsers = existingUsersData?.users || [];
-    
-    // Find the user with the matching email
-    const matchingUser = existingUsers.find(user => {
-      // Check if user and user.email exist before using them
-      return user && typeof user.email === 'string' && 
-        user.email.toLowerCase() === email.toLowerCase();
-    });
-    
-    // If user doesn't exist in auth system
-    if (!matchingUser) {
-      toast.error('User does not exist in authentication system');
-      return false;
-    }
-    
-    const userId = matchingUser.id;
-    
-    // Use admin API to update user password
-    const { error } = await supabase.auth.admin.updateUserById(
-      userId,
-      { password: password }
+    // Create a secure password reset instead of directly setting the password
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      { redirectTo: window.location.origin + '/reset-password' }
     );
     
-    if (error) {
-      console.error('Error updating user password:', error);
-      toast.error(`Password update failed: ${error.message}`);
+    if (resetError) {
+      console.error('Error resetting user password:', resetError);
+      toast.error(`Password update failed: ${resetError.message}`);
       return false;
     }
     
-    toast.success('Password updated successfully');
+    toast.success('Password reset link sent to the user\'s email');
     return true;
   } catch (error: any) {
     console.error('Error updating user password:', error);

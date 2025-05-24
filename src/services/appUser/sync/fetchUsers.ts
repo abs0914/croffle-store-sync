@@ -1,34 +1,10 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { User } from '@supabase/supabase-js';
 
 /**
- * Fetches all auth users from Supabase
- */
-export const fetchAuthUsers = async (): Promise<User[]> => {
-  try {
-    const { data: authUsersData, error: authError } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000
-    });
-    
-    if (authError) {
-      console.error("Failed to fetch auth users:", authError);
-      toast.error("Failed to fetch auth users");
-      return [];
-    }
-
-    return authUsersData?.users || [];
-  } catch (error: any) {
-    console.error("Error fetching auth users:", error);
-    toast.error("Error fetching auth users");
-    return [];
-  }
-};
-
-/**
- * Fetches all app users from the database
+ * Fetches all app users from the database using secure RPC function
+ * This replaces the direct admin API call which requires service role key
  */
 export const fetchAppUsers = async (): Promise<any[]> => {
   try {
