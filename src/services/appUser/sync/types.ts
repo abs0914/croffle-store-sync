@@ -1,25 +1,20 @@
 
-import { User } from '@supabase/supabase-js';
-
-export interface SyncResult {
-  created: number;
-  errors: string[];
-}
-
-export interface UpdateResult {
-  updated: number;
-  errors: string[];
-}
-
 export interface SyncResultItem {
   success: boolean;
   email?: string;
   error: string | null;
 }
 
-export interface UpdateResultItem {
-  success: boolean;
+export interface SyncResult {
+  created: number;
+  errors: string[];
+}
+
+export interface UpdateResultItem extends SyncResultItem {
   updated: boolean;
-  email?: string;
-  error: string | null;
+}
+
+export interface UpdateResult {
+  updated: number;
+  errors: string[];
 }
