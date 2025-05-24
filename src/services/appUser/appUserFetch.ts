@@ -13,14 +13,24 @@ export const fetchAppUsers = async (storeId?: string): Promise<AppUser[]> => {
     // Use the appropriate RPC function based on the parameters
     if (storeId) {
       // Use get_store_users RPC function for store-specific users
+      console.log(`Calling get_store_users RPC with store_id: ${storeId}`);
       const response = await supabase.rpc('get_store_users', { store_id_param: storeId });
       data = response.data;
       error = response.error;
     } else {
       // Use get_all_users RPC function for all users (admin access)
+      console.log('Calling get_all_users RPC function');
       const response = await supabase.rpc('get_all_users');
       data = response.data;
       error = response.error;
+      
+      // Log the response for debugging
+      console.log('Response from get_all_users:', {
+        hasError: !!error,
+        errorMessage: error?.message,
+        dataLength: data?.length || 0,
+        dataPreview: data ? data.slice(0, 2) : 'No data'
+      });
     }
     
     if (error) {

@@ -9,12 +9,19 @@ import { User } from "@supabase/supabase-js";
  */
 export const fetchAppUsers = async (): Promise<any[]> => {
   try {
+    console.log("Fetching app_users with get_all_users RPC function");
     const { data: appUsers, error: appUsersError } = await supabase.rpc('get_all_users');
     
     if (appUsersError) {
       console.error("Failed to fetch app_users:", appUsersError);
       toast.error("Failed to fetch app users");
       return [];
+    }
+
+    if (!appUsers || appUsers.length === 0) {
+      console.log("No app_users returned from get_all_users RPC function");
+    } else {
+      console.log(`Successfully fetched ${appUsers.length} app_users`);
     }
 
     return appUsers || [];
@@ -43,6 +50,7 @@ export const fetchAuthUsers = async (): Promise<User[]> => {
     const appUsers = await fetchAppUsers();
     const existingUserIds = new Set(appUsers.map(user => user.user_id).filter(Boolean));
     
+    console.log("Fetching auth users from auth.admin.listUsers");
     // We'll use the admin user's session to list all users
     const { data, error } = await supabase.auth.admin.listUsers();
     

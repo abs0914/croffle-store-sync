@@ -35,11 +35,15 @@ export default function useUsersData() {
         if (user.role === 'admin' || user.role === 'owner') {
           // Admins and owners can see all users
           console.log("Fetching all users (admin/owner access)");
-          return await fetchAppUsers();
+          const allUsers = await fetchAppUsers();
+          console.log(`Fetched ${allUsers.length} users with admin/owner access`);
+          return allUsers;
         } else if (currentStore) {
           // Other roles see only users from their current store
           console.log(`Fetching users for store: ${currentStore.id}`);
-          return await fetchAppUsers(currentStore.id);
+          const storeUsers = await fetchAppUsers(currentStore.id);
+          console.log(`Fetched ${storeUsers.length} users for store ${currentStore.id}`);
+          return storeUsers;
         } else if (user.email) {
           // No store selected, just fetch the current user's info
           console.log("Fetching only current user info");
