@@ -5,7 +5,7 @@ import { UserListView, ErrorView, LoadingView } from "./components";
 import { useUserDebug, useUsersData, useUserDialogs } from "./hooks";
 import UserAccessView from "./components/UserAccessView";
 import UserDialogs from "./components/UserDialogs";
-import { syncAuthWithAppUsers } from "@/services/appUser/appUserSync";
+import { syncAuthWithAppUsers } from "@/services/appUser/sync";
 import { toast } from "sonner";
 
 export default function UsersPage() {

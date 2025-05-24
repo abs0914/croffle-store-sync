@@ -4,3 +4,4 @@ export * from './appUserFetch';
 export * from './appUserMutations';
 export * from './appUserAuth';
 export * from './appUserHelpers';
+export * from './sync';

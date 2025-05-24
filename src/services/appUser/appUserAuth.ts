@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { toast } from "sonner";
 import { createAppUser, updateAppUser } from "./appUserMutations";
+import { User } from '@supabase/supabase-js';
 
 export const createAppUserWithAuth = async (
   data: AppUserFormData & { password: string }
@@ -14,8 +15,8 @@ export const createAppUserWithAuth = async (
       perPage: 1000
     });
     
-    let authUser = null;
-    let existingAuthUser = null;
+    let authUser: User | null = null;
+    let existingAuthUser: User | null = null;
     
     // If we successfully got auth users, find if the user already exists
     if (!checkError && existingAuthUsers && existingAuthUsers.users) {
@@ -24,12 +25,12 @@ export const createAppUserWithAuth = async (
         // Check if user and user.email exist before using them
         return user && typeof user.email === 'string' && 
           user.email.toLowerCase() === data.email.toLowerCase();
-      });
+      }) || null;
     }
     
     // If user already exists in auth
     if (existingAuthUser) {
-      console.log('User already exists in auth system:', data.email);
+      console.log('User already exists in auth system:', existingAuthUser.email);
       authUser = existingAuthUser;
       toast.info('User already exists in authentication system');
       
