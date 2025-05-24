@@ -1,111 +1,94 @@
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { setUserPassword } from "@/services/appUser";
+import { setUserPassword } from "@/services/appUser/appUserAuth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { AlertTriangle, Key } from "lucide-react";
-import AuthFormFields from "@/components/shared/AuthFormFields";
 
 interface PasswordManagementTabProps {
   userEmail: string;
 }
 
 export default function PasswordManagementTab({ userEmail }: PasswordManagementTabProps) {
-  const [passwordData, setPasswordData] = useState({
-    email: userEmail || "",
-    password: ""
-  });
-  const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
   
-  const setPasswordMutation = useMutation({
-    mutationFn: ({ email, password }: { email: string, password: string }) => 
-      setUserPassword(email, password),
-    onSuccess: () => {
-      setIsSettingPassword(false);
-      setPasswordData({ email: userEmail || "", password: "" });
-      toast.success("Password set successfully");
-    },
-    onError: (error: any) => {
-      setIsSettingPassword(false);
-      toast.error(`Failed to set password: ${error.message}`);
-    }
-  });
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPasswordData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
-  const handleSetPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!passwordData.email || !passwordData.password) {
-      toast.error("Email and password are required");
+  const handleResetPassword = async () => {
+    if (!password) {
+      toast.error("Password is required");
       return;
     }
     
-    if (passwordData.password.length < 8) {
-      toast.error("Password must be at least 8 characters long");
+    if (password !== confirmPassword) {
+      toast.error("Passwords don't match");
       return;
     }
     
-    setIsSettingPassword(true);
-    setPasswordMutation.mutate({
-      email: passwordData.email,
-      password: passwordData.password
-    });
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      await setUserPassword(userEmail, password);
+      setPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      console.error("Error during password reset:", error);
+    } finally {
+      setIsResetting(false);
+    }
   };
+  
+  if (!userEmail) {
+    return (
+      <div className="text-center py-4 text-muted-foreground">
+        User email not available. Cannot reset password.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <div className="border-t pt-4 mt-4">
-        <h4 className="text-sm font-medium flex items-center gap-1 mb-2">
-          <Key className="h-4 w-4" />
-          Set New Password
-        </h4>
-        <p className="text-xs text-muted-foreground mb-4">
-          Directly set a new password for this user
-        </p>
-        
-        <form onSubmit={handleSetPassword} className="space-y-4">
-          <AuthFormFields
-            email={passwordData.email}
-            password={passwordData.password}
-            onInputChange={handlePasswordChange}
-            isEditMode={true}
-          />
-          
-          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md p-3">
-            <div className="flex gap-2 text-amber-800 dark:text-amber-300">
-              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
-              <p className="text-xs">
-                Use this option with caution. This will immediately change the user's password
-                without requiring any verification.
-              </p>
-            </div>
-          </div>
-          
-          <Button 
-            type="submit" 
-            variant="secondary"
-            disabled={isSettingPassword || !passwordData.password}
-            className="w-full"
-          >
-            {isSettingPassword ? (
-              <>
-                <Spinner className="mr-2 h-4 w-4" />
-                Setting Password...
-              </>
-            ) : (
-              "Set New Password"
-            )}
-          </Button>
-        </form>
+      <div className="text-sm text-muted-foreground mb-4">
+        Set a new password for user: <span className="font-medium">{userEmail}</span>
       </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="new-password">New Password</Label>
+        <Input
+          id="new-password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Enter new password"
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="confirm-password">Confirm Password</Label>
+        <Input
+          id="confirm-password"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Confirm new password"
+        />
+      </div>
+      
+      <Button
+        type="button"
+        onClick={handleResetPassword}
+        disabled={isResetting || !password || !confirmPassword}
+        className="w-full mt-2"
+      >
+        {isResetting ? <Spinner className="mr-2 h-4 w-4" /> : null}
+        Reset Password
+      </Button>
     </div>
   );
 }

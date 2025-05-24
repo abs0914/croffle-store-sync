@@ -45,6 +45,10 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
       queryClient.invalidateQueries({ queryKey: ["app_users"] });
       onOpenChange(false);
       toast.success("User updated successfully");
+    },
+    onError: (error) => {
+      console.error("Error updating user:", error);
+      toast.error("Failed to update user: " + (error as Error).message);
     }
   });
 
@@ -58,7 +62,7 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
         contactNumber: user.contactNumber || "",
         email: user.email || "",
         role: user.role,
-        storeIds: user.storeIds,
+        storeIds: user.storeIds || [],
         isActive: user.isActive
       });
     }
