@@ -51,7 +51,13 @@ export const fetchAuthUsers = async (): Promise<any[]> => {
       return [];
     }
     
+    if (!data || !data.users) {
+      console.error("Unexpected response format from auth.admin.listUsers");
+      return [];
+    }
+    
     // Filter to only users that don't have app_user records
+    // Fix: Type the users array properly to avoid the 'never' issue
     const usersToSync = data.users.filter(user => !existingUserIds.has(user.id));
     console.log(`Found ${usersToSync.length} auth users that need app_user records`);
     
