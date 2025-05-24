@@ -4,21 +4,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateAppUser } from "@/services/appUser";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { Store } from "@/types/store";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserFormTab from "./UserFormTab";
 import PasswordManagementTab from "./PasswordManagementTab";
+import DialogHeader from "./DialogHeader";
+import DialogFooter from "./DialogFooter";
 
 interface EditUserDialogProps {
   isOpen: boolean;
@@ -85,15 +81,12 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
     }
   };
 
+  const handleClose = () => onOpenChange(false);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
-          <DialogDescription>
-            Update user information and permissions.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogHeader />
         
         {isAdmin && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
@@ -118,26 +111,11 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
           </Tabs>
         )}
         
-        <DialogFooter className="pt-4 mt-4">
-          <Button 
-            variant="outline" 
-            type="button" 
-            onClick={() => onOpenChange(false)}
-            disabled={updateMutation.isPending}
-          >
-            Cancel
-          </Button>
-          {activeTab === "general" && (
-            <Button 
-              form="user-form"
-              type="submit" 
-              disabled={updateMutation.isPending}
-            >
-              {updateMutation.isPending ? <Spinner className="mr-2 h-4 w-4" /> : null}
-              Save Changes
-            </Button>
-          )}
-        </DialogFooter>
+        <DialogFooter 
+          isPending={updateMutation.isPending}
+          onClose={handleClose}
+          activeTab={activeTab}
+        />
       </DialogContent>
     </Dialog>
   );
