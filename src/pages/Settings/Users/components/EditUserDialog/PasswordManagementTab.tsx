@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface PasswordManagementTabProps {
   userEmail: string;
@@ -15,20 +17,24 @@ export default function PasswordManagementTab({ userEmail }: PasswordManagementT
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const handleResetPassword = async () => {
+    // Reset any previous error message
+    setErrorMessage(null);
+    
     if (!password) {
-      toast.error("Password is required");
+      setErrorMessage("Password is required");
       return;
     }
     
     if (password !== confirmPassword) {
-      toast.error("Passwords don't match");
+      setErrorMessage("Passwords don't match");
       return;
     }
     
     if (password.length < 6) {
-      toast.error("Password must be at least 6 characters long");
+      setErrorMessage("Password must be at least 6 characters long");
       return;
     }
 
@@ -41,6 +47,7 @@ export default function PasswordManagementTab({ userEmail }: PasswordManagementT
       }
     } catch (error) {
       console.error("Error during password reset:", error);
+      setErrorMessage("An unexpected error occurred. Please try again.");
     } finally {
       setIsResetting(false);
     }
@@ -59,6 +66,13 @@ export default function PasswordManagementTab({ userEmail }: PasswordManagementT
       <div className="text-sm text-muted-foreground mb-4">
         Set a new password for user: <span className="font-medium">{userEmail}</span>
       </div>
+      
+      {errorMessage && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      )}
       
       <div className="space-y-2">
         <Label htmlFor="new-password">New Password</Label>

@@ -5,7 +5,7 @@ import UsersTable from "./UsersTable";
 import EmptyUsersView from "./EmptyUsersView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, RefreshCwIcon } from "lucide-react";
+import { PlusIcon, RefreshCwIcon, SyncIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 
 interface UserListViewProps {
@@ -19,6 +19,7 @@ interface UserListViewProps {
   onActivateUser?: (user: AppUser) => void;
   onDeactivateUser?: (user: AppUser) => void;
   onRefresh: () => void;
+  onSyncUsers?: () => void;
   error?: any;
 }
 
@@ -33,6 +34,7 @@ export default function UserListView({
   onActivateUser,
   onDeactivateUser,
   onRefresh,
+  onSyncUsers,
   error
 }: UserListViewProps) {
   const hasPermissionIssue = error?.message?.includes('policy') || error?.code === 'PGRST109';
@@ -96,6 +98,14 @@ export default function UserListView({
             <RefreshCwIcon className="h-4 w-4 mr-1" />
             Refresh
           </Button>
+          
+          {canManageUsers && onSyncUsers && (
+            <Button variant="outline" size="sm" onClick={onSyncUsers} disabled={isLoading}>
+              <SyncIcon className="h-4 w-4 mr-1" />
+              Sync Users
+            </Button>
+          )}
+          
           {canManageUsers && (
             <Button size="sm" onClick={onAddUser} disabled={isLoading}>
               <PlusIcon className="h-4 w-4 mr-1" />

@@ -5,6 +5,8 @@ import { UserListView, ErrorView, LoadingView } from "./components";
 import { useUserDebug, useUsersData, useUserDialogs } from "./hooks";
 import UserAccessView from "./components/UserAccessView";
 import UserDialogs from "./components/UserDialogs";
+import { syncAuthWithAppUsers } from "@/services/appUser/appUserSync";
+import { toast } from "sonner";
 
 export default function UsersPage() {
   const { currentStore, stores } = useStore();
@@ -27,6 +29,33 @@ export default function UsersPage() {
 
   // Debug hook
   useUserDebug({ user, isAdmin, isOwner, canManageUsers, currentStore });
+
+  // Function to handle user synchronization
+  const handleSyncUsers = async () => {
+    if (!canManageUsers) {
+      toast.error("You don't have permission to synchronize users");
+      return;
+    }
+    
+    toast.loading("Synchronizing users...");
+    
+    try {
+      const result = await syncAuthWithAppUsers();
+      
+      if (result.errors.length > 0) {
+        console.error("Errors during user sync:", result.errors);
+        toast.error(`Some users couldn't be synchronized: ${result.errors.length} errors`);
+      }
+      
+      // Refresh the user list after synchronization
+      refetch();
+    } catch (error) {
+      console.error("Failed to synchronize users:", error);
+      toast.error("Failed to synchronize users");
+    } finally {
+      toast.dismiss();
+    }
+  };
   
   // Handle loading state
   if (isLoading && !error) {
@@ -73,6 +102,7 @@ export default function UsersPage() {
         onActivateUser={handlers.handleActivateUser}
         onDeactivateUser={handlers.handleDeactivateUser}
         onRefresh={refetch}
+        onSyncUsers={handleSyncUsers}
       />
 
       {/* Dialogs */}
