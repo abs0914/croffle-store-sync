@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { User } from "@supabase/supabase-js";
 
 /**
  * Fetches all app users from the database using secure RPC function
@@ -28,7 +29,7 @@ export const fetchAppUsers = async (): Promise<any[]> => {
  * Fetches auth users that need to be synced to app_users table
  * This uses a simple approach that works for small user bases
  */
-export const fetchAuthUsers = async (): Promise<any[]> => {
+export const fetchAuthUsers = async (): Promise<User[]> => {
   try {
     // Get current user to verify permissions
     const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -56,9 +57,11 @@ export const fetchAuthUsers = async (): Promise<any[]> => {
       return [];
     }
     
+    // Explicitly type the users array as User[] to fix the 'never' issue
+    const authUsers = data.users as User[];
+    
     // Filter to only users that don't have app_user records
-    // Fix: Type the users array properly to avoid the 'never' issue
-    const usersToSync = data.users.filter(user => !existingUserIds.has(user.id));
+    const usersToSync = authUsers.filter(user => !existingUserIds.has(user.id));
     console.log(`Found ${usersToSync.length} auth users that need app_user records`);
     
     return usersToSync;
