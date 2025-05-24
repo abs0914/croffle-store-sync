@@ -18,9 +18,10 @@ export const createAppUserWithAuth = async (
     let existingAuthUser = null;
     
     // If we successfully got auth users, find if the user already exists
-    if (!checkError && existingAuthUsers) {
+    if (!checkError && existingAuthUsers && existingAuthUsers.users) {
+      // Type assertion to tell TypeScript that users have email property
       existingAuthUser = existingAuthUsers.users.find(user => 
-        user.email?.toLowerCase() === data.email.toLowerCase()
+        user.email && user.email.toLowerCase() === data.email.toLowerCase()
       );
     }
     
@@ -119,7 +120,7 @@ export const createAppUserWithAuth = async (
 export const setUserPassword = async (email: string, password: string): Promise<boolean> => {
   try {
     // First check if user exists in auth system
-    const { data: existingUsers, error: checkError } = await supabase.auth.admin.listUsers({
+    const { data: existingUsersData, error: checkError } = await supabase.auth.admin.listUsers({
       page: 1,
       perPage: 1000
     });
@@ -130,9 +131,12 @@ export const setUserPassword = async (email: string, password: string): Promise<
       return false;
     }
     
+    // Properly type the users array and check for undefined
+    const existingUsers = existingUsersData?.users || [];
+    
     // Find the user with the matching email
-    const matchingUser = existingUsers?.users.find(user => 
-      user.email?.toLowerCase() === email.toLowerCase()
+    const matchingUser = existingUsers.find(user => 
+      user.email && user.email.toLowerCase() === email.toLowerCase()
     );
     
     // If user doesn't exist in auth system
