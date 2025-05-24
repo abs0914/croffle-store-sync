@@ -34,9 +34,11 @@ export default function PasswordManagementTab({ userEmail }: PasswordManagementT
 
     setIsResetting(true);
     try {
-      await setUserPassword(userEmail, password);
-      setPassword('');
-      setConfirmPassword('');
+      const success = await setUserPassword(userEmail, password);
+      if (success) {
+        setPassword('');
+        setConfirmPassword('');
+      }
     } catch (error) {
       console.error("Error during password reset:", error);
     } finally {
