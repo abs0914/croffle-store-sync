@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { createAppUser, updateAppUser } from "./appUserMutations";
 import { AppUser, AppUserFormData } from "@/types/appUser";
@@ -48,7 +49,10 @@ export const syncAuthWithAppUsers = async (): Promise<SyncResult> => {
 
     // Find auth users without corresponding app_users (ensuring email exists)
     const missingUsers = authUsers.filter(
-      (authUser) => authUser.email && !existingAppUsersByEmail.has(authUser.email.toLowerCase())
+      (authUser) => {
+        return authUser && typeof authUser.email === 'string' && 
+          !existingAppUsersByEmail.has(authUser.email.toLowerCase());
+      }
     );
 
     console.log(`Found ${missingUsers.length} auth users without app_user records`);

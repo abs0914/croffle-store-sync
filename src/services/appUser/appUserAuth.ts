@@ -20,9 +20,11 @@ export const createAppUserWithAuth = async (
     // If we successfully got auth users, find if the user already exists
     if (!checkError && existingAuthUsers && existingAuthUsers.users) {
       // Type assertion to tell TypeScript that users have email property
-      existingAuthUser = existingAuthUsers.users.find(user => 
-        user.email && user.email.toLowerCase() === data.email.toLowerCase()
-      );
+      existingAuthUser = existingAuthUsers.users.find(user => {
+        // Check if user and user.email exist before using them
+        return user && typeof user.email === 'string' && 
+          user.email.toLowerCase() === data.email.toLowerCase();
+      });
     }
     
     // If user already exists in auth
@@ -135,9 +137,11 @@ export const setUserPassword = async (email: string, password: string): Promise<
     const existingUsers = existingUsersData?.users || [];
     
     // Find the user with the matching email
-    const matchingUser = existingUsers.find(user => 
-      user.email && user.email.toLowerCase() === email.toLowerCase()
-    );
+    const matchingUser = existingUsers.find(user => {
+      // Check if user and user.email exist before using them
+      return user && typeof user.email === 'string' && 
+        user.email.toLowerCase() === email.toLowerCase();
+    });
     
     // If user doesn't exist in auth system
     if (!matchingUser) {
