@@ -19,7 +19,7 @@ export const createAppUserWithAuth = async (
     let existingAuthUser: User | null = null;
     
     // If we successfully got auth users, find if the user already exists
-    if (!checkError && existingAuthUsers && existingAuthUsers.users) {
+    if (!checkError && existingAuthUsers && existingAuthUsers.users && Array.isArray(existingAuthUsers.users)) {
       // Type assertion to tell TypeScript that users have email property
       existingAuthUser = existingAuthUsers.users.find(user => {
         // Check if user and user.email exist before using them

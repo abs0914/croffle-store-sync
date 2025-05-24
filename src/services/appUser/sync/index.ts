@@ -1,4 +1,4 @@
 
 export { syncAuthWithAppUsers } from './userSync';
 export { updateAppUsersFromAuthMetadata } from './userMetadataSync';
-export { SyncResult, UpdateResult } from './types';
+export type { SyncResult, UpdateResult } from './types';
