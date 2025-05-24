@@ -26,10 +26,10 @@ export const createAppUserWithAuth = async (
         toast.info('User already exists, linking to existing user account');
         
         // Try to find an existing app_user record by email
-        const { data: existingUsers, error: lookupError } = await supabase
-          .from('app_users')
-          .select('*')
-          .eq('email', data.email);
+        const { data: existingUsers, error: lookupError } = await supabase.rpc(
+          'get_current_user_info',
+          { user_email: data.email }
+        );
         
         if (lookupError) {
           console.error('Error finding existing users:', lookupError);
