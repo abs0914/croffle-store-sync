@@ -30,14 +30,35 @@ export const fetchAppUsers = async (): Promise<any[]> => {
  */
 export const fetchAuthUsers = async (): Promise<any[]> => {
   try {
+    // Get auth users that need to be synced (those without app_user records)
+    const { data, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      console.error("Failed to get current user:", error);
+      return [];
+    }
+    
+    // We need to check if the user has admin/owner privileges
+    if (!data?.user) {
+      console.error("No authenticated user");
+      return [];
+    }
+    
+    // Now get users that need syncing using our RPC function
     const { data: authUsers, error: authError } = await supabase.rpc('get_users_needing_sync');
     
     if (authError) {
-      console.error("Failed to fetch auth users for sync:", authError);
-      toast.error("Failed to fetch users for synchronization");
+      if (authError.message.includes('structure of query does not match function result type')) {
+        console.error("Schema mismatch in get_users_needing_sync function:", authError);
+        toast.error("Database function needs updating. Please contact support.");
+      } else {
+        console.error("Failed to fetch auth users for sync:", authError);
+        toast.error("Failed to fetch users for synchronization");
+      }
       return [];
     }
 
+    console.log("Users needing sync:", authUsers);
     return authUsers || [];
   } catch (error: any) {
     console.error("Error fetching auth users:", error);

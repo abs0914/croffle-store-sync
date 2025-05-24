@@ -3,7 +3,7 @@ import { AppUserFormData } from "@/types/appUser";
 import { createAppUser } from "../appUserMutations";
 import { toast } from "sonner";
 import { SyncResult, SyncResultItem } from "./types";
-import { fetchAppUsers, fetchAuthUsers } from "./fetchUsers";
+import { fetchAppUsers, fetchAuthUsers, mapAppUsersByEmail } from "./fetchUsers";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -27,12 +27,7 @@ export const syncAuthWithAppUsers = async (): Promise<SyncResult> => {
     }
     
     // Create a map of existing app_users by email for quick lookup
-    const existingAppUsersByEmail = new Map<string, any>();
-    appUsers.forEach((user) => {
-      if (user.email) {
-        existingAppUsersByEmail.set(user.email.toLowerCase(), user);
-      }
-    });
+    const existingAppUsersByEmail = mapAppUsersByEmail(appUsers);
     
     // Get auth users that need to be synced using our custom RPC function
     const authUsersToSync = await fetchAuthUsers();
