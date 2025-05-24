@@ -785,6 +785,14 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_users_needing_sync: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          user_metadata: Json
+        }[]
+      }
       is_admin_or_owner: {
         Args: Record<PropertyKey, never>
         Returns: boolean

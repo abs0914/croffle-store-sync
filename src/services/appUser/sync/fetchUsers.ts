@@ -25,6 +25,28 @@ export const fetchAppUsers = async (): Promise<any[]> => {
 };
 
 /**
+ * Fetches auth users that need to be synced to app_users table
+ * This uses a secure RPC function instead of admin API
+ */
+export const fetchAuthUsers = async (): Promise<any[]> => {
+  try {
+    const { data: authUsers, error: authError } = await supabase.rpc('get_users_needing_sync');
+    
+    if (authError) {
+      console.error("Failed to fetch auth users for sync:", authError);
+      toast.error("Failed to fetch users for synchronization");
+      return [];
+    }
+
+    return authUsers || [];
+  } catch (error: any) {
+    console.error("Error fetching auth users:", error);
+    toast.error("Error fetching auth users");
+    return [];
+  }
+};
+
+/**
  * Creates a map of existing app users by email for quick lookup
  */
 export const mapAppUsersByEmail = (appUsers: any[]): Map<string, any> => {

@@ -3,7 +3,7 @@ import { AppUserFormData } from "@/types/appUser";
 import { createAppUser } from "../appUserMutations";
 import { toast } from "sonner";
 import { SyncResult, SyncResultItem } from "./types";
-import { fetchAppUsers } from "./fetchUsers";
+import { fetchAppUsers, fetchAuthUsers } from "./fetchUsers";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -19,34 +19,23 @@ export const syncAuthWithAppUsers = async (): Promise<SyncResult> => {
     }
     
     // Get all app_users using the secure RPC function
-    const { data: appUsers, error: appUsersError } = await supabase.rpc('get_all_users');
-    
-    if (appUsersError) {
-      console.error("Error fetching app users:", appUsersError);
-      toast.error("Error fetching app users");
-      return { created: 0, errors: [appUsersError.message] };
+    const appUsers = await fetchAppUsers();
+    if (!Array.isArray(appUsers)) {
+      console.error("Unexpected format for app users data");
+      toast.error("Failed to fetch app user data");
+      return { created: 0, errors: ["Failed to fetch app user data"] };
     }
     
     // Create a map of existing app_users by email for quick lookup
     const existingAppUsersByEmail = new Map<string, any>();
-    if (Array.isArray(appUsers)) {
-      appUsers.forEach((user) => {
-        if (user.email) {
-          existingAppUsersByEmail.set(user.email.toLowerCase(), user);
-        }
-      });
-    }
+    appUsers.forEach((user) => {
+      if (user.email) {
+        existingAppUsersByEmail.set(user.email.toLowerCase(), user);
+      }
+    });
     
-    // Get auth users that we need to sync (using a secure RPC function)
-    const { data: authUsersToSync, error: authError } = await supabase.rpc(
-      'get_users_needing_sync'
-    );
-    
-    if (authError) {
-      console.error("Error fetching auth users to sync:", authError);
-      toast.error("Failed to fetch users that need synchronization");
-      return { created: 0, errors: [authError.message] };
-    }
+    // Get auth users that need to be synced using our custom RPC function
+    const authUsersToSync = await fetchAuthUsers();
     
     if (!authUsersToSync || !Array.isArray(authUsersToSync) || authUsersToSync.length === 0) {
       console.log("No users to synchronize");
