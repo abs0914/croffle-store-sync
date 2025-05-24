@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { SyncResult, SyncResultItem } from "./types";
 import { fetchAppUsers, fetchAuthUsers, mapAppUsersByEmail } from "./fetchUsers";
 import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 
 /**
  * Synchronizes Auth users with app_users table
@@ -41,7 +42,7 @@ export const syncAuthWithAppUsers = async (): Promise<SyncResult> => {
     
     // Create app_user entries for users that need sync
     const results: SyncResultItem[] = await Promise.all(
-      authUsersToSync.map(async (authUser: any) => {
+      authUsersToSync.map(async (authUser: User) => {
         try {
           if (!authUser.email) return { success: false, error: "Missing email" };
           if (existingAppUsersByEmail.has(authUser.email.toLowerCase())) {
