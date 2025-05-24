@@ -22,7 +22,7 @@ export const createAppUserWithAuth = async (
     if (!checkError && existingAuthUsers && existingAuthUsers.users && Array.isArray(existingAuthUsers.users)) {
       // Type assertion to tell TypeScript that users have email property
       existingAuthUser = existingAuthUsers.users.find(user => {
-        // Check if user and user.email exist before using them
+        // Check if user exists and has an email property before comparing
         return user && typeof user.email === 'string' && 
           user.email.toLowerCase() === data.email.toLowerCase();
       }) || null;
