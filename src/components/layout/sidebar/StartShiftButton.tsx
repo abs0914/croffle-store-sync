@@ -1,20 +1,83 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useShift } from "@/contexts/shift";
 import { designClass } from "@/utils/designSystem";
+import EndShiftDialog from "@/components/pos/dialogs/EndShiftDialog";
+import { toast } from "sonner";
 
 export const StartShiftButton: React.FC = () => {
   const navigate = useNavigate();
-  
+  const { currentShift, endShift, isLoading } = useShift();
+  const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
+  const [isEndingShift, setIsEndingShift] = useState(false);
+
+  // Debug logging
+  console.log('StartShiftButton render:', {
+    currentShift: currentShift ? 'Active' : 'None',
+    isLoading,
+    shiftId: currentShift?.id
+  });
+
+  const handleEndShift = async (
+    endingCash: number,
+    endInventoryCount: Record<string, number>,
+    photo?: string
+  ) => {
+    if (!currentShift) return;
+
+    try {
+      setIsEndingShift(true);
+      const success = await endShift(endingCash, endInventoryCount, photo);
+
+      if (success) {
+        setIsEndShiftOpen(false);
+        toast.success("Shift ended successfully");
+      } else {
+        toast.error("Failed to end shift - please try again");
+      }
+    } catch (error) {
+      console.error("Error ending shift:", error);
+      toast.error(`Failed to end shift: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsEndingShift(false);
+    }
+  };
+
   return (
     <div className="px-3 py-4">
-      <Button 
-        className="w-full bg-croffle-accent hover:bg-croffle-accent/90 text-white rounded-md py-3"
-        onClick={() => navigate("/pos")}
-      >
-        Start Shift
-      </Button>
+      {isLoading ? (
+        <Button
+          className="w-full bg-gray-400 text-white rounded-md py-3"
+          disabled
+        >
+          Loading...
+        </Button>
+      ) : currentShift ? (
+        <>
+          <EndShiftDialog
+            isOpen={isEndShiftOpen}
+            onOpenChange={setIsEndShiftOpen}
+            currentShift={currentShift}
+            onEndShift={handleEndShift}
+          />
+          <Button
+            className="w-full bg-red-500 hover:bg-red-600 text-white rounded-md py-3"
+            onClick={() => setIsEndShiftOpen(true)}
+            disabled={isEndingShift}
+          >
+            {isEndingShift ? "Processing..." : "End Shift"}
+          </Button>
+        </>
+      ) : (
+        <Button
+          className="w-full bg-croffle-accent hover:bg-croffle-accent/90 text-white rounded-md py-3"
+          onClick={() => navigate("/pos")}
+        >
+          Start Shift
+        </Button>
+      )}
     </div>
   );
 };
