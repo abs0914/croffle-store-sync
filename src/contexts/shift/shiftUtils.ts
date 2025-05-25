@@ -121,6 +121,16 @@ export async function closeShift(
       throw new Error('Authentication required');
     }
 
+    // Get the current shift data to access store_id and start_inventory_count
+    const { data: shiftData, error: shiftError } = await supabase
+      .from('shifts')
+      .select('store_id, start_inventory_count, user_id')
+      .eq('id', shiftId)
+      .single();
+
+    if (shiftError) throw shiftError;
+
+    // Update the shift record
     const { error } = await supabase
       .from('shifts')
       .update({
@@ -133,11 +143,129 @@ export async function closeShift(
       .eq('id', shiftId);
 
     if (error) throw error;
+
+    // Synchronize inventory counts with the actual inventory system
+    await synchronizeInventoryFromShift(
+      shiftData.store_id,
+      shiftData.start_inventory_count || {},
+      endInventoryCount,
+      shiftId,
+      session.user.id
+    );
+
     return true;
   } catch (error) {
     console.error('Error closing shift:', error);
     // Let the calling function handle the error
     throw error;
+  }
+}
+
+// Synchronize inventory counts from shift closure with actual inventory system
+async function synchronizeInventoryFromShift(
+  storeId: string,
+  startInventoryCount: Record<string, number>,
+  endInventoryCount: Record<string, number>,
+  shiftId: string,
+  userId: string
+): Promise<void> {
+  try {
+    console.log('Synchronizing inventory from shift closure:', {
+      storeId,
+      shiftId,
+      itemCount: Object.keys(endInventoryCount).length
+    });
+
+    // Get all inventory stock items for this store
+    const { data: inventoryItems, error: fetchError } = await supabase
+      .from('inventory_stock')
+      .select('id, item, stock_quantity')
+      .eq('store_id', storeId);
+
+    if (fetchError) {
+      console.error('Error fetching inventory items:', fetchError);
+      throw fetchError;
+    }
+
+    // Create a map for quick lookup by item name
+    const inventoryMap = new Map<string, { id: string; currentStock: number }>();
+    inventoryItems?.forEach(item => {
+      inventoryMap.set(item.item, { id: item.id, currentStock: item.stock_quantity });
+    });
+
+    // Process each item in the end inventory count
+    for (const [itemName, endCount] of Object.entries(endInventoryCount)) {
+      const inventoryItem = inventoryMap.get(itemName);
+
+      if (!inventoryItem) {
+        console.warn(`Inventory item "${itemName}" not found in inventory_stock table`);
+        continue;
+      }
+
+      const startCount = startInventoryCount[itemName] || 0;
+      const currentStock = inventoryItem.currentStock;
+
+      // Calculate the difference between start and end counts
+      const countDifference = endCount - startCount;
+
+      // Calculate expected stock based on shift inventory tracking
+      // If end count is less than start count, it means items were consumed/sold
+      // If end count is more than start count, it means items were added/restocked
+      const expectedStock = currentStock + countDifference;
+
+      // Only update if there's a significant difference (avoid minor discrepancies)
+      const stockDifference = Math.abs(expectedStock - currentStock);
+      if (stockDifference >= 0.01) { // Allow for small rounding differences
+
+        console.log(`Updating inventory for "${itemName}":`, {
+          startCount,
+          endCount,
+          currentStock,
+          expectedStock,
+          difference: countDifference
+        });
+
+        // Update the inventory stock quantity
+        const { error: updateError } = await supabase
+          .from('inventory_stock')
+          .update({
+            stock_quantity: expectedStock,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', inventoryItem.id);
+
+        if (updateError) {
+          console.error(`Error updating inventory for "${itemName}":`, updateError);
+          continue; // Continue with other items even if one fails
+        }
+
+        // Create an inventory transaction record for audit trail
+        const { error: transactionError } = await supabase
+          .from('inventory_transactions')
+          .insert({
+            product_id: inventoryItem.id,
+            store_id: storeId,
+            transaction_type: 'shift_reconciliation',
+            quantity: Math.abs(countDifference),
+            previous_quantity: currentStock,
+            new_quantity: expectedStock,
+            reference_id: shiftId,
+            created_by: userId,
+            notes: `Shift closure reconciliation: ${startCount} → ${endCount} (${countDifference >= 0 ? '+' : ''}${countDifference})`
+          });
+
+        if (transactionError) {
+          console.error(`Error creating transaction record for "${itemName}":`, transactionError);
+          // Don't throw here, just log the error
+        }
+      }
+    }
+
+    console.log('Inventory synchronization completed successfully');
+  } catch (error) {
+    console.error('Error synchronizing inventory from shift:', error);
+    // Don't throw the error to prevent shift closure from failing
+    // The shift should still close even if inventory sync fails
   }
 }
 

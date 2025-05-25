@@ -5,12 +5,12 @@ import { format, subHours } from "date-fns";
 // Initialize hourly data structure (00:00 to 23:00)
 export function initializeHourlyData(): Record<string, { sales: number, transactions: number }> {
   const hourly: Record<string, { sales: number, transactions: number }> = {};
-  
+
   for (let i = 0; i < 24; i++) {
     const hour = i.toString().padStart(2, "0");
     hourly[hour] = { sales: 0, transactions: 0 };
   }
-  
+
   return hourly;
 }
 
@@ -23,14 +23,14 @@ export function createSimulatedUsers(userIds: string[] = []) {
     { id: "4", name: "Priya Patel", avatar: "https://i.pravatar.cc/300?u=priya" },
     { id: "5", name: "David Chen", avatar: "https://i.pravatar.cc/300?u=david" }
   ];
-  
+
   if (userIds.length > 0) {
     return userIds.map((userId, index) => ({
       ...mockCashiers[index % mockCashiers.length],
       id: userId
     }));
   }
-  
+
   return mockCashiers;
 }
 
@@ -42,36 +42,45 @@ export function createSampleCashierReport(): CashierReport {
     { name: "Miguel Rodriguez", avatar: "https://i.pravatar.cc/300?u=miguel", transactionCount: 25, totalSales: 7200, averageTransactionValue: 288.00, averageTransactionTime: 4.1 },
     { name: "Priya Patel", avatar: "https://i.pravatar.cc/300?u=priya", transactionCount: 30, totalSales: 8500, averageTransactionValue: 283.33, averageTransactionTime: 3.5 },
   ];
-  
+
   const totalTransactions = mockCashiers.reduce((sum, c) => sum + c.transactionCount, 0);
   const totalSales = mockCashiers.reduce((sum, c) => sum + c.totalSales, 0);
-  
+
   // Generate hourly data
   const hourlyData = [];
   const baseHours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-  
+
   for (const hour of baseHours) {
     const formattedHour = `${hour.toString().padStart(2, "0")}:00`;
     const transactions = Math.floor(Math.random() * 10) + 1;
     const sales = transactions * (Math.floor(Math.random() * 300) + 100);
-    
+
     hourlyData.push({
       hour: formattedHour,
       transactions,
       sales
     });
   }
-  
+
   // Generate sample attendance data
   const now = new Date();
   const attendance = [];
-  
+
   for (const cashier of mockCashiers) {
     const startTime = format(subHours(now, Math.floor(Math.random() * 8) + 1), "yyyy-MM-dd'T'HH:mm:ss'Z'");
     const endTime = Math.random() > 0.5 ? format(now, "yyyy-MM-dd'T'HH:mm:ss'Z'") : null;
-    const startingCash = Math.floor(Math.random() * 1000) + 2000;
-    const endingCash = endTime ? startingCash + Math.floor(Math.random() * 2000) : null;
-    
+    const startingCash = Math.floor(Math.random() * 500) + 2000; // Starting cash between 2000-2500
+
+    // Calculate ending cash with realistic variance
+    let endingCash = null;
+    if (endTime) {
+      // Add sales amount (based on cashier's total sales) minus some cash taken out
+      const salesCash = cashier.totalSales * 0.6; // Assume 60% of sales are cash
+      const cashTakenOut = Math.floor(Math.random() * 500); // Random cash taken for deposits
+      const variance = (Math.random() - 0.5) * 20; // Small variance (-10 to +10)
+      endingCash = Math.round(startingCash + salesCash - cashTakenOut + variance);
+    }
+
     attendance.push({
       name: cashier.name,
       userId: `sample-${cashier.name.toLowerCase().replace(/\s/g, '-')}`,
@@ -83,7 +92,7 @@ export function createSampleCashierReport(): CashierReport {
       endingCash
     });
   }
-  
+
   return {
     cashierCount: mockCashiers.length,
     totalTransactions,

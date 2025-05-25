@@ -10,6 +10,7 @@ import {
   CashierPerformanceTab,
   CashierAttendanceTab
 } from "./index";
+import { CashierCashTrackingCard } from "./CashierCashTrackingCard";
 
 interface CashierReportContainerProps {
   storeId: string;
@@ -22,10 +23,11 @@ interface CashierReportContainerProps {
 
 export function CashierReportContainer({ data }: CashierReportContainerProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  
+
   return (
     <div className="space-y-6">
       <CashierReportAlert data={data} />
+      <CashierCashTrackingCard data={data} />
       <CashierSummaryStats data={data} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -35,19 +37,19 @@ export function CashierReportContainer({ data }: CashierReportContainerProps) {
           <TabsTrigger value="cashiers" className="flex-1">Cashiers</TabsTrigger>
           <TabsTrigger value="attendance" className="flex-1">Attendance</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="overview">
           <CashierOverviewTab data={data} />
         </TabsContent>
-        
+
         <TabsContent value="hourly">
           <CashierHourlyTab data={data} />
         </TabsContent>
-        
+
         <TabsContent value="cashiers">
           <CashierPerformanceTab data={data} />
         </TabsContent>
-        
+
         <TabsContent value="attendance">
           <CashierAttendanceTab data={data} />
         </TabsContent>

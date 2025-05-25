@@ -20,7 +20,7 @@ export function CashierAttendanceTab({ data }: CashierAttendanceTabProps) {
       return "Invalid date";
     }
   };
-  
+
   return (
     <div className="space-y-6">
       {data.attendance && data.attendance.length > 0 ? (
@@ -40,6 +40,7 @@ export function CashierAttendanceTab({ data }: CashierAttendanceTabProps) {
                     <TableHead>End Image</TableHead>
                     <TableHead className="text-right">Starting Cash</TableHead>
                     <TableHead className="text-right">Ending Cash</TableHead>
+                    <TableHead className="text-right">Cash Variance</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -50,9 +51,9 @@ export function CashierAttendanceTab({ data }: CashierAttendanceTabProps) {
                       <TableCell>
                         {record.startPhoto ? (
                           <div className="relative h-12 w-16 overflow-hidden rounded-md border">
-                            <img 
-                              src={record.startPhoto} 
-                              alt="Start shift" 
+                            <img
+                              src={record.startPhoto}
+                              alt="Start shift"
                               className="h-full w-full object-cover"
                               onError={(e) => {
                                 e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
@@ -69,9 +70,9 @@ export function CashierAttendanceTab({ data }: CashierAttendanceTabProps) {
                       <TableCell>
                         {record.endPhoto ? (
                           <div className="relative h-12 w-16 overflow-hidden rounded-md border">
-                            <img 
-                              src={record.endPhoto} 
-                              alt="End shift" 
+                            <img
+                              src={record.endPhoto}
+                              alt="End shift"
                               className="h-full w-full object-cover"
                               onError={(e) => {
                                 e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'%3E%3C/circle%3E%3Cpolyline points='21 15 16 10 5 21'%3E%3C/polyline%3E%3C/svg%3E";
@@ -87,6 +88,19 @@ export function CashierAttendanceTab({ data }: CashierAttendanceTabProps) {
                       <TableCell className="text-right">{formatCurrency(record.startingCash)}</TableCell>
                       <TableCell className="text-right">
                         {record.endingCash !== null ? formatCurrency(record.endingCash) : "Not recorded"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {record.endingCash !== null ? (
+                          <span className={`font-medium ${
+                            record.endingCash - record.startingCash > 0 ? 'text-green-600' :
+                            record.endingCash - record.startingCash < 0 ? 'text-red-600' : 'text-gray-600'
+                          }`}>
+                            {record.endingCash - record.startingCash >= 0 ? '+' : ''}
+                            {formatCurrency(record.endingCash - record.startingCash)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Pending</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
