@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ShiftType } from "@/types";
 import { ShiftRow } from "./types";
 import { toast } from "sonner";
+import { debugInventoryPermissions, checkInventoryAccess, updateInventoryStockWithRetry } from "@/services/inventoryStock/inventoryStockDebug";
 
 // Map from ShiftRow to Shift model
 export function mapShiftRowToShift(shiftData: ShiftRow): ShiftType {
@@ -173,17 +174,40 @@ async function synchronizeInventoryFromShift(
     console.log('Synchronizing inventory from shift closure:', {
       storeId,
       shiftId,
-      itemCount: Object.keys(endInventoryCount).length
+      itemCount: Object.keys(endInventoryCount).length,
+      userId
     });
+
+    // Verify user authentication and permissions
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error('No active session for inventory synchronization');
+      return;
+    }
+
+    // Check if user has inventory access for this store
+    const hasAccess = await checkInventoryAccess(storeId);
+    if (!hasAccess) {
+      console.warn('User does not have inventory access for store:', storeId);
+      // Run debug to understand why
+      await debugInventoryPermissions(storeId);
+      return;
+    }
 
     // Get all inventory stock items for this store
     const { data: inventoryItems, error: fetchError } = await supabase
       .from('inventory_stock')
-      .select('id, item, stock_quantity')
+      .select('id, item, stock_quantity, store_id')
       .eq('store_id', storeId);
 
     if (fetchError) {
       console.error('Error fetching inventory items:', fetchError);
+      // If it's a permission error, log it but don't fail the shift closure
+      if (fetchError.code === 'PGRST301' || fetchError.message?.includes('permission')) {
+        console.warn('Permission denied for inventory access - running debug');
+        await debugInventoryPermissions(storeId);
+        return;
+      }
       throw fetchError;
     }
 
@@ -225,38 +249,51 @@ async function synchronizeInventoryFromShift(
           difference: countDifference
         });
 
-        // Update the inventory stock quantity
-        const { error: updateError } = await supabase
-          .from('inventory_stock')
-          .update({
-            stock_quantity: expectedStock,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', itemId);
+        // Update the inventory stock quantity with enhanced retry logic
+        const updateResult = await updateInventoryStockWithRetry(itemId, storeId, expectedStock);
 
-        if (updateError) {
-          console.error(`Error updating inventory for "${inventoryItem.item}" (ID: ${itemId}):`, updateError);
+        if (!updateResult.success) {
+          console.error(`Failed to update inventory for "${inventoryItem.item}" (ID: ${itemId}):`, updateResult.error);
+
+          // If it's a permission error, run debug
+          if (updateResult.error?.code === 'PGRST301' || updateResult.error?.message?.includes('permission')) {
+            console.warn('Permission error detected - running debug');
+            await debugInventoryPermissions(storeId);
+          }
+
           continue; // Continue with other items even if one fails
         }
 
-        // Create an inventory transaction record for audit trail
-        const { error: transactionError } = await supabase
-          .from('inventory_transactions')
-          .insert({
-            product_id: itemId,
-            store_id: storeId,
-            transaction_type: 'shift_reconciliation',
-            quantity: Math.abs(countDifference),
-            previous_quantity: currentStock,
-            new_quantity: expectedStock,
-            reference_id: shiftId,
-            created_by: userId,
-            notes: `Shift closure reconciliation for "${inventoryItem.item}": ${startCount} → ${endCount} (${countDifference >= 0 ? '+' : ''}${countDifference})`
-          });
+        console.log(`Successfully updated inventory for "${inventoryItem.item}"`);
 
-        if (transactionError) {
-          console.error(`Error creating transaction record for "${inventoryItem.item}" (ID: ${itemId}):`, transactionError);
-          // Don't throw here, just log the error
+        // Update the current stock for transaction record
+        currentStock = expectedStock;
+
+        // Create an inventory transaction record for audit trail (only if update was successful)
+        try {
+          const { error: transactionError } = await supabase
+            .from('inventory_transactions')
+            .insert({
+              product_id: itemId,
+              store_id: storeId,
+              transaction_type: 'shift_reconciliation',
+              quantity: Math.abs(countDifference),
+              previous_quantity: currentStock,
+              new_quantity: expectedStock,
+              reference_id: shiftId,
+              created_by: userId,
+              notes: `Shift closure reconciliation for "${inventoryItem.item}": ${startCount} → ${endCount} (${countDifference >= 0 ? '+' : ''}${countDifference})`
+            });
+
+          if (transactionError) {
+            console.error(`Error creating transaction record for "${inventoryItem.item}" (ID: ${itemId}):`, transactionError);
+            // Don't throw here, just log the error - the inventory update was successful
+          } else {
+            console.log(`Created transaction record for "${inventoryItem.item}"`);
+          }
+        } catch (transactionCreateError) {
+          console.error(`Exception creating transaction record for "${inventoryItem.item}":`, transactionCreateError);
+          // Continue - the inventory update was successful even if transaction logging failed
         }
       }
     }
