@@ -13,7 +13,7 @@ export const StartShiftButton: React.FC = () => {
   const [isEndShiftOpen, setIsEndShiftOpen] = useState(false);
   const [isEndingShift, setIsEndingShift] = useState(false);
 
-  // Debug logging
+  // Debug logging (can be removed in production)
   console.log('StartShiftButton render:', {
     currentShift: currentShift ? 'Active' : 'None',
     isLoading,

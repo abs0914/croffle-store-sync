@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Shift Status</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Shift Status Checker</h1>
+    <div id="results"></div>
+    
+    <script>
+        const SUPABASE_URL = "https://bwmkqscqkfoezcuzgpwq.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3bWtxc2Nxa2ZvZXpjdXpncHdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY1Mzg1NzEsImV4cCI6MjA2MjExNDU3MX0.Iv2rmTZIMIXQPdk8slgyhQMxiz1YXRvZGe3hoBPVImc";
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        async function checkShiftStatus() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Checking shift status...</p>';
+            
+            try {
+                // Get all stores
+                const { data: stores, error: storesError } = await supabaseClient
+                    .from('stores')
+                    .select('*');
+                
+                if (storesError) {
+                    throw storesError;
+                }
+                
+                resultsDiv.innerHTML += `<h2>Found ${stores.length} stores:</h2>`;
+                
+                for (const store of stores) {
+                    resultsDiv.innerHTML += `<h3>${store.name} (ID: ${store.id})</h3>`;
+                    
+                    // Get active shifts for this store
+                    const { data: shifts, error: shiftsError } = await supabaseClient
+                        .from('shifts')
+                        .select('*')
+                        .eq('store_id', store.id)
+                        .is('end_time', null)
+                        .order('start_time', { ascending: false });
+                    
+                    if (shiftsError) {
+                        resultsDiv.innerHTML += `<p style="color: red;">Error fetching shifts: ${shiftsError.message}</p>`;
+                        continue;
+                    }
+                    
+                    if (shifts && shifts.length > 0) {
+                        resultsDiv.innerHTML += `<p style="color: green;"><strong>Active Shift Found!</strong></p>`;
+                        const shift = shifts[0];
+                        resultsDiv.innerHTML += `
+                            <ul>
+                                <li>Shift ID: ${shift.id}</li>
+                                <li>User ID: ${shift.user_id}</li>
+                                <li>Start Time: ${new Date(shift.start_time).toLocaleString()}</li>
+                                <li>Starting Cash: ₱${shift.starting_cash}</li>
+                                <li>Cashier ID: ${shift.cashier_id || 'N/A'}</li>
+                            </ul>
+                        `;
+                    } else {
+                        resultsDiv.innerHTML += `<p style="color: orange;">No active shifts found</p>`;
+                    }
+                    
+                    // Get all shifts (including ended ones) for context
+                    const { data: allShifts } = await supabaseClient
+                        .from('shifts')
+                        .select('*')
+                        .eq('store_id', store.id)
+                        .order('start_time', { ascending: false })
+                        .limit(5);
+                    
+                    if (allShifts && allShifts.length > 0) {
+                        resultsDiv.innerHTML += `<h4>Recent Shifts (last 5):</h4>`;
+                        resultsDiv.innerHTML += '<table border="1" style="border-collapse: collapse; width: 100%;">';
+                        resultsDiv.innerHTML += '<tr><th>Start Time</th><th>End Time</th><th>Status</th><th>Starting Cash</th></tr>';
+                        
+                        allShifts.forEach(shift => {
+                            const status = shift.end_time ? 'Ended' : 'Active';
+                            const endTime = shift.end_time ? new Date(shift.end_time).toLocaleString() : 'N/A';
+                            resultsDiv.innerHTML += `
+                                <tr>
+                                    <td>${new Date(shift.start_time).toLocaleString()}</td>
+                                    <td>${endTime}</td>
+                                    <td style="color: ${status === 'Active' ? 'green' : 'gray'};">${status}</td>
+                                    <td>₱${shift.starting_cash}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        resultsDiv.innerHTML += '</table>';
+                    }
+                    
+                    resultsDiv.innerHTML += '<hr>';
+                }
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run the check when page loads
+        checkShiftStatus();
+    </script>
+</body>
+</html>
