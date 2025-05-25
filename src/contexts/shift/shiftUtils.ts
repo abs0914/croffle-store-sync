@@ -37,12 +37,26 @@ export async function createShift(
     if (!session) {
       throw new Error('Authentication required');
     }
-    
-    console.log("Creating shift with params:", { 
+
+    console.log("Creating shift with params:", {
       userId, storeId, startingCash, cashierId,
       inventoryCount: Object.keys(startInventoryCount).length + " items"
     });
-    
+
+    // Handle cashier ID - only use it if it's from the legacy cashiers table
+    let finalCashierId: string | null = null;
+    if (cashierId) {
+      if (cashierId.startsWith('app_user:')) {
+        // This is from app_users table, don't set cashier_id (foreign key constraint)
+        console.log("Cashier is from app_users table, not setting cashier_id foreign key");
+        finalCashierId = null;
+      } else {
+        // This is from legacy cashiers table, safe to use
+        console.log("Cashier is from legacy cashiers table, setting cashier_id");
+        finalCashierId = cashierId;
+      }
+    }
+
     const newShift = {
       user_id: userId,
       store_id: storeId,
@@ -51,18 +65,18 @@ export async function createShift(
       status: 'active',
       start_photo: startPhoto,
       start_inventory_count: startInventoryCount,
-      cashier_id: cashierId || null
+      cashier_id: finalCashierId
     };
-    
+
     const { data, error } = await supabase
       .from('shifts')
       .insert(newShift)
       .select()
       .single();
-    
+
     if (error) {
       console.error("Supabase error creating shift:", error);
-      
+
       if (error.code === '42501' || error.message.includes('permission denied') || error.message.includes('violates row-level security policy')) {
         console.error("Permission denied error details:", {
           code: error.code,
@@ -72,17 +86,17 @@ export async function createShift(
         });
         throw new Error('Permission denied: You do not have access to create shifts');
       }
-      
+
       throw error;
     }
-    
+
     if (!data) {
       console.error("No data returned when creating shift");
       throw new Error('No data returned when creating shift');
     }
-    
+
     console.log("Shift created successfully:", data);
-    
+
     // Type assertion to ShiftRow
     const shiftData = data as unknown as ShiftRow;
     return mapShiftRowToShift(shiftData);
@@ -106,7 +120,7 @@ export async function closeShift(
     if (!session) {
       throw new Error('Authentication required');
     }
-    
+
     const { error } = await supabase
       .from('shifts')
       .update({
@@ -117,7 +131,7 @@ export async function closeShift(
         end_inventory_count: endInventoryCount
       })
       .eq('id', shiftId);
-    
+
     if (error) throw error;
     return true;
   } catch (error) {
@@ -140,15 +154,15 @@ export async function getActiveShift(
       .eq('store_id', storeId)
       .eq('status', 'active')
       .maybeSingle();
-    
+
     if (error) throw error;
-    
+
     if (data) {
       // Type assertion to ShiftRow
       const shiftData = data as unknown as ShiftRow;
       return mapShiftRowToShift(shiftData);
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error fetching active shift:', error);
@@ -171,9 +185,9 @@ export async function getPreviousShiftEndingCash(
       .order('end_time', { ascending: false })
       .limit(1)
       .maybeSingle();
-    
+
     if (error) throw error;
-    
+
     return data?.ending_cash || 0;
   } catch (error) {
     console.error('Error fetching previous shift ending cash:', error);

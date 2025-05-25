@@ -19,16 +19,19 @@ export default function CashierSelectSection({
   isLoading
 }: CashierSelectSectionProps) {
   const { user } = useAuth();
-  
+
   // Find the cashier record matching the authenticated user
-  const currentCashier = user && cashiers.length > 0 
-    ? cashiers.find(cashier => cashier.userId === user.id) 
+  const currentCashier = user && cashiers.length > 0
+    ? cashiers.find(cashier => cashier.userId === user.id)
     : null;
-  
+
   // Update the selected cashier ID when the current cashier is found
   useEffect(() => {
     if (currentCashier) {
-      setSelectedCashierId(currentCashier.id);
+      // For cashiers from app_users table, we need to pass a special identifier
+      // that indicates this is from app_users, not the legacy cashiers table
+      const cashierIdToUse = currentCashier.userId ? `app_user:${currentCashier.id}` : currentCashier.id;
+      setSelectedCashierId(cashierIdToUse);
     }
   }, [currentCashier, setSelectedCashierId]);
 
