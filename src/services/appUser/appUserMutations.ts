@@ -22,7 +22,10 @@ export const createAppUser = async (data: AppUserFormData): Promise<AppUser | nu
 
     if (error) {
       console.error('Error creating app user:', error);
-      toast.error(`Failed to create user: ${error.message}`);
+      // Only show toast for non-RLS policy errors to avoid duplicate creation noise
+      if (!error.message.includes('row-level security policy')) {
+        toast.error(`Failed to create user: ${error.message}`);
+      }
       return null;
     }
 
@@ -43,7 +46,10 @@ export const createAppUser = async (data: AppUserFormData): Promise<AppUser | nu
     };
   } catch (error: any) {
     console.error('Error in createAppUser:', error);
-    toast.error(`Failed to create user: ${error.message}`);
+    // Only show toast for non-RLS policy errors to avoid duplicate creation noise
+    if (!error.message?.includes('row-level security policy')) {
+      toast.error(`Failed to create user: ${error.message}`);
+    }
     return null;
   }
 };
@@ -101,20 +107,20 @@ export const updateAppUser = async (data: AppUserFormData): Promise<AppUser | nu
 export const deleteAppUser = async (id: string): Promise<boolean> => {
   try {
     console.log('Attempting to delete app user with ID:', id);
-    
+
     // First, check if this user has a user_id (linked to auth)
     const { data: userData, error: fetchError } = await supabase
       .from('app_users')
       .select('user_id, email')
       .eq('id', id)
       .single();
-      
+
     if (fetchError) {
       console.error('Error fetching user data for deletion:', fetchError);
       toast.error(`Failed to delete user: ${fetchError.message}`);
       return false;
     }
-    
+
     // Delete the app_users entry first
     const { error: deleteError } = await supabase
       .from('app_users')
@@ -126,7 +132,7 @@ export const deleteAppUser = async (id: string): Promise<boolean> => {
       toast.error(`Failed to delete user: ${deleteError.message}`);
       return false;
     }
-    
+
     // If the user has an auth account, inform the admin they need to delete it separately
     if (userData?.user_id) {
       toast.success('User record deleted successfully');
@@ -134,7 +140,7 @@ export const deleteAppUser = async (id: string): Promise<boolean> => {
     } else {
       toast.success('User deleted successfully');
     }
-    
+
     return true;
   } catch (error: any) {
     console.error('Error in deleteAppUser:', error);

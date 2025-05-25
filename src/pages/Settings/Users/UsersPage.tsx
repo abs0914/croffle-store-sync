@@ -1,4 +1,5 @@
 
+import { Link } from "react-router-dom";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/auth";
 import { UserListView, ErrorView, LoadingView } from "./components";
@@ -7,6 +8,8 @@ import UserAccessView from "./components/UserAccessView";
 import UserDialogs from "./components/UserDialogs";
 import { syncAuthWithAppUsers, updateAppUsersFromAuthMetadata } from "@/services/appUser/sync";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { ArrowLeftIcon } from "lucide-react";
 
 export default function UsersPage() {
   const { currentStore, stores } = useStore();
@@ -15,10 +18,28 @@ export default function UsersPage() {
   const isOwner = hasPermission('owner');
   const isManager = user?.role === 'manager';
   const canManageUsers = isAdmin || isOwner;
-  
+
+  // Route protection: Only admin and owner can access this page
+  if (user && !canManageUsers && !isManager) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <h2 className="text-xl font-semibold text-gray-900">Access Denied</h2>
+        <p className="text-gray-600 text-center max-w-md">
+          You don't have permission to access user management. Only administrators and owners can manage users.
+        </p>
+        <Button asChild variant="outline">
+          <Link to="/dashboard">
+            <ArrowLeftIcon className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
   // Custom hooks
   const { users, isLoading, error, refetch } = useUsersData();
-  const { 
+  const {
     isAddDialogOpen, setIsAddDialogOpen,
     isEditDialogOpen, setIsEditDialogOpen,
     isDeleteDialogOpen, setIsDeleteDialogOpen,
@@ -36,15 +57,15 @@ export default function UsersPage() {
       toast.error("You don't have permission to synchronize users");
       return;
     }
-    
+
     const loadingToast = toast.loading("Synchronizing users...");
-    
+
     try {
       console.log("Starting user synchronization process");
-      
+
       // First try to synchronize any auth users that don't have app_user records
       const result = await syncAuthWithAppUsers();
-      
+
       if (result.errors.length > 0) {
         console.error("Errors during user sync:", result.errors);
         toast.error(`Some users couldn't be synchronized: ${result.errors.length} errors`);
@@ -53,13 +74,13 @@ export default function UsersPage() {
       } else {
         toast.success("All users are already synchronized");
       }
-      
+
       // Also update existing users from auth metadata
       const updateResult = await updateAppUsersFromAuthMetadata();
       if (updateResult.updated > 0) {
         toast.success(`Updated ${updateResult.updated} users with auth metadata`);
       }
-      
+
       // Refresh the user list after synchronization
       console.log("Refreshing user list after synchronization");
       await refetch();
@@ -70,22 +91,22 @@ export default function UsersPage() {
       toast.dismiss(loadingToast);
     }
   };
-  
+
   // Handle loading state
   if (isLoading && !error) {
     return <LoadingView />;
   }
-  
+
   // Handle specific database permission errors
   if (error && error instanceof Error && error.message.includes('Database permission error')) {
     return (
-      <ErrorView 
-        error={new Error('Database permission error - Please contact support')} 
-        onRetry={refetch} 
+      <ErrorView
+        error={new Error('Database permission error - Please contact support')}
+        onRetry={refetch}
       />
     );
   }
-  
+
   // Handle restricted access views for managers or errors
   if (isManager && !canManageUsers || error) {
     return (
@@ -119,20 +140,22 @@ export default function UsersPage() {
         onSyncUsers={handleSyncUsers}
       />
 
-      {/* Dialogs */}
-      <UserDialogs
-        isAddDialogOpen={isAddDialogOpen}
-        isEditDialogOpen={isEditDialogOpen}
-        isDeleteDialogOpen={isDeleteDialogOpen}
-        isActivateDialogOpen={isActivateDialogOpen}
-        selectedUser={selectedUser}
-        isDeactivating={isDeactivating}
-        stores={stores}
-        setIsAddDialogOpen={setIsAddDialogOpen}
-        setIsEditDialogOpen={setIsEditDialogOpen}
-        setIsDeleteDialogOpen={setIsDeleteDialogOpen}
-        setIsActivateDialogOpen={setIsActivateDialogOpen}
-      />
+      {/* Dialogs - Only render for users with management permissions */}
+      {canManageUsers && (
+        <UserDialogs
+          isAddDialogOpen={isAddDialogOpen}
+          isEditDialogOpen={isEditDialogOpen}
+          isDeleteDialogOpen={isDeleteDialogOpen}
+          isActivateDialogOpen={isActivateDialogOpen}
+          selectedUser={selectedUser}
+          isDeactivating={isDeactivating}
+          stores={stores}
+          setIsAddDialogOpen={setIsAddDialogOpen}
+          setIsEditDialogOpen={setIsEditDialogOpen}
+          setIsDeleteDialogOpen={setIsDeleteDialogOpen}
+          setIsActivateDialogOpen={setIsActivateDialogOpen}
+        />
+      )}
     </div>
   );
 }

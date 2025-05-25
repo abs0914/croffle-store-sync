@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { AppUserFormData } from "@/types/appUser";
 import { UserRole } from "@/types/user";
+import { useAuth } from "@/contexts/auth";
 import UserFormFields from "./UserFormFields";
 import {
   Dialog,
@@ -26,6 +27,21 @@ interface AddUserDialogProps {
 
 export default function AddUserDialog({ isOpen, onOpenChange, stores }: AddUserDialogProps) {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
+
+  // Permission check - only admin and owner can create users
+  const canManageUsers = hasPermission('admin') || hasPermission('owner');
+
+
+
+  // Security check: Close dialog and show error if user doesn't have permission
+  if (isOpen && !canManageUsers) {
+    console.warn('AddUserDialog: Non-admin user attempted to access user creation');
+    toast.error("You don't have permission to create users");
+    onOpenChange(false);
+    return null;
+  }
+
   const [formData, setFormData] = useState<AppUserFormData & { password: string }>({
     firstName: "",
     lastName: "",
@@ -68,17 +84,19 @@ export default function AddUserDialog({ isOpen, onOpenChange, stores }: AddUserD
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.email || !formData.password) {
       toast.error("Email and password are required");
       return;
     }
-    
+
     if (formData.password.length < 6) {
       toast.error("Password must be at least 6 characters long");
       return;
     }
-    
+
+
+
     createMutation.mutate(formData);
   };
 
@@ -99,16 +117,16 @@ export default function AddUserDialog({ isOpen, onOpenChange, stores }: AddUserD
             includePassword={true}
           />
           <DialogFooter className="pt-4">
-            <Button 
-              variant="outline" 
-              type="button" 
+            <Button
+              variant="outline"
+              type="button"
               onClick={() => onOpenChange(false)}
               disabled={createMutation.isPending}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={createMutation.isPending}
             >
               {createMutation.isPending ? <Spinner className="mr-2 h-4 w-4" /> : null}
