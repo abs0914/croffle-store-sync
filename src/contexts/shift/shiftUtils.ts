@@ -187,22 +187,22 @@ async function synchronizeInventoryFromShift(
       throw fetchError;
     }
 
-    // Create a map for quick lookup by item name
-    const inventoryMap = new Map<string, { id: string; currentStock: number }>();
+    // Create a map for quick lookup by item ID
+    const inventoryMap = new Map<string, { item: string; currentStock: number }>();
     inventoryItems?.forEach(item => {
-      inventoryMap.set(item.item, { id: item.id, currentStock: item.stock_quantity });
+      inventoryMap.set(item.id, { item: item.item, currentStock: item.stock_quantity });
     });
 
     // Process each item in the end inventory count
-    for (const [itemName, endCount] of Object.entries(endInventoryCount)) {
-      const inventoryItem = inventoryMap.get(itemName);
+    for (const [itemId, endCount] of Object.entries(endInventoryCount)) {
+      const inventoryItem = inventoryMap.get(itemId);
 
       if (!inventoryItem) {
-        console.warn(`Inventory item "${itemName}" not found in inventory_stock table`);
+        console.warn(`Inventory item with ID "${itemId}" not found in inventory_stock table`);
         continue;
       }
 
-      const startCount = startInventoryCount[itemName] || 0;
+      const startCount = startInventoryCount[itemId] || 0;
       const currentStock = inventoryItem.currentStock;
 
       // Calculate the difference between start and end counts
@@ -217,7 +217,7 @@ async function synchronizeInventoryFromShift(
       const stockDifference = Math.abs(expectedStock - currentStock);
       if (stockDifference >= 0.01) { // Allow for small rounding differences
 
-        console.log(`Updating inventory for "${itemName}":`, {
+        console.log(`Updating inventory for "${inventoryItem.item}" (ID: ${itemId}):`, {
           startCount,
           endCount,
           currentStock,
@@ -232,10 +232,10 @@ async function synchronizeInventoryFromShift(
             stock_quantity: expectedStock,
             updated_at: new Date().toISOString()
           })
-          .eq('id', inventoryItem.id);
+          .eq('id', itemId);
 
         if (updateError) {
-          console.error(`Error updating inventory for "${itemName}":`, updateError);
+          console.error(`Error updating inventory for "${inventoryItem.item}" (ID: ${itemId}):`, updateError);
           continue; // Continue with other items even if one fails
         }
 
@@ -243,7 +243,7 @@ async function synchronizeInventoryFromShift(
         const { error: transactionError } = await supabase
           .from('inventory_transactions')
           .insert({
-            product_id: inventoryItem.id,
+            product_id: itemId,
             store_id: storeId,
             transaction_type: 'shift_reconciliation',
             quantity: Math.abs(countDifference),
@@ -251,11 +251,11 @@ async function synchronizeInventoryFromShift(
             new_quantity: expectedStock,
             reference_id: shiftId,
             created_by: userId,
-            notes: `Shift closure reconciliation: ${startCount} → ${endCount} (${countDifference >= 0 ? '+' : ''}${countDifference})`
+            notes: `Shift closure reconciliation for "${inventoryItem.item}": ${startCount} → ${endCount} (${countDifference >= 0 ? '+' : ''}${countDifference})`
           });
 
         if (transactionError) {
-          console.error(`Error creating transaction record for "${itemName}":`, transactionError);
+          console.error(`Error creating transaction record for "${inventoryItem.item}" (ID: ${itemId}):`, transactionError);
           // Don't throw here, just log the error
         }
       }
