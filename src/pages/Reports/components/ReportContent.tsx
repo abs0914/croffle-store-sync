@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileBarChart } from "lucide-react";
+import { CashierReportGuard } from "@/components/auth/CashierReportGuard";
 
 interface ReportContentProps {
   reportType: ReportType;
@@ -24,21 +25,21 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   const isMobile = useIsMobile();
   const from = dateRange.from?.toISOString().split('T')[0];
   const to = dateRange.to?.toISOString().split('T')[0];
-  
+
   // Determine if we're in development/staging environment to warn about sample data
-  const isDevelopment = window.location.hostname === 'localhost' || 
+  const isDevelopment = window.location.hostname === 'localhost' ||
                         window.location.hostname.includes('staging') ||
                         window.location.hostname.includes('.lovable.app');
-  
+
   // Fetch data based on report type
-  const { data, isLoading, error, refetch, isSampleData } = useReportData({ 
-    reportType, 
+  const { data, isLoading, error, refetch, isSampleData } = useReportData({
+    reportType,
     storeId: selectedStoreId, // Use the selected store ID for fetching data
     isAllStores: selectedStoreId === 'all',
-    from, 
-    to 
+    from,
+    to
   });
-  
+
   // Display toast notifications for success/failure
   useEffect(() => {
     if (error) {
@@ -47,18 +48,21 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
         duration: 4000,
       });
     } else if (data && !isLoading) {
+      // Only show sample data warning in development AND when actually using sample data
       if (isSampleData && isDevelopment) {
         toast.warning("Using demo data", {
           description: "This report is using sample data for demonstration purposes.",
           duration: 5000,
           position: isMobile ? "top-center" : "top-right"
         });
-      } else {
+      } else if (!isSampleData) {
+        // Only show success message for real data
         toast.success("Report data loaded successfully", {
           duration: 3000,
           position: isMobile ? "top-center" : "top-right"
         });
       }
+      // No toast for sample data in production - silent operation
     }
   }, [data, error, isLoading, isSampleData, isDevelopment, isMobile]);
 
@@ -69,9 +73,9 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
 
   // Handle error state with retry option
   if (error) {
-    return <ReportErrorState 
-      onRetry={() => refetch()} 
-      errorMessage="Unable to load report data" 
+    return <ReportErrorState
+      onRetry={() => refetch()}
+      errorMessage="Unable to load report data"
     />;
   }
 
@@ -97,14 +101,16 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   // Render report content
   return (
     <div className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" tabIndex={0}>
-      <ReportView 
-        reportType={reportType}
-        data={data}
-        storeId={storeId}
-        selectedStoreId={selectedStoreId} // Pass the selected store ID to the report view
-        isAllStores={selectedStoreId === 'all'} // Indicate if we're viewing all stores
-        dateRange={dateRange}
-      />
+      <CashierReportGuard reportType={reportType}>
+        <ReportView
+          reportType={reportType}
+          data={data}
+          storeId={storeId}
+          selectedStoreId={selectedStoreId} // Pass the selected store ID to the report view
+          isAllStores={selectedStoreId === 'all'} // Indicate if we're viewing all stores
+          dateRange={dateRange}
+        />
+      </CashierReportGuard>
     </div>
   );
 }

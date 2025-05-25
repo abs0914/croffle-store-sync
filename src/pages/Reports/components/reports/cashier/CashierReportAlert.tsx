@@ -11,7 +11,12 @@ export function CashierReportAlert({ data }: CashierReportAlertProps) {
   // Determine if we're looking at sample data
   const isSampleData = !data.cashiers.some(c => c.transactionCount > 0);
 
-  if (!isSampleData) {
+  // Only show in development environments
+  const isDevelopment = window.location.hostname === 'localhost' ||
+                        window.location.hostname.includes('staging') ||
+                        window.location.hostname.includes('.lovable.app');
+
+  if (!isSampleData || !isDevelopment) {
     return null;
   }
 
