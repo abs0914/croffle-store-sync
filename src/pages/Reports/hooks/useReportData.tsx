@@ -9,6 +9,7 @@ import {
   fetchCashierReport
 } from "@/services/reports";
 import { formatCurrency } from "@/utils/format";
+import { testCashierDateQueries } from "@/services/reports/modules/cashier/cashierDateUtils";
 
 interface UseReportDataProps {
   reportType: ReportType;
@@ -99,6 +100,12 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
                           result.stockItems.every(item => item.initialStock % 10 === 0);
             break;
           case 'cashier':
+            // Run date debugging for cashier reports if no data is found initially
+            if (from === to && !isAllStores) {
+              console.log('🧪 Running cashier date query tests...');
+              await testCashierDateQueries(storeId, from);
+            }
+
             result = await fetchCashierReport(
               isAllStores ? 'all' : storeId,
               from,
@@ -110,7 +117,8 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
               cashierCount: result?.cashierCount || 0,
               totalTransactions: result?.totalTransactions || 0,
               cashierNames: result?.cashiers?.map(c => c.name) || [],
-              storeId: isAllStores ? 'all' : storeId
+              storeId: isAllStores ? 'all' : storeId,
+              dateRange: { from, to }
             });
 
             // Check for sample data patterns - only detect as sample if it contains ALL sample characteristics
