@@ -30,7 +30,7 @@ const initialState: CartState = {
   storeId: null,
 };
 
-const TAX_RATE = 0.12; // 12% VAT
+const TAX_RATE = 0.12; // 12% VAT (Philippines) - using VAT-inclusive pricing
 
 const CartContext = createContext<CartState>(initialState);
 
@@ -42,7 +42,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [total, setTotal] = useState(0);
   const [itemCount, setItemCount] = useState(0);
   const [storeId, setStoreId] = useState<string | null>(null);
-  
+
   // Update storeId when currentStore changes
   useEffect(() => {
     if (currentStore?.id) {
@@ -53,16 +53,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Recalculate totals when items change
-    const newSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const newTax = newSubtotal * TAX_RATE;
-    
-    setSubtotal(newSubtotal);
+    // Treat prices as VAT-inclusive (Philippine standard)
+    const newTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    // Calculate net amount (price without VAT) and VAT amount from VAT-inclusive total
+    const newNetAmount = newTotal / (1 + TAX_RATE); // Total / 1.12
+    const newTax = newTotal - newNetAmount; // VAT amount embedded in the total
+
+    setSubtotal(newTotal); // This is actually the VAT-inclusive total
     setTax(newTax);
-    setTotal(newSubtotal + newTax);
+    setTotal(newTotal); // Total remains the same as subtotal for VAT-inclusive pricing
     setItemCount(items.reduce((sum, item) => sum + item.quantity, 0));
-    
+
     // Debug log to check if items are being updated
-    console.log("Cart items updated in CartContext:", items);
+    console.log("Cart items updated in CartContext (VAT-inclusive):", {
+      items: items.length,
+      vatInclusiveTotal: newTotal,
+      netAmount: newNetAmount,
+      vatAmount: newTax
+    });
   }, [items]);
 
   const addItem = (product: Product, quantity = 1, variation?: ProductVariation) => {
@@ -73,7 +82,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     const itemPrice = variation ? variation.price : product.price;
-    
+
     // Debug log to verify data
     console.log("CartContext: Adding item to cart:", {
       product: product.name,
@@ -81,7 +90,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       price: itemPrice,
       variation: variation ? variation.name : "none"
     });
-    
+
     // Check if the item already exists in cart with the same variation or lack thereof
     const existingItemIndex = items.findIndex(item => {
       if (variation) {
@@ -89,17 +98,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return item.productId === product.id && !item.variationId;
     });
-    
+
     if (existingItemIndex !== -1) {
       // Update quantity if item exists
       const newItems = [...items];
       newItems[existingItemIndex].quantity += quantity;
       setItems(newItems);
-      
-      const displayName = variation ? 
-        `${product.name} (${variation.name})` : 
+
+      const displayName = variation ?
+        `${product.name} (${variation.name})` :
         product.name;
-      
+
       toast.success(`Updated quantity for ${displayName}`);
       console.log("CartContext: Updated existing item in cart", displayName);
     } else {
@@ -114,24 +123,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
         quantity,
         price: itemPrice,
       };
-      
+
       if (variation) {
         newItem.variationId = variation.id;
         newItem.variation = variation;
       }
-      
+
       // Use functional update to guarantee we're working with latest state
       setItems(prevItems => [...prevItems, newItem]);
-      
-      const displayName = variation ? 
-        `${product.name} (${variation.name})` : 
+
+      const displayName = variation ?
+        `${product.name} (${variation.name})` :
         product.name;
-      
+
       toast.success(`${displayName} added to cart`);
       console.log("CartContext: Added new item to cart", displayName);
     }
   };
-  
+
   const removeItem = (itemIndex: number) => {
     const newItems = [...items];
     const removedItem = newItems[itemIndex];
@@ -140,10 +149,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     toast.info(`${removedItem.product.name} removed from cart`);
     console.log("CartContext: Removed item from cart", removedItem.product.name);
   };
-  
+
   const updateQuantity = (itemIndex: number, quantity: number) => {
     if (quantity < 1) return;
-    
+
     const newItems = [...items];
     newItems[itemIndex].quantity = quantity;
     setItems(newItems);
@@ -152,7 +161,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       newQuantity: quantity
     });
   };
-  
+
   const clearCart = () => {
     setItems([]);
     toast.info('Cart cleared');
