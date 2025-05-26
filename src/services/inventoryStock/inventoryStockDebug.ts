@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Debug function to check user permissions for inventory operations
@@ -72,7 +73,7 @@ export const debugInventoryPermissions = async (storeId: string): Promise<void> 
     // Test inventory_transactions insert access
     if (inventoryItems && inventoryItems.length > 0) {
       const testItem = inventoryItems[0];
-      const { error: transactionError } = await supabase
+      const { data: transactionData, error: transactionError } = await supabase
         .from('inventory_transactions')
         .insert({
           product_id: testItem.id,
@@ -93,11 +94,11 @@ export const debugInventoryPermissions = async (storeId: string): Promise<void> 
         console.log('Transaction insert test successful');
         
         // Clean up test transaction
-        if (transactionError?.id) {
+        if (transactionData?.id) {
           await supabase
             .from('inventory_transactions')
             .delete()
-            .eq('id', transactionError.id);
+            .eq('id', transactionData.id);
         }
       }
     }

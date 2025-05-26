@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { ShiftType } from "@/types";
 import { ShiftRow } from "./types";
@@ -21,6 +22,24 @@ export function mapShiftRowToShift(shiftData: ShiftRow): ShiftType {
     endInventoryCount: shiftData.end_inventory_count || undefined,
     cashierId: shiftData.cashier_id || undefined
   };
+}
+
+// Helper function to safely convert Json to Record<string, number>
+function convertJsonToInventoryCount(json: any): Record<string, number> {
+  if (!json || typeof json !== 'object') {
+    return {};
+  }
+  
+  const result: Record<string, number> = {};
+  for (const [key, value] of Object.entries(json)) {
+    if (typeof value === 'number') {
+      result[key] = value;
+    } else if (typeof value === 'string' && !isNaN(Number(value))) {
+      result[key] = Number(value);
+    }
+  }
+  
+  return result;
 }
 
 // Create a new shift
@@ -145,10 +164,13 @@ export async function closeShift(
 
     if (error) throw error;
 
+    // Convert the Json type to Record<string, number> safely
+    const startInventoryCount = convertJsonToInventoryCount(shiftData.start_inventory_count);
+
     // Synchronize inventory counts with the actual inventory system
     await synchronizeInventoryFromShift(
       shiftData.store_id,
-      shiftData.start_inventory_count || {},
+      startInventoryCount,
       endInventoryCount,
       shiftId,
       session.user.id
