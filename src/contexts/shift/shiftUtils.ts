@@ -227,30 +227,24 @@ async function synchronizeInventoryFromShift(
       }
 
       const startCount = startInventoryCount[itemId] || 0;
+
+      // The end count from the shift represents the actual physical count
+      // Update the inventory stock to match this count directly
+      const newStockQuantity = endCount;
       const currentStock = inventoryItem.currentStock;
 
-      // Calculate the difference between start and end counts
-      const countDifference = endCount - startCount;
-
-      // Calculate expected stock based on shift inventory tracking
-      // If end count is less than start count, it means items were consumed/sold
-      // If end count is more than start count, it means items were added/restocked
-      const expectedStock = currentStock + countDifference;
-
-      // Only update if there's a significant difference (avoid minor discrepancies)
-      const stockDifference = Math.abs(expectedStock - currentStock);
-      if (stockDifference >= 0.01) { // Allow for small rounding differences
-
+      // Only update if there's a difference
+      if (Math.abs(newStockQuantity - currentStock) >= 0.01) {
         console.log(`Updating inventory for "${inventoryItem.item}" (ID: ${itemId}):`, {
           startCount,
           endCount,
           currentStock,
-          expectedStock,
-          difference: countDifference
+          newStockQuantity,
+          difference: newStockQuantity - currentStock
         });
 
         // Update the inventory stock quantity with enhanced retry logic
-        const updateResult = await updateInventoryStockWithRetry(itemId, storeId, expectedStock);
+        const updateResult = await updateInventoryStockWithRetry(itemId, storeId, newStockQuantity);
 
         if (!updateResult.success) {
           console.error(`Failed to update inventory for "${inventoryItem.item}" (ID: ${itemId}):`, updateResult.error);
@@ -266,9 +260,6 @@ async function synchronizeInventoryFromShift(
 
         console.log(`Successfully updated inventory for "${inventoryItem.item}"`);
 
-        // Update the current stock for transaction record
-        currentStock = expectedStock;
-
         // Create an inventory transaction record for audit trail (only if update was successful)
         try {
           const { error: transactionError } = await supabase
@@ -277,12 +268,12 @@ async function synchronizeInventoryFromShift(
               product_id: itemId,
               store_id: storeId,
               transaction_type: 'shift_reconciliation',
-              quantity: Math.abs(countDifference),
+              quantity: Math.abs(newStockQuantity - currentStock),
               previous_quantity: currentStock,
-              new_quantity: expectedStock,
+              new_quantity: newStockQuantity,
               reference_id: shiftId,
               created_by: userId,
-              notes: `Shift closure reconciliation for "${inventoryItem.item}": ${startCount} → ${endCount} (${countDifference >= 0 ? '+' : ''}${countDifference})`
+              notes: `Shift closure reconciliation for "${inventoryItem.item}": ${startCount} → ${endCount} (${newStockQuantity >= currentStock ? '+' : ''}${newStockQuantity - currentStock})`
             });
 
           if (transactionError) {
