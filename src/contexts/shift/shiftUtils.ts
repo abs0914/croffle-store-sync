@@ -1,4 +1,5 @@
 
+
 import { supabase } from "@/integrations/supabase/client";
 import { ShiftType } from "@/types";
 import { ShiftRow } from "./types";
@@ -289,7 +290,7 @@ async function synchronizeInventoryFromShift(
             .insert({
               product_id: itemId,
               store_id: storeId,
-              transaction_type: 'shift_reconciliation',
+              transaction_type: 'adjustment', // Use 'adjustment' instead of 'shift_reconciliation'
               quantity: Math.abs(newStockQuantity - currentStock),
               previous_quantity: currentStock,
               new_quantity: newStockQuantity,

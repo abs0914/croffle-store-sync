@@ -1,4 +1,5 @@
 
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Debug function to check user permissions for inventory operations
@@ -147,31 +148,91 @@ export const updateInventoryStockWithRetry = async (
   
   while (retryCount < maxRetries) {
     try {
-      const { error } = await supabase
+      console.log(`Attempting to update inventory stock for item ${itemId}:`, {
+        newQuantity,
+        storeId,
+        attempt: retryCount + 1
+      });
+
+      // First, let's verify the item exists and we can read it
+      const { data: existingItem, error: readError } = await supabase
+        .from('inventory_stock')
+        .select('id, item, stock_quantity, store_id')
+        .eq('id', itemId)
+        .eq('store_id', storeId)
+        .single();
+
+      if (readError) {
+        console.error('Error reading inventory item before update:', readError);
+        return { success: false, error: readError };
+      }
+
+      if (!existingItem) {
+        console.error('Inventory item not found:', { itemId, storeId });
+        return { success: false, error: new Error('Inventory item not found') };
+      }
+
+      console.log('Current inventory item before update:', existingItem);
+
+      // Now attempt the update
+      const { data: updatedData, error: updateError } = await supabase
         .from('inventory_stock')
         .update({
           stock_quantity: newQuantity,
           updated_at: new Date().toISOString()
         })
         .eq('id', itemId)
-        .eq('store_id', storeId);
-      
-      if (!error) {
-        return { success: true };
+        .eq('store_id', storeId)
+        .select();
+
+      if (updateError) {
+        console.error('Inventory update error:', {
+          error: updateError,
+          itemId,
+          storeId,
+          newQuantity,
+          attempt: retryCount + 1
+        });
+
+        // Handle specific error types
+        if (updateError.code === '409' || updateError.message?.includes('conflict')) {
+          console.warn(`Conflict detected for item ${itemId}, retry ${retryCount + 1}/${maxRetries}`);
+          retryCount++;
+          // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, retryCount)));
+          continue;
+        } else {
+          // Non-retryable error
+          return { success: false, error: updateError };
+        }
       }
-      
-      // Handle specific error types
-      if (error.code === '409' || error.message?.includes('conflict')) {
-        console.warn(`Conflict detected for item ${itemId}, retry ${retryCount + 1}/${maxRetries}`);
-        retryCount++;
-        // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, retryCount)));
-        continue;
+
+      console.log('Inventory update successful:', {
+        itemId,
+        newQuantity,
+        updatedData
+      });
+
+      // Verify the update was successful by reading the item again
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('inventory_stock')
+        .select('stock_quantity')
+        .eq('id', itemId)
+        .single();
+
+      if (verifyError) {
+        console.warn('Could not verify update:', verifyError);
       } else {
-        // Non-retryable error
-        return { success: false, error };
+        console.log('Verified updated quantity:', {
+          expected: newQuantity,
+          actual: verifyData.stock_quantity,
+          matches: verifyData.stock_quantity === newQuantity
+        });
       }
+
+      return { success: true };
     } catch (exception) {
+      console.error('Exception during inventory update:', exception);
       return { success: false, error: exception };
     }
   }
