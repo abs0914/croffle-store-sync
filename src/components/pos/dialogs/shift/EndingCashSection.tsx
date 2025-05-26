@@ -25,7 +25,7 @@ export default function EndingCashSection({
         Ending Cash Amount
         {currentShift && (
           <span className="text-sm text-muted-foreground ml-2">
-            (Starting cash: {currentShift.startingCash.toFixed(2)})
+            (Starting cash: ₱{currentShift.startingCash.toFixed(2)})
           </span>
         )}
       </Label>
@@ -37,7 +37,7 @@ export default function EndingCashSection({
         placeholder="0.00"
         className={cashError ? "border-red-500" : ""}
       />
-      
+
       {cashError && (
         <Alert variant="destructive" className="py-2 mt-1">
           <AlertCircle className="h-4 w-4" />

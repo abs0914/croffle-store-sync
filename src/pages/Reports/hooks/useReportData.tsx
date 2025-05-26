@@ -24,7 +24,8 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
     queryFn: async () => {
       if (!from || !to) return Promise.resolve(null);
 
-      console.log(`Fetching ${reportType} report for ${isAllStores ? 'all stores' : `store ${storeId}`} from ${from} to ${to}`);
+      console.log(`🔄 Fetching ${reportType} report for ${isAllStores ? 'all stores' : `store ${storeId}`} from ${from} to ${to}`);
+      console.log('📊 Query parameters:', { reportType, storeId, isAllStores, from, to });
 
       try {
         let result = null;
@@ -103,14 +104,25 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
               from,
               to
             );
-            // Check for sample data patterns instead of transaction count patterns
+
+            // Log the cashier result for debugging
+            console.log('👥 Cashier report result:', {
+              cashierCount: result?.cashierCount || 0,
+              totalTransactions: result?.totalTransactions || 0,
+              cashierNames: result?.cashiers?.map(c => c.name) || [],
+              storeId: isAllStores ? 'all' : storeId
+            });
+
+            // Check for sample data patterns - only detect as sample if it contains ALL sample characteristics
             isSampleData = result && result.cashiers?.length > 0 &&
-                          result.cashiers.some(c =>
-                            c.name.includes('John Smith') ||
-                            c.name.includes('Sarah Lee') ||
-                            c.name.includes('Miguel Rodriguez') ||
-                            c.name.includes('Priya Patel')
-                          );
+                          result.cashiers.length === 4 && // Exact sample count
+                          result.cashiers.every(c => c.avatar && c.avatar.includes('pravatar.cc')) &&
+                          result.cashiers.some(c => c.name === 'John Smith') &&
+                          result.cashiers.some(c => c.name === 'Sarah Lee') &&
+                          result.cashiers.some(c => c.name === 'Miguel Rodriguez') &&
+                          result.cashiers.some(c => c.name === 'Priya Patel');
+
+            console.log('🔍 Sample data detection result:', isSampleData);
             break;
           default:
             result = Promise.resolve(null);

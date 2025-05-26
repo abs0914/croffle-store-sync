@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CashierReport } from "@/types/reports";
 import { formatCurrency } from "@/utils/format";
-import { DollarSign, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
+import { Banknote, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 
 interface CashierCashTrackingCardProps {
   data: CashierReport;
@@ -45,7 +45,7 @@ export function CashierCashTrackingCard({ data }: CashierCashTrackingCardProps) 
     <Card className="border-l-4 border-l-green-500">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <DollarSign className="h-5 w-5 text-green-600" />
+          <Banknote className="h-5 w-5 text-green-600" />
           Cash Drawer Management
         </CardTitle>
       </CardHeader>
@@ -98,7 +98,7 @@ export function CashierCashTrackingCard({ data }: CashierCashTrackingCardProps) 
               )}
             </div>
             <div className={`text-2xl font-bold ${
-              cashStats.totalCashVariance > 0 ? 'text-green-600' : 
+              cashStats.totalCashVariance > 0 ? 'text-green-600' :
               cashStats.totalCashVariance < 0 ? 'text-red-600' : 'text-gray-600'
             }`}>
               {cashStats.totalCashVariance >= 0 ? '+' : ''}{formatCurrency(cashStats.totalCashVariance)}

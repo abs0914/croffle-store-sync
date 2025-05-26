@@ -57,6 +57,8 @@ export async function processCashierTransactions(transactions: any[], storeId: s
   // If no cashier data found, try to fetch app_users with cashier role for this store
   if (cashierIds.length === 0) {
     try {
+      console.log('🔍 No cashier data from transactions, fetching from app_users for store:', storeId);
+
       const { data: appUsers } = await supabase
         .from("app_users")
         .select("user_id, first_name, last_name, store_ids")
@@ -64,10 +66,16 @@ export async function processCashierTransactions(transactions: any[], storeId: s
         .eq("is_active", true);
 
       if (appUsers && appUsers.length > 0) {
-        // Filter users who have access to this store
-        const storeUsers = appUsers.filter(user =>
-          user.store_ids && user.store_ids.includes(storeId)
-        );
+        console.log('👥 Found app_users with cashier role:', appUsers.length);
+
+        // Filter users who have access to this store (or all stores if storeId is "all")
+        const storeUsers = storeId === "all"
+          ? appUsers
+          : appUsers.filter(user =>
+              user.store_ids && user.store_ids.includes(storeId)
+            );
+
+        console.log('👥 Filtered users for store', storeId, ':', storeUsers.length);
 
         storeUsers.forEach(user => {
           const userId = user.user_id;

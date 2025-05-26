@@ -1,11 +1,11 @@
 
 /**
- * Formats a number as currency
+ * Formats a number as currency in Philippine Peso (₱)
  */
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-PH', {
     style: 'currency',
-    currency: 'PHP', // Default to PHP, can be made configurable
+    currency: 'PHP',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(amount);

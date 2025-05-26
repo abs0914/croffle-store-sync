@@ -20,41 +20,61 @@ export async function fetchCashierReport(
       return createSampleCashierReport();
     }
 
-    // Get all transactions for the date range
-    const { data: transactions, error: txError } = await supabase
+    // Build transaction query - handle "all" stores case
+    let transactionQuery = supabase
       .from("transactions")
       .select("*")
-      .eq("store_id", storeId)
       .eq("status", "completed")
       .gte("created_at", `${from}T00:00:00`)
       .lte("created_at", `${to}T23:59:59`);
+
+    // Only filter by store_id if not "all"
+    if (storeId !== "all") {
+      transactionQuery = transactionQuery.eq("store_id", storeId);
+    }
+
+    const { data: transactions, error: txError } = await transactionQuery;
 
     if (txError) {
       console.error("❌ Transaction fetch error:", txError);
       throw txError;
     }
 
-    console.log('💳 Transactions fetched:', transactions?.length || 0);
+    console.log('💳 Transactions fetched:', transactions?.length || 0, 'for store:', storeId);
 
-    // Get all shifts for the date range
-    const { data: shifts, error: shiftsError } = await supabase
+    // Build shifts query - handle "all" stores case
+    let shiftsQuery = supabase
       .from("shifts")
       .select("*")
-      .eq("store_id", storeId)
       .gte("start_time", `${from}T00:00:00`)
       .lte("start_time", `${to}T23:59:59`);
+
+    // Only filter by store_id if not "all"
+    if (storeId !== "all") {
+      shiftsQuery = shiftsQuery.eq("store_id", storeId);
+    }
+
+    const { data: shifts, error: shiftsError } = await shiftsQuery;
 
     if (shiftsError) {
       console.error("❌ Shifts fetch error:", shiftsError);
       throw shiftsError;
     }
 
-    console.log('⏰ Shifts fetched:', shifts?.length || 0);
+    console.log('⏰ Shifts fetched:', shifts?.length || 0, 'for store:', storeId);
 
-    // If no data found, return sample data
+    // If no data found, return empty report instead of sample data
     if ((!transactions || transactions.length === 0) && (!shifts || shifts.length === 0)) {
-      console.info("No transaction or shift data found, using sample data");
-      return createSampleCashierReport();
+      console.info("No transaction or shift data found for the selected date range");
+      return {
+        cashierCount: 0,
+        totalTransactions: 0,
+        averageTransactionValue: 0,
+        averageTransactionTime: 0,
+        cashiers: [],
+        hourlyData: [],
+        attendance: []
+      };
     }
 
     // Process the transaction data
