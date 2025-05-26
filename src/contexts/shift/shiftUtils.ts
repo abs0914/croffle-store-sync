@@ -5,6 +5,7 @@ import { ShiftType } from "@/types";
 import { ShiftRow } from "./types";
 import { toast } from "sonner";
 import { debugInventoryPermissions, checkInventoryAccess, updateInventoryStockWithRetry } from "@/services/inventoryStock/inventoryStockDebug";
+import { QueryClient } from "@tanstack/react-query";
 
 // Map from ShiftRow to Shift model
 export function mapShiftRowToShift(shiftData: ShiftRow): ShiftType {
@@ -30,7 +31,7 @@ function convertJsonToInventoryCount(json: any): Record<string, number> {
   if (!json || typeof json !== 'object') {
     return {};
   }
-  
+
   const result: Record<string, number> = {};
   for (const [key, value] of Object.entries(json)) {
     if (typeof value === 'number') {
@@ -39,7 +40,7 @@ function convertJsonToInventoryCount(json: any): Record<string, number> {
       result[key] = Number(value);
     }
   }
-  
+
   return result;
 }
 
@@ -133,7 +134,8 @@ export async function closeShift(
   shiftId: string,
   endingCash: number,
   endInventoryCount: Record<string, number>,
-  endPhoto?: string
+  endPhoto?: string,
+  queryClient?: QueryClient
 ): Promise<boolean> {
   try {
     // Verify authentication status
@@ -174,7 +176,8 @@ export async function closeShift(
       startInventoryCount,
       endInventoryCount,
       shiftId,
-      session.user.id
+      session.user.id,
+      queryClient
     );
 
     return true;
@@ -191,7 +194,8 @@ async function synchronizeInventoryFromShift(
   startInventoryCount: Record<string, number>,
   endInventoryCount: Record<string, number>,
   shiftId: string,
-  userId: string
+  userId: string,
+  queryClient?: QueryClient
 ): Promise<void> {
   try {
     console.log('Synchronizing inventory from shift closure:', {
@@ -258,12 +262,13 @@ async function synchronizeInventoryFromShift(
 
       // Only update if there's a difference
       if (Math.abs(newStockQuantity - currentStock) >= 0.01) {
-        console.log(`Updating inventory for "${inventoryItem.item}" (ID: ${itemId}):`, {
-          startCount,
-          endCount,
-          currentStock,
-          newStockQuantity,
-          difference: newStockQuantity - currentStock
+        console.log(`🔄 INVENTORY UPDATE REQUIRED for "${inventoryItem.item}" (ID: ${itemId}):`, {
+          startCount: `${startCount} (shift start)`,
+          endCount: `${endCount} (shift end)`,
+          currentStock: `${currentStock} (database current)`,
+          newStockQuantity: `${newStockQuantity} (will update to)`,
+          difference: `${newStockQuantity - currentStock} (change)`,
+          changeType: newStockQuantity > currentStock ? 'INCREASE' : 'DECREASE'
         });
 
         // Update the inventory stock quantity with enhanced retry logic
@@ -309,10 +314,28 @@ async function synchronizeInventoryFromShift(
           console.error(`Exception creating transaction record for "${inventoryItem.item}":`, transactionCreateError);
           // Continue - the inventory update was successful even if transaction logging failed
         }
+      } else {
+        console.log(`✅ NO UPDATE NEEDED for "${inventoryItem.item}" (ID: ${itemId}):`, {
+          startCount,
+          endCount,
+          currentStock,
+          reason: 'No significant difference between current stock and end count'
+        });
       }
     }
 
     console.log('Inventory synchronization completed successfully');
+
+    // Invalidate React Query cache to refresh inventory displays
+    if (queryClient) {
+      console.log('Invalidating inventory cache for store:', storeId);
+      await queryClient.invalidateQueries({
+        queryKey: ['inventory-stock', storeId]
+      });
+      console.log('Inventory cache invalidated successfully');
+    } else {
+      console.warn('QueryClient not provided - inventory cache will not be invalidated');
+    }
   } catch (error) {
     console.error('Error synchronizing inventory from shift:', error);
     // Don't throw the error to prevent shift closure from failing

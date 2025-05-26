@@ -7,6 +7,7 @@ import { ShiftState } from "./types";
 import { createShift, closeShift, getActiveShift } from "./shiftUtils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const initialState: ShiftState = {
   currentShift: null,
@@ -21,6 +22,7 @@ const ShiftContext = createContext<ShiftState>(initialState);
 export function ShiftProvider({ children }: { children: ReactNode }) {
   const { user, session } = useAuth();
   const { currentStore } = useStore();
+  const queryClient = useQueryClient();
   const [currentShift, setCurrentShift] = useState<ShiftType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -36,7 +38,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
 
   const fetchActiveShift = async () => {
     if (!user || !currentStore || !session) return;
-    
+
     try {
       setIsLoading(true);
       const shift = await getActiveShift(user.id, currentStore.id);
@@ -50,7 +52,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   };
 
   const startShift = async (
-    startingCash: number, 
+    startingCash: number,
     startInventoryCount: Record<string, number>,
     startPhoto?: string,
     cashierId?: string
@@ -59,27 +61,27 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       toast.error("Missing user or store information");
       return false;
     }
-    
+
     try {
       // Verify authentication status before attempting to create a shift
       const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
+
       if (!currentSession) {
         toast.error("Authentication required - please log in again");
         return false;
       }
-      
+
       console.log(`Starting shift for store: ${currentStore.id} with user: ${user.id}`);
-      
+
       const shift = await createShift(
-        user.id, 
-        currentStore.id, 
-        startingCash, 
+        user.id,
+        currentStore.id,
+        startingCash,
         startInventoryCount,
         startPhoto,
         cashierId
       );
-      
+
       if (shift) {
         setCurrentShift(shift);
         toast.success("Shift started successfully");
@@ -90,7 +92,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Error in startShift:", error);
-      
+
       // Provide more specific error messages based on the error type
       if (error instanceof Error) {
         if (error.message.includes('JWT') || error.message.includes('auth') || error.message.includes('token')) {
@@ -103,13 +105,13 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       } else {
         toast.error("Failed to start shift - unknown error");
       }
-      
+
       return false;
     }
   };
-  
+
   const endShift = async (
-    endingCash: number, 
+    endingCash: number,
     endInventoryCount: Record<string, number>,
     endPhoto?: string
   ): Promise<boolean> => {
@@ -117,23 +119,24 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       toast.error("No active shift to end");
       return false;
     }
-    
+
     try {
       // Verify authentication status before attempting to end the shift
       const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
+
       if (!currentSession) {
         toast.error("Authentication required - please log in again");
         return false;
       }
-      
+
       const success = await closeShift(
-        currentShift.id, 
-        endingCash, 
+        currentShift.id,
+        endingCash,
         endInventoryCount,
-        endPhoto
+        endPhoto,
+        queryClient
       );
-      
+
       if (success) {
         setCurrentShift(null);
         toast.success("Shift ended successfully");
@@ -144,7 +147,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Error ending shift:", error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('JWT') || error.message.includes('auth') || error.message.includes('token')) {
           toast.error("Authentication expired - please log in again");
@@ -156,7 +159,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       } else {
         toast.error("Failed to end shift: unknown error");
       }
-      
+
       return false;
     }
   };
