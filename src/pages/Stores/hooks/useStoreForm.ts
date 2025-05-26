@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -18,9 +17,15 @@ interface StoreFormData {
   is_active: boolean;
 }
 
+// Helper function to check if a string is a valid UUID
+const isValidUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
 export const useStoreForm = (id?: string) => {
   const navigate = useNavigate();
-  const isEditing = !!id;
+  const isEditing = !!id && id !== "new";
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -39,12 +44,17 @@ export const useStoreForm = (id?: string) => {
   });
   
   useEffect(() => {
-    if (isEditing) {
+    // Only fetch store details if we're editing and have a valid UUID
+    if (id && id !== "new" && isValidUUID(id)) {
       fetchStoreDetails();
     }
   }, [id]);
   
   const fetchStoreDetails = async () => {
+    if (!id || id === "new" || !isValidUUID(id)) {
+      return;
+    }
+    
     setIsLoading(true);
     try {
       const { data, error } = await supabase
