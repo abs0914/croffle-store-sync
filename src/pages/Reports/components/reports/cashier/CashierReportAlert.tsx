@@ -8,8 +8,15 @@ interface CashierReportAlertProps {
 }
 
 export function CashierReportAlert({ data }: CashierReportAlertProps) {
-  // Determine if we're looking at sample data
-  const isSampleData = !data.cashiers.some(c => c.transactionCount > 0);
+  // Determine if we're looking at sample data by checking for specific sample data patterns
+  const isSampleData = data.cashiers.length > 0 &&
+    data.cashiers.some(c =>
+      c.name.includes('John Smith') ||
+      c.name.includes('Sarah Lee') ||
+      c.name.includes('Miguel Rodriguez') ||
+      c.name.includes('Priya Patel') ||
+      (c.avatar && c.avatar.includes('pravatar.cc'))
+    );
 
   // Only show in development environments
   const isDevelopment = window.location.hostname === 'localhost' ||

@@ -1,12 +1,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ReportType } from "..";
-import { 
-  fetchSalesReport, 
-  fetchInventoryReport, 
-  fetchProfitLossReport, 
+import {
+  fetchSalesReport,
+  fetchInventoryReport,
+  fetchProfitLossReport,
   fetchStockReport,
-  fetchCashierReport 
+  fetchCashierReport
 } from "@/services/reports";
 import { formatCurrency } from "@/utils/format";
 
@@ -23,27 +23,27 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
     queryKey: ['report', reportType, storeId, isAllStores, from, to],
     queryFn: async () => {
       if (!from || !to) return Promise.resolve(null);
-      
+
       console.log(`Fetching ${reportType} report for ${isAllStores ? 'all stores' : `store ${storeId}`} from ${from} to ${to}`);
-      
+
       try {
         let result = null;
         let isSampleData = false;
-        
+
         switch (reportType) {
           case 'sales':
             // Pass isAllStores as the 4th parameter only if the service supports it
             // For now, we'll use a workaround by using 'all' as the storeId when isAllStores is true
             result = await fetchSalesReport(
-              isAllStores ? 'all' : storeId, 
-              from, 
+              isAllStores ? 'all' : storeId,
+              from,
               to
             );
-            
+
             // Check if this is sample data
-            isSampleData = result && result.salesByDate?.length > 0 && 
+            isSampleData = result && result.salesByDate?.length > 0 &&
                           result.salesByDate.every(d => d.amount % 10 === 0);
-            
+
             // Format currency values
             if (result) {
               result.totalSales = parseFloat(result.totalSales);
@@ -61,24 +61,24 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
             break;
           case 'inventory':
             result = await fetchInventoryReport(
-              isAllStores ? 'all' : storeId, 
-              from, 
+              isAllStores ? 'all' : storeId,
+              from,
               to
             );
             // Check for sample data markers
-            isSampleData = result && result.inventoryItems?.length > 0 && 
+            isSampleData = result && result.inventoryItems?.length > 0 &&
                           result.inventoryItems.every(item => item.soldUnits % 5 === 0);
             break;
           case 'profit_loss':
             result = await fetchProfitLossReport(
-              isAllStores ? 'all' : storeId, 
-              from, 
+              isAllStores ? 'all' : storeId,
+              from,
               to
             );
             // Check for sample data markers
             isSampleData = result && result.profitByDate?.length > 0 &&
                           result.profitByDate.every(d => d.profit % 5 === 0);
-            
+
             // Format currency values
             if (result) {
               result.totalRevenue = parseFloat(result.totalRevenue.toString());
@@ -90,8 +90,8 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
             break;
           case 'stock':
             result = await fetchStockReport(
-              isAllStores ? 'all' : storeId, 
-              from, 
+              isAllStores ? 'all' : storeId,
+              from,
               to
             );
             isSampleData = result && result.stockItems?.length > 0 &&
@@ -99,12 +99,18 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
             break;
           case 'cashier':
             result = await fetchCashierReport(
-              isAllStores ? 'all' : storeId, 
-              from, 
+              isAllStores ? 'all' : storeId,
+              from,
               to
             );
-            isSampleData = result && result.cashiers?.length > 0 && 
-                          result.cashiers.every(c => c.transactionCount % 5 === 0);
+            // Check for sample data patterns instead of transaction count patterns
+            isSampleData = result && result.cashiers?.length > 0 &&
+                          result.cashiers.some(c =>
+                            c.name.includes('John Smith') ||
+                            c.name.includes('Sarah Lee') ||
+                            c.name.includes('Miguel Rodriguez') ||
+                            c.name.includes('Priya Patel')
+                          );
             break;
           default:
             result = Promise.resolve(null);
@@ -117,7 +123,7 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
         throw error;
       }
     },
-    enabled: !!storeId && !!from && !!to && 
+    enabled: !!storeId && !!from && !!to &&
             ['sales', 'inventory', 'profit_loss', 'stock', 'cashier'].includes(reportType),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),

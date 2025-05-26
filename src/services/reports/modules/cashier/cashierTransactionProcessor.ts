@@ -14,27 +14,15 @@ export async function processCashierTransactions(transactions: any[], storeId: s
   // Initialize structures for data processing
   const cashierData: Record<string, CashierDataRecord> = {};
   const hourlyData = initializeHourlyData();
-  
+
   // Process all transactions
   for (const tx of transactions) {
     // Handle cashier data
     const userId = tx.user_id as string;
     if (!cashierData[userId]) {
-      // Extract cashier name from the joined cashier data
+      // We'll fetch cashier names separately since we can't join directly
       let cashierName: string | null = null;
-      
-      if (tx.cashier) {
-        // Check if we have a proper cashier object with first_name and last_name
-        if (typeof tx.cashier === 'object' && tx.cashier !== null) {
-          const first = tx.cashier.first_name || '';
-          const last = tx.cashier.last_name || '';
-          
-          if (first || last) {
-            cashierName = `${first} ${last}`.trim();
-          }
-        }
-      }
-      
+
       cashierData[userId] = {
         userId,
         name: cashierName,
@@ -43,45 +31,50 @@ export async function processCashierTransactions(transactions: any[], storeId: s
         transactionTimes: []
       };
     }
-    
+
     cashierData[userId].transactionCount += 1;
     cashierData[userId].totalSales += tx.total || 0;
-    
+
     // We're approximating transaction time as 2-5 minutes based on transaction amount
     const txItems = typeof tx.items === 'string' ? JSON.parse(tx.items) : tx.items;
     const itemCount = txItems?.length || 1;
     const estimatedTime = Math.min(Math.max(itemCount * 0.5, 1), 10); // Between 1-10 minutes
     cashierData[userId].transactionTimes.push(estimatedTime);
-    
+
     // Process hourly data
     const txDate = new Date(tx.created_at);
     const hour = txDate.getHours().toString().padStart(2, '0');
-    
+
     if (hourlyData[hour]) {
       hourlyData[hour].sales += tx.total || 0;
       hourlyData[hour].transactions += 1;
     }
   }
-  
+
   // If no cashier data found in transactions, try to fetch cashiers directly
   let cashierIds = Object.keys(cashierData);
-  
-  // If no cashier data found, create simulated data for demo purposes
+
+  // If no cashier data found, try to fetch app_users with cashier role for this store
   if (cashierIds.length === 0) {
     try {
-      const { data: cashiers } = await supabase
-        .from("cashiers")
-        .select("user_id, first_name, last_name")
-        .eq("store_id", storeId)
+      const { data: appUsers } = await supabase
+        .from("app_users")
+        .select("user_id, first_name, last_name, store_ids")
+        .eq("role", "cashier")
         .eq("is_active", true);
-      
-      if (cashiers && cashiers.length > 0) {
-        cashiers.forEach(c => {
-          const userId = c.user_id;
+
+      if (appUsers && appUsers.length > 0) {
+        // Filter users who have access to this store
+        const storeUsers = appUsers.filter(user =>
+          user.store_ids && user.store_ids.includes(storeId)
+        );
+
+        storeUsers.forEach(user => {
+          const userId = user.user_id;
           if (userId) {
             cashierData[userId] = {
               userId,
-              name: `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown',
+              name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown',
               transactionCount: 0,
               totalSales: 0,
               transactionTimes: []
@@ -90,16 +83,46 @@ export async function processCashierTransactions(transactions: any[], storeId: s
         });
       }
     } catch (error) {
-      console.error("Error fetching cashiers:", error);
+      console.error("Error fetching app_users for cashier data:", error);
     }
   }
-  
+
   // Convert hourly data to array format
   const hourlyDataArray = Object.entries(hourlyData).map(([hour, data]) => ({
     hour: `${hour}:00`,
     sales: data.sales,
     transactions: data.transactions
   })).filter(h => h.transactions > 0 || h.sales > 0);
+
+  // Now fetch cashier names for all user IDs we found
+  const userIds = Object.keys(cashierData);
+  if (userIds.length > 0) {
+    try {
+      console.log('👥 Fetching cashier names for user IDs:', userIds);
+
+      // Fetch from app_users table
+      const { data: appUsers, error: appUsersError } = await supabase
+        .from("app_users")
+        .select("user_id, first_name, last_name")
+        .in("user_id", userIds);
+
+      if (appUsersError) {
+        console.error("Error fetching app_users:", appUsersError);
+      } else if (appUsers) {
+        console.log('👥 Found app_users:', appUsers.length);
+
+        // Update cashier names
+        appUsers.forEach(user => {
+          if (cashierData[user.user_id]) {
+            const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+            cashierData[user.user_id].name = name || 'Unknown';
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching cashier names:", error);
+    }
+  }
 
   return { cashierData, hourlyDataArray };
 }
