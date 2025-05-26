@@ -67,13 +67,24 @@ export async function processCashierTransactions(transactions: any[], storeId: s
 
       if (appUsers && appUsers.length > 0) {
         console.log('👥 Found app_users with cashier role:', appUsers.length);
+        console.log('👥 Sample user store_ids format:', appUsers[0]?.store_ids, typeof appUsers[0]?.store_ids);
 
         // Filter users who have access to this store (or all stores if storeId is "all")
         const storeUsers = storeId === "all"
           ? appUsers
-          : appUsers.filter(user =>
-              user.store_ids && user.store_ids.includes(storeId)
-            );
+          : appUsers.filter(user => {
+              if (!user.store_ids) return false;
+
+              // Handle both array and string formats of store_ids
+              const storeIds = Array.isArray(user.store_ids)
+                ? user.store_ids
+                : (typeof user.store_ids === 'string' ? JSON.parse(user.store_ids) : []);
+
+              const hasAccess = storeIds.includes(storeId);
+              console.log(`👤 User ${user.first_name} ${user.last_name}: store_ids=${JSON.stringify(storeIds)}, hasAccess=${hasAccess}`);
+
+              return hasAccess;
+            });
 
         console.log('👥 Filtered users for store', storeId, ':', storeUsers.length);
 
