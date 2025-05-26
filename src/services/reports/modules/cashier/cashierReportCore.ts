@@ -46,7 +46,7 @@ export async function fetchCashierReport(
     }
 
     console.log('🔍 Executing transaction query for store:', storeId);
-    const { data: transactions, error: txError } = await transactionQuery;
+    let { data: transactions, error: txError } = await transactionQuery;
 
     if (txError) {
       console.error("❌ Transaction fetch error:", txError);
