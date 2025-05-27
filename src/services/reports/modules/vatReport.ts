@@ -1,7 +1,9 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { VATReport } from "@/types/reports";
 import { handleReportError } from "../utils/reportUtils";
 import { createReportResponse, ReportWithDataSource } from "../utils/dataSourceUtils";
+import { format } from "date-fns";
 
 // VAT Report
 export async function fetchVATReport(

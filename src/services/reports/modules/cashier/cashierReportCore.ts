@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CashierReport } from "@/types/reports";
 import { handleReportError } from "../../utils/reportUtils";
@@ -59,6 +60,26 @@ export async function fetchCashierReport(
       throw txError;
     }
 
+    // Build shifts query with improved date filtering
+    let shiftsQuery = supabase
+      .from("shifts")
+      .select("*")
+      .gte("start_time", startDate)
+      .lte("start_time", endDate);
+
+    // Only filter by store_id if not "all"
+    if (storeId !== "all") {
+      shiftsQuery = shiftsQuery.eq("store_id", storeId);
+    }
+
+    console.log('🔍 Executing shifts query for store:', storeId);
+    const { data: shifts, error: shiftsError } = await shiftsQuery;
+
+    if (shiftsError) {
+      console.error("❌ Shifts fetch error:", shiftsError);
+      throw shiftsError;
+    }
+
     // If no data found, try alternative date queries for debugging
     if ((!transactions || transactions.length === 0) && (!shifts || shifts.length === 0)) {
       console.warn("🔍 No data found with standard query, trying alternative date formats...");
@@ -111,26 +132,6 @@ export async function fetchCashierReport(
           recordCount: 0
         });
       }
-    }
-
-    // Build shifts query with improved date filtering
-    let shiftsQuery = supabase
-      .from("shifts")
-      .select("*")
-      .gte("start_time", startDate)
-      .lte("start_time", endDate);
-
-    // Only filter by store_id if not "all"
-    if (storeId !== "all") {
-      shiftsQuery = shiftsQuery.eq("store_id", storeId);
-    }
-
-    console.log('🔍 Executing shifts query for store:', storeId);
-    const { data: shifts, error: shiftsError } = await shiftsQuery;
-
-    if (shiftsError) {
-      console.error("❌ Shifts fetch error:", shiftsError);
-      throw shiftsError;
     }
 
     // Process the transaction data

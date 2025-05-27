@@ -36,40 +36,35 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
             result = await fetchSalesReport(
               isAllStores ? 'all' : storeId,
               from,
-              to,
-              useSampleData
+              to
             );
             break;
           case 'inventory':
             result = await fetchInventoryReport(
               isAllStores ? 'all' : storeId,
               from,
-              to,
-              useSampleData
+              to
             );
             break;
           case 'profit_loss':
             result = await fetchProfitLossReport(
               isAllStores ? 'all' : storeId,
               from,
-              to,
-              useSampleData
+              to
             );
             break;
           case 'stock':
             result = await fetchStockReport(
               isAllStores ? 'all' : storeId,
               from,
-              to,
-              useSampleData
+              to
             );
             break;
           case 'cashier':
             result = await fetchCashierReport(
               isAllStores ? 'all' : storeId,
               from,
-              to,
-              useSampleData
+              to
             );
             break;
           default:
