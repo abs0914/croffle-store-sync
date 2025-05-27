@@ -27,6 +27,17 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   const from = dateRange.from?.toISOString().split('T')[0];
   const to = dateRange.to?.toISOString().split('T')[0];
 
+  // Log report parameters for debugging
+  useEffect(() => {
+    console.log('📊 ReportContent props:', {
+      reportType,
+      storeId: storeId.slice(0, 8),
+      selectedStoreId: selectedStoreId === 'all' ? 'ALL_STORES' : selectedStoreId.slice(0, 8),
+      isAllStores: selectedStoreId === 'all',
+      dateRange: { from, to }
+    });
+  }, [reportType, storeId, selectedStoreId, from, to]);
+
   // Fetch data based on report type
   const { data, dataSource, generatedAt, debugInfo, isLoading, error, refetch } = useReportData({
     reportType,
@@ -82,7 +93,10 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
             <div>
               <p className="font-medium text-lg">No data available</p>
               <p className="text-muted-foreground text-sm mt-2">
-                Try adjusting your date range or selected report
+                No {reportType} data found for {selectedStoreId === 'all' ? 'all stores' : 'the selected store'} in the date range {from} to {to}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Try adjusting your date range or selected store
               </p>
             </div>
           </div>

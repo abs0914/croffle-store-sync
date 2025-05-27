@@ -54,6 +54,7 @@ export function StoreSelector({
             .order('name');
             
           if (!error && data) {
+            console.log('🏪 Available stores for admin:', data.map(s => ({ id: s.id.slice(0, 8), name: s.name })));
             setAvailableStores(data);
           }
         } catch (error) {
@@ -61,6 +62,7 @@ export function StoreSelector({
         }
       } else {
         // Non-admin users only see their assigned stores
+        console.log('🏪 Available stores for user:', stores.map(s => ({ id: s.id.slice(0, 8), name: s.name })));
         setAvailableStores(stores);
       }
     };
@@ -78,6 +80,15 @@ export function StoreSelector({
     
     const store = availableStores.find(s => s.id === selectedStoreId);
     return store ? store.name : "Select Store";
+  };
+
+  const handleStoreSelect = (storeId: string) => {
+    console.log('🎯 Store selected:', { 
+      storeId: storeId === 'all' ? 'ALL_STORES' : storeId.slice(0, 8), 
+      storeName: storeId === 'all' ? 'All Stores' : availableStores.find(s => s.id === storeId)?.name 
+    });
+    onSelectStore(storeId);
+    setOpen(false);
   };
 
   return (
@@ -105,10 +116,7 @@ export function StoreSelector({
               {isAdmin && (
                 <CommandItem
                   key="all-stores"
-                  onSelect={() => {
-                    onSelectStore("all");
-                    setOpen(false);
-                  }}
+                  onSelect={() => handleStoreSelect("all")}
                   className="text-sm"
                 >
                   <div className="flex items-center gap-2 w-full">
@@ -124,15 +132,15 @@ export function StoreSelector({
               {availableStores.map((store) => (
                 <CommandItem
                   key={store.id}
-                  onSelect={() => {
-                    onSelectStore(store.id);
-                    setOpen(false);
-                  }}
+                  onSelect={() => handleStoreSelect(store.id)}
                   className="text-sm"
                 >
                   <div className="flex items-center gap-2 w-full">
                     <Store className="h-4 w-4" />
                     <span>{store.name}</span>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {store.id.slice(0, 8)}
+                    </span>
                   </div>
                   {selectedStoreId === store.id && (
                     <Check className="ml-auto h-4 w-4" />

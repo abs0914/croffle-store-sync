@@ -35,6 +35,10 @@ export default function Reports() {
   // Set initial store selection
   useEffect(() => {
     if (currentStore && !selectedStoreId) {
+      console.log('🏪 Setting initial store selection:', { 
+        storeId: currentStore.id.slice(0, 8), 
+        storeName: currentStore.name 
+      });
       setSelectedStoreId(currentStore.id);
     }
   }, [currentStore, selectedStoreId]);
@@ -42,6 +46,14 @@ export default function Reports() {
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(prev => !prev);
   }, []);
+
+  const handleStoreSelection = (storeId: string) => {
+    console.log('📊 Reports: Store selection changed:', { 
+      previousStoreId: selectedStoreId === 'all' ? 'ALL_STORES' : selectedStoreId.slice(0, 8),
+      newStoreId: storeId === 'all' ? 'ALL_STORES' : storeId.slice(0, 8)
+    });
+    setSelectedStoreId(storeId);
+  };
 
   // Handle store loading state
   if (storeLoading) {
@@ -123,7 +135,7 @@ export default function Reports() {
                   </h3>
                   <StoreSelector
                     selectedStoreId={selectedStoreId}
-                    onSelectStore={setSelectedStoreId}
+                    onSelectStore={handleStoreSelection}
                   />
                 </div>
               )}
