@@ -10,27 +10,77 @@ export async function fetchSalesReport(
   to: string
 ): Promise<SalesReport | null> {
   try {
-    // Fetch transactions within the date range
-    const { data: transactions, error } = await supabase
+    console.log('🔍 Fetching sales report:', { storeId, from, to });
+
+    // Build the query with proper date handling
+    let transactionQuery = supabase
       .from("transactions")
       .select("*")
-      .eq("store_id", storeId)
       .eq("status", "completed")
-      .gte("created_at", `${from}T00:00:00`)
-      .lte("created_at", `${to}T23:59:59`)
       .order("created_at");
+
+    // Add store filter if not "all"
+    if (storeId !== "all") {
+      transactionQuery = transactionQuery.eq("store_id", storeId);
+    }
+
+    // Use improved date range handling
+    if (from === to) {
+      // Single date query
+      transactionQuery = transactionQuery
+        .gte("created_at", `${from}T00:00:00`)
+        .lt("created_at", `${from}T23:59:59`);
+    } else {
+      // Date range query
+      transactionQuery = transactionQuery
+        .gte("created_at", `${from}T00:00:00`)
+        .lte("created_at", `${to}T23:59:59`);
+    }
+
+    console.log('🔍 Executing sales transaction query...');
+    let { data: transactions, error } = await transactionQuery;
 
     if (error) {
       throw error;
     }
 
+    console.log(`📈 Sales query found ${transactions?.length || 0} transactions`);
+
+    // If no transactions found, try alternative approach
     if (!transactions || transactions.length === 0) {
+      console.warn("🔍 No sales data found with primary query, trying alternative...");
+      
+      const altQuery = supabase
+        .from("transactions")
+        .select("*")
+        .eq("status", "completed")
+        .order("created_at");
+
+      if (storeId !== "all") {
+        altQuery.eq("store_id", storeId);
+      }
+
+      const { data: altTransactions } = await altQuery
+        .gte("created_at", `${from}T00:00:00+00:00`)
+        .lte("created_at", `${from}T23:59:59+00:00`);
+      
+      console.log(`🔄 Alternative sales query found ${altTransactions?.length || 0} transactions`);
+      
+      if (altTransactions && altTransactions.length > 0) {
+        transactions = altTransactions;
+      }
+    }
+
+    if (!transactions || transactions.length === 0) {
+      console.info("ℹ️ No sales data found for the selected period");
       return null;
     }
 
     // Calculate total sales and transactions
     const totalSales = transactions.reduce((sum, tx) => sum + tx.total, 0);
     const totalTransactions = transactions.length;
+
+    console.log(`💰 Sales summary: ${totalTransactions} transactions, ₱${totalSales.toFixed(2)} total`);
 
     // Calculate sales by date
     const dateRange = eachDayOfInterval({
