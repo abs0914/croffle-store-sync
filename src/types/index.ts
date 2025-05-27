@@ -7,6 +7,7 @@ export type { Shift as ShiftType } from './shift';
 export * from './transaction';
 export * from './inventory';
 export * from './recipe';
+export * from './reports';
 
 // Common Supabase query result type to help with TypeScript inference
 export interface SupabaseQueryResult<T> {
