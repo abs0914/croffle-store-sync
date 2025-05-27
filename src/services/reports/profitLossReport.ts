@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProfitLossReport } from "@/types/reports";
 import { toast } from "sonner";
 import { format, eachDayOfInterval, parseISO } from "date-fns";
+import { fetchTransactionsWithFallback, logTransactionDetails } from "./utils/transactionQueryUtils";
 
 export async function fetchProfitLossReport(
   storeId: string,
@@ -10,21 +11,36 @@ export async function fetchProfitLossReport(
   to: string
 ): Promise<ProfitLossReport | null> {
   try {
-    // Fetch transactions within the date range
-    const { data: transactions, error } = await supabase
-      .from("transactions")
-      .select("*")
-      .eq("store_id", storeId)
-      .eq("status", "completed")
-      .gte("created_at", `${from}T00:00:00`)
-      .lte("created_at", `${to}T23:59:59`)
-      .order("created_at");
+    console.log('🔍 Fetching profit & loss report:', { storeId, from, to });
+
+    // Use unified transaction query
+    const queryResult = await fetchTransactionsWithFallback({
+      storeId,
+      from,
+      to,
+      status: "completed",
+      orderBy: "created_at",
+      ascending: true
+    });
+
+    const { data: transactions, error, queryAttempts, recordCount } = queryResult;
 
     if (error) {
+      console.error("❌ Profit & Loss report query error:", error);
       throw error;
     }
 
+    console.log(`📊 P&L query summary:`, {
+      recordCount,
+      queryAttempts: queryAttempts.length,
+      storeFilter: storeId !== "all" ? storeId.slice(0, 8) : "ALL_STORES"
+    });
+
+    // Log transaction details for debugging
+    logTransactionDetails(transactions || [], "Profit & Loss Report");
+
     if (!transactions || transactions.length === 0) {
+      console.info("ℹ️ No profit & loss data found for the selected period");
       return null;
     }
 
@@ -35,6 +51,7 @@ export async function fetchProfitLossReport(
       .eq("store_id", storeId);
 
     if (productsError) {
+      console.error("❌ Error fetching products:", productsError);
       throw productsError;
     }
 
@@ -43,6 +60,8 @@ export async function fetchProfitLossReport(
     products?.forEach(product => {
       productCostMap[product.id] = product.cost || 0;
     });
+
+    console.log(`📦 Loaded ${Object.keys(productCostMap).length} product cost mappings`);
 
     // Calculate revenue, cost, and profit for each product
     const productProfitability: Record<string, {
@@ -93,6 +112,8 @@ export async function fetchProfitLossReport(
         : 0;
     });
 
+    console.log(`💰 P&L totals: Revenue ₱${totalRevenue.toFixed(2)}, Cost ₱${totalCost.toFixed(2)}, Gross Profit ₱${(totalRevenue - totalCost).toFixed(2)}`);
+
     // Calculate daily profit and loss
     const dateRange = eachDayOfInterval({
       start: parseISO(from),
@@ -117,6 +138,8 @@ export async function fetchProfitLossReport(
         });
       });
       
+      console.log(`📅 ${dateStr}: Revenue ₱${dailyRevenue.toFixed(2)}, Cost ₱${dailyCost.toFixed(2)}, Profit ₱${(dailyRevenue - dailyCost).toFixed(2)}`);
+      
       return {
         date: format(date, "MMM dd"),
         revenue: dailyRevenue,
@@ -130,6 +153,8 @@ export async function fetchProfitLossReport(
     const grossProfit = totalRevenue - totalCost;
     const netProfit = grossProfit - expenses;
 
+    console.log(`📈 Final P&L: Gross Profit ₱${grossProfit.toFixed(2)}, Net Profit ₱${netProfit.toFixed(2)}`);
+
     return {
       totalRevenue,
       costOfGoods: totalCost,
@@ -142,7 +167,7 @@ export async function fetchProfitLossReport(
         .slice(0, 10)
     };
   } catch (error) {
-    console.error("Error fetching profit/loss report:", error);
+    console.error("❌ Error fetching profit/loss report:", error);
     toast.error("Failed to load profit and loss report");
     return null;
   }

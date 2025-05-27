@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SalesReport } from "@/types/reports";
 import { toast } from "sonner";
 import { format, eachDayOfInterval, parseISO } from "date-fns";
+import { fetchTransactionsWithFallback, logTransactionDetails } from "./utils/transactionQueryUtils";
 
 export async function fetchSalesReport(
   storeId: string,
@@ -12,64 +13,31 @@ export async function fetchSalesReport(
   try {
     console.log('🔍 Fetching sales report:', { storeId, from, to });
 
-    // Build the query with proper date handling
-    let transactionQuery = supabase
-      .from("transactions")
-      .select("*")
-      .eq("status", "completed")
-      .order("created_at");
+    // Use unified transaction query
+    const queryResult = await fetchTransactionsWithFallback({
+      storeId,
+      from,
+      to,
+      status: "completed",
+      orderBy: "created_at",
+      ascending: true
+    });
 
-    // Add store filter if not "all"
-    if (storeId !== "all") {
-      transactionQuery = transactionQuery.eq("store_id", storeId);
-    }
-
-    // Use improved date range handling
-    if (from === to) {
-      // Single date query
-      transactionQuery = transactionQuery
-        .gte("created_at", `${from}T00:00:00`)
-        .lt("created_at", `${from}T23:59:59`);
-    } else {
-      // Date range query
-      transactionQuery = transactionQuery
-        .gte("created_at", `${from}T00:00:00`)
-        .lte("created_at", `${to}T23:59:59`);
-    }
-
-    console.log('🔍 Executing sales transaction query...');
-    let { data: transactions, error } = await transactionQuery;
+    const { data: transactions, error, queryAttempts, recordCount } = queryResult;
 
     if (error) {
+      console.error("❌ Sales report query error:", error);
       throw error;
     }
 
-    console.log(`📈 Sales query found ${transactions?.length || 0} transactions`);
+    console.log(`📈 Sales query summary:`, {
+      recordCount,
+      queryAttempts: queryAttempts.length,
+      storeFilter: storeId !== "all" ? storeId.slice(0, 8) : "ALL_STORES"
+    });
 
-    // If no transactions found, try alternative approach
-    if (!transactions || transactions.length === 0) {
-      console.warn("🔍 No sales data found with primary query, trying alternative...");
-      
-      const altQuery = supabase
-        .from("transactions")
-        .select("*")
-        .eq("status", "completed")
-        .order("created_at");
-
-      if (storeId !== "all") {
-        altQuery.eq("store_id", storeId);
-      }
-
-      const { data: altTransactions } = await altQuery
-        .gte("created_at", `${from}T00:00:00+00:00`)
-        .lte("created_at", `${from}T23:59:59+00:00`);
-      
-      console.log(`🔄 Alternative sales query found ${altTransactions?.length || 0} transactions`);
-      
-      if (altTransactions && altTransactions.length > 0) {
-        transactions = altTransactions;
-      }
-    }
+    // Log transaction details for debugging
+    logTransactionDetails(transactions || [], "Sales Report");
 
     if (!transactions || transactions.length === 0) {
       console.info("ℹ️ No sales data found for the selected period");
@@ -94,9 +62,13 @@ export async function fetchSalesReport(
         tx.created_at.startsWith(dateStr)
       );
       
+      const dailyAmount = dailyTransactions.reduce((sum, tx) => sum + tx.total, 0);
+      
+      console.log(`📅 ${dateStr}: ${dailyTransactions.length} transactions, ₱${dailyAmount.toFixed(2)}`);
+      
       return {
         date: format(date, "MMM dd"),
-        amount: dailyTransactions.reduce((sum, tx) => sum + tx.total, 0),
+        amount: dailyAmount,
         transactions: dailyTransactions.length
       };
     });
@@ -130,6 +102,8 @@ export async function fetchSalesReport(
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
 
+    console.log('🏆 Top products:', topProducts.map(p => `${p.name}: ₱${p.revenue.toFixed(2)}`));
+
     // Calculate payment method breakdown
     const paymentMethods: Record<string, number> = {
       'cash': 0,
@@ -152,6 +126,10 @@ export async function fetchSalesReport(
         percentage: (amount / totalSales) * 100
       }));
 
+    console.log('💳 Payment methods:', paymentMethodsArray.map(pm => 
+      `${pm.method}: ₱${pm.amount.toFixed(2)} (${pm.percentage.toFixed(1)}%)`
+    ));
+
     return {
       totalSales,
       totalTransactions,
@@ -160,7 +138,7 @@ export async function fetchSalesReport(
       paymentMethods: paymentMethodsArray
     };
   } catch (error) {
-    console.error("Error fetching sales report:", error);
+    console.error("❌ Error fetching sales report:", error);
     toast.error("Failed to load sales report");
     return null;
   }
