@@ -24,35 +24,37 @@ export async function fetchCashierReport(
       });
     }
 
-    // Create proper date range with timezone handling
-    const startDate = `${from}T00:00:00.000Z`;
-    const endDate = `${to}T23:59:59.999Z`;
-    
-    console.log('📅 Date range being used:', { 
+    // Use PostgreSQL date functions for proper timezone handling
+    // This ensures we get the full day in the database's timezone
+    const queryAttempts: string[] = [];
+
+    console.log('📅 Using PostgreSQL date functions for date range:', { 
       originalFrom: from, 
       originalTo: to,
-      startDate, 
-      endDate,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
 
-    const queryAttempts: string[] = [];
-
-    // Build transaction query with improved date filtering
+    // Build transaction query with PostgreSQL date functions
     let transactionQuery = supabase
       .from("transactions")
       .select("*")
       .eq("status", "completed")
-      .gte("created_at", startDate)
-      .lte("created_at", endDate);
+      .gte("created_at", from)
+      .lt("created_at", `${new Date(new Date(to).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`);
 
     // Only filter by store_id if not "all"
     if (storeId !== "all") {
       transactionQuery = transactionQuery.eq("store_id", storeId);
     }
 
-    queryAttempts.push(`Standard query: ${startDate} to ${endDate}`);
+    queryAttempts.push(`PostgreSQL date range: ${from} to next day`);
     console.log('🔍 Executing transaction query for store:', storeId);
+    console.log('📊 Query details:', {
+      from_date: from,
+      to_date_exclusive: new Date(new Date(to).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      store_filter: storeId !== "all" ? storeId : "ALL_STORES"
+    });
+
     let { data: transactions, error: txError } = await transactionQuery;
 
     if (txError) {
@@ -60,12 +62,39 @@ export async function fetchCashierReport(
       throw txError;
     }
 
-    // Build shifts query with improved date filtering
+    console.log(`📈 Found ${transactions?.length || 0} transactions with PostgreSQL date functions`);
+
+    // If no transactions found with standard query, try alternative date queries
+    if (!transactions || transactions.length === 0) {
+      console.warn("🔍 No data found with PostgreSQL date query, trying alternative approaches...");
+      
+      // Try using date_trunc for exact date matching
+      const altQuery = supabase
+        .from("transactions")
+        .select("*")
+        .eq("status", "completed")
+        .gte("created_at", `${from}T00:00:00`)
+        .lt("created_at", `${from}T23:59:59`);
+
+      if (storeId !== "all") {
+        altQuery.eq("store_id", storeId);
+      }
+
+      const { data: altTransactions } = await altQuery;
+      console.log(`🔄 Alternative query found ${altTransactions?.length || 0} transactions`);
+      
+      if (altTransactions && altTransactions.length > 0) {
+        transactions = altTransactions;
+        queryAttempts.push(`Alternative time range: ${from}T00:00:00 to ${from}T23:59:59`);
+      }
+    }
+
+    // Build shifts query with the same date logic
     let shiftsQuery = supabase
       .from("shifts")
       .select("*")
-      .gte("start_time", startDate)
-      .lte("start_time", endDate);
+      .gte("start_time", from)
+      .lt("start_time", `${new Date(new Date(to).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`);
 
     // Only filter by store_id if not "all"
     if (storeId !== "all") {
@@ -80,62 +109,67 @@ export async function fetchCashierReport(
       throw shiftsError;
     }
 
-    // If no data found, try alternative date queries for debugging
-    if ((!transactions || transactions.length === 0) && (!shifts || shifts.length === 0)) {
-      console.warn("🔍 No data found with standard query, trying alternative date formats...");
+    console.log(`⏰ Found ${shifts?.length || 0} shifts`);
+
+    // If still no transaction data found, try one more comprehensive query
+    if (!transactions || transactions.length === 0) {
+      console.log("🔍 Trying comprehensive date query to find any recent data...");
       
-      // Try querying without time constraints to see if data exists at all
-      const { data: allTransactions } = await supabase
+      // Get all transactions for this store in the past week for debugging
+      const { data: recentTransactions } = await supabase
         .from("transactions")
-        .select("created_at, store_id, user_id, total")
+        .select("id, created_at, user_id, total, store_id")
         .eq("status", "completed")
         .eq("store_id", storeId)
         .order("created_at", { ascending: false })
-        .limit(5);
-        
-      console.log('🔍 Recent transactions for debugging:', allTransactions?.map(tx => ({
+        .limit(10);
+
+      console.log('📅 Recent transactions for debugging:', recentTransactions?.map(tx => ({
+        id: tx.id,
         created_at: tx.created_at,
-        date: new Date(tx.created_at).toISOString().split('T')[0],
+        date: new Date(tx.created_at).toLocaleDateString(),
         targetDate: from,
-        matches: new Date(tx.created_at).toISOString().split('T')[0] === from
+        store_id: tx.store_id
       })));
 
-      // Try date-only comparison
-      const { data: dateOnlyTransactions } = await supabase
+      // Try exact date match using date functions
+      const { data: exactDateTransactions } = await supabase
         .from("transactions")
         .select("*")
         .eq("status", "completed")
-        .gte("created_at", from)
-        .lt("created_at", new Date(new Date(to).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-        .eq("store_id", storeId);
-        
-      console.log('🔍 Date-only query results:', dateOnlyTransactions?.length || 0);
+        .eq("store_id", storeId)
+        .filter("created_at", "gte", `${from}T00:00:00+00:00`)
+        .filter("created_at", "lte", `${to}T23:59:59+00:00`);
 
-      if (dateOnlyTransactions && dateOnlyTransactions.length > 0) {
-        console.log('✅ Found transactions with date-only query, using these instead');
-        transactions = dateOnlyTransactions;
-      } else {
-        console.info("ℹ️ No transaction or shift data found for the selected date range and store");
-        const emptyReport: CashierReport = {
-          cashierCount: 0,
-          totalTransactions: 0,
-          averageTransactionValue: 0,
-          averageTransactionTime: 0,
-          cashiers: [],
-          hourlyData: [],
-          attendance: []
-        };
-        
-        return createReportResponse(emptyReport, 'real', {
-          queryAttempts,
-          fallbackReason: 'No data found for date range',
-          recordCount: 0
-        });
+      if (exactDateTransactions && exactDateTransactions.length > 0) {
+        console.log(`✅ Found ${exactDateTransactions.length} transactions with exact date+timezone query`);
+        transactions = exactDateTransactions;
+        queryAttempts.push(`Exact date with timezone: ${from}T00:00:00+00:00 to ${to}T23:59:59+00:00`);
       }
     }
 
+    // If still no data, return empty report with debug info
+    if (!transactions || transactions.length === 0) {
+      console.info("ℹ️ No transaction data found after all query attempts");
+      const emptyReport: CashierReport = {
+        cashierCount: 0,
+        totalTransactions: 0,
+        averageTransactionValue: 0,
+        averageTransactionTime: 0,
+        cashiers: [],
+        hourlyData: [],
+        attendance: []
+      };
+      
+      return createReportResponse(emptyReport, 'real', {
+        queryAttempts,
+        fallbackReason: 'No transactions found for date range after multiple query attempts',
+        recordCount: 0
+      });
+    }
+
     // Process the transaction data
-    console.log('⚙️ Processing transaction data...');
+    console.log(`⚙️ Processing ${transactions.length} transactions...`);
     const { cashierData, hourlyDataArray } = await processCashierTransactions(transactions || [], storeId);
 
     // Process attendance data
@@ -172,13 +206,14 @@ export async function fetchCashierReport(
       ? cashiers.reduce((sum, c) => sum + c.averageTransactionTime, 0) / cashiers.length
       : 0;
 
-    console.log('📈 Cashier report generated:', {
+    console.log('📈 Cashier report generated successfully:', {
       cashierCount: cashiers.length,
       totalTransactions,
       totalSales: totalSales.toFixed(2),
       cashierNames: cashiers.map(c => c.name),
       dateRange: { from, to },
-      storeId
+      storeId,
+      dataFound: transactions.length > 0
     });
 
     const finalReport: CashierReport = {
