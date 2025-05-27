@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 interface CashierData {
+  userId: string;
   name: string;
   transactionCount: number;
   totalSales: number;
@@ -62,6 +63,7 @@ export async function processCashierTransactions(
     // Initialize cashier data if not exists
     if (!cashierData[userId]) {
       cashierData[userId] = {
+        userId: userId, // Add the missing userId property
         name: cashierName,
         transactionCount: 0,
         totalSales: 0,
