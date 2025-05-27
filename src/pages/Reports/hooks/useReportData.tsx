@@ -8,8 +8,7 @@ import {
   fetchStockReport,
   fetchCashierReport
 } from "@/services/reports";
-import { formatCurrency } from "@/utils/format";
-import { testCashierDateQueries } from "@/services/reports/modules/cashier/cashierDateUtils";
+import { ReportWithDataSource } from "@/services/reports/utils/dataSourceUtils";
 
 interface UseReportDataProps {
   reportType: ReportType;
@@ -17,127 +16,68 @@ interface UseReportDataProps {
   isAllStores?: boolean;
   from?: string;
   to?: string;
+  useSampleData?: boolean;
 }
 
-export function useReportData({ reportType, storeId, isAllStores = false, from, to }: UseReportDataProps) {
+export function useReportData({ reportType, storeId, isAllStores = false, from, to, useSampleData = false }: UseReportDataProps) {
   const queryResult = useQuery({
-    queryKey: ['report', reportType, storeId, isAllStores, from, to],
+    queryKey: ['report', reportType, storeId, isAllStores, from, to, useSampleData],
     queryFn: async () => {
       if (!from || !to) return Promise.resolve(null);
 
       console.log(`🔄 Fetching ${reportType} report for ${isAllStores ? 'all stores' : `store ${storeId}`} from ${from} to ${to}`);
-      console.log('📊 Query parameters:', { reportType, storeId, isAllStores, from, to });
+      console.log('📊 Query parameters:', { reportType, storeId, isAllStores, from, to, useSampleData });
 
       try {
-        let result = null;
-        let isSampleData = false;
+        let result: ReportWithDataSource<any> | any = null;
 
         switch (reportType) {
           case 'sales':
-            // Pass isAllStores as the 4th parameter only if the service supports it
-            // For now, we'll use a workaround by using 'all' as the storeId when isAllStores is true
             result = await fetchSalesReport(
               isAllStores ? 'all' : storeId,
               from,
-              to
+              to,
+              useSampleData
             );
-
-            // Check if this is sample data
-            isSampleData = result && result.salesByDate?.length > 0 &&
-                          result.salesByDate.every(d => d.amount % 10 === 0);
-
-            // Format currency values
-            if (result) {
-              result.totalSales = parseFloat(result.totalSales);
-              if (result.topProducts) {
-                result.topProducts.forEach(product => {
-                  product.revenue = parseFloat(product.revenue.toString());
-                });
-              }
-              if (result.paymentMethods) {
-                result.paymentMethods.forEach(method => {
-                  method.amount = parseFloat(method.amount.toString());
-                });
-              }
-            }
             break;
           case 'inventory':
             result = await fetchInventoryReport(
               isAllStores ? 'all' : storeId,
               from,
-              to
+              to,
+              useSampleData
             );
-            // Check for sample data markers
-            isSampleData = result && result.inventoryItems?.length > 0 &&
-                          result.inventoryItems.every(item => item.soldUnits % 5 === 0);
             break;
           case 'profit_loss':
             result = await fetchProfitLossReport(
               isAllStores ? 'all' : storeId,
               from,
-              to
+              to,
+              useSampleData
             );
-            // Check for sample data markers
-            isSampleData = result && result.profitByDate?.length > 0 &&
-                          result.profitByDate.every(d => d.profit % 5 === 0);
-
-            // Format currency values
-            if (result) {
-              result.totalRevenue = parseFloat(result.totalRevenue.toString());
-              result.costOfGoods = parseFloat(result.costOfGoods.toString());
-              result.grossProfit = parseFloat(result.grossProfit.toString());
-              result.expenses = parseFloat(result.expenses.toString());
-              result.netProfit = parseFloat(result.netProfit.toString());
-            }
             break;
           case 'stock':
             result = await fetchStockReport(
               isAllStores ? 'all' : storeId,
               from,
-              to
+              to,
+              useSampleData
             );
-            isSampleData = result && result.stockItems?.length > 0 &&
-                          result.stockItems.every(item => item.initialStock % 10 === 0);
             break;
           case 'cashier':
-            // Run date debugging for cashier reports if no data is found initially
-            if (from === to && !isAllStores) {
-              console.log('🧪 Running cashier date query tests...');
-              await testCashierDateQueries(storeId, from);
-            }
-
             result = await fetchCashierReport(
               isAllStores ? 'all' : storeId,
               from,
-              to
+              to,
+              useSampleData
             );
-
-            // Log the cashier result for debugging
-            console.log('👥 Cashier report result:', {
-              cashierCount: result?.cashierCount || 0,
-              totalTransactions: result?.totalTransactions || 0,
-              cashierNames: result?.cashiers?.map(c => c.name) || [],
-              storeId: isAllStores ? 'all' : storeId,
-              dateRange: { from, to }
-            });
-
-            // Check for sample data patterns - only detect as sample if it contains ALL sample characteristics
-            isSampleData = result && result.cashiers?.length > 0 &&
-                          result.cashiers.length === 4 && // Exact sample count
-                          result.cashiers.every(c => c.avatar && c.avatar.includes('pravatar.cc')) &&
-                          result.cashiers.some(c => c.name === 'John Smith') &&
-                          result.cashiers.some(c => c.name === 'Sarah Lee') &&
-                          result.cashiers.some(c => c.name === 'Miguel Rodriguez') &&
-                          result.cashiers.some(c => c.name === 'Priya Patel');
-
-            console.log('🔍 Sample data detection result:', isSampleData);
             break;
           default:
             result = Promise.resolve(null);
             break;
         }
 
-        return { data: result, isSampleData };
+        return result;
       } catch (error) {
         console.error(`Error fetching ${reportType} report:`, error);
         throw error;
@@ -150,11 +90,20 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
     refetchOnWindowFocus: false
   });
 
+  // Handle both old and new response formats
+  const responseData = queryResult.data;
+  const reportData = responseData?.data || responseData;
+  const dataSource = responseData?.dataSource || 'real';
+  const generatedAt = responseData?.generatedAt;
+  const debugInfo = responseData?.debugInfo;
+
   return {
-    data: queryResult.data?.data || null,
+    data: reportData,
+    dataSource,
+    generatedAt,
+    debugInfo,
     isLoading: queryResult.isLoading,
     error: queryResult.error,
-    isSampleData: queryResult.data?.isSampleData || false,
     refetch: () => {
       console.log("Manually refetching report data...");
       return queryResult.refetch();

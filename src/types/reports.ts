@@ -234,3 +234,20 @@ export interface StockReport {
     outOfStockItems: number;
   }>;
 }
+
+// Add data source metadata to all reports
+export interface ReportMetadata {
+  dataSource: 'real' | 'sample' | 'mixed';
+  generatedAt: string;
+  debugInfo?: {
+    queryAttempts?: string[];
+    fallbackReason?: string;
+    recordCount?: number;
+  };
+}
+
+// Enhanced report response wrapper
+export interface EnhancedReportResponse<T> {
+  data: T;
+  metadata: ReportMetadata;
+}

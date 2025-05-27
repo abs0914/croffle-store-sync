@@ -1,23 +1,26 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CashierReport } from "@/types/reports";
 import { handleReportError } from "../../utils/reportUtils";
 import { processCashierTransactions } from "./cashierTransactionProcessor";
 import { processAttendanceData } from "./cashierAttendanceProcessor";
 import { createSampleCashierReport } from "../cashierReportUtils";
+import { createReportResponse, ReportWithDataSource } from "../../utils/dataSourceUtils";
 
 export async function fetchCashierReport(
   storeId: string,
   from: string,
   to: string,
   useSampleData = false
-): Promise<CashierReport | null> {
+): Promise<ReportWithDataSource<CashierReport> | null> {
   try {
     console.log('🔍 Fetching cashier report:', { storeId, from, to, useSampleData });
 
     if (useSampleData) {
       console.log('📊 Using sample data as requested');
-      return createSampleCashierReport();
+      const sampleData = createSampleCashierReport();
+      return createReportResponse(sampleData, 'sample', {
+        fallbackReason: 'Explicitly requested sample data'
+      });
     }
 
     // Create proper date range with timezone handling
@@ -32,6 +35,8 @@ export async function fetchCashierReport(
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
 
+    const queryAttempts: string[] = [];
+
     // Build transaction query with improved date filtering
     let transactionQuery = supabase
       .from("transactions")
@@ -45,6 +50,7 @@ export async function fetchCashierReport(
       transactionQuery = transactionQuery.eq("store_id", storeId);
     }
 
+    queryAttempts.push(`Standard query: ${startDate} to ${endDate}`);
     console.log('🔍 Executing transaction query for store:', storeId);
     let { data: transactions, error: txError } = await transactionQuery;
 
@@ -52,50 +58,6 @@ export async function fetchCashierReport(
       console.error("❌ Transaction fetch error:", txError);
       throw txError;
     }
-
-    console.log('💳 Transactions fetched:', {
-      count: transactions?.length || 0,
-      storeId,
-      sampleTransactions: transactions?.slice(0, 3).map(tx => ({
-        id: tx.id,
-        user_id: tx.user_id,
-        total: tx.total,
-        created_at: tx.created_at,
-        store_id: tx.store_id
-      }))
-    });
-
-    // Build shifts query with improved date filtering
-    let shiftsQuery = supabase
-      .from("shifts")
-      .select("*")
-      .gte("start_time", startDate)
-      .lte("start_time", endDate);
-
-    // Only filter by store_id if not "all"
-    if (storeId !== "all") {
-      shiftsQuery = shiftsQuery.eq("store_id", storeId);
-    }
-
-    console.log('🔍 Executing shifts query for store:', storeId);
-    const { data: shifts, error: shiftsError } = await shiftsQuery;
-
-    if (shiftsError) {
-      console.error("❌ Shifts fetch error:", shiftsError);
-      throw shiftsError;
-    }
-
-    console.log('⏰ Shifts fetched:', {
-      count: shifts?.length || 0,
-      storeId,
-      sampleShifts: shifts?.slice(0, 3).map(shift => ({
-        id: shift.id,
-        user_id: shift.user_id,
-        start_time: shift.start_time,
-        end_time: shift.end_time,
-        store_id: shift.store_id
-      }))
-    });
 
     // If no data found, try alternative date queries for debugging
     if ((!transactions || transactions.length === 0) && (!shifts || shifts.length === 0)) {
@@ -133,7 +95,7 @@ export async function fetchCashierReport(
         transactions = dateOnlyTransactions;
       } else {
         console.info("ℹ️ No transaction or shift data found for the selected date range and store");
-        return {
+        const emptyReport: CashierReport = {
           cashierCount: 0,
           totalTransactions: 0,
           averageTransactionValue: 0,
@@ -142,7 +104,33 @@ export async function fetchCashierReport(
           hourlyData: [],
           attendance: []
         };
+        
+        return createReportResponse(emptyReport, 'real', {
+          queryAttempts,
+          fallbackReason: 'No data found for date range',
+          recordCount: 0
+        });
       }
+    }
+
+    // Build shifts query with improved date filtering
+    let shiftsQuery = supabase
+      .from("shifts")
+      .select("*")
+      .gte("start_time", startDate)
+      .lte("start_time", endDate);
+
+    // Only filter by store_id if not "all"
+    if (storeId !== "all") {
+      shiftsQuery = shiftsQuery.eq("store_id", storeId);
+    }
+
+    console.log('🔍 Executing shifts query for store:', storeId);
+    const { data: shifts, error: shiftsError } = await shiftsQuery;
+
+    if (shiftsError) {
+      console.error("❌ Shifts fetch error:", shiftsError);
+      throw shiftsError;
     }
 
     // Process the transaction data
@@ -192,7 +180,7 @@ export async function fetchCashierReport(
       storeId
     });
 
-    return {
+    const finalReport: CashierReport = {
       cashierCount: cashiers.length,
       totalTransactions,
       averageTransactionValue,
@@ -201,6 +189,11 @@ export async function fetchCashierReport(
       hourlyData: hourlyDataArray,
       attendance: attendanceData
     };
+
+    return createReportResponse(finalReport, 'real', {
+      queryAttempts,
+      recordCount: transactions?.length || 0
+    });
   } catch (error) {
     console.error("❌ Cashier report generation error:", error);
     return handleReportError("Cashier Report", error);

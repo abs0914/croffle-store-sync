@@ -10,11 +10,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileBarChart } from "lucide-react";
 import { CashierReportGuard } from "@/components/auth/CashierReportGuard";
+import { DataSourceIndicator } from "@/components/reports/DataSourceIndicator";
 
 interface ReportContentProps {
   reportType: ReportType;
   storeId: string;
-  selectedStoreId: string; // Added for multi-store support
+  selectedStoreId: string;
   dateRange: {
     from: Date | undefined;
     to: Date | undefined;
@@ -26,15 +27,10 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   const from = dateRange.from?.toISOString().split('T')[0];
   const to = dateRange.to?.toISOString().split('T')[0];
 
-  // Determine if we're in development/staging environment to warn about sample data
-  const isDevelopment = window.location.hostname === 'localhost' ||
-                        window.location.hostname.includes('staging') ||
-                        window.location.hostname.includes('.lovable.app');
-
   // Fetch data based on report type
-  const { data, isLoading, error, refetch, isSampleData } = useReportData({
+  const { data, dataSource, generatedAt, debugInfo, isLoading, error, refetch } = useReportData({
     reportType,
-    storeId: selectedStoreId, // Use the selected store ID for fetching data
+    storeId: selectedStoreId,
     isAllStores: selectedStoreId === 'all',
     from,
     to
@@ -48,23 +44,20 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
         duration: 4000,
       });
     } else if (data && !isLoading) {
-      // Only show sample data warning in development AND when actually using sample data
-      if (isSampleData && isDevelopment) {
-        toast.warning("Using demo data", {
-          description: "This report is using sample data for demonstration purposes.",
+      if (dataSource === 'sample') {
+        toast.warning("Showing demo data", {
+          description: "This report contains sample data for demonstration.",
           duration: 5000,
           position: isMobile ? "top-center" : "top-right"
         });
-      } else if (!isSampleData) {
-        // Only show success message for real data
+      } else if (dataSource === 'real') {
         toast.success("Report data loaded successfully", {
           duration: 3000,
           position: isMobile ? "top-center" : "top-right"
         });
       }
-      // No toast for sample data in production - silent operation
     }
-  }, [data, error, isLoading, isSampleData, isDevelopment, isMobile]);
+  }, [data, error, isLoading, dataSource, isMobile]);
 
   // Handle report loading state
   if (isLoading) {
@@ -98,16 +91,23 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
     );
   }
 
-  // Render report content
+  // Render report content with data source indicator
   return (
-    <div className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" tabIndex={0}>
+    <div className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring space-y-4" tabIndex={0}>
+      <DataSourceIndicator 
+        dataSource={dataSource}
+        generatedAt={generatedAt}
+        debugInfo={debugInfo}
+        showFullAlert={true}
+      />
+      
       <CashierReportGuard reportType={reportType}>
         <ReportView
           reportType={reportType}
           data={data}
           storeId={storeId}
-          selectedStoreId={selectedStoreId} // Pass the selected store ID to the report view
-          isAllStores={selectedStoreId === 'all'} // Indicate if we're viewing all stores
+          selectedStoreId={selectedStoreId}
+          isAllStores={selectedStoreId === 'all'}
           dateRange={dateRange}
         />
       </CashierReportGuard>
