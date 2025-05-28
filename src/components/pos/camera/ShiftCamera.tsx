@@ -12,7 +12,8 @@ interface ShiftCameraProps {
 
 export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   const [attemptedInit, setAttemptedInit] = useState(false);
-  const initTimerRef = useState<NodeJS.Timeout | null>(null)[0];
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
   
   const { 
     videoRef,
@@ -34,40 +35,59 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   // Clean up resources when component unmounts
   useEffect(() => {
     return () => {
+      console.log('[ShiftCamera] Component unmounting, cleaning up camera');
       stopCamera();
-      if (initTimerRef) {
-        clearTimeout(initTimerRef);
-      }
     };
-  }, [stopCamera, initTimerRef]);
+  }, [stopCamera]);
   
-  // Initialize camera as soon as component mounts
+  // Initialize camera when component mounts, but with retry logic
   useEffect(() => {
-    if (!attemptedInit) {
-      console.log("[ShiftCamera] Auto-initializing camera on component mount");
+    if (!attemptedInit && retryCount < maxRetries) {
+      console.log(`[ShiftCamera] Auto-initializing camera (attempt ${retryCount + 1})`);
       setAttemptedInit(true);
       setShowCamera(true);
       
-      // Small delay to ensure DOM is ready
+      // Add a delay to ensure DOM is ready and avoid rapid retries
+      const delay = retryCount > 0 ? 1000 * retryCount : 100;
+      
       setTimeout(() => {
-        startCamera().catch(error => {
-          console.error("[ShiftCamera] Auto-init failed:", error);
+        startCamera().then(success => {
+          if (!success && retryCount < maxRetries - 1) {
+            console.log(`[ShiftCamera] Auto-init attempt ${retryCount + 1} failed, will retry`);
+            setRetryCount(prev => prev + 1);
+            setAttemptedInit(false);
+          }
+        }).catch(error => {
+          console.error(`[ShiftCamera] Auto-init attempt ${retryCount + 1} failed:`, error);
           setCameraError(error.message || "Failed to initialize camera");
+          
+          if (retryCount < maxRetries - 1) {
+            setRetryCount(prev => prev + 1);
+            setAttemptedInit(false);
+          }
         });
-      }, 100);
+      }, delay);
     }
-  }, [attemptedInit, startCamera, setShowCamera, setCameraError]);
+  }, [attemptedInit, retryCount, startCamera, setShowCamera, setCameraError]);
 
   const handleCaptureClick = () => {
-    const photoUrl = capturePhoto();
-    if (photoUrl) {
-      onCapture(photoUrl);
-    } else {
-      toast.error("Failed to capture photo");
+    try {
+      const photoUrl = capturePhoto();
+      if (photoUrl) {
+        console.log('[ShiftCamera] Photo captured successfully');
+        onCapture(photoUrl);
+      } else {
+        console.error('[ShiftCamera] Failed to capture photo');
+        toast.error("Failed to capture photo. Please try again.");
+      }
+    } catch (error) {
+      console.error('[ShiftCamera] Error during photo capture:', error);
+      toast.error("Error capturing photo. Please try again.");
     }
   };
   
   const resetPhoto = () => {
+    console.log('[ShiftCamera] Resetting photo');
     setPhoto(null);
     onCapture(null);
     if (onReset) {
@@ -76,23 +96,33 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   };
   
   const handleRetry = () => {
+    console.log('[ShiftCamera] Manual retry requested');
+    
+    // Reset states
     stopCamera();
     setAttemptedInit(false);
     setCameraError(null);
+    setRetryCount(0);
     
-    // Retry initialization after a short delay
+    // Retry initialization after cleanup
     setTimeout(() => {
       setShowCamera(true);
       startCamera().catch(error => {
-        console.error("[ShiftCamera] Retry failed:", error);
+        console.error("[ShiftCamera] Manual retry failed:", error);
         setCameraError(error.message || "Failed to initialize camera");
       });
-    }, 100);
+    }, 500);
   };
   
   return (
     <div className="space-y-2">
       <Label>Capture Photo</Label>
+      
+      {retryCount >= maxRetries && cameraError && (
+        <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border">
+          Camera initialization failed after {maxRetries} attempts. You can still continue without a photo, or try the manual retry button below.
+        </div>
+      )}
       
       <CameraContainer 
         videoRef={videoRef}
@@ -106,6 +136,7 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         resetPhoto={resetPhoto}
         initCamera={() => {
           setAttemptedInit(false);
+          setRetryCount(0);
           handleRetry();
         }}
         handleRetry={handleRetry}

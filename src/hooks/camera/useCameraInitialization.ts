@@ -29,6 +29,13 @@ export function useCameraInitialization({
   
   const startCamera = useCallback(async () => {
     try {
+      // Stop any existing stream first to prevent conflicts
+      if (mediaStreamRef.current) {
+        console.log('[Camera] Stopping existing stream before new attempt');
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+      }
+      
       // Reset camera state and set starting flag
       resetCameraState();
       setIsStartingCamera(true);
@@ -42,13 +49,13 @@ export function useCameraInitialization({
         throw new Error('Browser does not support camera access');
       }
       
-      // Wait for video element to be available (give it a little time)
+      // Wait for video element to be available
       let videoElement = videoRef.current;
       if (!videoElement) {
-        console.log('[Camera] Video element not immediately available, waiting briefly...');
+        console.log('[Camera] Video element not immediately available, waiting...');
         
-        // Short timeout to allow ref to connect
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Wait longer for ref to connect
+        await new Promise(resolve => setTimeout(resolve, 200));
         videoElement = videoRef.current;
         
         if (!videoElement) {
@@ -59,20 +66,58 @@ export function useCameraInitialization({
       
       console.log('[Camera] Video element found, requesting camera access');
       
-      // Define camera constraints for 3:4 aspect ratio (taller) without the problematic advanced property
-      const constraints = { 
-        video: { 
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1080 },
-          height: { ideal: 1440 }, // 3:4 ratio (1080 * 4/3)
-          aspectRatio: { ideal: 3/4 }
+      // Try different constraint sets for better compatibility
+      const constraintSets = [
+        // Primary constraints - prefer back camera
+        { 
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1080 },
+            height: { ideal: 1440 },
+            aspectRatio: { ideal: 3/4 }
+          },
+          audio: false
         },
-        audio: false
-      };
+        // Fallback 1 - any camera with specific resolution
+        { 
+          video: { 
+            width: { ideal: 720 },
+            height: { ideal: 960 },
+            aspectRatio: { ideal: 3/4 }
+          },
+          audio: false
+        },
+        // Fallback 2 - basic constraints
+        { 
+          video: true,
+          audio: false
+        }
+      ];
       
-      // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('[Camera] Camera access granted, attaching stream');
+      let stream: MediaStream | null = null;
+      let lastError: Error | null = null;
+      
+      // Try each constraint set
+      for (let i = 0; i < constraintSets.length; i++) {
+        try {
+          console.log(`[Camera] Trying constraint set ${i + 1}:`, constraintSets[i]);
+          stream = await navigator.mediaDevices.getUserMedia(constraintSets[i]);
+          console.log(`[Camera] Successfully got stream with constraint set ${i + 1}`);
+          break;
+        } catch (error: any) {
+          console.log(`[Camera] Constraint set ${i + 1} failed:`, error.message);
+          lastError = error;
+          
+          // If this is a "NotReadableError", wait before trying next set
+          if (error.name === 'NotReadableError') {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      }
+      
+      if (!stream) {
+        throw lastError || new Error('Failed to access camera with any constraints');
+      }
       
       // Double-check video element is still available
       videoElement = videoRef.current;
@@ -89,11 +134,11 @@ export function useCameraInitialization({
       
       // Set up event listeners for the video element
       videoElement.onloadedmetadata = () => {
-        videoElement = videoRef.current;
-        if (!videoElement) return;
+        const currentVideo = videoRef.current;
+        if (!currentVideo) return;
         
         console.log('[Camera] Video metadata loaded, playing video');
-        videoElement.play().catch(err => {
+        currentVideo.play().catch(err => {
           console.error("[Camera] Error playing video:", err);
           setCameraError(`Could not start video: ${err.message}`);
         });
@@ -101,8 +146,16 @@ export function useCameraInitialization({
       
       // Additional event to make sure we know when video is actually playing
       videoElement.onplaying = () => {
-        console.log('[Camera] Video is now playing');
+        console.log('[Camera] Video is now playing successfully');
         setCameraInitialized(true);
+        setIsStartingCamera(false);
+        setCameraError(null); // Clear any previous errors
+      };
+      
+      // Handle video errors
+      videoElement.onerror = (error) => {
+        console.error('[Camera] Video element error:', error);
+        setCameraError('Video playback failed');
         setIsStartingCamera(false);
       };
       
@@ -110,12 +163,34 @@ export function useCameraInitialization({
       mediaStreamRef.current = stream;
       setShowCamera(true);
       
-      console.log('[Camera] Stream attached to video element, tracks:', stream.getTracks().length);
+      console.log('[Camera] Stream setup complete, tracks:', stream.getTracks().length);
       return true;
+      
     } catch (error: any) {
       console.error('[Camera] Error accessing camera:', error);
-      setCameraError(error.message || 'Failed to access camera');
-      toast.error('Camera access failed. Please check permissions.');
+      
+      let errorMessage = 'Failed to access camera';
+      
+      // Provide more specific error messages
+      switch (error.name) {
+        case 'NotReadableError':
+          errorMessage = 'Camera is busy or unavailable. Please close other apps using the camera and try again.';
+          break;
+        case 'NotAllowedError':
+          errorMessage = 'Camera access denied. Please allow camera permissions and refresh the page.';
+          break;
+        case 'NotFoundError':
+          errorMessage = 'No camera found on this device.';
+          break;
+        case 'OverconstrainedError':
+          errorMessage = 'Camera constraints not supported. Using basic camera settings.';
+          break;
+        default:
+          errorMessage = error.message || 'Failed to access camera';
+      }
+      
+      setCameraError(errorMessage);
+      toast.error(errorMessage);
       setShowCamera(false);
       setIsStartingCamera(false);
       
