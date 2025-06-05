@@ -174,6 +174,145 @@ export type Database = {
           },
         ]
       }
+      delivery_orders: {
+        Row: {
+          actual_delivery_date: string | null
+          created_at: string | null
+          delivery_notes: string | null
+          delivery_number: string
+          id: string
+          purchase_order_id: string
+          scheduled_delivery_date: string | null
+          status: Database["public"]["Enums"]["delivery_order_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          actual_delivery_date?: string | null
+          created_at?: string | null
+          delivery_notes?: string | null
+          delivery_number: string
+          id?: string
+          purchase_order_id: string
+          scheduled_delivery_date?: string | null
+          status?: Database["public"]["Enums"]["delivery_order_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          actual_delivery_date?: string | null
+          created_at?: string | null
+          delivery_notes?: string | null
+          delivery_number?: string
+          id?: string
+          purchase_order_id?: string
+          scheduled_delivery_date?: string | null
+          status?: Database["public"]["Enums"]["delivery_order_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_orders_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goods_received_notes: {
+        Row: {
+          created_at: string | null
+          delivery_order_id: string
+          digital_signature: string | null
+          grn_number: string
+          id: string
+          quality_check_passed: boolean | null
+          received_at: string | null
+          received_by: string
+          remarks: string | null
+          status: Database["public"]["Enums"]["grn_status"] | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_order_id: string
+          digital_signature?: string | null
+          grn_number: string
+          id?: string
+          quality_check_passed?: boolean | null
+          received_at?: string | null
+          received_by: string
+          remarks?: string | null
+          status?: Database["public"]["Enums"]["grn_status"] | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_order_id?: string
+          digital_signature?: string | null
+          grn_number?: string
+          id?: string
+          quality_check_passed?: boolean | null
+          received_at?: string | null
+          received_by?: string
+          remarks?: string | null
+          status?: Database["public"]["Enums"]["grn_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_received_notes_delivery_order_id_fkey"
+            columns: ["delivery_order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grn_items: {
+        Row: {
+          created_at: string | null
+          grn_id: string
+          id: string
+          item_remarks: string | null
+          ordered_quantity: number
+          purchase_order_item_id: string
+          quality_status: string | null
+          received_quantity: number
+        }
+        Insert: {
+          created_at?: string | null
+          grn_id: string
+          id?: string
+          item_remarks?: string | null
+          ordered_quantity: number
+          purchase_order_item_id: string
+          quality_status?: string | null
+          received_quantity: number
+        }
+        Update: {
+          created_at?: string | null
+          grn_id?: string
+          id?: string
+          item_remarks?: string | null
+          ordered_quantity?: number
+          purchase_order_item_id?: string
+          quality_status?: string | null
+          received_quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grn_items_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_received_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_items_purchase_order_item_id_fkey"
+            columns: ["purchase_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           barcode: string | null
@@ -393,6 +532,42 @@ export type Database = {
           last_name?: string
           store_ids?: string[]
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      order_audit_trail: {
+        Row: {
+          action: string
+          change_reason: string | null
+          changed_by: string
+          created_at: string | null
+          id: string
+          new_status: string | null
+          old_status: string | null
+          order_id: string
+          order_type: string
+        }
+        Insert: {
+          action: string
+          change_reason?: string | null
+          changed_by: string
+          created_at?: string | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          order_id: string
+          order_type: string
+        }
+        Update: {
+          action?: string
+          change_reason?: string | null
+          changed_by?: string
+          created_at?: string | null
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          order_id?: string
+          order_type?: string
         }
         Relationships: []
       }
@@ -619,6 +794,114 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_order_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          inventory_stock_id: string
+          purchase_order_id: string
+          quantity: number
+          specifications: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          inventory_stock_id: string
+          purchase_order_id: string
+          quantity: number
+          specifications?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          inventory_stock_id?: string
+          purchase_order_id?: string
+          quantity?: number
+          specifications?: string | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          created_by: string
+          id: string
+          notes: string | null
+          order_number: string
+          requested_delivery_date: string | null
+          status: Database["public"]["Enums"]["purchase_order_status"] | null
+          store_id: string
+          supplier_id: string | null
+          total_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by: string
+          id?: string
+          notes?: string | null
+          order_number: string
+          requested_delivery_date?: string | null
+          status?: Database["public"]["Enums"]["purchase_order_status"] | null
+          store_id: string
+          supplier_id?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          notes?: string | null
+          order_number?: string
+          requested_delivery_date?: string | null
+          status?: Database["public"]["Enums"]["purchase_order_status"] | null
+          store_id?: string
+          supplier_id?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -1210,6 +1493,11 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "owner" | "manager" | "cashier"
+      delivery_order_status:
+        | "for_delivery"
+        | "partial_delivery"
+        | "delivery_complete"
+      grn_status: "pending" | "verified" | "discrepancy_noted"
       inventory_category: "ingredients" | "packaging" | "supplies"
       inventory_unit:
         | "kg"
@@ -1226,6 +1514,13 @@ export type Database = {
         | "ordered"
         | "delivered"
         | "received"
+        | "cancelled"
+      purchase_order_status:
+        | "draft"
+        | "pending"
+        | "approved"
+        | "in_progress"
+        | "completed"
         | "cancelled"
     }
     CompositeTypes: {
@@ -1343,6 +1638,12 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "owner", "manager", "cashier"],
+      delivery_order_status: [
+        "for_delivery",
+        "partial_delivery",
+        "delivery_complete",
+      ],
+      grn_status: ["pending", "verified", "discrepancy_noted"],
       inventory_category: ["ingredients", "packaging", "supplies"],
       inventory_unit: ["kg", "g", "pieces", "liters", "ml", "boxes", "packs"],
       order_status: [
@@ -1352,6 +1653,14 @@ export const Constants = {
         "ordered",
         "delivered",
         "received",
+        "cancelled",
+      ],
+      purchase_order_status: [
+        "draft",
+        "pending",
+        "approved",
+        "in_progress",
+        "completed",
         "cancelled",
       ],
     },

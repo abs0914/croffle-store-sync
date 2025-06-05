@@ -57,6 +57,18 @@ const menuItems = [
     href: "/reports",
     icon: BarChart,
     roles: ["admin", "owner", "manager", "cashier"]
+  },
+  {
+    icon: Package,
+    label: "Inventory",
+    href: "/inventory",
+    permission: "manager" as const,
+  },
+  {
+    icon: ShoppingCart,
+    label: "Order Management",
+    href: "/order-management",
+    permission: "manager" as const,
   }
 ];
 
@@ -71,7 +83,7 @@ const settingsItems = [
 
 export function MainMenu() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const isActive = (href: string) => {
     if (href === "/dashboard" && location.pathname === "/") {
@@ -80,9 +92,9 @@ export function MainMenu() {
     return location.pathname.startsWith(href);
   };
 
-  // Filter menu items based on user role
+  // Filter menu items based on user role and permission
   const filteredMenuItems = menuItems.filter(item =>
-    !user?.role || item.roles.includes(user.role)
+    !user?.role || item.roles.includes(user.role) || hasPermission(item.permission)
   );
 
   const filteredSettingsItems = settingsItems.filter(item =>

@@ -1,0 +1,148 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { GoodsReceivedNote, GRNItem } from "@/types/orderManagement";
+import { toast } from "sonner";
+
+export const fetchGRNs = async (storeId?: string): Promise<GoodsReceivedNote[]> => {
+  try {
+    let query = supabase
+      .from('goods_received_notes')
+      .select(`
+        *,
+        delivery_order:delivery_orders(
+          *,
+          purchase_order:purchase_orders(
+            *,
+            supplier:suppliers(*)
+          )
+        ),
+        items:grn_items(
+          *,
+          purchase_order_item:purchase_order_items(
+            *,
+            inventory_stock:inventory_stock(*)
+          )
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (storeId) {
+      query = query.eq('delivery_order.purchase_order.store_id', storeId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching GRNs:', error);
+    toast.error('Failed to fetch goods received notes');
+    return [];
+  }
+};
+
+export const createGRN = async (
+  deliveryOrderId: string,
+  receivedBy: string
+): Promise<GoodsReceivedNote | null> => {
+  try {
+    const grnNumber = await generateGRNNumber();
+    
+    const { data, error } = await supabase
+      .from('goods_received_notes')
+      .insert({
+        grn_number: grnNumber,
+        delivery_order_id: deliveryOrderId,
+        received_by: receivedBy,
+        status: 'pending'
+      })
+      .select(`
+        *,
+        delivery_order:delivery_orders(
+          *,
+          purchase_order:purchase_orders(
+            *,
+            supplier:suppliers(*)
+          )
+        )
+      `)
+      .single();
+
+    if (error) throw error;
+    toast.success('GRN created successfully');
+    return data;
+  } catch (error) {
+    console.error('Error creating GRN:', error);
+    toast.error('Failed to create goods received note');
+    return null;
+  }
+};
+
+export const updateGRN = async (
+  id: string,
+  updates: Partial<GoodsReceivedNote>
+): Promise<GoodsReceivedNote | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('goods_received_notes')
+      .update(updates)
+      .eq('id', id)
+      .select(`
+        *,
+        delivery_order:delivery_orders(
+          *,
+          purchase_order:purchase_orders(
+            *,
+            supplier:suppliers(*)
+          )
+        )
+      `)
+      .single();
+
+    if (error) throw error;
+    toast.success('GRN updated successfully');
+    return data;
+  } catch (error) {
+    console.error('Error updating GRN:', error);
+    toast.error('Failed to update goods received note');
+    return null;
+  }
+};
+
+export const addGRNItem = async (
+  item: Omit<GRNItem, 'id' | 'created_at'>
+): Promise<GRNItem | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('grn_items')
+      .insert(item)
+      .select(`
+        *,
+        purchase_order_item:purchase_order_items(
+          *,
+          inventory_stock:inventory_stock(*)
+        )
+      `)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error adding GRN item:', error);
+    toast.error('Failed to add item to GRN');
+    return null;
+  }
+};
+
+const generateGRNNumber = async (): Promise<string> => {
+  try {
+    const { data, error } = await supabase
+      .rpc('generate_grn_number');
+
+    if (error) throw error;
+    return data || `GRN${Date.now()}`;
+  } catch (error) {
+    console.error('Error generating GRN number:', error);
+    return `GRN${Date.now()}`;
+  }
+};

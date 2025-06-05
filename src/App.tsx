@@ -1,84 +1,101 @@
-
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Toaster } from "sonner";
-
-import CustomerManagement from "./pages/Customers/CustomerManagement";
-import Dashboard from "./pages/Dashboard";
-import POS from "./pages/POS";
-import NotFound from "./pages/NotFound";
-import { MainLayout } from "./components/layout/MainLayout";
-import Login from "./pages/Login";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+} from "react-router-dom";
 import { AuthProvider } from "./contexts/auth";
-import { StoreProvider } from "./contexts/StoreContext";
-import { ShiftProvider } from "./contexts/shift";
-import { StoreDisplayProvider } from "./contexts/StoreDisplayContext";
-import { CartProvider } from "./contexts/CartContext";
-import Stores from "./pages/Stores";
-import StoreForm from "./pages/Stores/StoreForm";
-import StoreSettings from "./pages/Stores/StoreSettings";
-import StoreQR from "./pages/Stores/StoreQR";
-import CustomerForm from "./pages/Stores/CustomerForm";
-import CustomerFormPreview from "./pages/Stores/CustomerFormPreview";
-import InventoryStock from "./pages/Inventory/InventoryStock";
-import Inventory from "./pages/Inventory";
-import Reports from "./pages/Reports";
-import ProductForm from "./pages/Inventory/ProductForm";
-import Users from "./pages/Settings/Users";
-import { useIsMobile } from "./hooks/use-mobile";
+import { MainLayout } from "./components/layout";
+import { Dashboard } from "./pages/Dashboard";
+import { Pos } from "./pages/Pos";
+import { Customers } from "./pages/Customers";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-
-function ToasterWithResponsivePosition() {
-  const isMobile = useIsMobile();
-  return (
-    <Toaster
-      position={isMobile ? "top-center" : "top-right"}
-      closeButton
-      richColors
-      expand={isMobile}
-      toastOptions={{
-        classNames: {
-          toast: "group toast rounded-md",
-          title: "font-medium text-sm",
-          description: "text-xs",
-        },
-        duration: isMobile ? 4000 : 3000,
-      }}
-    />
-  );
-}
+import { Inventory } from "./pages/Inventory";
+import { Settings } from "./pages/Settings";
+import { Stores } from "./pages/Stores";
+import { StoreProvider } from "./contexts/store";
+import { ShiftProvider } from "./contexts/shift";
+import { QueryClient } from "react-query";
+import OrderManagement from "./pages/OrderManagement";
 
 function App() {
   return (
     <AuthProvider>
       <StoreProvider>
         <ShiftProvider>
-          <CartProvider>
-            <BrowserRouter>
-              <StoreDisplayProvider>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/" element={<MainLayout><Dashboard /></MainLayout>} />
-                  <Route path="/dashboard" element={<MainLayout><Dashboard /></MainLayout>} />
-                  <Route path="/customers" element={<MainLayout><CustomerManagement /></MainLayout>} />
-                  <Route path="/pos" element={<MainLayout><POS /></MainLayout>} />
-                  <Route path="/stores" element={<MainLayout><ProtectedRoute requiredRole="owner"><Stores /></ProtectedRoute></MainLayout>} />
-                  <Route path="/stores/:id" element={<MainLayout><ProtectedRoute requiredRole="owner"><StoreForm /></ProtectedRoute></MainLayout>} />
-                  <Route path="/stores/:id/settings" element={<MainLayout><ProtectedRoute requiredRole="owner"><StoreSettings /></ProtectedRoute></MainLayout>} />
-                  <Route path="/stores/:id/qr" element={<MainLayout><ProtectedRoute requiredRole="owner"><StoreQR /></ProtectedRoute></MainLayout>} />
-                  <Route path="/stores/:id/qr/preview" element={<MainLayout><ProtectedRoute requiredRole="owner"><CustomerFormPreview /></ProtectedRoute></MainLayout>} />
-                  <Route path="/customer-form/:storeId" element={<CustomerForm />} />
-                  <Route path="/inventory" element={<MainLayout><Inventory /></MainLayout>} />
-                  <Route path="/inventory/product/:id" element={<MainLayout><ProductForm /></MainLayout>} />
-                  <Route path="/inventory/stock" element={<MainLayout><InventoryStock /></MainLayout>} />
-                  <Route path="/reports" element={<MainLayout><Reports /></MainLayout>} />
-                  <Route path="/settings/users" element={<MainLayout><ProtectedRoute requiredRole="owner"><Users /></ProtectedRoute></MainLayout>} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <ToasterWithResponsivePosition />
-              </StoreDisplayProvider>
-            </BrowserRouter>
-          </CartProvider>
-        </ShiftProvider>
+          <Router>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Dashboard />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/pos"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Pos />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customers"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Customers />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inventory"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Inventory />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Settings />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stores"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <Stores />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/order-management"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <OrderManagement />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </Router>
       </StoreProvider>
     </AuthProvider>
   );
