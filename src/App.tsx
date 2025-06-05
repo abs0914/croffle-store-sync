@@ -5,20 +5,17 @@ import {
   Routes,
 } from "react-router-dom";
 import { AuthProvider } from "./contexts/auth";
-import { MainLayout } from "./components/layout";
-import { Dashboard } from "./pages/Dashboard";
-import { Pos } from "./pages/Pos";
-import { Customers } from "./pages/Customers";
+import { MainLayout } from "./components/layout/MainLayout";
+import Dashboard from "./pages/Dashboard";
+import Pos from "./pages/POS";
+import Customers from "./pages/Customers";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import { Inventory } from "./pages/Inventory";
-import { Settings } from "./pages/Settings";
-import { Stores } from "./pages/Stores";
-import { StoreProvider } from "./contexts/store";
+import Inventory from "./pages/Inventory";
+import Stores from "./pages/Stores";
+import { StoreProvider } from "./contexts/StoreContext";
 import { ShiftProvider } from "./contexts/shift";
-import { QueryClient } from "react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import OrderManagement from "./pages/OrderManagement";
-import CommissaryInventory from "./pages/CommissaryInventory";
-import InventoryConversion from "./pages/InventoryConversion";
 
 function App() {
   return (
@@ -93,26 +90,6 @@ function App() {
                   <ProtectedRoute>
                     <MainLayout>
                       <OrderManagement />
-                    </MainLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/commissary-inventory"
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <CommissaryInventory />
-                    </MainLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/inventory-conversion"
-                element={
-                  <ProtectedRoute>
-                    <MainLayout>
-                      <InventoryConversion />
                     </MainLayout>
                   </ProtectedRoute>
                 }

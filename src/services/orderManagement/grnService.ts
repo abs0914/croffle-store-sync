@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { GoodsReceivedNote, GRNItem } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -136,11 +135,10 @@ export const addGRNItem = async (
 
 const generateGRNNumber = async (): Promise<string> => {
   try {
-    const { data, error } = await supabase
-      .rpc('generate_grn_number');
-
-    if (error) throw error;
-    return data || `GRN${Date.now()}`;
+    // Generate a simple GRN number with timestamp
+    const timestamp = Date.now();
+    const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `GRN${timestamp}${randomSuffix}`;
   } catch (error) {
     console.error('Error generating GRN number:', error);
     return `GRN${Date.now()}`;

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { PurchaseOrder, PurchaseOrderItem } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -123,11 +122,10 @@ export const removePurchaseOrderItem = async (id: string): Promise<boolean> => {
 
 export const generatePurchaseOrderNumber = async (): Promise<string> => {
   try {
-    const { data, error } = await supabase
-      .rpc('generate_purchase_order_number');
-
-    if (error) throw error;
-    return data || `PO${Date.now()}`;
+    // Generate a simple order number with timestamp
+    const timestamp = Date.now();
+    const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `PO${timestamp}${randomSuffix}`;
   } catch (error) {
     console.error('Error generating purchase order number:', error);
     return `PO${Date.now()}`;

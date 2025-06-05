@@ -30,8 +30,8 @@ export function GRNTab() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'warning';
-      case 'verified': return 'success';
+      case 'pending': return 'secondary';
+      case 'verified': return 'default';
       case 'discrepancy_noted': return 'destructive';
       default: return 'secondary';
     }
