@@ -7,9 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
-import { createRecipe, addRecipeIngredient } from "@/services/inventoryManagement/recipeService";
-import { fetchInventoryItems } from "@/services/inventoryManagement/inventoryItemService";
-import { InventoryItem } from "@/types/inventoryManagement";
+import { createRecipe, addRecipeIngredient, fetchInventoryStock } from "@/services/inventoryManagement/recipeService";
+import { InventoryStock } from "@/types/inventoryManagement";
 
 interface AddRecipeDialogProps {
   open: boolean;
@@ -19,7 +18,7 @@ interface AddRecipeDialogProps {
 }
 
 interface RecipeIngredientForm {
-  inventory_item_id: string;
+  inventory_stock_id: string;
   quantity: number;
   unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
 }
@@ -31,7 +30,7 @@ export function AddRecipeDialog({
   onSuccess
 }: AddRecipeDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [inventoryStock, setInventoryStock] = useState<InventoryStock[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -42,18 +41,18 @@ export function AddRecipeDialog({
 
   useEffect(() => {
     if (open) {
-      loadInventoryItems();
+      loadInventoryStock();
     }
   }, [open, storeId]);
 
-  const loadInventoryItems = async () => {
-    const items = await fetchInventoryItems(storeId);
-    setInventoryItems(items);
+  const loadInventoryStock = async () => {
+    const items = await fetchInventoryStock(storeId);
+    setInventoryStock(items);
   };
 
   const addIngredient = () => {
     setIngredients([...ingredients, {
-      inventory_item_id: '',
+      inventory_stock_id: '',
       quantity: 0,
       unit: 'kg'
     }]);
@@ -86,10 +85,10 @@ export function AddRecipeDialog({
       if (recipe) {
         // Add ingredients to the recipe
         for (const ingredient of ingredients) {
-          if (ingredient.inventory_item_id && ingredient.quantity > 0) {
+          if (ingredient.inventory_stock_id && ingredient.quantity > 0) {
             await addRecipeIngredient({
               recipe_id: recipe.id,
-              inventory_item_id: ingredient.inventory_item_id,
+              inventory_stock_id: ingredient.inventory_stock_id,
               quantity: ingredient.quantity,
               unit: ingredient.unit
             });
@@ -184,16 +183,16 @@ export function AddRecipeDialog({
                 <div key={index} className="grid grid-cols-5 gap-2 items-end">
                   <div className="col-span-2">
                     <Select
-                      value={ingredient.inventory_item_id}
-                      onValueChange={(value) => updateIngredient(index, 'inventory_item_id', value)}
+                      value={ingredient.inventory_stock_id}
+                      onValueChange={(value) => updateIngredient(index, 'inventory_stock_id', value)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select ingredient" />
                       </SelectTrigger>
                       <SelectContent>
-                        {inventoryItems.map((item) => (
+                        {inventoryStock.map((item) => (
                           <SelectItem key={item.id} value={item.id}>
-                            {item.name}
+                            {item.item} ({item.unit})
                           </SelectItem>
                         ))}
                       </SelectContent>

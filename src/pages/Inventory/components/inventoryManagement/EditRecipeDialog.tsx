@@ -7,9 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
-import { updateRecipe, addRecipeIngredient, removeRecipeIngredient } from "@/services/inventoryManagement/recipeService";
-import { fetchInventoryItems } from "@/services/inventoryManagement/inventoryItemService";
-import { Recipe, InventoryItem, RecipeIngredient } from "@/types/inventoryManagement";
+import { updateRecipe, addRecipeIngredient, removeRecipeIngredient, fetchInventoryStock } from "@/services/inventoryManagement/recipeService";
+import { Recipe, InventoryStock, RecipeIngredient } from "@/types/inventoryManagement";
 
 interface EditRecipeDialogProps {
   open: boolean;
@@ -20,7 +19,7 @@ interface EditRecipeDialogProps {
 }
 
 interface RecipeIngredientForm extends Partial<RecipeIngredient> {
-  inventory_item_id: string;
+  inventory_stock_id: string;
   quantity: number;
   unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
   isNew?: boolean;
@@ -34,7 +33,7 @@ export function EditRecipeDialog({
   onSuccess
 }: EditRecipeDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [inventoryStock, setInventoryStock] = useState<InventoryStock[]>([]);
   const [formData, setFormData] = useState({
     name: recipe.name,
     description: recipe.description || '',
@@ -45,7 +44,7 @@ export function EditRecipeDialog({
 
   useEffect(() => {
     if (open) {
-      loadInventoryItems();
+      loadInventoryStock();
       setFormData({
         name: recipe.name,
         description: recipe.description || '',
@@ -54,20 +53,20 @@ export function EditRecipeDialog({
       });
       setIngredients(recipe.ingredients?.map(ing => ({
         ...ing,
-        inventory_item_id: ing.inventory_item_id,
+        inventory_stock_id: ing.inventory_stock_id,
         isNew: false
       })) || []);
     }
   }, [open, recipe]);
 
-  const loadInventoryItems = async () => {
-    const items = await fetchInventoryItems(storeId);
-    setInventoryItems(items);
+  const loadInventoryStock = async () => {
+    const items = await fetchInventoryStock(storeId);
+    setInventoryStock(items);
   };
 
   const addIngredient = () => {
     setIngredients([...ingredients, {
-      inventory_item_id: '',
+      inventory_stock_id: '',
       quantity: 0,
       unit: 'kg',
       isNew: true
@@ -102,10 +101,10 @@ export function EditRecipeDialog({
       if (updatedRecipe) {
         // Add new ingredients
         for (const ingredient of ingredients) {
-          if (ingredient.isNew && ingredient.inventory_item_id && ingredient.quantity > 0) {
+          if (ingredient.isNew && ingredient.inventory_stock_id && ingredient.quantity > 0) {
             await addRecipeIngredient({
               recipe_id: recipe.id,
-              inventory_item_id: ingredient.inventory_item_id,
+              inventory_stock_id: ingredient.inventory_stock_id,
               quantity: ingredient.quantity,
               unit: ingredient.unit
             });
@@ -189,17 +188,17 @@ export function EditRecipeDialog({
                 <div key={index} className="grid grid-cols-5 gap-2 items-end">
                   <div className="col-span-2">
                     <Select
-                      value={ingredient.inventory_item_id}
-                      onValueChange={(value) => updateIngredient(index, 'inventory_item_id', value)}
+                      value={ingredient.inventory_stock_id}
+                      onValueChange={(value) => updateIngredient(index, 'inventory_stock_id', value)}
                       disabled={!ingredient.isNew}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select ingredient" />
                       </SelectTrigger>
                       <SelectContent>
-                        {inventoryItems.map((item) => (
+                        {inventoryStock.map((item) => (
                           <SelectItem key={item.id} value={item.id}>
-                            {item.name}
+                            {item.item} ({item.unit})
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -51,11 +51,24 @@ export interface Recipe {
 export interface RecipeIngredient {
   id: string;
   recipe_id: string;
-  inventory_item_id: string;
+  inventory_stock_id: string;
   quantity: number;
   unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
   created_at: string;
-  inventory_item?: InventoryItem;
+  inventory_stock?: InventoryStock;
+}
+
+export interface InventoryStock {
+  id: string;
+  store_id: string;
+  item: string;
+  unit: string;
+  stock_quantity: number;
+  cost?: number;
+  sku?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface StockTransaction {

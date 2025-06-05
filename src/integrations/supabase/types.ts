@@ -627,7 +627,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          inventory_item_id: string
+          inventory_stock_id: string
           quantity: number
           recipe_id: string
           unit: Database["public"]["Enums"]["inventory_unit"]
@@ -635,7 +635,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          inventory_item_id: string
+          inventory_stock_id: string
           quantity: number
           recipe_id: string
           unit: Database["public"]["Enums"]["inventory_unit"]
@@ -643,17 +643,17 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          inventory_item_id?: string
+          inventory_stock_id?: string
           quantity?: number
           recipe_id?: string
           unit?: Database["public"]["Enums"]["inventory_unit"]
         }
         Relationships: [
           {
-            foreignKeyName: "recipe_ingredients_inventory_item_id_fkey"
-            columns: ["inventory_item_id"]
+            foreignKeyName: "recipe_ingredients_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
           {

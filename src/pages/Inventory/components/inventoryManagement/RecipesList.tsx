@@ -128,7 +128,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
                     <div className="space-y-1">
                       {recipe.ingredients?.map((ingredient) => (
                         <div key={ingredient.id} className="text-sm flex justify-between">
-                          <span>{ingredient.inventory_item?.name}</span>
+                          <span>{ingredient.inventory_stock?.item}</span>
                           <span>{ingredient.quantity} {ingredient.unit}</span>
                         </div>
                       )) || <span className="text-sm text-muted-foreground">No ingredients</span>}

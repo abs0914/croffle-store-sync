@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Recipe, RecipeIngredient } from "@/types/inventoryManagement";
+import { Recipe, RecipeIngredient, InventoryStock } from "@/types/inventoryManagement";
 import { toast } from "sonner";
 
 export const fetchRecipes = async (storeId: string): Promise<Recipe[]> => {
@@ -11,7 +11,7 @@ export const fetchRecipes = async (storeId: string): Promise<Recipe[]> => {
         *,
         ingredients:recipe_ingredients(
           *,
-          inventory_item:inventory_items(*)
+          inventory_stock:inventory_stock(*)
         )
       `)
       .eq('store_id', storeId)
@@ -37,7 +37,7 @@ export const createRecipe = async (recipe: Omit<Recipe, 'id' | 'created_at' | 'u
         *,
         ingredients:recipe_ingredients(
           *,
-          inventory_item:inventory_items(*)
+          inventory_stock:inventory_stock(*)
         )
       `)
       .single();
@@ -63,7 +63,7 @@ export const updateRecipe = async (id: string, updates: Partial<Recipe>): Promis
         *,
         ingredients:recipe_ingredients(
           *,
-          inventory_item:inventory_items(*)
+          inventory_stock:inventory_stock(*)
         )
       `)
       .single();
@@ -104,7 +104,7 @@ export const addRecipeIngredient = async (recipeIngredient: Omit<RecipeIngredien
       .insert(recipeIngredient)
       .select(`
         *,
-        inventory_item:inventory_items(*)
+        inventory_stock:inventory_stock(*)
       `)
       .single();
 
@@ -135,9 +135,28 @@ export const removeRecipeIngredient = async (id: string): Promise<boolean> => {
   }
 };
 
+export const fetchInventoryStock = async (storeId: string): Promise<InventoryStock[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('inventory_stock')
+      .select('*')
+      .eq('store_id', storeId)
+      .eq('is_active', true)
+      .order('item');
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching inventory stock:', error);
+    toast.error('Failed to fetch inventory stock');
+    return [];
+  }
+};
+
 export const calculateRecipeCost = (recipe: Recipe): number => {
   return recipe.ingredients?.reduce((total, ingredient) => {
-    const cost = ingredient.inventory_item?.unit_cost || 0;
+    const cost = ingredient.inventory_stock?.cost || 0;
     return total + (cost * ingredient.quantity);
   }, 0) || 0;
 };
