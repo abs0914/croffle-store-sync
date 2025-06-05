@@ -1,3 +1,4 @@
+
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -10,7 +11,8 @@ import {
   FileSpreadsheet,
   UserCircle,
   Utensils,
-  Boxes
+  Boxes,
+  ShoppingCart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth";
@@ -18,7 +20,7 @@ import { useAuth } from "@/contexts/auth";
 const menuItems = [
   {
     name: "Dashboard",
-    href: "/dashboard",
+    href: "/",
     icon: LayoutDashboard,
     roles: ["admin", "owner", "manager", "cashier"]
   },
@@ -35,40 +37,22 @@ const menuItems = [
     roles: ["admin", "owner", "manager", "cashier"]
   },
   {
-    name: "Menu Management",
+    name: "Inventory",
     href: "/inventory",
-    icon: Utensils,
+    icon: Package,
     roles: ["admin", "owner", "manager", "cashier"]
   },
   {
-    name: "Inventory Stock",
-    href: "/inventory/stock",
-    icon: Boxes,
-    roles: ["admin", "owner", "manager", "cashier"]
+    name: "Order Management",
+    href: "/order-management",
+    icon: ShoppingCart,
+    roles: ["admin", "owner", "manager"]
   },
   {
     name: "Stores",
     href: "/stores",
     icon: Store,
     roles: ["admin", "owner"]
-  },
-  {
-    name: "Reports",
-    href: "/reports",
-    icon: BarChart,
-    roles: ["admin", "owner", "manager", "cashier"]
-  },
-  {
-    icon: Package,
-    label: "Inventory",
-    href: "/inventory",
-    permission: "manager" as const,
-  },
-  {
-    icon: ShoppingCart,
-    label: "Order Management",
-    href: "/order-management",
-    permission: "manager" as const,
   }
 ];
 
@@ -86,15 +70,15 @@ export function MainMenu() {
   const { user, hasPermission } = useAuth();
 
   const isActive = (href: string) => {
-    if (href === "/dashboard" && location.pathname === "/") {
+    if (href === "/" && location.pathname === "/") {
       return true;
     }
-    return location.pathname.startsWith(href);
+    return location.pathname.startsWith(href) && href !== "/";
   };
 
-  // Filter menu items based on user role and permission
+  // Filter menu items based on user role
   const filteredMenuItems = menuItems.filter(item =>
-    !user?.role || item.roles.includes(user.role) || hasPermission(item.permission)
+    !user?.role || item.roles.includes(user.role)
   );
 
   const filteredSettingsItems = settingsItems.filter(item =>

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { DeliveryOrder } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -87,11 +86,10 @@ export const updateDeliveryOrder = async (
 
 const generateDeliveryOrderNumber = async (): Promise<string> => {
   try {
-    const { data, error } = await supabase
-      .rpc('generate_delivery_order_number');
-
-    if (error) throw error;
-    return data || `DO${Date.now()}`;
+    // Generate a simple delivery order number with timestamp
+    const timestamp = Date.now();
+    const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `DO${timestamp}${randomSuffix}`;
   } catch (error) {
     console.error('Error generating delivery order number:', error);
     return `DO${Date.now()}`;

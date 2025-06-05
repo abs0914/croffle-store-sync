@@ -35,8 +35,8 @@ export function DeliveryOrdersTab() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'for_delivery': return 'default';
-      case 'partial_delivery': return 'warning';
-      case 'delivery_complete': return 'success';
+      case 'partial_delivery': return 'secondary';
+      case 'delivery_complete': return 'default';
       default: return 'secondary';
     }
   };

@@ -44,10 +44,10 @@ export function PurchaseOrdersTab() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'draft': return 'secondary';
-      case 'pending': return 'warning';
+      case 'pending': return 'secondary';
       case 'approved': return 'default';
       case 'in_progress': return 'default';
-      case 'completed': return 'success';
+      case 'completed': return 'default';
       case 'cancelled': return 'destructive';
       default: return 'secondary';
     }

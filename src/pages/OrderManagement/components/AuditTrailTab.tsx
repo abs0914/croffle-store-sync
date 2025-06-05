@@ -22,7 +22,7 @@ export function AuditTrailTab() {
         .limit(100);
 
       if (error) throw error;
-      setAuditTrail(data || []);
+      setAuditTrail((data as OrderAuditTrail[]) || []);
     } catch (error) {
       console.error('Error fetching audit trail:', error);
     } finally {
@@ -37,8 +37,8 @@ export function AuditTrailTab() {
   const getActionColor = (action: string) => {
     switch (action) {
       case 'status_change': return 'default';
-      case 'created': return 'success';
-      case 'updated': return 'warning';
+      case 'created': return 'default';
+      case 'updated': return 'secondary';
       case 'deleted': return 'destructive';
       default: return 'secondary';
     }
