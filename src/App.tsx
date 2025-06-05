@@ -1,3 +1,4 @@
+
 import {
   BrowserRouter as Router,
   Route,
@@ -96,6 +97,7 @@ function App() {
               />
             </Routes>
           </Router>
+        </ShiftProvider>
       </StoreProvider>
     </AuthProvider>
   );
