@@ -48,8 +48,7 @@ export function AddInventoryItemDialog({
       sku: formData.sku || undefined,
       barcode: formData.barcode || undefined,
       expiry_date: formData.expiry_date || undefined,
-      is_active: true,
-      last_updated: new Date().toISOString()
+      is_active: true
     });
 
     setLoading(false);

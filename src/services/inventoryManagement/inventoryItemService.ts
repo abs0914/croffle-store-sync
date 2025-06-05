@@ -56,7 +56,7 @@ export const getStockLevel = (currentStock: number, minimumThreshold: number): '
   return 'good';
 };
 
-export const createInventoryItem = async (item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at' | 'last_updated'>): Promise<InventoryItem | null> => {
+export const createInventoryItem = async (item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at' | 'last_updated' | 'supplier'>): Promise<InventoryItem | null> => {
   try {
     const { data, error } = await supabase
       .from('inventory_items')
