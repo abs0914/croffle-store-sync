@@ -14,6 +14,9 @@ import {
 import { fetchSuppliers } from "@/services/inventoryManagement/supplierService";
 import { useAuth } from "@/contexts/auth";
 import { AddCommissaryItemDialog } from "./components/AddCommissaryItemDialog";
+import { EditCommissaryItemDialog } from "./components/EditCommissaryItemDialog";
+import { StockAdjustmentDialog } from "./components/StockAdjustmentDialog";
+import { DeleteConfirmationDialog } from "./components/DeleteConfirmationDialog";
 import { toast } from "sonner";
 
 export default function CommissaryInventory() {
@@ -22,6 +25,10 @@ export default function CommissaryInventory() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showStockDialog, setShowStockDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<CommissaryInventoryItem | null>(null);
   const [filters, setFilters] = useState<CommissaryInventoryFilters>({
     category: 'all',
     stockLevel: 'all',
@@ -48,8 +55,14 @@ export default function CommissaryInventory() {
 
   const loadData = async () => {
     setLoading(true);
-    await Promise.all([loadItems(), loadSuppliers()]);
-    setLoading(false);
+    try {
+      await Promise.all([loadItems(), loadSuppliers()]);
+    } catch (error) {
+      console.error('Error loading commissary data:', error);
+      toast.error('Failed to load commissary data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadItems = async () => {
@@ -76,13 +89,28 @@ export default function CommissaryInventory() {
       low: 'warning',
       out: 'destructive'
     } as const;
-    
+
     return (
       <Badge variant={variants[level]} className="flex items-center gap-1">
         {getStockLevelIcon(level)}
         {level.toUpperCase()}
       </Badge>
     );
+  };
+
+  const handleEditItem = (item: CommissaryInventoryItem) => {
+    setSelectedItem(item);
+    setShowEditDialog(true);
+  };
+
+  const handleStockAdjustment = (item: CommissaryInventoryItem) => {
+    setSelectedItem(item);
+    setShowStockDialog(true);
+  };
+
+  const handleDeleteItem = (item: CommissaryInventoryItem) => {
+    setSelectedItem(item);
+    setShowDeleteDialog(true);
   };
 
   if (!hasAdminAccess) {
@@ -246,10 +274,29 @@ export default function CommissaryInventory() {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditItem(item)}
+                        >
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleStockAdjustment(item)}
+                        >
+                          <Package className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteItem(item)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <AlertTriangle className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -265,6 +312,30 @@ export default function CommissaryInventory() {
       <AddCommissaryItemDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
+        onSuccess={loadData}
+      />
+
+      {/* Edit Commissary Item Dialog */}
+      <EditCommissaryItemDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        item={selectedItem}
+        onSuccess={loadData}
+      />
+
+      {/* Stock Adjustment Dialog */}
+      <StockAdjustmentDialog
+        open={showStockDialog}
+        onOpenChange={setShowStockDialog}
+        item={selectedItem}
+        onSuccess={loadData}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        item={selectedItem}
         onSuccess={loadData}
       />
     </div>

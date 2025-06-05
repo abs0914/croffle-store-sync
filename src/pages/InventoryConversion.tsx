@@ -97,6 +97,13 @@ export default function InventoryConversion() {
       return;
     }
 
+    // Validate sufficient commissary stock
+    const selectedItem = commissaryItems.find(item => item.id === conversionForm.commissary_item_id);
+    if (selectedItem && conversionForm.raw_material_quantity > selectedItem.current_stock) {
+      toast.error(`Insufficient stock. Available: ${selectedItem.current_stock} ${selectedItem.unit}`);
+      return;
+    }
+
     setConverting(true);
 
     try {

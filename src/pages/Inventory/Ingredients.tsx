@@ -43,17 +43,25 @@ export default function Ingredients() {
 
   return (
     <div className="container mx-auto p-4">
-      <InventoryHeader 
-        title="Inventory Stock Management" 
-        description="Manage your raw materials, ingredients, and supplies"
+      <InventoryHeader
+        title="Store Ingredients Management"
+        description="Manage finished ingredients and supplies ready for menu use"
       />
-      
+
+      <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <h3 className="font-semibold text-amber-800 mb-2">Store-Level Ingredients</h3>
+        <p className="text-sm text-amber-700">
+          These are finished ingredients ready for use in recipes and menu items.
+          Raw materials are managed in the Commissary Inventory and converted to finished ingredients.
+        </p>
+      </div>
+
       <div className="flex justify-end mb-4">
-        <Button 
+        <Button
           onClick={() => setIsAddModalOpen(true)}
           className="bg-croffle-accent hover:bg-croffle-accent/90"
         >
-          <Plus className="mr-2 h-4 w-4" /> Add Inventory Item
+          <Plus className="mr-2 h-4 w-4" /> Add Store Ingredient
         </Button>
       </div>
 

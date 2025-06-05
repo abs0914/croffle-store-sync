@@ -125,11 +125,11 @@ export default function InventoryStock() {
           </TabsList>
         </Tabs>
       
-        <Button 
+        <Button
           onClick={() => setIsAddModalOpen(true)}
           className="bg-croffle-accent hover:bg-croffle-accent/90"
         >
-          <Plus className="mr-2 h-4 w-4" /> Add Inventory Item
+          <Plus className="mr-2 h-4 w-4" /> Add Store Inventory Item
         </Button>
       </div>
 

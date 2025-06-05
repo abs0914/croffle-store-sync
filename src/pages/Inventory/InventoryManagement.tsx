@@ -32,30 +32,38 @@ export default function InventoryManagement() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Inventory Management</h1>
+          <h1 className="text-3xl font-bold">Menu & Recipe Management</h1>
           <p className="text-muted-foreground">
-            Manage your inventory, recipes, suppliers, and orders for {currentStore.name}
+            Manage recipes, menu items, and store operations for {currentStore.name}
           </p>
         </div>
+      </div>
+
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h3 className="font-semibold text-blue-800 mb-2">Store-Level Operations</h3>
+        <p className="text-sm text-blue-700">
+          This section manages recipes and menu items using your store's finished inventory.
+          Raw materials are managed separately in the Commissary Inventory (admin access required).
+        </p>
       </div>
 
       <InventoryStats storeId={currentStore.id} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="items">Inventory Items</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="recipes">Recipes</TabsTrigger>
+          <TabsTrigger value="items">Store Inventory</TabsTrigger>
           <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="items">
-          <InventoryItemsList storeId={currentStore.id} />
-        </TabsContent>
-
         <TabsContent value="recipes">
           <RecipesTab storeId={currentStore.id} />
+        </TabsContent>
+
+        <TabsContent value="items">
+          <InventoryItemsList storeId={currentStore.id} />
         </TabsContent>
 
         <TabsContent value="suppliers">

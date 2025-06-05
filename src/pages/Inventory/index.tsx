@@ -33,10 +33,10 @@ export default function Inventory() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className={`grid w-full ${hasAdminAccess ? 'grid-cols-6' : 'grid-cols-6'}`}>
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="management" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Management
+            <ChefHat className="h-4 w-4" />
+            Recipes & Menu
           </TabsTrigger>
           <TabsTrigger value="products" className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
@@ -44,14 +44,14 @@ export default function Inventory() {
           </TabsTrigger>
           <TabsTrigger value="stock" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Store Stock
+            Store Inventory
           </TabsTrigger>
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Categories
           </TabsTrigger>
           <TabsTrigger value="ingredients" className="flex items-center gap-2">
-            <ChefHat className="h-4 w-4" />
+            <Warehouse className="h-4 w-4" />
             Ingredients
           </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">

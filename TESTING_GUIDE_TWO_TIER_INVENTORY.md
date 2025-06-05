@@ -311,6 +311,172 @@ If tests fail or issues are encountered:
 4. Review RLS policies in Supabase dashboard
 5. Check network connectivity and API responses
 
+## 🎨 UI Component Testing
+
+### Test 18: Commissary Inventory UI Components
+**Login as Admin**
+
+1. **Add Commissary Item Dialog**:
+   - Click "Add Raw Material" button
+   - ✅ Dialog opens with all required fields
+   - ✅ Form validation works (required fields)
+   - ✅ Supplier dropdown populates correctly
+   - ✅ Category selection works
+   - ✅ Unit selection works
+   - ✅ Form submission creates item successfully
+
+2. **Edit Commissary Item Dialog**:
+   - Click edit button on any commissary item
+   - ✅ Dialog opens with pre-filled data
+   - ✅ Current stock field is disabled (read-only)
+   - ✅ Changes save successfully
+   - ✅ Cancel button works without saving
+
+3. **Stock Adjustment Dialog**:
+   - Click stock adjustment button on any item
+   - ✅ Dialog shows current stock level
+   - ✅ Adjustment type buttons work (increase/decrease/set)
+   - ✅ Quantity validation works
+   - ✅ New stock level preview updates correctly
+   - ✅ Reason field is required
+   - ✅ Stock adjustment saves successfully
+
+4. **Delete Confirmation Dialog**:
+   - Click delete button on any item
+   - ✅ Confirmation dialog appears
+   - ✅ Must type "DELETE" to confirm
+   - ✅ Warning message shows item details
+   - ✅ Cancel button works
+   - ✅ Delete confirmation works
+
+### Test 19: Inventory Conversion UI Components
+**Login as Admin**
+
+1. **Conversion Form**:
+   - ✅ Commissary item dropdown shows available items with stock
+   - ✅ Raw material quantity validation works
+   - ✅ Finished goods quantity validation works
+   - ✅ Target inventory selection works
+   - ✅ Create new item option works
+   - ✅ Notes field accepts input
+   - ✅ Convert button enables/disables correctly
+
+2. **Conversion History**:
+   - ✅ Recent conversions display correctly
+   - ✅ Shows commissary item → store item
+   - ✅ Displays quantities and dates
+   - ✅ Shows conversion notes
+
+### Test 20: Responsive Design Testing
+1. **Mobile View (< 768px)**:
+   - ✅ Navigation menu collapses properly
+   - ✅ Tables become scrollable
+   - ✅ Dialogs fit screen properly
+   - ✅ Form fields stack vertically
+
+2. **Tablet View (768px - 1024px)**:
+   - ✅ Grid layouts adjust appropriately
+   - ✅ Sidebar navigation works
+   - ✅ Dialogs are properly sized
+
+3. **Desktop View (> 1024px)**:
+   - ✅ Full layout displays correctly
+   - ✅ All components are properly spaced
+   - ✅ Dialogs are centered and sized appropriately
+
+### Test 21: Error Handling UI
+1. **Network Errors**:
+   - Disconnect internet
+   - Try to load commissary inventory
+   - ✅ Error message displays
+   - ✅ Loading states handle gracefully
+
+2. **Validation Errors**:
+   - Try to submit forms with invalid data
+   - ✅ Field-level validation messages appear
+   - ✅ Form submission is prevented
+   - ✅ Error messages are clear and helpful
+
+3. **Permission Errors**:
+   - Login as non-admin user
+   - Try to access admin URLs directly
+   - ✅ Access denied messages display
+   - ✅ User is redirected appropriately
+
+## 🔧 Legacy Cleanup Verification
+
+### Test 22: Terminology Consistency
+1. **Check all pages for consistent terminology**:
+   - ✅ "Store Inventory" or "Store Inventory Stocks" (not just "Inventory")
+   - ✅ "Commissary Inventory" for raw materials
+   - ✅ "Finished ingredients" vs "raw materials" distinction
+   - ✅ Clear separation in descriptions and help text
+
+2. **Navigation Menu**:
+   - ✅ Menu items clearly labeled
+   - ✅ Admin-only items hidden for non-admins
+   - ✅ Tooltips and descriptions are accurate
+
+### Test 23: Component Consolidation
+1. **Verify no duplicate functionality**:
+   - ✅ Only one inventory management system for store items
+   - ✅ No conflicting services or components
+   - ✅ Consistent data sources throughout
+
+2. **Service Layer Consistency**:
+   - ✅ All store inventory uses `inventory_stock` table
+   - ✅ All commissary inventory uses `commissary_inventory` table
+   - ✅ No legacy `inventory_items` references in active code
+
+## ✅ Complete Test Results Checklist
+
+### Access Control & Security
+- [ ] Admin can access all features
+- [ ] Store users cannot access commissary features
+- [ ] Direct URL access properly restricted
+- [ ] Role-based menu rendering works
+- [ ] Data isolation between stores works
+
+### Commissary Management
+- [ ] Can create/edit/delete commissary items
+- [ ] Stock level indicators work correctly
+- [ ] Filtering and search function properly
+- [ ] Supplier integration works
+- [ ] Stock adjustments work with audit trail
+
+### Inventory Conversion
+- [ ] Basic conversion process works
+- [ ] Stock levels update correctly
+- [ ] Conversion history is accurate
+- [ ] New store items can be created during conversion
+- [ ] Validation prevents invalid conversions
+
+### Integration Testing
+- [ ] Menu management uses only store inventory
+- [ ] Order management uses only store inventory
+- [ ] Recipe creation restricted to store items
+- [ ] Purchase orders work with store inventory
+
+### UI/UX Testing
+- [ ] All dialogs open and close properly
+- [ ] Form validation works correctly
+- [ ] Loading states display appropriately
+- [ ] Error messages are clear and helpful
+- [ ] Responsive design works on all screen sizes
+
+### Error Handling
+- [ ] Insufficient stock prevents conversion
+- [ ] Unauthorized access is blocked
+- [ ] Form validation works properly
+- [ ] Network errors are handled gracefully
+- [ ] Permission errors show appropriate messages
+
+### Legacy Cleanup
+- [ ] Terminology is consistent throughout
+- [ ] No duplicate or conflicting components
+- [ ] Service layer uses correct data sources
+- [ ] Navigation and help text are accurate
+
 ## 🎉 Testing Complete
 
-Once all tests pass, the two-tier inventory system is ready for production use!
+Once all tests pass, the two-tier inventory system with complete UI components is ready for production use!
