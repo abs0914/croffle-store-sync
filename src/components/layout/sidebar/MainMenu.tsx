@@ -10,7 +10,9 @@ import {
   FileSpreadsheet,
   UserCircle,
   Utensils,
-  Boxes
+  Boxes,
+  RefreshCw,
+  ShoppingCart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth";
@@ -57,6 +59,18 @@ const menuItems = [
     href: "/reports",
     icon: BarChart,
     roles: ["admin", "owner", "manager", "cashier"]
+  },
+  {
+    name: "Commissary Inventory",
+    href: "/commissary-inventory",
+    icon: Package,
+    roles: ["admin", "owner"]
+  },
+  {
+    name: "Inventory Conversion",
+    href: "/inventory-conversion",
+    icon: RefreshCw,
+    roles: ["admin", "owner"]
   },
   {
     icon: Package,

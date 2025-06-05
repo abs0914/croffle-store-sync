@@ -92,13 +92,21 @@ export default function InventoryStock() {
 
   return (
     <div className="space-y-6">
-      <InventoryHeader 
-        title="Inventory Stock Management" 
-        description="Track and manage your raw materials, ingredients, and supplies"
+      <InventoryHeader
+        title="Store Inventory Stock Management"
+        description="Track and manage finished ingredients and supplies ready for use in menu items"
         onExportCSV={handleExportCSV}
         onImportClick={handleImportClick}
         onDownloadTemplate={handleDownloadTemplate}
       />
+
+      <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <h3 className="font-semibold text-amber-800 mb-2">Store-Level Inventory</h3>
+        <p className="text-sm text-amber-700">
+          This inventory contains finished ingredients and supplies that are ready for use in menu items and recipes.
+          Raw materials are managed separately in the Commissary Inventory (admin access required).
+        </p>
+      </div>
       
       <Tabs defaultValue="stock" value="stock" onValueChange={handleNavigationTabChange} className="w-full">
         <TabsList className="mb-4">

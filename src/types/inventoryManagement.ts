@@ -124,3 +124,63 @@ export interface InventoryFilters {
   supplier?: string;
   search?: string;
 }
+
+// Commissary Inventory Types (Admin-level raw materials)
+export interface CommissaryInventoryItem {
+  id: string;
+  name: string;
+  category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  current_stock: number;
+  minimum_threshold: number;
+  unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
+  unit_cost?: number;
+  supplier_id?: string;
+  sku?: string;
+  barcode?: string;
+  expiry_date?: string;
+  storage_location?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  supplier?: Supplier;
+}
+
+// Inventory Conversion Types
+export interface InventoryConversion {
+  id: string;
+  commissary_item_id: string;
+  store_id: string;
+  inventory_stock_id: string;
+  raw_material_quantity: number;
+  finished_goods_quantity: number;
+  conversion_ratio: number;
+  conversion_date: string;
+  converted_by: string;
+  notes?: string;
+  created_at: string;
+  commissary_item?: CommissaryInventoryItem;
+  inventory_stock?: InventoryStock;
+}
+
+// Conversion Recipe Types (for defining how raw materials become finished goods)
+export interface ConversionRecipe {
+  id: string;
+  name: string;
+  commissary_item_id: string;
+  finished_item_name: string;
+  finished_item_unit: string;
+  conversion_ratio: number; // How many finished units per raw material unit
+  instructions?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  commissary_item?: CommissaryInventoryItem;
+}
+
+// Filters for commissary inventory
+export interface CommissaryInventoryFilters {
+  category?: 'raw_materials' | 'packaging_materials' | 'supplies' | 'all';
+  stockLevel?: StockLevel | 'all';
+  supplier?: string;
+  search?: string;
+}

@@ -17,6 +17,8 @@ import { StoreProvider } from "./contexts/store";
 import { ShiftProvider } from "./contexts/shift";
 import { QueryClient } from "react-query";
 import OrderManagement from "./pages/OrderManagement";
+import CommissaryInventory from "./pages/CommissaryInventory";
+import InventoryConversion from "./pages/InventoryConversion";
 
 function App() {
   return (
@@ -91,6 +93,26 @@ function App() {
                   <ProtectedRoute>
                     <MainLayout>
                       <OrderManagement />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/commissary-inventory"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <CommissaryInventory />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inventory-conversion"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout>
+                      <InventoryConversion />
                     </MainLayout>
                   </ProtectedRoute>
                 }
