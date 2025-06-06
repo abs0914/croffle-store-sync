@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { toast } from "sonner";
@@ -24,7 +23,7 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
       };
       const dbCategory = categoryMap[filters.category as keyof typeof categoryMap];
       if (dbCategory) {
-        query = query.eq('category', dbCategory);
+        query = query.eq('category', dbCategory as 'ingredients' | 'packaging' | 'supplies');
       }
     }
 
@@ -80,11 +79,24 @@ export const createCommissaryInventoryItem = async (
                       item.category === 'packaging_materials' ? 'packaging' : 
                       'supplies';
 
+    // Use a default store_id for commissary items (you might want to create a special commissary store)
+    const DEFAULT_COMMISSARY_STORE_ID = '00000000-0000-0000-0000-000000000000';
+
     const { data, error } = await supabase
       .from('inventory_items')
       .insert({
-        ...item,
-        category: dbCategory,
+        name: item.name,
+        category: dbCategory as 'ingredients' | 'packaging' | 'supplies',
+        current_stock: item.current_stock,
+        minimum_threshold: item.minimum_threshold,
+        unit: item.unit,
+        unit_cost: item.unit_cost,
+        supplier_id: item.supplier_id,
+        sku: item.sku,
+        barcode: item.barcode,
+        expiry_date: item.expiry_date,
+        store_id: DEFAULT_COMMISSARY_STORE_ID,
+        is_active: true,
         last_updated: new Date().toISOString()
       })
       .select(`
@@ -117,12 +129,15 @@ export const updateCommissaryInventoryItem = async (
 ): Promise<CommissaryInventoryItem | null> => {
   try {
     // Transform category if it exists in updates
-    const dbUpdates = { ...updates };
+    const dbUpdates: any = { ...updates };
     if (updates.category) {
-      (dbUpdates as any).category = updates.category === 'raw_materials' ? 'ingredients' : 
-                                   updates.category === 'packaging_materials' ? 'packaging' : 
-                                   'supplies';
+      dbUpdates.category = updates.category === 'raw_materials' ? 'ingredients' : 
+                          updates.category === 'packaging_materials' ? 'packaging' : 
+                          'supplies';
     }
+
+    // Remove properties that don't exist in the database schema
+    delete dbUpdates.supplier;
 
     const { data, error } = await supabase
       .from('inventory_items')
