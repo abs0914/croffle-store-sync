@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { toast } from "sonner";
@@ -5,7 +6,7 @@ import { toast } from "sonner";
 export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilters): Promise<CommissaryInventoryItem[]> => {
   try {
     let query = supabase
-      .from('commissary_inventory')
+      .from('inventory_items')
       .select(`
         *,
         supplier:suppliers(*)
@@ -15,7 +16,16 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
 
     // Apply filters
     if (filters?.category && filters.category !== 'all') {
-      query = query.eq('category', filters.category);
+      // Map commissary categories to inventory_items categories
+      const categoryMap = {
+        'raw_materials': 'ingredients',
+        'packaging_materials': 'packaging',
+        'supplies': 'supplies'
+      };
+      const dbCategory = categoryMap[filters.category as keyof typeof categoryMap];
+      if (dbCategory) {
+        query = query.eq('category', dbCategory);
+      }
     }
 
     if (filters?.supplier) {
@@ -45,7 +55,15 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
 
     if (error) throw error;
 
-    return data || [];
+    // Transform the data to match CommissaryInventoryItem interface
+    const transformedData: CommissaryInventoryItem[] = (data || []).map(item => ({
+      ...item,
+      category: item.category === 'ingredients' ? 'raw_materials' : 
+                item.category === 'packaging' ? 'packaging_materials' : 
+                'supplies' as const
+    }));
+
+    return transformedData;
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
     toast.error('Failed to fetch commissary inventory');
@@ -57,9 +75,18 @@ export const createCommissaryInventoryItem = async (
   item: Omit<CommissaryInventoryItem, 'id' | 'created_at' | 'updated_at' | 'supplier'>
 ): Promise<CommissaryInventoryItem | null> => {
   try {
+    // Transform category back to database format
+    const dbCategory = item.category === 'raw_materials' ? 'ingredients' : 
+                      item.category === 'packaging_materials' ? 'packaging' : 
+                      'supplies';
+
     const { data, error } = await supabase
-      .from('commissary_inventory')
-      .insert(item)
+      .from('inventory_items')
+      .insert({
+        ...item,
+        category: dbCategory,
+        last_updated: new Date().toISOString()
+      })
       .select(`
         *,
         supplier:suppliers(*)
@@ -68,8 +95,15 @@ export const createCommissaryInventoryItem = async (
 
     if (error) throw error;
 
+    const transformedData: CommissaryInventoryItem = {
+      ...data,
+      category: data.category === 'ingredients' ? 'raw_materials' : 
+                data.category === 'packaging' ? 'packaging_materials' : 
+                'supplies' as const
+    };
+
     toast.success('Commissary inventory item created successfully');
-    return data;
+    return transformedData;
   } catch (error) {
     console.error('Error creating commissary inventory item:', error);
     toast.error('Failed to create commissary inventory item');
@@ -82,9 +116,17 @@ export const updateCommissaryInventoryItem = async (
   updates: Partial<CommissaryInventoryItem>
 ): Promise<CommissaryInventoryItem | null> => {
   try {
+    // Transform category if it exists in updates
+    const dbUpdates = { ...updates };
+    if (updates.category) {
+      (dbUpdates as any).category = updates.category === 'raw_materials' ? 'ingredients' : 
+                                   updates.category === 'packaging_materials' ? 'packaging' : 
+                                   'supplies';
+    }
+
     const { data, error } = await supabase
-      .from('commissary_inventory')
-      .update(updates)
+      .from('inventory_items')
+      .update(dbUpdates)
       .eq('id', id)
       .select(`
         *,
@@ -94,8 +136,15 @@ export const updateCommissaryInventoryItem = async (
 
     if (error) throw error;
 
+    const transformedData: CommissaryInventoryItem = {
+      ...data,
+      category: data.category === 'ingredients' ? 'raw_materials' : 
+                data.category === 'packaging' ? 'packaging_materials' : 
+                'supplies' as const
+    };
+
     toast.success('Commissary inventory item updated successfully');
-    return data;
+    return transformedData;
   } catch (error) {
     console.error('Error updating commissary inventory item:', error);
     toast.error('Failed to update commissary inventory item');
@@ -106,7 +155,7 @@ export const updateCommissaryInventoryItem = async (
 export const deleteCommissaryInventoryItem = async (id: string): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('commissary_inventory')
+      .from('inventory_items')
       .update({ is_active: false })
       .eq('id', id);
 
@@ -130,7 +179,7 @@ export const adjustCommissaryInventoryStock = async (
   try {
     // Get current stock
     const { data: currentItem, error: fetchError } = await supabase
-      .from('commissary_inventory')
+      .from('inventory_items')
       .select('current_stock')
       .eq('id', id)
       .single();
@@ -141,17 +190,14 @@ export const adjustCommissaryInventoryStock = async (
 
     // Update stock
     const { error: updateError } = await supabase
-      .from('commissary_inventory')
+      .from('inventory_items')
       .update({ 
         current_stock: newStock,
-        updated_at: new Date().toISOString()
+        last_updated: new Date().toISOString()
       })
       .eq('id', id);
 
     if (updateError) throw updateError;
-
-    // Create transaction record (we'll need to create this table)
-    // For now, we'll skip the transaction logging
 
     toast.success('Commissary inventory stock adjusted successfully');
     return true;

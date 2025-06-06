@@ -87,7 +87,7 @@ export default function CommissaryInventory() {
   const getStockLevelBadge = (level: 'good' | 'low' | 'out') => {
     const variants = {
       good: 'default',
-      low: 'warning',
+      low: 'secondary',
       out: 'destructive'
     } as const;
 

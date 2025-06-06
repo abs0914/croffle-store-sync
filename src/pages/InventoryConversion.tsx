@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Package, RefreshCw, History } from "lucide-react";
 import { 
   CommissaryInventoryItem, 
-  InventoryStock, 
-  InventoryConversion 
+  InventoryStock
 } from "@/types/inventoryManagement";
+import type { InventoryConversion } from "@/types/inventoryManagement";
 import { 
   fetchCommissaryItemsForConversion,
   fetchStoreInventoryForConversion,
@@ -20,7 +21,7 @@ import {
   fetchInventoryConversions
 } from "@/services/inventoryManagement/inventoryConversionService";
 import { useAuth } from "@/contexts/auth";
-import { useStore } from "@/contexts/store";
+import { useStore } from "@/contexts/StoreContext";
 import { toast } from "sonner";
 
 export default function InventoryConversion() {
