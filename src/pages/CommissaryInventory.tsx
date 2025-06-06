@@ -187,14 +187,14 @@ export default function CommissaryInventory() {
             </Select>
 
             <Select
-              value={filters.supplier || ''}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value }))}
+              value={filters.supplier || 'none'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value === 'none' ? '' : value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Supplier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Suppliers</SelectItem>
+                <SelectItem value="none">All Suppliers</SelectItem>
                 {suppliers.map((supplier) => (
                   <SelectItem key={supplier.id} value={supplier.id}>
                     {supplier.name}
