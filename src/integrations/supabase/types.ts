@@ -136,6 +136,129 @@ export type Database = {
           },
         ]
       }
+      conversion_ingredients: {
+        Row: {
+          commissary_item_id: string
+          created_at: string
+          id: string
+          inventory_conversion_id: string
+          quantity_used: number
+          unit_cost: number | null
+        }
+        Insert: {
+          commissary_item_id: string
+          created_at?: string
+          id?: string
+          inventory_conversion_id: string
+          quantity_used: number
+          unit_cost?: number | null
+        }
+        Update: {
+          commissary_item_id?: string
+          created_at?: string
+          id?: string
+          inventory_conversion_id?: string
+          quantity_used?: number
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversion_ingredients_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversion_ingredients_inventory_conversion_id_fkey"
+            columns: ["inventory_conversion_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_conversions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversion_recipe_ingredients: {
+        Row: {
+          commissary_item_id: string
+          conversion_recipe_id: string
+          created_at: string
+          id: string
+          quantity: number
+        }
+        Insert: {
+          commissary_item_id: string
+          conversion_recipe_id: string
+          created_at?: string
+          id?: string
+          quantity: number
+        }
+        Update: {
+          commissary_item_id?: string
+          conversion_recipe_id?: string
+          created_at?: string
+          id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversion_recipe_ingredients_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversion_recipe_ingredients_conversion_recipe_id_fkey"
+            columns: ["conversion_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "conversion_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversion_recipes: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          finished_item_name: string
+          finished_item_unit: string
+          id: string
+          instructions: string | null
+          is_active: boolean
+          name: string
+          updated_at: string
+          yield_quantity: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          finished_item_name: string
+          finished_item_unit: string
+          id?: string
+          instructions?: string | null
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          yield_quantity?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          finished_item_name?: string
+          finished_item_unit?: string
+          id?: string
+          instructions?: string | null
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          yield_quantity?: number
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           created_at: string | null
@@ -309,6 +432,57 @@ export type Database = {
             columns: ["purchase_order_item_id"]
             isOneToOne: false
             referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_conversions: {
+        Row: {
+          conversion_date: string
+          conversion_recipe_id: string | null
+          converted_by: string
+          created_at: string
+          finished_goods_quantity: number
+          id: string
+          inventory_stock_id: string
+          notes: string | null
+          store_id: string
+        }
+        Insert: {
+          conversion_date?: string
+          conversion_recipe_id?: string | null
+          converted_by: string
+          created_at?: string
+          finished_goods_quantity: number
+          id?: string
+          inventory_stock_id: string
+          notes?: string | null
+          store_id: string
+        }
+        Update: {
+          conversion_date?: string
+          conversion_recipe_id?: string | null
+          converted_by?: string
+          created_at?: string
+          finished_goods_quantity?: number
+          id?: string
+          inventory_stock_id?: string
+          notes?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_conversions_conversion_recipe_id_fkey"
+            columns: ["conversion_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "conversion_recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_conversions_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
         ]

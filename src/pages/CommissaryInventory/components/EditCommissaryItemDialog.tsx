@@ -69,7 +69,7 @@ export function EditCommissaryItemDialog({
 
     const updatedItem = await updateCommissaryInventoryItem(item.id, {
       ...formData,
-      supplier_id: formData.supplier_id || undefined,
+      supplier_id: formData.supplier_id === 'none' ? undefined : formData.supplier_id,
       sku: formData.sku || undefined,
       barcode: formData.barcode || undefined,
       expiry_date: formData.expiry_date || undefined,
@@ -190,14 +190,14 @@ export function EditCommissaryItemDialog({
           <div className="space-y-2">
             <Label htmlFor="supplier_id">Supplier</Label>
             <Select
-              value={formData.supplier_id}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, supplier_id: value }))}
+              value={formData.supplier_id || 'none'}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, supplier_id: value === 'none' ? '' : value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select supplier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No supplier</SelectItem>
+                <SelectItem value="none">No supplier</SelectItem>
                 {suppliers.map((supplier) => (
                   <SelectItem key={supplier.id} value={supplier.id}>
                     {supplier.name}

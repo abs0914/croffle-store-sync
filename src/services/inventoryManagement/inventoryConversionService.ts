@@ -1,7 +1,27 @@
 import { supabase } from "@/integrations/supabase/client";
-import { InventoryConversion, CommissaryInventoryItem, InventoryStock } from "@/types/inventoryManagement";
+import type { 
+  InventoryConversion, 
+  ConversionRecipe, 
+  ConversionRecipeForm,
+  MultiIngredientConversionForm 
+} from "@/types/inventoryManagement";
+import { CommissaryInventoryItem, InventoryStock } from "@/types/inventoryManagement";
 import { fetchInventoryStock } from "@/services/inventoryManagement/recipeService";
 import { toast } from "sonner";
+
+// Helper function to transform database category to our interface category
+const transformCategory = (dbCategory: 'ingredients' | 'packaging' | 'supplies'): 'raw_materials' | 'packaging_materials' | 'supplies' => {
+  switch (dbCategory) {
+    case 'ingredients':
+      return 'raw_materials';
+    case 'packaging':
+      return 'packaging_materials';
+    case 'supplies':
+      return 'supplies';
+    default:
+      return 'supplies';
+  }
+};
 
 export const fetchInventoryConversions = async (storeId?: string): Promise<InventoryConversion[]> => {
   try {
@@ -9,8 +29,12 @@ export const fetchInventoryConversions = async (storeId?: string): Promise<Inven
       .from('inventory_conversions')
       .select(`
         *,
-        commissary_item:commissary_inventory(*),
-        inventory_stock:inventory_stock(*)
+        conversion_recipe:conversion_recipes(*),
+        inventory_stock:inventory_stock(*),
+        ingredients:conversion_ingredients(
+          *,
+          commissary_item:inventory_items(*)
+        )
       `)
       .order('conversion_date', { ascending: false });
 
@@ -19,10 +43,21 @@ export const fetchInventoryConversions = async (storeId?: string): Promise<Inven
     }
 
     const { data, error } = await query;
-
     if (error) throw error;
 
-    return data || [];
+    // Transform the data to match our TypeScript interfaces
+    const transformedData: InventoryConversion[] = (data || []).map(conversion => ({
+      ...conversion,
+      ingredients: conversion.ingredients?.map((ingredient: any) => ({
+        ...ingredient,
+        commissary_item: ingredient.commissary_item ? {
+          ...ingredient.commissary_item,
+          category: transformCategory(ingredient.commissary_item.category)
+        } : undefined
+      })) || []
+    }));
+
+    return transformedData;
   } catch (error) {
     console.error('Error fetching inventory conversions:', error);
     toast.error('Failed to fetch inventory conversions');
@@ -30,103 +65,183 @@ export const fetchInventoryConversions = async (storeId?: string): Promise<Inven
   }
 };
 
-export const createInventoryConversion = async (
-  conversion: Omit<InventoryConversion, 'id' | 'created_at' | 'commissary_item' | 'inventory_stock'>
+export const createMultiIngredientConversion = async (
+  conversion: MultiIngredientConversionForm,
+  storeId: string,
+  userId: string
 ): Promise<InventoryConversion | null> => {
   try {
-    // Start a transaction to ensure data consistency
-    const { data, error } = await supabase.rpc('create_inventory_conversion', {
-      p_commissary_item_id: conversion.commissary_item_id,
-      p_store_id: conversion.store_id,
-      p_inventory_stock_id: conversion.inventory_stock_id,
-      p_raw_material_quantity: conversion.raw_material_quantity,
-      p_finished_goods_quantity: conversion.finished_goods_quantity,
-      p_conversion_ratio: conversion.conversion_ratio,
-      p_converted_by: conversion.converted_by,
-      p_notes: conversion.notes || null
-    });
-
-    if (error) {
-      // If RPC doesn't exist, fall back to manual transaction
-      return await createInventoryConversionManual(conversion);
-    }
-
-    toast.success('Inventory conversion completed successfully');
-    return data;
-  } catch (error) {
-    console.error('Error creating inventory conversion:', error);
-    toast.error('Failed to create inventory conversion');
-    return null;
-  }
-};
-
-// Manual conversion creation (fallback if RPC doesn't exist)
-const createInventoryConversionManual = async (
-  conversion: Omit<InventoryConversion, 'id' | 'created_at' | 'commissary_item' | 'inventory_stock'>
-): Promise<InventoryConversion | null> => {
-  try {
-    // 1. Check commissary inventory has enough stock
-    const { data: commissaryItem, error: commissaryError } = await supabase
-      .from('commissary_inventory')
-      .select('current_stock')
-      .eq('id', conversion.commissary_item_id)
-      .single();
-
-    if (commissaryError) throw commissaryError;
-
-    if (commissaryItem.current_stock < conversion.raw_material_quantity) {
-      toast.error('Insufficient commissary inventory stock');
-      return null;
-    }
-
-    // 2. Create conversion record
-    const { data: conversionData, error: conversionError } = await supabase
+    // Start a transaction by creating the main conversion
+    const { data: newConversion, error: conversionError } = await supabase
       .from('inventory_conversions')
-      .insert(conversion)
-      .select(`
-        *,
-        commissary_item:commissary_inventory(*),
-        inventory_stock:inventory_stock(*)
-      `)
+      .insert({
+        conversion_recipe_id: conversion.conversion_recipe_id || null,
+        store_id: storeId,
+        inventory_stock_id: conversion.inventory_stock_id,
+        finished_goods_quantity: conversion.finished_goods_quantity,
+        converted_by: userId,
+        notes: conversion.notes
+      })
+      .select()
       .single();
 
     if (conversionError) throw conversionError;
 
-    // 3. Update commissary inventory (decrease)
-    const { error: commissaryUpdateError } = await supabase
-      .from('commissary_inventory')
-      .update({ 
-        current_stock: commissaryItem.current_stock - conversion.raw_material_quantity,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', conversion.commissary_item_id);
+    // Create conversion ingredients
+    const ingredientsData = conversion.ingredients.map(ingredient => ({
+      inventory_conversion_id: newConversion.id,
+      commissary_item_id: ingredient.commissary_item_id,
+      quantity_used: ingredient.quantity,
+      unit_cost: ingredient.unit_cost
+    }));
 
-    if (commissaryUpdateError) throw commissaryUpdateError;
+    const { error: ingredientsError } = await supabase
+      .from('conversion_ingredients')
+      .insert(ingredientsData);
 
-    // 4. Update store inventory (increase)
-    const { data: storeItem, error: storeError } = await supabase
+    if (ingredientsError) throw ingredientsError;
+
+    // Update commissary stock levels directly
+    for (const ingredient of conversion.ingredients) {
+      // Get current stock
+      const { data: currentItem, error: fetchError } = await supabase
+        .from('inventory_items')
+        .select('current_stock')
+        .eq('id', ingredient.commissary_item_id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching current stock:', fetchError);
+        continue;
+      }
+
+      const newStock = currentItem.current_stock - ingredient.quantity;
+
+      // Update stock
+      const { error: stockError } = await supabase
+        .from('inventory_items')
+        .update({ 
+          current_stock: newStock,
+          last_updated: new Date().toISOString()
+        })
+        .eq('id', ingredient.commissary_item_id);
+
+      if (stockError) {
+        console.error('Error updating commissary stock:', stockError);
+        // Continue with other ingredients even if one fails
+      }
+    }
+
+    // Update target inventory stock directly
+    const { data: currentStock, error: fetchStockError } = await supabase
       .from('inventory_stock')
       .select('stock_quantity')
       .eq('id', conversion.inventory_stock_id)
       .single();
 
-    if (storeError) throw storeError;
+    if (fetchStockError) {
+      console.error('Error fetching current inventory stock:', fetchStockError);
+    } else {
+      const newStockQuantity = currentStock.stock_quantity + conversion.finished_goods_quantity;
 
-    const { error: storeUpdateError } = await supabase
-      .from('inventory_stock')
-      .update({ 
-        stock_quantity: storeItem.stock_quantity + conversion.finished_goods_quantity,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', conversion.inventory_stock_id);
+      const { error: targetStockError } = await supabase
+        .from('inventory_stock')
+        .update({ 
+          stock_quantity: newStockQuantity,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', conversion.inventory_stock_id);
 
-    if (storeUpdateError) throw storeUpdateError;
+      if (targetStockError) {
+        console.error('Error updating target stock:', targetStockError);
+      }
+    }
 
-    toast.success('Inventory conversion completed successfully');
-    return conversionData;
+    toast.success('Multi-ingredient conversion completed successfully');
+    return newConversion;
   } catch (error) {
-    console.error('Error in manual inventory conversion:', error);
-    toast.error('Failed to complete inventory conversion');
+    console.error('Error creating multi-ingredient conversion:', error);
+    toast.error('Failed to create multi-ingredient conversion');
+    return null;
+  }
+};
+
+export const fetchConversionRecipes = async (): Promise<ConversionRecipe[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('conversion_recipes')
+      .select(`
+        *,
+        ingredients:conversion_recipe_ingredients(
+          *,
+          commissary_item:inventory_items(*)
+        )
+      `)
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) throw error;
+
+    // Transform the data to match our TypeScript interfaces
+    const transformedData: ConversionRecipe[] = (data || []).map(recipe => ({
+      ...recipe,
+      ingredients: recipe.ingredients?.map((ingredient: any) => ({
+        ...ingredient,
+        commissary_item: ingredient.commissary_item ? {
+          ...ingredient.commissary_item,
+          category: transformCategory(ingredient.commissary_item.category)
+        } : undefined
+      })) || []
+    }));
+
+    return transformedData;
+  } catch (error) {
+    console.error('Error fetching conversion recipes:', error);
+    toast.error('Failed to fetch conversion recipes');
+    return [];
+  }
+};
+
+export const createConversionRecipe = async (
+  recipe: ConversionRecipeForm,
+  userId: string
+): Promise<ConversionRecipe | null> => {
+  try {
+    // Create the recipe
+    const { data: newRecipe, error: recipeError } = await supabase
+      .from('conversion_recipes')
+      .insert({
+        name: recipe.name,
+        description: recipe.description,
+        finished_item_name: recipe.finished_item_name,
+        finished_item_unit: recipe.finished_item_unit,
+        yield_quantity: recipe.yield_quantity,
+        instructions: recipe.instructions,
+        created_by: userId
+      })
+      .select()
+      .single();
+
+    if (recipeError) throw recipeError;
+
+    // Create recipe ingredients
+    const ingredientsData = recipe.ingredients.map(ingredient => ({
+      conversion_recipe_id: newRecipe.id,
+      commissary_item_id: ingredient.commissary_item_id,
+      quantity: ingredient.quantity
+    }));
+
+    const { error: ingredientsError } = await supabase
+      .from('conversion_recipe_ingredients')
+      .insert(ingredientsData);
+
+    if (ingredientsError) throw ingredientsError;
+
+    toast.success('Conversion recipe created successfully');
+    return newRecipe;
+  } catch (error) {
+    console.error('Error creating conversion recipe:', error);
+    toast.error('Failed to create conversion recipe');
     return null;
   }
 };
@@ -134,7 +249,7 @@ const createInventoryConversionManual = async (
 export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInventoryItem[]> => {
   try {
     const { data, error } = await supabase
-      .from('commissary_inventory')
+      .from('inventory_items')
       .select('*')
       .eq('is_active', true)
       .gt('current_stock', 0)
@@ -142,7 +257,13 @@ export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInv
 
     if (error) throw error;
 
-    return data || [];
+    // Transform the data to match CommissaryInventoryItem interface
+    const transformedData: CommissaryInventoryItem[] = (data || []).map(item => ({
+      ...item,
+      category: transformCategory(item.category)
+    }));
+
+    return transformedData;
   } catch (error) {
     console.error('Error fetching commissary items for conversion:', error);
     toast.error('Failed to fetch commissary items');
@@ -152,7 +273,6 @@ export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInv
 
 export const fetchStoreInventoryForConversion = async (storeId: string): Promise<InventoryStock[]> => {
   try {
-    // Use the existing fetchInventoryStock function from recipeService
     return await fetchInventoryStock(storeId);
   } catch (error) {
     console.error('Error fetching store inventory for conversion:', error);
@@ -161,7 +281,6 @@ export const fetchStoreInventoryForConversion = async (storeId: string): Promise
   }
 };
 
-// Create or find store inventory item for conversion
 export const createOrFindStoreInventoryItem = async (
   storeId: string,
   itemName: string,
@@ -204,7 +323,35 @@ export const createOrFindStoreInventoryItem = async (
   }
 };
 
-// Calculate conversion suggestions based on commissary stock and store needs
+export const validateConversionIngredients = (
+  ingredients: any[],
+  availableItems: CommissaryInventoryItem[]
+): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+
+  for (const ingredient of ingredients) {
+    const availableItem = availableItems.find(item => item.id === ingredient.commissary_item_id);
+    
+    if (!availableItem) {
+      errors.push('Invalid ingredient selected');
+      continue;
+    }
+
+    if (ingredient.quantity > availableItem.current_stock) {
+      errors.push(`Insufficient stock for ${availableItem.name}. Available: ${availableItem.current_stock} ${availableItem.unit}`);
+    }
+
+    if (ingredient.quantity <= 0) {
+      errors.push(`Invalid quantity for ${availableItem.name}`);
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
 export const getConversionSuggestions = async (storeId: string): Promise<any[]> => {
   try {
     // This would be a complex query to suggest conversions based on:

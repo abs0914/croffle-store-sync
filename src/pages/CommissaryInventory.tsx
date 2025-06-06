@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,10 @@ import {
 } from "@/services/inventoryManagement/commissaryInventoryService";
 import { fetchSuppliers } from "@/services/inventoryManagement/supplierService";
 import { useAuth } from "@/contexts/auth";
-import { AddCommissaryItemDialog } from "./components/AddCommissaryItemDialog";
-import { EditCommissaryItemDialog } from "./components/EditCommissaryItemDialog";
-import { StockAdjustmentDialog } from "./components/StockAdjustmentDialog";
-import { DeleteConfirmationDialog } from "./components/DeleteConfirmationDialog";
+import { AddCommissaryItemDialog } from "./CommissaryInventory/components/AddCommissaryItemDialog";
+import { EditCommissaryItemDialog } from "./CommissaryInventory/components/EditCommissaryItemDialog";
+import { StockAdjustmentDialog } from "./CommissaryInventory/components/StockAdjustmentDialog";
+import { DeleteConfirmationDialog } from "./CommissaryInventory/components/DeleteConfirmationDialog";
 import { toast } from "sonner";
 
 export default function CommissaryInventory() {
@@ -86,7 +87,7 @@ export default function CommissaryInventory() {
   const getStockLevelBadge = (level: 'good' | 'low' | 'out') => {
     const variants = {
       good: 'default',
-      low: 'warning',
+      low: 'secondary',
       out: 'destructive'
     } as const;
 
@@ -186,14 +187,14 @@ export default function CommissaryInventory() {
             </Select>
 
             <Select
-              value={filters.supplier || ''}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value }))}
+              value={filters.supplier || 'none'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value === 'none' ? '' : value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Supplier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Suppliers</SelectItem>
+                <SelectItem value="none">All Suppliers</SelectItem>
                 {suppliers.map((supplier) => (
                   <SelectItem key={supplier.id} value={supplier.id}>
                     {supplier.name}
