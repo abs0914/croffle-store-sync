@@ -35,7 +35,7 @@ export function MultiIngredientConversionFormComponent({
   const [formData, setFormData] = useState<MultiIngredientConversionForm>({
     conversion_recipe_id: '',
     ingredients: [{ commissary_item_id: '', quantity: 0, available_stock: 0 }],
-    inventory_stock_id: '',
+    inventory_stock_id: 'create_new',
     new_item_name: '',
     new_item_unit: '',
     finished_goods_quantity: 0,
@@ -138,8 +138,8 @@ export function MultiIngredientConversionFormComponent({
       return;
     }
 
-    if (!formData.inventory_stock_id && (!formData.new_item_name || !formData.new_item_unit)) {
-      toast.error('Please select a target item or create a new one');
+    if (formData.inventory_stock_id === 'create_new' && (!formData.new_item_name || !formData.new_item_unit)) {
+      toast.error('Please fill in new item details or select an existing item');
       return;
     }
 
@@ -148,7 +148,13 @@ export function MultiIngredientConversionFormComponent({
       return;
     }
 
-    await onSubmit(formData);
+    // Prepare the data for submission
+    const submissionData = {
+      ...formData,
+      inventory_stock_id: formData.inventory_stock_id === 'create_new' ? '' : formData.inventory_stock_id
+    };
+
+    await onSubmit(submissionData);
   };
 
   return (
@@ -164,9 +170,9 @@ export function MultiIngredientConversionFormComponent({
         <div className="space-y-2">
           <Label htmlFor="recipe_template">Recipe Template (Optional)</Label>
           <Select
-            value={formData.conversion_recipe_id || ''}
+            value={formData.conversion_recipe_id || 'no_template'}
             onValueChange={(value) => {
-              if (value) {
+              if (value !== 'no_template') {
                 loadRecipe(value);
               } else {
                 setFormData(prev => ({ ...prev, conversion_recipe_id: '' }));
@@ -177,7 +183,7 @@ export function MultiIngredientConversionFormComponent({
               <SelectValue placeholder="Select a recipe template" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No template (manual entry)</SelectItem>
+              <SelectItem value="no_template">No template (manual entry)</SelectItem>
               {conversionRecipes.map((recipe) => (
                 <SelectItem key={recipe.id} value={recipe.id}>
                   {recipe.name} → {recipe.finished_item_name} ({recipe.yield_quantity} {recipe.finished_item_unit})
@@ -220,13 +226,18 @@ export function MultiIngredientConversionFormComponent({
                   <div className="space-y-2">
                     <Label>Raw Material</Label>
                     <Select
-                      value={ingredient.commissary_item_id}
-                      onValueChange={(value) => updateIngredient(index, 'commissary_item_id', value)}
+                      value={ingredient.commissary_item_id || 'select_item'}
+                      onValueChange={(value) => {
+                        if (value !== 'select_item') {
+                          updateIngredient(index, 'commissary_item_id', value);
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select raw material" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="select_item">Select raw material</SelectItem>
                         {commissaryItems.map((item) => (
                           <SelectItem key={item.id} value={item.id}>
                             {item.name} ({item.current_stock} {item.unit} available)
@@ -291,10 +302,10 @@ export function MultiIngredientConversionFormComponent({
           <div className="space-y-2">
             <Label>Target Inventory Item</Label>
             <Select
-              value={formData.inventory_stock_id || 'create_new'}
+              value={formData.inventory_stock_id}
               onValueChange={(value) => setFormData(prev => ({ 
                 ...prev, 
-                inventory_stock_id: value === 'create_new' ? '' : value,
+                inventory_stock_id: value,
                 new_item_name: value === 'create_new' ? prev.new_item_name : '',
                 new_item_unit: value === 'create_new' ? prev.new_item_unit : ''
               }))}
@@ -313,7 +324,7 @@ export function MultiIngredientConversionFormComponent({
             </Select>
           </div>
 
-          {(!formData.inventory_stock_id || formData.inventory_stock_id === 'create_new') && (
+          {formData.inventory_stock_id === 'create_new' && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="new_item_name">New Item Name</Label>
