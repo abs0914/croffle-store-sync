@@ -19,6 +19,7 @@ import { EditCommissaryItemDialog } from "./CommissaryInventory/components/EditC
 import { StockAdjustmentDialog } from "./CommissaryInventory/components/StockAdjustmentDialog";
 import { DeleteConfirmationDialog } from "./CommissaryInventory/components/DeleteConfirmationDialog";
 import { toast } from "sonner";
+import { formatCurrency } from "@/utils/format";
 
 export default function CommissaryInventory() {
   const { user } = useAuth();
@@ -262,7 +263,7 @@ export default function CommissaryInventory() {
                             <span className="font-medium">Min Threshold:</span> {item.minimum_threshold} {item.unit}
                           </div>
                           <div>
-                            <span className="font-medium">Unit Cost:</span> ${item.unit_cost?.toFixed(2) || 'N/A'}
+                            <span className="font-medium">Unit Cost:</span> {item.unit_cost ? formatCurrency(item.unit_cost) : 'N/A'}
                           </div>
                           <div>
                             <span className="font-medium">Supplier:</span> {item.supplier?.name || 'N/A'}

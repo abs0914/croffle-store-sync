@@ -2,6 +2,7 @@
 import { CashierReport } from "@/types/reports";
 import { processCashierTransactions } from "./cashierTransactionProcessor";
 import { processAttendanceData } from "./cashierAttendanceProcessor";
+import { formatCurrency } from "@/utils/format";
 
 export async function processCashierReportData(
   transactions: any[],
@@ -47,7 +48,7 @@ export async function processCashierReportData(
   console.log('📈 Cashier report generated successfully:', {
     cashierCount: cashiers.length,
     totalTransactions,
-    totalSales: totalSales.toFixed(2),
+    totalSales: formatCurrency(totalSales),
     cashierNames: cashiers.map(c => c.name),
     dataFound: transactions.length > 0
   });

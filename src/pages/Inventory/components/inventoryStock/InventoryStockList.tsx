@@ -21,6 +21,7 @@ import {
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
+import { formatCurrency } from "@/utils/format";
 
 interface InventoryStockListProps {
   stockItems: InventoryStock[];
@@ -143,7 +144,7 @@ export const InventoryStockList = ({
                 </span>
               </TableCell>
               <TableCell className="text-right">
-                {stockItem.cost !== undefined ? `₱${stockItem.cost.toFixed(2)}` : '—'}
+                {stockItem.cost !== undefined ? formatCurrency(stockItem.cost) : '—'}
               </TableCell>
               <TableCell>
                 {stockItem.is_active ? (

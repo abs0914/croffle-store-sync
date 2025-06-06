@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BadgePercent } from "lucide-react";
+import { formatCurrency } from "@/utils/format";
 
 interface DiscountSelectorProps {
   subtotal: number;
@@ -62,8 +63,8 @@ export default function DiscountSelector({
   };
 
   // Calculate the display discount amount
-  const displayDiscount = currentDiscount > 0 
-    ? `₱${currentDiscount.toFixed(2)} (${currentDiscountType})` 
+  const displayDiscount = currentDiscount > 0
+    ? `${formatCurrency(currentDiscount)} (${currentDiscountType})`
     : "None";
   
   return (

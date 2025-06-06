@@ -4,6 +4,7 @@ import { ProfitLossReport } from "@/types/reports";
 import { toast } from "sonner";
 import { format, eachDayOfInterval, parseISO } from "date-fns";
 import { fetchTransactionsWithFallback, logTransactionDetails } from "./utils/transactionQueryUtils";
+import { formatCurrency } from "@/utils/format";
 
 export async function fetchProfitLossReport(
   storeId: string,
@@ -112,7 +113,7 @@ export async function fetchProfitLossReport(
         : 0;
     });
 
-    console.log(`💰 P&L totals: Revenue ₱${totalRevenue.toFixed(2)}, Cost ₱${totalCost.toFixed(2)}, Gross Profit ₱${(totalRevenue - totalCost).toFixed(2)}`);
+    console.log(`💰 P&L totals: Revenue ${formatCurrency(totalRevenue)}, Cost ${formatCurrency(totalCost)}, Gross Profit ${formatCurrency(totalRevenue - totalCost)}`);
 
     // Calculate daily profit and loss
     const dateRange = eachDayOfInterval({
@@ -138,7 +139,7 @@ export async function fetchProfitLossReport(
         });
       });
       
-      console.log(`📅 ${dateStr}: Revenue ₱${dailyRevenue.toFixed(2)}, Cost ₱${dailyCost.toFixed(2)}, Profit ₱${(dailyRevenue - dailyCost).toFixed(2)}`);
+      console.log(`📅 ${dateStr}: Revenue ${formatCurrency(dailyRevenue)}, Cost ${formatCurrency(dailyCost)}, Profit ${formatCurrency(dailyRevenue - dailyCost)}`);
       
       return {
         date: format(date, "MMM dd"),
@@ -153,7 +154,7 @@ export async function fetchProfitLossReport(
     const grossProfit = totalRevenue - totalCost;
     const netProfit = grossProfit - expenses;
 
-    console.log(`📈 Final P&L: Gross Profit ₱${grossProfit.toFixed(2)}, Net Profit ₱${netProfit.toFixed(2)}`);
+    console.log(`📈 Final P&L: Gross Profit ${formatCurrency(grossProfit)}, Net Profit ${formatCurrency(netProfit)}`);
 
     return {
       totalRevenue,

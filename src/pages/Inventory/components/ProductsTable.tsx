@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
+import { formatCurrency } from "@/utils/format";
 
 interface ProductsTableProps {
   products: Product[];
@@ -55,7 +56,7 @@ export const ProductsTable = ({ products, onDeleteProduct }: ProductsTableProps)
                   {product.category?.name || "Uncategorized"}
                 </TableCell>
                 <TableCell className="text-right">
-                  ₱{product.price.toFixed(2)}
+                  {formatCurrency(product.price)}
                 </TableCell>
                 <TableCell className="text-center">
                   {product.stock_quantity || product.stockQuantity || 0}

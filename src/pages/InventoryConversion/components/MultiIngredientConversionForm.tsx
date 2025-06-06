@@ -16,6 +16,7 @@ import {
   ConversionIngredientForm
 } from "@/types/inventoryManagement";
 import { toast } from "sonner";
+import { formatCurrency } from "@/utils/format";
 
 interface MultiIngredientConversionFormProps {
   commissaryItems: CommissaryInventoryItem[];
@@ -268,11 +269,11 @@ export function MultiIngredientConversionFormComponent({
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Unit Cost:</span>
-                      <span className="font-medium">${selectedItem.unit_cost?.toFixed(2) || 'N/A'}</span>
+                      <span className="font-medium">{selectedItem.unit_cost ? formatCurrency(selectedItem.unit_cost) : 'N/A'}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Total Cost:</span>
-                      <span className="font-medium">${((selectedItem.unit_cost || 0) * ingredient.quantity).toFixed(2)}</span>
+                      <span className="font-medium">{formatCurrency((selectedItem.unit_cost || 0) * ingredient.quantity)}</span>
                     </div>
                     {ingredient.quantity > selectedItem.current_stock && (
                       <div className="flex items-center gap-2 text-red-600 text-sm">
@@ -291,7 +292,7 @@ export function MultiIngredientConversionFormComponent({
         <div className="p-4 bg-blue-50 rounded-lg">
           <div className="flex justify-between items-center">
             <span className="font-medium">Total Raw Material Cost:</span>
-            <span className="text-lg font-bold text-blue-600">${totalCost.toFixed(2)}</span>
+            <span className="text-lg font-bold text-blue-600">{formatCurrency(totalCost)}</span>
           </div>
         </div>
 

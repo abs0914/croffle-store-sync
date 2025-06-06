@@ -1,16 +1,17 @@
 
 import { Ingredient } from "@/types";
 import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { Edit, Plus } from "lucide-react";
+import { formatCurrency } from "@/utils/format";
 import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -63,8 +64,8 @@ export const IngredientList = ({
             <TableCell>{ingredient.unit_type}</TableCell>
             <TableCell className="text-right">{ingredient.stock_quantity}</TableCell>
             <TableCell className="text-right">
-              {ingredient.cost_per_unit 
-                ? `₱${ingredient.cost_per_unit.toFixed(2)}` 
+              {ingredient.cost_per_unit
+                ? formatCurrency(ingredient.cost_per_unit)
                 : "—"}
             </TableCell>
             <TableCell>

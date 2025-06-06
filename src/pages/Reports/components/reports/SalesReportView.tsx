@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SalesReport } from "@/types/reports";
+import { formatCurrency } from "@/utils/format";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { format } from "date-fns";
 
@@ -42,7 +43,7 @@ export function SalesReportView({ data, dateRange, isAllStores }: SalesReportVie
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-croffle-light/20 p-4 rounded-lg">
               <p className="text-sm text-muted-foreground">Total Sales</p>
-              <h3 className="text-2xl font-bold text-croffle-primary">₱{data.totalSales.toFixed(2)}</h3>
+              <h3 className="text-2xl font-bold text-croffle-primary">{formatCurrency(data.totalSales)}</h3>
             </div>
             <div className="bg-croffle-light/20 p-4 rounded-lg">
               <p className="text-sm text-muted-foreground">Total Transactions</p>

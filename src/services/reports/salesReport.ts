@@ -4,6 +4,7 @@ import { SalesReport } from "@/types/reports";
 import { toast } from "sonner";
 import { format, eachDayOfInterval, parseISO } from "date-fns";
 import { fetchTransactionsWithFallback, logTransactionDetails } from "./utils/transactionQueryUtils";
+import { formatCurrency } from "@/utils/format";
 
 export async function fetchSalesReport(
   storeId: string,
@@ -48,7 +49,7 @@ export async function fetchSalesReport(
     const totalSales = transactions.reduce((sum, tx) => sum + tx.total, 0);
     const totalTransactions = transactions.length;
 
-    console.log(`💰 Sales summary: ${totalTransactions} transactions, ₱${totalSales.toFixed(2)} total`);
+    console.log(`💰 Sales summary: ${totalTransactions} transactions, ${formatCurrency(totalSales)} total`);
 
     // Calculate sales by date
     const dateRange = eachDayOfInterval({
@@ -102,7 +103,7 @@ export async function fetchSalesReport(
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
 
-    console.log('🏆 Top products:', topProducts.map(p => `${p.name}: ₱${p.revenue.toFixed(2)}`));
+    console.log('🏆 Top products:', topProducts.map(p => `${p.name}: ${formatCurrency(p.revenue)}`));
 
     // Calculate payment method breakdown
     const paymentMethods: Record<string, number> = {
@@ -126,8 +127,8 @@ export async function fetchSalesReport(
         percentage: (amount / totalSales) * 100
       }));
 
-    console.log('💳 Payment methods:', paymentMethodsArray.map(pm => 
-      `${pm.method}: ₱${pm.amount.toFixed(2)} (${pm.percentage.toFixed(1)}%)`
+    console.log('💳 Payment methods:', paymentMethodsArray.map(pm =>
+      `${pm.method}: ${formatCurrency(pm.amount)} (${pm.percentage.toFixed(1)}%)`
     ));
 
     return {
