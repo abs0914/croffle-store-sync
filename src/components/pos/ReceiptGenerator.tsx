@@ -9,6 +9,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Transaction, Customer } from "@/types";
 import { useStore } from "@/contexts/StoreContext";
 import { toast } from "sonner";
+import { formatCurrency } from "@/utils/format";
 
 interface ReceiptGeneratorProps {
   transaction: Transaction;
@@ -84,12 +85,7 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
     printWindow.close();
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP'
-    }).format(amount);
-  };
+
 
   // Generate QR code content
   const qrContent = `RECEIPT:${transaction.receiptNumber}|STORE:${currentStore?.name || ''}|DATE:${format(new Date(transaction.createdAt), 'yyyy-MM-dd HH:mm')}|TOTAL:${transaction.total}`;

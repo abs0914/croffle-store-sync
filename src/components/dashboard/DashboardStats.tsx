@@ -4,6 +4,7 @@ import { CreditCard, Package, Users, BarChart4 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/utils/format";
 
 interface StatCardProps {
   title: string;
@@ -19,12 +20,8 @@ interface StatCardProps {
 export function DashboardStats() {
   const { dailySales, productsCount, customersCount, bestSeller, isLoading } = useDashboardStats();
   
-  // Format currency
-  const formattedSales = new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-    minimumFractionDigits: 2
-  }).format(dailySales);
+  // Format currency using centralized function
+  const formattedSales = formatCurrency(dailySales);
 
   // Statistics data connected to actual data
   const stats = [
