@@ -1,4 +1,3 @@
-
 export interface InventoryItem {
   id: string;
   store_id: string;
@@ -145,36 +144,89 @@ export interface CommissaryInventoryItem {
   supplier?: Supplier;
 }
 
-// Inventory Conversion Types
+// Enhanced Conversion Recipe Types (for defining how multiple raw materials become finished goods)
+export interface ConversionRecipe {
+  id: string;
+  name: string;
+  description?: string;
+  finished_item_name: string;
+  finished_item_unit: string;
+  yield_quantity: number;
+  instructions?: string;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  ingredients?: ConversionRecipeIngredient[];
+}
+
+export interface ConversionRecipeIngredient {
+  id: string;
+  conversion_recipe_id: string;
+  commissary_item_id: string;
+  quantity: number;
+  created_at: string;
+  commissary_item?: CommissaryInventoryItem;
+}
+
+// Enhanced Inventory Conversion Types
 export interface InventoryConversion {
   id: string;
-  commissary_item_id: string;
+  conversion_recipe_id?: string;
   store_id: string;
   inventory_stock_id: string;
-  raw_material_quantity: number;
   finished_goods_quantity: number;
-  conversion_ratio: number;
   conversion_date: string;
   converted_by: string;
   notes?: string;
   created_at: string;
-  commissary_item?: CommissaryInventoryItem;
+  conversion_recipe?: ConversionRecipe;
   inventory_stock?: InventoryStock;
+  ingredients?: ConversionIngredient[];
 }
 
-// Conversion Recipe Types (for defining how raw materials become finished goods)
-export interface ConversionRecipe {
+export interface ConversionIngredient {
   id: string;
-  name: string;
+  inventory_conversion_id: string;
   commissary_item_id: string;
+  quantity_used: number;
+  unit_cost?: number;
+  created_at: string;
+  commissary_item?: CommissaryInventoryItem;
+}
+
+// Form types for multi-ingredient conversions
+export interface MultiIngredientConversionForm {
+  conversion_recipe_id?: string;
+  ingredients: ConversionIngredientForm[];
+  inventory_stock_id: string;
+  new_item_name: string;
+  new_item_unit: string;
+  finished_goods_quantity: number;
+  notes: string;
+}
+
+export interface ConversionIngredientForm {
+  commissary_item_id: string;
+  quantity: number;
+  available_stock: number;
+  unit_cost?: number;
+}
+
+// Recipe creation form
+export interface ConversionRecipeForm {
+  name: string;
+  description: string;
   finished_item_name: string;
   finished_item_unit: string;
-  conversion_ratio: number; // How many finished units per raw material unit
-  instructions?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  commissary_item?: CommissaryInventoryItem;
+  yield_quantity: number;
+  instructions: string;
+  ingredients: ConversionRecipeIngredientForm[];
+}
+
+export interface ConversionRecipeIngredientForm {
+  commissary_item_id: string;
+  quantity: number;
 }
 
 // Filters for commissary inventory
