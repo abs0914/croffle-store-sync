@@ -11,7 +11,10 @@ import {
   FileSpreadsheet,
   UserCircle,
   Utensils,
-  Boxes
+  Boxes,
+  ShoppingCart,
+  Warehouse,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth";
@@ -48,6 +51,18 @@ const menuItems = [
     roles: ["admin", "owner", "manager"]
   },
   {
+    name: "Commissary Inventory",
+    href: "/commissary-inventory",
+    icon: Warehouse,
+    roles: ["admin", "owner"]
+  },
+  {
+    name: "Inventory Conversion",
+    href: "/inventory-conversion",
+    icon: RefreshCw,
+    roles: ["admin", "owner"]
+  },
+  {
     name: "Stores",
     href: "/stores",
     icon: Store,
@@ -58,18 +73,6 @@ const menuItems = [
     href: "/reports",
     icon: BarChart,
     roles: ["admin", "owner", "manager", "cashier"]
-  },
-  {
-    icon: Package,
-    label: "Inventory",
-    href: "/inventory",
-    permission: "manager" as const,
-  },
-  {
-    icon: ShoppingCart,
-    label: "Order Management",
-    href: "/order-management",
-    permission: "manager" as const,
   }
 ];
 

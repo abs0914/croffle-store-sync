@@ -5,14 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryItemsList } from "./components/inventoryManagement/InventoryItemsList";
 import { InventoryStats } from "./components/inventoryManagement/InventoryStats";
-import { SuppliersTab } from "./components/inventoryManagement/SuppliersTab";
 import { RecipesTab } from "./components/inventoryManagement/RecipesTab";
-import { OrdersTab } from "./components/inventoryManagement/OrdersTab";
-import { StockTransactionsTab } from "./components/inventoryManagement/StockTransactionsTab";
 
 export default function InventoryManagement() {
   const { currentStore } = useStore();
-  const [activeTab, setActiveTab] = useState("items");
+  const [activeTab, setActiveTab] = useState("recipes");
 
   if (!currentStore) {
     return (
@@ -47,15 +44,20 @@ export default function InventoryManagement() {
         </p>
       </div>
 
+      <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <h3 className="font-semibold text-amber-800 mb-2">Need to Manage Suppliers or Orders?</h3>
+        <p className="text-sm text-amber-700">
+          Supplier management and purchase orders are handled in the dedicated <strong>Order Management</strong> module.
+          Navigate to Order Management from the main menu to create orders, manage suppliers, and track deliveries.
+        </p>
+      </div>
+
       <InventoryStats storeId={currentStore.id} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="recipes">Recipes</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="recipes">Recipes & Menu</TabsTrigger>
           <TabsTrigger value="items">Store Inventory</TabsTrigger>
-          <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="recipes">
@@ -66,17 +68,7 @@ export default function InventoryManagement() {
           <InventoryItemsList storeId={currentStore.id} />
         </TabsContent>
 
-        <TabsContent value="suppliers">
-          <SuppliersTab />
-        </TabsContent>
 
-        <TabsContent value="orders">
-          <OrdersTab storeId={currentStore.id} />
-        </TabsContent>
-
-        <TabsContent value="transactions">
-          <StockTransactionsTab storeId={currentStore.id} />
-        </TabsContent>
       </Tabs>
     </div>
   );

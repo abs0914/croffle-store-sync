@@ -16,6 +16,8 @@ import { StoreProvider } from "./contexts/StoreContext";
 import { ShiftProvider } from "./contexts/shift";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import OrderManagement from "./pages/OrderManagement";
+import CommissaryInventory from "./pages/CommissaryInventory";
+import InventoryConversion from "./pages/InventoryConversion";
 
 function App() {
   return (
@@ -90,6 +92,26 @@ function App() {
                   <ProtectedRoute>
                     <MainLayout>
                       <OrderManagement />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/commissary-inventory"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <MainLayout>
+                      <CommissaryInventory />
+                    </MainLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inventory-conversion"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <MainLayout>
+                      <InventoryConversion />
                     </MainLayout>
                   </ProtectedRoute>
                 }
