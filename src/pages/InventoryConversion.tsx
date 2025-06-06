@@ -291,19 +291,19 @@ export default function InventoryConversion() {
             <div className="space-y-2">
               <Label>Target Inventory Item</Label>
               <Select
-                value={conversionForm.inventory_stock_id}
+                value={conversionForm.inventory_stock_id || 'create_new'}
                 onValueChange={(value) => setConversionForm(prev => ({ 
                   ...prev, 
-                  inventory_stock_id: value,
-                  new_item_name: '',
-                  new_item_unit: ''
+                  inventory_stock_id: value === 'create_new' ? '' : value,
+                  new_item_name: value === 'create_new' ? prev.new_item_name : '',
+                  new_item_unit: value === 'create_new' ? prev.new_item_unit : ''
                 }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select existing item or create new" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Create New Item</SelectItem>
+                  <SelectItem value="create_new">Create New Item</SelectItem>
                   {storeItems.map((item) => (
                     <SelectItem key={item.id} value={item.id}>
                       {item.item} ({item.stock_quantity} {item.unit})
@@ -313,7 +313,7 @@ export default function InventoryConversion() {
               </Select>
             </div>
 
-            {!conversionForm.inventory_stock_id && (
+            {(!conversionForm.inventory_stock_id || conversionForm.inventory_stock_id === 'create_new') && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="new_item_name">New Item Name</Label>
