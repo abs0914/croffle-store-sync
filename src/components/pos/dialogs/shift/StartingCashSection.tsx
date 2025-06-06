@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { formatCurrency } from "@/utils/format";
 
 interface StartingCashSectionProps {
   startingCash: number;
@@ -23,7 +24,7 @@ export default function StartingCashSection({
         Starting Cash Amount 
         {previousEndingCash !== null && (
           <span className="text-sm text-muted-foreground ml-2">
-            (Previous ending cash: {previousEndingCash.toFixed(2)})
+            (Previous ending cash: {formatCurrency(previousEndingCash)})
           </span>
         )}
       </Label>

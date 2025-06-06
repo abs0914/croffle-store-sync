@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { CartItem } from "@/types";
+import { formatCurrency } from "@/utils/format";
 
 interface CartItemListProps {
   items: CartItem[];
@@ -40,7 +41,7 @@ export default function CartItemList({
               )}
             </div>
             <p className="font-semibold text-croffle-primary">
-              ₱{(item.price * item.quantity).toFixed(2)}
+              {formatCurrency(item.price * item.quantity)}
             </p>
           </div>
           

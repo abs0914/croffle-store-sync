@@ -101,13 +101,13 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
           className="w-full mt-4 bg-green-600 hover:bg-green-700 text-lg py-6"
           disabled={total <= 0 || !currentShift}
         >
-          Pay ₱{total.toFixed(2)}
+          Pay {formatCurrency(total)}
         </Button>
       </DialogTrigger>
       
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-xl">Payment: ₱{total.toFixed(2)}</DialogTitle>
+          <DialogTitle className="text-xl">Payment: {formatCurrency(total)}</DialogTitle>
         </DialogHeader>
         
         <PaymentMethods

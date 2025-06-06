@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Shift } from "@/types";
+import { formatCurrency } from "@/utils/format";
 
 interface EndingCashSectionProps {
   endingCash: number;
@@ -25,7 +26,7 @@ export default function EndingCashSection({
         Ending Cash Amount
         {currentShift && (
           <span className="text-sm text-muted-foreground ml-2">
-            (Starting cash: ₱{currentShift.startingCash.toFixed(2)})
+            (Starting cash: {formatCurrency(currentShift.startingCash)})
           </span>
         )}
       </Label>

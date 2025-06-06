@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Banknote, CreditCard, Wallet } from "lucide-react";
+import { formatCurrency } from "@/utils/format";
 
 interface PaymentMethodsProps {
   total: number;
@@ -64,7 +65,7 @@ export function CashPaymentTab({
             variant="outline"
             onClick={() => setAmountTendered(amount)}
           >
-            ₱{amount.toFixed(2)}
+            {formatCurrency(amount)}
           </Button>
         ))}
       </div>
@@ -72,7 +73,7 @@ export function CashPaymentTab({
       <Card className="p-4 bg-muted">
         <div className="flex justify-between text-lg font-medium">
           <span>Change Due:</span>
-          <span>₱{changeAmount.toFixed(2)}</span>
+          <span>{formatCurrency(changeAmount)}</span>
         </div>
       </Card>
     </div>

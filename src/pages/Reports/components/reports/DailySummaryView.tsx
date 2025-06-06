@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Printer, Download } from "lucide-react";
 import { fetchDailySalesSummary } from "@/services/reports";
 import { format } from "date-fns";
+import { formatCurrency } from "@/utils/format";
 
 interface DailySummaryViewProps {
   storeId: string;
@@ -99,7 +100,7 @@ export function DailySummaryView({ storeId, date }: DailySummaryViewProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-croffle-light/20 p-4 rounded-lg">
               <p className="text-sm text-muted-foreground">Total Sales</p>
-              <h3 className="text-2xl font-bold text-croffle-primary">₱{data.totalSales.toFixed(2)}</h3>
+              <h3 className="text-2xl font-bold text-croffle-primary">{formatCurrency(data.totalSales)}</h3>
             </div>
             <div className="bg-croffle-light/20 p-4 rounded-lg">
               <p className="text-sm text-muted-foreground">Transactions</p>
@@ -126,8 +127,8 @@ export function DailySummaryView({ storeId, date }: DailySummaryViewProps) {
                   <TableRow key={index}>
                     <TableCell>{item.name}</TableCell>
                     <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">₱{item.price.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">₱{item.totalSales.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.totalSales)}</TableCell>
                   </TableRow>
                 ))}
                 
@@ -136,7 +137,7 @@ export function DailySummaryView({ storeId, date }: DailySummaryViewProps) {
                   <TableCell>Total</TableCell>
                   <TableCell className="text-right">{data.totalItemsSold}</TableCell>
                   <TableCell className="text-right"></TableCell>
-                  <TableCell className="text-right">₱{data.totalSales.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(data.totalSales)}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -153,7 +154,7 @@ export function DailySummaryView({ storeId, date }: DailySummaryViewProps) {
             {data.paymentMethods.map((method, index) => (
               <div key={index} className="bg-croffle-light/10 p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground">{method.method}</p>
-                <h3 className="text-xl font-bold text-croffle-primary">₱{method.amount.toFixed(2)}</h3>
+                <h3 className="text-xl font-bold text-croffle-primary">{formatCurrency(method.amount)}</h3>
                 <p className="text-xs text-muted-foreground">{method.percentage.toFixed(1)}% of sales</p>
               </div>
             ))}

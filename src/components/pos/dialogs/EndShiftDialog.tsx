@@ -13,6 +13,7 @@ import { Shift, InventoryStock } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { fetchInventoryStock } from "@/services/inventoryStock";
 import { Camera } from "lucide-react";
+import { formatCurrency } from "@/utils/format";
 
 // Import the refactored components
 import ShiftPhotoSection from "./shift/ShiftPhotoSection";
@@ -72,7 +73,7 @@ export default function EndShiftDialog({
   // Validate ending cash amount whenever it changes
   useEffect(() => {
     if (currentShift && endingCash < currentShift.startingCash) {
-      setCashError(`Ending cash must be at least ${currentShift.startingCash.toFixed(2)} (starting cash amount)`);
+      setCashError(`Ending cash must be at least ${formatCurrency(currentShift.startingCash)} (starting cash amount)`);
     } else {
       setCashError(null);
     }
@@ -90,7 +91,7 @@ export default function EndShiftDialog({
     
     // Double check cash validation
     if (endingCash < currentShift.startingCash) {
-      setCashError(`Ending cash must be at least ${currentShift.startingCash.toFixed(2)} (starting cash amount)`);
+      setCashError(`Ending cash must be at least ${formatCurrency(currentShift.startingCash)} (starting cash amount)`);
       return;
     }
     
