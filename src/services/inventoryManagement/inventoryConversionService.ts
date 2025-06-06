@@ -9,6 +9,20 @@ import { CommissaryInventoryItem, InventoryStock } from "@/types/inventoryManage
 import { fetchInventoryStock } from "@/services/inventoryManagement/recipeService";
 import { toast } from "sonner";
 
+// Helper function to transform database category to our interface category
+const transformCategory = (dbCategory: 'ingredients' | 'packaging' | 'supplies'): 'raw_materials' | 'packaging_materials' | 'supplies' => {
+  switch (dbCategory) {
+    case 'ingredients':
+      return 'raw_materials';
+    case 'packaging':
+      return 'packaging_materials';
+    case 'supplies':
+      return 'supplies';
+    default:
+      return 'supplies';
+  }
+};
+
 export const fetchInventoryConversions = async (storeId?: string): Promise<InventoryConversion[]> => {
   try {
     let query = supabase
@@ -31,7 +45,19 @@ export const fetchInventoryConversions = async (storeId?: string): Promise<Inven
     const { data, error } = await query;
     if (error) throw error;
 
-    return data || [];
+    // Transform the data to match our TypeScript interfaces
+    const transformedData: InventoryConversion[] = (data || []).map(conversion => ({
+      ...conversion,
+      ingredients: conversion.ingredients?.map((ingredient: any) => ({
+        ...ingredient,
+        commissary_item: ingredient.commissary_item ? {
+          ...ingredient.commissary_item,
+          category: transformCategory(ingredient.commissary_item.category)
+        } : undefined
+      })) || []
+    }));
+
+    return transformedData;
   } catch (error) {
     console.error('Error fetching inventory conversions:', error);
     toast.error('Failed to fetch inventory conversions');
@@ -75,12 +101,30 @@ export const createMultiIngredientConversion = async (
 
     if (ingredientsError) throw ingredientsError;
 
-    // Update commissary stock levels
+    // Update commissary stock levels directly
     for (const ingredient of conversion.ingredients) {
-      const { error: stockError } = await supabase.rpc('update_commissary_stock', {
-        item_id: ingredient.commissary_item_id,
-        quantity_used: ingredient.quantity
-      });
+      // Get current stock
+      const { data: currentItem, error: fetchError } = await supabase
+        .from('inventory_items')
+        .select('current_stock')
+        .eq('id', ingredient.commissary_item_id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching current stock:', fetchError);
+        continue;
+      }
+
+      const newStock = currentItem.current_stock - ingredient.quantity;
+
+      // Update stock
+      const { error: stockError } = await supabase
+        .from('inventory_items')
+        .update({ 
+          current_stock: newStock,
+          last_updated: new Date().toISOString()
+        })
+        .eq('id', ingredient.commissary_item_id);
 
       if (stockError) {
         console.error('Error updating commissary stock:', stockError);
@@ -88,14 +132,29 @@ export const createMultiIngredientConversion = async (
       }
     }
 
-    // Update target inventory stock
-    const { error: targetStockError } = await supabase.rpc('update_inventory_stock', {
-      stock_id: conversion.inventory_stock_id,
-      quantity_added: conversion.finished_goods_quantity
-    });
+    // Update target inventory stock directly
+    const { data: currentStock, error: fetchStockError } = await supabase
+      .from('inventory_stock')
+      .select('stock_quantity')
+      .eq('id', conversion.inventory_stock_id)
+      .single();
 
-    if (targetStockError) {
-      console.error('Error updating target stock:', targetStockError);
+    if (fetchStockError) {
+      console.error('Error fetching current inventory stock:', fetchStockError);
+    } else {
+      const newStockQuantity = currentStock.stock_quantity + conversion.finished_goods_quantity;
+
+      const { error: targetStockError } = await supabase
+        .from('inventory_stock')
+        .update({ 
+          stock_quantity: newStockQuantity,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', conversion.inventory_stock_id);
+
+      if (targetStockError) {
+        console.error('Error updating target stock:', targetStockError);
+      }
     }
 
     toast.success('Multi-ingredient conversion completed successfully');
@@ -122,7 +181,20 @@ export const fetchConversionRecipes = async (): Promise<ConversionRecipe[]> => {
       .order('name');
 
     if (error) throw error;
-    return data || [];
+
+    // Transform the data to match our TypeScript interfaces
+    const transformedData: ConversionRecipe[] = (data || []).map(recipe => ({
+      ...recipe,
+      ingredients: recipe.ingredients?.map((ingredient: any) => ({
+        ...ingredient,
+        commissary_item: ingredient.commissary_item ? {
+          ...ingredient.commissary_item,
+          category: transformCategory(ingredient.commissary_item.category)
+        } : undefined
+      })) || []
+    }));
+
+    return transformedData;
   } catch (error) {
     console.error('Error fetching conversion recipes:', error);
     toast.error('Failed to fetch conversion recipes');
@@ -188,9 +260,7 @@ export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInv
     // Transform the data to match CommissaryInventoryItem interface
     const transformedData: CommissaryInventoryItem[] = (data || []).map(item => ({
       ...item,
-      category: item.category === 'ingredients' ? 'raw_materials' : 
-                item.category === 'packaging' ? 'packaging_materials' : 
-                'supplies' as const
+      category: transformCategory(item.category)
     }));
 
     return transformedData;
