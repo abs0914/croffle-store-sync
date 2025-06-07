@@ -12,13 +12,25 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
-  if (isAuthenticated) {
+  if (isAuthenticated && !isLoading) {
     navigate("/");
     return null;
+  }
+
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-croffle-background">
+        <div className="flex items-center space-x-2">
+          <Spinner className="h-8 w-8 text-croffle-accent" />
+          <span className="text-croffle-primary font-semibold">Loading...</span>
+        </div>
+      </div>
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,7 +48,8 @@ export default function Login() {
       toast.success("Login successful");
       navigate("/");
     } catch (error) {
-      // Error is already handled in the login function
+      // Error is already handled in the login function with toast
+      console.error("Login failed:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -68,6 +81,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isSubmitting}
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -78,6 +92,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isSubmitting}
+                autoComplete="current-password"
               />
             </div>
             <Button 

@@ -5,6 +5,18 @@ import { useAuthState } from "./useAuthState";
 import { checkPermission, checkStoreAccess, mapSupabaseUser } from "./utils";
 import { UserRole } from "@/types";
 
+// Helper function to control logging based on environment
+const isDevelopment = process.env.NODE_ENV === 'development';
+const authLog = (message: string, ...args: any[]) => {
+  if (isDevelopment) {
+    console.log(`🔐 Auth Provider: ${message}`, ...args);
+  }
+};
+
+const authError = (message: string, error?: any) => {
+  console.error(`🔐 Auth Provider Error: ${message}`, error);
+};
+
 const initialState: AuthState = {
   user: null,
   session: null,
@@ -46,23 +58,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key?.includes('supabase.auth') && event.newValue !== event.oldValue) {
-        console.log('Auth state changed in another tab, synchronizing...');
+        authLog('Auth state changed in another tab, synchronizing...');
         
         // Refresh the session state from storage
         supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
           if (currentSession?.user) {
-            console.log('Session found in another tab, updating local state');
+            authLog('Session found in another tab, updating local state');
             const mappedUser = await mapSupabaseUser(currentSession.user);
             setSession(currentSession);
             setUser(mappedUser);
           } else if (session) {
             // User logged out in another tab
-            console.log('User logged out in another tab');
+            authLog('User logged out in another tab');
             setSession(null);
             setUser(null);
           }
         }).catch(error => {
-          console.error("Error syncing session across tabs:", error);
+          authError("Error syncing session across tabs:", error);
         });
       }
     };
@@ -81,10 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authErrorHandledRef.current = false;
     setIsLoading(true);
     
+    authLog('Initializing authentication...');
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log(`Auth state changed: ${event}`);
+        authLog(`Auth state changed: ${event}`);
         
         // Only update session state synchronously
         setSession(newSession);
@@ -109,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       if (currentSession?.user) {
-        console.log('Existing session found');
+        authLog('Existing session found');
         const mappedUser = await mapSupabaseUser(currentSession.user);
         setSession(currentSession);
         setUser(mappedUser);
@@ -117,11 +131,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Setup token refresh
         setupTokenRefresh(currentSession);
       } else {
-        console.log('No existing session found');
+        authLog('No existing session found');
       }
       setIsLoading(false);
     }).catch(error => {
-      console.error("Error checking session:", error);
+      authError("Error checking session:", error);
       setIsLoading(false);
     });
 
@@ -137,11 +151,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Handle network status changes
   useEffect(() => {
     const handleOnline = () => {
-      console.log('Network connection restored');
+      authLog('Network connection restored');
       
       // Check if we have a user but need to refresh the session
       if (user && !session) {
-        console.log('Attempting to restore session after network reconnection');
+        authLog('Attempting to restore session after network reconnection');
         supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
           if (currentSession) {
             setSession(currentSession);
@@ -152,7 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     
     const handleOffline = () => {
-      console.log('Network connection lost');
+      authLog('Network connection lost');
       // We keep the current user/session state when offline
     };
     

@@ -13,6 +13,7 @@ import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import Inventory from "./pages/Inventory";
 import Stores from "./pages/Stores";
 import Settings from "./pages/Settings";
+import Login from "./pages/Login";
 import { StoreProvider } from "./contexts/StoreContext";
 import { ShiftProvider } from "./contexts/shift";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -30,6 +31,7 @@ function App() {
           <ShiftProvider>
             <Router>
               <Routes>
+                <Route path="/login" element={<Login />} />
                 <Route
                   path="/"
                   element={

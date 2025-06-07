@@ -5,6 +5,18 @@ import { toast } from "sonner";
 import { User, Session } from "./types";
 import { mapSupabaseUser } from "./utils";
 
+// Helper function to control logging based on environment
+const isDevelopment = process.env.NODE_ENV === 'development';
+const authLog = (message: string, ...args: any[]) => {
+  if (isDevelopment) {
+    console.log(`🔐 Auth: ${message}`, ...args);
+  }
+};
+
+const authError = (message: string, error?: any) => {
+  console.error(`🔐 Auth Error: ${message}`, error);
+};
+
 export function useAuthState() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -26,16 +38,16 @@ export function useAuthState() {
       // Calculate time until token needs refresh (5 minutes before expiry)
       const timeUntilRefresh = Math.max(0, expiresAt - now - 5 * 60 * 1000);
       
-      console.log(`Session token will refresh in ${Math.floor(timeUntilRefresh / 60000)} minutes`);
+      authLog(`Session token will refresh in ${Math.floor(timeUntilRefresh / 60000)} minutes`);
       
       // Set timeout to refresh token before it expires
       refreshTimeoutRef.current = setTimeout(async () => {
-        console.log('Refreshing auth token...');
+        authLog('Refreshing auth token...');
         try {
           const { data, error } = await supabase.auth.refreshSession();
           
           if (error) {
-            console.error('Error refreshing token:', error);
+            authError('Error refreshing token:', error);
             if (!authErrorHandledRef.current) {
               authErrorHandledRef.current = true;
               toast.error('Your session has expired. Please log in again.');
@@ -43,12 +55,12 @@ export function useAuthState() {
               setUser(null);
             }
           } else if (data.session) {
-            console.log('Token refreshed successfully');
+            authLog('Token refreshed successfully');
             setSession(data.session);
             setupTokenRefresh(data.session);
           }
         } catch (err) {
-          console.error('Exception during token refresh:', err);
+          authError('Exception during token refresh:', err);
         }
       }, timeUntilRefresh);
     }
@@ -58,6 +70,8 @@ export function useAuthState() {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      authLog('Attempting login for:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -68,6 +82,7 @@ export function useAuthState() {
       }
       
       if (data.user) {
+        authLog('Login successful for:', email);
         const mappedUser = await mapSupabaseUser(data.user);
         setUser(mappedUser);
         setSession(data.session);
@@ -76,7 +91,7 @@ export function useAuthState() {
         setupTokenRefresh(data.session);
       }
     } catch (error: any) {
-      console.error("Login error:", error);
+      authError("Login error:", error);
       toast.error(error.message || "Failed to login");
       throw error;
     } finally {
@@ -88,6 +103,8 @@ export function useAuthState() {
   const logout = async () => {
     setIsLoading(true);
     try {
+      authLog('Logging out user');
+      
       const { error } = await supabase.auth.signOut();
       if (error) {
         throw error;
@@ -105,8 +122,10 @@ export function useAuthState() {
       // Reset error handling flag on logout
       authErrorHandledRef.current = false;
       
+      authLog('Logout successful');
+      
     } catch (error: any) {
-      console.error("Logout error:", error);
+      authError("Logout error:", error);
       toast.error(error.message || "Failed to logout");
       throw error;
     } finally {
