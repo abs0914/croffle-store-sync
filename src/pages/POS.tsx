@@ -40,6 +40,33 @@ export default function POS() {
   const activeProductsCount = products.filter(p => p.is_active).length;
   console.log(`Total products: ${products.length}, Active products: ${activeProductsCount}`);
   
+  // Enhanced wrapper for addItem with detailed logging
+  const handleAddItemToCart = (product, quantity, variation) => {
+    console.log("POS: handleAddItemToCart called with:", {
+      product: product.name,
+      productId: product.id,
+      quantity,
+      variation: variation ? variation.name : "none",
+      currentStore: currentStore?.id,
+      currentShift: currentShift?.id
+    });
+    
+    if (!currentStore) {
+      console.error("POS: No store selected");
+      toast.error("Please select a store first");
+      return;
+    }
+    
+    if (!currentShift) {
+      console.error("POS: No shift active");
+      toast.error("Please start a shift first");
+      return;
+    }
+    
+    console.log("POS: Calling addItem from CartContext");
+    addItem(product, quantity, variation);
+  };
+  
   // Wrapper for payment processing
   const handlePaymentComplete = async (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
@@ -106,7 +133,7 @@ export default function POS() {
       discountIdNumber={discountIdNumber}
       handleApplyDiscount={handleApplyDiscount}
       handlePaymentComplete={handlePaymentComplete}
-      addItemToCart={addItem}
+      addItemToCart={handleAddItemToCart}
     />
   );
 }
