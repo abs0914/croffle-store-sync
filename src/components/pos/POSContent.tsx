@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import ShiftManager from "@/components/pos/ShiftManager";
 import CartView from "@/components/pos/CartView";
 import ProductGrid from "@/components/pos/product-grid";
@@ -7,6 +8,9 @@ import { useCart } from "@/contexts/cart/CartContext";
 import { Product, Category, Customer, ProductVariation } from "@/types";
 import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
 import { useStoreDisplay } from "@/contexts/StoreDisplayContext";
+import { PrinterStatusIndicator } from "@/components/printer/PrinterStatusIndicator";
+import { ThermalPrinterSettings } from "@/components/printer/ThermalPrinterSettings";
+import { Settings } from "lucide-react";
 interface POSContentProps {
   activeCategory: string;
   setActiveCategory: (category: string) => void;
@@ -60,12 +64,23 @@ export default function POSContent({
   } = useStoreDisplay();
   return <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
-        
+
         <div className="flex items-center gap-2">
           {currentStore && config.contentMode !== "hidden" && <StoreNameDisplay variant="badge" size="sm" showLogo={true} />}
           {selectedCustomer && <Badge variant="secondary" className="text-sm">
               Customer: {selectedCustomer.name}
             </Badge>}
+        </div>
+
+        {/* Printer Status and Settings */}
+        <div className="flex items-center gap-2">
+          <PrinterStatusIndicator />
+          <ThermalPrinterSettings>
+            <Button variant="outline" size="sm" className="flex items-center gap-1">
+              <Settings className="h-4 w-4" />
+              Printer
+            </Button>
+          </ThermalPrinterSettings>
         </div>
       </div>
       

@@ -15,7 +15,23 @@ export function useThermalPrinter() {
 
   useEffect(() => {
     checkAvailability();
-  }, []);
+
+    // Set up periodic connection monitoring
+    const monitorInterval = setInterval(() => {
+      if (isConnected && connectedPrinter) {
+        // Check if printer is still connected
+        const currentlyConnected = PrinterDiscovery.isConnected();
+        if (!currentlyConnected) {
+          console.log('Printer disconnected, updating status...');
+          setIsConnected(false);
+          setConnectedPrinter(null);
+          toast.info('Thermal printer disconnected');
+        }
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(monitorInterval);
+  }, [isConnected, connectedPrinter]);
 
   const checkAvailability = async () => {
     try {
@@ -41,17 +57,28 @@ export function useThermalPrinter() {
 
     setIsScanning(true);
     try {
+      toast.info('Scanning for thermal printers...');
       const printers = await PrinterDiscovery.scanForPrinters();
       setAvailablePrinters(printers);
-      
+
       if (printers.length === 0) {
         toast.info('No thermal printers found. Make sure your printer is on and in pairing mode.');
       } else {
-        toast.success(`Found ${printers.length} printer(s)`);
+        toast.success(`Found ${printers.length} thermal printer(s)`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to scan for printers:', error);
-      toast.error('Failed to scan for printers');
+
+      // Provide specific error messages based on error type
+      if (error.message?.includes('permissions')) {
+        toast.error('Bluetooth permissions required. Please enable Bluetooth access.');
+      } else if (error.message?.includes('not available')) {
+        toast.error('Bluetooth not available on this device');
+      } else if (error.message?.includes('not enabled')) {
+        toast.error('Please enable Bluetooth on your device');
+      } else {
+        toast.error(`Scan failed: ${error.message || 'Unknown error'}`);
+      }
     } finally {
       setIsScanning(false);
     }
@@ -59,20 +86,34 @@ export function useThermalPrinter() {
 
   const connectToPrinter = async (printer: ThermalPrinter) => {
     try {
+      console.log(`Attempting to connect to printer: ${printer.name} (${printer.connectionType})`);
+      toast.info(`Connecting to ${printer.name}...`);
+
       const success = await PrinterDiscovery.connectToPrinter(printer);
-      
+
       if (success) {
         setIsConnected(true);
         setConnectedPrinter(printer);
         toast.success(`Connected to ${printer.name}`);
+        console.log(`Successfully connected to ${printer.name}`);
       } else {
-        toast.error(`Failed to connect to ${printer.name}`);
+        toast.error(`Failed to connect to ${printer.name}. Please try again.`);
+        console.error(`Connection failed for ${printer.name}`);
       }
-      
+
       return success;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to connect to printer:', error);
-      toast.error('Connection failed');
+
+      // Provide specific error messages
+      if (error.message?.includes('GATT')) {
+        toast.error('Bluetooth connection failed. Please ensure the printer is in pairing mode.');
+      } else if (error.message?.includes('not available')) {
+        toast.error('Printer not available. Please check if it\'s powered on.');
+      } else {
+        toast.error(`Connection failed: ${error.message || 'Unknown error'}`);
+      }
+
       return false;
     }
   };

@@ -234,33 +234,48 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
       <div className="mt-4 space-y-2">
         {/* Thermal printer button - show if available */}
         {isAvailable && (
-          <Button 
+          <Button
             onClick={handleThermalPrint}
             disabled={!isConnected || isPrinting}
-            className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700"
+            className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isPrinting ? (
               <>
                 <Bluetooth className="mr-2 h-4 w-4 animate-pulse" />
                 Printing to Thermal...
               </>
+            ) : isConnected ? (
+              <>
+                <Bluetooth className="mr-2 h-4 w-4" />
+                Print to Thermal Printer
+              </>
             ) : (
               <>
                 <Bluetooth className="mr-2 h-4 w-4" />
-                {isConnected ? 'Print to Thermal Printer' : 'Connect Thermal Printer'}
+                Connect Thermal Printer First
               </>
             )}
           </Button>
         )}
-        
+
         {/* Regular print button */}
-        <Button 
+        <Button
           onClick={handlePrint}
           variant={isAvailable ? "outline" : "default"}
           className="w-full flex items-center justify-center"
         >
           <Printer className="mr-2 h-4 w-4" />
           Print Receipt (Browser)
+        </Button>
+
+        {/* Download button */}
+        <Button
+          onClick={() => {/* TODO: Implement download functionality */}}
+          variant="outline"
+          className="w-full flex items-center justify-center"
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Download Receipt
         </Button>
         
         <Button 

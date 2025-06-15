@@ -2,6 +2,10 @@
 import { Separator } from "@/components/ui/separator";
 import PaymentProcessor from "../payment/PaymentProcessor";
 import { formatCurrency } from "@/utils/format";
+import { PrinterStatusIndicator } from "@/components/printer/PrinterStatusIndicator";
+import { QuickPrinterSetup } from "@/components/printer/QuickPrinterSetup";
+import { Button } from "@/components/ui/button";
+import { Bluetooth } from "lucide-react";
 
 interface CartSummaryProps {
   subtotal: number;
@@ -68,6 +72,17 @@ export default function CartSummary({
       <div className="flex justify-between text-lg font-bold">
         <span className="text-croffle-primary">Total Price</span>
         <span className="text-croffle-primary">{formatCurrency(finalTotal)}</span>
+      </div>
+
+      {/* Printer Status */}
+      <div className="flex items-center justify-between py-2">
+        <PrinterStatusIndicator />
+        <QuickPrinterSetup>
+          <Button variant="ghost" size="sm" className="text-xs">
+            <Bluetooth className="h-3 w-3 mr-1" />
+            Setup
+          </Button>
+        </QuickPrinterSetup>
       </div>
 
       {/* Payment Processor */}

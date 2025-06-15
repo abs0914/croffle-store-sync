@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluetooth Thermal Printer Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .device {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bluetooth Thermal Printer Test</h1>
+        
+        <div id="status" class="status info">
+            Checking Bluetooth availability...
+        </div>
+        
+        <div>
+            <button id="checkAvailability">Check Bluetooth Availability</button>
+            <button id="scanDevices" disabled>Scan for Devices</button>
+            <button id="scanPrinters" disabled>Scan for Printers Only</button>
+            <button id="clearLog">Clear Log</button>
+        </div>
+        
+        <div id="devices"></div>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+        const devicesDiv = document.getElementById('devices');
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logEntry.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            log.appendChild(logEntry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function setStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        async function checkBluetoothAvailability() {
+            addLog('Checking Bluetooth availability...');
+            
+            try {
+                if (!navigator.bluetooth) {
+                    throw new Error('Web Bluetooth API not supported');
+                }
+                
+                const available = await navigator.bluetooth.getAvailability();
+                addLog(`Bluetooth available: ${available}`, available ? 'success' : 'error');
+                
+                if (available) {
+                    setStatus('Bluetooth is available', 'success');
+                    document.getElementById('scanDevices').disabled = false;
+                    document.getElementById('scanPrinters').disabled = false;
+                } else {
+                    setStatus('Bluetooth not available', 'error');
+                }
+                
+                return available;
+            } catch (error) {
+                addLog(`Error checking Bluetooth: ${error.message}`, 'error');
+                setStatus(`Bluetooth error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function scanForDevices() {
+            addLog('Starting device scan...');
+            devicesDiv.innerHTML = '';
+            
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['battery_service', 'device_information']
+                });
+                
+                addLog(`Found device: ${device.name || 'Unknown'} (${device.id})`, 'success');
+                
+                const deviceDiv = document.createElement('div');
+                deviceDiv.className = 'device';
+                deviceDiv.innerHTML = `
+                    <span>${device.name || 'Unknown Device'}</span>
+                    <button onclick="connectToDevice('${device.id}')">Connect</button>
+                `;
+                devicesDiv.appendChild(deviceDiv);
+                
+            } catch (error) {
+                addLog(`Scan error: ${error.message}`, 'error');
+                setStatus(`Scan failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function scanForPrinters() {
+            addLog('Starting thermal printer scan...');
+            devicesDiv.innerHTML = '';
+            
+            try {
+                // Try to scan for devices with printer-like names
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { namePrefix: 'POS' },
+                        { namePrefix: 'Thermal' },
+                        { namePrefix: 'Printer' },
+                        { namePrefix: 'BT-' },
+                        { namePrefix: 'TP-' },
+                        { namePrefix: 'EPSON' },
+                        { namePrefix: 'CITIZEN' },
+                        { namePrefix: 'STAR' }
+                    ],
+                    optionalServices: ['battery_service', 'device_information']
+                });
+                
+                addLog(`Found thermal printer: ${device.name || 'Unknown'} (${device.id})`, 'success');
+                
+                const deviceDiv = document.createElement('div');
+                deviceDiv.className = 'device';
+                deviceDiv.innerHTML = `
+                    <span>🖨️ ${device.name || 'Unknown Printer'}</span>
+                    <button onclick="connectToDevice('${device.id}')">Connect</button>
+                `;
+                devicesDiv.appendChild(deviceDiv);
+                
+            } catch (error) {
+                addLog(`Printer scan error: ${error.message}`, 'error');
+                
+                // If no printers found with filters, try general scan
+                if (error.name === 'NotFoundError') {
+                    addLog('No thermal printers found with filters, trying general scan...');
+                    await scanForDevices();
+                } else {
+                    setStatus(`Printer scan failed: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        async function connectToDevice(deviceId) {
+            addLog(`Attempting to connect to device: ${deviceId}`);
+            // This is a placeholder - actual connection would require the device object
+            addLog('Connection functionality not implemented in this test', 'info');
+        }
+        
+        function clearLog() {
+            log.innerHTML = '';
+        }
+        
+        // Event listeners
+        document.getElementById('checkAvailability').addEventListener('click', checkBluetoothAvailability);
+        document.getElementById('scanDevices').addEventListener('click', scanForDevices);
+        document.getElementById('scanPrinters').addEventListener('click', scanForPrinters);
+        document.getElementById('clearLog').addEventListener('click', clearLog);
+        
+        // Initialize
+        checkBluetoothAvailability();
+        
+        addLog('Bluetooth Thermal Printer Test initialized');
+        addLog('This test helps diagnose Bluetooth scanning issues');
+        addLog('Make sure your thermal printer is on and in pairing mode');
+    </script>
+</body>
+</html>
