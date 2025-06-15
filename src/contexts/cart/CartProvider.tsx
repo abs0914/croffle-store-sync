@@ -1,37 +1,11 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+
+import { useState, useEffect, ReactNode } from "react";
 import { CartItem, Product, ProductVariation } from "@/types";
 import { toast } from "sonner";
-import { useStore } from "./StoreContext";
+import { useStore } from "../StoreContext";
+import { CartContext } from "./CartContext";
 
-interface CartState {
-  items: CartItem[];
-  addItem: (product: Product, quantity?: number, variation?: ProductVariation) => void;
-  removeItem: (itemIndex: number) => void;
-  updateQuantity: (itemIndex: number, quantity: number) => void;
-  clearCart: () => void;
-  subtotal: number;
-  tax: number;
-  total: number;
-  itemCount: number;
-  storeId: string | null;
-}
-
-const initialState: CartState = {
-  items: [],
-  addItem: () => {},
-  removeItem: () => {},
-  updateQuantity: () => {},
-  clearCart: () => {},
-  subtotal: 0,
-  tax: 0,
-  total: 0,
-  itemCount: 0,
-  storeId: null,
-};
-
-const TAX_RATE = 0.12; // 12% VAT (Philippines) - using VAT-inclusive pricing
-
-const CartContext = createContext<CartState>(initialState);
+const TAX_RATE = 0.12; // 12% VAT (Philippines), VAT-inclusive
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { currentStore } = useStore();
@@ -42,7 +16,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [itemCount, setItemCount] = useState(0);
   const [storeId, setStoreId] = useState<string | null>(null);
 
-  // Update storeId when currentStore changes
   useEffect(() => {
     if (currentStore?.id) {
       setStoreId(currentStore.id);
@@ -51,26 +24,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [currentStore]);
 
   useEffect(() => {
-    // Recalculate totals when items change
-    // Treat prices as VAT-inclusive (Philippine standard)
     const newTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    // Calculate net amount (price without VAT) and VAT amount from VAT-inclusive total
-    const newNetAmount = newTotal / (1 + TAX_RATE); // Total / 1.12
-    const newTax = newTotal - newNetAmount; // VAT amount embedded in the total
-
-    setSubtotal(newTotal); // This is actually the VAT-inclusive total
+    const newNetAmount = newTotal / (1 + TAX_RATE);
+    const newTax = newTotal - newNetAmount;
+    setSubtotal(newTotal);
     setTax(newTax);
-    setTotal(newTotal); // Total remains the same as subtotal for VAT-inclusive pricing
+    setTotal(newTotal);
     setItemCount(items.reduce((sum, item) => sum + item.quantity, 0));
 
-    // Debug log to check if items are being updated
     console.log("CartContext: Cart items updated (VAT-inclusive):", {
       itemsCount: items.length,
       vatInclusiveTotal: newTotal,
       netAmount: newNetAmount,
       vatAmount: newTax,
-      items: items.map(item => ({ name: item.product.name, quantity: item.quantity, price: item.price }))
+      items: items.map(item => ({ name: item.product.name, quantity: item.quantity, price: item.price })),
     });
   }, [items]);
 
@@ -84,7 +51,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       functionType: typeof addItem
     });
 
-    // Check if we have a store selected
     if (!currentStore?.id) {
       console.error("CartContext: No store selected");
       toast.error("Please select a store first");
@@ -98,10 +64,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     const itemPrice = variation ? variation.price : product.price;
-
     console.log("CartContext: Item price determined:", itemPrice);
 
-    // Check if the item already exists in cart with the same variation or lack thereof
     const existingItemIndex = items.findIndex(item => {
       if (variation) {
         return item.productId === product.id && item.variationId === variation.id;
@@ -113,7 +77,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     console.log("CartContext: Current items before addition:", items);
 
     if (existingItemIndex !== -1) {
-      // Update quantity if item exists
       console.log("CartContext: Updating existing item quantity");
       const newItems = [...items];
       newItems[existingItemIndex].quantity += quantity;
@@ -126,14 +89,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       toast.success(`Updated quantity for ${displayName}`);
       console.log("CartContext: Updated existing item in cart", displayName);
     } else {
-      // Add new item
       console.log("CartContext: Creating new item for cart");
       const newItem: CartItem = {
         productId: product.id,
         product: {
           ...product,
           is_active: product.is_active || product.isActive || true,
-          stock_quantity: product.stock_quantity || product.stockQuantity || 0
+          stock_quantity: product.stock_quantity || product.stockQuantity || 0,
         },
         quantity,
         price: itemPrice,
@@ -146,7 +108,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       console.log("CartContext: New cart item created:", newItem);
 
-      // Use functional update to guarantee we're working with latest state
       setItems(prevItems => {
         console.log("CartContext: Previous items:", prevItems);
         const updatedItems = [...prevItems, newItem];
@@ -213,5 +174,3 @@ export function CartProvider({ children }: { children: ReactNode }) {
     </CartContext.Provider>
   );
 }
-
-export const useCart = () => useContext(CartContext);

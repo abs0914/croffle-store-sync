@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import ShiftManager from "@/components/pos/ShiftManager";
 import CartView from "@/components/pos/CartView";
 import ProductGrid from "@/components/pos/product-grid";
-import { useCart } from "@/contexts/CartContext";
+import { useCart } from "@/contexts/cart/CartContext";
 import { Product, Category, Customer, ProductVariation } from "@/types";
 import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
 import { useStoreDisplay } from "@/contexts/StoreDisplayContext";

@@ -1,8 +1,7 @@
-
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
-import { useCart } from "@/contexts/CartContext";
+import { useCart } from "@/contexts/cart/CartContext";
 import { useProductData } from "@/hooks/useProductData";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import POSContent from "@/components/pos/POSContent";
