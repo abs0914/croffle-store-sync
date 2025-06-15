@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -54,7 +54,12 @@ export default function EndShiftDialog({
       setInventoryCount({});
       setShowCameraView(false);
       setCashError(null);
-    } else if (isOpen && inventoryItems.length > 0) {
+    }
+  }, [isOpen]);
+
+  // Initialize inventory count and ending cash when dialog opens and inventory loads
+  useEffect(() => {
+    if (isOpen && inventoryItems.length > 0) {
       // Initialize inventory count with current stock quantities
       const initialCount = inventoryItems.reduce((acc, item) => {
         acc[item.id] = item.stock_quantity || 0;
@@ -68,7 +73,7 @@ export default function EndShiftDialog({
         setEndingCash(currentShift.startingCash);
       }
     }
-  }, [isOpen, inventoryItems, currentShift]);
+  }, [isOpen, inventoryItems.length, currentShift?.startingCash]);
 
   // Validate ending cash amount whenever it changes
   useEffect(() => {
@@ -77,14 +82,14 @@ export default function EndShiftDialog({
     } else {
       setCashError(null);
     }
-  }, [endingCash, currentShift]);
+  }, [endingCash, currentShift?.startingCash]);
 
-  const handleInventoryCountChange = (itemId: string, value: number) => {
+  const handleInventoryCountChange = useCallback((itemId: string, value: number) => {
     setInventoryCount(prev => ({
       ...prev,
       [itemId]: value
     }));
-  };
+  }, []);
 
   const handleSubmit = async () => {
     if (!currentShift) return;
