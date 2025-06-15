@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { UsersPage } from "./Settings/Users";
-import { CashiersPage } from "./Settings/Cashiers";
-import { ManagersPage } from "./Settings/Managers";
+import UsersPage from "./Settings/Users";
+import CashiersPage from "./Settings/Cashiers";
+import ManagersPage from "./Settings/Managers";
 import { ThermalPrinterPage } from './Settings/ThermalPrinter';
 import { PrinterStatusIndicator } from '@/components/printer/PrinterStatusIndicator';
 

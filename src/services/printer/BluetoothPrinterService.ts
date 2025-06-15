@@ -1,4 +1,3 @@
-
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import { ESCPOSFormatter } from './ESCPOSFormatter';
 import { PrinterDiscovery, ThermalPrinter } from './PrinterDiscovery';
@@ -30,12 +29,13 @@ export class BluetoothPrinterService {
     try {
       const receiptData = this.formatReceiptForThermal(transaction, customer, storeName);
       const bytes = new TextEncoder().encode(receiptData);
+      const dataView = new DataView(bytes.buffer);
       
       await BleClient.write(
         printer.device.deviceId,
         this.PRINT_SERVICE_UUID,
         this.PRINT_CHARACTERISTIC_UUID,
-        bytes
+        dataView
       );
       
       console.log('Receipt printed successfully');
@@ -55,12 +55,13 @@ export class BluetoothPrinterService {
     try {
       const testData = this.formatTestReceipt();
       const bytes = new TextEncoder().encode(testData);
+      const dataView = new DataView(bytes.buffer);
       
       await BleClient.write(
         printer.device.deviceId,
         this.PRINT_SERVICE_UUID,
         this.PRINT_CHARACTERISTIC_UUID,
-        bytes
+        dataView
       );
       
       return true;
