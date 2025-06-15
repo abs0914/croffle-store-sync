@@ -44,14 +44,29 @@ export default function ProductGrid({
   
   // Handle product selection
   const handleProductClick = async (product: Product) => {
-    if (!isShiftActive || !(product.is_active || product.isActive)) return;
+    console.log("ProductGrid: Product clicked", {
+      productName: product.name,
+      productId: product.id,
+      isShiftActive,
+      isActive: product.is_active || product.isActive
+    });
+
+    if (!isShiftActive) {
+      console.log("ProductGrid: Shift not active, cannot add to cart");
+      return;
+    }
+    
+    if (!(product.is_active || product.isActive)) {
+      console.log("ProductGrid: Product not active, cannot add to cart");
+      return;
+    }
     
     setSelectedProduct(product);
 
     try {
       setIsLoadingVariations(true);
       const variations = await fetchProductVariations(product.id);
-      console.log("Fetched variations:", variations);
+      console.log("ProductGrid: Fetched variations:", variations);
       
       // If there are variations, show the dialog
       if (variations && variations.length > 0) {
@@ -59,12 +74,17 @@ export default function ProductGrid({
         setIsDialogOpen(true);
       } else {
         // If no variations, add the product directly
-        console.log("Adding regular product directly (no variations)");
+        console.log("ProductGrid: Adding regular product directly (no variations)");
+        console.log("ProductGrid: Calling addItemToCart with:", {
+          product: product.name,
+          productId: product.id,
+          price: product.price
+        });
         addItemToCart(product);
       }
       
     } catch (error) {
-      console.error("Error loading product variations:", error);
+      console.error("ProductGrid: Error loading product variations:", error);
     } finally {
       setIsLoadingVariations(false);
     }
@@ -73,7 +93,11 @@ export default function ProductGrid({
   // Handle variation selection
   const handleVariationSelect = (variation: ProductVariation) => {
     if (selectedProduct) {
-      console.log("Adding variation to cart:", variation.name, "for product:", selectedProduct.name);
+      console.log("ProductGrid: Adding variation to cart:", {
+        variation: variation.name,
+        product: selectedProduct.name,
+        price: variation.price
+      });
       addItemToCart(selectedProduct, 1, variation);
       setIsDialogOpen(false);
     }
@@ -101,11 +125,19 @@ export default function ProductGrid({
 
   const handleRegularProductSelect = () => {
     if (selectedProduct) {
-      console.log("Adding regular product to cart:", selectedProduct.name);
+      console.log("ProductGrid: Adding regular product to cart:", selectedProduct.name);
       addItemToCart(selectedProduct);
       setIsDialogOpen(false);
     }
   };
+
+  console.log("ProductGrid: Render state", {
+    productsCount: products.length,
+    filteredProductsCount: filteredProducts.length,
+    isShiftActive,
+    isLoading,
+    activeCategory
+  });
 
   return (
     <>
