@@ -1,13 +1,13 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import { Printer, Download } from "lucide-react";
+import { Printer, Download, Bluetooth } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Transaction, Customer } from "@/types";
 import { useStore } from "@/contexts/StoreContext";
+import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import { toast } from "sonner";
 
 interface ReceiptGeneratorProps {
@@ -17,6 +17,7 @@ interface ReceiptGeneratorProps {
 
 export default function ReceiptGenerator({ transaction, customer }: ReceiptGeneratorProps) {
   const { currentStore } = useStore();
+  const { isAvailable, isConnected, printReceipt, isPrinting } = useThermalPrinter();
   const receiptRef = React.useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -84,6 +85,18 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
     printWindow.close();
   };
 
+  const handleThermalPrint = async () => {
+    if (!isConnected) {
+      toast.error('No thermal printer connected');
+      return;
+    }
+
+    const success = await printReceipt(transaction, customer, currentStore?.name);
+    if (success) {
+      toast.success('Receipt printed to thermal printer');
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
@@ -98,6 +111,7 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
     <div>
       {/* Receipt content */}
       <div ref={receiptRef} className="text-sm">
+        {/* Receipt header */}
         <div className="receipt-header text-center mb-4">
           <h2 className="text-xl font-bold">{currentStore?.name || 'Store Name'}</h2>
           <p className="text-xs">{currentStore?.address || 'Store Address'}</p>
@@ -218,13 +232,37 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
 
       {/* Print buttons */}
       <div className="mt-4 space-y-2">
+        {/* Thermal printer button - show if available */}
+        {isAvailable && (
+          <Button 
+            onClick={handleThermalPrint}
+            disabled={!isConnected || isPrinting}
+            className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700"
+          >
+            {isPrinting ? (
+              <>
+                <Bluetooth className="mr-2 h-4 w-4 animate-pulse" />
+                Printing to Thermal...
+              </>
+            ) : (
+              <>
+                <Bluetooth className="mr-2 h-4 w-4" />
+                {isConnected ? 'Print to Thermal Printer' : 'Connect Thermal Printer'}
+              </>
+            )}
+          </Button>
+        )}
+        
+        {/* Regular print button */}
         <Button 
           onClick={handlePrint}
+          variant={isAvailable ? "outline" : "default"}
           className="w-full flex items-center justify-center"
         >
           <Printer className="mr-2 h-4 w-4" />
-          Print Receipt
+          Print Receipt (Browser)
         </Button>
+        
         <Button 
           variant="outline" 
           className="w-full flex items-center justify-center"
