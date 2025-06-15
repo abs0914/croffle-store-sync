@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { CartItem, Product, ProductVariation } from "@/types";
 import { toast } from "sonner";
@@ -76,18 +75,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   const addItem = (product: Product, quantity = 1, variation?: ProductVariation) => {
-    console.log("CartContext: addItem called with:", {
-      product: product.name,
-      productId: product.id,
+    console.log("CartContext: addItem function called! Arguments:", {
+      product: product ? product.name : "NULL",
+      productId: product ? product.id : "NULL",
       quantity,
       variation: variation ? variation.name : "none",
-      currentStoreId: currentStore?.id
+      currentStoreId: currentStore?.id,
+      functionType: typeof addItem
     });
 
     // Check if we have a store selected
     if (!currentStore?.id) {
       console.error("CartContext: No store selected");
       toast.error("Please select a store first");
+      return;
+    }
+
+    if (!product) {
+      console.error("CartContext: No product provided");
+      toast.error("Invalid product");
       return;
     }
 
@@ -104,9 +110,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
 
     console.log("CartContext: Existing item index:", existingItemIndex);
+    console.log("CartContext: Current items before addition:", items);
 
     if (existingItemIndex !== -1) {
       // Update quantity if item exists
+      console.log("CartContext: Updating existing item quantity");
       const newItems = [...items];
       newItems[existingItemIndex].quantity += quantity;
       setItems(newItems);
@@ -119,6 +127,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       console.log("CartContext: Updated existing item in cart", displayName);
     } else {
       // Add new item
+      console.log("CartContext: Creating new item for cart");
       const newItem: CartItem = {
         productId: product.id,
         product: {
@@ -135,10 +144,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         newItem.variation = variation;
       }
 
-      console.log("CartContext: Creating new cart item:", newItem);
+      console.log("CartContext: New cart item created:", newItem);
 
       // Use functional update to guarantee we're working with latest state
       setItems(prevItems => {
+        console.log("CartContext: Previous items:", prevItems);
         const updatedItems = [...prevItems, newItem];
         console.log("CartContext: Updated items array:", updatedItems);
         return updatedItems;
@@ -151,6 +161,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       toast.success(`${displayName} added to cart`);
       console.log("CartContext: Added new item to cart", displayName);
     }
+
+    console.log("CartContext: addItem function completed");
   };
 
   const removeItem = (itemIndex: number) => {
@@ -179,6 +191,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     toast.info('Cart cleared');
     console.log("CartContext: Cart cleared");
   };
+
+  console.log("CartContext: Provider rendering with items:", items.length);
 
   return (
     <CartContext.Provider
