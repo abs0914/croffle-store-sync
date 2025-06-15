@@ -1,7 +1,6 @@
 
 import { useState } from "react";
--import { useCart } from "@/contexts/CartContext";
-+import { useCart } from "@/contexts/cart/CartContext";
+import { useCart } from "@/contexts/cart/CartContext";
 import { Customer, Transaction } from "@/types";
 import { createTransaction } from "@/services/transactions";
 import { toast } from "sonner";
