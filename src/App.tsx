@@ -1,19 +1,20 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Dashboard } from '@/pages/Dashboard';
-import { Products } from '@/pages/Products';
-import { POS } from '@/pages/POS';
-import { Settings } from '@/pages/Settings';
-import { Auth } from '@/pages/Auth';
+import Dashboard from '@/pages/Dashboard';
+import Products from '@/pages/Products';
+import POS from '@/pages/POS';
+import Settings from '@/pages/Settings';
+import Auth from '@/pages/Auth';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/auth';
-import { Inventory } from '@/pages/Inventory';
-import { Customers } from '@/pages/Customers';
-import { Orders } from '@/pages/Orders';
-import { Stores } from '@/pages/Stores';
-import { InventoryManagement } from '@/pages/Inventory/InventoryManagement';
-import { CommissaryInventory } from '@/pages/Inventory/CommissaryInventory';
+import Inventory from '@/pages/Inventory';
+import { CustomerManagement as Customers } from '@/pages/Customers';
+import Orders from '@/pages/Orders';
+import Stores from '@/pages/Stores';
+import InventoryManagement from '@/pages/Inventory/InventoryManagement';
+import CommissaryInventory from '@/pages/Inventory/CommissaryInventory';
 import BulkUpload from "@/pages/BulkUpload";
 
 function App() {

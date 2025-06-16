@@ -12,7 +12,12 @@ export const fetchCommissaryInventory = async (): Promise<CommissaryInventoryIte
       .order('name');
 
     if (error) throw error;
-    return data || [];
+    
+    // Cast the data to ensure proper typing
+    return (data || []).map(item => ({
+      ...item,
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies'
+    }));
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
     toast.error('Failed to fetch commissary inventory');
@@ -47,8 +52,8 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
 
     const processedIngredients = ingredients.map(ingredient => ({
       name: ingredient.name,
-      category: ingredient.category,
-      unit: ingredient.unit,
+      category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      unit: ingredient.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair',
       unit_cost: ingredient.unit_cost || 0,
       current_stock: ingredient.current_stock || 0,
       minimum_threshold: ingredient.minimum_threshold || 0,

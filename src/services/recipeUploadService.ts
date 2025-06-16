@@ -41,7 +41,7 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
           commissary_item_id: commissaryItem?.id,
           inventory_stock_id: '00000000-0000-0000-0000-000000000000', // Placeholder
           quantity: ingredient.quantity,
-          unit: ingredient.unit,
+          unit: ingredient.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
           cost_per_unit: ingredient.cost_per_unit || commissaryItem?.unit_cost || 0
         };
       });
