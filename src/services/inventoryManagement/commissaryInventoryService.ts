@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { toast } from "sonner";
@@ -35,7 +36,7 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
       ...item,
       category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: item.supplier && typeof item.supplier === 'object' && !Array.isArray(item.supplier) && item.supplier.id
+      supplier: item.supplier && typeof item.supplier === 'object' && !Array.isArray(item.supplier) && 'id' in item.supplier
         ? item.supplier as any 
         : null
     }));
@@ -79,7 +80,7 @@ export const createCommissaryInventoryItem = async (
       ...data,
       category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: data.supplier && typeof data.supplier === 'object' && !Array.isArray(data.supplier) && data.supplier.id
+      supplier: data.supplier && typeof data.supplier === 'object' && !Array.isArray(data.supplier) && 'id' in data.supplier
         ? data.supplier as any 
         : null
     };
@@ -112,7 +113,7 @@ export const updateCommissaryInventoryItem = async (
       ...data,
       category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: data.supplier && typeof data.supplier === 'object' && !Array.isArray(data.supplier) && data.supplier.id
+      supplier: data.supplier && typeof data.supplier === 'object' && !Array.isArray(data.supplier) && 'id' in data.supplier
         ? data.supplier as any 
         : null
     };
