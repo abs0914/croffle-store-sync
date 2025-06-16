@@ -1,152 +1,127 @@
-
-import { Link, useLocation } from "react-router-dom";
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import {
-  LayoutDashboard,
-  Store,
-  ShoppingBasket,
-  Users,
-  Settings,
-  BarChart,
-  Package,
-  FileSpreadsheet,
-  UserCircle,
-  Utensils,
-  Boxes,
-  ShoppingCart,
-  Warehouse,
-  RefreshCw
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/auth";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+
+import { Package, Upload, Users, Settings, Store, BarChart3, ShoppingCart, Boxes, Truck } from "lucide-react";
+import { UserRole } from '@/types';
+
+interface MenuItem {
+  title: string;
+  icon: React.ComponentType<any>;
+  href: string;
+  permissions: UserRole[];
+}
 
 const menuItems = [
   {
-    name: "Dashboard",
-    href: "/",
-    icon: LayoutDashboard,
-    roles: ["admin", "owner", "manager", "cashier"]
+    title: "Dashboard",
+    icon: BarChart3,
+    href: "/dashboard",
+    permissions: ["admin", "owner", "manager", "staff"] as UserRole[],
   },
   {
-    name: "POS",
-    href: "/pos",
-    icon: ShoppingBasket,
-    roles: ["admin", "owner", "manager", "cashier"]
-  },
-  {
-    name: "Customers",
-    href: "/customers",
-    icon: Users,
-    roles: ["admin", "owner", "manager", "cashier"]
-  },
-  {
-    name: "Inventory",
-    href: "/inventory",
-    icon: Package,
-    roles: ["admin", "owner", "manager", "cashier"]
-  },
-  {
-    name: "Order Management",
-    href: "/order-management",
+    title: "Point of Sale",
     icon: ShoppingCart,
-    roles: ["admin", "owner", "manager"]
+    href: "/pos",
+    permissions: ["admin", "owner", "manager", "staff"] as UserRole[],
   },
   {
-    name: "Commissary Inventory",
-    href: "/commissary-inventory",
-    icon: Warehouse,
-    roles: ["admin", "owner"]
+    title: "Products",
+    icon: Boxes,
+    href: "/products",
+    permissions: ["admin", "owner", "manager"] as UserRole[],
   },
   {
-    name: "Inventory Conversion",
-    href: "/inventory-conversion",
-    icon: RefreshCw,
-    roles: ["admin", "owner"]
+    title: "Inventory",
+    icon: Truck,
+    href: "/inventory",
+    permissions: ["admin", "owner", "manager"] as UserRole[],
   },
   {
-    name: "Stores",
-    href: "/stores",
+    title: "Bulk Upload",
+    icon: Upload,
+    href: "/bulk-upload",
+    permissions: ["admin", "owner"] as UserRole[],
+  },
+  {
+    title: "Order Management",
+    icon: ShoppingCart,
+    href: "/orders",
+    permissions: ["admin", "owner", "manager"] as UserRole[],
+  },
+  {
+    title: "Users",
+    icon: Users,
+    href: "/users",
+    permissions: ["admin", "owner"] as UserRole[],
+  },
+  {
+    title: "Stores",
     icon: Store,
-    roles: ["admin", "owner"]
+    href: "/stores",
+    permissions: ["admin", "owner"] as UserRole[],
   },
   {
-    name: "Reports",
-    href: "/reports",
-    icon: BarChart,
-    roles: ["admin", "owner", "manager", "cashier"]
-  }
-];
-
-const settingsItems = [
-  {
-    name: "Users",
-    href: "/settings/users",
-    icon: UserCircle,
-    roles: ["admin", "owner"]
-  }
+    title: "Settings",
+    icon: Settings,
+    href: "/settings",
+    permissions: ["admin", "owner"] as UserRole[],
+  },
 ];
 
 export function MainMenu() {
-  const location = useLocation();
   const { user, hasPermission } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const isActive = (href: string) => {
-    if (href === "/" && location.pathname === "/") {
-      return true;
-    }
-    return location.pathname.startsWith(href) && href !== "/";
-  };
-
-  // Filter menu items based on user role
   const filteredMenuItems = menuItems.filter(item =>
-    !user?.role || item.roles.includes(user.role)
-  );
-
-  const filteredSettingsItems = settingsItems.filter(item =>
-    !user?.role || item.roles.includes(user.role)
+    item.permissions.some(role => hasPermission(role))
   );
 
   return (
-    <div className="flex flex-col space-y-1 px-2">
-      <nav className="space-y-1">
-        {filteredMenuItems.map((item) => (
-          <Link
-            key={item.name}
-            to={item.href}
-            className={cn(
-              "py-2 px-4 flex items-center space-x-2 rounded-lg text-sm transition-colors",
-              isActive(item.href)
-                ? "bg-croffle-dark/80 text-white font-medium"
-                : "hover:bg-croffle-dark/30 text-croffle-foreground"
-            )}
-          >
-            <item.icon className={cn("h-5 w-5", isActive(item.href) ? "text-white" : "text-croffle-foreground")} />
-            <span>{item.name}</span>
-          </Link>
-        ))}
-      </nav>
-
-      {filteredSettingsItems.length > 0 && (
-        <div className="pt-6 border-t border-gray-700 mt-4">
-          <p className="text-xs font-medium px-4 mb-2 text-muted-foreground">Settings</p>
-          <nav className="space-y-1">
-            {filteredSettingsItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
+    <div className="flex flex-col space-y-1">
+      {filteredMenuItems.map((item) => (
+        <Button
+          key={item.href}
+          variant="ghost"
+          className={cn(
+            "justify-start font-normal",
+            location.pathname === item.href ? "bg-secondary hover:bg-secondary" : "hover:bg-accent hover:text-accent-foreground",
+          )}
+          onClick={() => navigate(item.href)}
+        >
+          <item.icon className="mr-2 h-4 w-4" />
+          <span>{item.title}</span>
+        </Button>
+      ))}
+      <Separator className="my-2" />
+      <Accordion type="single" collapsible>
+        <AccordionItem value="item-1">
+          <AccordionTrigger>Utilities</AccordionTrigger>
+            <AccordionContent>
+              <Button
+                variant="ghost"
                 className={cn(
-                  "py-2 px-4 flex items-center space-x-2 rounded-lg text-sm transition-colors",
-                  isActive(item.href)
-                    ? "bg-croffle-dark/80 text-white font-medium"
-                    : "hover:bg-croffle-dark/30 text-croffle-foreground"
+                  "justify-start font-normal",
+                  location.pathname === "/under-construction" ? "bg-secondary hover:bg-secondary" : "hover:bg-accent hover:text-accent-foreground",
                 )}
+                onClick={() => navigate("/under-construction")}
               >
-                <item.icon className={cn("h-5 w-5", isActive(item.href) ? "text-white" : "text-croffle-foreground")} />
-                <span>{item.name}</span>
-              </Link>
-            ))}
-          </nav>
-        </div>
-      )}
+                <Package className="mr-2 h-4 w-4" />
+                <span>Placeholder</span>
+              </Button>
+            </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
