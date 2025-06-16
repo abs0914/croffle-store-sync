@@ -33,7 +33,7 @@ export const fetchInventoryConversions = async (storeId?: string): Promise<Inven
         inventory_stock:inventory_stock(*),
         ingredients:conversion_ingredients(
           *,
-          commissary_item:inventory_items(*)
+          commissary_item:commissary_inventory(*)
         )
       `)
       .order('conversion_date', { ascending: false });
@@ -174,7 +174,7 @@ export const fetchConversionRecipes = async (): Promise<ConversionRecipe[]> => {
         *,
         ingredients:conversion_recipe_ingredients(
           *,
-          commissary_item:inventory_items(*)
+          commissary_item:commissary_inventory(*)
         )
       `)
       .eq('is_active', true)
@@ -249,7 +249,7 @@ export const createConversionRecipe = async (
 export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInventoryItem[]> => {
   try {
     const { data, error } = await supabase
-      .from('inventory_items')
+      .from('commissary_inventory')
       .select('*')
       .eq('is_active', true)
       .gt('current_stock', 0)
@@ -257,13 +257,7 @@ export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInv
 
     if (error) throw error;
 
-    // Transform the data to match CommissaryInventoryItem interface
-    const transformedData: CommissaryInventoryItem[] = (data || []).map(item => ({
-      ...item,
-      category: transformCategory(item.category)
-    }));
-
-    return transformedData;
+    return data || [];
   } catch (error) {
     console.error('Error fetching commissary items for conversion:', error);
     toast.error('Failed to fetch commissary items');

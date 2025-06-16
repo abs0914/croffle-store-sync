@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Trash2, ChefHat, Calculator } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Search, Edit, Trash2, ChefHat, Calculator, Download, Upload, FileText, FileJson } from "lucide-react";
 import { fetchRecipes, deleteRecipe, calculateRecipeCost } from "@/services/inventoryManagement/recipeService";
 import { Recipe } from "@/types/inventoryManagement";
 import { AddRecipeDialog } from "./AddRecipeDialog";
 import { EditRecipeDialog } from "./EditRecipeDialog";
+import { useRecipeImportExport } from "@/hooks/recipe/useRecipeImportExport";
 
 interface RecipesListProps {
   storeId: string;
@@ -20,6 +22,14 @@ export function RecipesList({ storeId }: RecipesListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+
+  const {
+    handleExportCSV,
+    handleExportJSON,
+    handleImportCSV,
+    handleImportJSON,
+    handleDownloadTemplate
+  } = useRecipeImportExport(recipes, storeId, loadRecipes);
 
   const loadRecipes = async () => {
     setLoading(true);
@@ -54,10 +64,44 @@ export function RecipesList({ storeId }: RecipesListProps) {
             <ChefHat className="h-5 w-5" />
             Recipes
           </CardTitle>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Recipe
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Import/Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Import/Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownloadTemplate}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Download CSV Template
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleImportCSV}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import from CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleImportJSON}>
+                  <FileJson className="h-4 w-4 mr-2" />
+                  Import from JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV} disabled={recipes.length === 0}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export to CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportJSON} disabled={recipes.length === 0}>
+                  <FileJson className="h-4 w-4 mr-2" />
+                  Export to JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Recipe
+            </Button>
+          </div>
         </div>
         
         <div className="relative">
