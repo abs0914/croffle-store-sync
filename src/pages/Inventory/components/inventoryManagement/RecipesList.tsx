@@ -38,7 +38,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
     
     setLoading(true);
     try {
-      const data = await fetchRecipes({ storeId: selectedStore });
+      const data = await fetchRecipes(selectedStore);
       // Ensure data is an array, fallback to empty array if not
       setRecipes(Array.isArray(data) ? data : []);
     } catch (error) {
