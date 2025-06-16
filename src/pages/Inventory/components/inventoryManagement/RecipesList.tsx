@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
     handleImportCSV,
     handleImportJSON,
     handleDownloadTemplate
-  } = useRecipeImportExport(storeId, () => loadRecipes());
+  } = useRecipeImportExport(recipes, storeId, () => loadRecipes());
 
   const loadRecipes = useCallback(async () => {
     if (!selectedStore) return;
@@ -185,7 +184,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
                     <div className="space-y-1">
                       {recipe.ingredients?.map((ingredient) => (
                         <div key={ingredient.id} className="text-sm flex justify-between">
-                          <span>{ingredient.inventory_stock?.item}</span>
+                          <span>{ingredient.inventory_stock?.item || 'Unknown item'}</span>
                           <span>{ingredient.quantity} {ingredient.unit}</span>
                         </div>
                       )) || <span className="text-sm text-muted-foreground">No ingredients</span>}
