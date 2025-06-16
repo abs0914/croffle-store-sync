@@ -393,6 +393,7 @@ export class BluetoothPrinterService {
     // Header - Store name (centered, bold, small font)
     receipt += ESCPOSFormatter.center();
     receipt += ESCPOSFormatter.bold((storeName || 'THE CROFFLE STORE'));
+    receipt += ESCPOSFormatter.forceSmallFont(); // Reset font after bold
     receipt += ESCPOSFormatter.lineFeed();
     receipt += 'SALES RECEIPT' + ESCPOSFormatter.lineFeed(2);
     receipt += ESCPOSFormatter.left();
@@ -434,6 +435,7 @@ export class BluetoothPrinterService {
       // Truncate long product names
       const itemName = item.name.length > 30 ? item.name.substring(0, 27) + '...' : item.name;
       receipt += ESCPOSFormatter.bold(itemName) + ESCPOSFormatter.lineFeed();
+      receipt += ESCPOSFormatter.forceSmallFont(); // Reset font after each bold item
 
       // Format price line with better spacing
       const unitPrice = item.unitPrice.toFixed(2);
@@ -471,6 +473,7 @@ export class BluetoothPrinterService {
         `P${transaction.total.toFixed(2)}`
       )
     );
+    receipt += ESCPOSFormatter.forceSmallFont(); // Reset font after bold total
     
     // Payment details
     receipt += ESCPOSFormatter.lineFeed();
@@ -494,9 +497,10 @@ export class BluetoothPrinterService {
     receipt += ESCPOSFormatter.lineFeed(2);
     receipt += ESCPOSFormatter.center();
     receipt += 'Thank you for your purchase!' + ESCPOSFormatter.lineFeed();
-    receipt += ESCPOSFormatter.left(); // Reset alignment before QR code
+    receipt += ESCPOSFormatter.forceSmallFont(); // Ensure small font before QR
     receipt += ESCPOSFormatter.center(); // Center QR code
     receipt += ESCPOSFormatter.qrCode(transaction.receiptNumber);
+    receipt += ESCPOSFormatter.forceSmallFont(); // Reset font after QR code
     receipt += ESCPOSFormatter.lineFeed(3);
     receipt += ESCPOSFormatter.cut();
 
@@ -512,6 +516,7 @@ export class BluetoothPrinterService {
     // Header - small font for better fit
     receipt += ESCPOSFormatter.center();
     receipt += ESCPOSFormatter.bold('TEST RECEIPT');
+    receipt += ESCPOSFormatter.forceSmallFont(); // Reset font after bold
     receipt += ESCPOSFormatter.lineFeed(2);
     receipt += ESCPOSFormatter.left();
 

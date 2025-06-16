@@ -10,9 +10,10 @@ export class ESCPOSFormatter {
            this.GS + '!' + '\x00'; // Ensure normal character size
   }
 
-  // Text formatting
+  // Text formatting (with font size preservation)
   static bold(text: string): string {
-    return this.ESC + 'E' + '\x01' + text + this.ESC + 'E' + '\x00';
+    return this.ESC + 'E' + '\x01' + text + this.ESC + 'E' + '\x00' +
+           this.ESC + '!' + '\x01' + this.GS + '!' + '\x00'; // Restore small font after bold
   }
 
   static center(): string {
@@ -52,12 +53,17 @@ export class ESCPOSFormatter {
     return this.GS + '!' + '\x00' + this.ESC + '!' + '\x00'; // Reset both GS and ESC font controls
   }
 
-  // Force smallest possible font for thermal printers
+  // Force smallest possible font for thermal printers (simplified)
   static forceSmallFont(): string {
-    return this.ESC + '@' + // Reset printer
-           this.ESC + '!' + '\x01' + // Select Font B (smaller)
-           this.GS + '!' + '\x00' + // Normal character size
-           this.ESC + 'M' + '\x01'; // Select Font B alternative command
+    return this.ESC + '!' + '\x01' + // Select Font B (smaller)
+           this.GS + '!' + '\x00'; // Normal character size (no double width/height)
+  }
+
+  // Complete printer reset with small font
+  static resetToSmallFont(): string {
+    return this.ESC + '@' + // Reset printer completely
+           this.ESC + '!' + '\x01' + // Select Font B
+           this.GS + '!' + '\x00'; // Normal character size
   }
 
   // Legacy method for compatibility
@@ -75,14 +81,16 @@ export class ESCPOSFormatter {
     return this.GS + 'V' + String.fromCharCode(65) + String.fromCharCode(0);
   }
   
-  // QR Code
+  // QR Code (fixed size and font reset)
   static qrCode(data: string): string {
     const qrCommands = [
       this.GS + '(k' + String.fromCharCode(4, 0, 49, 65, 50, 0), // QR model
-      this.GS + '(k' + String.fromCharCode(3, 0, 49, 67, 8), // QR size
+      this.GS + '(k' + String.fromCharCode(3, 0, 49, 67, 3), // QR size = 3 (smaller!)
       this.GS + '(k' + String.fromCharCode(3, 0, 49, 69, 48), // QR error correction
       this.GS + '(k' + String.fromCharCode(data.length + 3, 0, 49, 80, 48) + data, // QR data
-      this.GS + '(k' + String.fromCharCode(3, 0, 49, 81, 48) // QR print
+      this.GS + '(k' + String.fromCharCode(3, 0, 49, 81, 48), // QR print
+      this.ESC + '!' + '\x01', // Reset to Font B after QR
+      this.GS + '!' + '\x00'   // Reset character size after QR
     ];
     return qrCommands.join('');
   }
