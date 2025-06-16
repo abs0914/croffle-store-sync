@@ -136,6 +136,60 @@ export type Database = {
           },
         ]
       }
+      commissary_inventory: {
+        Row: {
+          barcode: string | null
+          category: string
+          created_at: string
+          current_stock: number
+          expiry_date: string | null
+          id: string
+          is_active: boolean
+          minimum_threshold: number
+          name: string
+          sku: string | null
+          storage_location: string | null
+          supplier_id: string | null
+          unit: string
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          category: string
+          created_at?: string
+          current_stock?: number
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_threshold?: number
+          name: string
+          sku?: string | null
+          storage_location?: string | null
+          supplier_id?: string | null
+          unit: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          category?: string
+          created_at?: string
+          current_stock?: number
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_threshold?: number
+          name?: string
+          sku?: string | null
+          storage_location?: string | null
+          supplier_id?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       conversion_ingredients: {
         Row: {
           commissary_item_id: string
@@ -1082,6 +1136,8 @@ export type Database = {
       }
       recipe_ingredients: {
         Row: {
+          commissary_item_id: string | null
+          cost_per_unit: number | null
           created_at: string
           id: string
           inventory_stock_id: string
@@ -1090,6 +1146,8 @@ export type Database = {
           unit: Database["public"]["Enums"]["inventory_unit"]
         }
         Insert: {
+          commissary_item_id?: string | null
+          cost_per_unit?: number | null
           created_at?: string
           id?: string
           inventory_stock_id: string
@@ -1098,6 +1156,8 @@ export type Database = {
           unit: Database["public"]["Enums"]["inventory_unit"]
         }
         Update: {
+          commissary_item_id?: string | null
+          cost_per_unit?: number | null
           created_at?: string
           id?: string
           inventory_stock_id?: string
@@ -1106,6 +1166,13 @@ export type Database = {
           unit?: Database["public"]["Enums"]["inventory_unit"]
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_recipe_ingredients_commissary_item"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recipe_ingredients_inventory_stock_id_fkey"
             columns: ["inventory_stock_id"]
@@ -1124,6 +1191,7 @@ export type Database = {
       }
       recipes: {
         Row: {
+          cost_per_serving: number | null
           created_at: string
           description: string | null
           id: string
@@ -1131,13 +1199,16 @@ export type Database = {
           is_active: boolean | null
           name: string
           product_id: string
+          serving_size: number | null
           store_id: string
+          total_cost: number | null
           updated_at: string
           variation_id: string | null
           version: number | null
           yield_quantity: number
         }
         Insert: {
+          cost_per_serving?: number | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1145,13 +1216,16 @@ export type Database = {
           is_active?: boolean | null
           name: string
           product_id: string
+          serving_size?: number | null
           store_id: string
+          total_cost?: number | null
           updated_at?: string
           variation_id?: string | null
           version?: number | null
           yield_quantity?: number
         }
         Update: {
+          cost_per_serving?: number | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1159,7 +1233,9 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           product_id?: string
+          serving_size?: number | null
           store_id?: string
+          total_cost?: number | null
           updated_at?: string
           variation_id?: string | null
           version?: number | null

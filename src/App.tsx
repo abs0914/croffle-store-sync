@@ -1,136 +1,151 @@
 
-import {
-  BrowserRouter as Router,
-  Route,
-  Routes,
-} from "react-router-dom";
-import { AuthProvider } from "./contexts/auth";
-import { MainLayout } from "./components/layout/MainLayout";
-import Dashboard from "./pages/Dashboard";
-import Pos from "./pages/POS";
-import Customers from "./pages/Customers";
-import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import Inventory from "./pages/Inventory";
-import Stores from "./pages/Stores";
-import Settings from "./pages/Settings";
-import Login from "./pages/Login";
-import { StoreProvider } from "./contexts/StoreContext";
-import { ShiftProvider } from "./contexts/shift";
-import { CartProvider } from "./contexts/cart/CartProvider";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import OrderManagement from "./pages/OrderManagement";
-import CommissaryInventory from "./pages/CommissaryInventory";
-import InventoryConversion from "./pages/InventoryConversion";
-
-const queryClient = new QueryClient();
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { MainLayout } from '@/components/layout/MainLayout';
+import Dashboard from '@/pages/Dashboard';
+import Products from '@/pages/Products';
+import POS from '@/pages/POS';
+import Settings from '@/pages/Settings';
+import Auth from '@/pages/Auth';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { useAuth } from '@/contexts/auth';
+import Inventory from '@/pages/Inventory';
+import CustomerManagement from '@/pages/Customers/CustomerManagement';
+import Orders from '@/pages/Orders';
+import Stores from '@/pages/Stores';
+import InventoryManagement from '@/pages/Inventory/InventoryManagement';
+import CommissaryInventory from '@/pages/Inventory/CommissaryInventory';
+import BulkUpload from "@/pages/BulkUpload";
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <StoreProvider>
-          <ShiftProvider>
-            <CartProvider>
-              <Router>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route
-                    path="/"
-                    element={
-                      <ProtectedRoute>
-                        <MainLayout>
-                          <Dashboard />
-                        </MainLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/pos"
-                    element={
-                      <ProtectedRoute>
-                        <MainLayout>
-                          <Pos />
-                        </MainLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/customers"
-                    element={
-                      <ProtectedRoute>
-                        <MainLayout>
-                          <Customers />
-                        </MainLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/inventory"
-                    element={
-                      <ProtectedRoute>
-                        <MainLayout>
-                          <Inventory />
-                        </MainLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/settings"
-                    element={
-                      <ProtectedRoute>
-                        <MainLayout>
-                          <Settings />
-                        </MainLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/stores"
-                    element={
-                      <ProtectedRoute>
-                        <MainLayout>
-                          <Stores />
-                        </MainLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/order-management"
-                    element={
-                      <ProtectedRoute>
-                        <MainLayout>
-                          <OrderManagement />
-                        </MainLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/commissary-inventory"
-                    element={
-                      <ProtectedRoute requiredRole="admin">
-                        <MainLayout>
-                          <CommissaryInventory />
-                        </MainLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/inventory-conversion"
-                    element={
-                      <ProtectedRoute requiredRole="admin">
-                        <MainLayout>
-                          <InventoryConversion />
-                        </MainLayout>
-                      </ProtectedRoute>
-                    }
-                  />
-                </Routes>
-              </Router>
-            </CartProvider>
-          </ShiftProvider>
-        </StoreProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <Router>
+      <div className="min-h-screen bg-background">
+        <Routes>
+          <Route path="/auth" element={<Auth />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Dashboard />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Dashboard />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/products"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Products />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pos"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <POS />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Inventory />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory-management"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <InventoryManagement />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/commissary-inventory"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "owner"]}>
+                <MainLayout>
+                  <CommissaryInventory />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customers"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <CustomerManagement />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/orders"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Orders />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stores"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "owner"]}>
+                <MainLayout>
+                  <Stores />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <Settings />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bulk-upload"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "owner"]}>
+                <MainLayout>
+                  <BulkUpload />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
