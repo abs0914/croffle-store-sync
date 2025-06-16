@@ -386,73 +386,87 @@ export class BluetoothPrinterService {
     storeName?: string
   ): string {
     let receipt = ESCPOSFormatter.init();
-    
-    // Header
+
+    // Header - Store name (centered, bold, normal size to fit better)
     receipt += ESCPOSFormatter.center();
-    receipt += ESCPOSFormatter.bold(ESCPOSFormatter.doubleWidth());
-    receipt += (storeName || 'THE CROFFLE STORE') + ESCPOSFormatter.lineFeed();
-    receipt += ESCPOSFormatter.normalWidth();
-    receipt += ESCPOSFormatter.left();
+    receipt += ESCPOSFormatter.bold((storeName || 'THE CROFFLE STORE'));
+    receipt += ESCPOSFormatter.lineFeed();
+    receipt += ESCPOSFormatter.normalSize();
     receipt += 'SALES RECEIPT' + ESCPOSFormatter.lineFeed(2);
-    
-    // Receipt details
+    receipt += ESCPOSFormatter.left();
+
+    // Receipt details (shorter format for thermal paper)
     receipt += ESCPOSFormatter.formatLine(
-      'Receipt #:', 
-      transaction.receiptNumber
+      'Receipt #:',
+      transaction.receiptNumber.substring(0, 15) // Truncate if too long
     );
     receipt += ESCPOSFormatter.formatLine(
-      'Date:', 
-      new Date(transaction.createdAt).toLocaleDateString('en-PH')
+      'Date:',
+      new Date(transaction.createdAt).toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: '2-digit'
+      })
     );
     receipt += ESCPOSFormatter.formatLine(
-      'Time:', 
-      new Date(transaction.createdAt).toLocaleTimeString('en-PH')
+      'Time:',
+      new Date(transaction.createdAt).toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     );
     
     if (customer) {
       receipt += ESCPOSFormatter.lineFeed();
-      receipt += ESCPOSFormatter.formatLine('Customer:', customer.name);
+      receipt += ESCPOSFormatter.formatLine('Customer:', customer.name.substring(0, 20)); // Truncate long names
       if (customer.phone) {
         receipt += ESCPOSFormatter.formatLine('Phone:', customer.phone);
       }
     }
-    
+
     receipt += ESCPOSFormatter.horizontalLine();
-    
-    // Items
+
+    // Items (improved formatting)
     transaction.items.forEach(item => {
-      receipt += ESCPOSFormatter.bold(item.name) + ESCPOSFormatter.lineFeed();
+      // Truncate long product names
+      const itemName = item.name.length > 30 ? item.name.substring(0, 27) + '...' : item.name;
+      receipt += ESCPOSFormatter.bold(itemName) + ESCPOSFormatter.lineFeed();
+
+      // Format price line with better spacing
+      const unitPrice = item.unitPrice.toFixed(2);
+      const totalPrice = item.totalPrice.toFixed(2);
       receipt += ESCPOSFormatter.formatLine(
-        `  ${ESCPOSFormatter.formatCurrency(item.unitPrice, 10)} x ${item.quantity}`,
-        ESCPOSFormatter.formatCurrency(item.totalPrice, 12)
+        `  P${unitPrice} x ${item.quantity}`,
+        `P${totalPrice}`
       );
     });
-    
+
     receipt += ESCPOSFormatter.horizontalLine();
     
-    // Totals
+    // Totals (improved formatting with peso symbol)
     receipt += ESCPOSFormatter.formatLine(
       'Subtotal:',
-      ESCPOSFormatter.formatCurrency(transaction.subtotal, 15)
+      `P${transaction.subtotal.toFixed(2)}`
     );
-    
+
     if (transaction.discount > 0) {
       receipt += ESCPOSFormatter.formatLine(
         'Discount:',
-        '-' + ESCPOSFormatter.formatCurrency(transaction.discount, 14)
+        `-P${transaction.discount.toFixed(2)}`
       );
     }
-    
+
     receipt += ESCPOSFormatter.formatLine(
       'VAT (12%):',
-      ESCPOSFormatter.formatCurrency(transaction.tax, 15)
+      `P${transaction.tax.toFixed(2)}`
     );
-    
+
     receipt += ESCPOSFormatter.horizontalLine();
     receipt += ESCPOSFormatter.bold(
       ESCPOSFormatter.formatLine(
         'TOTAL:',
-        ESCPOSFormatter.formatCurrency(transaction.total, 15)
+        `P${transaction.total.toFixed(2)}`
       )
     );
     
@@ -462,48 +476,66 @@ export class BluetoothPrinterService {
       'Payment:',
       transaction.paymentMethod.toUpperCase()
     );
-    
+
     if (transaction.paymentMethod === 'cash') {
       receipt += ESCPOSFormatter.formatLine(
         'Tendered:',
-        ESCPOSFormatter.formatCurrency(transaction.amountTendered || 0, 15)
+        `P${(transaction.amountTendered || 0).toFixed(2)}`
       );
       receipt += ESCPOSFormatter.formatLine(
         'Change:',
-        ESCPOSFormatter.formatCurrency(transaction.change || 0, 15)
+        `P${(transaction.change || 0).toFixed(2)}`
       );
     }
-    
+
     // Footer
     receipt += ESCPOSFormatter.lineFeed(2);
     receipt += ESCPOSFormatter.center();
     receipt += 'Thank you for your purchase!' + ESCPOSFormatter.lineFeed();
+    receipt += ESCPOSFormatter.left(); // Reset alignment before QR code
+    receipt += ESCPOSFormatter.center(); // Center QR code
     receipt += ESCPOSFormatter.qrCode(transaction.receiptNumber);
     receipt += ESCPOSFormatter.lineFeed(3);
     receipt += ESCPOSFormatter.cut();
-    
+
     return receipt;
   }
   
   private static formatTestReceipt(): string {
     let receipt = ESCPOSFormatter.init();
-    
+
+    // Header - normal size for better fit
     receipt += ESCPOSFormatter.center();
-    receipt += ESCPOSFormatter.bold(ESCPOSFormatter.doubleWidth());
-    receipt += 'TEST RECEIPT' + ESCPOSFormatter.lineFeed();
-    receipt += ESCPOSFormatter.normalWidth();
+    receipt += ESCPOSFormatter.bold('TEST RECEIPT');
+    receipt += ESCPOSFormatter.lineFeed(2);
     receipt += ESCPOSFormatter.left();
-    receipt += ESCPOSFormatter.lineFeed();
-    
+
+    // Test information
     receipt += 'Printer connection: OK' + ESCPOSFormatter.lineFeed();
-    receipt += 'Date: ' + new Date().toLocaleDateString() + ESCPOSFormatter.lineFeed();
-    receipt += 'Time: ' + new Date().toLocaleTimeString() + ESCPOSFormatter.lineFeed();
-    
+    receipt += 'Date: ' + new Date().toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: '2-digit'
+    }) + ESCPOSFormatter.lineFeed();
+    receipt += 'Time: ' + new Date().toLocaleTimeString('en-US', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + ESCPOSFormatter.lineFeed();
+
+    // Test formatting
+    receipt += ESCPOSFormatter.horizontalLine();
+    receipt += ESCPOSFormatter.formatLine('Test Item', 'P10.00');
+    receipt += ESCPOSFormatter.formatLine('Quantity:', '1');
+    receipt += ESCPOSFormatter.horizontalLine();
+    receipt += ESCPOSFormatter.formatLine('Total:', 'P10.00');
+
+    // Footer
     receipt += ESCPOSFormatter.lineFeed(2);
     receipt += ESCPOSFormatter.center();
     receipt += 'Thermal printing ready!' + ESCPOSFormatter.lineFeed(3);
     receipt += ESCPOSFormatter.cut();
-    
+
     return receipt;
   }
 }

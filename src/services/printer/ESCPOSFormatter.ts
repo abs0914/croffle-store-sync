@@ -2,31 +2,49 @@
 export class ESCPOSFormatter {
   private static readonly ESC = '\x1B';
   private static readonly GS = '\x1D';
-  
+
   // Initialize printer
   static init(): string {
-    return this.ESC + '@';
+    return this.ESC + '@'; // Initialize printer
   }
-  
+
   // Text formatting
   static bold(text: string): string {
-    return this.ESC + 'E1' + text + this.ESC + 'E0';
+    return this.ESC + 'E' + '\x01' + text + this.ESC + 'E' + '\x00';
   }
-  
+
   static center(): string {
-    return this.ESC + 'a1';
+    return this.ESC + 'a' + '\x01';
   }
-  
+
   static left(): string {
-    return this.ESC + 'a0';
+    return this.ESC + 'a' + '\x00';
   }
-  
+
+  static right(): string {
+    return this.ESC + 'a' + '\x02';
+  }
+
+  // Font size controls (more precise)
   static doubleWidth(): string {
-    return this.GS + '!1';
+    return this.GS + '!' + '\x10'; // Double width only
   }
-  
+
+  static doubleHeight(): string {
+    return this.GS + '!' + '\x01'; // Double height only
+  }
+
+  static doubleSize(): string {
+    return this.GS + '!' + '\x11'; // Double width and height
+  }
+
+  static normalSize(): string {
+    return this.GS + '!' + '\x00'; // Normal size
+  }
+
+  // Legacy method for compatibility
   static normalWidth(): string {
-    return this.GS + '!0';
+    return this.normalSize();
   }
   
   // Line feeds
@@ -51,25 +69,48 @@ export class ESCPOSFormatter {
     return qrCommands.join('');
   }
   
-  // Horizontal line
+  // Horizontal line (adjusted for thermal printer width)
   static horizontalLine(width: number = 32): string {
     return '-'.repeat(width) + this.lineFeed();
   }
-  
-  // Format currency for thermal printer (right-aligned)
-  static formatCurrency(amount: number, width: number = 32): string {
-    const formatted = new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP'
-    }).format(amount);
-    
+
+  // Format currency for thermal printer (avoid problematic peso symbol)
+  static formatCurrency(amount: number, width: number = 10): string {
+    // Use simple number formatting without currency symbol to avoid encoding issues
+    const formatted = amount.toFixed(2);
     return formatted.padStart(width);
   }
-  
-  // Format line with left and right text
+
+  // Format currency with peso symbol (use safe ASCII representation)
+  static formatCurrencyWithSymbol(amount: number, width: number = 12): string {
+    const formatted = 'P' + amount.toFixed(2); // Use 'P' instead of ₱ symbol
+    return formatted.padStart(width);
+  }
+
+  // Format line with left and right text (optimized for thermal printer)
   static formatLine(left: string, right: string, width: number = 32): string {
-    const totalLength = left.length + right.length;
-    const padding = Math.max(0, width - totalLength);
-    return left + ' '.repeat(padding) + right + this.lineFeed();
+    // Ensure we don't exceed the line width
+    const maxLeftWidth = width - right.length - 1; // Leave space for at least 1 space
+    const truncatedLeft = left.length > maxLeftWidth ? left.substring(0, maxLeftWidth - 3) + '...' : left;
+
+    const totalLength = truncatedLeft.length + right.length;
+    const padding = Math.max(1, width - totalLength); // At least 1 space
+
+    return truncatedLeft + ' '.repeat(padding) + right + this.lineFeed();
+  }
+
+  // Format item line (special formatting for product items)
+  static formatItemLine(name: string, price: string, quantity: number, total: string, width: number = 32): string {
+    // Format: "Product Name"
+    //         "  P10.00 x 2        P20.00"
+    let result = name + this.lineFeed();
+
+    const qtyLine = `  P${price} x ${quantity}`;
+    const totalFormatted = `P${total}`;
+
+    const padding = Math.max(1, width - qtyLine.length - totalFormatted.length);
+    result += qtyLine + ' '.repeat(padding) + totalFormatted + this.lineFeed();
+
+    return result;
   }
 }
