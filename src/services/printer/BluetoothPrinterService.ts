@@ -10,7 +10,7 @@ export class BluetoothPrinterService {
 
   // Web Bluetooth UUIDs (for thermal printers like POS58)
   private static readonly WEB_BLUETOOTH_SERVICE_UUID = '49535343-fe7d-4ae5-8fa9-9fafd205e455';
-  private static readonly WEB_BLUETOOTH_WRITE_CHARACTERISTIC_UUID = '49535343-8841-43f4-a8d4-ecbe34729bb3';
+  private static readonly WEB_BLUETOOTH_WRITE_CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
   
   static async isAvailable(): Promise<boolean> {
     try {
@@ -243,11 +243,11 @@ export class BluetoothPrinterService {
           console.log(`Characteristic UUID: ${char.uuid}, Properties:`, char.properties);
         }
 
-        // Try known write characteristic UUIDs first
+        // Try known write characteristic UUIDs first (prioritize different characteristics for large data)
         const knownWriteCharacteristics = [
+          '00002af1-0000-1000-8000-00805f9b34fb', // Capacitor BLE write characteristic (try this first for large data)
+          '49535343-aca3-481c-91ec-d85e28a60318', // Alternative write characteristic with notify
           '49535343-8841-43f4-a8d4-ecbe34729bb3', // Common thermal printer write characteristic
-          '49535343-aca3-481c-91ec-d85e28a60318', // Alternative write characteristic
-          '00002af1-0000-1000-8000-00805f9b34fb', // Capacitor BLE write characteristic
           '0000ff03-0000-1000-8000-00805f9b34fb'  // Another common write characteristic
         ];
 
@@ -285,8 +285,11 @@ export class BluetoothPrinterService {
 
       // Step 4: Send data to printer (with chunking for large data)
       console.log('Sending data to printer...');
+      console.log(`Using write characteristic: ${writeCharacteristic.uuid}`);
+      console.log(`Characteristic properties:`, writeCharacteristic.properties);
 
-      const maxChunkSize = 512; // Web Bluetooth limit
+      // Use smaller chunk size for better compatibility
+      const maxChunkSize = 256; // Reduced from 512 for better compatibility
       const totalBytes = dataBytes.length;
 
       if (totalBytes <= maxChunkSize) {
@@ -314,17 +317,24 @@ export class BluetoothPrinterService {
 
           console.log(`Sending chunk ${i + 1}/${numChunks}: ${chunk.length} bytes (${start}-${end - 1})`);
 
-          if (writeCharacteristic.properties.writeWithoutResponse) {
-            await writeCharacteristic.writeValueWithoutResponse(chunk);
-          } else if (writeCharacteristic.properties.write) {
-            await writeCharacteristic.writeValue(chunk);
-          } else {
-            throw new Error('Characteristic does not support writing');
+          try {
+            if (writeCharacteristic.properties.writeWithoutResponse) {
+              await writeCharacteristic.writeValueWithoutResponse(chunk);
+            } else if (writeCharacteristic.properties.write) {
+              await writeCharacteristic.writeValue(chunk);
+            } else {
+              throw new Error('Characteristic does not support writing');
+            }
+
+            console.log(`✅ Chunk ${i + 1}/${numChunks} sent successfully`);
+          } catch (chunkError) {
+            console.error(`❌ Failed to send chunk ${i + 1}/${numChunks}:`, chunkError);
+            throw new Error(`Failed to send data chunk ${i + 1}: ${chunkError.message}`);
           }
 
-          // Small delay between chunks to ensure printer can process
+          // Longer delay between chunks to ensure printer can process
           if (i < numChunks - 1) {
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
 
