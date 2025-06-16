@@ -167,24 +167,45 @@ export function QuickPrinterSetup({ children }: QuickPrinterSetupProps) {
 
           {/* Test Print */}
           {isConnected && (
-            <Button
-              onClick={printTestReceipt}
-              disabled={isPrinting}
-              variant="outline"
-              className="w-full"
-            >
-              {isPrinting ? (
-                <>
-                  <Spinner className="mr-2 h-4 w-4" />
-                  Printing Test...
-                </>
-              ) : (
-                <>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print Test Receipt
-                </>
+            <div className="space-y-2">
+              <Button
+                onClick={printTestReceipt}
+                disabled={isPrinting}
+                variant="outline"
+                className="w-full"
+              >
+                {isPrinting ? (
+                  <>
+                    <Spinner className="mr-2 h-4 w-4" />
+                    Printing Test...
+                  </>
+                ) : (
+                  <>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print Test Receipt
+                  </>
+                )}
+              </Button>
+
+              {/* Debug Service Discovery (Development Only) */}
+              {process.env.NODE_ENV === 'development' && connectedPrinter?.connectionType === 'web' && (
+                <Button
+                  onClick={async () => {
+                    try {
+                      const { BluetoothPrinterService } = await import('@/services/printer/BluetoothPrinterService');
+                      await BluetoothPrinterService.testServiceDiscovery();
+                    } catch (error) {
+                      console.error('Service discovery test failed:', error);
+                    }
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs"
+                >
+                  🔍 Test Service Discovery (Debug)
+                </Button>
               )}
-            </Button>
+            </div>
           )}
 
           {/* Debug Information */}

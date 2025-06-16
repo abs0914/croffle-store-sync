@@ -142,18 +142,34 @@ export function useThermalPrinter() {
 
     setIsPrinting(true);
     try {
+      console.log(`Starting receipt print for transaction: ${transaction.receiptNumber}`);
+      toast.info('Sending receipt to printer...');
+
       const success = await BluetoothPrinterService.printReceipt(transaction, customer, storeName);
-      
+
       if (success) {
-        toast.success('Receipt printed successfully');
+        toast.success('Receipt sent to printer successfully!');
+        console.log(`✅ Receipt printed successfully: ${transaction.receiptNumber}`);
       } else {
-        toast.error('Failed to print receipt');
+        toast.error('Failed to send receipt to printer');
+        console.error(`❌ Receipt printing failed: ${transaction.receiptNumber}`);
       }
-      
+
       return success;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to print receipt:', error);
-      toast.error('Printing failed');
+
+      // Provide specific error messages based on error type
+      if (error.message?.includes('service')) {
+        toast.error('Printer service not found. Check printer compatibility.');
+      } else if (error.message?.includes('characteristic')) {
+        toast.error('Printer communication failed. Try reconnecting.');
+      } else if (error.message?.includes('write')) {
+        toast.error('Failed to send data to printer. Check connection.');
+      } else {
+        toast.error(`Printing failed: ${error.message || 'Unknown error'}`);
+      }
+
       return false;
     } finally {
       setIsPrinting(false);
@@ -168,18 +184,34 @@ export function useThermalPrinter() {
 
     setIsPrinting(true);
     try {
+      console.log('Starting test receipt print...');
+      toast.info('Sending test receipt to printer...');
+
       const success = await BluetoothPrinterService.printTestReceipt();
-      
+
       if (success) {
-        toast.success('Test receipt printed');
+        toast.success('Test receipt sent to printer successfully!');
+        console.log('✅ Test receipt printed successfully');
       } else {
-        toast.error('Failed to print test receipt');
+        toast.error('Failed to send test receipt to printer');
+        console.error('❌ Test receipt printing failed');
       }
-      
+
       return success;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to print test receipt:', error);
-      toast.error('Test print failed');
+
+      // Provide specific error messages based on error type
+      if (error.message?.includes('service')) {
+        toast.error('Printer service not found. Check printer compatibility.');
+      } else if (error.message?.includes('characteristic')) {
+        toast.error('Printer communication failed. Try reconnecting.');
+      } else if (error.message?.includes('write')) {
+        toast.error('Failed to send data to printer. Check connection.');
+      } else {
+        toast.error(`Test print failed: ${error.message || 'Unknown error'}`);
+      }
+
       return false;
     } finally {
       setIsPrinting(false);
