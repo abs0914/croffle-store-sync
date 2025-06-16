@@ -35,7 +35,7 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
       ...item,
       category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: item.supplier && typeof item.supplier === 'object' && item.supplier !== null && 'id' in item.supplier
+      supplier: item.supplier !== null && typeof item.supplier === 'object' && 'id' in item.supplier
         ? item.supplier as any 
         : null
     }));
@@ -79,7 +79,7 @@ export const createCommissaryInventoryItem = async (
       ...data,
       category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: data.supplier && typeof data.supplier === 'object' && data.supplier !== null && 'id' in data.supplier
+      supplier: data.supplier !== null && typeof data.supplier === 'object' && 'id' in data.supplier
         ? data.supplier as any 
         : null
     };
@@ -112,7 +112,7 @@ export const updateCommissaryInventoryItem = async (
       ...data,
       category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: data.supplier && typeof data.supplier === 'object' && data.supplier !== null && 'id' in data.supplier
+      supplier: data.supplier !== null && typeof data.supplier === 'object' && 'id' in data.supplier
         ? data.supplier as any 
         : null
     };
