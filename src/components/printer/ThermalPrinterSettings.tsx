@@ -30,7 +30,8 @@ export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps
     scanForPrinters,
     connectToPrinter,
     disconnectPrinter,
-    printTestReceipt
+    printTestReceipt,
+    testServiceDiscovery
   } = useThermalPrinter();
 
   if (!isAvailable) {
@@ -160,9 +161,9 @@ export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps
           {isConnected && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Test Print</CardTitle>
+                <CardTitle className="text-lg">Test & Debug</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-2">
                 <Button
                   onClick={printTestReceipt}
                   disabled={isPrinting}
@@ -180,6 +181,15 @@ export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps
                       Print Test Receipt
                     </>
                   )}
+                </Button>
+                <Button
+                  onClick={testServiceDiscovery}
+                  disabled={isPrinting}
+                  className="w-full"
+                  variant="outline"
+                  size="sm"
+                >
+                  Debug Service Discovery
                 </Button>
               </CardContent>
             </Card>

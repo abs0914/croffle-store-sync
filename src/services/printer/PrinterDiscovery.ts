@@ -97,7 +97,16 @@ export class PrinterDiscovery {
           { namePrefix: 'RONGTA' },
           { namePrefix: 'XPRINTER' }
         ],
-        optionalServices: ['battery_service', 'device_information']
+        optionalServices: [
+          'battery_service',
+          'device_information',
+          // Common thermal printer service UUIDs
+          '49535343-fe7d-4ae5-8fa9-9fafd205e455', // Common thermal printer service
+          '000018f0-0000-1000-8000-00805f9b34fb', // Alternative printer service
+          '0000fff0-0000-1000-8000-00805f9b34fb', // Another common printer service
+          '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART service (sometimes used)
+          '12345678-1234-1234-1234-123456789abc'  // Generic printer service
+        ]
       });
 
       console.log(`Found thermal printer via Web Bluetooth: ${device.name}`);

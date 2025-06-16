@@ -114,6 +114,15 @@ export class BluetoothPrinterService {
       const services = await device.gatt.getPrimaryServices();
       console.log(`📡 Found ${services.length} services:`);
 
+      if (services.length === 0) {
+        console.error('❌ No services found! This indicates a Web Bluetooth API issue.');
+        console.log('💡 Possible solutions:');
+        console.log('   1. Ensure the printer is properly paired in system Bluetooth settings');
+        console.log('   2. Try disconnecting and reconnecting the printer');
+        console.log('   3. Check if the printer requires specific service UUIDs in optionalServices');
+        return false;
+      }
+
       for (const service of services) {
         console.log(`  Service: ${service.uuid}`);
 
@@ -183,17 +192,30 @@ export class BluetoothPrinterService {
         const services = await device.gatt.getPrimaryServices();
         console.log(`Found ${services.length} services total`);
 
+        if (services.length === 0) {
+          throw new Error('No Services found in device. The printer may not be properly paired or may require different service UUIDs.');
+        }
+
         // Log all service UUIDs for debugging
         for (const svc of services) {
           console.log(`Service UUID: ${svc.uuid}`);
         }
 
-        // Try to find a service that might be for printing
-        service = services.find(s =>
-          s.uuid.toLowerCase().includes('49535343') ||
-          s.uuid.toLowerCase().includes('18f0') ||
-          s.uuid.toLowerCase().includes('fff0')
-        ) || services[0];
+        // Try to find a service that might be for printing (more comprehensive search)
+        service = services.find(s => {
+          const uuid = s.uuid.toLowerCase();
+          return uuid.includes('49535343') ||
+                 uuid.includes('18f0') ||
+                 uuid.includes('fff0') ||
+                 uuid.includes('6e40') ||  // Nordic UART
+                 uuid.includes('1234');   // Generic printer
+        });
+
+        // If no specific printer service found, try the first available service
+        if (!service && services.length > 0) {
+          console.warn('No known printer service found, trying first available service...');
+          service = services[0];
+        }
 
         if (!service) {
           throw new Error('No suitable service found for printing');

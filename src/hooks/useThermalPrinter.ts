@@ -218,6 +218,34 @@ export function useThermalPrinter() {
     }
   };
 
+  const testServiceDiscovery = async () => {
+    if (!isConnected) {
+      toast.error('No printer connected');
+      return false;
+    }
+
+    try {
+      console.log('Starting service discovery test...');
+      toast.info('Testing printer service discovery...');
+
+      const success = await BluetoothPrinterService.testServiceDiscovery();
+
+      if (success) {
+        toast.success('Service discovery completed! Check console for details.');
+        console.log('✅ Service discovery test completed');
+      } else {
+        toast.error('Service discovery failed! Check console for details.');
+        console.error('❌ Service discovery test failed');
+      }
+
+      return success;
+    } catch (error: any) {
+      console.error('Failed to test service discovery:', error);
+      toast.error(`Service discovery test failed: ${error.message || 'Unknown error'}`);
+      return false;
+    }
+  };
+
   return {
     isAvailable,
     isConnected,
@@ -230,6 +258,7 @@ export function useThermalPrinter() {
     disconnectPrinter,
     printReceipt,
     printTestReceipt,
+    testServiceDiscovery,
     checkAvailability
   };
 }
