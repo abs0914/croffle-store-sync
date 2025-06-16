@@ -1,10 +1,10 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface CommissaryRecipeUsage {
   recipe_id: string;
   quantity_used: number;
+  store_id: string;
   transaction_id?: string;
   notes?: string;
 }
@@ -114,6 +114,7 @@ export const deductCommissaryInventoryForRecipe = async (
         .from('recipe_usage_log')
         .insert({
           recipe_id: recipeUsage.recipe_id,
+          store_id: recipeUsage.store_id,
           quantity_used: recipeUsage.quantity_used,
           used_by: userId,
           transaction_id: recipeUsage.transaction_id,

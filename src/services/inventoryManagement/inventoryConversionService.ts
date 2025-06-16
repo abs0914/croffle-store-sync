@@ -4,7 +4,9 @@ import {
   CommissaryInventoryItem, 
   InventoryStock,
   MultiIngredientConversionForm,
-  ConversionRecipe 
+  ConversionRecipe,
+  ConversionRecipeForm,
+  ConversionRecipeIngredientForm 
 } from "@/types/inventoryManagement";
 import type { InventoryConversion } from "@/types/inventoryManagement";
 import { toast } from "sonner";
@@ -23,7 +25,8 @@ export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInv
     return (data || []).map(item => ({
       ...item,
       category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-      unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs'
+      unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+      supplier: null
     }));
   } catch (error) {
     console.error('Error fetching commissary items:', error);
@@ -125,7 +128,7 @@ export const createMultiIngredientConversion = async (
       const { error: stockError } = await supabase
         .from('commissary_inventory')
         .update({
-          current_stock: supabase.raw(`current_stock - ${ingredient.quantity_used}`)
+          current_stock: supabase.raw(`current_stock - ${ingredient.quantity}`)
         })
         .eq('id', ingredient.commissary_item_id);
 
@@ -137,7 +140,7 @@ export const createMultiIngredientConversion = async (
         .insert({
           inventory_conversion_id: conversion.id,
           commissary_item_id: ingredient.commissary_item_id,
-          quantity_used: ingredient.quantity_used,
+          quantity_used: ingredient.quantity,
           unit_cost: ingredient.unit_cost
         });
 
@@ -184,7 +187,14 @@ export const fetchInventoryConversions = async (storeId: string): Promise<Invent
 
     if (error) throw error;
 
-    return data || [];
+    // Handle type conversion with proper error handling
+    return (data || []).map(item => ({
+      ...item,
+      ingredients: (item.ingredients || []).map((ing: any) => ({
+        ...ing,
+        commissary_item: ing.commissary_item || null
+      }))
+    })) as InventoryConversion[];
   } catch (error) {
     console.error('Error fetching conversions:', error);
     toast.error('Failed to fetch conversions');
@@ -208,10 +218,64 @@ export const fetchConversionRecipes = async (): Promise<ConversionRecipe[]> => {
 
     if (error) throw error;
 
-    return data || [];
+    // Handle type conversion with proper error handling
+    return (data || []).map(item => ({
+      ...item,
+      ingredients: (item.ingredients || []).map((ing: any) => ({
+        ...ing,
+        commissary_item: ing.commissary_item || null
+      }))
+    })) as ConversionRecipe[];
   } catch (error) {
     console.error('Error fetching conversion recipes:', error);
     toast.error('Failed to fetch conversion recipes');
     return [];
+  }
+};
+
+export const createConversionRecipe = async (
+  recipeData: ConversionRecipeForm,
+  userId: string
+): Promise<ConversionRecipe | null> => {
+  try {
+    // Create the recipe first
+    const { data: recipe, error: recipeError } = await supabase
+      .from('conversion_recipes')
+      .insert({
+        name: recipeData.name,
+        description: recipeData.description,
+        finished_item_name: recipeData.finished_item_name,
+        finished_item_unit: recipeData.finished_item_unit,
+        yield_quantity: recipeData.yield_quantity,
+        instructions: recipeData.instructions,
+        created_by: userId,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (recipeError) throw recipeError;
+
+    // Create the ingredients
+    const ingredientPromises = recipeData.ingredients.map(async (ingredient) => {
+      const { error: ingredientError } = await supabase
+        .from('conversion_recipe_ingredients')
+        .insert({
+          conversion_recipe_id: recipe.id,
+          commissary_item_id: ingredient.commissary_item_id,
+          quantity: ingredient.quantity
+        });
+
+      if (ingredientError) throw ingredientError;
+    });
+
+    await Promise.all(ingredientPromises);
+
+    toast.success('Conversion recipe created successfully');
+    return recipe as ConversionRecipe;
+  } catch (error) {
+    console.error('Error creating conversion recipe:', error);
+    toast.error('Failed to create conversion recipe');
+    return null;
   }
 };

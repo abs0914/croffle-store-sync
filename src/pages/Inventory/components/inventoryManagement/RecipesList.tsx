@@ -26,12 +26,20 @@ export function RecipesList({ storeId }: RecipesListProps) {
   const [selectedStore, setSelectedStore] = useState<string | null>(storeId);
   const [filters, setFilters] = useState<{ [key: string]: any }>({});
 
+  const {
+    handleExportCSV,
+    handleExportJSON,
+    handleImportCSV,
+    handleImportJSON,
+    handleDownloadTemplate
+  } = useRecipeImportExport(storeId, () => loadRecipes());
+
   const loadRecipes = useCallback(async () => {
     if (!selectedStore) return;
     
     setLoading(true);
     try {
-      const data = await fetchRecipes(selectedStore, filters);
+      const data = await fetchRecipes(selectedStore);
       setRecipes(data);
     } catch (error) {
       console.error('Error loading recipes:', error);
@@ -39,15 +47,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
     } finally {
       setLoading(false);
     }
-  }, [selectedStore, filters]);
-
-  const {
-    handleExportCSV,
-    handleExportJSON,
-    handleImportCSV,
-    handleImportJSON,
-    handleDownloadTemplate
-  } = useRecipeImportExport(storeId, loadRecipes);
+  }, [selectedStore]);
 
   useEffect(() => {
     loadRecipes();
