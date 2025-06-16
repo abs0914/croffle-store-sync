@@ -10,7 +10,7 @@ export class BluetoothPrinterService {
 
   // Web Bluetooth UUIDs (for thermal printers like POS58)
   private static readonly WEB_BLUETOOTH_SERVICE_UUID = '49535343-fe7d-4ae5-8fa9-9fafd205e455';
-  private static readonly WEB_BLUETOOTH_WRITE_CHARACTERISTIC_UUID = '49535343-1e4d-4bd9-ba61-23c647249616';
+  private static readonly WEB_BLUETOOTH_WRITE_CHARACTERISTIC_UUID = '49535343-8841-43f4-a8d4-ecbe34729bb3';
   
   static async isAvailable(): Promise<boolean> {
     try {
@@ -243,10 +243,32 @@ export class BluetoothPrinterService {
           console.log(`Characteristic UUID: ${char.uuid}, Properties:`, char.properties);
         }
 
-        // Find a characteristic that supports writing
-        writeCharacteristic = characteristics.find(c =>
-          c.properties.write || c.properties.writeWithoutResponse
-        );
+        // Try known write characteristic UUIDs first
+        const knownWriteCharacteristics = [
+          '49535343-8841-43f4-a8d4-ecbe34729bb3', // Common thermal printer write characteristic
+          '49535343-aca3-481c-91ec-d85e28a60318', // Alternative write characteristic
+          '00002af1-0000-1000-8000-00805f9b34fb', // Capacitor BLE write characteristic
+          '0000ff03-0000-1000-8000-00805f9b34fb'  // Another common write characteristic
+        ];
+
+        // First try to find a known write characteristic
+        for (const knownUuid of knownWriteCharacteristics) {
+          writeCharacteristic = characteristics.find(c =>
+            c.uuid.toLowerCase() === knownUuid.toLowerCase() &&
+            (c.properties.write || c.properties.writeWithoutResponse)
+          );
+          if (writeCharacteristic) {
+            console.log(`Found known write characteristic: ${writeCharacteristic.uuid}`);
+            break;
+          }
+        }
+
+        // If no known characteristic found, find any characteristic that supports writing
+        if (!writeCharacteristic) {
+          writeCharacteristic = characteristics.find(c =>
+            c.properties.write || c.properties.writeWithoutResponse
+          );
+        }
 
         if (!writeCharacteristic) {
           throw new Error('No writable characteristic found');
