@@ -10,7 +10,7 @@ import Auth from '@/pages/Auth';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/auth';
 import Inventory from '@/pages/Inventory';
-import { CustomerManagement as Customers } from '@/pages/Customers';
+import { CustomerManagement } from '@/pages/Customers';
 import Orders from '@/pages/Orders';
 import Stores from '@/pages/Stores';
 import InventoryManagement from '@/pages/Inventory/InventoryManagement';
@@ -98,7 +98,7 @@ function App() {
             element={
               <ProtectedRoute>
                 <MainLayout>
-                  <Customers />
+                  <CustomerManagement />
                 </MainLayout>
               </ProtectedRoute>
             }

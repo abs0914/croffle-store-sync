@@ -16,7 +16,8 @@ export const fetchCommissaryInventory = async (): Promise<CommissaryInventoryIte
     // Cast the data to ensure proper typing
     return (data || []).map(item => ({
       ...item,
-      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies'
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair'
     }));
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
