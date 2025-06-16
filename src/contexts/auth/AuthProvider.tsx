@@ -23,6 +23,7 @@ const initialState: AuthState = {
   isLoading: true,
   isAuthenticated: false,
   login: async () => {},
+  register: async () => {},
   logout: async () => {},
   hasPermission: () => false,
   hasStoreAccess: () => false,
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authErrorHandledRef,
     setupTokenRefresh,
     login,
+    register,
     logout
   } = useAuthState();
   
@@ -198,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        register,
         logout,
         hasPermission,
         hasStoreAccess,
