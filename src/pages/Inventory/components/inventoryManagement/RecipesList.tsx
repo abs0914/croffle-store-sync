@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,10 +39,12 @@ export function RecipesList({ storeId }: RecipesListProps) {
     setLoading(true);
     try {
       const data = await fetchRecipes({ storeId: selectedStore });
-      setRecipes(data);
+      // Ensure data is an array, fallback to empty array if not
+      setRecipes(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading recipes:', error);
       toast.error('Failed to load recipes');
+      setRecipes([]);
     } finally {
       setLoading(false);
     }
@@ -54,6 +57,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
   const handleDeleteRecipe = async (recipe: Recipe) => {
     if (!confirm(`Are you sure you want to delete the recipe "${recipe.name}"?`)) return;
     
+    // Pass just the recipe ID as a string
     const success = await deleteRecipe(recipe.id);
     if (success) {
       loadRecipes();
