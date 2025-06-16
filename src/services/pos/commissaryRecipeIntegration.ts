@@ -17,13 +17,12 @@ export interface RecipeCommissaryMapping {
   recipe_ingredient_id: string;
   inventory_stock_id: string;
   commissary_item_id: string;
-  conversion_ratio: number; // How much commissary item is needed per store item
+  conversion_ratio: number;
   item_name: string;
 }
 
 /**
  * Get commissary mappings for recipe ingredients
- * This function finds which commissary items correspond to store inventory items used in recipes
  */
 export const getRecipeCommissaryMappings = async (
   recipeId: string,
@@ -52,7 +51,6 @@ export const getRecipeCommissaryMappings = async (
         .from('inventory_conversions')
         .select(`
           commissary_item_id,
-          raw_material_quantity,
           finished_goods_quantity,
           commissary_item:commissary_inventory(
             id,
@@ -66,7 +64,7 @@ export const getRecipeCommissaryMappings = async (
 
       if (!conversionError && conversions && conversions.length > 0) {
         const conversion = conversions[0];
-        const conversionRatio = conversion.raw_material_quantity / conversion.finished_goods_quantity;
+        const conversionRatio = 1 / conversion.finished_goods_quantity; // Simplified ratio
         
         commissaryMappings.push({
           recipe_ingredient_id: ingredient.id,
@@ -87,7 +85,6 @@ export const getRecipeCommissaryMappings = async (
 
 /**
  * Deduct commissary inventory based on recipe usage
- * This function is called after store-level deduction to maintain commissary accuracy
  */
 export const deductCommissaryForRecipe = async (
   recipeId: string,
@@ -164,7 +161,7 @@ export const deductCommissaryForRecipe = async (
           continue;
         }
 
-        // Update commissary stock
+        // Update commissary stock using rpc or direct update
         const newStock = currentStock - commissaryQuantityNeeded;
         const { error: updateError } = await supabase
           .from('commissary_inventory')
@@ -176,27 +173,6 @@ export const deductCommissaryForRecipe = async (
         if (updateError) {
           result.errors.push(`Failed to update commissary stock for ${mapping.item_name}: ${updateError.message}`);
           continue;
-        }
-
-        // Log commissary transaction (if inventory_transactions supports commissary items)
-        // Note: This might need a separate commissary_transactions table
-        try {
-          await supabase
-            .from('inventory_transactions')
-            .insert({
-              product_id: mapping.commissary_item_id, // This might need adjustment based on schema
-              store_id: storeId,
-              transaction_type: 'commissary_recipe_usage',
-              quantity: -commissaryQuantityNeeded,
-              previous_quantity: currentStock,
-              new_quantity: newStock,
-              created_by: userId,
-              notes: `Commissary deduction for recipe: ${recipe.name} (${quantityUsed} units)`,
-              reference_id: transactionId
-            });
-        } catch (logError) {
-          console.warn('Failed to log commissary transaction:', logError);
-          // Don't fail the entire operation for logging issues
         }
 
         result.commissary_deductions.push({

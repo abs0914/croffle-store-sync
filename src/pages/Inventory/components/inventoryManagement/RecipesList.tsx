@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +21,8 @@ export function RecipesList({ storeId }: RecipesListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [filters, setFilters] = useState<{ [key: string]: any }>({});
 
   const {
     handleExportCSV,
@@ -31,16 +32,24 @@ export function RecipesList({ storeId }: RecipesListProps) {
     handleDownloadTemplate
   } = useRecipeImportExport(recipes, storeId, loadRecipes);
 
-  const loadRecipes = async () => {
+  const loadRecipes = useCallback(async () => {
+    if (!selectedStore) return;
+    
     setLoading(true);
-    const data = await fetchRecipes(storeId);
-    setRecipes(data);
-    setLoading(false);
-  };
+    try {
+      const data = await fetchRecipes(selectedStore, filters);
+      setRecipes(data);
+    } catch (error) {
+      console.error('Error loading recipes:', error);
+      toast.error('Failed to load recipes');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedStore, filters]);
 
   useEffect(() => {
     loadRecipes();
-  }, [storeId]);
+  }, [loadRecipes]);
 
   const handleDeleteRecipe = async (recipe: Recipe) => {
     if (!confirm(`Are you sure you want to delete the recipe "${recipe.name}"?`)) return;

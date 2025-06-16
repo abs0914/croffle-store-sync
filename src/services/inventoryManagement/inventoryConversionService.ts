@@ -246,20 +246,24 @@ export const createConversionRecipe = async (
   }
 };
 
-export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInventoryItem[]> => {
+export const fetchCommissaryItems = async (): Promise<CommissaryInventoryItem[]> => {
   try {
     const { data, error } = await supabase
       .from('commissary_inventory')
       .select('*')
       .eq('is_active', true)
-      .gt('current_stock', 0)
       .order('name');
 
     if (error) throw error;
-
-    return data || [];
+    
+    // Cast the data to ensure proper typing
+    return (data || []).map(item => ({
+      ...item,
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs'
+    }));
   } catch (error) {
-    console.error('Error fetching commissary items for conversion:', error);
+    console.error('Error fetching commissary items:', error);
     toast.error('Failed to fetch commissary items');
     return [];
   }
