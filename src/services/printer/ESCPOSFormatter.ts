@@ -5,7 +5,9 @@ export class ESCPOSFormatter {
 
   // Initialize printer
   static init(): string {
-    return this.ESC + '@'; // Initialize printer
+    return this.ESC + '@' + // Initialize printer
+           this.ESC + '!' + '\x00' + // Reset font to smallest size
+           this.GS + '!' + '\x00'; // Ensure normal character size
   }
 
   // Text formatting
@@ -25,7 +27,15 @@ export class ESCPOSFormatter {
     return this.ESC + 'a' + '\x02';
   }
 
-  // Font size controls (more precise)
+  // Font size controls (optimized for thermal printers)
+  static smallFont(): string {
+    return this.ESC + '!' + '\x01'; // Small font (Font B)
+  }
+
+  static normalFont(): string {
+    return this.ESC + '!' + '\x00'; // Normal font (Font A)
+  }
+
   static doubleWidth(): string {
     return this.GS + '!' + '\x10'; // Double width only
   }
@@ -39,7 +49,15 @@ export class ESCPOSFormatter {
   }
 
   static normalSize(): string {
-    return this.GS + '!' + '\x00'; // Normal size
+    return this.GS + '!' + '\x00' + this.ESC + '!' + '\x00'; // Reset both GS and ESC font controls
+  }
+
+  // Force smallest possible font for thermal printers
+  static forceSmallFont(): string {
+    return this.ESC + '@' + // Reset printer
+           this.ESC + '!' + '\x01' + // Select Font B (smaller)
+           this.GS + '!' + '\x00' + // Normal character size
+           this.ESC + 'M' + '\x01'; // Select Font B alternative command
   }
 
   // Legacy method for compatibility

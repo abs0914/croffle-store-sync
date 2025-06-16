@@ -387,11 +387,13 @@ export class BluetoothPrinterService {
   ): string {
     let receipt = ESCPOSFormatter.init();
 
-    // Header - Store name (centered, bold, normal size to fit better)
+    // Force smallest possible font
+    receipt += ESCPOSFormatter.forceSmallFont();
+
+    // Header - Store name (centered, bold, small font)
     receipt += ESCPOSFormatter.center();
     receipt += ESCPOSFormatter.bold((storeName || 'THE CROFFLE STORE'));
     receipt += ESCPOSFormatter.lineFeed();
-    receipt += ESCPOSFormatter.normalSize();
     receipt += 'SALES RECEIPT' + ESCPOSFormatter.lineFeed(2);
     receipt += ESCPOSFormatter.left();
 
@@ -504,7 +506,10 @@ export class BluetoothPrinterService {
   private static formatTestReceipt(): string {
     let receipt = ESCPOSFormatter.init();
 
-    // Header - normal size for better fit
+    // Force smallest possible font
+    receipt += ESCPOSFormatter.forceSmallFont();
+
+    // Header - small font for better fit
     receipt += ESCPOSFormatter.center();
     receipt += ESCPOSFormatter.bold('TEST RECEIPT');
     receipt += ESCPOSFormatter.lineFeed(2);
