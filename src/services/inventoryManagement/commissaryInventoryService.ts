@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { toast } from "sonner";
@@ -31,11 +30,12 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
 
     if (error) throw error;
 
-    // Cast the data to ensure proper typing
+    // Process the data to handle typing properly
     return (data || []).map(item => ({
       ...item,
       category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-      unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs'
+      unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+      supplier: item.supplier || null
     }));
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
@@ -73,11 +73,11 @@ export const createCommissaryInventoryItem = async (
     if (error) throw error;
 
     toast.success('Commissary inventory item created successfully');
-    // Cast the data to ensure proper typing
     return {
       ...data,
       category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-      unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs'
+      unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+      supplier: data.supplier || null
     };
   } catch (error) {
     console.error('Error creating commissary inventory item:', error);
@@ -104,11 +104,11 @@ export const updateCommissaryInventoryItem = async (
     if (error) throw error;
 
     toast.success('Commissary inventory item updated successfully');
-    // Cast the data to ensure proper typing
     return {
       ...data,
       category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-      unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs'
+      unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+      supplier: data.supplier || null
     };
   } catch (error) {
     console.error('Error updating commissary inventory item:', error);

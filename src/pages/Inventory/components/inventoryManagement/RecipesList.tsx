@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Recipe } from "@/types/inventoryManagement";
 import { AddRecipeDialog } from "./AddRecipeDialog";
 import { EditRecipeDialog } from "./EditRecipeDialog";
 import { useRecipeImportExport } from "@/hooks/recipe/useRecipeImportExport";
+import { toast } from "sonner";
 
 interface RecipesListProps {
   storeId: string;
@@ -21,16 +23,8 @@ export function RecipesList({ storeId }: RecipesListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
-  const [selectedStore, setSelectedStore] = useState<string | null>(null);
+  const [selectedStore, setSelectedStore] = useState<string | null>(storeId);
   const [filters, setFilters] = useState<{ [key: string]: any }>({});
-
-  const {
-    handleExportCSV,
-    handleExportJSON,
-    handleImportCSV,
-    handleImportJSON,
-    handleDownloadTemplate
-  } = useRecipeImportExport(recipes, storeId, loadRecipes);
 
   const loadRecipes = useCallback(async () => {
     if (!selectedStore) return;
@@ -46,6 +40,14 @@ export function RecipesList({ storeId }: RecipesListProps) {
       setLoading(false);
     }
   }, [selectedStore, filters]);
+
+  const {
+    handleExportCSV,
+    handleExportJSON,
+    handleImportCSV,
+    handleImportJSON,
+    handleDownloadTemplate
+  } = useRecipeImportExport(storeId, loadRecipes);
 
   useEffect(() => {
     loadRecipes();
