@@ -16,10 +16,10 @@ export function MainLayout({ children }: MainLayoutProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  // Redirect to auth if not authenticated
+  // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      navigate("/auth");
+      navigate("/login");
     }
   }, [isLoading, isAuthenticated, navigate]);
 
