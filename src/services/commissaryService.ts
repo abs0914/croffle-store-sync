@@ -12,7 +12,11 @@ export const fetchCommissaryInventory = async (): Promise<CommissaryInventoryIte
       .order('name');
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair'
+    }));
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
     toast.error('Failed to fetch commissary inventory');
