@@ -124,12 +124,21 @@ export const createMultiIngredientConversion = async (
 
     // Process ingredients
     const ingredientPromises = conversionData.ingredients.map(async (ingredient) => {
+      // Get current stock first
+      const { data: currentItem, error: fetchError } = await supabase
+        .from('commissary_inventory')
+        .select('current_stock')
+        .eq('id', ingredient.commissary_item_id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const newStock = currentItem.current_stock - ingredient.quantity;
+      
       // Update commissary stock
       const { error: stockError } = await supabase
         .from('commissary_inventory')
-        .update({
-          current_stock: supabase.raw(`current_stock - ${ingredient.quantity}`)
-        })
+        .update({ current_stock: newStock })
         .eq('id', ingredient.commissary_item_id);
 
       if (stockError) throw stockError;
@@ -149,12 +158,21 @@ export const createMultiIngredientConversion = async (
 
     await Promise.all(ingredientPromises);
 
+    // Get current store stock first
+    const { data: currentStoreItem, error: fetchStoreError } = await supabase
+      .from('inventory_stock')
+      .select('stock_quantity')
+      .eq('id', conversionData.inventory_stock_id)
+      .single();
+
+    if (fetchStoreError) throw fetchStoreError;
+
+    const newStoreStock = currentStoreItem.stock_quantity + conversionData.finished_goods_quantity;
+
     // Update store inventory
     const { error: storeStockError } = await supabase
       .from('inventory_stock')
-      .update({
-        stock_quantity: supabase.raw(`stock_quantity + ${conversionData.finished_goods_quantity}`)
-      })
+      .update({ stock_quantity: newStoreStock })
       .eq('id', conversionData.inventory_stock_id);
 
     if (storeStockError) throw storeStockError;
@@ -192,7 +210,9 @@ export const fetchInventoryConversions = async (storeId: string): Promise<Invent
       ...item,
       ingredients: (item.ingredients || []).map((ing: any) => ({
         ...ing,
-        commissary_item: ing.commissary_item || null
+        commissary_item: ing.commissary_item && typeof ing.commissary_item === 'object' && 'id' in ing.commissary_item 
+          ? ing.commissary_item 
+          : null
       }))
     })) as InventoryConversion[];
   } catch (error) {
@@ -223,7 +243,9 @@ export const fetchConversionRecipes = async (): Promise<ConversionRecipe[]> => {
       ...item,
       ingredients: (item.ingredients || []).map((ing: any) => ({
         ...ing,
-        commissary_item: ing.commissary_item || null
+        commissary_item: ing.commissary_item && typeof ing.commissary_item === 'object' && 'id' in ing.commissary_item 
+          ? ing.commissary_item 
+          : null
       }))
     })) as ConversionRecipe[];
   } catch (error) {

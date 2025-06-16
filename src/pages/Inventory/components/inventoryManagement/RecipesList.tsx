@@ -23,8 +23,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
-  const [selectedStore, setSelectedStore] = useState<string | null>(storeId);
-  const [filters, setFilters] = useState<{ [key: string]: any }>({});
+  const [selectedStore] = useState<string | null>(storeId);
 
   const {
     handleExportCSV,
