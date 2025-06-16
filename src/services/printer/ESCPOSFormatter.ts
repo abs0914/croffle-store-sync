@@ -5,15 +5,12 @@ export class ESCPOSFormatter {
 
   // Initialize printer
   static init(): string {
-    return this.ESC + '@' + // Initialize printer
-           this.ESC + '!' + '\x00' + // Reset font to smallest size
-           this.GS + '!' + '\x00'; // Ensure normal character size
+    return this.ESC + '@'; // Initialize printer only - let it use default font
   }
 
-  // Text formatting (with font size preservation)
+  // Text formatting (simplified - no font interference)
   static bold(text: string): string {
-    return this.ESC + 'E' + '\x01' + text + this.ESC + 'E' + '\x00' +
-           this.ESC + '!' + '\x01' + this.GS + '!' + '\x00'; // Restore small font after bold
+    return this.ESC + 'E' + '\x01' + text + this.ESC + 'E' + '\x00';
   }
 
   static center(): string {
@@ -53,17 +50,19 @@ export class ESCPOSFormatter {
     return this.GS + '!' + '\x00' + this.ESC + '!' + '\x00'; // Reset both GS and ESC font controls
   }
 
-  // Force smallest possible font for thermal printers (simplified)
-  static forceSmallFont(): string {
-    return this.ESC + '!' + '\x01' + // Select Font B (smaller)
-           this.GS + '!' + '\x00'; // Normal character size (no double width/height)
+  // Use normal font (Font A) - more reliable than Font B
+  static useNormalFont(): string {
+    return this.ESC + '!' + '\x00'; // Font A, normal size
   }
 
-  // Complete printer reset with small font
-  static resetToSmallFont(): string {
-    return this.ESC + '@' + // Reset printer completely
-           this.ESC + '!' + '\x01' + // Select Font B
-           this.GS + '!' + '\x00'; // Normal character size
+  // Use smaller font only if needed (Font B)
+  static useSmallFont(): string {
+    return this.ESC + '!' + '\x01'; // Font B (smaller)
+  }
+
+  // Reset to normal size (no double width/height)
+  static resetSize(): string {
+    return this.GS + '!' + '\x00'; // Normal character size
   }
 
   // Legacy method for compatibility
@@ -81,16 +80,14 @@ export class ESCPOSFormatter {
     return this.GS + 'V' + String.fromCharCode(65) + String.fromCharCode(0);
   }
   
-  // QR Code (fixed size and font reset)
+  // QR Code (simplified - no font interference)
   static qrCode(data: string): string {
     const qrCommands = [
       this.GS + '(k' + String.fromCharCode(4, 0, 49, 65, 50, 0), // QR model
-      this.GS + '(k' + String.fromCharCode(3, 0, 49, 67, 3), // QR size = 3 (smaller!)
+      this.GS + '(k' + String.fromCharCode(3, 0, 49, 67, 4), // QR size = 4 (medium size)
       this.GS + '(k' + String.fromCharCode(3, 0, 49, 69, 48), // QR error correction
       this.GS + '(k' + String.fromCharCode(data.length + 3, 0, 49, 80, 48) + data, // QR data
-      this.GS + '(k' + String.fromCharCode(3, 0, 49, 81, 48), // QR print
-      this.ESC + '!' + '\x01', // Reset to Font B after QR
-      this.GS + '!' + '\x00'   // Reset character size after QR
+      this.GS + '(k' + String.fromCharCode(3, 0, 49, 81, 48) // QR print
     ];
     return qrCommands.join('');
   }

@@ -23,8 +23,11 @@ export default function CompletedTransaction({
 
   // Automatically print receipt when transaction completes and printer is connected
   useEffect(() => {
+    let hasTriggered = false; // Prevent multiple prints
+
     const autoPrint = async () => {
-      if (isConnected && transaction) {
+      if (isConnected && transaction && !hasTriggered) {
+        hasTriggered = true;
         console.log('Auto-printing receipt to thermal printer...');
         await printReceipt(transaction, customer, currentStore?.name);
       }
@@ -33,7 +36,7 @@ export default function CompletedTransaction({
     // Small delay to ensure transaction is fully processed
     const timer = setTimeout(autoPrint, 1000);
     return () => clearTimeout(timer);
-  }, [isConnected, transaction, customer, currentStore?.name, printReceipt]);
+  }, [isConnected, transaction?.receiptNumber]); // Only depend on essential values
 
   return (
     <div className="flex flex-col items-center justify-center h-full max-w-md mx-auto">
