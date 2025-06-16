@@ -32,14 +32,20 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
     if (error) throw error;
 
     // Process the data to handle typing properly
-    return (data || []).map(item => ({
-      ...item,
-      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-      unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: item.supplier && typeof item.supplier === 'object' && !Array.isArray(item.supplier) && 'id' in item.supplier
-        ? item.supplier as any 
-        : null
-    }));
+    return (data || []).map(item => {
+      // Safe supplier check
+      const supplierData = item.supplier && 
+                          typeof item.supplier === 'object' && 
+                          !Array.isArray(item.supplier) ? 
+                          item.supplier : null;
+
+      return {
+        ...item,
+        category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+        unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+        supplier: supplierData
+      };
+    });
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
     toast.error('Failed to fetch commissary inventory');
@@ -75,14 +81,18 @@ export const createCommissaryInventoryItem = async (
 
     if (error) throw error;
 
+    // Safe supplier check
+    const supplierData = data.supplier && 
+                        typeof data.supplier === 'object' && 
+                        !Array.isArray(data.supplier) ? 
+                        data.supplier : null;
+
     toast.success('Commissary inventory item created successfully');
     return {
       ...data,
       category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: data.supplier && typeof data.supplier === 'object' && !Array.isArray(data.supplier) && 'id' in data.supplier
-        ? data.supplier as any 
-        : null
+      supplier: supplierData
     };
   } catch (error) {
     console.error('Error creating commissary inventory item:', error);
@@ -108,14 +118,18 @@ export const updateCommissaryInventoryItem = async (
 
     if (error) throw error;
 
+    // Safe supplier check
+    const supplierData = data.supplier && 
+                        typeof data.supplier === 'object' && 
+                        !Array.isArray(data.supplier) ? 
+                        data.supplier : null;
+
     toast.success('Commissary inventory item updated successfully');
     return {
       ...data,
       category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: data.supplier && typeof data.supplier === 'object' && !Array.isArray(data.supplier) && 'id' in data.supplier
-        ? data.supplier as any 
-        : null
+      supplier: supplierData
     };
   } catch (error) {
     console.error('Error updating commissary inventory item:', error);
