@@ -283,17 +283,52 @@ export class BluetoothPrinterService {
       const dataBytes = encoder.encode(data);
       console.log(`Data converted to ${dataBytes.length} bytes`);
 
-      // Step 4: Send data to printer
+      // Step 4: Send data to printer (with chunking for large data)
       console.log('Sending data to printer...');
 
-      if (writeCharacteristic.properties.writeWithoutResponse) {
-        console.log('Using writeWithoutResponse...');
-        await writeCharacteristic.writeValueWithoutResponse(dataBytes);
-      } else if (writeCharacteristic.properties.write) {
-        console.log('Using writeValue...');
-        await writeCharacteristic.writeValue(dataBytes);
+      const maxChunkSize = 512; // Web Bluetooth limit
+      const totalBytes = dataBytes.length;
+
+      if (totalBytes <= maxChunkSize) {
+        // Send small data in one chunk
+        console.log(`Sending ${totalBytes} bytes in single chunk...`);
+
+        if (writeCharacteristic.properties.writeWithoutResponse) {
+          console.log('Using writeWithoutResponse...');
+          await writeCharacteristic.writeValueWithoutResponse(dataBytes);
+        } else if (writeCharacteristic.properties.write) {
+          console.log('Using writeValue...');
+          await writeCharacteristic.writeValue(dataBytes);
+        } else {
+          throw new Error('Characteristic does not support writing');
+        }
       } else {
-        throw new Error('Characteristic does not support writing');
+        // Send large data in chunks
+        const numChunks = Math.ceil(totalBytes / maxChunkSize);
+        console.log(`Sending ${totalBytes} bytes in ${numChunks} chunks of max ${maxChunkSize} bytes each...`);
+
+        for (let i = 0; i < numChunks; i++) {
+          const start = i * maxChunkSize;
+          const end = Math.min(start + maxChunkSize, totalBytes);
+          const chunk = dataBytes.slice(start, end);
+
+          console.log(`Sending chunk ${i + 1}/${numChunks}: ${chunk.length} bytes (${start}-${end - 1})`);
+
+          if (writeCharacteristic.properties.writeWithoutResponse) {
+            await writeCharacteristic.writeValueWithoutResponse(chunk);
+          } else if (writeCharacteristic.properties.write) {
+            await writeCharacteristic.writeValue(chunk);
+          } else {
+            throw new Error('Characteristic does not support writing');
+          }
+
+          // Small delay between chunks to ensure printer can process
+          if (i < numChunks - 1) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+        }
+
+        console.log(`✅ All ${numChunks} chunks sent successfully`);
       }
 
       console.log('✅ Data sent to thermal printer successfully via Web Bluetooth');
