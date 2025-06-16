@@ -6,9 +6,9 @@ import Dashboard from '@/pages/Dashboard';
 import Products from '@/pages/Products';
 import POS from '@/pages/POS';
 import Settings from '@/pages/Settings';
-import Auth from '@/pages/Auth';
+import Login from '@/pages/Login';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { useAuth } from '@/contexts/auth';
+import { AuthProvider } from '@/contexts/auth';
 import Inventory from '@/pages/Inventory';
 import CustomerManagement from '@/pages/Customers/CustomerManagement';
 import Orders from '@/pages/Orders';
@@ -19,11 +19,12 @@ import BulkUpload from "@/pages/BulkUpload";
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-background">
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-background">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
             path="/"
             element={
               <ProtectedRoute>
@@ -143,9 +144,10 @@ function App() {
               </ProtectedRoute>
             }
           />
-        </Routes>
-      </div>
-    </Router>
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 
