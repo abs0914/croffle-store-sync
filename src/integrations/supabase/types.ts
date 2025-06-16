@@ -492,6 +492,7 @@ export type Database = {
       }
       inventory_conversions: {
         Row: {
+          commissary_item_id: string | null
           conversion_date: string
           conversion_recipe_id: string | null
           converted_by: string
@@ -503,6 +504,7 @@ export type Database = {
           store_id: string
         }
         Insert: {
+          commissary_item_id?: string | null
           conversion_date?: string
           conversion_recipe_id?: string | null
           converted_by: string
@@ -514,6 +516,7 @@ export type Database = {
           store_id: string
         }
         Update: {
+          commissary_item_id?: string | null
           conversion_date?: string
           conversion_recipe_id?: string | null
           converted_by?: string
@@ -525,6 +528,13 @@ export type Database = {
           store_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_conversions_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_conversions_conversion_recipe_id_fkey"
             columns: ["conversion_recipe_id"]
@@ -1184,7 +1194,69 @@ export type Database = {
             foreignKeyName: "recipe_ingredients_recipe_id_fkey"
             columns: ["recipe_id"]
             isOneToOne: false
+            referencedRelation: "recipe_usage_analytics"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
             referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_usage_log: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          quantity_used: number
+          recipe_id: string
+          store_id: string
+          transaction_id: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity_used?: number
+          recipe_id: string
+          store_id: string
+          transaction_id?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity_used?: number
+          recipe_id?: string
+          store_id?: string
+          transaction_id?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_usage_log_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_usage_analytics"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "recipe_usage_log_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_usage_log_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -1637,7 +1709,29 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      recipe_usage_analytics: {
+        Row: {
+          avg_quantity_per_use: number | null
+          first_used: string | null
+          last_used: string | null
+          recipe_id: string | null
+          recipe_name: string | null
+          store_id: string | null
+          store_name: string | null
+          total_quantity_used: number | null
+          usage_count: number | null
+          usage_month: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_access_user_record: {

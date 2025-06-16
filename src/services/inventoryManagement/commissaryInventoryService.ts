@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { toast } from "sonner";
@@ -26,26 +27,25 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
       query = query.or(`name.ilike.%${filters.search}%,sku.ilike.%${filters.search}%`);
     }
 
-    // Apply stock level filter
-    if (filters?.stockLevel && filters.stockLevel !== 'all') {
-      switch (filters.stockLevel) {
-        case 'out':
-          query = query.eq('current_stock', 0);
-          break;
-        case 'low':
-          query = query.filter('current_stock', 'lte', 'minimum_threshold');
-          break;
-        case 'good':
-          query = query.filter('current_stock', 'gt', 'minimum_threshold');
-          break;
-      }
-    }
-
     const { data, error } = await query;
 
     if (error) throw error;
 
-    return data || [];
+    // Process the data to handle typing properly
+    return (data || []).map(item => {
+      // Safe supplier check
+      const supplierData = item.supplier && 
+                          typeof item.supplier === 'object' && 
+                          !Array.isArray(item.supplier) ? 
+                          item.supplier : null;
+
+      return {
+        ...item,
+        category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+        unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+        supplier: supplierData
+      };
+    });
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
     toast.error('Failed to fetch commissary inventory');
@@ -81,8 +81,19 @@ export const createCommissaryInventoryItem = async (
 
     if (error) throw error;
 
+    // Safe supplier check
+    const supplierData = data.supplier && 
+                        typeof data.supplier === 'object' && 
+                        !Array.isArray(data.supplier) ? 
+                        data.supplier : null;
+
     toast.success('Commissary inventory item created successfully');
-    return data;
+    return {
+      ...data,
+      category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+      supplier: supplierData
+    };
   } catch (error) {
     console.error('Error creating commissary inventory item:', error);
     toast.error('Failed to create commissary inventory item');
@@ -95,13 +106,9 @@ export const updateCommissaryInventoryItem = async (
   updates: Partial<CommissaryInventoryItem>
 ): Promise<CommissaryInventoryItem | null> => {
   try {
-    // Remove properties that don't exist in the database schema
-    const dbUpdates: any = { ...updates };
-    delete dbUpdates.supplier;
-
     const { data, error } = await supabase
       .from('commissary_inventory')
-      .update(dbUpdates)
+      .update(updates)
       .eq('id', id)
       .select(`
         *,
@@ -111,8 +118,19 @@ export const updateCommissaryInventoryItem = async (
 
     if (error) throw error;
 
+    // Safe supplier check
+    const supplierData = data.supplier && 
+                        typeof data.supplier === 'object' && 
+                        !Array.isArray(data.supplier) ? 
+                        data.supplier : null;
+
     toast.success('Commissary inventory item updated successfully');
-    return data;
+    return {
+      ...data,
+      category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+      supplier: supplierData
+    };
   } catch (error) {
     console.error('Error updating commissary inventory item:', error);
     toast.error('Failed to update commissary inventory item');
@@ -124,7 +142,7 @@ export const deleteCommissaryInventoryItem = async (id: string): Promise<boolean
   try {
     const { error } = await supabase
       .from('commissary_inventory')
-      .update({ is_active: false })
+      .delete()
       .eq('id', id);
 
     if (error) throw error;
@@ -145,44 +163,28 @@ export const adjustCommissaryInventoryStock = async (
   userId: string
 ): Promise<boolean> => {
   try {
-    // Get current stock
-    const { data: currentItem, error: fetchError } = await supabase
+    const { error } = await supabase
       .from('commissary_inventory')
-      .select('current_stock')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const previousStock = currentItem.current_stock;
-
-    // Update stock
-    const { error: updateError } = await supabase
-      .from('commissary_inventory')
-      .update({
-        current_stock: newStock
-      })
+      .update({ current_stock: newStock })
       .eq('id', id);
 
-    if (updateError) throw updateError;
+    if (error) throw error;
 
-    toast.success('Commissary inventory stock adjusted successfully');
+    toast.success('Stock adjusted successfully');
     return true;
   } catch (error) {
-    console.error('Error adjusting commissary inventory stock:', error);
-    toast.error('Failed to adjust commissary inventory stock');
+    console.error('Error adjusting stock:', error);
+    toast.error('Failed to adjust stock');
     return false;
   }
 };
 
-// Get stock level status
 export const getCommissaryStockLevel = (item: CommissaryInventoryItem): 'good' | 'low' | 'out' => {
   if (item.current_stock === 0) return 'out';
   if (item.current_stock <= item.minimum_threshold) return 'low';
   return 'good';
 };
 
-// Get stock level color for UI
 export const getCommissaryStockLevelColor = (level: 'good' | 'low' | 'out'): string => {
   switch (level) {
     case 'good': return 'text-green-600';

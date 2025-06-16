@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { Recipe } from "@/types/inventoryManagement";
 import { AddRecipeDialog } from "./AddRecipeDialog";
 import { EditRecipeDialog } from "./EditRecipeDialog";
 import { useRecipeImportExport } from "@/hooks/recipe/useRecipeImportExport";
+import { toast } from "sonner";
 
 interface RecipesListProps {
   storeId: string;
@@ -22,6 +22,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [selectedStore] = useState<string | null>(storeId);
 
   const {
     handleExportCSV,
@@ -29,22 +30,33 @@ export function RecipesList({ storeId }: RecipesListProps) {
     handleImportCSV,
     handleImportJSON,
     handleDownloadTemplate
-  } = useRecipeImportExport(recipes, storeId, loadRecipes);
+  } = useRecipeImportExport(recipes, storeId, () => loadRecipes());
 
-  const loadRecipes = async () => {
+  const loadRecipes = useCallback(async () => {
+    if (!selectedStore) return;
+    
     setLoading(true);
-    const data = await fetchRecipes(storeId);
-    setRecipes(data);
-    setLoading(false);
-  };
+    try {
+      const data = await fetchRecipes(selectedStore);
+      // Ensure data is an array, fallback to empty array if not
+      setRecipes(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading recipes:', error);
+      toast.error('Failed to load recipes');
+      setRecipes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedStore]);
 
   useEffect(() => {
     loadRecipes();
-  }, [storeId]);
+  }, [loadRecipes]);
 
   const handleDeleteRecipe = async (recipe: Recipe) => {
     if (!confirm(`Are you sure you want to delete the recipe "${recipe.name}"?`)) return;
     
+    // Pass just the recipe ID as a string
     const success = await deleteRecipe(recipe.id);
     if (success) {
       loadRecipes();
@@ -172,7 +184,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
                     <div className="space-y-1">
                       {recipe.ingredients?.map((ingredient) => (
                         <div key={ingredient.id} className="text-sm flex justify-between">
-                          <span>{ingredient.inventory_stock?.item}</span>
+                          <span>{ingredient.inventory_stock?.item || 'Unknown item'}</span>
                           <span>{ingredient.quantity} {ingredient.unit}</span>
                         </div>
                       )) || <span className="text-sm text-muted-foreground">No ingredients</span>}

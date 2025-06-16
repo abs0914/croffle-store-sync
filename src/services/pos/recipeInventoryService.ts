@@ -22,7 +22,6 @@ export interface InventoryDeductionResult {
 
 /**
  * Deduct inventory based on recipe usage
- * This function is called when a product with a recipe is sold in POS
  */
 export const deductInventoryForRecipe = async (
   recipeUsage: RecipeUsageData,
@@ -60,8 +59,7 @@ export const deductInventoryForRecipe = async (
       return result;
     }
 
-    // Check stock availability first
-    const stockChecks = [];
+    // Process each ingredient deduction
     for (const ingredient of recipe.ingredients) {
       const requiredQuantity = ingredient.quantity * recipeUsage.quantity_used;
       const currentStock = ingredient.inventory_stock?.stock_quantity || 0;
@@ -71,7 +69,7 @@ export const deductInventoryForRecipe = async (
           `Insufficient stock for ${ingredient.inventory_stock?.item || 'Unknown item'}: ` +
           `Required ${requiredQuantity} ${ingredient.unit}, Available ${currentStock}`
         );
-        stockChecks.push({
+        result.deductions.push({
           inventory_stock_id: ingredient.inventory_stock_id,
           item_name: ingredient.inventory_stock?.item || 'Unknown',
           quantity_deducted: requiredQuantity,
@@ -79,69 +77,35 @@ export const deductInventoryForRecipe = async (
           insufficient_stock: true
         });
       } else {
-        stockChecks.push({
-          inventory_stock_id: ingredient.inventory_stock_id,
-          item_name: ingredient.inventory_stock?.item || 'Unknown',
-          quantity_deducted: requiredQuantity,
-          remaining_stock: currentStock - requiredQuantity,
-          insufficient_stock: false
-        });
-      }
-    }
+        try {
+          // Update inventory stock using simple subtraction
+          const { data: updatedStock, error: updateError } = await supabase
+            .from('inventory_stock')
+            .update({
+              stock_quantity: currentStock - requiredQuantity,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', ingredient.inventory_stock_id)
+            .eq('store_id', storeId)
+            .select()
+            .single();
 
-    // If any ingredient has insufficient stock, return error
-    if (result.errors.length > 0) {
-      result.deductions = stockChecks;
-      return result;
-    }
+          if (updateError) {
+            result.errors.push(`Failed to update stock for ${ingredient.inventory_stock?.item}: ${updateError.message}`);
+            continue;
+          }
 
-    // Perform the deductions
-    for (const ingredient of recipe.ingredients) {
-      const requiredQuantity = ingredient.quantity * recipeUsage.quantity_used;
-      
-      try {
-        // Update inventory stock
-        const { data: updatedStock, error: updateError } = await supabase
-          .from('inventory_stock')
-          .update({
-            stock_quantity: supabase.raw(`stock_quantity - ${requiredQuantity}`),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', ingredient.inventory_stock_id)
-          .eq('store_id', storeId)
-          .select()
-          .single();
-
-        if (updateError) {
-          result.errors.push(`Failed to update stock for ${ingredient.inventory_stock?.item}: ${updateError.message}`);
-          continue;
-        }
-
-        // Create inventory transaction record
-        await supabase
-          .from('inventory_transactions')
-          .insert({
-            product_id: ingredient.inventory_stock_id,
-            store_id: storeId,
-            transaction_type: 'recipe_usage',
-            quantity: -requiredQuantity,
-            previous_quantity: (updatedStock?.stock_quantity || 0) + requiredQuantity,
-            new_quantity: updatedStock?.stock_quantity || 0,
-            created_by: userId,
-            notes: `Recipe usage: ${recipe.name} (${recipeUsage.quantity_used} units)${recipeUsage.notes ? ` - ${recipeUsage.notes}` : ''}`,
-            reference_id: recipeUsage.transaction_id
+          result.deductions.push({
+            inventory_stock_id: ingredient.inventory_stock_id,
+            item_name: ingredient.inventory_stock?.item || 'Unknown',
+            quantity_deducted: requiredQuantity,
+            remaining_stock: updatedStock?.stock_quantity || 0
           });
 
-        result.deductions.push({
-          inventory_stock_id: ingredient.inventory_stock_id,
-          item_name: ingredient.inventory_stock?.item || 'Unknown',
-          quantity_deducted: requiredQuantity,
-          remaining_stock: updatedStock?.stock_quantity || 0
-        });
-
-      } catch (error) {
-        console.error(`Error deducting stock for ingredient ${ingredient.inventory_stock_id}:`, error);
-        result.errors.push(`Failed to deduct stock for ${ingredient.inventory_stock?.item}: ${error}`);
+        } catch (error) {
+          console.error(`Error deducting stock for ingredient ${ingredient.inventory_stock_id}:`, error);
+          result.errors.push(`Failed to deduct stock for ${ingredient.inventory_stock?.item}: ${error}`);
+        }
       }
     }
 
@@ -160,7 +124,6 @@ export const deductInventoryForRecipe = async (
         });
     } catch (error) {
       console.warn('Failed to log recipe usage:', error);
-      // Don't fail the entire operation for logging issues
     }
 
     result.success = result.errors.length === 0;
