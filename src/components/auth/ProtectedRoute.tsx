@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -30,9 +31,9 @@ export function ProtectedRoute({
     );
   }
 
-  // Redirect to login if not authenticated
+  // Redirect to auth if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   // Check role-based access
