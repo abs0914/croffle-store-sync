@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
     
     setLoading(true);
     try {
-      const data = await fetchRecipes(selectedStore);
+      const data = await fetchRecipes({ storeId: selectedStore });
       setRecipes(data);
     } catch (error) {
       console.error('Error loading recipes:', error);
