@@ -6,19 +6,22 @@ import { UserRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { checkRouteAccess } from '@/contexts/auth/role-utils';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: UserRole;
   allowedRoles?: UserRole[];
   fallbackPath?: string;
+  requireStoreAccess?: boolean;
 }
 
 export function ProtectedRoute({ 
   children, 
   requiredRole, 
   allowedRoles, 
-  fallbackPath = '/dashboard' 
+  fallbackPath = '/dashboard',
+  requireStoreAccess = false
 }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated } = useAuth();
 
@@ -57,12 +60,26 @@ export function ProtectedRoute({
       return roleHierarchy[user.role] >= roleHierarchy[requiredRole];
     }
     
-    // If no specific requirements, allow access
-    return true;
+    // Check route-based access using current path
+    const currentPath = window.location.pathname;
+    return checkRouteAccess(user.role, currentPath);
+  };
+
+  // Check store access if required
+  const hasStoreAccess = () => {
+    if (!requireStoreAccess) return true;
+    
+    // Admin and owner have access to all stores
+    if (user?.role === 'admin' || user?.role === 'owner') {
+      return true;
+    }
+    
+    // For other roles, check if they have at least one store assigned
+    return user?.storeIds && user.storeIds.length > 0;
   };
 
   // Show access denied page if user doesn't have permission
-  if (!hasAccess()) {
+  if (!hasAccess() || !hasStoreAccess()) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 p-6">
         <div className="text-center space-y-2">
@@ -73,6 +90,11 @@ export function ProtectedRoute({
           <div className="text-sm text-gray-500 mt-2">
             Your role: <span className="font-medium capitalize">{user?.role}</span>
           </div>
+          {requireStoreAccess && (!user?.storeIds || user.storeIds.length === 0) && (
+            <div className="text-sm text-red-500 mt-2">
+              No store access assigned. Please contact your administrator.
+            </div>
+          )}
         </div>
         <Button asChild variant="outline">
           <Link to={fallbackPath}>

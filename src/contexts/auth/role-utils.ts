@@ -29,6 +29,65 @@ export const checkPermission = (userRole: UserRole | undefined, requiredRole: Us
 };
 
 /**
+ * Check if a user has access to a specific route based on their role
+ */
+export const checkRouteAccess = (userRole: UserRole | undefined, route: string): boolean => {
+  if (!userRole) return false;
+  
+  // Admin and owner have access to everything
+  if (userRole === 'admin' || userRole === 'owner') {
+    return true;
+  }
+  
+  // Define allowed routes for each role
+  const roleRoutes: Record<UserRole, string[]> = {
+    admin: [], // Admin gets everything, handled above
+    owner: [], // Owner gets everything, handled above
+    manager: [
+      '/dashboard',
+      '/pos',
+      '/customers',
+      '/reports',
+      '/order-management',
+      '/settings' // Limited settings access
+    ],
+    cashier: [
+      '/dashboard',
+      '/pos',
+      '/customers'
+    ]
+  };
+  
+  const allowedRoutes = roleRoutes[userRole] || [];
+  
+  // Check if the route starts with any allowed route pattern
+  return allowedRoutes.some(allowedRoute => 
+    route === allowedRoute || route.startsWith(allowedRoute + '/')
+  );
+};
+
+/**
+ * Check if a user can access admin panel
+ */
+export const canAccessAdminPanel = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner';
+};
+
+/**
+ * Check if a user can access production management
+ */
+export const canAccessProduction = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner' || userRole === 'manager';
+};
+
+/**
+ * Check if a user can access inventory management
+ */
+export const canAccessInventory = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner' || userRole === 'manager';
+};
+
+/**
  * Checks if a user has access to a specific store
  * Admin and owner users have access to all stores
  */

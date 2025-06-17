@@ -39,6 +39,7 @@ import {
   Truck,
   Warehouse
 } from "lucide-react";
+import { checkRouteAccess, canAccessProduction, canAccessInventory } from "@/contexts/auth/role-utils";
 
 interface MenuItem {
   path?: string;
@@ -105,29 +106,61 @@ export function Sidebar() {
     );
   }
 
-  const menuItems: MenuItem[] = [
-    { path: "/", label: "Dashboard", icon: Home },
-    { path: "/pos", label: "Point of Sale", icon: ShoppingCart },
-    {
-      label: "Production",
-      icon: Factory,
-      submenu: [
-        { path: "/production", label: "Production Management", icon: ChefHat },
-        { path: "/inventory", label: "Store Inventory", icon: Package },
-        { path: "/commissary-inventory", label: "Commissary Inventory", icon: Warehouse },
-      ]
-    },
-    {
-      label: "Orders & Supply",
-      icon: Truck,
-      submenu: [
-        { path: "/order-management", label: "Order Management", icon: Truck },
-      ]
-    },
-    { path: "/customers", label: "Customers", icon: Users },
-    { path: "/reports", label: "Reports", icon: BarChart3 },
-    { path: "/settings", label: "Settings", icon: Settings },
-  ];
+  // Filter menu items based on user role and route access
+  const getFilteredMenuItems = (): MenuItem[] => {
+    const baseMenuItems: MenuItem[] = [
+      { path: "/", label: "Dashboard", icon: Home },
+      { path: "/pos", label: "Point of Sale", icon: ShoppingCart },
+      {
+        label: "Production",
+        icon: Factory,
+        submenu: [
+          { path: "/production", label: "Production Management", icon: ChefHat },
+          { path: "/inventory", label: "Store Inventory", icon: Package },
+          { path: "/commissary-inventory", label: "Commissary Inventory", icon: Warehouse },
+        ],
+        hidden: !canAccessProduction(user?.role)
+      },
+      {
+        label: "Orders & Supply",
+        icon: Truck,
+        submenu: [
+          { path: "/order-management", label: "Order Management", icon: Truck },
+        ],
+        hidden: !canAccessInventory(user?.role)
+      },
+      { path: "/customers", label: "Customers", icon: Users },
+      { 
+        path: "/reports", 
+        label: "Reports", 
+        icon: BarChart3,
+        hidden: !checkRouteAccess(user?.role, "/reports")
+      },
+      { 
+        path: "/settings", 
+        label: "Settings", 
+        icon: Settings,
+        hidden: !checkRouteAccess(user?.role, "/settings")
+      },
+    ];
+
+    return baseMenuItems.filter(item => {
+      if (item.hidden) return false;
+      
+      if (item.submenu) {
+        // Filter submenu items based on access
+        item.submenu = item.submenu.filter(subItem => 
+          !subItem.hidden && checkRouteAccess(user?.role, subItem.path || "")
+        );
+        // Hide parent if no accessible submenu items
+        return item.submenu.length > 0;
+      }
+      
+      return item.path ? checkRouteAccess(user?.role, item.path) : true;
+    });
+  };
+
+  const menuItems = getFilteredMenuItems();
 
   return (
     <Sheet>
