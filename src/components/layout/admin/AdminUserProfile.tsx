@@ -14,7 +14,7 @@ export const AdminUserProfile: React.FC = () => {
           <User className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white truncate">
+          <p className="text-sm font-medium truncate text-gray-950">
             {user.name}
           </p>
           <p className="text-xs text-gray-400 truncate">
