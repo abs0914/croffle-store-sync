@@ -10,7 +10,7 @@ export const AdminUserProfile: React.FC = () => {
   if (!user) return null;
   return <div className="border-t border-gray-700 p-4 bg-orange-200">
       <div className="flex items-center space-x-3 mb-3">
-        <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-full">
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-950">
           <User className="h-4 w-4 text-white" />
         </div>
         <div className="flex-1 min-w-0">
