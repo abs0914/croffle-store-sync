@@ -34,12 +34,8 @@ import {
   Users,
   BarChart3,
   Settings,
-  Store,
-  UserCheck,
-  Receipt,
   Factory,
   ChefHat,
-  Upload,
   Truck
 } from "lucide-react";
 
@@ -61,6 +57,53 @@ export function Sidebar() {
     return location.pathname === path;
   };
 
+  // Don't show store-specific menu items for admin users
+  const isAdminArea = location.pathname.startsWith('/admin');
+  
+  if (isAdminArea) {
+    return (
+      <Sheet>
+        <SheetTrigger asChild>
+          <button className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground bg-muted hover:bg-muted-foreground hover:text-accent-foreground h-10 px-4 py-2 w-full">
+            Admin Menu
+          </button>
+        </SheetTrigger>
+        <SheetContent className="w-full sm:w-[280px]">
+          <SheetHeader>
+            <SheetTitle>Admin Menu</SheetTitle>
+            <SheetDescription>
+              System administration
+            </SheetDescription>
+          </SheetHeader>
+          <Separator className="my-4" />
+          
+          <div className="text-center text-sm text-muted-foreground">
+            Please use the main admin sidebar for navigation
+          </div>
+
+          <Separator className="my-4" />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground bg-muted hover:bg-muted-foreground hover:text-accent-foreground h-10 px-4 py-2 w-full">
+                <Avatar className="mr-2">
+                  <AvatarImage src="https://github.com/shadcn.png" />
+                  <AvatarFallback>CN</AvatarFallback>
+                </Avatar>
+                {user?.email}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => logout()}>Logout</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
   const menuItems: MenuItem[] = [
     { path: "/", label: "Dashboard", icon: Home },
     { path: "/pos", label: "Point of Sale", icon: ShoppingCart },
@@ -70,7 +113,6 @@ export function Sidebar() {
       submenu: [
         { path: "/production", label: "Production Management", icon: ChefHat },
         { path: "/inventory", label: "Store Inventory", icon: Package },
-        { path: "/inventory-conversion", label: "Legacy Conversion", icon: Factory, hidden: true },
       ]
     },
     {
@@ -78,7 +120,6 @@ export function Sidebar() {
       icon: Truck,
       submenu: [
         { path: "/order-management", label: "Order Management", icon: Truck },
-        { path: "/bulk-upload", label: "Legacy Bulk Upload", icon: Upload, hidden: true },
       ]
     },
     { path: "/customers", label: "Customers", icon: Users },
