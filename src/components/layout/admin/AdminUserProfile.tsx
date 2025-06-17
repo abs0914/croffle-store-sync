@@ -26,7 +26,7 @@ export const AdminUserProfile: React.FC = () => {
         </div>
       </div>
       
-      <Button variant="ghost" size="sm" onClick={logout} className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
+      <Button variant="ghost" size="sm" onClick={logout} className="w-full justify-start text-gray-300 hover:text-white bg-zinc-950 hover:bg-zinc-800">
         <LogOut className="mr-2 h-4 w-4" />
         Sign Out
       </Button>
