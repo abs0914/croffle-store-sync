@@ -30,6 +30,10 @@ export const useAdminRecipesData = () => {
     setIsLoading(true);
     try {
       console.log('Fetching recipes...');
+      
+      // Add a small delay to ensure database changes are reflected
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { data, error } = await supabase
         .from('recipes')
         .select(`
@@ -42,11 +46,19 @@ export const useAdminRecipesData = () => {
         .order('name');
 
       if (error) {
+        console.error('Supabase error:', error);
         throw error;
       }
 
       console.log('Fetched recipes:', data?.length || 0);
-      setRecipes(data as Recipe[] || []);
+      console.log('Recipe data:', data);
+      
+      // Ensure we're setting fresh data
+      setRecipes([]);
+      setTimeout(() => {
+        setRecipes(data as Recipe[] || []);
+      }, 10);
+      
     } catch (error: any) {
       console.error('Error fetching recipes:', error);
       toast.error('Failed to load recipes');

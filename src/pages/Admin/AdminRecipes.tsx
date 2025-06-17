@@ -50,11 +50,15 @@ export default function AdminRecipes() {
       try {
         console.log('Starting bulk delete for recipes:', selectedRecipes);
         
+        // Delete in a transaction-like manner
+        const recipeIds = [...selectedRecipes]; // Copy the array
+        
         // First delete all recipe ingredients for the selected recipes
+        console.log('Deleting recipe ingredients...');
         const { error: ingredientsError } = await supabase
           .from('recipe_ingredients')
           .delete()
-          .in('recipe_id', selectedRecipes);
+          .in('recipe_id', recipeIds);
 
         if (ingredientsError) {
           console.error('Error deleting ingredients:', ingredientsError);
@@ -64,10 +68,11 @@ export default function AdminRecipes() {
         console.log('Ingredients deleted successfully');
 
         // Then delete the recipes themselves
+        console.log('Deleting recipes...');
         const { error: recipesError } = await supabase
           .from('recipes')
           .delete()
-          .in('id', selectedRecipes);
+          .in('id', recipeIds);
 
         if (recipesError) {
           console.error('Error deleting recipes:', recipesError);
@@ -76,12 +81,22 @@ export default function AdminRecipes() {
 
         console.log('Recipes deleted successfully');
 
-        toast.success(`Successfully deleted ${selectedRecipes.length} recipe${selectedRecipes.length !== 1 ? 's' : ''} and their ingredients`);
+        // Clear selection immediately
         setSelectedRecipes([]);
         
-        // Force a fresh fetch of recipes
+        // Show success message
+        toast.success(`Successfully deleted ${recipeIds.length} recipe${recipeIds.length !== 1 ? 's' : ''} and their ingredients`);
+        
+        // Force refresh with multiple attempts to ensure UI updates
         console.log('Refreshing recipes data...');
         await refreshRecipes();
+        
+        // Additional refresh after a short delay to ensure state is updated
+        setTimeout(async () => {
+          console.log('Secondary refresh...');
+          await refreshRecipes();
+        }, 500);
+        
         console.log('Recipes refreshed');
       } catch (error) {
         console.error('Error deleting recipes:', error);
