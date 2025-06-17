@@ -22,7 +22,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import UsersPage from "@/pages/Settings/Users/UsersPage";
 import CashiersPage from "@/pages/Settings/Cashiers/CashiersPage";
 import ManagersPage from "@/pages/Settings/Managers/ManagersPage";
-import ThermalPrinter from "@/pages/Settings/ThermalPrinter";
+import { ThermalPrinterPage } from "@/pages/Settings/ThermalPrinter";
 import StoresPage from "@/pages/Stores";
 import StoreForm from "@/pages/Stores/StoreForm";
 import StoreQR from "@/pages/Stores/StoreQR";
@@ -175,7 +175,7 @@ function App() {
                     <Route path="/settings/thermal-printer" element={
                       <ProtectedRoute>
                         <MainLayout>
-                          <ThermalPrinter />
+                          <ThermalPrinterPage />
                         </MainLayout>
                       </ProtectedRoute>
                     } />
