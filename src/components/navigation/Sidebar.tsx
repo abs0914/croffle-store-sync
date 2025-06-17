@@ -34,17 +34,10 @@ import {
   Users,
   BarChart3,
   Settings,
-  Factory,
-  ChefHat,
-  Truck,
-  Warehouse
+  Truck
 } from "lucide-react";
 import { 
-  checkRouteAccess, 
-  canAccessProduction, 
-  canAccessInventory,
-  canAccessCommissary,
-  canAccessRecipeManagement
+  checkRouteAccess
 } from "@/contexts/auth/role-utils";
 
 interface MenuItem {
@@ -112,7 +105,7 @@ export function Sidebar() {
     );
   }
 
-  // Filter menu items based on user role and Phase 4 requirements
+  // Phase 5: Simplified store-level navigation - no production management
   const getFilteredMenuItems = (): MenuItem[] => {
     const baseMenuItems: MenuItem[] = [
       { path: "/", label: "Dashboard", icon: Home },
@@ -130,30 +123,11 @@ export function Sidebar() {
         icon: Truck,
         hidden: !checkRouteAccess(user?.role, "/order-management") // Managers and above only
       },
-      {
-        label: "Production",
-        icon: Factory,
-        submenu: [
-          { 
-            path: "/production", 
-            label: "Recipe Production", 
-            icon: ChefHat,
-            hidden: !canAccessRecipeManagement(user?.role) // Admin-only
-          },
-          { 
-            path: "/inventory", 
-            label: "Store Inventory", 
-            icon: Package,
-            hidden: !canAccessInventory(user?.role) // Managers and above
-          },
-          { 
-            path: "/commissary-inventory", 
-            label: "Commissary Inventory", 
-            icon: Warehouse,
-            hidden: !canAccessCommissary(user?.role) // Admin-only
-          },
-        ],
-        hidden: !canAccessProduction(user?.role) && !canAccessInventory(user?.role)
+      { 
+        path: "/inventory", 
+        label: "Store Inventory", 
+        icon: Package,
+        hidden: !checkRouteAccess(user?.role, "/inventory") // Managers and above only
       },
       { 
         path: "/settings", 
@@ -165,16 +139,6 @@ export function Sidebar() {
 
     return baseMenuItems.filter(item => {
       if (item.hidden) return false;
-      
-      if (item.submenu) {
-        // Filter submenu items based on access
-        item.submenu = item.submenu.filter(subItem => 
-          !subItem.hidden && checkRouteAccess(user?.role, subItem.path || "")
-        );
-        // Hide parent if no accessible submenu items
-        return item.submenu.length > 0;
-      }
-      
       return item.path ? checkRouteAccess(user?.role, item.path) : true;
     });
   };
@@ -200,48 +164,16 @@ export function Sidebar() {
         {menuItems.map((item, index) => {
           if (item.hidden) return null;
 
-          if (item.submenu) {
-            return (
-              <Accordion type="single" collapsible key={index}>
-                <AccordionItem value={item.label}>
-                  <AccordionTrigger className="data-[state=open]:bg-secondary hover:bg-secondary rounded-md">
-                    <div className="flex items-center space-x-2 w-full">
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="flex flex-col space-y-2">
-                      {item.submenu.map((subItem, subIndex) => {
-                        if (subItem.hidden) return null;
-                        return (
-                          <button
-                            key={subIndex}
-                            onClick={() => navigate(subItem.path || "")}
-                            className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent text-sm ${isActive(subItem.path || "") ? 'bg-secondary' : ''}`}
-                          >
-                            <subItem.icon className="h-3 w-3" />
-                            <span>{subItem.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            );
-          } else {
-            return (
-              <button
-                key={index}
-                onClick={() => navigate(item.path || "")}
-                className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent ${isActive(item.path || "") ? 'bg-secondary' : ''}`}
-              >
-                <item.icon className="h-4 w-4" />
-                <span>{item.label}</span>
-              </button>
-            );
-          }
+          return (
+            <button
+              key={index}
+              onClick={() => navigate(item.path || "")}
+              className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent ${isActive(item.path || "") ? 'bg-secondary' : ''}`}
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.label}</span>
+            </button>
+          );
         })}
 
         <Separator className="my-4" />

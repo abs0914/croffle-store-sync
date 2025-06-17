@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { checkRouteAccess } from '@/contexts/auth/role-utils';
 
-import { BarChart3, ShoppingCart, Users, Settings, Truck } from "lucide-react";
+import { BarChart3, ShoppingCart, Users, Settings, Truck, Package } from "lucide-react";
 import { UserRole } from '@/types';
 
 interface MenuItem {
@@ -16,6 +16,7 @@ interface MenuItem {
   permissions: UserRole[];
 }
 
+// Phase 5: Simplified store-level menu items - no production management
 const menuItems: MenuItem[] = [
   {
     title: "Dashboard",
@@ -46,6 +47,12 @@ const menuItems: MenuItem[] = [
     icon: Truck,
     href: "/order-management",
     permissions: ["admin", "owner", "manager"] as UserRole[], // Managers can purchase finished goods
+  },
+  {
+    title: "Store Inventory",
+    icon: Package,
+    href: "/inventory",
+    permissions: ["admin", "owner", "manager"] as UserRole[], // Managers and above only
   },
   {
     title: "Settings",

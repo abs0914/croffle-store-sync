@@ -11,7 +11,7 @@ const QuickActions = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Define quick actions based on Phase 4 role requirements
+  // Phase 5: Simplified store-level quick actions - no production management
   const actions = [
     {
       title: 'Point of Sale',
