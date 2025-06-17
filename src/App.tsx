@@ -21,6 +21,7 @@ import BulkUpload from './pages/BulkUpload';
 import Inventory from './pages/Inventory';
 import InventoryConversion from './pages/InventoryConversion';
 import ProductionManagement from "./pages/ProductionManagement";
+import { AdminRoutes } from './components/app/AdminRoutes';
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,9 @@ function App() {
                     <Route path="/reports" element={<ProtectedRoute><MainLayout><Reports /></MainLayout></ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute><MainLayout><Settings /></MainLayout></ProtectedRoute>} />
                     <Route path="/order-management" element={<ProtectedRoute><MainLayout><OrderManagement /></MainLayout></ProtectedRoute>} />
+                    
+                    {/* Admin Routes */}
+                    <AdminRoutes />
                   </Routes>
                   <Toaster />
                 </div>
