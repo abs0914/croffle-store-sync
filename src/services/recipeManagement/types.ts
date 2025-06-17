@@ -12,6 +12,7 @@ export interface RecipeTemplate {
   created_by: string;
   created_at: string;
   updated_at: string;
+  image_url?: string;
   ingredients: RecipeTemplateIngredient[];
   total_cost?: number;
   cost_per_serving?: number;

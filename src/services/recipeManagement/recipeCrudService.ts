@@ -19,7 +19,8 @@ export const createRecipeTemplate = async (
         category_name: templateData.category_name,
         version: templateData.version,
         is_active: templateData.is_active,
-        created_by: templateData.created_by
+        created_by: templateData.created_by,
+        image_url: templateData.image_url
       })
       .select()
       .single();
@@ -44,8 +45,14 @@ export const createRecipeTemplate = async (
       if (ingredientsError) throw ingredientsError;
     }
 
+    // Create the complete RecipeTemplate object with ingredients
+    const completeTemplate: RecipeTemplate = {
+      ...template,
+      ingredients: []
+    };
+
     toast.success('Recipe template created successfully');
-    return template as RecipeTemplate;
+    return completeTemplate;
   } catch (error: any) {
     console.error('Error creating recipe template:', error);
     toast.error('Failed to create recipe template');
@@ -68,6 +75,7 @@ export const updateRecipeTemplate = async (
         serving_size: updates.serving_size,
         category_name: updates.category_name,
         is_active: updates.is_active,
+        image_url: updates.image_url,
         updated_at: new Date().toISOString()
       })
       .eq('id', templateId);
