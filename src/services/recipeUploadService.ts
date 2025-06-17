@@ -18,7 +18,47 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
 
     for (const recipe of recipes) {
       try {
-        // Create the recipe first
+        // First, create or find a matching product for this recipe
+        let productId: string;
+        
+        // Check if a product with this name already exists
+        const { data: existingProduct } = await supabase
+          .from('products')
+          .select('id')
+          .eq('store_id', storeId)
+          .eq('name', recipe.name)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (existingProduct) {
+          productId = existingProduct.id;
+        } else {
+          // Create a new product for this recipe
+          const { data: newProduct, error: productError } = await supabase
+            .from('products')
+            .insert({
+              name: recipe.name,
+              description: recipe.description || `Product for ${recipe.name}`,
+              price: 0, // Will be calculated from recipe cost
+              cost: 0, // Will be calculated from recipe ingredients
+              stock_quantity: 0,
+              store_id: storeId,
+              sku: `RECIPE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              is_active: true
+            })
+            .select()
+            .single();
+
+          if (productError) {
+            console.error(`Error creating product for recipe ${recipe.name}:`, productError);
+            errorCount++;
+            continue;
+          }
+
+          productId = newProduct.id;
+        }
+
+        // Create the recipe with the valid product_id
         const { data: recipeData, error: recipeError } = await supabase
           .from('recipes')
           .insert({
@@ -28,7 +68,7 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
             serving_size: recipe.serving_size,
             instructions: recipe.instructions,
             store_id: storeId,
-            product_id: '00000000-0000-0000-0000-000000000000', // Placeholder until linked to actual product
+            product_id: productId,
             is_active: true
           })
           .select()
@@ -66,6 +106,24 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
           console.error(`Error adding ingredients for recipe ${recipe.name}:`, ingredientsError);
           errorCount++;
         } else {
+          // Calculate total recipe cost and update the product
+          const totalCost = recipe.ingredients.reduce((sum, ingredient) => {
+            const commissaryItem = commissaryMap.get(ingredient.commissary_item_name.toLowerCase());
+            const costPerUnit = ingredient.cost_per_unit || commissaryItem?.unit_cost || 0;
+            return sum + (ingredient.quantity * costPerUnit);
+          }, 0);
+
+          // Update product with calculated cost and suggested selling price
+          const suggestedPrice = totalCost * 2.5; // 150% markup as example
+          
+          await supabase
+            .from('products')
+            .update({
+              cost: totalCost,
+              price: suggestedPrice
+            })
+            .eq('id', productId);
+
           successCount++;
         }
 
