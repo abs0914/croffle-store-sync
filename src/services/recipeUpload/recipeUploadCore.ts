@@ -3,23 +3,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { RecipeUpload } from "@/types/commissary";
 import { toast } from "sonner";
 import { fetchDataForUpload } from "./recipeUploadHelpers";
-import { processRecipeUpload } from "./recipeUploadProcessor";
+import { processRecipeUploadAsTemplate } from "./recipeTemplateProcessor";
 
-export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string): Promise<boolean> => {
+export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId?: string): Promise<boolean> => {
   try {
-    console.log(`Starting bulk upload of ${recipes.length} recipes for store ${storeId}`);
+    console.log(`Starting bulk upload of ${recipes.length} recipes as templates`);
     
-    // Fetch all required data for the upload process
-    const uploadData = await fetchDataForUpload(storeId);
+    // For template creation, we don't need store-specific data, but we still need commissary data
+    const uploadData = await fetchDataForUpload(storeId || '');
     
     let successCount = 0;
     let errorCount = 0;
 
-    // Process each recipe
+    // Process each recipe as a template
     for (const recipe of recipes) {
       try {
-        console.log(`Processing recipe: ${recipe.name}`);
-        const success = await processRecipeUpload(recipe, storeId, uploadData);
+        console.log(`Processing recipe template: ${recipe.name}`);
+        const success = await processRecipeUploadAsTemplate(recipe, uploadData);
         
         if (success) {
           successCount++;
@@ -34,18 +34,18 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
 
     // Show results to user
     if (successCount > 0) {
-      toast.success(`Successfully uploaded ${successCount} recipes${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
+      toast.success(`Successfully created ${successCount} recipe template${successCount !== 1 ? 's' : ''}${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
     }
     
     if (errorCount > 0 && successCount === 0) {
-      toast.error(`Failed to upload recipes. Please check that ingredient names match items in commissary inventory.`);
+      toast.error(`Failed to create recipe templates. Please check that ingredient names match items in commissary inventory.`);
       return false;
     }
 
     return successCount > 0;
   } catch (error) {
-    console.error('Error bulk uploading recipes:', error);
-    toast.error('Failed to upload recipes');
+    console.error('Error bulk uploading recipes as templates:', error);
+    toast.error('Failed to create recipe templates');
     return false;
   }
 };

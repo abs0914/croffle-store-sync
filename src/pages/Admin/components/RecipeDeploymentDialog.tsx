@@ -7,7 +7,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { RecipeTemplate } from '@/services/recipeManagement/recipeTemplateService';
-import { deployRecipeToStores } from '@/services/recipeManagement/recipeDeploymentService';
 
 interface RecipeDeploymentDialogProps {
   isOpen: boolean;
@@ -76,6 +75,102 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
     }
   };
 
+  const deployToStore = async (storeId: string) => {
+    if (!template) return false;
+
+    try {
+      // Create product first (placeholder)
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .insert({
+          name: template.name,
+          description: template.description,
+          sku: `RCP-${template.name.replace(/\s+/g, '-').toUpperCase()}-${storeId.slice(0, 8)}`,
+          price: 0, // Will be calculated
+          cost: 0,  // Will be calculated
+          stock_quantity: 0,
+          store_id: storeId,
+          is_active: false // Keep inactive until approved
+        })
+        .select()
+        .single();
+
+      if (productError) throw productError;
+
+      // Create recipe
+      const { data: recipe, error: recipeError } = await supabase
+        .from('recipes')
+        .insert({
+          name: template.name,
+          description: template.description,
+          instructions: template.instructions,
+          yield_quantity: template.yield_quantity,
+          serving_size: template.serving_size,
+          store_id: storeId,
+          product_id: product.id,
+          category_name: template.category_name,
+          is_active: true,
+          approval_status: 'pending_approval',
+          version: 1
+        })
+        .select()
+        .single();
+
+      if (recipeError) throw recipeError;
+
+      // Create recipe ingredients
+      const ingredientInserts = [];
+      for (const ingredient of template.ingredients) {
+        // Find or create inventory stock item for this store
+        let { data: inventoryItem, error: inventoryFindError } = await supabase
+          .from('inventory_stock')
+          .select('id')
+          .eq('store_id', storeId)
+          .eq('item', ingredient.commissary_item_name)
+          .maybeSingle();
+
+        if (!inventoryItem) {
+          // Create inventory stock item
+          const { data: newInventoryItem, error: inventoryCreateError } = await supabase
+            .from('inventory_stock')
+            .insert({
+              store_id: storeId,
+              item: ingredient.commissary_item_name,
+              unit: ingredient.unit,
+              stock_quantity: 0,
+              cost: ingredient.cost_per_unit || 0,
+              is_active: true
+            })
+            .select()
+            .single();
+
+          if (inventoryCreateError) throw inventoryCreateError;
+          inventoryItem = newInventoryItem;
+        }
+
+        ingredientInserts.push({
+          recipe_id: recipe.id,
+          inventory_stock_id: inventoryItem.id,
+          commissary_item_id: ingredient.commissary_item_id,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit as any,
+          cost_per_unit: ingredient.cost_per_unit || 0
+        });
+      }
+
+      const { error: ingredientsError } = await supabase
+        .from('recipe_ingredients')
+        .insert(ingredientInserts);
+
+      if (ingredientsError) throw ingredientsError;
+
+      return true;
+    } catch (error) {
+      console.error(`Error deploying to store ${storeId}:`, error);
+      return false;
+    }
+  };
+
   const handleDeploy = async () => {
     if (!template || selectedStoreIds.length === 0) {
       toast.error('Please select at least one store');
@@ -84,15 +179,30 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
 
     setIsDeploying(true);
     try {
-      const results = await deployRecipeToStores(template.id, selectedStoreIds);
-      
-      const successCount = results.filter(r => r.success).length;
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const storeId of selectedStoreIds) {
+        const success = await deployToStore(storeId);
+        if (success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+
       if (successCount > 0) {
+        toast.success(`Recipe deployed to ${successCount} store${successCount !== 1 ? 's' : ''} (pending approval)`);
         onSuccess();
         onClose();
       }
+
+      if (failCount > 0) {
+        toast.error(`Failed to deploy to ${failCount} store${failCount !== 1 ? 's' : ''}`);
+      }
     } catch (error) {
       console.error('Error deploying recipe:', error);
+      toast.error('Failed to deploy recipe');
     } finally {
       setIsDeploying(false);
     }
@@ -110,7 +220,7 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
         <div className="space-y-6">
           <div>
             <p className="text-sm text-muted-foreground">
-              Select the stores where you want to deploy this recipe. The recipe will be created 
+              Select the stores where you want to deploy this recipe template. The recipe will be created 
               with "pending approval" status and will need to be approved by store managers before 
               it becomes available as a product.
             </p>

@@ -1,59 +1,23 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Download, ChefHat } from "lucide-react";
+import { Upload, Download, ChefHat, Info } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
 import { parseRecipesCSV } from "@/utils/csvParser";
 import { bulkUploadRecipes } from "@/services/recipeUploadService";
 import { toast } from "sonner";
-import { StoreSelector } from "./StoreSelector";
-import { supabase } from "@/integrations/supabase/client";
-import { Store } from "@/types";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const RecipeUpload = () => {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedStoreId, setSelectedStoreId] = useState<string>("");
-  const [stores, setStores] = useState<Store[]>([]);
-  const { currentStore } = useStore();
-
-  useEffect(() => {
-    fetchStores();
-  }, []);
-
-  useEffect(() => {
-    // Set default store when currentStore changes
-    if (currentStore && !selectedStoreId) {
-      setSelectedStoreId(currentStore.id);
-    }
-  }, [currentStore, selectedStoreId]);
-
-  const fetchStores = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setStores(data || []);
-    } catch (error) {
-      console.error('Error fetching stores:', error);
-      toast.error('Failed to load stores');
-    }
-  };
 
   const handleFileUpload = async () => {
     if (!uploadFile) {
       toast.error("Please select a file to upload");
-      return;
-    }
-
-    if (!selectedStoreId) {
-      toast.error("Please select a target store");
       return;
     }
 
@@ -67,38 +31,13 @@ export const RecipeUpload = () => {
         return;
       }
 
-      if (selectedStoreId === "all") {
-        // Upload to all stores
-        let totalSuccess = 0;
-        let totalFailed = 0;
-
-        for (const store of stores) {
-          try {
-            const success = await bulkUploadRecipes(recipes, store.id);
-            if (success) {
-              totalSuccess++;
-              toast.success(`Successfully uploaded recipes to ${store.name}`);
-            } else {
-              totalFailed++;
-              toast.error(`Failed to upload recipes to ${store.name}`);
-            }
-          } catch (error) {
-            console.error(`Error uploading to ${store.name}:`, error);
-            totalFailed++;
-            toast.error(`Failed to upload recipes to ${store.name}`);
-          }
-        }
-
-        toast.success(`Upload completed: ${totalSuccess} stores successful, ${totalFailed} stores failed`);
-      } else {
-        // Upload to selected store
-        const success = await bulkUploadRecipes(recipes, selectedStoreId);
-        if (!success) {
-          return;
-        }
+      // Upload recipes as templates (no store ID needed)
+      const success = await bulkUploadRecipes(recipes);
+      
+      if (success) {
+        setUploadFile(null);
+        toast.success("Recipe templates created successfully! You can now edit them and deploy to stores.");
       }
-
-      setUploadFile(null);
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Failed to process upload file");
@@ -150,38 +89,22 @@ Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
     window.URL.revokeObjectURL(url);
   };
 
-  const selectedStoreName = selectedStoreId === "all" 
-    ? "All Stores" 
-    : stores.find(s => s.id === selectedStoreId)?.name || "Unknown Store";
-
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ChefHat className="h-5 w-5" />
-          Upload Recipes
+          Upload Recipe Templates
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <StoreSelector
-          stores={stores}
-          selectedStoreId={selectedStoreId}
-          onStoreChange={setSelectedStoreId}
-          disabled={isUploading}
-        />
-
-        {selectedStoreId && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-700">
-              <strong>Target:</strong> {selectedStoreName}
-            </p>
-            {selectedStoreId === "all" && (
-              <p className="text-xs text-blue-600 mt-1">
-                Recipes will be uploaded to all {stores.length} active stores
-              </p>
-            )}
-          </div>
-        )}
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>New Process:</strong> Uploaded recipes will be created as centralized templates. 
+            You can then edit them, add images, and deploy to specific stores from the Recipe Management tab.
+          </AlertDescription>
+        </Alert>
 
         <div className="space-y-2">
           <Label htmlFor="recipe-file">CSV File</Label>
@@ -196,11 +119,11 @@ Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
         <div className="flex gap-2">
           <Button 
             onClick={handleFileUpload}
-            disabled={!uploadFile || isUploading || !selectedStoreId}
+            disabled={!uploadFile || isUploading}
             className="flex-1"
           >
             <Upload className="h-4 w-4 mr-2" />
-            {isUploading ? "Uploading..." : "Upload Recipes"}
+            {isUploading ? "Creating Templates..." : "Create Recipe Templates"}
           </Button>
           
           <Button 
@@ -219,9 +142,10 @@ Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
             <li>Optional columns: Cost per Unit, Total Cost</li>
             <li>Each row represents one ingredient in a recipe</li>
             <li>Multiple rows with same recipe name will be grouped together</li>
-            <li>Category will be used to organize recipes in the POS system</li>
+            <li>Category will be used to organize recipes</li>
             <li>Ingredient names must match items in commissary inventory</li>
             <li>Total Cost can be calculated automatically if Cost per Unit is provided</li>
+            <li><strong>Templates will be created centrally and can be deployed to stores later</strong></li>
           </ul>
         </div>
       </CardContent>

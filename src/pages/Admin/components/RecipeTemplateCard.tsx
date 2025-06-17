@@ -11,7 +11,8 @@ import {
   Rocket, 
   ChefHat,
   Clock,
-  Users
+  Users,
+  Image as ImageIcon
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -42,10 +43,26 @@ export const RecipeTemplateCard: React.FC<RecipeTemplateCardProps> = ({
   );
 
   const costPerServing = template.serving_size ? totalCost / template.serving_size : totalCost;
+  const imageUrl = (template as any).image_url;
 
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
+        {/* Recipe Image */}
+        {imageUrl ? (
+          <div className="w-full h-32 mb-3 rounded-md overflow-hidden">
+            <img 
+              src={imageUrl} 
+              alt={template.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="w-full h-32 mb-3 rounded-md bg-gray-100 flex items-center justify-center">
+            <ImageIcon className="h-8 w-8 text-gray-400" />
+          </div>
+        )}
+
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-lg flex items-center gap-2">

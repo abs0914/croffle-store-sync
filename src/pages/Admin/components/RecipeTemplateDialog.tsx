@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { RecipeTemplate, RecipeTemplateIngredient } from '@/services/recipeManagement/types';
@@ -44,13 +44,15 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
     category_name: '',
     instructions: '',
     yield_quantity: 1,
-    serving_size: 1
+    serving_size: 1,
+    image_url: ''
   });
 
   const [ingredients, setIngredients] = useState<RecipeTemplateIngredientInput[]>([]);
   const [commissaryItems, setCommissaryItems] = useState<CommissaryItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -64,7 +66,8 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
           category_name: template.category_name || '',
           instructions: template.instructions || '',
           yield_quantity: template.yield_quantity,
-          serving_size: template.serving_size || 1
+          serving_size: template.serving_size || 1,
+          image_url: (template as any).image_url || ''
         });
         
         setIngredients(template.ingredients.map(ing => ({
@@ -87,7 +90,8 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       category_name: '',
       instructions: '',
       yield_quantity: 1,
-      serving_size: 1
+      serving_size: 1,
+      image_url: ''
     });
     setIngredients([]);
   };
@@ -120,6 +124,53 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      // Create a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `recipe-${Date.now()}.${fileExt}`;
+      const filePath = `recipe-images/${fileName}`;
+
+      // Upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('recipe-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('recipe-images')
+        .getPublicUrl(filePath);
+
+      setFormData(prev => ({ ...prev, image_url: publicUrl }));
+      toast.success('Image uploaded successfully');
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = () => {
+    setFormData(prev => ({ ...prev, image_url: '' }));
   };
 
   const addIngredient = () => {
@@ -252,6 +303,51 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
               placeholder="Recipe description"
               rows={3}
             />
+          </div>
+
+          {/* Image Upload Section */}
+          <div>
+            <Label>Recipe Image</Label>
+            <div className="space-y-4">
+              {formData.image_url ? (
+                <div className="relative">
+                  <img 
+                    src={formData.image_url} 
+                    alt="Recipe" 
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={removeImage}
+                    className="absolute top-2 right-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <div className="mt-4">
+                    <Label htmlFor="image-upload" className="cursor-pointer">
+                      <span className="text-sm text-gray-600">Click to upload an image</span>
+                      <Input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                    </Label>
+                  </div>
+                  {uploadingImage && (
+                    <p className="text-sm text-blue-600 mt-2">Uploading...</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

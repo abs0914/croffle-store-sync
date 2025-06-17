@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RecipeTemplateCard } from './RecipeTemplateCard';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { DeleteRecipeTemplateDialog } from './DeleteRecipeTemplateDialog';
+import { RecipeDeploymentDialog } from './RecipeDeploymentDialog';
 import { getRecipeTemplates } from '@/services/recipeManagement/recipeTemplateService';
 import { deleteRecipeTemplate, duplicateRecipeTemplate } from '@/services/recipeManagement/recipeCrudService';
 import { RecipeTemplate } from '@/services/recipeManagement/types';
@@ -22,7 +23,9 @@ export const RecipeManagementTab: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<RecipeTemplate | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeployDialogOpen, setIsDeployDialogOpen] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<RecipeTemplate | null>(null);
+  const [templateToDeploy, setTemplateToDeploy] = useState<RecipeTemplate | null>(null);
 
   useEffect(() => {
     fetchTemplates();
@@ -70,7 +73,8 @@ export const RecipeManagementTab: React.FC = () => {
   };
 
   const handleDeploy = (template: RecipeTemplate) => {
-    toast.info('Deploy functionality coming soon');
+    setTemplateToDeploy(template);
+    setIsDeployDialogOpen(true);
   };
 
   const handleCreateNew = () => {
@@ -82,6 +86,11 @@ export const RecipeManagementTab: React.FC = () => {
     fetchTemplates();
     setIsDialogOpen(false);
     setSelectedTemplate(null);
+  };
+
+  const handleDeploySuccess = () => {
+    setIsDeployDialogOpen(false);
+    setTemplateToDeploy(null);
   };
 
   const filteredTemplates = templates.filter(template => {
@@ -201,6 +210,16 @@ export const RecipeManagementTab: React.FC = () => {
         }}
         template={templateToDelete}
         onConfirm={handleConfirmDelete}
+      />
+
+      <RecipeDeploymentDialog
+        isOpen={isDeployDialogOpen}
+        onClose={() => {
+          setIsDeployDialogOpen(false);
+          setTemplateToDeploy(null);
+        }}
+        template={templateToDeploy}
+        onSuccess={handleDeploySuccess}
       />
     </div>
   );
