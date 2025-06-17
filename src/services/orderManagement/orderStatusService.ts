@@ -50,7 +50,11 @@ export const fetchPendingOrders = async (storeId: string): Promise<OrderWithStat
       .order('created_at', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      items: typeof item.items === 'string' ? JSON.parse(item.items) : (item.items || []),
+      order_status: item.order_status as 'pending' | 'preparing' | 'ready' | 'completed' | 'cancelled'
+    }));
   } catch (error) {
     console.error('Error fetching pending orders:', error);
     toast.error('Failed to fetch pending orders');

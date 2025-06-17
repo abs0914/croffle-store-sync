@@ -70,7 +70,10 @@ export const fetchInventoryMovements = async (
     const { data, error } = await query;
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      movement_type: item.movement_type as 'sale' | 'adjustment' | 'transfer_in' | 'transfer_out' | 'restock' | 'damage' | 'expire'
+    }));
   } catch (error) {
     console.error('Error fetching inventory movements:', error);
     toast.error('Failed to fetch inventory movements');

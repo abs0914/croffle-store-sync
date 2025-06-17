@@ -26,12 +26,12 @@ export const useTransactionHandler = () => {
   const [completedTransaction, setCompletedTransaction] = useState<CompletedTransaction | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [discount, setDiscount] = useState(0);
-  const [discountType, setDiscountType] = useState<string>('');
+  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | ''>('');
   const [discountIdNumber, setDiscountIdNumber] = useState<string>('');
 
   const handleApplyDiscount = useCallback((
     discountAmount: number, 
-    type: string, 
+    type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', 
     idNumber: string
   ) => {
     setDiscount(discountAmount);
@@ -67,6 +67,12 @@ export const useTransactionHandler = () => {
       const receiptNumber = generateReceiptNumber();
       const change = paymentMethod === 'cash' ? Math.max(0, amountTendered - total) : 0;
 
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
       // Create transaction record
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
@@ -74,7 +80,7 @@ export const useTransactionHandler = () => {
           receipt_number: receiptNumber,
           customer_id: selectedCustomer?.id,
           store_id: store.id,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: user.id,
           shift_id: shift.id,
           items: JSON.stringify(items),
           subtotal,
@@ -87,7 +93,7 @@ export const useTransactionHandler = () => {
           discount_type: discountType || null,
           discount_id_number: discountIdNumber || null,
           payment_details: paymentDetails ? JSON.stringify(paymentDetails) : null,
-          order_status: 'completed', // Set initial order status
+          order_status: 'completed',
           status: 'completed'
         })
         .select()
@@ -162,11 +168,11 @@ export const useTransactionHandler = () => {
         variation_id: item.variation?.id || null,
         transaction_type: 'sale' as const,
         quantity: item.quantity,
-        previous_quantity: 0, // This would need to be fetched from product/variation
-        new_quantity: 0, // This would need to be calculated
+        previous_quantity: 0,
+        new_quantity: 0,
         reference_id: transaction.id,
         notes: `Sale transaction ${receiptNumber}`,
-        created_by: (await supabase.auth.getUser()).data.user?.id
+        created_by: user.id
       }));
 
       if (inventoryTransactions.length > 0) {

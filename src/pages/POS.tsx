@@ -107,9 +107,20 @@ export default function POS() {
 
   // If we have a completed transaction, show the receipt
   if (completedTransaction) {
+    // Convert CompletedTransaction to Transaction format for compatibility
+    const transactionForReceipt = {
+      ...completedTransaction,
+      shiftId: currentShift?.id || '',
+      storeId: currentStore?.id || '',
+      userId: '',
+      paymentMethod: completedTransaction.payment_method as 'cash' | 'card' | 'e-wallet',
+      status: 'completed' as const,
+      createdAt: completedTransaction.created_at
+    };
+
     return (
       <CompletedTransaction
-        transaction={completedTransaction}
+        transaction={transactionForReceipt}
         customer={selectedCustomer}
         startNewSale={startNewSale}
       />
@@ -128,7 +139,7 @@ export default function POS() {
       selectedCustomer={selectedCustomer}
       setSelectedCustomer={setSelectedCustomer}
       discount={discount}
-      discountType={discountType}
+      discountType={discountType as 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | undefined}
       discountIdNumber={discountIdNumber}
       handleApplyDiscount={handleApplyDiscount}
       handlePaymentComplete={handlePaymentComplete}
