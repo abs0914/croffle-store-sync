@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Recipe } from '@/types/inventoryManagement';
 import { Store } from '@/types';
+import { getDeployedRecipes } from '@/services/recipeManagement/recipeDataService';
 
 interface RecipeMetrics {
   totalRecipes: number;
@@ -11,6 +12,9 @@ interface RecipeMetrics {
   draftRecipes: number;
   deployedStores: number;
   averageCost: number;
+  pendingApproval: number;
+  approved: number;
+  rejected: number;
 }
 
 export const useAdminRecipesData = () => {
@@ -29,25 +33,10 @@ export const useAdminRecipesData = () => {
   const fetchRecipes = async () => {
     setIsLoading(true);
     try {
-      console.log('Fetching recipes...');
+      console.log('Fetching deployed recipes...');
       
-      const { data, error } = await supabase
-        .from('recipes')
-        .select(`
-          *,
-          ingredients:recipe_ingredients(
-            *,
-            inventory_stock:inventory_stock(*)
-          )
-        `)
-        .order('name');
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      console.log('Fetched recipes:', data?.length || 0);
+      const data = await getDeployedRecipes();
+      console.log('Fetched deployed recipes:', data?.length || 0);
       console.log('Recipe data:', data);
       
       // Set recipes directly without delays or timeouts
@@ -95,9 +84,22 @@ export const useAdminRecipesData = () => {
 
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(recipe => 
-        statusFilter === 'active' ? recipe.is_active : !recipe.is_active
-      );
+      filtered = filtered.filter(recipe => {
+        switch (statusFilter) {
+          case 'active':
+            return recipe.is_active;
+          case 'inactive':
+            return !recipe.is_active;
+          case 'pending':
+            return recipe.approval_status === 'pending_approval';
+          case 'approved':
+            return recipe.approval_status === 'approved';
+          case 'rejected':
+            return recipe.approval_status === 'rejected';
+          default:
+            return true;
+        }
+      });
     }
 
     // Apply store filter
@@ -110,7 +112,10 @@ export const useAdminRecipesData = () => {
 
   const recipeMetrics: RecipeMetrics = useMemo(() => {
     const activeRecipes = recipes.filter(recipe => recipe.is_active).length;
-    const draftRecipes = recipes.length - activeRecipes;
+    const draftRecipes = recipes.filter(recipe => recipe.approval_status === 'draft' || !recipe.approval_status).length;
+    const pendingApproval = recipes.filter(recipe => recipe.approval_status === 'pending_approval').length;
+    const approved = recipes.filter(recipe => recipe.approval_status === 'approved').length;
+    const rejected = recipes.filter(recipe => recipe.approval_status === 'rejected').length;
     const uniqueStores = new Set(recipes.map(recipe => recipe.store_id)).size;
     
     // Calculate average cost from recipe ingredients
@@ -129,7 +134,10 @@ export const useAdminRecipesData = () => {
       activeRecipes,
       draftRecipes,
       deployedStores: uniqueStores,
-      averageCost
+      averageCost,
+      pendingApproval,
+      approved,
+      rejected
     };
   }, [recipes]);
 

@@ -1294,6 +1294,99 @@ export type Database = {
           },
         ]
       }
+      recipe_template_ingredients: {
+        Row: {
+          commissary_item_id: string
+          commissary_item_name: string
+          cost_per_unit: number | null
+          created_at: string | null
+          id: string
+          quantity: number
+          recipe_template_id: string
+          unit: string
+        }
+        Insert: {
+          commissary_item_id: string
+          commissary_item_name: string
+          cost_per_unit?: number | null
+          created_at?: string | null
+          id?: string
+          quantity: number
+          recipe_template_id: string
+          unit: string
+        }
+        Update: {
+          commissary_item_id?: string
+          commissary_item_name?: string
+          cost_per_unit?: number | null
+          created_at?: string | null
+          id?: string
+          quantity?: number
+          recipe_template_id?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_template_ingredients_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_template_ingredients_recipe_template_id_fkey"
+            columns: ["recipe_template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_templates: {
+        Row: {
+          category_name: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          instructions: string | null
+          is_active: boolean | null
+          name: string
+          serving_size: number | null
+          updated_at: string | null
+          version: number | null
+          yield_quantity: number
+        }
+        Insert: {
+          category_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          name: string
+          serving_size?: number | null
+          updated_at?: string | null
+          version?: number | null
+          yield_quantity?: number
+        }
+        Update: {
+          category_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          name?: string
+          serving_size?: number | null
+          updated_at?: string | null
+          version?: number | null
+          yield_quantity?: number
+        }
+        Relationships: []
+      }
       recipe_usage_log: {
         Row: {
           created_at: string
@@ -1351,6 +1444,10 @@ export type Database = {
       }
       recipes: {
         Row: {
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          category_name: string | null
           cost_per_serving: number | null
           created_at: string
           description: string | null
@@ -1359,6 +1456,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           product_id: string
+          rejection_reason: string | null
           serving_size: number | null
           store_id: string
           total_cost: number | null
@@ -1368,6 +1466,10 @@ export type Database = {
           yield_quantity: number
         }
         Insert: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category_name?: string | null
           cost_per_serving?: number | null
           created_at?: string
           description?: string | null
@@ -1376,6 +1478,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           product_id: string
+          rejection_reason?: string | null
           serving_size?: number | null
           store_id: string
           total_cost?: number | null
@@ -1385,6 +1488,10 @@ export type Database = {
           yield_quantity?: number
         }
         Update: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category_name?: string | null
           cost_per_serving?: number | null
           created_at?: string
           description?: string | null
@@ -1393,6 +1500,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           product_id?: string
+          rejection_reason?: string | null
           serving_size?: number | null
           store_id?: string
           total_cost?: number | null

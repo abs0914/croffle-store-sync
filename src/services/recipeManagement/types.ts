@@ -15,11 +15,16 @@ export interface RecipeTemplate {
   ingredients: RecipeTemplateIngredient[];
   total_cost?: number;
   cost_per_serving?: number;
+  approval_status?: 'draft' | 'pending_approval' | 'approved' | 'rejected';
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
 }
 
 export interface RecipeTemplateIngredient {
   id: string;
   recipe_template_id: string;
+  commissary_item_id: string;
   commissary_item_name: string;
   quantity: number;
   unit: string;
@@ -33,4 +38,9 @@ export interface DeploymentResult {
   recipeId?: string;
   productId?: string;
   error?: string;
+}
+
+export interface ApprovalAction {
+  action: 'approve' | 'reject';
+  reason?: string;
 }

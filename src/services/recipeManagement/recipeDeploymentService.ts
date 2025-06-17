@@ -15,8 +15,11 @@ export const deployRecipeToStores = async (
   try {
     // Get the template
     const { data: template, error: templateError } = await supabase
-      .from('recipes')
-      .select('*')
+      .from('recipe_templates')
+      .select(`
+        *,
+        recipe_template_ingredients (*)
+      `)
       .eq('id', templateId)
       .single();
     
@@ -24,25 +27,7 @@ export const deployRecipeToStores = async (
     
     for (const storeId of storeIds) {
       try {
-        // 1. Create/Update product in the store
-        const { data: product, error: productError } = await supabase
-          .from('products')
-          .upsert({
-            name: template.name,
-            description: template.description,
-            store_id: storeId,
-            price: 0, // Will be set by store manager
-            cost: template.total_cost || 0,
-            stock_quantity: 0,
-            is_active: true,
-            sku: `RCP-${template.name.replace(/\s+/g, '-').toUpperCase()}-${storeId.slice(-4)}`
-          })
-          .select()
-          .single();
-        
-        if (productError) throw productError;
-        
-        // 2. Create recipe linked to the product
+        // Create recipe in store with pending approval status
         const { data: recipe, error: recipeError } = await supabase
           .from('recipes')
           .insert({
@@ -51,20 +36,70 @@ export const deployRecipeToStores = async (
             instructions: template.instructions,
             yield_quantity: template.yield_quantity,
             store_id: storeId,
-            product_id: product.id,
+            product_id: '', // Will be set when approved
             is_active: true,
-            version: 1
+            version: 1,
+            approval_status: 'pending_approval',
+            category_name: template.category_name
           })
           .select()
           .single();
         
         if (recipeError) throw recipeError;
         
+        // Create recipe ingredients
+        if (template.recipe_template_ingredients?.length > 0) {
+          // First, we need to find corresponding inventory items in the target store
+          for (const templateIngredient of template.recipe_template_ingredients) {
+            // Try to find existing inventory item or create a placeholder
+            const { data: inventoryItem, error: inventoryError } = await supabase
+              .from('inventory_stock')
+              .select('id')
+              .eq('store_id', storeId)
+              .eq('item', templateIngredient.commissary_item_name)
+              .maybeSingle();
+            
+            let inventoryStockId = inventoryItem?.id;
+            
+            // If no inventory item exists, create a placeholder
+            if (!inventoryStockId) {
+              const { data: newInventoryItem, error: newInventoryError } = await supabase
+                .from('inventory_stock')
+                .insert({
+                  store_id: storeId,
+                  item: templateIngredient.commissary_item_name,
+                  unit: templateIngredient.unit,
+                  stock_quantity: 0,
+                  cost: templateIngredient.cost_per_unit || 0,
+                  is_active: true
+                })
+                .select()
+                .single();
+              
+              if (newInventoryError) throw newInventoryError;
+              inventoryStockId = newInventoryItem.id;
+            }
+            
+            // Create recipe ingredient
+            const { error: ingredientError } = await supabase
+              .from('recipe_ingredients')
+              .insert({
+                recipe_id: recipe.id,
+                inventory_stock_id: inventoryStockId,
+                commissary_item_id: templateIngredient.commissary_item_id,
+                quantity: templateIngredient.quantity,
+                unit: templateIngredient.unit,
+                cost_per_unit: templateIngredient.cost_per_unit
+              });
+            
+            if (ingredientError) throw ingredientError;
+          }
+        }
+        
         results.push({
           storeId,
           success: true,
-          recipeId: recipe.id,
-          productId: product.id
+          recipeId: recipe.id
         });
         
       } catch (error: any) {
@@ -81,7 +116,7 @@ export const deployRecipeToStores = async (
     const failCount = results.filter(r => !r.success).length;
     
     if (successCount > 0) {
-      toast.success(`Recipe deployed to ${successCount} store${successCount !== 1 ? 's' : ''}`);
+      toast.success(`Recipe deployed to ${successCount} store${successCount !== 1 ? 's' : ''} (pending approval)`);
     }
     
     if (failCount > 0) {
@@ -105,6 +140,9 @@ export const getRecipeDeployments = async (templateId: string) => {
         id,
         store_id,
         product_id,
+        approval_status,
+        approved_at,
+        rejection_reason,
         created_at,
         stores:store_id(name)
       `)

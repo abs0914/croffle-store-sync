@@ -1,34 +1,51 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { RecipeTemplate, RecipeTemplateIngredient } from "./types";
+import { toast } from "sonner";
 
 export const createRecipeTemplate = async (
-  template: Omit<RecipeTemplate, 'id' | 'created_at' | 'updated_at' | 'ingredients'>, 
+  templateData: Omit<RecipeTemplate, 'id' | 'created_at' | 'updated_at' | 'ingredients'>,
   ingredients: Omit<RecipeTemplateIngredient, 'id' | 'recipe_template_id' | 'created_at'>[]
 ): Promise<RecipeTemplate | null> => {
   try {
-    // For now, create using the existing recipes table
-    const { data: templateData, error: templateError } = await supabase
-      .from('recipes')
+    const { data: template, error: templateError } = await supabase
+      .from('recipe_templates')
       .insert({
-        name: template.name,
-        description: template.description,
-        instructions: template.instructions,
-        yield_quantity: template.yield_quantity,
-        serving_size: template.serving_size,
-        version: template.version,
-        is_active: template.is_active,
-        store_id: '00000000-0000-0000-0000-000000000000', // Template store ID
-        product_id: '00000000-0000-0000-0000-000000000000' // Placeholder product ID
+        name: templateData.name,
+        description: templateData.description,
+        instructions: templateData.instructions,
+        yield_quantity: templateData.yield_quantity,
+        serving_size: templateData.serving_size,
+        category_name: templateData.category_name,
+        version: templateData.version,
+        is_active: templateData.is_active,
+        created_by: templateData.created_by
       })
       .select()
       .single();
 
     if (templateError) throw templateError;
 
+    // Insert ingredients
+    if (ingredients.length > 0) {
+      const { error: ingredientsError } = await supabase
+        .from('recipe_template_ingredients')
+        .insert(
+          ingredients.map(ing => ({
+            recipe_template_id: template.id,
+            commissary_item_id: ing.commissary_item_id,
+            commissary_item_name: ing.commissary_item_name,
+            quantity: ing.quantity,
+            unit: ing.unit,
+            cost_per_unit: ing.cost_per_unit
+          }))
+        );
+
+      if (ingredientsError) throw ingredientsError;
+    }
+
     toast.success('Recipe template created successfully');
-    return templateData as any;
+    return template as RecipeTemplate;
   } catch (error: any) {
     console.error('Error creating recipe template:', error);
     toast.error('Failed to create recipe template');
@@ -37,43 +54,41 @@ export const createRecipeTemplate = async (
 };
 
 export const updateRecipeTemplate = async (
-  id: string, 
-  updates: Partial<RecipeTemplate>, 
-  ingredients?: Omit<RecipeTemplateIngredient, 'id' | 'recipe_template_id' | 'created_at'>[]
-): Promise<RecipeTemplate | null> => {
+  templateId: string,
+  updates: Partial<RecipeTemplate>
+): Promise<boolean> => {
   try {
-    const { data: templateData, error: templateError } = await supabase
-      .from('recipes')
+    const { error } = await supabase
+      .from('recipe_templates')
       .update({
         name: updates.name,
         description: updates.description,
         instructions: updates.instructions,
         yield_quantity: updates.yield_quantity,
         serving_size: updates.serving_size,
-        version: (updates.version || 1) + 1,
+        category_name: updates.category_name,
+        is_active: updates.is_active,
         updated_at: new Date().toISOString()
       })
-      .eq('id', id)
-      .select()
-      .single();
+      .eq('id', templateId);
 
-    if (templateError) throw templateError;
+    if (error) throw error;
 
     toast.success('Recipe template updated successfully');
-    return templateData as any;
+    return true;
   } catch (error: any) {
     console.error('Error updating recipe template:', error);
     toast.error('Failed to update recipe template');
-    return null;
+    return false;
   }
 };
 
-export const deleteRecipeTemplate = async (id: string): Promise<boolean> => {
+export const deleteRecipeTemplate = async (templateId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('recipes')
+      .from('recipe_templates')
       .delete()
-      .eq('id', id);
+      .eq('id', templateId);
 
     if (error) throw error;
 
@@ -86,39 +101,107 @@ export const deleteRecipeTemplate = async (id: string): Promise<boolean> => {
   }
 };
 
-export const duplicateRecipeTemplate = async (id: string): Promise<RecipeTemplate | null> => {
+export const duplicateRecipeTemplate = async (templateId: string): Promise<boolean> => {
   try {
-    const { data: template, error: fetchError } = await supabase
-      .from('recipes')
-      .select('*')
-      .eq('id', id)
+    // Get the original template with ingredients
+    const { data: original, error: fetchError } = await supabase
+      .from('recipe_templates')
+      .select(`
+        *,
+        recipe_template_ingredients (*)
+      `)
+      .eq('id', templateId)
       .single();
 
     if (fetchError) throw fetchError;
 
-    const duplicatedTemplate = {
-      ...template,
-      name: `Copy of ${template.name}`,
-      version: 1
-    };
-
-    delete duplicatedTemplate.id;
-    delete duplicatedTemplate.created_at;
-    delete duplicatedTemplate.updated_at;
-
-    const { data: newTemplate, error: createError } = await supabase
-      .from('recipes')
-      .insert(duplicatedTemplate)
+    // Create duplicate template
+    const { data: newTemplate, error: templateError } = await supabase
+      .from('recipe_templates')
+      .insert({
+        name: `${original.name} (Copy)`,
+        description: original.description,
+        instructions: original.instructions,
+        yield_quantity: original.yield_quantity,
+        serving_size: original.serving_size,
+        category_name: original.category_name,
+        version: 1,
+        is_active: false,
+        created_by: original.created_by
+      })
       .select()
       .single();
 
-    if (createError) throw createError;
+    if (templateError) throw templateError;
+
+    // Duplicate ingredients
+    if (original.recipe_template_ingredients?.length > 0) {
+      const { error: ingredientsError } = await supabase
+        .from('recipe_template_ingredients')
+        .insert(
+          original.recipe_template_ingredients.map((ing: any) => ({
+            recipe_template_id: newTemplate.id,
+            commissary_item_id: ing.commissary_item_id,
+            commissary_item_name: ing.commissary_item_name,
+            quantity: ing.quantity,
+            unit: ing.unit,
+            cost_per_unit: ing.cost_per_unit
+          }))
+        );
+
+      if (ingredientsError) throw ingredientsError;
+    }
 
     toast.success('Recipe template duplicated successfully');
-    return newTemplate as any;
+    return true;
   } catch (error: any) {
     console.error('Error duplicating recipe template:', error);
     toast.error('Failed to duplicate recipe template');
-    return null;
+    return false;
+  }
+};
+
+export const approveRecipe = async (recipeId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('recipes')
+      .update({
+        approval_status: 'approved',
+        approved_by: (await supabase.auth.getUser()).data.user?.id,
+        approved_at: new Date().toISOString()
+      })
+      .eq('id', recipeId);
+
+    if (error) throw error;
+
+    toast.success('Recipe approved successfully - Product will be created automatically');
+    return true;
+  } catch (error: any) {
+    console.error('Error approving recipe:', error);
+    toast.error('Failed to approve recipe');
+    return false;
+  }
+};
+
+export const rejectRecipe = async (recipeId: string, reason: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('recipes')
+      .update({
+        approval_status: 'rejected',
+        approved_by: (await supabase.auth.getUser()).data.user?.id,
+        approved_at: new Date().toISOString(),
+        rejection_reason: reason
+      })
+      .eq('id', recipeId);
+
+    if (error) throw error;
+
+    toast.success('Recipe rejected');
+    return true;
+  } catch (error: any) {
+    console.error('Error rejecting recipe:', error);
+    toast.error('Failed to reject recipe');
+    return false;
   }
 };
