@@ -24,6 +24,8 @@ export interface Product {
   stock_quantity: number;
   stockQuantity?: number; // For frontend compatibility
   recipe?: Recipe; // Optional recipe connection
+  created_at?: string;
+  updated_at?: string; // Add missing updated_at field
 }
 
 export interface ProductVariation {

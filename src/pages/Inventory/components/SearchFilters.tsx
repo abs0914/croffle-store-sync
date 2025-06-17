@@ -2,17 +2,24 @@
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Category } from "@/types";
 
 interface SearchFiltersProps {
   searchTerm: string;
-  setSearchTerm: (term: string) => void;
+  onSearchChange: (term: string) => void;
+  categories: Category[];
+  activeCategory: string;
+  onCategoryChange: (category: string) => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
 
 export const SearchFilters = ({
   searchTerm,
-  setSearchTerm,
+  onSearchChange,
+  categories,
+  activeCategory,
+  onCategoryChange,
   activeTab,
   setActiveTab,
 }: SearchFiltersProps) => {
@@ -25,7 +32,7 @@ export const SearchFilters = ({
           placeholder="Search products..."
           className="pl-8"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="flex-1 min-w-[250px]">

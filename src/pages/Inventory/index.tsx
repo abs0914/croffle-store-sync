@@ -134,6 +134,8 @@ export default function Inventory() {
         categories={categories}
         activeCategory={activeCategory}
         onCategoryChange={setActiveCategory}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
       />
 
       <Card>
