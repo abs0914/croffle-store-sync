@@ -1,37 +1,99 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ChefHat, Plus, Search, Filter } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RecipeTemplateCard } from './RecipeTemplateCard';
+import { RecipeTemplateDialog } from './RecipeTemplateDialog';
+import { DeleteRecipeTemplateDialog } from './DeleteRecipeTemplateDialog';
+import { getRecipeTemplates } from '@/services/recipeManagement/recipeTemplateService';
+import { deleteRecipeTemplate, duplicateRecipeTemplate } from '@/services/recipeManagement/recipeCrudService';
+import { RecipeTemplate } from '@/services/recipeManagement/types';
+import { toast } from 'sonner';
 
 export const RecipeManagementTab: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [templates, setTemplates] = useState<RecipeTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState<RecipeTemplate | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<RecipeTemplate | null>(null);
 
-  // Sample recipe templates data
-  const recipeTemplates = [
-    {
-      id: '1',
-      name: 'Classic Croffle',
-      description: 'Traditional croffle with maple syrup',
-      status: 'active',
-      stores: 5,
-      lastUpdated: '2024-01-15'
-    },
-    {
-      id: '2',
-      name: 'Chocolate Croffle',
-      description: 'Rich chocolate croffle with berries',
-      status: 'draft',
-      stores: 0,
-      lastUpdated: '2024-01-14'
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getRecipeTemplates();
+      setTemplates(data);
+    } catch (error) {
+      console.error('Error fetching recipe templates:', error);
+      toast.error('Failed to fetch recipe templates');
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  const handleEdit = (template: RecipeTemplate) => {
+    setSelectedTemplate(template);
+    setIsDialogOpen(true);
+  };
+
+  const handleDuplicate = async (template: RecipeTemplate) => {
+    const success = await duplicateRecipeTemplate(template.id);
+    if (success) {
+      await fetchTemplates();
+    }
+  };
+
+  const handleDelete = (template: RecipeTemplate) => {
+    setTemplateToDelete(template);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!templateToDelete) return;
+
+    const success = await deleteRecipeTemplate(templateToDelete.id);
+    if (success) {
+      await fetchTemplates();
+      setIsDeleteDialogOpen(false);
+      setTemplateToDelete(null);
+    }
+  };
+
+  const handleDeploy = (template: RecipeTemplate) => {
+    toast.info('Deploy functionality coming soon');
+  };
+
+  const handleCreateNew = () => {
+    setSelectedTemplate(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogSuccess = () => {
+    fetchTemplates();
+    setIsDialogOpen(false);
+    setSelectedTemplate(null);
+  };
+
+  const filteredTemplates = templates.filter(template => {
+    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         template.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesFilter = filterStatus === 'all' || 
+                         (filterStatus === 'active' && template.is_active) ||
+                         (filterStatus === 'inactive' && !template.is_active);
+
+    return matchesSearch && matchesFilter;
+  });
 
   return (
     <div className="space-y-6">
@@ -42,7 +104,7 @@ export const RecipeManagementTab: React.FC = () => {
             Create and manage recipe templates that can be deployed to stores
           </p>
         </div>
-        <Button>
+        <Button onClick={handleCreateNew}>
           <Plus className="h-4 w-4 mr-2" />
           Create Template
         </Button>
@@ -67,66 +129,79 @@ export const RecipeManagementTab: React.FC = () => {
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="inactive">Inactive</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Recipe Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {recipeTemplates.map((template) => (
-          <Card key={template.id} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ChefHat className="h-5 w-5 text-orange-600" />
-                  <CardTitle className="text-lg">{template.name}</CardTitle>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-3 bg-gray-200 rounded"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
                 </div>
-                <Badge variant={template.status === 'active' ? 'default' : 'secondary'}>
-                  {template.status}
-                </Badge>
-              </div>
-              <CardDescription>{template.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Deployed to:</span>
-                  <span className="font-medium">{template.stores} stores</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Last updated:</span>
-                  <span>{template.lastUpdated}</span>
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
-                    Edit
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
-                    Deploy
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTemplates.map((template) => (
+            <RecipeTemplateCard
+              key={template.id}
+              template={template}
+              onEdit={handleEdit}
+              onDuplicate={handleDuplicate}
+              onDelete={handleDelete}
+              onDeploy={handleDeploy}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
-      {recipeTemplates.length === 0 && (
+      {!isLoading && filteredTemplates.length === 0 && (
         <Card className="p-12 text-center">
           <ChefHat className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">No Recipe Templates</h3>
           <p className="text-muted-foreground mb-4">
-            Create your first recipe template to get started
+            {searchQuery || filterStatus !== 'all' 
+              ? 'No templates match your current filters'
+              : 'Create your first recipe template to get started'
+            }
           </p>
-          <Button>
+          <Button onClick={handleCreateNew}>
             <Plus className="h-4 w-4 mr-2" />
             Create Template
           </Button>
         </Card>
       )}
+
+      {/* Dialogs */}
+      <RecipeTemplateDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        template={selectedTemplate}
+        onSuccess={handleDialogSuccess}
+      />
+
+      <DeleteRecipeTemplateDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setTemplateToDelete(null);
+        }}
+        template={templateToDelete}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 };
