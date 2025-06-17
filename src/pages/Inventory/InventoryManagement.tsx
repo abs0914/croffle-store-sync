@@ -1,8 +1,6 @@
 
-import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { InventoryItemsList } from "./components/inventoryManagement/InventoryItemsList";
+import { Card, CardContent } from "@/components/ui/card";
 import { InventoryStats } from "./components/inventoryManagement/InventoryStats";
 
 export default function InventoryManagement() {
@@ -49,8 +47,15 @@ export default function InventoryManagement() {
         </p>
       </div>
 
+      <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+        <h3 className="font-semibold text-green-800 mb-2">Recipe Management</h3>
+        <p className="text-sm text-green-700">
+          All recipe creation and management is now handled in the <strong>Admin panel</strong>. 
+          Approved recipes are automatically deployed as products to your store inventory.
+        </p>
+      </div>
+
       <InventoryStats storeId={currentStore.id} />
-      <InventoryItemsList storeId={currentStore.id} />
     </div>
   );
 }

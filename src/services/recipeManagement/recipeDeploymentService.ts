@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RecipeTemplate, DeploymentResult } from "./types";
 
+// Re-export the types for external use
+export type { RecipeTemplate, DeploymentResult };
+
 export const deployRecipeToStores = async (
   templateId: string, 
   storeIds: string[]
