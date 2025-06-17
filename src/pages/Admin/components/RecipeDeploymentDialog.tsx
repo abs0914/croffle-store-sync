@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Store, MapPin, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { RecipeTemplate, deployRecipeToStores, getRecipeDeployments } from '@/services/recipeManagement/recipeTemplateService';
+import { RecipeTemplate, deployRecipeToStores } from '@/services/recipeManagement/recipeDeploymentService';
 
 interface RecipeDeploymentDialogProps {
   isOpen: boolean;
@@ -58,19 +58,21 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
 
       if (storesError) throw storesError;
 
-      // Fetch deployment status for this template
-      const deployments = await getRecipeDeployments();
-      const templateDeployments = deployments.filter(d => 
-        d.recipe && d.recipe.name === template.name
-      );
+      // Fetch existing recipes to check deployment status
+      const { data: recipesData, error: recipesError } = await supabase
+        .from('recipes')
+        .select('store_id, created_at')
+        .eq('name', template.name);
+
+      if (recipesError) throw recipesError;
 
       const storesWithStatus: StoreWithStatus[] = (storesData || []).map(store => {
-        const deployment = templateDeployments.find(d => d.store_id === store.id);
+        const deployment = recipesData?.find(d => d.store_id === store.id);
         return {
           ...store,
-          deployment_status: deployment?.deployment_status || null,
-          deployed_at: deployment?.deployed_at,
-          error_message: deployment?.error_message
+          deployment_status: deployment ? 'deployed' : null,
+          deployed_at: deployment?.created_at,
+          error_message: null
         };
       });
 
@@ -108,13 +110,7 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
 
     setIsDeploying(true);
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) {
-        toast.error('Authentication required');
-        return;
-      }
-
-      await deployRecipeToStores(template.id, selectedStores, user.data.user.id);
+      await deployRecipeToStores(template.id, selectedStores);
       
       // Refresh deployment status
       await fetchStoresWithDeploymentStatus();
