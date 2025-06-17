@@ -30,8 +30,14 @@ export const checkPermission = (userRole: UserRole | undefined, requiredRole: Us
 
 /**
  * Checks if a user has access to a specific store
+ * Admin and owner users have access to all stores
  */
-export const checkStoreAccess = (userStoreIds: string[] | undefined, storeId: string): boolean => {
+export const checkStoreAccess = (userStoreIds: string[] | undefined, storeId: string, userRole?: UserRole): boolean => {
+  // Admin and owner users have access to all stores
+  if (userRole === 'admin' || userRole === 'owner') {
+    return true;
+  }
+  
   if (!userStoreIds) return false;
   return userStoreIds.includes(storeId);
 };

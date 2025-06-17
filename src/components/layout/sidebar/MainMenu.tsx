@@ -5,14 +5,8 @@ import { useAuth } from '@/contexts/auth';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
 
-import { Package, Users, Settings, Store, BarChart3, ShoppingCart, Boxes, Truck } from "lucide-react";
+import { Users, Settings, Store, BarChart3, ShoppingCart, Boxes, Truck } from "lucide-react";
 import { UserRole } from '@/types';
 
 interface MenuItem {
@@ -27,13 +21,13 @@ const menuItems = [
     title: "Dashboard",
     icon: BarChart3,
     href: "/dashboard",
-    permissions: ["admin", "owner", "manager", "staff"] as UserRole[],
+    permissions: ["admin", "owner", "manager", "cashier"] as UserRole[],
   },
   {
     title: "Point of Sale",
     icon: ShoppingCart,
     href: "/pos",
-    permissions: ["admin", "owner", "manager", "staff"] as UserRole[],
+    permissions: ["admin", "owner", "manager", "cashier"] as UserRole[],
   },
   {
     title: "Products",
@@ -98,25 +92,6 @@ export function MainMenu() {
           <span>{item.title}</span>
         </Button>
       ))}
-      <Separator className="my-2" />
-      <Accordion type="single" collapsible>
-        <AccordionItem value="item-1">
-          <AccordionTrigger>Utilities</AccordionTrigger>
-            <AccordionContent>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "justify-start font-normal",
-                  location.pathname === "/under-construction" ? "bg-secondary hover:bg-secondary" : "hover:bg-accent hover:text-accent-foreground",
-                )}
-                onClick={() => navigate("/under-construction")}
-              >
-                <Package className="mr-2 h-4 w-4" />
-                <span>Placeholder</span>
-              </Button>
-            </AccordionContent>
-        </AccordionItem>
-      </Accordion>
     </div>
   );
 }

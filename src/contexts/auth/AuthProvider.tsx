@@ -189,7 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasStoreAccess = (storeId: string): boolean => {
     if (!user) return false;
-    return checkStoreAccess(user.storeIds, storeId);
+    return checkStoreAccess(user.storeIds, storeId, user.role);
   };
 
   return (
