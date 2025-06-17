@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -8,6 +7,9 @@ import POS from '@/pages/POS';
 import Settings from '@/pages/Settings';
 import Login from '@/pages/Login';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { AdminProtectedRoute } from '@/components/auth/AdminProtectedRoute';
+import { AdminLayout } from '@/components/layout/AdminLayout';
+import AdminDashboard from '@/pages/Admin/AdminDashboard';
 import { AuthProvider } from '@/contexts/auth';
 import Inventory from '@/pages/Inventory';
 import CustomerManagement from '@/pages/Customers/CustomerManagement';
@@ -23,6 +25,20 @@ function App() {
         <div className="min-h-screen bg-background">
           <Routes>
             <Route path="/login" element={<Login />} />
+            
+            {/* Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminDashboard />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
+            
+            {/* Regular Routes */}
             <Route
             path="/"
             element={

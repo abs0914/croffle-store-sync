@@ -9,16 +9,33 @@ import { PrinterStatusIndicator } from '@/components/printer/PrinterStatusIndica
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RawIngredientUpload } from "@/components/uploads/RawIngredientUpload";
 import { RecipeUpload } from "@/components/uploads/RecipeUpload";
-import { Upload, Package, ChefHat } from "lucide-react";
+import { Upload, Package, ChefHat, Settings as SettingsIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth";
+import { useNavigate } from "react-router-dom";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("users");
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Settings</h1>
-        <PrinterStatusIndicator />
+        <div className="flex items-center gap-4">
+          {user?.role === 'admin' && (
+            <Button
+              onClick={() => navigate('/admin')}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <SettingsIcon className="h-4 w-4" />
+              Admin Panel
+            </Button>
+          )}
+          <PrinterStatusIndicator />
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
