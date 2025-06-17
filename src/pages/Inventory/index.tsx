@@ -1,15 +1,26 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { InventoryHeader } from './components/InventoryHeader';
+import InventoryHeader from './components/InventoryHeader';
 import { SearchFilters } from './components/SearchFilters';
 import { ProductsTable } from './components/ProductsTable';
 import { useStore } from '@/contexts/StoreContext';
+import { useProductData } from '@/hooks/useProductData';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function InventoryPage() {
   const { currentStore } = useStore();
   const [activeTab, setActiveTab] = useState('products');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterTab, setFilterTab] = useState('all');
+
+  const {
+    filteredProducts,
+    isLoading,
+    handleExportCSV,
+    handleImportClick,
+    handleDownloadTemplate
+  } = useProductData(currentStore?.id || null);
 
   if (!currentStore) {
     return (
@@ -24,6 +35,20 @@ export default function InventoryPage() {
       </div>
     );
   }
+
+  // Filter products based on search term and active tab
+  const finalFilteredProducts = filteredProducts.filter(product => {
+    const matchesSearch = !searchTerm || 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesTab = filterTab === 'all' || 
+      (filterTab === 'active' && (product.is_active || product.isActive)) ||
+      (filterTab === 'inactive' && !(product.is_active || product.isActive)) ||
+      (filterTab === 'low-stock' && (product.stock_quantity || product.stockQuantity || 0) <= 10);
+    
+    return matchesSearch && matchesTab;
+  });
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -48,9 +73,22 @@ export default function InventoryPage() {
         </TabsList>
 
         <TabsContent value="products" className="space-y-6">
-          <InventoryHeader />
-          <SearchFilters />
-          <ProductsTable />
+          <InventoryHeader
+            title="Products & Stock Management"
+            description="Manage your store's product inventory"
+            onExportCSV={handleExportCSV}
+            onImportClick={handleImportClick}
+            onDownloadTemplate={handleDownloadTemplate}
+          />
+          <SearchFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            activeTab={filterTab}
+            setActiveTab={setFilterTab}
+          />
+          <ProductsTable 
+            products={finalFilteredProducts}
+          />
         </TabsContent>
       </Tabs>
     </div>
