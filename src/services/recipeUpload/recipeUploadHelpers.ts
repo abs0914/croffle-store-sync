@@ -1,10 +1,10 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface UploadData {
   commissaryMap: Map<string, any>;
   categoryMap: Map<string, any>;
   storeInventoryMap: Map<string, any>;
+  storeId: string; // Add storeId to the interface
 }
 
 export const fetchDataForUpload = async (storeId: string): Promise<UploadData> => {
@@ -37,7 +37,8 @@ export const fetchDataForUpload = async (storeId: string): Promise<UploadData> =
   return {
     commissaryMap,
     categoryMap,
-    storeInventoryMap
+    storeInventoryMap,
+    storeId // Include storeId in the returned data
   };
 };
 

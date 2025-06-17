@@ -26,7 +26,8 @@ export const processRecipeIngredients = async (
       ingredient,
       commissaryItem,
       uploadData.storeInventoryMap,
-      unitMapping
+      unitMapping,
+      uploadData.storeId // Pass the store ID from uploadData
     );
 
     if (!storeInventoryItem) {
@@ -72,7 +73,8 @@ const findOrCreateStoreInventoryItem = async (
   ingredient: any,
   commissaryItem: any,
   storeInventoryMap: Map<string, any>,
-  unitMapping: Record<string, string>
+  unitMapping: Record<string, string>,
+  storeId: string // Add storeId parameter
 ): Promise<any> => {
   const existingItem = storeInventoryMap.get(ingredient.commissary_item_name.toLowerCase());
   
@@ -83,10 +85,12 @@ const findOrCreateStoreInventoryItem = async (
   // Create new store inventory item
   const mappedUnit = unitMapping[ingredient.unit.toLowerCase()] || ingredient.unit;
   
+  console.log('Creating inventory stock item with store_id:', storeId);
+  
   const { data: newStoreItem, error: storeItemError } = await supabase
     .from('inventory_stock')
     .insert({
-      store_id: commissaryItem.store_id || ingredient.store_id,
+      store_id: storeId, // Use the passed storeId parameter
       item: ingredient.commissary_item_name,
       unit: mappedUnit,
       stock_quantity: 0,
