@@ -7,10 +7,7 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
   try {
     let query = supabase
       .from('commissary_inventory')
-      .select(`
-        *,
-        supplier:suppliers(*)
-      `)
+      .select('*')
       .eq('is_active', true)
       .order('name');
 
@@ -31,19 +28,28 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
 
     if (error) throw error;
 
-    // Process the data to handle typing properly
+    // Fetch suppliers separately if we have items with supplier_ids
+    const supplierIds = (data || []).map(item => item.supplier_id).filter(Boolean);
+    let suppliers: any[] = [];
+    
+    if (supplierIds.length > 0) {
+      const { data: suppliersData } = await supabase
+        .from('suppliers')
+        .select('*')
+        .in('id', supplierIds);
+      
+      suppliers = suppliersData || [];
+    }
+
+    // Process the data and manually join supplier information
     return (data || []).map(item => {
-      // Safe supplier check
-      const supplierData = item.supplier && 
-                          typeof item.supplier === 'object' && 
-                          !Array.isArray(item.supplier) ? 
-                          item.supplier : null;
+      const supplier = suppliers.find(s => s.id === item.supplier_id) || null;
 
       return {
         ...item,
         category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
         unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-        supplier: supplierData
+        supplier: supplier
       };
     });
   } catch (error) {
