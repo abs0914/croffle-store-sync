@@ -115,7 +115,8 @@ export default function POS() {
       userId: '',
       paymentMethod: completedTransaction.payment_method as 'cash' | 'card' | 'e-wallet',
       status: 'completed' as const,
-      createdAt: completedTransaction.created_at
+      createdAt: completedTransaction.created_at,
+      receiptNumber: completedTransaction.receipt_number // Map receipt_number to receiptNumber
     };
 
     return (

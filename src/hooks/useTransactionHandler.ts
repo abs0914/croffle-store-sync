@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem } from "@/contexts/cart/types";
 import { Store } from "@/types";
-import { Shift } from "@/contexts/shift/types";
+import { ShiftType } from "@/types"; // Use ShiftType instead of Shift
 import { Customer } from "@/types";
 import { createInventoryMovement } from "@/services/storeInventory/inventoryMovementService";
 
@@ -47,7 +47,7 @@ export const useTransactionHandler = () => {
 
   const handlePaymentComplete = useCallback(async (
     store: Store,
-    shift: Shift,
+    shift: ShiftType, // Use ShiftType instead of Shift
     items: CartItem[],
     subtotal: number,
     tax: number,
@@ -164,7 +164,7 @@ export const useTransactionHandler = () => {
       // Create inventory transactions for tracking
       const inventoryTransactions = items.map(item => ({
         store_id: store.id,
-        product_id: item.id,
+        product_id: item.productId,
         variation_id: item.variation?.id || null,
         transaction_type: 'sale' as const,
         quantity: item.quantity,
