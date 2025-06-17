@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -10,6 +11,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminProtectedRoute } from '@/components/auth/AdminProtectedRoute';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import AdminDashboard from '@/pages/Admin/AdminDashboard';
+import AdminStores from '@/pages/Admin/AdminStores';
 import { AuthProvider } from '@/contexts/auth';
 import Inventory from '@/pages/Inventory';
 import CustomerManagement from '@/pages/Customers/CustomerManagement';
@@ -33,6 +35,16 @@ function App() {
                 <AdminProtectedRoute>
                   <AdminLayout>
                     <AdminDashboard />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/stores"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminStores />
                   </AdminLayout>
                 </AdminProtectedRoute>
               }
