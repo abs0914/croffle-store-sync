@@ -4,9 +4,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 
-import { Users, Settings, Store, BarChart3, ShoppingCart, Boxes, Truck } from "lucide-react";
+import { BarChart3, ShoppingCart, Users, Settings } from "lucide-react";
 import { UserRole } from '@/types';
 
 interface MenuItem {
@@ -30,40 +29,22 @@ const menuItems = [
     permissions: ["admin", "owner", "manager", "cashier"] as UserRole[],
   },
   {
-    title: "Products",
-    icon: Boxes,
-    href: "/products",
-    permissions: ["admin", "owner", "manager"] as UserRole[],
-  },
-  {
-    title: "Inventory",
-    icon: Truck,
-    href: "/inventory",
-    permissions: ["admin", "owner", "manager"] as UserRole[],
-  },
-  {
-    title: "Order Management",
-    icon: ShoppingCart,
-    href: "/orders",
-    permissions: ["admin", "owner", "manager"] as UserRole[],
-  },
-  {
-    title: "Users",
+    title: "Customers",
     icon: Users,
-    href: "/users",
-    permissions: ["admin", "owner"] as UserRole[],
+    href: "/customers",
+    permissions: ["admin", "owner", "manager", "cashier"] as UserRole[],
   },
   {
-    title: "Stores",
-    icon: Store,
-    href: "/stores",
-    permissions: ["admin", "owner"] as UserRole[],
+    title: "Reports",
+    icon: BarChart3,
+    href: "/reports",
+    permissions: ["admin", "owner", "manager", "cashier"] as UserRole[],
   },
   {
     title: "Settings",
     icon: Settings,
     href: "/settings",
-    permissions: ["admin", "owner"] as UserRole[],
+    permissions: ["admin", "owner", "manager", "cashier"] as UserRole[],
   },
 ];
 
