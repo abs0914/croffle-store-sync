@@ -1,4 +1,3 @@
-
 import { InventoryStock } from "@/types";
 import { Button } from "@/components/ui/button";
 import { 
@@ -29,7 +28,7 @@ interface InventoryStockListProps {
   onEdit: (stockItem: InventoryStock) => void;
   onStockAdjust: (stockItem: InventoryStock) => void;
   onStockTransfer?: (stockItem: InventoryStock) => void;
-  onDelete?: (stockItem: InventoryStock) => void;
+  onDelete: (stockItem: InventoryStock) => void;
   hasMultipleStores?: boolean;
 }
 
@@ -191,14 +190,13 @@ export const InventoryStockList = ({
                         </DropdownMenuItem>
                       )}
                       
-                      {onDelete && (
-                        <DropdownMenuItem 
-                          className="text-destructive" 
-                          onClick={() => onDelete(stockItem)}
-                        >
-                          Delete Item
-                        </DropdownMenuItem>
-                      )}
+                      <DropdownMenuItem 
+                        className="text-destructive" 
+                        onClick={() => onDelete(stockItem)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Item
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
