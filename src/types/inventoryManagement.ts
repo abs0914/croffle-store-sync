@@ -33,18 +33,20 @@ export interface Supplier {
 
 export interface Recipe {
   id: string;
-  product_id: string;
-  variation_id?: string;
-  store_id: string;
   name: string;
   description?: string;
-  yield_quantity: number;
   instructions?: string;
-  version: number;
+  yield_quantity: number;
+  store_id: string;
+  product_id: string;
+  variation_id?: string;
   is_active: boolean;
+  version: number;
   created_at: string;
   updated_at: string;
-  ingredients: RecipeIngredient[];
+  ingredients?: RecipeIngredient[];
+  total_cost?: number;
+  cost_per_serving?: number;
 }
 
 export interface RecipeIngredient {
@@ -52,18 +54,19 @@ export interface RecipeIngredient {
   recipe_id: string;
   inventory_stock_id: string;
   quantity: number;
-  unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
+  unit: string;
+  cost_per_unit?: number;
   created_at: string;
   inventory_stock?: InventoryStock;
 }
 
 export interface InventoryStock {
   id: string;
-  store_id: string;
   item: string;
   unit: string;
+  cost: number;
+  store_id: string;
   stock_quantity: number;
-  cost?: number;
   sku?: string;
   is_active: boolean;
   created_at: string;
