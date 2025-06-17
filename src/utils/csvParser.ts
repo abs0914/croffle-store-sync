@@ -62,29 +62,45 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
 
 export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
   const lines = csvText.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
   const recipes: Map<string, RecipeUpload> = new Map();
   
   lines.slice(1).forEach(line => {
-    const values = line.split(',').map(v => v.trim());
-    const [recipeName, description, yieldQty, servingSize, instructions, ingredientName, quantity, unit, costPerUnit] = values;
+    if (!line.trim()) return;
+    
+    const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+    const rowData: any = {};
+    
+    // Map CSV headers to data
+    headers.forEach((header, index) => {
+      rowData[header] = values[index] || '';
+    });
+    
+    const recipeName = rowData['name'];
+    const ingredientName = rowData['ingredient name'] || rowData['ingredientname'];
+    const unitOfMeasure = rowData['unit of measure'] || rowData['unitofmeasure'] || rowData['unit'];
+    const quantityUsed = rowData['quantity used'] || rowData['quantityused'] || rowData['quantity'];
+    const costPerUnit = rowData['cost per unit'] || rowData['costperunit'] || rowData['cost'];
+    
+    if (!recipeName || !ingredientName) return;
     
     if (!recipes.has(recipeName)) {
       recipes.set(recipeName, {
         name: recipeName,
-        description: description || undefined,
-        yield_quantity: parseFloat(yieldQty) || 1,
-        serving_size: parseFloat(servingSize) || 1,
-        instructions: instructions || undefined,
+        description: `Recipe for ${recipeName}`,
+        yield_quantity: 1,
+        serving_size: 1,
+        instructions: `Instructions for preparing ${recipeName}`,
         ingredients: []
       });
     }
     
     const recipe = recipes.get(recipeName)!;
-    if (ingredientName && quantity) {
+    if (ingredientName && quantityUsed) {
       recipe.ingredients.push({
         commissary_item_name: ingredientName,
-        quantity: parseFloat(quantity),
-        unit: unit || 'g',
+        quantity: parseFloat(quantityUsed) || 1,
+        unit: unitOfMeasure || 'pieces',
         cost_per_unit: parseFloat(costPerUnit) || undefined
       });
     }

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Recipe, RecipeIngredient, InventoryStock } from "@/types/inventoryManagement";
 import { toast } from "sonner";
@@ -163,85 +162,68 @@ export const calculateRecipeCost = (recipe: Recipe): number => {
 
 // Recipe CSV Import/Export Functions
 export const generateRecipeCSVTemplate = (): string => {
-  const headers = [
-    'recipe_name',
-    'description',
-    'yield_quantity',
-    'instructions',
-    'ingredient_1_name',
-    'ingredient_1_quantity',
-    'ingredient_1_unit',
-    'ingredient_2_name',
-    'ingredient_2_quantity',
-    'ingredient_2_unit',
-    'ingredient_3_name',
-    'ingredient_3_quantity',
-    'ingredient_3_unit',
-    'ingredient_4_name',
-    'ingredient_4_quantity',
-    'ingredient_4_unit',
-    'ingredient_5_name',
-    'ingredient_5_quantity',
-    'ingredient_5_unit'
-  ];
+  const template = `Name,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit,Total Cost
+Classic - Tiramisu,Croissant,piece,1,30,
+Classic - Tiramisu,Whipped Cream,serving,1,8,
+Classic - Tiramisu,Tiramisu Sauce,portion,1,3.5,
+Classic - Tiramisu,Choco Flakes,portion,1,2.5,51.3
+Classic - Tiramisu,Take out Box,piece,1,6,
+Classic - Tiramisu,Chopstick,pair,1,0.6,
+Classic - Tiramisu,Waxpaper,piece,1,0.7,
+Classic - Choco Nut,Croissant,piece,1,30,
+Classic - Choco Nut,Whipped Cream,serving,1,8,
+Classic - Choco Nut,Chocolate Sauce,portion,1,2.5,
+Classic - Choco Nut,Peanut,portion,1,2.5,50.3
+Classic - Choco Nut,Take out Box,piece,1,6,
+Classic - Choco Nut,Chopstick,pair,1,0.6,
+Classic - Choco Nut,Waxpaper,piece,1,0.7,
+Croffle Overload,Croissant,piece,0.5,15,
+Croffle Overload,Vanilla Ice Cream,scoop,1,15.44,
+Croffle Overload,Colored Sprinkle,portion,1,2.5,37.74
+Croffle Overload,Peanut,portion,1,2.5,
+Croffle Overload,Choco Flakes,portion,1,2.5,
+Croffle Overload,Marshmallow,portion,1,2.5,
+Croffle Overload,Overload Cup,piece,1,4,
+Croffle Overload,Popsicle,piece,1,0.3,
+Croffle Overload,Spoon,piece,1,0.5,`;
 
-  const sampleData = [
-    'Chocolate Chip Cookie',
-    'Classic chocolate chip cookie recipe',
-    '24',
-    'Mix dry ingredients, add wet ingredients, fold in chocolate chips, bake at 350F for 12 minutes',
-    'All Purpose Flour',
-    '2',
-    'kg',
-    'Sugar',
-    '1',
-    'kg',
-    'Chocolate Chips',
-    '0.5',
-    'kg',
-    'Butter',
-    '0.5',
-    'kg',
-    'Eggs',
-    '6',
-    'pieces'
-  ];
-
-  return [headers.join(','), sampleData.join(',')].join('\n');
+  return template;
 };
 
 export const generateRecipesCSV = async (recipes: Recipe[]): Promise<string> => {
-  const headers = [
-    'recipe_name',
-    'description',
-    'yield_quantity',
-    'instructions',
-    'total_cost',
-    'cost_per_unit',
-    'ingredients_count',
-    'ingredients_list'
-  ];
+  const rows: string[] = ['Name,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit,Total Cost'];
 
-  const rows = recipes.map(recipe => {
+  recipes.forEach(recipe => {
     const totalCost = calculateRecipeCost(recipe);
-    const costPerUnit = recipe.yield_quantity > 0 ? totalCost / recipe.yield_quantity : 0;
-    const ingredientsList = recipe.ingredients?.map(ing =>
-      `${ing.inventory_stock?.item || 'Unknown'} (${ing.quantity} ${ing.unit})`
-    ).join('; ') || '';
-
-    return [
-      `"${recipe.name}"`,
-      `"${recipe.description || ''}"`,
-      recipe.yield_quantity,
-      `"${recipe.instructions || ''}"`,
-      totalCost.toFixed(2),
-      costPerUnit.toFixed(2),
-      recipe.ingredients?.length || 0,
-      `"${ingredientsList}"`
-    ].join(',');
+    
+    if (recipe.ingredients && recipe.ingredients.length > 0) {
+      recipe.ingredients.forEach((ingredient, index) => {
+        const isLastIngredient = index === recipe.ingredients!.length - 1;
+        const row = [
+          `"${recipe.name}"`,
+          `"${ingredient.inventory_stock?.item || 'Unknown'}"`,
+          ingredient.unit,
+          ingredient.quantity,
+          ingredient.inventory_stock?.cost || 0,
+          isLastIngredient ? totalCost.toFixed(2) : ''
+        ].join(',');
+        rows.push(row);
+      });
+    } else {
+      // If no ingredients, still add a row with recipe name
+      const row = [
+        `"${recipe.name}"`,
+        '',
+        '',
+        '',
+        '',
+        totalCost.toFixed(2)
+      ].join(',');
+      rows.push(row);
+    }
   });
 
-  return [headers.join(','), ...rows].join('\n');
+  return rows.join('\n');
 };
 
 export const parseRecipesCSV = async (csvData: string, storeId: string): Promise<Recipe[]> => {
@@ -250,73 +232,85 @@ export const parseRecipesCSV = async (csvData: string, storeId: string): Promise
     throw new Error('CSV file must contain at least a header row and one data row');
   }
 
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-  const importedRecipes: Recipe[] = [];
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
+  const recipes: Map<string, any> = new Map();
 
   for (let i = 1; i < lines.length; i++) {
     const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
 
     if (values.length < headers.length) continue;
 
-    const recipeData: any = {};
+    const rowData: any = {};
     headers.forEach((header, index) => {
-      recipeData[header] = values[index] || '';
+      rowData[header] = values[index] || '';
     });
 
-    // Validate required fields
-    if (!recipeData.recipe_name) {
+    const recipeName = rowData['name'];
+    const ingredientName = rowData['ingredient name'] || rowData['ingredientname'];
+    const unit = rowData['unit of measure'] || rowData['unitofmeasure'] || rowData['unit'];
+    const quantity = rowData['quantity used'] || rowData['quantityused'] || rowData['quantity'];
+    const costPerUnit = rowData['cost per unit'] || rowData['costperunit'] || rowData['cost'];
+
+    if (!recipeName) {
       console.warn(`Skipping row ${i + 1}: Missing recipe name`);
       continue;
     }
 
-    try {
-      // Create the recipe
-      const recipe = await createRecipe({
-        name: recipeData.recipe_name,
-        description: recipeData.description || '',
-        yield_quantity: parseFloat(recipeData.yield_quantity) || 1,
-        instructions: recipeData.instructions || '',
+    if (!recipes.has(recipeName)) {
+      recipes.set(recipeName, {
+        name: recipeName,
+        description: `Recipe for ${recipeName}`,
+        yield_quantity: 1,
+        instructions: `Instructions for preparing ${recipeName}`,
         store_id: storeId,
         product_id: '',
         is_active: true,
-        version: 1
+        version: 1,
+        ingredients: []
       });
+    }
 
+    const recipe = recipes.get(recipeName);
+    if (ingredientName && quantity) {
+      // Find matching inventory stock item
+      const { data: inventoryStock } = await supabase
+        .from('inventory_stock')
+        .select('id')
+        .eq('store_id', storeId)
+        .ilike('item', `%${ingredientName}%`)
+        .limit(1)
+        .single();
+
+      recipe.ingredients.push({
+        ingredient_name: ingredientName,
+        inventory_stock_id: inventoryStock?.id || '00000000-0000-0000-0000-000000000000',
+        quantity: parseFloat(quantity) || 1,
+        unit: unit || 'pieces',
+        cost_per_unit: parseFloat(costPerUnit) || 0
+      });
+    }
+  }
+
+  const importedRecipes: Recipe[] = [];
+
+  for (const recipeData of recipes.values()) {
+    try {
+      const recipe = await createRecipe(recipeData);
       if (recipe) {
-        // Process ingredients (up to 5 ingredients from CSV)
-        for (let j = 1; j <= 5; j++) {
-          const ingredientName = recipeData[`ingredient_${j}_name`];
-          const ingredientQuantity = recipeData[`ingredient_${j}_quantity`];
-          const ingredientUnit = recipeData[`ingredient_${j}_unit`];
-
-          if (ingredientName && ingredientQuantity && ingredientUnit) {
-            // Find matching inventory stock item
-            const { data: inventoryStock } = await supabase
-              .from('inventory_stock')
-              .select('id')
-              .eq('store_id', storeId)
-              .ilike('item', `%${ingredientName}%`)
-              .limit(1)
-              .single();
-
-            if (inventoryStock) {
-              await addRecipeIngredient({
-                recipe_id: recipe.id,
-                inventory_stock_id: inventoryStock.id,
-                quantity: parseFloat(ingredientQuantity),
-                unit: ingredientUnit as any
-              });
-            } else {
-              console.warn(`Ingredient "${ingredientName}" not found in inventory for recipe "${recipe.name}"`);
-            }
-          }
+        // Add ingredients to the recipe
+        for (const ingredientData of recipeData.ingredients) {
+          await addRecipeIngredient({
+            recipe_id: recipe.id,
+            inventory_stock_id: ingredientData.inventory_stock_id,
+            quantity: ingredientData.quantity,
+            unit: ingredientData.unit as any
+          });
         }
-
         importedRecipes.push(recipe);
       }
     } catch (error) {
-      console.error(`Error importing recipe from row ${i + 1}:`, error);
-      toast.error(`Failed to import recipe from row ${i + 1}: ${recipeData.recipe_name}`);
+      console.error(`Error importing recipe "${recipeData.name}":`, error);
+      toast.error(`Failed to import recipe: ${recipeData.name}`);
     }
   }
 
