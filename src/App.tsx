@@ -21,6 +21,7 @@ import BulkUpload from './pages/BulkUpload';
 import Inventory from './pages/Inventory';
 import InventoryConversion from './pages/InventoryConversion';
 import ProductionManagement from "./pages/ProductionManagement";
+import CommissaryInventory from './pages/CommissaryInventory';
 import { AdminProtectedRoute } from './components/auth/AdminProtectedRoute';
 import { AdminLayout } from './components/layout/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
@@ -66,6 +67,7 @@ function App() {
                       <Route path="/reports" element={<ProtectedRoute><MainLayout><Reports /></MainLayout></ProtectedRoute>} />
                       <Route path="/settings" element={<ProtectedRoute><MainLayout><Settings /></MainLayout></ProtectedRoute>} />
                       <Route path="/order-management" element={<ProtectedRoute><MainLayout><OrderManagement /></MainLayout></ProtectedRoute>} />
+                      <Route path="/commissary-inventory" element={<ProtectedRoute><MainLayout><CommissaryInventory /></MainLayout></ProtectedRoute>} />
                       
                       {/* Core Admin Routes */}
                       <Route path="/admin" element={
@@ -120,6 +122,14 @@ function App() {
                         <AdminProtectedRoute>
                           <AdminLayout>
                             <BulkUpload />
+                          </AdminLayout>
+                        </AdminProtectedRoute>
+                      } />
+
+                      <Route path="/admin/commissary-inventory" element={
+                        <AdminProtectedRoute>
+                          <AdminLayout>
+                            <CommissaryInventory />
                           </AdminLayout>
                         </AdminProtectedRoute>
                       } />

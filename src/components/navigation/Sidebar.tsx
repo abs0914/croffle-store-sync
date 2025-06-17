@@ -36,7 +36,8 @@ import {
   Settings,
   Factory,
   ChefHat,
-  Truck
+  Truck,
+  Warehouse
 } from "lucide-react";
 
 interface MenuItem {
@@ -113,6 +114,7 @@ export function Sidebar() {
       submenu: [
         { path: "/production", label: "Production Management", icon: ChefHat },
         { path: "/inventory", label: "Store Inventory", icon: Package },
+        { path: "/commissary-inventory", label: "Commissary Inventory", icon: Warehouse },
       ]
     },
     {

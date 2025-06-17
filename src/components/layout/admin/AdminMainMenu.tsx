@@ -10,7 +10,8 @@ import {
   UserCheck,
   Truck,
   Upload,
-  ShoppingCart
+  ShoppingCart,
+  Warehouse
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -44,6 +45,11 @@ const menuItems = [
     name: 'Order Management',
     href: '/admin/order-management',
     icon: Truck,
+  },
+  {
+    name: 'Commissary Inventory',
+    href: '/admin/commissary-inventory',
+    icon: Warehouse,
   },
   {
     name: 'Users',

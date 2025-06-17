@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Package, AlertTriangle, CheckCircle } from "lucide-react";
+import { Plus, Search, Edit, Package, AlertTriangle, CheckCircle, Warehouse } from "lucide-react";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { 
   fetchCommissaryInventory, 
@@ -14,10 +14,10 @@ import {
 } from "@/services/inventoryManagement/commissaryInventoryService";
 import { fetchSuppliers } from "@/services/inventoryManagement/supplierService";
 import { useAuth } from "@/contexts/auth";
-import { AddCommissaryItemDialog } from "./CommissaryInventory/components/AddCommissaryItemDialog";
-import { EditCommissaryItemDialog } from "./CommissaryInventory/components/EditCommissaryItemDialog";
-import { StockAdjustmentDialog } from "./CommissaryInventory/components/StockAdjustmentDialog";
-import { DeleteConfirmationDialog } from "./CommissaryInventory/components/DeleteConfirmationDialog";
+import { AddCommissaryItemDialog } from "./Inventory/components/AddCommissaryItemDialog";
+import { EditCommissaryItemDialog } from "./Inventory/components/EditCommissaryItemDialog";
+import { StockAdjustmentDialog } from "./Inventory/components/StockAdjustmentDialog";
+import { DeleteConfirmationDialog } from "./Inventory/components/DeleteConfirmationDialog";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/format";
 
@@ -134,9 +134,12 @@ export default function CommissaryInventory() {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Commissary Inventory</h1>
+        <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
+          <Warehouse className="h-8 w-8" />
+          Commissary Inventory
+        </h1>
         <p className="text-muted-foreground">
-          Manage raw materials and supplies for conversion to store inventory
+          Manage raw materials and supplies for conversion to store inventory. Raw materials uploaded through bulk upload will appear here.
         </p>
       </div>
 
@@ -238,7 +241,7 @@ export default function CommissaryInventory() {
             <div className="text-center py-8">
               <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground">
-                No commissary inventory items found
+                No commissary inventory items found. Upload raw materials through the Bulk Upload feature to see them here.
               </p>
             </div>
           ) : (
