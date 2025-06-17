@@ -31,9 +31,9 @@ export function ProtectedRoute({
     );
   }
 
-  // Redirect to auth page if not authenticated
+  // Redirect to login page if not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   // Check role-based access
