@@ -20,7 +20,15 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
           ingredient.category = value as 'raw_materials' | 'packaging_materials' | 'supplies';
           break;
         case 'unit':
-          ingredient.unit = value;
+          // Map common unit names to valid database units
+          const unitMapping: Record<string, string> = {
+            'piece': 'pieces',
+            'serving': 'g',
+            'portion': 'g',
+            'scoop': 'g',
+            'pair': 'pieces'
+          };
+          ingredient.unit = unitMapping[value.toLowerCase()] || value;
           break;
         case 'unit_cost':
         case 'cost':
