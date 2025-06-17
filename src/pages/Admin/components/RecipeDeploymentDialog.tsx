@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -90,7 +89,8 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
           cost: 0,  // Will be calculated
           stock_quantity: 0,
           store_id: storeId,
-          is_active: false // Keep inactive until approved
+          is_active: false, // Keep inactive until approved
+          image_url: (template as any).image_url || null // Deploy the image from template
         })
         .select()
         .single();
@@ -222,7 +222,7 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
             <p className="text-sm text-muted-foreground">
               Select the stores where you want to deploy this recipe template. The recipe will be created 
               with "pending approval" status and will need to be approved by store managers before 
-              it becomes available as a product.
+              it becomes available as a product. The recipe image will also be deployed to all selected stores.
             </p>
           </div>
 

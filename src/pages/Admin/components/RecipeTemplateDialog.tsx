@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -120,7 +119,9 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
         .order('name');
 
       if (error) throw error;
-      setCategories(data?.map(cat => cat.name) || []);
+      // Remove duplicates using Set
+      const uniqueCategories = [...new Set(data?.map(cat => cat.name) || [])];
+      setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
@@ -144,8 +145,8 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
     try {
       // Create a unique filename
       const fileExt = file.name.split('.').pop();
-      const fileName = `recipe-${Date.now()}.${fileExt}`;
-      const filePath = `recipe-images/${fileName}`;
+      const fileName = `recipe-template-${Date.now()}.${fileExt}`;
+      const filePath = `templates/${fileName}`;
 
       // Upload the file
       const { error: uploadError } = await supabase.storage
