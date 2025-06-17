@@ -1,4 +1,5 @@
 
+
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
@@ -93,8 +94,8 @@ export default function POS() {
       // Convert cart items to the format expected by the transaction handler
       const cartItemsForTransaction = items.map(item => ({
         ...item,
-        id: item.id,
-        name: item.name
+        id: item.productId, // Use productId as id
+        name: item.product.name // Get name from product object
       }));
 
       await processPayment(
@@ -120,7 +121,7 @@ export default function POS() {
     const transactionItems: TransactionItem[] = completedTransaction.items.map(item => ({
       productId: item.productId,
       variationId: item.variationId,
-      name: item.name,
+      name: item.product?.name || item.name, // Use product.name if available, fallback to name
       quantity: item.quantity,
       unitPrice: item.price,
       totalPrice: item.price * item.quantity
@@ -168,3 +169,4 @@ export default function POS() {
     />
   );
 }
+
