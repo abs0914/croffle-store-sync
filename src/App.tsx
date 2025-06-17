@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -12,6 +11,7 @@ import { AdminProtectedRoute } from '@/components/auth/AdminProtectedRoute';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import AdminDashboard from '@/pages/Admin/AdminDashboard';
 import AdminStores from '@/pages/Admin/AdminStores';
+import AdminRecipes from '@/pages/Admin/AdminRecipes';
 import { AuthProvider } from '@/contexts/auth';
 import Inventory from '@/pages/Inventory';
 import CustomerManagement from '@/pages/Customers/CustomerManagement';
@@ -45,6 +45,16 @@ function App() {
                 <AdminProtectedRoute>
                   <AdminLayout>
                     <AdminStores />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/recipes"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminRecipes />
                   </AdminLayout>
                 </AdminProtectedRoute>
               }

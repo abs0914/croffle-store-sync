@@ -1,103 +1,89 @@
 
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-
+import { NavLink } from 'react-router-dom';
 import { 
-  BarChart3, 
+  LayoutDashboard, 
   Store, 
-  Users, 
   ChefHat, 
-  ShoppingCart, 
-  User,
-  Settings
-} from "lucide-react";
+  ShoppingBag, 
+  Users, 
+  FileText, 
+  BarChart3, 
+  Settings,
+  Package,
+  UserCheck
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface AdminMenuItem {
-  title: string;
-  icon: React.ComponentType<any>;
-  href: string;
-  description: string;
-}
-
-const adminMenuItems: AdminMenuItem[] = [
+const menuItems = [
   {
-    title: "Dashboard",
-    icon: BarChart3,
-    href: "/admin",
-    description: "System overview and metrics",
+    name: 'Dashboard',
+    href: '/admin',
+    icon: LayoutDashboard,
   },
   {
-    title: "Store Management",
+    name: 'Store Management',
+    href: '/admin/stores',
     icon: Store,
-    href: "/admin/stores",
-    description: "Manage all store locations",
   },
   {
-    title: "Recipe & Products",
+    name: 'Recipe Management',
+    href: '/admin/recipes',
     icon: ChefHat,
-    href: "/admin/recipes",
-    description: "Master recipe and product management",
   },
   {
-    title: "Customer Database",
+    name: 'Product Management',
+    href: '/admin/products',
+    icon: Package,
+  },
+  {
+    name: 'Customer Management',
+    href: '/admin/customers',
     icon: Users,
-    href: "/admin/customers",
-    description: "Cross-store customer management",
   },
   {
-    title: "Order Management",
-    icon: ShoppingCart,
-    href: "/admin/orders",
-    description: "Centralized order processing",
+    name: 'Order Management',
+    href: '/admin/orders',
+    icon: ShoppingBag,
   },
   {
-    title: "User Management",
-    icon: User,
-    href: "/admin/users",
-    description: "System user administration",
+    name: 'User Management',
+    href: '/admin/users',
+    icon: UserCheck,
   },
   {
-    title: "System Settings",
+    name: 'Reports & Analytics',
+    href: '/admin/reports',
+    icon: BarChart3,
+  },
+  {
+    name: 'System Settings',
+    href: '/admin/settings',
     icon: Settings,
-    href: "/admin/settings",
-    description: "System configuration",
   },
 ];
 
-export function AdminMainMenu() {
-  const { user } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // Only show menu if user is admin
-  if (user?.role !== 'admin') {
-    return null;
-  }
-
+export const AdminMainMenu: React.FC = () => {
   return (
-    <div className="flex flex-col space-y-1 px-3">
-      {adminMenuItems.map((item) => (
-        <Button
-          key={item.href}
-          variant="ghost"
-          className={cn(
-            "justify-start font-normal text-gray-300 hover:text-white hover:bg-gray-800 h-auto p-3 flex-col items-start",
-            location.pathname === item.href ? "bg-blue-600 text-white hover:bg-blue-600" : "",
-          )}
-          onClick={() => navigate(item.href)}
+    <nav className="space-y-1">
+      {menuItems.map((item) => (
+        <NavLink
+          key={item.name}
+          to={item.href}
+          end={item.href === '/admin'}
+          className={({ isActive }) =>
+            cn(
+              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              isActive
+                ? 'bg-blue-100 text-blue-900'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            )
+          }
         >
-          <div className="flex items-center w-full">
-            <item.icon className="mr-3 h-4 w-4 flex-shrink-0" />
-            <span className="font-medium">{item.title}</span>
-          </div>
-          <span className="text-xs text-gray-400 ml-7 mt-1">
-            {item.description}
-          </span>
-        </Button>
+          <item.icon className="h-5 w-5" />
+          {item.name}
+        </NavLink>
       ))}
-    </div>
+    </nav>
   );
-}
+};
