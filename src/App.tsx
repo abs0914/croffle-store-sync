@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -7,40 +8,9 @@ import { StoreProvider } from './contexts/StoreContext';
 import { ShiftProvider } from './contexts/shift';
 import { CartProvider } from './contexts/cart/CartProvider';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import POS from './pages/POS';
-import Products from './pages/Products';
-import ProductCatalog from './pages/ProductCatalog';
-import Customers from './pages/Customers';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { MainLayout } from './components/layout/MainLayout';
-import OrderManagement from './pages/OrderManagement';
-import BulkUpload from './pages/BulkUpload';
-import Inventory from './pages/Inventory';
-import InventoryConversion from './pages/InventoryConversion';
-import ProductionManagement from "./pages/ProductionManagement";
-import CommissaryInventory from './pages/CommissaryInventory';
-import { AdminProtectedRoute } from './components/auth/AdminProtectedRoute';
-import { AdminLayout } from './components/layout/AdminLayout';
-import AdminDashboard from './pages/Admin/AdminDashboard';
-import AdminStores from './pages/Admin/AdminStores';
-import AdminRecipes from './pages/Admin/AdminRecipes';
-import AdminCustomers from './pages/Admin/AdminCustomers';
-import AdminOrders from './pages/Admin/AdminOrders';
-import AdminReports from './pages/Admin/AdminReports';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import ProductForm from './pages/Inventory/ProductForm';
-
-// Import modular route components for admin routes
-import UsersPage from './pages/Settings/Users/UsersPage';
-import CashiersPage from './pages/Settings/Cashiers/CashiersPage';
-import ManagersPage from './pages/Settings/Managers/ManagersPage';
-import StoresPage from './pages/Stores';
-import StoreForm from './pages/Stores/StoreForm';
-import StoreQR from './pages/Stores/StoreQR';
-import StoreSettings from './pages/Stores/StoreSettings';
+import { MainAppRoutes } from './components/app/MainAppRoutes';
+import { AdminAppRoutes } from './components/app/AdminAppRoutes';
 
 const queryClient = new QueryClient();
 
@@ -58,215 +28,12 @@ function App() {
                   <div className="min-h-screen bg-background">
                     <Routes>
                       <Route path="/login" element={<Login />} />
-                      {/* Both root and dashboard routes show the same Dashboard component */}
-                      <Route path="/" element={
-                        <ProtectedRoute requireStoreAccess={true}>
-                          <MainLayout><Dashboard /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/dashboard" element={
-                        <ProtectedRoute requireStoreAccess={true}>
-                          <MainLayout><Dashboard /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/pos" element={
-                        <ProtectedRoute requireStoreAccess={true}>
-                          <MainLayout><POS /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/product-catalog" element={
-                        <ProtectedRoute requireStoreAccess={true}>
-                          <MainLayout><ProductCatalog /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/production" element={
-                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-                          <MainLayout><ProductionManagement /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/inventory" element={
-                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-                          <MainLayout><Inventory /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/inventory/product/new" element={
-                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-                          <MainLayout><ProductForm /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/inventory/product/:id" element={
-                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-                          <MainLayout><ProductForm /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/inventory-conversion" element={
-                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-                          <MainLayout><InventoryConversion /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/bulk-upload" element={
-                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
-                          <MainLayout><BulkUpload /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/customers" element={
-                        <ProtectedRoute requireStoreAccess={true}>
-                          <MainLayout><Customers /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/reports" element={
-                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-                          <MainLayout><Reports /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/settings" element={
-                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
-                          <MainLayout><Settings /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/order-management" element={
-                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-                          <MainLayout><OrderManagement /></MainLayout>
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/commissary-inventory" element={
-                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
-                          <MainLayout><CommissaryInventory /></MainLayout>
-                        </ProtectedRoute>
-                      } />
                       
-                      {/* Core Admin Routes */}
-                      <Route path="/admin" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <AdminDashboard />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
+                      {/* Main Application Routes */}
+                      <MainAppRoutes />
                       
-                      <Route path="/admin/stores" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <AdminStores />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      
-                      <Route path="/admin/recipes" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <AdminRecipes />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      
-                      <Route path="/admin/customers" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <AdminCustomers />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      
-                      <Route path="/admin/orders" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <AdminOrders />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      
-                      <Route path="/admin/reports" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <AdminReports />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-
-                      <Route path="/admin/bulk-upload" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <BulkUpload />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-
-                      <Route path="/admin/commissary-inventory" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <CommissaryInventory />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      
-                      <Route path="/admin/order-management" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <OrderManagement />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-
-                      {/* Admin User Management Routes */}
-                      <Route path="/admin/users" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <UsersPage />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      <Route path="/admin/cashiers" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <CashiersPage />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      <Route path="/admin/managers" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <ManagersPage />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-
-                      {/* Admin Store Management Routes */}
-                      <Route path="/admin/stores/list" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <StoresPage />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      <Route path="/admin/stores/new" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <StoreForm />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      <Route path="/admin/stores/edit/:id" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <StoreForm />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      <Route path="/admin/stores/:id/qr" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <StoreQR />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
-                      <Route path="/admin/stores/:id/settings" element={
-                        <AdminProtectedRoute>
-                          <AdminLayout>
-                            <StoreSettings />
-                          </AdminLayout>
-                        </AdminProtectedRoute>
-                      } />
+                      {/* Admin Routes */}
+                      <AdminAppRoutes />
                     </Routes>
                     <Toaster />
                   </div>
