@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
@@ -7,6 +8,7 @@ import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
 import { toast } from "sonner";
+import { TransactionItem } from "@/types/transaction";
 
 export default function POS() {
   const { currentStore } = useStore();
@@ -88,10 +90,17 @@ export default function POS() {
     }
     
     try {
+      // Convert cart items to the format expected by the transaction handler
+      const cartItemsForTransaction = items.map(item => ({
+        ...item,
+        id: item.id,
+        name: item.name
+      }));
+
       await processPayment(
         currentStore, 
         currentShift, 
-        items, 
+        cartItemsForTransaction, 
         subtotal, 
         tax, 
         total,
@@ -107,6 +116,16 @@ export default function POS() {
 
   // If we have a completed transaction, show the receipt
   if (completedTransaction) {
+    // Convert CartItems to TransactionItems for the receipt
+    const transactionItems: TransactionItem[] = completedTransaction.items.map(item => ({
+      productId: item.productId,
+      variationId: item.variationId,
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.price,
+      totalPrice: item.price * item.quantity
+    }));
+
     // Convert CompletedTransaction to Transaction format for compatibility
     const transactionForReceipt = {
       ...completedTransaction,
@@ -116,7 +135,8 @@ export default function POS() {
       paymentMethod: completedTransaction.payment_method as 'cash' | 'card' | 'e-wallet',
       status: 'completed' as const,
       createdAt: completedTransaction.created_at,
-      receiptNumber: completedTransaction.receipt_number // Map receipt_number to receiptNumber
+      receiptNumber: completedTransaction.receipt_number,
+      items: transactionItems // Use properly formatted TransactionItems
     };
 
     return (
