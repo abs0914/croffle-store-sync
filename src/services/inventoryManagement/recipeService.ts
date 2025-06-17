@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { InventoryStock } from "@/types/orderManagement";
 import { Recipe } from "@/types/inventoryManagement";
@@ -297,11 +296,7 @@ export const parseRecipesCSV = async (csvData: string, storeId: string): Promise
           item: values[4],
           cost: parseFloat(values[7]) || 0,
           unit: values[6] || 'kg',
-          store_id: storeId,
-          stock_quantity: 0,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          stock_quantity: 0
         }
       });
     }
