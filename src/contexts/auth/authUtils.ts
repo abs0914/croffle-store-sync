@@ -53,7 +53,7 @@ export const fetchAppUserData = async (email: string): Promise<AppUserData | nul
     }
 
     // Ensure the returned data includes all required AppUserData fields
-    const userData = data?.[0];
+    const userData = data?.[0] as any;
     if (userData) {
       return {
         id: userData.id,
@@ -62,7 +62,7 @@ export const fetchAppUserData = async (email: string): Promise<AppUserData | nul
         last_name: userData.last_name,
         email: userData.email,
         contact_number: userData.contact_number,
-        role: userData.role,
+        role: userData.role as UserRole,
         store_ids: userData.store_ids,
         is_active: userData.is_active,
         created_at: userData.created_at || new Date().toISOString(),
