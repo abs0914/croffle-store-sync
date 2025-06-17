@@ -39,7 +39,7 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string):
     return true;
   }
   
-  // Define allowed routes for each role
+  // Define allowed routes for each role based on Phase 4 requirements
   const roleRoutes: Record<UserRole, string[]> = {
     admin: [], // Admin gets everything, handled above
     owner: [], // Owner gets everything, handled above
@@ -48,11 +48,11 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string):
       '/pos',
       '/customers',
       '/reports',
-      '/order-management',
+      '/order-management', // Managers can access order management for purchasing finished goods
       '/settings' // Limited settings access
     ],
     cashier: [
-      '/dashboard',
+      '/dashboard', // Only Dashboard, POS, and Customers for cashiers
       '/pos',
       '/customers'
     ]
@@ -74,10 +74,10 @@ export const canAccessAdminPanel = (userRole: UserRole | undefined): boolean => 
 };
 
 /**
- * Check if a user can access production management
+ * Check if a user can access production management (commissary operations)
  */
 export const canAccessProduction = (userRole: UserRole | undefined): boolean => {
-  return userRole === 'admin' || userRole === 'owner' || userRole === 'manager';
+  return userRole === 'admin' || userRole === 'owner';
 };
 
 /**
@@ -85,6 +85,20 @@ export const canAccessProduction = (userRole: UserRole | undefined): boolean => 
  */
 export const canAccessInventory = (userRole: UserRole | undefined): boolean => {
   return userRole === 'admin' || userRole === 'owner' || userRole === 'manager';
+};
+
+/**
+ * Check if a user can access commissary inventory (admin-only)
+ */
+export const canAccessCommissary = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner';
+};
+
+/**
+ * Check if a user can access recipe management (admin-only)
+ */
+export const canAccessRecipeManagement = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner';
 };
 
 /**

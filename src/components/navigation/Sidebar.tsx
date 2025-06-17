@@ -39,7 +39,13 @@ import {
   Truck,
   Warehouse
 } from "lucide-react";
-import { checkRouteAccess, canAccessProduction, canAccessInventory } from "@/contexts/auth/role-utils";
+import { 
+  checkRouteAccess, 
+  canAccessProduction, 
+  canAccessInventory,
+  canAccessCommissary,
+  canAccessRecipeManagement
+} from "@/contexts/auth/role-utils";
 
 interface MenuItem {
   path?: string;
@@ -106,7 +112,7 @@ export function Sidebar() {
     );
   }
 
-  // Filter menu items based on user role and route access
+  // Filter menu items based on user role and Phase 4 requirements
   const getFilteredMenuItems = (): MenuItem[] => {
     const baseMenuItems: MenuItem[] = [
       { path: "/", label: "Dashboard", icon: Home },
@@ -116,29 +122,44 @@ export function Sidebar() {
         path: "/reports", 
         label: "Reports", 
         icon: BarChart3,
-        hidden: !checkRouteAccess(user?.role, "/reports")
+        hidden: !checkRouteAccess(user?.role, "/reports") // Managers and above only
       },
       {
         path: "/order-management", 
         label: "Order Management", 
         icon: Truck,
-        hidden: !checkRouteAccess(user?.role, "/order-management")
+        hidden: !checkRouteAccess(user?.role, "/order-management") // Managers and above only
       },
       {
         label: "Production",
         icon: Factory,
         submenu: [
-          { path: "/production", label: "Production Management", icon: ChefHat },
-          { path: "/inventory", label: "Store Inventory", icon: Package },
-          { path: "/commissary-inventory", label: "Commissary Inventory", icon: Warehouse },
+          { 
+            path: "/production", 
+            label: "Recipe Production", 
+            icon: ChefHat,
+            hidden: !canAccessRecipeManagement(user?.role) // Admin-only
+          },
+          { 
+            path: "/inventory", 
+            label: "Store Inventory", 
+            icon: Package,
+            hidden: !canAccessInventory(user?.role) // Managers and above
+          },
+          { 
+            path: "/commissary-inventory", 
+            label: "Commissary Inventory", 
+            icon: Warehouse,
+            hidden: !canAccessCommissary(user?.role) // Admin-only
+          },
         ],
-        hidden: !canAccessProduction(user?.role)
+        hidden: !canAccessProduction(user?.role) && !canAccessInventory(user?.role)
       },
       { 
         path: "/settings", 
         label: "Settings", 
         icon: Settings,
-        hidden: !checkRouteAccess(user?.role, "/settings")
+        hidden: !checkRouteAccess(user?.role, "/settings") // Managers and above only
       },
     ];
 

@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { checkRouteAccess, canAccessProduction, canAccessInventory } from '@/contexts/auth/role-utils';
+import { checkRouteAccess } from '@/contexts/auth/role-utils';
 
 import { BarChart3, ShoppingCart, Users, Settings, Truck } from "lucide-react";
 import { UserRole } from '@/types';
@@ -14,7 +14,6 @@ interface MenuItem {
   icon: React.ComponentType<any>;
   href: string;
   permissions: UserRole[];
-  checkAccess?: (role: UserRole) => boolean;
 }
 
 const menuItems: MenuItem[] = [
@@ -40,19 +39,19 @@ const menuItems: MenuItem[] = [
     title: "Reports",
     icon: BarChart3,
     href: "/reports",
-    permissions: ["admin", "owner", "manager"] as UserRole[],
+    permissions: ["admin", "owner", "manager"] as UserRole[], // Managers and above only
   },
   {
     title: "Order Management",
     icon: Truck,
     href: "/order-management",
-    permissions: ["admin", "owner", "manager"] as UserRole[],
+    permissions: ["admin", "owner", "manager"] as UserRole[], // Managers can purchase finished goods
   },
   {
     title: "Settings",
     icon: Settings,
     href: "/settings",
-    permissions: ["admin", "owner", "manager"] as UserRole[],
+    permissions: ["admin", "owner", "manager"] as UserRole[], // Managers and above only
   },
 ];
 
@@ -67,11 +66,6 @@ export function MainMenu() {
     
     // Additional route-specific access check
     const hasRouteAccess = checkRouteAccess(user?.role, item.href);
-    
-    // Use custom access check if provided
-    if (item.checkAccess && user?.role) {
-      return hasRolePermission && item.checkAccess(user.role) && hasRouteAccess;
-    }
     
     return hasRolePermission && hasRouteAccess;
   });

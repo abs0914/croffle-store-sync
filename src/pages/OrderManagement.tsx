@@ -14,13 +14,14 @@ export default function OrderManagement() {
   const { user, hasPermission } = useAuth();
   const [activeTab, setActiveTab] = useState("order-status");
 
-  if (!user || (!hasPermission('manager') && !hasPermission('admin'))) {
+  // Phase 4: Managers can access order management for purchasing finished goods from commissary
+  if (!user || (!hasPermission('manager') && !hasPermission('admin') && !hasPermission('owner'))) {
     return (
       <div className="container mx-auto p-6">
         <Card>
           <CardContent className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">
-              You don't have permission to access Order Management.
+              You don't have permission to access Order Management. This feature is available to managers and above.
             </p>
           </CardContent>
         </Card>
@@ -34,7 +35,10 @@ export default function OrderManagement() {
         <div>
           <h1 className="text-3xl font-bold">Order Management</h1>
           <p className="text-muted-foreground">
-            Manage and process customer orders, track delivery status, and handle fulfillment
+            {user.role === 'manager' 
+              ? "Purchase finished goods from commissary and manage store orders"
+              : "Manage and process customer orders, track delivery status, and handle fulfillment"
+            }
           </p>
         </div>
       </div>
