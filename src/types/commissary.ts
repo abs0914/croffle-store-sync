@@ -19,6 +19,7 @@ export interface CommissaryInventoryItem {
 
 export interface RecipeUpload {
   name: string;
+  category?: string; // Added category support
   description?: string;
   yield_quantity: number;
   serving_size: number;

@@ -49,38 +49,38 @@ export const RecipeUpload = () => {
   };
 
   const downloadTemplate = () => {
-    const template = `Name,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit,Total Cost
-Classic - Tiramisu,Croissant,piece,1,30,
-Classic - Tiramisu,Whipped Cream,serving,1,8,
-Classic - Tiramisu,Tiramisu Sauce,portion,1,3.5,
-Classic - Tiramisu,Choco Flakes,portion,1,2.5,51.3
-Classic - Tiramisu,Take out Box,piece,1,6,
-Classic - Tiramisu,Chopstick,pair,1,0.6,
-Classic - Tiramisu,Waxpaper,piece,1,0.7,
-Classic - Choco Nut,Croissant,piece,1,30,
-Classic - Choco Nut,Whipped Cream,serving,1,8,
-Classic - Choco Nut,Chocolate Sauce,portion,1,2.5,
-Classic - Choco Nut,Peanut,portion,1,2.5,50.3
-Classic - Choco Nut,Take out Box,piece,1,6,
-Classic - Choco Nut,Chopstick,pair,1,0.6,
-Classic - Choco Nut,Waxpaper,piece,1,0.7,
-Croffle Overload,Croissant,piece,0.5,15,
-Croffle Overload,Vanilla Ice Cream,scoop,1,15.44,
-Croffle Overload,Colored Sprinkle,portion,1,2.5,37.74
-Croffle Overload,Peanut,portion,1,2.5,
-Croffle Overload,Choco Flakes,portion,1,2.5,
-Croffle Overload,Marshmallow,portion,1,2.5,
-Croffle Overload,Overload Cup,piece,1,4,
-Croffle Overload,Popsicle,piece,1,0.3,
-Croffle Overload,Spoon,piece,1,0.5,
-Mini Croffle,Croissant,piece,0.5,15,
-Mini Croffle,Whipped Cream,serving,0.5,4,
-Mini Croffle,Chocolate Sauce,portion,1,1.25,21.5
-Mini Croffle,Caramel Sauce,portion,1,1.25,
-Mini Croffle,Colored Sprinkle,portion,1,1.25,
-Mini Croffle,Peanut,portion,1,1.25,
-Mini Croffle,Mini Take out Box,piece,1,2.4,
-Mini Croffle,Popsicle,piece,1,0.3,`;
+    const template = `Name,Category,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit,Total Cost
+Classic - Tiramisu,Classic,Croissant,piece,1,30,
+Classic - Tiramisu,Classic,Whipped Cream,serving,1,8,
+Classic - Tiramisu,Classic,Tiramisu Sauce,portion,1,3.5,
+Classic - Tiramisu,Classic,Choco Flakes,portion,1,2.5,51.3
+Classic - Tiramisu,Classic,Take out Box,piece,1,6,
+Classic - Tiramisu,Classic,Chopstick,pair,1,0.6,
+Classic - Tiramisu,Classic,Waxpaper,piece,1,0.7,
+Classic - Choco Nut,Classic,Croissant,piece,1,30,
+Classic - Choco Nut,Classic,Whipped Cream,serving,1,8,
+Classic - Choco Nut,Classic,Chocolate Sauce,portion,1,2.5,
+Classic - Choco Nut,Classic,Peanut,portion,1,2.5,50.3
+Classic - Choco Nut,Classic,Take out Box,piece,1,6,
+Classic - Choco Nut,Classic,Chopstick,pair,1,0.6,
+Classic - Choco Nut,Classic,Waxpaper,piece,1,0.7,
+Croffle Overload,Overload,Croissant,piece,0.5,15,
+Croffle Overload,Overload,Vanilla Ice Cream,scoop,1,15.44,
+Croffle Overload,Overload,Colored Sprinkle,portion,1,2.5,37.74
+Croffle Overload,Overload,Peanut,portion,1,2.5,
+Croffle Overload,Overload,Choco Flakes,portion,1,2.5,
+Croffle Overload,Overload,Marshmallow,portion,1,2.5,
+Croffle Overload,Overload,Overload Cup,piece,1,4,
+Croffle Overload,Overload,Popsicle,piece,1,0.3,
+Croffle Overload,Overload,Spoon,piece,1,0.5,
+Mini Croffle,Mini,Croissant,piece,0.5,15,
+Mini Croffle,Mini,Whipped Cream,serving,0.5,4,
+Mini Croffle,Mini,Chocolate Sauce,portion,1,1.25,21.5
+Mini Croffle,Mini,Caramel Sauce,portion,1,1.25,
+Mini Croffle,Mini,Colored Sprinkle,portion,1,1.25,
+Mini Croffle,Mini,Peanut,portion,1,1.25,
+Mini Croffle,Mini,Mini Take out Box,piece,1,2.4,
+Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -132,10 +132,11 @@ Mini Croffle,Popsicle,piece,1,0.3,`;
         <div className="text-sm text-muted-foreground">
           <p className="font-medium mb-2">CSV Format Requirements:</p>
           <ul className="list-disc list-inside space-y-1">
-            <li>Required columns: Name, Ingredient Name, Unit of Measure, Quantity Used</li>
+            <li>Required columns: Name, Category, Ingredient Name, Unit of Measure, Quantity Used</li>
             <li>Optional columns: Cost per Unit, Total Cost</li>
             <li>Each row represents one ingredient in a recipe</li>
             <li>Multiple rows with same recipe name will be grouped together</li>
+            <li>Category will be used to organize recipes in the POS system</li>
             <li>Ingredient names must match items in commissary inventory</li>
             <li>Total Cost can be calculated automatically if Cost per Unit is provided</li>
           </ul>

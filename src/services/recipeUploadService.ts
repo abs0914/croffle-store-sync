@@ -13,6 +13,15 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
 
     const commissaryMap = new Map(commissaryItems?.map(item => [item.name.toLowerCase(), item]) || []);
 
+    // Get existing categories for the store
+    const { data: existingCategories } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('store_id', storeId)
+      .eq('is_active', true);
+
+    const categoryMap = new Map(existingCategories?.map(cat => [cat.name.toLowerCase(), cat]) || []);
+
     let successCount = 0;
     let errorCount = 0;
 
@@ -38,6 +47,34 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
 
     for (const recipe of recipes) {
       try {
+        // Handle category creation if provided
+        let categoryId: string | undefined;
+        if (recipe.category) {
+          const existingCategory = categoryMap.get(recipe.category.toLowerCase());
+          if (existingCategory) {
+            categoryId = existingCategory.id;
+          } else {
+            // Create new category
+            const { data: newCategory, error: categoryError } = await supabase
+              .from('categories')
+              .insert({
+                name: recipe.category,
+                description: `Category for ${recipe.category} items`,
+                store_id: storeId,
+                is_active: true
+              })
+              .select()
+              .single();
+
+            if (categoryError) {
+              console.error(`Error creating category ${recipe.category}:`, categoryError);
+            } else {
+              categoryId = newCategory.id;
+              categoryMap.set(recipe.category.toLowerCase(), newCategory);
+            }
+          }
+        }
+
         // First, create or find a matching product for this recipe
         let productId: string;
         
@@ -52,6 +89,14 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
 
         if (existingProduct) {
           productId = existingProduct.id;
+          
+          // Update existing product with category if provided
+          if (categoryId) {
+            await supabase
+              .from('products')
+              .update({ category_id: categoryId })
+              .eq('id', existingProduct.id);
+          }
         } else {
           // Create a new product for this recipe
           const { data: newProduct, error: productError } = await supabase
@@ -63,6 +108,7 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
               cost: 0, // Will be calculated from recipe ingredients
               stock_quantity: 0,
               store_id: storeId,
+              category_id: categoryId,
               sku: `RECIPE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               is_active: true
             })

@@ -108,6 +108,7 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     });
     
     const recipeName = rowData['name'] || rowData['recipe name'] || rowData['recipename'];
+    const recipeCategory = rowData['category'] || rowData['recipe category'] || rowData['recipecategory'];
     const ingredientName = rowData['ingredient name'] || rowData['ingredientname'] || rowData['ingredient'];
     const unitOfMeasure = rowData['unit of measure'] || rowData['unitofmeasure'] || rowData['unit'] || rowData['uom'];
     const quantityUsed = rowData['quantity used'] || rowData['quantityused'] || rowData['quantity'] || rowData['qty'];
@@ -118,6 +119,7 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     if (!recipes.has(recipeName)) {
       recipes.set(recipeName, {
         name: recipeName,
+        category: recipeCategory || undefined, // Add category support
         description: `Recipe for ${recipeName}`,
         yield_quantity: 1,
         serving_size: 1,
