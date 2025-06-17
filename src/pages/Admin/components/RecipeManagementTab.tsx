@@ -48,7 +48,7 @@ export const RecipeManagementTab: React.FC = () => {
       setTemplates(data);
       
       // Extract unique categories
-      const uniqueCategories = [...new Set(data.map(t => t.category_name).filter(Boolean))];
+      const uniqueCategories = [...new Set(data.map(t => t.category_name).filter(Boolean))] as string[];
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error fetching templates:', error);

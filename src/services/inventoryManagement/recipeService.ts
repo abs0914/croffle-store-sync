@@ -39,7 +39,12 @@ export const fetchRecipes = async (storeId: string): Promise<Recipe[]> => {
       .order('name');
 
     if (error) throw error;
-    return data || [];
+    
+    // Cast approval_status to the proper type
+    return (data || []).map(recipe => ({
+      ...recipe,
+      approval_status: recipe.approval_status as 'draft' | 'pending_approval' | 'approved' | 'rejected'
+    }));
   } catch (error) {
     console.error('Error fetching recipes:', error);
     toast.error('Failed to fetch recipes');
@@ -57,7 +62,11 @@ export const createRecipe = async (recipeData: Omit<Recipe, 'id' | 'created_at' 
 
     if (error) throw error;
     toast.success('Recipe created successfully');
-    return data;
+    
+    return {
+      ...data,
+      approval_status: data.approval_status as 'draft' | 'pending_approval' | 'approved' | 'rejected'
+    };
   } catch (error) {
     console.error('Error creating recipe:', error);
     toast.error('Failed to create recipe');
@@ -76,7 +85,11 @@ export const updateRecipe = async (recipeId: string, updates: Partial<Recipe>): 
 
     if (error) throw error;
     toast.success('Recipe updated successfully');
-    return data;
+    
+    return {
+      ...data,
+      approval_status: data.approval_status as 'draft' | 'pending_approval' | 'approved' | 'rejected'
+    };
   } catch (error) {
     console.error('Error updating recipe:', error);
     toast.error('Failed to update recipe');
@@ -264,7 +277,8 @@ export const parseRecipesCSV = async (csvData: string, storeId: string): Promise
         version: 1,
         ingredients: [],
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        approval_status: 'draft' as const
       });
     }
 
@@ -309,7 +323,8 @@ export const parseRecipesJSON = async (jsonData: string, storeId: string): Promi
       id: crypto.randomUUID(),
       store_id: storeId,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      approval_status: 'draft' as const
     }));
   } catch (error) {
     throw new Error('Invalid JSON format');
