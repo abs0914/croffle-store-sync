@@ -32,7 +32,7 @@ export default function ProductionManagement() {
         </TabsList>
 
         <TabsContent value="dashboard">
-          <ProductionDashboard />
+          <ProductionDashboard storeId={currentStore?.id || ""} />
         </TabsContent>
 
         <TabsContent value="recipe-management">
@@ -40,11 +40,11 @@ export default function ProductionManagement() {
         </TabsContent>
 
         <TabsContent value="conversion-recipes">
-          <ConversionRecipesTab />
+          <ConversionRecipesTab storeId={currentStore?.id || ""} />
         </TabsContent>
 
         <TabsContent value="menu-recipes">
-          <MenuRecipesTab />
+          <MenuRecipesTab storeId={currentStore?.id || ""} />
         </TabsContent>
 
         <TabsContent value="bulk-upload">

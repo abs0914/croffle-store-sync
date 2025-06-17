@@ -3,11 +3,11 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth";
-import { PurchaseOrdersTab } from "./OrderManagement/components/PurchaseOrdersTab";
-import { DeliveryOrdersTab } from "./OrderManagement/components/DeliveryOrdersTab";
-import { GRNTab } from "./OrderManagement/components/GRNTab";
-import { AuditTrailTab } from "./OrderManagement/components/AuditTrailTab";
-import { OrderStatusManagement } from "./OrderManagement/components/OrderStatusManagement";
+import { PurchaseOrdersTab } from "./components/PurchaseOrdersTab";
+import { DeliveryOrdersTab } from "./components/DeliveryOrdersTab";
+import { GRNTab } from "./components/GRNTab";
+import { AuditTrailTab } from "./components/AuditTrailTab";
+import { OrderStatusManagement } from "./components/OrderStatusManagement";
 import { ShoppingCart, Truck, ClipboardCheck, History, Clock } from "lucide-react";
 
 export default function OrderManagement() {
