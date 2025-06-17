@@ -20,7 +20,7 @@ export const AdminUserProfile: React.FC = () => {
           <p className="text-xs text-gray-400 truncate">
             {user.email}
           </p>
-          <p className="text-xs text-blue-400 uppercase font-medium">
+          <p className="text-xs uppercase font-medium text-zinc-950">
             {user.role}
           </p>
         </div>
