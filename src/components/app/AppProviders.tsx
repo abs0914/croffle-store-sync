@@ -4,7 +4,7 @@ import { BrowserRouter as Router } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
 import { StoreProvider } from "@/contexts/StoreContext";
 import { StoreDisplayProvider } from "@/contexts/StoreDisplayContext";
-import { OptimizedCartProvider } from "@/contexts/OptimizedCartContext";
+import { CartProvider } from "@/contexts/CartContext";
 import { ShiftProvider } from "@/contexts/shift";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -19,7 +19,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <StoreProvider>
-          <OptimizedCartProvider>
+          <CartProvider>
             <ShiftProvider>
               <Router>
                 <StoreDisplayProvider>
@@ -28,7 +28,7 @@ export function AppProviders({ children }: AppProvidersProps) {
                 </StoreDisplayProvider>
               </Router>
             </ShiftProvider>
-          </OptimizedCartProvider>
+          </CartProvider>
         </StoreProvider>
       </AuthProvider>
     </QueryClientProvider>

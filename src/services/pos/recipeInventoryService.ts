@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -78,7 +79,7 @@ export const deductInventoryForRecipe = async (
         });
       } else {
         try {
-          // Update inventory stock using simple subtraction
+          // Update inventory stock using correct field name
           const { data: updatedStock, error: updateError } = await supabase
             .from('inventory_stock')
             .update({
@@ -101,6 +102,25 @@ export const deductInventoryForRecipe = async (
             quantity_deducted: requiredQuantity,
             remaining_stock: updatedStock?.stock_quantity || 0
           });
+
+          // Create inventory transaction record with correct field names
+          try {
+            await supabase
+              .from('inventory_transactions')
+              .insert({
+                product_id: ingredient.inventory_stock_id,
+                store_id: storeId,
+                transaction_type: 'recipe_usage',
+                quantity: requiredQuantity,
+                previous_quantity: currentStock,
+                new_quantity: updatedStock?.stock_quantity || 0,
+                reference_id: recipeUsage.transaction_id,
+                notes: `Recipe usage: ${recipe.name} (${recipeUsage.quantity_used} units)`,
+                created_by: userId
+              });
+          } catch (transactionError) {
+            console.warn('Failed to log inventory transaction:', transactionError);
+          }
 
         } catch (error) {
           console.error(`Error deducting stock for ingredient ${ingredient.inventory_stock_id}:`, error);
@@ -202,8 +222,6 @@ export const checkRecipeAvailability = async (
 
 /**
  * Get low stock alerts for recipe ingredients
- * Note: inventory_stock table doesn't have minimum_threshold field,
- * so we'll use a default threshold of 5 units for alerts
  */
 export const getRecipeIngredientAlerts = async (storeId: string, lowStockThreshold: number = 5): Promise<{
   item_name: string;

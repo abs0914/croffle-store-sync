@@ -1,0 +1,129 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { User as SupabaseUser } from "@supabase/supabase-js";
+import { User, UserRole } from "@/types";
+
+export interface AppUserData {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  contact_number?: string;
+  role: UserRole;
+  store_ids: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Map Supabase user to application user format
+ */
+export const mapSupabaseUser = (
+  supabaseUser: SupabaseUser,
+  appUserData?: AppUserData
+): User => {
+  const displayName = appUserData 
+    ? `${appUserData.first_name} ${appUserData.last_name}`.trim()
+    : supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User';
+
+  return {
+    id: supabaseUser.id,
+    email: supabaseUser.email || '',
+    name: displayName,
+    role: appUserData?.role || 'cashier',
+    storeIds: appUserData?.store_ids || [],
+    isActive: appUserData?.is_active ?? true,
+    lastSignIn: supabaseUser.last_sign_in_at || undefined,
+    createdAt: supabaseUser.created_at || new Date().toISOString(),
+  };
+};
+
+/**
+ * Fetch app user data from database
+ */
+export const fetchAppUserData = async (email: string): Promise<AppUserData | null> => {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_current_user_info', { user_email: email });
+
+    if (error) {
+      console.error('Error fetching app user data:', error);
+      return null;
+    }
+
+    return data?.[0] || null;
+  } catch (error) {
+    console.error('Exception fetching app user data:', error);
+    return null;
+  }
+};
+
+/**
+ * Check if user has specific permission
+ */
+export const hasPermission = (userRole: UserRole, requiredRole: UserRole): boolean => {
+  const roleHierarchy: Record<UserRole, number> = {
+    admin: 4,
+    owner: 3,
+    manager: 2,
+    cashier: 1,
+  };
+
+  return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+};
+
+/**
+ * Check if user has access to specific store
+ */
+export const hasStoreAccess = (user: User, storeId: string): boolean => {
+  if (user.role === 'admin' || user.role === 'owner') {
+    return true;
+  }
+  return user.storeIds.includes(storeId);
+};
+
+/**
+ * Get user's accessible stores
+ */
+export const getAccessibleStores = async (user: User): Promise<string[]> => {
+  if (user.role === 'admin' || user.role === 'owner') {
+    // Fetch all store IDs for admin/owner
+    try {
+      const { data: stores, error } = await supabase
+        .from('stores')
+        .select('id')
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching stores:', error);
+        return user.storeIds;
+      }
+
+      return stores.map(store => store.id);
+    } catch (error) {
+      console.error('Exception fetching stores:', error);
+      return user.storeIds;
+    }
+  }
+
+  return user.storeIds;
+};
+
+/**
+ * Refresh user session
+ */
+export const refreshUserSession = async (): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error) {
+      console.error('Session refresh error:', error);
+      return false;
+    }
+    return !!data.session;
+  } catch (error) {
+    console.error('Exception during session refresh:', error);
+    return false;
+  }
+};
