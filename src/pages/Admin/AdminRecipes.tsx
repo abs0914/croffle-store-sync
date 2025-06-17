@@ -48,6 +48,8 @@ export default function AdminRecipes() {
     
     if (action === 'delete') {
       try {
+        console.log('Starting bulk delete for recipes:', selectedRecipes);
+        
         // First delete all recipe ingredients for the selected recipes
         const { error: ingredientsError } = await supabase
           .from('recipe_ingredients')
@@ -55,8 +57,11 @@ export default function AdminRecipes() {
           .in('recipe_id', selectedRecipes);
 
         if (ingredientsError) {
+          console.error('Error deleting ingredients:', ingredientsError);
           throw ingredientsError;
         }
+
+        console.log('Ingredients deleted successfully');
 
         // Then delete the recipes themselves
         const { error: recipesError } = await supabase
@@ -65,12 +70,19 @@ export default function AdminRecipes() {
           .in('id', selectedRecipes);
 
         if (recipesError) {
+          console.error('Error deleting recipes:', recipesError);
           throw recipesError;
         }
 
+        console.log('Recipes deleted successfully');
+
         toast.success(`Successfully deleted ${selectedRecipes.length} recipe${selectedRecipes.length !== 1 ? 's' : ''} and their ingredients`);
         setSelectedRecipes([]);
+        
+        // Force a fresh fetch of recipes
+        console.log('Refreshing recipes data...');
         await refreshRecipes();
+        console.log('Recipes refreshed');
       } catch (error) {
         console.error('Error deleting recipes:', error);
         toast.error('Failed to delete recipes');

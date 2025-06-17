@@ -29,6 +29,7 @@ export const useAdminRecipesData = () => {
   const fetchRecipes = async () => {
     setIsLoading(true);
     try {
+      console.log('Fetching recipes...');
       const { data, error } = await supabase
         .from('recipes')
         .select(`
@@ -44,10 +45,12 @@ export const useAdminRecipesData = () => {
         throw error;
       }
 
+      console.log('Fetched recipes:', data?.length || 0);
       setRecipes(data as Recipe[] || []);
     } catch (error: any) {
       console.error('Error fetching recipes:', error);
       toast.error('Failed to load recipes');
+      setRecipes([]); // Clear recipes on error
     } finally {
       setIsLoading(false);
     }
