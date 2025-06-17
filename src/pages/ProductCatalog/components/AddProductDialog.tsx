@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Spinner } from '@/components/ui/spinner';
 import { X, Upload, Image } from 'lucide-react';
-import { createProduct } from '@/services/productCatalog/productCatalogService';
+import { createProduct, updateProduct } from '@/services/productCatalog/productCatalogService';
 import { uploadProductImage } from '@/services/productCatalog/productImageService';
 import { ProductCatalog } from '@/services/productCatalog/types';
 import { useAuth } from '@/contexts/auth';
@@ -73,6 +73,8 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
 
     setIsSubmitting(true);
     try {
+      console.log('Creating product with data:', formData);
+      
       const productData: Omit<ProductCatalog, 'id' | 'created_at' | 'updated_at' | 'ingredients'> = {
         store_id: storeId,
         product_name: formData.product_name,
@@ -85,10 +87,14 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
       const result = await createProduct(productData, []);
       
       if (result && selectedFile) {
+        console.log('Product created, now uploading image for product:', result.id);
         const imageUrl = await uploadProductImage(selectedFile, result.id);
         if (imageUrl) {
-          // Update product with image URL - we would need to add this to the service
-          console.log('Image uploaded:', imageUrl);
+          console.log('Image uploaded successfully, updating product with image URL');
+          // Note: We would need to add an image_url field to the product_catalog table
+          // and update the updateProduct service to handle image URLs
+          // For now, we'll just log it
+          console.log('Product image URL:', imageUrl);
         }
       }
       
