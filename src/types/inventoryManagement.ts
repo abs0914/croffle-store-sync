@@ -37,6 +37,7 @@ export interface Recipe {
   description?: string;
   instructions?: string;
   yield_quantity: number;
+  serving_size?: number;
   store_id: string;
   product_id: string;
   variation_id?: string;
@@ -44,20 +45,33 @@ export interface Recipe {
   version: number;
   created_at: string;
   updated_at: string;
-  ingredients?: RecipeIngredient[];
+  category_name?: string;
   total_cost?: number;
   cost_per_serving?: number;
+  approval_status?: 'draft' | 'pending_approval' | 'approved' | 'rejected';
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+  ingredients?: RecipeIngredient[];
+  stores?: { name: string };
 }
 
 export interface RecipeIngredient {
   id: string;
   recipe_id: string;
   inventory_stock_id: string;
+  commissary_item_id?: string;
   quantity: number;
   unit: string;
   cost_per_unit?: number;
   created_at: string;
-  inventory_stock?: InventoryStock;
+  inventory_stock?: {
+    id: string;
+    item: string;
+    unit: string;
+    cost?: number;
+    stock_quantity: number;
+  };
 }
 
 export interface InventoryStock {

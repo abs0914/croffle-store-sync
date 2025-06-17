@@ -10,7 +10,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { RecipeTemplate, RecipeTemplateIngredient, createRecipeTemplate, updateRecipeTemplate } from '@/services/recipeManagement/recipeTemplateService';
+import { RecipeTemplate, RecipeTemplateIngredient } from '@/services/recipeManagement/types';
+import { 
+  createRecipeTemplate, 
+  updateRecipeTemplate, 
+  RecipeTemplateData,
+  RecipeTemplateIngredientInput 
+} from '@/services/recipeManagement/recipeTemplateService';
 
 interface RecipeTemplateDialogProps {
   isOpen: boolean;
@@ -41,7 +47,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
     serving_size: 1
   });
 
-  const [ingredients, setIngredients] = useState<Omit<RecipeTemplateIngredient, 'id' | 'recipe_template_id' | 'created_at'>[]>([]);
+  const [ingredients, setIngredients] = useState<RecipeTemplateIngredientInput[]>([]);
   const [commissaryItems, setCommissaryItems] = useState<CommissaryItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +68,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
         });
         
         setIngredients(template.ingredients.map(ing => ({
+          commissary_item_id: ing.commissary_item_id,
           commissary_item_name: ing.commissary_item_name,
           quantity: ing.quantity,
           unit: ing.unit,
@@ -117,6 +124,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
 
   const addIngredient = () => {
     setIngredients([...ingredients, {
+      commissary_item_id: '',
       commissary_item_name: '',
       quantity: 1,
       unit: 'g',
@@ -124,14 +132,15 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
     }]);
   };
 
-  const updateIngredient = (index: number, field: string, value: any) => {
+  const updateIngredient = (index: number, field: keyof RecipeTemplateIngredientInput, value: any) => {
     const updated = [...ingredients];
     updated[index] = { ...updated[index], [field]: value };
     
-    // Auto-fill unit and cost when commissary item is selected
+    // Auto-fill when commissary item is selected
     if (field === 'commissary_item_name' && value) {
       const item = commissaryItems.find(ci => ci.name === value);
       if (item) {
+        updated[index].commissary_item_id = item.id;
         updated[index].unit = item.unit;
         updated[index].cost_per_unit = item.unit_cost || 0;
       }
@@ -157,10 +166,17 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       return;
     }
 
+    // Validate ingredients have commissary items selected
+    const invalidIngredients = ingredients.filter(ing => !ing.commissary_item_id || !ing.commissary_item_name);
+    if (invalidIngredients.length > 0) {
+      toast.error('Please select commissary items for all ingredients');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const templateData = {
+      const templateData: RecipeTemplateData = {
         ...formData,
         created_by: (await supabase.auth.getUser()).data.user?.id || '',
         is_active: true,
