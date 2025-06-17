@@ -55,10 +55,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <StoreProvider>
-          <StoreDisplayProvider>
-            <OptimizedCartProvider>
-              <ShiftProvider>
-                <Router>
+          <OptimizedCartProvider>
+            <ShiftProvider>
+              <Router>
+                <StoreDisplayProvider>
                   <Routes>
                     {/* Public routes */}
                     <Route path="/" element={<Index />} />
@@ -309,10 +309,10 @@ function App() {
                     } />
                   </Routes>
                   <Toaster />
-                </Router>
-              </ShiftProvider>
-            </OptimizedCartProvider>
-          </StoreDisplayProvider>
+                </StoreDisplayProvider>
+              </Router>
+            </ShiftProvider>
+          </OptimizedCartProvider>
         </StoreProvider>
       </AuthProvider>
     </QueryClientProvider>
