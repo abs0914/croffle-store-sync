@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Grid3X3, List, Download, Settings, Upload, Copy } from 'lucide-react';
+import { Grid3X3, List } from 'lucide-react';
 import { Store } from '@/types';
 
 interface AdminRecipesHeaderProps {
@@ -37,29 +37,6 @@ export const AdminRecipesHeader: React.FC<AdminRecipesHeaderProps> = ({
           <p className="text-gray-500">
             Manage master recipe templates and deploy them across your store network
           </p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Upload className="h-4 w-4 mr-2" />
-            Import
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm">
-            <Copy className="h-4 w-4 mr-2" />
-            Deploy to Stores
-          </Button>
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4 mr-2" />
-            Recipe Settings
-          </Button>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Recipe
-          </Button>
         </div>
       </div>
       
