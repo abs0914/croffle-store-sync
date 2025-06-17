@@ -1,25 +1,10 @@
-
 import React from 'react';
 import { AdminCustomerCard } from './AdminCustomerCard';
 import { AdminCustomerListItem } from './AdminCustomerListItem';
 import { Spinner } from '@/components/ui/spinner';
 import { Store } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
-
-interface CustomerWithStats {
-  id: string;
-  name: string;
-  email?: string;
-  phone: string;
-  storeId?: string;
-  storeName?: string;
-  address?: string;
-  loyaltyPoints: number;
-  totalOrders: number;
-  totalSpent: number;
-  lastOrderDate?: string;
-  registrationDate: string;
-}
+import { CustomerWithStats } from '../types/adminTypes';
 
 interface AdminCustomersListProps {
   customers: CustomerWithStats[];

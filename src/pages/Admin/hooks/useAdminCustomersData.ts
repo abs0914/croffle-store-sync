@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Customer } from '@/types';
 import { Store } from '@/types';
+import { CustomerWithStats } from '../types/adminTypes';
 
 interface CustomerMetrics {
   totalCustomers: number;
@@ -11,13 +10,6 @@ interface CustomerMetrics {
   newCustomers: number;
   topStoreCustomers: number;
   averageLifetimeValue: number;
-}
-
-interface CustomerWithStats extends Customer {
-  totalOrders: number;
-  totalSpent: number;
-  lastOrderDate?: string;
-  registrationDate: string;
 }
 
 export const useAdminCustomersData = () => {

@@ -1,25 +1,10 @@
-
 import React from 'react';
 import { AdminOrderCard } from './AdminOrderCard';
 import { AdminOrderListItem } from './AdminOrderListItem';
 import { Spinner } from '@/components/ui/spinner';
 import { Store } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
-
-interface AdminOrder {
-  id: string;
-  orderNumber: string;
-  storeId: string;
-  storeName?: string;
-  customerId?: string;
-  customerName?: string;
-  status: string;
-  total: number;
-  itemCount: number;
-  paymentMethod: string;
-  createdAt: string;
-  items: any[];
-}
+import { AdminOrder } from '../types/adminTypes';
 
 interface AdminOrdersListProps {
   orders: AdminOrder[];

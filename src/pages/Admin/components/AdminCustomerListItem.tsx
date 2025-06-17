@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,21 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { User, Mail, Phone, Building2, ShoppingBag, DollarSign, Calendar, MoreVertical } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Store } from '@/types';
-
-interface CustomerWithStats {
-  id: string;
-  name: string;
-  email?: string;
-  phone: string;
-  storeId?: string;
-  storeName?: string;
-  address?: string;
-  loyaltyPoints: number;
-  totalOrders: number;
-  totalSpent: number;
-  lastOrderDate?: string;
-  registrationDate: string;
-}
+import { CustomerWithStats } from '../types/adminTypes';
 
 interface AdminCustomerListItemProps {
   customer: CustomerWithStats;
