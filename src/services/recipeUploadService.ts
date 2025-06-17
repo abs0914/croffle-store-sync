@@ -22,6 +22,15 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
 
     const categoryMap = new Map(existingCategories?.map(cat => [cat.name.toLowerCase(), cat]) || []);
 
+    // Get store inventory items for the specific store
+    const { data: storeInventoryItems } = await supabase
+      .from('inventory_stock')
+      .select('id, item, store_id')
+      .eq('store_id', storeId)
+      .eq('is_active', true);
+
+    const storeInventoryMap = new Map(storeInventoryItems?.map(item => [item.item.toLowerCase(), item]) || []);
+
     let successCount = 0;
     let errorCount = 0;
 
@@ -146,12 +155,42 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
           continue;
         }
 
-        // Add ingredients with proper unit mapping
-        const ingredientInserts = recipe.ingredients.map(ingredient => {
+        // Add ingredients with proper inventory references
+        const ingredientInserts = [];
+        
+        for (const ingredient of recipe.ingredients) {
           const commissaryItem = commissaryMap.get(ingredient.commissary_item_name.toLowerCase());
           
           if (!commissaryItem) {
             console.warn(`Ingredient "${ingredient.commissary_item_name}" not found in commissary inventory`);
+            continue;
+          }
+
+          // Try to find a corresponding store inventory item, or create one if needed
+          let storeInventoryItem = storeInventoryMap.get(ingredient.commissary_item_name.toLowerCase());
+          
+          if (!storeInventoryItem) {
+            // Create a store inventory item for this ingredient
+            const { data: newStoreItem, error: storeItemError } = await supabase
+              .from('inventory_stock')
+              .insert({
+                store_id: storeId,
+                item: ingredient.commissary_item_name,
+                unit: unitMapping[ingredient.unit.toLowerCase()] || ingredient.unit,
+                stock_quantity: 0,
+                cost: ingredient.cost_per_unit || commissaryItem.unit_cost || 0,
+                is_active: true
+              })
+              .select()
+              .single();
+
+            if (storeItemError) {
+              console.error(`Error creating store inventory item for ${ingredient.commissary_item_name}:`, storeItemError);
+              continue;
+            }
+            
+            storeInventoryItem = newStoreItem;
+            storeInventoryMap.set(ingredient.commissary_item_name.toLowerCase(), newStoreItem);
           }
 
           // Ensure unit is mapped to valid enum value
@@ -161,43 +200,46 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
           const validUnits = ['kg', 'g', 'pieces', 'liters', 'ml', 'boxes', 'packs'];
           const finalUnit = validUnits.includes(mappedUnit) ? mappedUnit : 'pieces';
           
-          return {
+          ingredientInserts.push({
             recipe_id: recipeData.id,
-            commissary_item_id: commissaryItem?.id,
-            inventory_stock_id: '00000000-0000-0000-0000-000000000000', // Placeholder
+            commissary_item_id: commissaryItem.id,
+            inventory_stock_id: storeInventoryItem.id,
             quantity: ingredient.quantity,
             unit: finalUnit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-            cost_per_unit: ingredient.cost_per_unit || commissaryItem?.unit_cost || 0
-          };
-        });
+            cost_per_unit: ingredient.cost_per_unit || commissaryItem.unit_cost || 0
+          });
+        }
 
-        const { error: ingredientsError } = await supabase
-          .from('recipe_ingredients')
-          .insert(ingredientInserts);
+        if (ingredientInserts.length > 0) {
+          const { error: ingredientsError } = await supabase
+            .from('recipe_ingredients')
+            .insert(ingredientInserts);
 
-        if (ingredientsError) {
-          console.error(`Error adding ingredients for recipe ${recipe.name}:`, ingredientsError);
-          errorCount++;
+          if (ingredientsError) {
+            console.error(`Error adding ingredients for recipe ${recipe.name}:`, ingredientsError);
+            errorCount++;
+          } else {
+            // Calculate total recipe cost and update the product
+            const totalCost = ingredientInserts.reduce((sum, ingredient) => {
+              return sum + (ingredient.quantity * ingredient.cost_per_unit);
+            }, 0);
+
+            // Update product with calculated cost and suggested selling price
+            const suggestedPrice = totalCost * 2.5; // 150% markup as example
+            
+            await supabase
+              .from('products')
+              .update({
+                cost: totalCost,
+                price: suggestedPrice
+              })
+              .eq('id', productId);
+
+            successCount++;
+          }
         } else {
-          // Calculate total recipe cost and update the product
-          const totalCost = recipe.ingredients.reduce((sum, ingredient) => {
-            const commissaryItem = commissaryMap.get(ingredient.commissary_item_name.toLowerCase());
-            const costPerUnit = ingredient.cost_per_unit || commissaryItem?.unit_cost || 0;
-            return sum + (ingredient.quantity * costPerUnit);
-          }, 0);
-
-          // Update product with calculated cost and suggested selling price
-          const suggestedPrice = totalCost * 2.5; // 150% markup as example
-          
-          await supabase
-            .from('products')
-            .update({
-              cost: totalCost,
-              price: suggestedPrice
-            })
-            .eq('id', productId);
-
-          successCount++;
+          console.warn(`No valid ingredients found for recipe ${recipe.name}`);
+          errorCount++;
         }
 
       } catch (error) {
