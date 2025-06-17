@@ -15,7 +15,6 @@ import Orders from '@/pages/Orders';
 import Stores from '@/pages/Stores';
 import InventoryManagement from '@/pages/Inventory/InventoryManagement';
 import CommissaryInventory from '@/pages/Inventory/CommissaryInventory';
-import BulkUpload from "@/pages/BulkUpload";
 
 function App() {
   return (
@@ -130,16 +129,6 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <Settings />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/bulk-upload"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "owner"]}>
-                <MainLayout>
-                  <BulkUpload />
                 </MainLayout>
               </ProtectedRoute>
             }

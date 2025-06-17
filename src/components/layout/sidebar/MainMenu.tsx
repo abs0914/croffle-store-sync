@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
@@ -11,7 +12,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 
-import { Package, Upload, Users, Settings, Store, BarChart3, ShoppingCart, Boxes, Truck } from "lucide-react";
+import { Package, Users, Settings, Store, BarChart3, ShoppingCart, Boxes, Truck } from "lucide-react";
 import { UserRole } from '@/types';
 
 interface MenuItem {
@@ -45,12 +46,6 @@ const menuItems = [
     icon: Truck,
     href: "/inventory",
     permissions: ["admin", "owner", "manager"] as UserRole[],
-  },
-  {
-    title: "Bulk Upload",
-    icon: Upload,
-    href: "/bulk-upload",
-    permissions: ["admin", "owner"] as UserRole[],
   },
   {
     title: "Order Management",
