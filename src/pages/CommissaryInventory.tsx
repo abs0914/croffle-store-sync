@@ -1,16 +1,16 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Package, AlertTriangle, CheckCircle, Warehouse } from "lucide-react";
+import { Plus, Search, Edit, Package, AlertTriangle, CheckCircle, Warehouse, Trash2 } from "lucide-react";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { 
   fetchCommissaryInventory, 
   getCommissaryStockLevel, 
-  getCommissaryStockLevelColor 
+  getCommissaryStockLevelColor,
+  removeDuplicateCommissaryItems
 } from "@/services/inventoryManagement/commissaryInventoryService";
 import { fetchSuppliers } from "@/services/inventoryManagement/supplierService";
 import { useAuth } from "@/contexts/auth";
@@ -26,6 +26,7 @@ export default function CommissaryInventory() {
   const [items, setItems] = useState<CommissaryInventoryItem[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removingDuplicates, setRemovingDuplicates] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showStockDialog, setShowStockDialog] = useState(false);
@@ -113,6 +114,15 @@ export default function CommissaryInventory() {
   const handleDeleteItem = (item: CommissaryInventoryItem) => {
     setSelectedItem(item);
     setShowDeleteDialog(true);
+  };
+
+  const handleRemoveDuplicates = async () => {
+    setRemovingDuplicates(true);
+    const success = await removeDuplicateCommissaryItems();
+    if (success) {
+      await loadData(); // Refresh the data after removing duplicates
+    }
+    setRemovingDuplicates(false);
   };
 
   if (!hasAdminAccess) {
@@ -219,6 +229,16 @@ export default function CommissaryInventory() {
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Raw Material
+          </Button>
+          
+          <Button
+            onClick={handleRemoveDuplicates}
+            disabled={removingDuplicates}
+            variant="outline"
+            className="text-orange-600 hover:text-orange-700 border-orange-300 hover:border-orange-400"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            {removingDuplicates ? "Removing..." : "Remove Duplicates"}
           </Button>
         </div>
       </div>

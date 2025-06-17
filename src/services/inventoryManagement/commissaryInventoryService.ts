@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { toast } from "sonner";
@@ -158,6 +157,94 @@ export const deleteCommissaryInventoryItem = async (id: string): Promise<boolean
   } catch (error) {
     console.error('Error deleting commissary inventory item:', error);
     toast.error('Failed to delete commissary inventory item');
+    return false;
+  }
+};
+
+export const removeDuplicateCommissaryItems = async (): Promise<boolean> => {
+  try {
+    // Fetch all active commissary items
+    const { data: items, error: fetchError } = await supabase
+      .from('commissary_inventory')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
+
+    if (fetchError) throw fetchError;
+
+    if (!items || items.length === 0) {
+      toast.info('No items found to deduplicate');
+      return true;
+    }
+
+    // Group items by name (case-insensitive) and category
+    const itemGroups = new Map<string, typeof items>();
+    
+    items.forEach(item => {
+      const key = `${item.name.toLowerCase().trim()}-${item.category}`;
+      if (!itemGroups.has(key)) {
+        itemGroups.set(key, []);
+      }
+      itemGroups.get(key)!.push(item);
+    });
+
+    // Find duplicates and merge them
+    let duplicatesFound = 0;
+    let itemsRemoved = 0;
+
+    for (const [key, group] of itemGroups) {
+      if (group.length > 1) {
+        duplicatesFound++;
+        
+        // Sort by created_at to keep the oldest item
+        group.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        
+        const keepItem = group[0]; // Keep the first (oldest) item
+        const duplicateItems = group.slice(1); // Remove the rest
+        
+        // Sum up the stock quantities from duplicates
+        const totalStock = group.reduce((sum, item) => sum + (item.current_stock || 0), 0);
+        
+        // Update the kept item with the total stock
+        const { error: updateError } = await supabase
+          .from('commissary_inventory')
+          .update({
+            current_stock: totalStock,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', keepItem.id);
+
+        if (updateError) {
+          console.error(`Error updating item ${keepItem.name}:`, updateError);
+          continue;
+        }
+
+        // Delete the duplicate items
+        for (const duplicateItem of duplicateItems) {
+          const { error: deleteError } = await supabase
+            .from('commissary_inventory')
+            .delete()
+            .eq('id', duplicateItem.id);
+
+          if (deleteError) {
+            console.error(`Error deleting duplicate item ${duplicateItem.name}:`, deleteError);
+          } else {
+            itemsRemoved++;
+          }
+        }
+      }
+    }
+
+    if (duplicatesFound === 0) {
+      toast.info('No duplicate items found');
+    } else {
+      toast.success(`Successfully removed ${itemsRemoved} duplicate items and consolidated ${duplicatesFound} item groups`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error removing duplicate commissary items:', error);
+    toast.error('Failed to remove duplicate items');
     return false;
   }
 };
