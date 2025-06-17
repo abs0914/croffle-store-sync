@@ -5,6 +5,8 @@ import { AdminRecipesMetrics } from './components/AdminRecipesMetrics';
 import { AdminRecipesList } from './components/AdminRecipesList';
 import { AdminRecipeBulkActions } from './components/AdminRecipeBulkActions';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function AdminRecipes() {
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
@@ -43,8 +45,30 @@ export default function AdminRecipes() {
 
   const handleBulkAction = async (action: string) => {
     console.log('Bulk action:', action, 'on recipes:', selectedRecipes);
-    setSelectedRecipes([]);
-    await refreshRecipes();
+    
+    if (action === 'delete') {
+      try {
+        const { error } = await supabase
+          .from('recipes')
+          .update({ is_active: false })
+          .in('id', selectedRecipes);
+
+        if (error) {
+          throw error;
+        }
+
+        toast.success(`Successfully deleted ${selectedRecipes.length} recipe${selectedRecipes.length !== 1 ? 's' : ''}`);
+        setSelectedRecipes([]);
+        await refreshRecipes();
+      } catch (error) {
+        console.error('Error deleting recipes:', error);
+        toast.error('Failed to delete recipes');
+      }
+    } else {
+      // Handle other bulk actions
+      setSelectedRecipes([]);
+      await refreshRecipes();
+    }
   };
 
   return (
