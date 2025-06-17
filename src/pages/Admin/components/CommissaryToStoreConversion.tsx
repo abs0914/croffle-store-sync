@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -97,7 +96,15 @@ export const CommissaryToStoreConversion: React.FC = () => {
         .order('name');
 
       if (error) throw error;
-      setCommissaryItems(data || []);
+      
+      // Cast the data to ensure proper typing with type assertions
+      const typedItems = (data || []).map(item => ({
+        ...item,
+        category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+        unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair'
+      }));
+      
+      setCommissaryItems(typedItems);
     } catch (error) {
       console.error('Error fetching commissary items:', error);
       toast.error('Failed to load commissary items');

@@ -41,7 +41,15 @@ export const CommissaryInventoryTab: React.FC = () => {
         .order('name');
 
       if (error) throw error;
-      setItems(data || []);
+      
+      // Cast the data to ensure proper typing with type assertions
+      const typedItems = (data || []).map(item => ({
+        ...item,
+        category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+        unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair'
+      }));
+      
+      setItems(typedItems);
     } catch (error) {
       console.error('Error fetching commissary inventory:', error);
       toast.error('Failed to load commissary inventory');
