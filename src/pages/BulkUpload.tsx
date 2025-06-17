@@ -59,6 +59,7 @@ export default function BulkUpload() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Upload complete recipes with ingredient lists and costs. 
                   Make sure all ingredients exist in your commissary inventory first.
+                  You can upload to a specific store or all stores at once.
                 </p>
               </CardContent>
             </Card>

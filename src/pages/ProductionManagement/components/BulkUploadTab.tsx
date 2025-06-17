@@ -1,11 +1,14 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RawIngredientUpload } from "@/components/uploads/RawIngredientUpload";
 import { RecipeUpload } from "@/components/uploads/RecipeUpload";
 import { Button } from "@/components/ui/button";
 import { Download, Upload, Package, ChefHat, Factory } from "lucide-react";
+import { StoreSelector } from "@/components/uploads/StoreSelector";
+import { supabase } from "@/integrations/supabase/client";
+import { Store } from "@/types";
 
 interface BulkUploadTabProps {
   storeId: string;
@@ -13,6 +16,31 @@ interface BulkUploadTabProps {
 
 export function BulkUploadTab({ storeId }: BulkUploadTabProps) {
   const [activeUploadTab, setActiveUploadTab] = useState("commissary");
+  const [selectedStoreId, setSelectedStoreId] = useState<string>(storeId);
+  const [stores, setStores] = useState<Store[]>([]);
+
+  useEffect(() => {
+    fetchStores();
+  }, []);
+
+  useEffect(() => {
+    setSelectedStoreId(storeId);
+  }, [storeId]);
+
+  const fetchStores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setStores(data || []);
+    } catch (error) {
+      console.error('Error fetching stores:', error);
+    }
+  };
 
   const handleDownloadTemplate = (type: string) => {
     // Template download logic would go here
@@ -151,7 +179,14 @@ export function BulkUploadTab({ storeId }: BulkUploadTabProps) {
               <CardTitle>Upload Menu Recipes</CardTitle>
             </CardHeader>
             <CardContent>
-              <RecipeUpload />
+              <div className="space-y-4">
+                <StoreSelector
+                  stores={stores}
+                  selectedStoreId={selectedStoreId}
+                  onStoreChange={setSelectedStoreId}
+                />
+                <RecipeUpload />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,11 +8,43 @@ import { useStore } from "@/contexts/StoreContext";
 import { parseRecipesCSV } from "@/utils/csvParser";
 import { bulkUploadRecipes } from "@/services/recipeUploadService";
 import { toast } from "sonner";
+import { StoreSelector } from "./StoreSelector";
+import { supabase } from "@/integrations/supabase/client";
+import { Store } from "@/types";
 
 export const RecipeUpload = () => {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("");
+  const [stores, setStores] = useState<Store[]>([]);
   const { currentStore } = useStore();
+
+  useEffect(() => {
+    fetchStores();
+  }, []);
+
+  useEffect(() => {
+    // Set default store when currentStore changes
+    if (currentStore && !selectedStoreId) {
+      setSelectedStoreId(currentStore.id);
+    }
+  }, [currentStore, selectedStoreId]);
+
+  const fetchStores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setStores(data || []);
+    } catch (error) {
+      console.error('Error fetching stores:', error);
+      toast.error('Failed to load stores');
+    }
+  };
 
   const handleFileUpload = async () => {
     if (!uploadFile) {
@@ -21,8 +52,8 @@ export const RecipeUpload = () => {
       return;
     }
 
-    if (!currentStore) {
-      toast.error("Please select a store first");
+    if (!selectedStoreId) {
+      toast.error("Please select a target store");
       return;
     }
 
@@ -36,10 +67,38 @@ export const RecipeUpload = () => {
         return;
       }
 
-      const success = await bulkUploadRecipes(recipes, currentStore.id);
-      if (success) {
-        setUploadFile(null);
+      if (selectedStoreId === "all") {
+        // Upload to all stores
+        let totalSuccess = 0;
+        let totalFailed = 0;
+
+        for (const store of stores) {
+          try {
+            const success = await bulkUploadRecipes(recipes, store.id);
+            if (success) {
+              totalSuccess++;
+              toast.success(`Successfully uploaded recipes to ${store.name}`);
+            } else {
+              totalFailed++;
+              toast.error(`Failed to upload recipes to ${store.name}`);
+            }
+          } catch (error) {
+            console.error(`Error uploading to ${store.name}:`, error);
+            totalFailed++;
+            toast.error(`Failed to upload recipes to ${store.name}`);
+          }
+        }
+
+        toast.success(`Upload completed: ${totalSuccess} stores successful, ${totalFailed} stores failed`);
+      } else {
+        // Upload to selected store
+        const success = await bulkUploadRecipes(recipes, selectedStoreId);
+        if (!success) {
+          return;
+        }
       }
+
+      setUploadFile(null);
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Failed to process upload file");
@@ -91,6 +150,10 @@ Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
     window.URL.revokeObjectURL(url);
   };
 
+  const selectedStoreName = selectedStoreId === "all" 
+    ? "All Stores" 
+    : stores.find(s => s.id === selectedStoreId)?.name || "Unknown Store";
+
   return (
     <Card>
       <CardHeader>
@@ -100,6 +163,26 @@ Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <StoreSelector
+          stores={stores}
+          selectedStoreId={selectedStoreId}
+          onStoreChange={setSelectedStoreId}
+          disabled={isUploading}
+        />
+
+        {selectedStoreId && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-700">
+              <strong>Target:</strong> {selectedStoreName}
+            </p>
+            {selectedStoreId === "all" && (
+              <p className="text-xs text-blue-600 mt-1">
+                Recipes will be uploaded to all {stores.length} active stores
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="recipe-file">CSV File</Label>
           <Input
@@ -113,7 +196,7 @@ Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
         <div className="flex gap-2">
           <Button 
             onClick={handleFileUpload}
-            disabled={!uploadFile || isUploading || !currentStore}
+            disabled={!uploadFile || isUploading || !selectedStoreId}
             className="flex-1"
           >
             <Upload className="h-4 w-4 mr-2" />
