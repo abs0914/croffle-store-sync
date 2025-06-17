@@ -1,53 +1,48 @@
 
-import { useEffect } from "react";
-import { useAuth } from "@/contexts/auth";
 import { useStore } from "@/contexts/StoreContext";
-import { useShift } from "@/contexts/shift";
-import { Navigate } from "react-router-dom";
-import DashboardSummary from "@/components/dashboard/DashboardSummary";
-import RecentTransactions from "@/components/dashboard/RecentTransactions";
-import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { StoreInfo } from "@/components/dashboard/StoreInfo";
 import QuickActions from "@/components/dashboard/QuickActions";
+import DashboardSummary from "@/components/dashboard/DashboardSummary";
+import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
+import RecentTransactions from "@/components/dashboard/RecentTransactions";
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  console.log('Dashboard component rendering...');
+  
   const { currentStore } = useStore();
-  const { currentShift } = useShift();
+  console.log('Current store:', currentStore);
 
-  // Redirect owners to their specialized dashboard
-  if (user?.role === 'owner') {
-    return <Navigate to="/owner-dashboard" replace />;
+  if (!currentStore) {
+    console.log('No store selected, showing store selection message');
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Welcome to your POS System</h1>
+          <p className="text-muted-foreground">Please select a store from the sidebar to get started.</p>
+        </div>
+      </div>
+    );
   }
+
+  console.log('Rendering dashboard with store:', currentStore.name);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        {currentStore && (
-          <div className="text-sm text-muted-foreground">
-            {currentStore.name}
-            {currentShift && ` • Shift #${currentShift.id.slice(0, 8)}`}
-          </div>
-        )}
-      </div>
-
-      {currentStore ? (
-        <>
+      <DashboardHeader />
+      
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
           <DashboardSummary storeId={currentStore.id} />
-          
-          <div className="grid gap-6 md:grid-cols-2">
-            <RecentTransactions storeId={currentStore.id} />
-            <InventoryAlerts storeId={currentStore.id} />
-          </div>
-          
           <QuickActions />
-        </>
-      ) : (
-        <div className="text-center py-12">
-          <h2 className="text-xl font-semibold mb-2">Welcome to Croffle Store</h2>
-          <p className="text-muted-foreground">Please select a store to view the dashboard.</p>
         </div>
-      )}
+        
+        <div className="space-y-6">
+          <StoreInfo />
+          <InventoryAlerts storeId={currentStore.id} />
+          <RecentTransactions storeId={currentStore.id} />
+        </div>
+      </div>
     </div>
   );
 }
