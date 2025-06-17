@@ -212,13 +212,13 @@ export const getRecipeTemplates = async (): Promise<RecipeTemplate[]> => {
       id: recipe.id,
       name: recipe.name,
       description: recipe.description,
-      category_name: recipe.category_name,
+      category_name: undefined, // recipes table doesn't have category_name
       instructions: recipe.instructions,
       yield_quantity: recipe.yield_quantity,
       serving_size: recipe.serving_size,
       version: recipe.version || 1,
       is_active: recipe.is_active || true,
-      created_by: recipe.created_by || 'system',
+      created_by: 'system', // recipes table doesn't have created_by
       created_at: recipe.created_at,
       updated_at: recipe.updated_at,
       ingredients: (recipe.recipe_ingredients || []).map((ing: any) => ({
