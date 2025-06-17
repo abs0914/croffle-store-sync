@@ -1,3 +1,4 @@
+
 import { Routes, Route } from "react-router-dom";
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
@@ -270,7 +271,7 @@ export function AppRoutes() {
         </AdminProtectedRoute>
       } />
 
-      {/* Protected app routes */}
+      {/* Protected app routes - NO RECIPE MANAGEMENT ROUTES */}
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <MainLayout>
