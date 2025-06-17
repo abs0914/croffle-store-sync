@@ -31,9 +31,6 @@ export const useAdminRecipesData = () => {
     try {
       console.log('Fetching recipes...');
       
-      // Add a small delay to ensure database changes are reflected
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
       const { data, error } = await supabase
         .from('recipes')
         .select(`
@@ -53,11 +50,8 @@ export const useAdminRecipesData = () => {
       console.log('Fetched recipes:', data?.length || 0);
       console.log('Recipe data:', data);
       
-      // Ensure we're setting fresh data
-      setRecipes([]);
-      setTimeout(() => {
-        setRecipes(data as Recipe[] || []);
-      }, 10);
+      // Set recipes directly without delays or timeouts
+      setRecipes(data as Recipe[] || []);
       
     } catch (error: any) {
       console.error('Error fetching recipes:', error);
