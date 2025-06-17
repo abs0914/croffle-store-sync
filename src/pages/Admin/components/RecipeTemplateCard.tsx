@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RecipeTemplate } from '@/services/recipeManagement/recipeTemplateService';
+import { RecipeTemplate } from '@/services/recipeManagement/types';
 
 interface RecipeTemplateCardProps {
   template: RecipeTemplate;
@@ -43,19 +42,27 @@ export const RecipeTemplateCard: React.FC<RecipeTemplateCardProps> = ({
   );
 
   const costPerServing = template.serving_size ? totalCost / template.serving_size : totalCost;
-  const imageUrl = (template as any).image_url;
 
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         {/* Recipe Image */}
-        {imageUrl ? (
+        {template.image_url ? (
           <div className="w-full h-32 mb-3 rounded-md overflow-hidden">
             <img 
-              src={imageUrl} 
+              src={template.image_url} 
               alt={template.name}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                console.error('Failed to load image:', template.image_url);
+                // Hide the image and show placeholder on error
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
             />
+            <div className="w-full h-32 bg-gray-100 flex items-center justify-center hidden">
+              <ImageIcon className="h-8 w-8 text-gray-400" />
+            </div>
           </div>
         ) : (
           <div className="w-full h-32 mb-3 rounded-md bg-gray-100 flex items-center justify-center">
