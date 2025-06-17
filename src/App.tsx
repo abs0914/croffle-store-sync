@@ -31,6 +31,7 @@ import AdminCustomers from './pages/Admin/AdminCustomers';
 import AdminOrders from './pages/Admin/AdminOrders';
 import AdminReports from './pages/Admin/AdminReports';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import ProductForm from './pages/Inventory/ProductForm';
 
 // Import modular route components for admin routes
 import UsersPage from './pages/Settings/Users/UsersPage';
@@ -81,6 +82,16 @@ function App() {
                       <Route path="/inventory" element={
                         <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
                           <MainLayout><Inventory /></MainLayout>
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/inventory/product/new" element={
+                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
+                          <MainLayout><ProductForm /></MainLayout>
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/inventory/product/:id" element={
+                        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
+                          <MainLayout><ProductForm /></MainLayout>
                         </ProtectedRoute>
                       } />
                       <Route path="/inventory-conversion" element={

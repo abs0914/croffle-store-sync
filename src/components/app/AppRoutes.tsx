@@ -297,6 +297,29 @@ export function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      {/* Store-level Inventory Routes */}
+      <Route path="/inventory" element={
+        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
+          <MainLayout>
+            <InventoryPage />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/inventory/product/new" element={
+        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
+          <MainLayout>
+            <ProductForm />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+      <Route path="/inventory/product/:id" element={
+        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
+          <MainLayout>
+            <ProductForm />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+
       <Route path="/customers" element={
         <ProtectedRoute>
           <MainLayout>
