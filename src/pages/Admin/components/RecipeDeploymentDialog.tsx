@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { RecipeTemplate } from '@/services/recipeManagement/recipeTemplateService';
+import { RecipeTemplate } from '@/services/recipeManagement/types';
 
 interface RecipeDeploymentDialogProps {
   isOpen: boolean;
