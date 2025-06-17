@@ -7,12 +7,14 @@ export interface RecipeTemplate {
   instructions?: string;
   yield_quantity: number;
   serving_size?: number;
-  version: number;
   is_active: boolean;
+  version: number;
   created_by: string;
   created_at: string;
   updated_at: string;
   ingredients: RecipeTemplateIngredient[];
+  total_cost?: number;
+  cost_per_serving?: number;
 }
 
 export interface RecipeTemplateIngredient {
@@ -26,7 +28,9 @@ export interface RecipeTemplateIngredient {
 }
 
 export interface DeploymentResult {
-  store_id: string;
-  status: 'deployed' | 'failed';
-  message: string;
+  storeId: string;
+  success: boolean;
+  recipeId?: string;
+  productId?: string;
+  error?: string;
 }

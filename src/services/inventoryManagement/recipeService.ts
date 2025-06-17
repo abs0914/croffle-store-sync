@@ -111,7 +111,10 @@ export const addRecipeIngredient = async (ingredientData: {
   try {
     const { error } = await supabase
       .from('recipe_ingredients')
-      .insert(ingredientData);
+      .insert({
+        ...ingredientData,
+        unit: ingredientData.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs'
+      });
 
     if (error) throw error;
   } catch (error) {

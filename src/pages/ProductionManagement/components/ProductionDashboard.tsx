@@ -1,277 +1,177 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { AlertTriangle, Package, Factory, ChefHat, TrendingUp } from "lucide-react";
-import { fetchCommissaryItemsForConversion } from "@/services/inventoryManagement/inventoryConversionService";
-import { fetchInventoryStock } from "@/services/inventoryManagement/recipeService";
-import { fetchInventoryAlerts } from "@/services/storeInventory/inventoryAlertService";
-import type { CommissaryInventoryItem, InventoryStock } from "@/types/inventoryManagement";
-import type { InventoryAlert } from "@/services/storeInventory/inventoryAlertService";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Package, AlertTriangle, TrendingUp, Clock } from 'lucide-react';
+import { fetchInventoryStock } from '@/services/inventoryManagement/recipeService';
+import { InventoryStock } from '@/types/inventoryManagement';
+import { toast } from 'sonner';
 
 interface ProductionDashboardProps {
   storeId: string;
 }
 
 export function ProductionDashboard({ storeId }: ProductionDashboardProps) {
-  const [commissaryItems, setCommissaryItems] = useState<CommissaryInventoryItem[]>([]);
-  const [storeInventory, setStoreInventory] = useState<InventoryStock[]>([]);
-  const [alerts, setAlerts] = useState<InventoryAlert[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [inventoryItems, setInventoryItems] = useState<InventoryStock[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
+    loadInventoryItems();
   }, [storeId]);
 
-  const loadDashboardData = async () => {
-    setLoading(true);
-    const [commissaryData, storeData, alertsData] = await Promise.all([
-      fetchCommissaryItemsForConversion(),
-      fetchInventoryStock(storeId),
-      fetchInventoryAlerts(storeId)
-    ]);
-    
-    setCommissaryItems(commissaryData);
-    setStoreInventory(storeData);
-    setAlerts(alertsData);
-    setLoading(false);
+  const loadInventoryItems = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchInventoryStock(storeId);
+      // Ensure cost property is defined for all items
+      const itemsWithCost = data.map(item => ({
+        ...item,
+        cost: item.cost ?? 0
+      }));
+      setInventoryItems(itemsWithCost);
+    } catch (error) {
+      console.error('Error loading inventory items:', error);
+      toast.error('Failed to load inventory items');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const lowStockCommissary = commissaryItems.filter(item => 
-    item.current_stock <= item.minimum_threshold && item.current_stock > 0
-  );
-  
-  const outOfStockCommissary = commissaryItems.filter(item => 
-    item.current_stock === 0
-  );
+  const lowStockItems = inventoryItems.filter(item => item.stock_quantity < 10 && item.stock_quantity > 0);
+  const outOfStockItems = inventoryItems.filter(item => item.stock_quantity === 0);
+  const totalValue = inventoryItems.reduce((sum, item) => sum + (item.stock_quantity * (item.cost || 0)), 0);
 
-  const lowStockStore = storeInventory.filter(item => 
-    item.stock_quantity <= 5 && item.stock_quantity > 0
-  );
-
-  const outOfStockStore = storeInventory.filter(item => 
-    item.stock_quantity === 0
-  );
-
-  const metrics = [
+  const stats = [
     {
-      title: "Commissary Items",
-      value: commissaryItems.length,
-      subtitle: `${lowStockCommissary.length} low stock`,
-      icon: Factory,
-      color: "text-blue-600",
-      alert: lowStockCommissary.length > 0
-    },
-    {
-      title: "Store Inventory",
-      value: storeInventory.length,
-      subtitle: `${lowStockStore.length} low stock`,
+      title: "Total Inventory Items",
+      value: inventoryItems.length,
       icon: Package,
-      color: "text-green-600",
-      alert: lowStockStore.length > 0
+      color: "text-blue-600",
+      bgColor: "bg-blue-50"
     },
     {
-      title: "Active Alerts",
-      value: alerts.length,
-      subtitle: "Inventory alerts",
+      title: "Low Stock Alerts",
+      value: lowStockItems.length,
       icon: AlertTriangle,
-      color: alerts.length > 0 ? "text-red-600" : "text-gray-600",
-      alert: alerts.length > 0
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-50"
     },
     {
-      title: "Conversion Ready",
-      value: commissaryItems.filter(item => item.current_stock > item.minimum_threshold).length,
-      subtitle: "Items ready for conversion",
+      title: "Out of Stock",
+      value: outOfStockItems.length,
+      icon: Clock,
+      color: "text-red-600",
+      bgColor: "bg-red-50"
+    },
+    {
+      title: "Total Inventory Value",
+      value: `₱${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
       icon: TrendingUp,
-      color: "text-purple-600",
-      alert: false
+      color: "text-green-600",
+      bgColor: "bg-green-50"
     }
   ];
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Loading...</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">--</div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Metrics Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {metrics.map((metric, index) => (
-          <Card key={index} className={metric.alert ? "border-orange-200" : ""}>
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Production Dashboard</h2>
+        <p className="text-muted-foreground">
+          Overview of your store's inventory and production status
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{metric.title}</CardTitle>
-              <metric.icon className={`h-4 w-4 ${metric.color}`} />
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {stat.title}
+              </CardTitle>
+              <div className={`p-2 rounded-full ${stat.bgColor}`}>
+                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metric.value}</div>
-              <p className="text-xs text-muted-foreground">{metric.subtitle}</p>
+              <div className="text-2xl font-bold">{stat.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Commissary Status */}
+      {/* Low Stock Alerts */}
+      {lowStockItems.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Factory className="h-5 w-5" />
-              Commissary Status
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Low Stock Alerts
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {outOfStockCommissary.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-red-600 mb-2">Out of Stock</h4>
-                  <div className="space-y-2">
-                    {outOfStockCommissary.slice(0, 3).map((item) => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <span className="text-sm">{item.name}</span>
-                        <Badge variant="destructive">0 {item.unit}</Badge>
-                      </div>
-                    ))}
-                    {outOfStockCommissary.length > 3 && (
-                      <p className="text-xs text-muted-foreground">
-                        +{outOfStockCommissary.length - 3} more items
-                      </p>
-                    )}
+            <div className="space-y-2">
+              {lowStockItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div>
+                    <span className="font-medium">{item.item}</span>
+                    <span className="text-sm text-muted-foreground ml-2">({item.unit})</span>
                   </div>
+                  <Badge variant="outline" className="text-yellow-700 border-yellow-300">
+                    {item.stock_quantity} remaining
+                  </Badge>
                 </div>
-              )}
-
-              {lowStockCommissary.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-orange-600 mb-2">Low Stock</h4>
-                  <div className="space-y-2">
-                    {lowStockCommissary.slice(0, 3).map((item) => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <span className="text-sm">{item.name}</span>
-                        <Badge variant="outline" className="text-orange-600 border-orange-600">
-                          {item.current_stock} {item.unit}
-                        </Badge>
-                      </div>
-                    ))}
-                    {lowStockCommissary.length > 3 && (
-                      <p className="text-xs text-muted-foreground">
-                        +{lowStockCommissary.length - 3} more items
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {outOfStockCommissary.length === 0 && lowStockCommissary.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  All commissary items are well stocked
-                </p>
-              )}
+              ))}
             </div>
           </CardContent>
         </Card>
+      )}
 
-        {/* Store Inventory Status */}
+      {/* Out of Stock Alerts */}
+      {outOfStockItems.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Store Inventory Status
+              <Clock className="h-5 w-5 text-red-600" />
+              Out of Stock Items
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {outOfStockStore.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-red-600 mb-2">Out of Stock</h4>
-                  <div className="space-y-2">
-                    {outOfStockStore.slice(0, 3).map((item) => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <span className="text-sm">{item.item}</span>
-                        <Badge variant="destructive">0 {item.unit}</Badge>
-                      </div>
-                    ))}
-                    {outOfStockStore.length > 3 && (
-                      <p className="text-xs text-muted-foreground">
-                        +{outOfStockStore.length - 3} more items
-                      </p>
-                    )}
+            <div className="space-y-2">
+              {outOfStockItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                  <div>
+                    <span className="font-medium">{item.item}</span>
+                    <span className="text-sm text-muted-foreground ml-2">({item.unit})</span>
                   </div>
+                  <Badge variant="destructive">
+                    Out of Stock
+                  </Badge>
                 </div>
-              )}
-
-              {lowStockStore.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-orange-600 mb-2">Low Stock</h4>
-                  <div className="space-y-2">
-                    {lowStockStore.slice(0, 3).map((item) => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <span className="text-sm">{item.item}</span>
-                        <Badge variant="outline" className="text-orange-600 border-orange-600">
-                          {item.stock_quantity} {item.unit}
-                        </Badge>
-                      </div>
-                    ))}
-                    {lowStockStore.length > 3 && (
-                      <p className="text-xs text-muted-foreground">
-                        +{lowStockStore.length - 3} more items
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {outOfStockStore.length === 0 && lowStockStore.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  All store items are well stocked
-                </p>
-              )}
+              ))}
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Suggested Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-3">
-            {outOfStockStore.length > 0 && (
-              <Button variant="outline" className="justify-start">
-                <Factory className="h-4 w-4 mr-2" />
-                Convert Items to Restock
-              </Button>
-            )}
-            {lowStockCommissary.length > 0 && (
-              <Button variant="outline" className="justify-start">
-                <Package className="h-4 w-4 mr-2" />
-                Order Commissary Supplies
-              </Button>
-            )}
-            {alerts.length > 0 && (
-              <Button variant="outline" className="justify-start">
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Review Inventory Alerts
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {inventoryItems.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium mb-2">No inventory data available</h3>
+            <p className="text-muted-foreground">
+              Inventory items will appear here once they are added to your store.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
