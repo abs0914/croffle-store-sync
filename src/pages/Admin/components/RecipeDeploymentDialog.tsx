@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -21,35 +22,65 @@ interface Store {
   is_active: boolean;
 }
 
+interface StoreWithDeploymentStatus extends Store {
+  isAlreadyDeployed: boolean;
+  existingRecipeId?: string;
+}
+
 export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
   isOpen,
   onClose,
   template,
   onSuccess
 }) => {
-  const [stores, setStores] = useState<Store[]>([]);
+  const [stores, setStores] = useState<StoreWithDeploymentStatus[]>([]);
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      fetchStores();
+    if (isOpen && template) {
+      fetchStoresWithDeploymentStatus();
       setSelectedStoreIds([]);
     }
-  }, [isOpen]);
+  }, [isOpen, template]);
 
-  const fetchStores = async () => {
+  const fetchStoresWithDeploymentStatus = async () => {
+    if (!template) return;
+    
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch all active stores
+      const { data: storesData, error: storesError } = await supabase
         .from('stores')
         .select('id, name, address, is_active')
         .eq('is_active', true)
         .order('name');
 
-      if (error) throw error;
-      setStores(data || []);
+      if (storesError) throw storesError;
+
+      // Check which stores already have this recipe deployed
+      const { data: existingRecipes, error: recipesError } = await supabase
+        .from('recipes')
+        .select('id, store_id')
+        .eq('name', template.name)
+        .eq('is_active', true);
+
+      if (recipesError) throw recipesError;
+
+      // Create a map of deployed stores
+      const deployedStoreMap = new Map(
+        existingRecipes?.map(recipe => [recipe.store_id, recipe.id]) || []
+      );
+
+      // Combine store data with deployment status
+      const storesWithStatus: StoreWithDeploymentStatus[] = (storesData || []).map(store => ({
+        ...store,
+        isAlreadyDeployed: deployedStoreMap.has(store.id),
+        existingRecipeId: deployedStoreMap.get(store.id)
+      }));
+
+      setStores(storesWithStatus);
     } catch (error) {
       console.error('Error fetching stores:', error);
       toast.error('Failed to load stores');
@@ -67,10 +98,11 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
   };
 
   const handleSelectAll = () => {
-    if (selectedStoreIds.length === stores.length) {
+    const availableStores = stores.filter(store => !store.isAlreadyDeployed);
+    if (selectedStoreIds.length === availableStores.length) {
       setSelectedStoreIds([]);
     } else {
-      setSelectedStoreIds(stores.map(store => store.id));
+      setSelectedStoreIds(availableStores.map(store => store.id));
     }
   };
 
@@ -90,7 +122,7 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
           stock_quantity: 0,
           store_id: storeId,
           is_active: false, // Keep inactive until approved
-          image_url: (template as any).image_url || null // Deploy the image from template
+          image_url: template.image_url || null
         })
         .select()
         .single();
@@ -210,6 +242,9 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
 
   if (!template) return null;
 
+  const availableStores = stores.filter(store => !store.isAlreadyDeployed);
+  const deployedStores = stores.filter(store => store.isAlreadyDeployed);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -222,21 +257,21 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
             <p className="text-sm text-muted-foreground">
               Select the stores where you want to deploy this recipe template. The recipe will be created 
               with "pending approval" status and will need to be approved by store managers before 
-              it becomes available as a product. The recipe image will also be deployed to all selected stores.
+              it becomes available as a product.
             </p>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="text-base font-medium">Select Stores</Label>
+              <Label className="text-base font-medium">Available Stores</Label>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={handleSelectAll}
-                disabled={isLoading}
+                disabled={isLoading || availableStores.length === 0}
               >
-                {selectedStoreIds.length === stores.length ? 'Deselect All' : 'Select All'}
+                {selectedStoreIds.length === availableStores.length ? 'Deselect All' : 'Select All'}
               </Button>
             </div>
 
@@ -246,39 +281,62 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
                 <p className="text-muted-foreground">Loading stores...</p>
               </div>
             ) : (
-              <div className="border rounded-md p-4 max-h-64 overflow-y-auto space-y-3">
-                {stores.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No active stores found
-                  </p>
-                ) : (
-                  stores.map(store => (
-                    <div key={store.id} className="flex items-center space-x-3">
-                      <Checkbox
-                        id={`store-${store.id}`}
-                        checked={selectedStoreIds.includes(store.id)}
-                        onCheckedChange={(checked) => handleStoreSelection(store.id, !!checked)}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <Label 
-                          htmlFor={`store-${store.id}`} 
-                          className="cursor-pointer text-sm font-medium"
-                        >
-                          {store.name}
-                        </Label>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {store.address}
-                        </p>
+              <div className="space-y-4">
+                {availableStores.length > 0 && (
+                  <div className="border rounded-md p-4 max-h-64 overflow-y-auto space-y-3">
+                    {availableStores.map(store => (
+                      <div key={store.id} className="flex items-center space-x-3">
+                        <Checkbox
+                          id={`store-${store.id}`}
+                          checked={selectedStoreIds.includes(store.id)}
+                          onCheckedChange={(checked) => handleStoreSelection(store.id, !!checked)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <Label 
+                            htmlFor={`store-${store.id}`} 
+                            className="cursor-pointer text-sm font-medium"
+                          >
+                            {store.name}
+                          </Label>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {store.address}
+                          </p>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+
+                {deployedStores.length > 0 && (
+                  <div>
+                    <Label className="text-base font-medium text-muted-foreground mb-2 block">
+                      Already Deployed ({deployedStores.length})
+                    </Label>
+                    <div className="border rounded-md p-4 bg-gray-50 space-y-2">
+                      {deployedStores.map(store => (
+                        <div key={store.id} className="flex items-center space-x-3 text-sm text-muted-foreground">
+                          <div className="w-4 h-4 rounded-full bg-green-500 flex-shrink-0"></div>
+                          <div className="flex-1">
+                            <span className="font-medium">{store.name}</span>
+                            <span className="ml-2 text-xs">- Recipe already deployed</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))
+                  </div>
+                )}
+
+                {availableStores.length === 0 && deployedStores.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No stores found
+                  </p>
                 )}
               </div>
             )}
 
             {selectedStoreIds.length > 0 && (
               <p className="text-sm text-muted-foreground">
-                {selectedStoreIds.length} store{selectedStoreIds.length !== 1 ? 's' : ''} selected
+                {selectedStoreIds.length} store{selectedStoreIds.length !== 1 ? 's' : ''} selected for deployment
               </p>
             )}
           </div>
