@@ -1,14 +1,21 @@
 
 import React, { useState } from 'react';
-import { AdminOrdersHeader } from './components/AdminOrdersHeader';
-import { AdminOrdersMetrics } from './components/AdminOrdersMetrics';
-import { AdminOrdersList } from './components/AdminOrdersList';
-import { AdminOrderBulkActions } from './components/AdminOrderBulkActions';
-import { useAdminOrdersData } from './hooks/useAdminOrdersData';
+import { AdminPurchaseOrdersHeader } from './components/AdminPurchaseOrdersHeader';
+import { AdminPurchaseOrdersMetrics } from './components/AdminPurchaseOrdersMetrics';
+import { AdminPurchaseOrdersList } from './components/AdminPurchaseOrdersList';
+import { AdminPurchaseOrderBulkActions } from './components/AdminPurchaseOrderBulkActions';
+import { useAdminPurchaseOrdersData } from './hooks/useAdminPurchaseOrdersData';
+import { ViewPurchaseOrderDialog } from '@/pages/OrderManagement/components/ViewPurchaseOrderDialog';
+import { PurchaseOrder } from '@/types/orderManagement';
+import { updatePurchaseOrder } from '@/services/orderManagement/purchaseOrderService';
+import { useAuth } from '@/contexts/auth';
+import { toast } from 'sonner';
 
 export default function AdminOrders() {
+  const { user } = useAuth();
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
   
   const {
     orders,
@@ -24,8 +31,9 @@ export default function AdminOrders() {
     isLoading,
     refreshOrders,
     orderMetrics,
-    stores
-  } = useAdminOrdersData();
+    stores,
+    bulkApproveOrders
+  } = useAdminPurchaseOrdersData();
 
   const handleSelectOrder = (orderId: string) => {
     setSelectedOrders(prev => 
@@ -44,14 +52,46 @@ export default function AdminOrders() {
   };
 
   const handleBulkAction = async (action: string) => {
-    console.log('Bulk action:', action, 'on orders:', selectedOrders);
+    if (action === 'approve') {
+      await bulkApproveOrders(selectedOrders);
+    } else if (action === 'reject') {
+      try {
+        const promises = selectedOrders.map(orderId =>
+          updatePurchaseOrder(orderId, { 
+            status: 'cancelled',
+            approved_by: user?.id
+          })
+        );
+        await Promise.all(promises);
+        toast.success(`Rejected ${selectedOrders.length} orders`);
+        await refreshOrders();
+      } catch (error) {
+        toast.error('Failed to reject orders');
+      }
+    }
     setSelectedOrders([]);
+  };
+
+  const handleApproveOrder = async (orderId: string) => {
+    await updatePurchaseOrder(orderId, {
+      status: 'approved',
+      approved_by: user?.id,
+      approved_at: new Date().toISOString()
+    });
+    await refreshOrders();
+  };
+
+  const handleRejectOrder = async (orderId: string) => {
+    await updatePurchaseOrder(orderId, {
+      status: 'cancelled',
+      approved_by: user?.id
+    });
     await refreshOrders();
   };
 
   return (
     <div className="space-y-6">
-      <AdminOrdersHeader 
+      <AdminPurchaseOrdersHeader 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         storeFilter={storeFilter}
@@ -65,17 +105,17 @@ export default function AdminOrders() {
         stores={stores}
       />
       
-      <AdminOrdersMetrics metrics={orderMetrics} />
+      <AdminPurchaseOrdersMetrics metrics={orderMetrics} />
       
       {selectedOrders.length > 0 && (
-        <AdminOrderBulkActions 
+        <AdminPurchaseOrderBulkActions 
           selectedCount={selectedOrders.length}
           onBulkAction={handleBulkAction}
           onClearSelection={() => setSelectedOrders([])}
         />
       )}
       
-      <AdminOrdersList
+      <AdminPurchaseOrdersList
         orders={filteredOrders}
         selectedOrders={selectedOrders}
         viewMode={viewMode}
@@ -83,8 +123,20 @@ export default function AdminOrders() {
         onSelectOrder={handleSelectOrder}
         onSelectAll={handleSelectAll}
         onRefresh={refreshOrders}
+        onViewOrder={setViewingOrder}
+        onApproveOrder={handleApproveOrder}
+        onRejectOrder={handleRejectOrder}
         stores={stores}
       />
+
+      {viewingOrder && (
+        <ViewPurchaseOrderDialog
+          order={viewingOrder}
+          open={!!viewingOrder}
+          onOpenChange={(open) => !open && setViewingOrder(null)}
+          onSuccess={refreshOrders}
+        />
+      )}
     </div>
   );
 }
