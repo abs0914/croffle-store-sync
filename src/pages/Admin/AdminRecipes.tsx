@@ -48,16 +48,27 @@ export default function AdminRecipes() {
     
     if (action === 'delete') {
       try {
-        const { error } = await supabase
-          .from('recipes')
-          .update({ is_active: false })
-          .in('id', selectedRecipes);
+        // First delete all recipe ingredients for the selected recipes
+        const { error: ingredientsError } = await supabase
+          .from('recipe_ingredients')
+          .delete()
+          .in('recipe_id', selectedRecipes);
 
-        if (error) {
-          throw error;
+        if (ingredientsError) {
+          throw ingredientsError;
         }
 
-        toast.success(`Successfully deleted ${selectedRecipes.length} recipe${selectedRecipes.length !== 1 ? 's' : ''}`);
+        // Then delete the recipes themselves
+        const { error: recipesError } = await supabase
+          .from('recipes')
+          .delete()
+          .in('id', selectedRecipes);
+
+        if (recipesError) {
+          throw recipesError;
+        }
+
+        toast.success(`Successfully deleted ${selectedRecipes.length} recipe${selectedRecipes.length !== 1 ? 's' : ''} and their ingredients`);
         setSelectedRecipes([]);
         await refreshRecipes();
       } catch (error) {

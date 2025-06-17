@@ -80,12 +80,21 @@ export const updateRecipe = async (id: string, updates: Partial<Recipe>): Promis
 
 export const deleteRecipe = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    // First delete all recipe ingredients
+    const { error: ingredientsError } = await supabase
+      .from('recipe_ingredients')
+      .delete()
+      .eq('recipe_id', id);
+
+    if (ingredientsError) throw ingredientsError;
+
+    // Then delete the recipe itself
+    const { error: recipeError } = await supabase
       .from('recipes')
-      .update({ is_active: false })
+      .delete()
       .eq('id', id);
 
-    if (error) throw error;
+    if (recipeError) throw recipeError;
 
     toast.success('Recipe deleted successfully');
     return true;
