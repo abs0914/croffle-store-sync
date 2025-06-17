@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,7 @@ import { format } from 'date-fns';
 
 export const StockOrdersManagement: React.FC = () => {
   const { user } = useAuth();
-  const storeId = user?.store_ids?.[0] || '';
+  const storeId = user?.storeIds?.[0] || '';
 
   const { data: orders = [], isLoading, refetch } = useQuery({
     queryKey: ['stock-orders', storeId],

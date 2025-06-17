@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +16,7 @@ import {
   Package,
   AlertCircle
 } from 'lucide-react';
-import { approveRecipe, rejectRecipe } from '@/services/recipeManagement/recipeCrudService';
+import { approveRecipe, rejectRecipe } from '@/services/recipeManagement/recipeApprovalService';
 import { useState } from 'react';
 
 interface AdminRecipesListProps {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,7 +38,7 @@ export const ProductCatalogManagement: React.FC = () => {
   const [productToDelete, setProductToDelete] = useState<ProductCatalog | null>(null);
 
   // Get user's first store for now (can be enhanced for multi-store)
-  const storeId = user?.store_ids?.[0] || '';
+  const storeId = user?.storeIds?.[0] || '';
 
   const { data: products = [], isLoading, refetch } = useQuery({
     queryKey: ['product-catalog', storeId],

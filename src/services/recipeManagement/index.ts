@@ -10,10 +10,16 @@ export {
   duplicateRecipeTemplate
 } from './recipeCrudService';
 
+// Export approval operations
+export {
+  approveRecipe,
+  rejectRecipe
+} from './recipeApprovalService';
+
 // Export deployment operations
 export {
-  deployRecipeToStores,
-  getRecipeDeployments
+  deployRecipeToProductCatalog,
+  deployRecipeToMultipleStores
 } from './recipeDeploymentService';
 
 // Export data fetching

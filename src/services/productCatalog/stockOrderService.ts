@@ -18,7 +18,10 @@ export const fetchStockOrders = async (storeId: string): Promise<StockOrder[]> =
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(order => ({
+      ...order,
+      status: order.status as StockOrder['status']
+    }));
   } catch (error) {
     console.error('Error fetching stock orders:', error);
     toast.error('Failed to fetch stock orders');
@@ -33,7 +36,15 @@ export const createStockOrder = async (
   try {
     const { data: orderData, error: orderError } = await supabase
       .from('stock_orders')
-      .insert(order)
+      .insert({
+        store_id: order.store_id,
+        order_date: order.order_date,
+        status: order.status,
+        requested_by: order.requested_by,
+        approved_by: order.approved_by,
+        fulfilled_date: order.fulfilled_date,
+        notes: order.notes
+      })
       .select()
       .single();
 
@@ -53,7 +64,10 @@ export const createStockOrder = async (
     }
 
     toast.success('Stock order created successfully');
-    return orderData;
+    return {
+      ...orderData,
+      status: orderData.status as StockOrder['status']
+    };
   } catch (error) {
     console.error('Error creating stock order:', error);
     toast.error('Failed to create stock order');
