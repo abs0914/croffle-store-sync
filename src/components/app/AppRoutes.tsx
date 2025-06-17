@@ -17,11 +17,11 @@ export function AppRoutes() {
       <Route path="/customer-form/:storeId" element={<CustomerForm />} />
       <Route path="/customer-form-preview/:storeId" element={<CustomerFormPreview />} />
 
-      {/* Admin routes - call as function to get the fragment content */}
-      {AdminRoutes()}
+      {/* Admin routes */}
+      <AdminRoutes />
 
-      {/* Protected app routes - call as function to get the fragment content */}
-      {ProtectedRoutes()}
+      {/* Protected app routes */}
+      <ProtectedRoutes />
     </Routes>
   );
 }

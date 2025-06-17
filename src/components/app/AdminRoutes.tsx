@@ -85,9 +85,9 @@ export function AdminRoutes() {
       } />
 
       {/* Modular Route Groups */}
-      {AdminInventoryRoutes()}
-      {AdminUserRoutes()}
-      {AdminStoreRoutes()}
+      <AdminInventoryRoutes />
+      <AdminUserRoutes />
+      <AdminStoreRoutes />
     </>
   );
 }

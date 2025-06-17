@@ -1,5 +1,4 @@
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
 import { StoreProvider } from "@/contexts/StoreContext";
@@ -8,29 +7,25 @@ import { CartProvider } from "@/contexts/CartContext";
 import { ShiftProvider } from "@/contexts/shift";
 import { Toaster } from "@/components/ui/sonner";
 
-const queryClient = new QueryClient();
-
 interface AppProvidersProps {
   children: React.ReactNode;
 }
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <StoreProvider>
-          <CartProvider>
-            <ShiftProvider>
-              <Router>
-                <StoreDisplayProvider>
-                  {children}
-                  <Toaster />
-                </StoreDisplayProvider>
-              </Router>
-            </ShiftProvider>
-          </CartProvider>
-        </StoreProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <StoreProvider>
+        <CartProvider>
+          <ShiftProvider>
+            <Router>
+              <StoreDisplayProvider>
+                {children}
+                <Toaster />
+              </StoreDisplayProvider>
+            </Router>
+          </ShiftProvider>
+        </CartProvider>
+      </StoreProvider>
+    </AuthProvider>
   );
 }
