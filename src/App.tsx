@@ -15,7 +15,7 @@ import Customers from './pages/Customers';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import MainLayout from './components/layout/MainLayout';
+import { MainLayout } from './components/layout/MainLayout';
 import OrderManagement from './pages/OrderManagement';
 import BulkUpload from './pages/BulkUpload';
 import Inventory from './pages/Inventory';
