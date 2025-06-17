@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Spinner } from '@/components/ui/spinner';
 import { X, Upload, Image } from 'lucide-react';
 import { createProduct } from '@/services/productCatalog/productCatalogService';
+import { uploadProductImage } from '@/services/productCatalog/productImageService';
 import { ProductCatalog } from '@/services/productCatalog/types';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -28,6 +29,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
   const storeId = user?.storeIds?.[0] || '';
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     product_name: '',
@@ -48,6 +50,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setImagePreview(e.target?.result as string);
@@ -57,6 +60,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
   };
 
   const handleRemoveImage = () => {
+    setSelectedFile(null);
     setImagePreview(null);
   };
 
@@ -80,6 +84,14 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
 
       const result = await createProduct(productData, []);
       
+      if (result && selectedFile) {
+        const imageUrl = await uploadProductImage(selectedFile, result.id);
+        if (imageUrl) {
+          // Update product with image URL - we would need to add this to the service
+          console.log('Image uploaded:', imageUrl);
+        }
+      }
+      
       if (result) {
         toast.success('Product created successfully');
         onProductAdded();
@@ -101,6 +113,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
       is_available: true,
       display_order: 0
     });
+    setSelectedFile(null);
     setImagePreview(null);
     onClose();
   };

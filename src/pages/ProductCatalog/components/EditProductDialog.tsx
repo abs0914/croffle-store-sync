@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Spinner } from '@/components/ui/spinner';
 import { X, Image } from 'lucide-react';
 import { updateProduct } from '@/services/productCatalog/productCatalogService';
+import { uploadProductImage, deleteProductImage } from '@/services/productCatalog/productImageService';
 import { ProductCatalog } from '@/services/productCatalog/types';
 import { toast } from 'sonner';
 
@@ -26,7 +27,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   product
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     product_name: '',
     description: '',
@@ -44,7 +47,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         is_available: product.is_available,
         display_order: product.display_order
       });
+      setCurrentImageUrl(null); // Products don't have image_url in the current schema
       setImagePreview(null);
+      setSelectedFile(null);
     }
   }, [product]);
 
@@ -59,6 +64,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setImagePreview(e.target?.result as string);
@@ -68,7 +74,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   };
 
   const handleRemoveImage = () => {
+    setSelectedFile(null);
     setImagePreview(null);
+    setCurrentImageUrl(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,6 +85,19 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
     setIsSubmitting(true);
     try {
+      let imageUrl = currentImageUrl;
+
+      // Handle image upload if a new file is selected
+      if (selectedFile) {
+        // Delete old image if it exists
+        if (currentImageUrl) {
+          await deleteProductImage(currentImageUrl);
+        }
+        
+        // Upload new image
+        imageUrl = await uploadProductImage(selectedFile, product.id);
+      }
+
       const updates: Partial<ProductCatalog> = {
         product_name: formData.product_name,
         description: formData.description || undefined,
@@ -100,7 +121,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   };
 
   const handleClose = () => {
+    setSelectedFile(null);
     setImagePreview(null);
+    setCurrentImageUrl(null);
     onClose();
   };
 
@@ -169,10 +192,10 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
               <div>
                 <Label>Product Image</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                  {imagePreview ? (
+                  {imagePreview || currentImageUrl ? (
                     <div className="relative">
                       <img
-                        src={imagePreview}
+                        src={imagePreview || currentImageUrl || ''}
                         alt="Product preview"
                         className="w-full h-32 object-cover rounded"
                       />

@@ -13,7 +13,9 @@ import {
   EyeOff,
   Edit,
   Trash2,
-  Package
+  Package,
+  Tag,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -33,6 +35,7 @@ import {
 import { AddProductDialog } from './components/AddProductDialog';
 import { EditProductDialog } from './components/EditProductDialog';
 import { BulkOperations } from './components/BulkOperations';
+import { CategoryManager } from './components/CategoryManager';
 
 export const ProductCatalogManagement: React.FC = () => {
   const { user } = useAuth();
@@ -43,6 +46,7 @@ export const ProductCatalogManagement: React.FC = () => {
   const [productToDelete, setProductToDelete] = useState<ProductCatalog | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<ProductCatalog | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
@@ -119,10 +123,16 @@ export const ProductCatalogManagement: React.FC = () => {
           <h1 className="text-2xl font-bold">Product Catalog</h1>
           <p className="text-muted-foreground">Manage your store's product offerings</p>
         </div>
-        <Button className="flex items-center gap-2" onClick={() => setAddDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Add Product
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
+            <Tag className="h-4 w-4 mr-2" />
+            Categories
+          </Button>
+          <Button className="flex items-center gap-2" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Add Product
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -165,7 +175,7 @@ export const ProductCatalogManagement: React.FC = () => {
       )}
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredProducts.map((product) => (
           <Card key={product.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
@@ -178,69 +188,81 @@ export const ProductCatalogManagement: React.FC = () => {
                     }
                   />
                   <div className="flex-1">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Package className="h-5 w-5" />
+                    <CardTitle className="text-base line-clamp-2">
                       {product.product_name}
                     </CardTitle>
-                    <Badge 
-                      variant={product.is_available ? "default" : "secondary"}
-                      className="mt-2"
-                    >
-                      {product.is_available ? 'Available' : 'Unavailable'}
-                    </Badge>
                   </div>
                 </div>
               </div>
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {product.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {product.description}
-                </p>
-              )}
-
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold">₱{product.price.toFixed(2)}</span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleToggleAvailability(product)}
-                  >
-                    {product.is_available ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleEditProduct(product)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => {
-                      setProductToDelete(product);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                </div>
+              {/* Product Image Placeholder */}
+              <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                <ImageIcon className="h-12 w-12 text-gray-400" />
               </div>
 
-              {product.ingredients && product.ingredients.length > 0 && (
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground mb-2">
-                    {product.ingredients.length} ingredient{product.ingredients.length !== 1 ? 's' : ''}
-                  </p>
+              {/* Product Details */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-semibold text-green-600">
+                    ₱{product.price.toFixed(2)}
+                  </span>
+                  <Badge 
+                    variant={product.is_available ? "default" : "secondary"}
+                  >
+                    {product.is_available ? 'Available' : 'Unavailable'}
+                  </Badge>
                 </div>
-              )}
+
+                {product.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {product.description}
+                  </p>
+                )}
+
+                {product.ingredients && product.ingredients.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      {product.ingredients.length} ingredient{product.ingredients.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleToggleAvailability(product)}
+                  className="flex-1"
+                >
+                  {product.is_available ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleEditProduct(product)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    setProductToDelete(product);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -293,6 +315,12 @@ export const ProductCatalogManagement: React.FC = () => {
         onClose={() => setEditDialogOpen(false)}
         onProductUpdated={handleRefetch}
         product={productToEdit}
+      />
+
+      {/* Category Manager */}
+      <CategoryManager
+        isOpen={categoryManagerOpen}
+        onClose={() => setCategoryManagerOpen(false)}
       />
     </div>
   );
