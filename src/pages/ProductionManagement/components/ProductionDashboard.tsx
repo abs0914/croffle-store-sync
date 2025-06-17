@@ -161,7 +161,7 @@ export function ProductionDashboard({ storeId }: ProductionDashboardProps) {
                     {lowStockCommissary.slice(0, 3).map((item) => (
                       <div key={item.id} className="flex items-center justify-between">
                         <span className="text-sm">{item.name}</span>
-                        <Badge variant="warning">
+                        <Badge variant="outline" className="text-orange-600 border-orange-600">
                           {item.current_stock} {item.unit}
                         </Badge>
                       </div>
@@ -220,7 +220,7 @@ export function ProductionDashboard({ storeId }: ProductionDashboardProps) {
                     {lowStockStore.slice(0, 3).map((item) => (
                       <div key={item.id} className="flex items-center justify-between">
                         <span className="text-sm">{item.item}</span>
-                        <Badge variant="warning">
+                        <Badge variant="outline" className="text-orange-600 border-orange-600">
                           {item.stock_quantity} {item.unit}
                         </Badge>
                       </div>

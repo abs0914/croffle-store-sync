@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Sheet,
@@ -60,7 +61,7 @@ export function Sidebar() {
     return location.pathname === path;
   };
 
-  const menuItems = [
+  const menuItems: MenuItem[] = [
     { path: "/", label: "Dashboard", icon: Home },
     { path: "/pos", label: "Point of Sale", icon: ShoppingCart },
     {
@@ -69,7 +70,7 @@ export function Sidebar() {
       submenu: [
         { path: "/production", label: "Production Management", icon: ChefHat },
         { path: "/inventory", label: "Store Inventory", icon: Package },
-        { path: "/inventory-conversion", label: "Legacy Conversion", icon: Factory, hidden: true }, // Keep for transition
+        { path: "/inventory-conversion", label: "Legacy Conversion", icon: Factory, hidden: true },
       ]
     },
     {
@@ -77,14 +78,11 @@ export function Sidebar() {
       icon: Truck,
       submenu: [
         { path: "/order-management", label: "Order Management", icon: Truck },
-        { path: "/bulk-upload", label: "Legacy Bulk Upload", icon: Upload, hidden: true }, // Keep for transition
+        { path: "/bulk-upload", label: "Legacy Bulk Upload", icon: Upload, hidden: true },
       ]
     },
     { path: "/customers", label: "Customers", icon: Users },
     { path: "/reports", label: "Reports", icon: BarChart3 },
-    { path: "/cashiers", label: "Cashiers", icon: UserCheck },
-    { path: "/shifts", label: "Shifts", icon: Receipt },
-    { path: "/stores", label: "Stores", icon: Store },
     { path: "/settings", label: "Settings", icon: Settings },
   ];
 
@@ -119,16 +117,19 @@ export function Sidebar() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="flex flex-col space-y-2">
-                      {item.submenu.map((subItem, subIndex) => (
-                        <button
-                          key={subIndex}
-                          onClick={() => navigate(subItem.path || "")}
-                          className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent text-sm ${isActive(subItem.path || "") ? 'bg-secondary' : ''}`}
-                        >
-                          <subItem.icon className="h-3 w-3" />
-                          <span>{subItem.label}</span>
-                        </button>
-                      ))}
+                      {item.submenu.map((subItem, subIndex) => {
+                        if (subItem.hidden) return null;
+                        return (
+                          <button
+                            key={subIndex}
+                            onClick={() => navigate(subItem.path || "")}
+                            className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent text-sm ${isActive(subItem.path || "") ? 'bg-secondary' : ''}`}
+                          >
+                            <subItem.icon className="h-3 w-3" />
+                            <span>{subItem.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
