@@ -1,16 +1,14 @@
-
 import React from "react";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
-
 export const AdminUserProfile: React.FC = () => {
-  const { user, logout } = useAuth();
-
+  const {
+    user,
+    logout
+  } = useAuth();
   if (!user) return null;
-
-  return (
-    <div className="border-t border-gray-700 p-4 bg-gray-800">
+  return <div className="border-t border-gray-700 p-4 bg-orange-200">
       <div className="flex items-center space-x-3 mb-3">
         <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-full">
           <User className="h-4 w-4 text-white" />
@@ -28,15 +26,9 @@ export const AdminUserProfile: React.FC = () => {
         </div>
       </div>
       
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={logout}
-        className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700"
-      >
+      <Button variant="ghost" size="sm" onClick={logout} className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700">
         <LogOut className="mr-2 h-4 w-4" />
         Sign Out
       </Button>
-    </div>
-  );
+    </div>;
 };
