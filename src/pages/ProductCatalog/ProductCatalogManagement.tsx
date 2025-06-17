@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Plus, 
   Search, 
@@ -28,6 +30,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AddProductDialog } from './components/AddProductDialog';
+import { EditProductDialog } from './components/EditProductDialog';
+import { BulkOperations } from './components/BulkOperations';
 
 export const ProductCatalogManagement: React.FC = () => {
   const { user } = useAuth();
@@ -36,6 +41,10 @@ export const ProductCatalogManagement: React.FC = () => {
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<ProductCatalog | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<ProductCatalog | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
   // Get user's first store for now (can be enhanced for multi-store)
   const storeId = user?.storeIds?.[0] || '';
@@ -45,6 +54,11 @@ export const ProductCatalogManagement: React.FC = () => {
     queryFn: () => fetchProductCatalog(storeId),
     enabled: !!storeId,
   });
+
+  // Clear selections when products change
+  useEffect(() => {
+    setSelectedProducts([]);
+  }, [products]);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -71,6 +85,24 @@ export const ProductCatalogManagement: React.FC = () => {
     }
   };
 
+  const handleEditProduct = (product: ProductCatalog) => {
+    setProductToEdit(product);
+    setEditDialogOpen(true);
+  };
+
+  const handleProductSelection = (productId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(prev => [...prev, productId]);
+    } else {
+      setSelectedProducts(prev => prev.filter(id => id !== productId));
+    }
+  };
+
+  const handleRefetch = () => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ['product-catalog'] });
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -87,7 +119,7 @@ export const ProductCatalogManagement: React.FC = () => {
           <h1 className="text-2xl font-bold">Product Catalog</h1>
           <p className="text-muted-foreground">Manage your store's product offerings</p>
         </div>
-        <Button className="flex items-center gap-2">
+        <Button className="flex items-center gap-2" onClick={() => setAddDialogOpen(true)}>
           <Plus className="h-4 w-4" />
           Add Product
         </Button>
@@ -118,23 +150,45 @@ export const ProductCatalogManagement: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Bulk Operations */}
+      {products.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <BulkOperations
+              products={filteredProducts}
+              selectedProducts={selectedProducts}
+              onSelectionChange={setSelectedProducts}
+              onProductsUpdated={handleRefetch}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredProducts.map((product) => (
           <Card key={product.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    {product.product_name}
-                  </CardTitle>
-                  <Badge 
-                    variant={product.is_available ? "default" : "secondary"}
-                    className="mt-2"
-                  >
-                    {product.is_available ? 'Available' : 'Unavailable'}
-                  </Badge>
+                <div className="flex items-center gap-3 flex-1">
+                  <Checkbox
+                    checked={selectedProducts.includes(product.id)}
+                    onCheckedChange={(checked) => 
+                      handleProductSelection(product.id, checked as boolean)
+                    }
+                  />
+                  <div className="flex-1">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      {product.product_name}
+                    </CardTitle>
+                    <Badge 
+                      variant={product.is_available ? "default" : "secondary"}
+                      className="mt-2"
+                    >
+                      {product.is_available ? 'Available' : 'Unavailable'}
+                    </Badge>
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -160,7 +214,11 @@ export const ProductCatalogManagement: React.FC = () => {
                       <Eye className="h-4 w-4" />
                     )}
                   </Button>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleEditProduct(product)}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button 
@@ -196,7 +254,7 @@ export const ProductCatalogManagement: React.FC = () => {
             <p className="text-muted-foreground mb-4">
               {searchTerm ? 'Try adjusting your search terms.' : 'Start by adding your first product to the catalog.'}
             </p>
-            <Button>
+            <Button onClick={() => setAddDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Product
             </Button>
@@ -221,6 +279,21 @@ export const ProductCatalogManagement: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Product Dialog */}
+      <AddProductDialog
+        isOpen={addDialogOpen}
+        onClose={() => setAddDialogOpen(false)}
+        onProductAdded={handleRefetch}
+      />
+
+      {/* Edit Product Dialog */}
+      <EditProductDialog
+        isOpen={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        onProductUpdated={handleRefetch}
+        product={productToEdit}
+      />
     </div>
   );
 };
