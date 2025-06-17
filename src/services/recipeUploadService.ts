@@ -16,6 +16,26 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
     let successCount = 0;
     let errorCount = 0;
 
+    // Enhanced unit mapping to ensure valid database enum values
+    const unitMapping: Record<string, string> = {
+      'piece': 'pieces',
+      'serving': 'g',
+      'portion': 'g',
+      'scoop': 'g',
+      'pair': 'pieces',
+      'gram': 'g',
+      'grams': 'g',
+      'kilogram': 'kg',
+      'kilograms': 'kg',
+      'liter': 'liters',
+      'litre': 'liters',
+      'milliliter': 'ml',
+      'millilitre': 'ml',
+      'box': 'boxes',
+      'pack': 'packs',
+      'package': 'packs'
+    };
+
     for (const recipe of recipes) {
       try {
         // First, create or find a matching product for this recipe
@@ -80,20 +100,27 @@ export const bulkUploadRecipes = async (recipes: RecipeUpload[], storeId: string
           continue;
         }
 
-        // Add ingredients
+        // Add ingredients with proper unit mapping
         const ingredientInserts = recipe.ingredients.map(ingredient => {
           const commissaryItem = commissaryMap.get(ingredient.commissary_item_name.toLowerCase());
           
           if (!commissaryItem) {
             console.warn(`Ingredient "${ingredient.commissary_item_name}" not found in commissary inventory`);
           }
+
+          // Ensure unit is mapped to valid enum value
+          const mappedUnit = unitMapping[ingredient.unit.toLowerCase()] || ingredient.unit;
+          
+          // Validate the unit is one of the allowed enum values
+          const validUnits = ['kg', 'g', 'pieces', 'liters', 'ml', 'boxes', 'packs'];
+          const finalUnit = validUnits.includes(mappedUnit) ? mappedUnit : 'pieces';
           
           return {
             recipe_id: recipeData.id,
             commissary_item_id: commissaryItem?.id,
             inventory_stock_id: '00000000-0000-0000-0000-000000000000', // Placeholder
             quantity: ingredient.quantity,
-            unit: ingredient.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+            unit: finalUnit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
             cost_per_unit: ingredient.cost_per_unit || commissaryItem?.unit_cost || 0
           };
         });

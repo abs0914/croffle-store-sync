@@ -26,7 +26,18 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
             'serving': 'g',
             'portion': 'g',
             'scoop': 'g',
-            'pair': 'pieces'
+            'pair': 'pieces',
+            'gram': 'g',
+            'grams': 'g',
+            'kilogram': 'kg',
+            'kilograms': 'kg',
+            'liter': 'liters',
+            'litre': 'liters',
+            'milliliter': 'ml',
+            'millilitre': 'ml',
+            'box': 'boxes',
+            'pack': 'packs',
+            'package': 'packs'
           };
           ingredient.unit = unitMapping[value.toLowerCase()] || value;
           break;
@@ -65,6 +76,26 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
   const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
   const recipes: Map<string, RecipeUpload> = new Map();
   
+  // Enhanced unit mapping for recipe ingredients
+  const unitMapping: Record<string, string> = {
+    'piece': 'pieces',
+    'serving': 'g',
+    'portion': 'g',
+    'scoop': 'g',
+    'pair': 'pieces',
+    'gram': 'g',
+    'grams': 'g',
+    'kilogram': 'kg',
+    'kilograms': 'kg',
+    'liter': 'liters',
+    'litre': 'liters',
+    'milliliter': 'ml',
+    'millilitre': 'ml',
+    'box': 'boxes',
+    'pack': 'packs',
+    'package': 'packs'
+  };
+  
   lines.slice(1).forEach(line => {
     if (!line.trim()) return;
     
@@ -76,11 +107,11 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
       rowData[header] = values[index] || '';
     });
     
-    const recipeName = rowData['name'];
-    const ingredientName = rowData['ingredient name'] || rowData['ingredientname'];
-    const unitOfMeasure = rowData['unit of measure'] || rowData['unitofmeasure'] || rowData['unit'];
-    const quantityUsed = rowData['quantity used'] || rowData['quantityused'] || rowData['quantity'];
-    const costPerUnit = rowData['cost per unit'] || rowData['costperunit'] || rowData['cost'];
+    const recipeName = rowData['name'] || rowData['recipe name'] || rowData['recipename'];
+    const ingredientName = rowData['ingredient name'] || rowData['ingredientname'] || rowData['ingredient'];
+    const unitOfMeasure = rowData['unit of measure'] || rowData['unitofmeasure'] || rowData['unit'] || rowData['uom'];
+    const quantityUsed = rowData['quantity used'] || rowData['quantityused'] || rowData['quantity'] || rowData['qty'];
+    const costPerUnit = rowData['cost per unit'] || rowData['costperunit'] || rowData['cost'] || rowData['unit cost'];
     
     if (!recipeName || !ingredientName) return;
     
@@ -97,10 +128,13 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     
     const recipe = recipes.get(recipeName)!;
     if (ingredientName && quantityUsed) {
+      // Apply unit mapping to ensure valid database enum values
+      const mappedUnit = unitMapping[unitOfMeasure?.toLowerCase()] || unitOfMeasure || 'pieces';
+      
       recipe.ingredients.push({
         commissary_item_name: ingredientName,
         quantity: parseFloat(quantityUsed) || 1,
-        unit: unitOfMeasure || 'pieces',
+        unit: mappedUnit,
         cost_per_unit: parseFloat(costPerUnit) || undefined
       });
     }
