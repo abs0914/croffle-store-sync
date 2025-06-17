@@ -680,6 +680,9 @@ export type Database = {
           id: string
           is_active: boolean | null
           item: string
+          last_restocked: string | null
+          maximum_capacity: number | null
+          minimum_threshold: number | null
           sku: string | null
           stock_quantity: number
           store_id: string
@@ -692,6 +695,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           item: string
+          last_restocked?: string | null
+          maximum_capacity?: number | null
+          minimum_threshold?: number | null
           sku?: string | null
           stock_quantity?: number
           store_id: string
@@ -704,6 +710,9 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           item?: string
+          last_restocked?: string | null
+          maximum_capacity?: number | null
+          minimum_threshold?: number | null
           sku?: string | null
           stock_quantity?: number
           store_id?: string
@@ -1007,6 +1016,119 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_catalog: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_available: boolean
+          price: number
+          product_name: string
+          recipe_id: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_available?: boolean
+          price?: number
+          product_name: string
+          recipe_id?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_available?: boolean
+          price?: number
+          product_name?: string
+          recipe_id?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_catalog_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_usage_analytics"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "product_catalog_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_catalog_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_ingredients: {
+        Row: {
+          commissary_item_id: string | null
+          created_at: string
+          id: string
+          inventory_stock_id: string
+          product_catalog_id: string
+          required_quantity: number
+          unit: string
+        }
+        Insert: {
+          commissary_item_id?: string | null
+          created_at?: string
+          id?: string
+          inventory_stock_id: string
+          product_catalog_id: string
+          required_quantity?: number
+          unit: string
+        }
+        Update: {
+          commissary_item_id?: string | null
+          created_at?: string
+          id?: string
+          inventory_stock_id?: string
+          product_catalog_id?: string
+          required_quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_ingredients_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_ingredients_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_ingredients_product_catalog_id_fkey"
+            columns: ["product_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "product_catalog"
             referencedColumns: ["id"]
           },
         ]
@@ -1602,6 +1724,118 @@ export type Database = {
           },
         ]
       }
+      stock_order_items: {
+        Row: {
+          approved_quantity: number | null
+          created_at: string
+          id: string
+          inventory_stock_id: string
+          notes: string | null
+          requested_quantity: number
+          stock_order_id: string
+          unit_cost: number | null
+        }
+        Insert: {
+          approved_quantity?: number | null
+          created_at?: string
+          id?: string
+          inventory_stock_id: string
+          notes?: string | null
+          requested_quantity?: number
+          stock_order_id: string
+          unit_cost?: number | null
+        }
+        Update: {
+          approved_quantity?: number | null
+          created_at?: string
+          id?: string
+          inventory_stock_id?: string
+          notes?: string | null
+          requested_quantity?: number
+          stock_order_id?: string
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_order_items_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_order_items_stock_order_id_fkey"
+            columns: ["stock_order_id"]
+            isOneToOne: false
+            referencedRelation: "stock_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_orders: {
+        Row: {
+          approved_by: string | null
+          created_at: string
+          fulfilled_date: string | null
+          id: string
+          notes: string | null
+          order_date: string
+          order_number: string
+          requested_by: string
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string
+          fulfilled_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_number: string
+          requested_by: string
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string
+          fulfilled_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_number?: string
+          requested_by?: string
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_orders_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "stock_orders_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "stock_orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_transactions: {
         Row: {
           created_at: string
@@ -2066,6 +2300,10 @@ export type Database = {
           store_ids: string[]
           is_active: boolean
         }
+        Returns: string
+      }
+      generate_stock_order_number: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       get_all_users: {

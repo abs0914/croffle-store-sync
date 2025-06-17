@@ -1,11 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { RecipeTemplate } from '@/services/recipeManagement/types';
+import { deployRecipeToMultipleStores } from '@/services/recipeManagement/recipeDeploymentService';
 
 interface RecipeDeploymentDialogProps {
   isOpen: boolean;
@@ -23,7 +26,7 @@ interface Store {
 
 interface StoreWithDeploymentStatus extends Store {
   isAlreadyDeployed: boolean;
-  existingRecipeId?: string;
+  existingProductId?: string;
 }
 
 export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
@@ -36,11 +39,24 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [pricing, setPricing] = useState({
+    price: 0,
+    markup: 1.5
+  });
 
   useEffect(() => {
     if (isOpen && template) {
       fetchStoresWithDeploymentStatus();
       setSelectedStoreIds([]);
+      
+      // Calculate suggested price based on ingredients
+      const totalCost = template.ingredients.reduce((sum, ingredient) => 
+        sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
+      );
+      setPricing({
+        price: totalCost * 1.5, // Default 50% markup
+        markup: 1.5
+      });
     }
   }, [isOpen, template]);
 
@@ -58,25 +74,24 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
 
       if (storesError) throw storesError;
 
-      // Check which stores already have this recipe deployed
-      const { data: existingRecipes, error: recipesError } = await supabase
-        .from('recipes')
+      // Check which stores already have this recipe deployed in product catalog
+      const { data: existingProducts, error: productsError } = await supabase
+        .from('product_catalog')
         .select('id, store_id')
-        .eq('name', template.name)
-        .eq('is_active', true);
+        .eq('product_name', template.name);
 
-      if (recipesError) throw recipesError;
+      if (productsError) throw productsError;
 
       // Create a map of deployed stores
       const deployedStoreMap = new Map(
-        existingRecipes?.map(recipe => [recipe.store_id, recipe.id]) || []
+        existingProducts?.map(product => [product.store_id, product.id]) || []
       );
 
       // Combine store data with deployment status
       const storesWithStatus: StoreWithDeploymentStatus[] = (storesData || []).map(store => ({
         ...store,
         isAlreadyDeployed: deployedStoreMap.has(store.id),
-        existingRecipeId: deployedStoreMap.get(store.id)
+        existingProductId: deployedStoreMap.get(store.id)
       }));
 
       setStores(storesWithStatus);
@@ -105,103 +120,6 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
     }
   };
 
-  const deployToStore = async (storeId: string) => {
-    if (!template) return false;
-
-    try {
-      // Create product first (placeholder)
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .insert({
-          name: template.name,
-          description: template.description,
-          sku: `RCP-${template.name.replace(/\s+/g, '-').toUpperCase()}-${storeId.slice(0, 8)}`,
-          price: 0, // Will be calculated
-          cost: 0,  // Will be calculated
-          stock_quantity: 0,
-          store_id: storeId,
-          is_active: false, // Keep inactive until approved
-          image_url: template.image_url || null
-        })
-        .select()
-        .single();
-
-      if (productError) throw productError;
-
-      // Create recipe
-      const { data: recipe, error: recipeError } = await supabase
-        .from('recipes')
-        .insert({
-          name: template.name,
-          description: template.description,
-          instructions: template.instructions,
-          yield_quantity: template.yield_quantity,
-          serving_size: template.serving_size,
-          store_id: storeId,
-          product_id: product.id,
-          category_name: template.category_name,
-          is_active: true,
-          approval_status: 'pending_approval',
-          version: 1
-        })
-        .select()
-        .single();
-
-      if (recipeError) throw recipeError;
-
-      // Create recipe ingredients
-      const ingredientInserts = [];
-      for (const ingredient of template.ingredients) {
-        // Find or create inventory stock item for this store
-        let { data: inventoryItem, error: inventoryFindError } = await supabase
-          .from('inventory_stock')
-          .select('id')
-          .eq('store_id', storeId)
-          .eq('item', ingredient.commissary_item_name)
-          .maybeSingle();
-
-        if (!inventoryItem) {
-          // Create inventory stock item
-          const { data: newInventoryItem, error: inventoryCreateError } = await supabase
-            .from('inventory_stock')
-            .insert({
-              store_id: storeId,
-              item: ingredient.commissary_item_name,
-              unit: ingredient.unit,
-              stock_quantity: 0,
-              cost: ingredient.cost_per_unit || 0,
-              is_active: true
-            })
-            .select()
-            .single();
-
-          if (inventoryCreateError) throw inventoryCreateError;
-          inventoryItem = newInventoryItem;
-        }
-
-        ingredientInserts.push({
-          recipe_id: recipe.id,
-          inventory_stock_id: inventoryItem.id,
-          commissary_item_id: ingredient.commissary_item_id,
-          quantity: ingredient.quantity,
-          unit: ingredient.unit as any,
-          cost_per_unit: ingredient.cost_per_unit || 0
-        });
-      }
-
-      const { error: ingredientsError } = await supabase
-        .from('recipe_ingredients')
-        .insert(ingredientInserts);
-
-      if (ingredientsError) throw ingredientsError;
-
-      return true;
-    } catch (error) {
-      console.error(`Error deploying to store ${storeId}:`, error);
-      return false;
-    }
-  };
-
   const handleDeploy = async () => {
     if (!template || selectedStoreIds.length === 0) {
       toast.error('Please select at least one store');
@@ -210,27 +128,9 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
 
     setIsDeploying(true);
     try {
-      let successCount = 0;
-      let failCount = 0;
-
-      for (const storeId of selectedStoreIds) {
-        const success = await deployToStore(storeId);
-        if (success) {
-          successCount++;
-        } else {
-          failCount++;
-        }
-      }
-
-      if (successCount > 0) {
-        toast.success(`Recipe deployed to ${successCount} store${successCount !== 1 ? 's' : ''} (pending approval)`);
-        onSuccess();
-        onClose();
-      }
-
-      if (failCount > 0) {
-        toast.error(`Failed to deploy to ${failCount} store${failCount !== 1 ? 's' : ''}`);
-      }
+      await deployRecipeToMultipleStores(template, selectedStoreIds, pricing);
+      onSuccess();
+      onClose();
     } catch (error) {
       console.error('Error deploying recipe:', error);
       toast.error('Failed to deploy recipe');
@@ -248,16 +148,54 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Deploy Recipe: {template.name}</DialogTitle>
+          <DialogTitle>Deploy Recipe to Product Catalog: {template.name}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           <div>
             <p className="text-sm text-muted-foreground">
-              Select the stores where you want to deploy this recipe template. The recipe will be created 
-              with "pending approval" status and will need to be approved by store managers before 
-              it becomes available as a product.
+              Deploy this recipe template to store product catalogs. Products will be created 
+              with "pending approval" status and require store manager approval before becoming available.
             </p>
+          </div>
+
+          {/* Pricing Configuration */}
+          <div className="space-y-4">
+            <Label className="text-base font-medium">Product Pricing</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="price">Product Price (₱)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  value={pricing.price}
+                  onChange={(e) => setPricing(prev => ({ 
+                    ...prev, 
+                    price: parseFloat(e.target.value) || 0 
+                  }))}
+                />
+              </div>
+              <div>
+                <Label htmlFor="markup">Markup Multiplier</Label>
+                <Input
+                  id="markup"
+                  type="number"
+                  step="0.1"
+                  value={pricing.markup}
+                  onChange={(e) => {
+                    const markup = parseFloat(e.target.value) || 1;
+                    const totalCost = template.ingredients.reduce((sum, ingredient) => 
+                      sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
+                    );
+                    setPricing({ 
+                      markup, 
+                      price: totalCost * markup 
+                    });
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -317,7 +255,7 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
                           <div className="w-4 h-4 rounded-full bg-green-500 flex-shrink-0"></div>
                           <div className="flex-1">
                             <span className="font-medium">{store.name}</span>
-                            <span className="ml-2 text-xs">- Recipe already deployed</span>
+                            <span className="ml-2 text-xs">- Product already in catalog</span>
                           </div>
                         </div>
                       ))}

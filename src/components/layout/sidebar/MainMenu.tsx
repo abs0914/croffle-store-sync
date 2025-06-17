@@ -1,98 +1,155 @@
 
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { checkRouteAccess } from '@/contexts/auth/role-utils';
+import { 
+  LayoutDashboard, 
+  ShoppingCart, 
+  Package, 
+  BarChart3, 
+  Settings, 
+  Store,
+  Package2,
+  Factory,
+  Truck,
+  FileSpreadsheet,
+  ClipboardList,
+  Boxes,
+  ShoppingBag
+} from 'lucide-react';
+import { useAuth } from '@/contexts/auth';
 
-import { BarChart3, ShoppingCart, Users, Settings, Truck, Package } from "lucide-react";
-import { UserRole } from '@/types';
-
-interface MenuItem {
-  title: string;
-  icon: React.ComponentType<any>;
-  href: string;
-  permissions: UserRole[];
+interface MenuItemProps {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  isActive: boolean;
+  badge?: string;
 }
 
-// Phase 5: Simplified store-level menu items - no production management
-const menuItems: MenuItem[] = [
-  {
-    title: "Dashboard",
-    icon: BarChart3,
-    href: "/dashboard",
-    permissions: ["admin", "owner", "manager", "cashier"] as UserRole[],
-  },
-  {
-    title: "Point of Sale",
-    icon: ShoppingCart,
-    href: "/pos",
-    permissions: ["admin", "owner", "manager", "cashier"] as UserRole[],
-  },
-  {
-    title: "Customers",
-    icon: Users,
-    href: "/customers",
-    permissions: ["admin", "owner", "manager", "cashier"] as UserRole[],
-  },
-  {
-    title: "Reports",
-    icon: BarChart3,
-    href: "/reports",
-    permissions: ["admin", "owner", "manager"] as UserRole[], // Managers and above only
-  },
-  {
-    title: "Order Management",
-    icon: Truck,
-    href: "/order-management",
-    permissions: ["admin", "owner", "manager"] as UserRole[], // Managers can purchase finished goods
-  },
-  {
-    title: "Store Inventory",
-    icon: Package,
-    href: "/inventory",
-    permissions: ["admin", "owner", "manager"] as UserRole[], // Managers and above only
-  },
-  {
-    title: "Settings",
-    icon: Settings,
-    href: "/settings",
-    permissions: ["admin", "owner", "manager"] as UserRole[], // Managers and above only
-  },
-];
+const MenuItem: React.FC<MenuItemProps> = ({ to, icon, label, isActive, badge }) => (
+  <Link
+    to={to}
+    className={cn(
+      "flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
+      isActive && "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
+    )}
+  >
+    {icon}
+    <span>{label}</span>
+    {badge && (
+      <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+        {badge}
+      </span>
+    )}
+  </Link>
+);
 
-export function MainMenu() {
-  const { user, hasPermission } = useAuth();
+export const MainMenu: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
+  const isManagerOrAbove = isAdminOrOwner || user?.role === 'manager';
+
+  const menuItems = [
+    {
+      to: '/dashboard',
+      icon: <LayoutDashboard className="h-4 w-4" />,
+      label: 'Dashboard',
+    },
+    {
+      to: '/pos',
+      icon: <ShoppingCart className="h-4 w-4" />,
+      label: 'Point of Sale',
+    },
+    {
+      to: '/product-catalog',
+      icon: <ShoppingBag className="h-4 w-4" />,
+      label: 'Product Catalog',
+      adminOnly: false,
+    },
+    {
+      to: '/products',
+      icon: <Package className="h-4 w-4" />,
+      label: 'Products',
+    },
+    {
+      to: '/inventory',
+      icon: <Package2 className="h-4 w-4" />,
+      label: 'Store Inventory',
+    },
+    {
+      to: '/stock-orders',
+      icon: <ClipboardList className="h-4 w-4" />,
+      label: 'Stock Orders',
+      adminOnly: false,
+    },
+    {
+      to: '/production-management',
+      icon: <Factory className="h-4 w-4" />,
+      label: 'Production',
+      managerOnly: true,
+    },
+    {
+      to: '/commissary-inventory',
+      icon: <Boxes className="h-4 w-4" />,
+      label: 'Commissary',
+      adminOnly: true,
+    },
+    {
+      to: '/inventory-conversion',
+      icon: <Package className="h-4 w-4" />,
+      label: 'Inventory Conversion',
+      managerOnly: true,
+    },
+    {
+      to: '/order-management',
+      icon: <Truck className="h-4 w-4" />,
+      label: 'Order Management',
+      managerOnly: true,
+    },
+    {
+      to: '/reports',
+      icon: <BarChart3 className="h-4 w-4" />,
+      label: 'Reports',
+    },
+    {
+      to: '/bulk-upload',
+      icon: <FileSpreadsheet className="h-4 w-4" />,
+      label: 'Bulk Upload',
+      adminOnly: true,
+    },
+    {
+      to: '/stores',
+      icon: <Store className="h-4 w-4" />,
+      label: 'Stores',
+      adminOnly: true,
+    },
+    {
+      to: '/settings',
+      icon: <Settings className="h-4 w-4" />,
+      label: 'Settings',
+    },
+  ];
 
   const filteredMenuItems = menuItems.filter(item => {
-    // Check if user has the required role
-    const hasRolePermission = item.permissions.some(role => hasPermission(role));
-    
-    // Additional route-specific access check
-    const hasRouteAccess = checkRouteAccess(user?.role, item.href);
-    
-    return hasRolePermission && hasRouteAccess;
+    if (item.adminOnly && !isAdminOrOwner) return false;
+    if (item.managerOnly && !isManagerOrAbove) return false;
+    return true;
   });
 
   return (
-    <div className="flex flex-col space-y-1">
+    <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
       {filteredMenuItems.map((item) => (
-        <Button
-          key={item.href}
-          variant="ghost"
-          className={cn(
-            "justify-start font-normal",
-            location.pathname === item.href ? "bg-secondary hover:bg-secondary" : "hover:bg-accent hover:text-accent-foreground",
-          )}
-          onClick={() => navigate(item.href)}
-        >
-          <item.icon className="mr-2 h-4 w-4" />
-          <span>{item.title}</span>
-        </Button>
+        <MenuItem
+          key={item.to}
+          to={item.to}
+          icon={item.icon}
+          label={item.label}
+          isActive={location.pathname.startsWith(item.to)}
+        />
       ))}
-    </div>
+    </nav>
   );
-}
+};

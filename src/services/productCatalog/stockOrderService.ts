@@ -1,0 +1,112 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { StockOrder, StockOrderItem } from "./types";
+import { toast } from "sonner";
+
+export const fetchStockOrders = async (storeId: string): Promise<StockOrder[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('stock_orders')
+      .select(`
+        *,
+        items:stock_order_items(
+          *,
+          inventory_item:inventory_stock(*)
+        )
+      `)
+      .eq('store_id', storeId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching stock orders:', error);
+    toast.error('Failed to fetch stock orders');
+    return [];
+  }
+};
+
+export const createStockOrder = async (
+  order: Omit<StockOrder, 'id' | 'order_number' | 'created_at' | 'updated_at' | 'items'>,
+  items: Omit<StockOrderItem, 'id' | 'stock_order_id' | 'created_at'>[]
+): Promise<StockOrder | null> => {
+  try {
+    const { data: orderData, error: orderError } = await supabase
+      .from('stock_orders')
+      .insert(order)
+      .select()
+      .single();
+
+    if (orderError) throw orderError;
+
+    if (items.length > 0) {
+      const { error: itemsError } = await supabase
+        .from('stock_order_items')
+        .insert(
+          items.map(item => ({
+            ...item,
+            stock_order_id: orderData.id
+          }))
+        );
+
+      if (itemsError) throw itemsError;
+    }
+
+    toast.success('Stock order created successfully');
+    return orderData;
+  } catch (error) {
+    console.error('Error creating stock order:', error);
+    toast.error('Failed to create stock order');
+    return null;
+  }
+};
+
+export const updateStockOrderStatus = async (
+  id: string,
+  status: StockOrder['status'],
+  approvedBy?: string
+): Promise<boolean> => {
+  try {
+    const updates: any = { status };
+    if (approvedBy) {
+      updates.approved_by = approvedBy;
+    }
+    if (status === 'fulfilled') {
+      updates.fulfilled_date = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+      .from('stock_orders')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) throw error;
+
+    toast.success(`Stock order ${status} successfully`);
+    return true;
+  } catch (error) {
+    console.error('Error updating stock order status:', error);
+    toast.error('Failed to update stock order status');
+    return false;
+  }
+};
+
+export const updateStockOrderItem = async (
+  id: string,
+  updates: Partial<StockOrderItem>
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('stock_order_items')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return true;
+  } catch (error) {
+    console.error('Error updating stock order item:', error);
+    toast.error('Failed to update stock order item');
+    return false;
+  }
+};
