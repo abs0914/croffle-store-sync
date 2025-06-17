@@ -34,9 +34,8 @@ export const mapSupabaseUser = (
     name: displayName,
     role: appUserData?.role || 'cashier',
     storeIds: appUserData?.store_ids || [],
-    isActive: appUserData?.is_active ?? true,
-    lastSignIn: supabaseUser.last_sign_in_at || undefined,
-    createdAt: supabaseUser.created_at || new Date().toISOString(),
+    // Remove isActive as it's not part of the User type
+    // lastSignIn and createdAt are also not part of the User type based on the interface
   };
 };
 
@@ -53,7 +52,25 @@ export const fetchAppUserData = async (email: string): Promise<AppUserData | nul
       return null;
     }
 
-    return data?.[0] || null;
+    // Ensure the returned data includes all required AppUserData fields
+    const userData = data?.[0];
+    if (userData) {
+      return {
+        id: userData.id,
+        user_id: userData.user_id,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        email: userData.email,
+        contact_number: userData.contact_number,
+        role: userData.role,
+        store_ids: userData.store_ids,
+        is_active: userData.is_active,
+        created_at: userData.created_at || new Date().toISOString(),
+        updated_at: userData.updated_at || new Date().toISOString(),
+      };
+    }
+
+    return null;
   } catch (error) {
     console.error('Exception fetching app user data:', error);
     return null;
