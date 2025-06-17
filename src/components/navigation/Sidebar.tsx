@@ -111,6 +111,19 @@ export function Sidebar() {
     const baseMenuItems: MenuItem[] = [
       { path: "/", label: "Dashboard", icon: Home },
       { path: "/pos", label: "Point of Sale", icon: ShoppingCart },
+      { path: "/customers", label: "Customers", icon: Users },
+      { 
+        path: "/reports", 
+        label: "Reports", 
+        icon: BarChart3,
+        hidden: !checkRouteAccess(user?.role, "/reports")
+      },
+      {
+        path: "/order-management", 
+        label: "Order Management", 
+        icon: Truck,
+        hidden: !checkRouteAccess(user?.role, "/order-management")
+      },
       {
         label: "Production",
         icon: Factory,
@@ -120,21 +133,6 @@ export function Sidebar() {
           { path: "/commissary-inventory", label: "Commissary Inventory", icon: Warehouse },
         ],
         hidden: !canAccessProduction(user?.role)
-      },
-      {
-        label: "Orders & Supply",
-        icon: Truck,
-        submenu: [
-          { path: "/order-management", label: "Order Management", icon: Truck },
-        ],
-        hidden: !canAccessInventory(user?.role)
-      },
-      { path: "/customers", label: "Customers", icon: Users },
-      { 
-        path: "/reports", 
-        label: "Reports", 
-        icon: BarChart3,
-        hidden: !checkRouteAccess(user?.role, "/reports")
       },
       { 
         path: "/settings", 

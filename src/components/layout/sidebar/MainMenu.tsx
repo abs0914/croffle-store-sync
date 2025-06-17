@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { checkRouteAccess, canAccessProduction, canAccessInventory } from '@/contexts/auth/role-utils';
 
-import { BarChart3, ShoppingCart, Users, Settings } from "lucide-react";
+import { BarChart3, ShoppingCart, Users, Settings, Truck } from "lucide-react";
 import { UserRole } from '@/types';
 
 interface MenuItem {
@@ -40,6 +40,12 @@ const menuItems: MenuItem[] = [
     title: "Reports",
     icon: BarChart3,
     href: "/reports",
+    permissions: ["admin", "owner", "manager"] as UserRole[],
+  },
+  {
+    title: "Order Management",
+    icon: Truck,
+    href: "/order-management",
     permissions: ["admin", "owner", "manager"] as UserRole[],
   },
   {
