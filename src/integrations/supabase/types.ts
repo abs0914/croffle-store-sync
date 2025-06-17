@@ -623,6 +623,56 @@ export type Database = {
           },
         ]
       }
+      inventory_movements: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          inventory_stock_id: string
+          movement_type: string
+          new_quantity: number
+          notes: string | null
+          previous_quantity: number
+          quantity_change: number
+          reference_id: string | null
+          reference_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          inventory_stock_id: string
+          movement_type: string
+          new_quantity: number
+          notes?: string | null
+          previous_quantity: number
+          quantity_change: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          inventory_stock_id?: string
+          movement_type?: string
+          new_quantity?: number
+          notes?: string | null
+          previous_quantity?: number
+          quantity_change?: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_stock: {
         Row: {
           cost: number | null
@@ -853,6 +903,44 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_status_history: {
+        Row: {
+          change_reason: string | null
+          changed_at: string | null
+          changed_by: string
+          id: string
+          new_status: string
+          old_status: string | null
+          transaction_id: string
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_at?: string | null
+          changed_by: string
+          id?: string
+          new_status: string
+          old_status?: string | null
+          transaction_id: string
+        }
+        Update: {
+          change_reason?: string | null
+          changed_at?: string | null
+          changed_by?: string
+          id?: string
+          new_status?: string
+          old_status?: string | null
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -1453,6 +1541,113 @@ export type Database = {
           },
         ]
       }
+      store_inventory_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string | null
+          current_quantity: number
+          id: string
+          inventory_stock_id: string
+          is_acknowledged: boolean | null
+          store_id: string
+          threshold_quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          created_at?: string | null
+          current_quantity: number
+          id?: string
+          inventory_stock_id: string
+          is_acknowledged?: boolean | null
+          store_id: string
+          threshold_quantity: number
+          updated_at?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string | null
+          current_quantity?: number
+          id?: string
+          inventory_stock_id?: string
+          is_acknowledged?: boolean | null
+          store_id?: string
+          threshold_quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_inventory_alerts_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_inventory_alerts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_metrics: {
+        Row: {
+          average_order_value: number | null
+          created_at: string | null
+          id: string
+          inventory_turnover: number | null
+          low_stock_items: number | null
+          metric_date: string
+          out_of_stock_items: number | null
+          store_id: string
+          total_orders: number | null
+          total_sales: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          average_order_value?: number | null
+          created_at?: string | null
+          id?: string
+          inventory_turnover?: number | null
+          low_stock_items?: number | null
+          metric_date: string
+          out_of_stock_items?: number | null
+          store_id: string
+          total_orders?: number | null
+          total_sales?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          average_order_value?: number | null
+          created_at?: string | null
+          id?: string
+          inventory_turnover?: number | null
+          low_stock_items?: number | null
+          metric_date?: string
+          out_of_stock_items?: number | null
+          store_id?: string
+          total_orders?: number | null
+          total_sales?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_metrics_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_settings: {
         Row: {
           created_at: string | null
@@ -1593,14 +1788,18 @@ export type Database = {
       transactions: {
         Row: {
           amount_tendered: number | null
+          assigned_to: string | null
           change: number | null
           created_at: string | null
           customer_id: string | null
           discount: number
           discount_id_number: string | null
           discount_type: string | null
+          estimated_completion_time: string | null
           id: string
           items: Json
+          order_notes: string | null
+          order_status: string | null
           payment_details: Json | null
           payment_method: string
           receipt_number: string
@@ -1614,14 +1813,18 @@ export type Database = {
         }
         Insert: {
           amount_tendered?: number | null
+          assigned_to?: string | null
           change?: number | null
           created_at?: string | null
           customer_id?: string | null
           discount?: number
           discount_id_number?: string | null
           discount_type?: string | null
+          estimated_completion_time?: string | null
           id?: string
           items: Json
+          order_notes?: string | null
+          order_status?: string | null
           payment_details?: Json | null
           payment_method: string
           receipt_number: string
@@ -1635,14 +1838,18 @@ export type Database = {
         }
         Update: {
           amount_tendered?: number | null
+          assigned_to?: string | null
           change?: number | null
           created_at?: string | null
           customer_id?: string | null
           discount?: number
           discount_id_number?: string | null
           discount_type?: string | null
+          estimated_completion_time?: string | null
           id?: string
           items?: Json
+          order_notes?: string | null
+          order_status?: string | null
           payment_details?: Json | null
           payment_method?: string
           receipt_number?: string

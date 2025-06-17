@@ -1,4 +1,3 @@
-
 import { Routes, Route } from "react-router-dom";
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
@@ -46,6 +45,7 @@ import InventoryConversion from "@/pages/InventoryConversion";
 
 // Protected app pages
 import Dashboard from "@/pages/Dashboard";
+import OwnerDashboard from "@/pages/OwnerDashboard";
 import POS from "@/pages/POS";
 import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
@@ -275,6 +275,15 @@ export function AppRoutes() {
         <ProtectedRoute>
           <MainLayout>
             <Dashboard />
+          </MainLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Owner Dashboard Route */}
+      <Route path="/owner-dashboard" element={
+        <ProtectedRoute>
+          <MainLayout>
+            <OwnerDashboard />
           </MainLayout>
         </ProtectedRoute>
       } />
