@@ -1,9 +1,11 @@
 
 import React, { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminRecipesHeader } from './components/AdminRecipesHeader';
 import { AdminRecipesMetrics } from './components/AdminRecipesMetrics';
 import { AdminRecipesList } from './components/AdminRecipesList';
 import { AdminRecipeBulkActions } from './components/AdminRecipeBulkActions';
+import { RecipeManagementTab } from './components/RecipeManagementTab';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,6 +13,7 @@ import { toast } from 'sonner';
 export default function AdminRecipes() {
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [activeTab, setActiveTab] = useState('deployed-recipes');
   
   const {
     recipes,
@@ -55,11 +58,9 @@ export default function AdminRecipes() {
           return;
         }
 
-        // Copy the recipe IDs
         const recipeIds = [...selectedRecipes];
         console.log('Recipe IDs to delete:', recipeIds);
 
-        // First, verify the recipes exist in the database
         const { data: existingRecipes, error: checkError } = await supabase
           .from('recipes')
           .select('id, name')
@@ -77,7 +78,6 @@ export default function AdminRecipes() {
           return;
         }
 
-        // Delete recipe ingredients first
         console.log('Deleting recipe ingredients...');
         const { error: ingredientsError, count: ingredientsCount } = await supabase
           .from('recipe_ingredients')
@@ -91,7 +91,6 @@ export default function AdminRecipes() {
 
         console.log(`Deleted ${ingredientsCount || 0} recipe ingredients`);
 
-        // Then delete the recipes themselves
         console.log('Deleting recipes...');
         const { error: recipesError, count: recipesCount } = await supabase
           .from('recipes')
@@ -105,13 +104,10 @@ export default function AdminRecipes() {
 
         console.log(`Deleted ${recipesCount || 0} recipes from database`);
 
-        // Clear selection immediately
         setSelectedRecipes([]);
         
-        // Show success message
         toast.success(`Successfully deleted ${recipesCount || 0} recipe${(recipesCount || 0) !== 1 ? 's' : ''} and their ingredients`);
         
-        // Force refresh the data
         console.log('Refreshing recipes data...');
         await refreshRecipes();
         
@@ -121,7 +117,6 @@ export default function AdminRecipes() {
         toast.error(`Failed to delete recipes: ${error.message || 'Unknown error'}`);
       }
     } else {
-      // Handle other bulk actions
       setSelectedRecipes([]);
       await refreshRecipes();
     }
@@ -129,38 +124,58 @@ export default function AdminRecipes() {
 
   return (
     <div className="space-y-6">
-      <AdminRecipesHeader 
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        storeFilter={storeFilter}
-        setStoreFilter={setStoreFilter}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        stores={stores}
-      />
-      
-      <AdminRecipesMetrics metrics={recipeMetrics} />
-      
-      {selectedRecipes.length > 0 && (
-        <AdminRecipeBulkActions 
-          selectedCount={selectedRecipes.length}
-          onBulkAction={handleBulkAction}
-          onClearSelection={() => setSelectedRecipes([])}
-        />
-      )}
-      
-      <AdminRecipesList
-        recipes={filteredRecipes}
-        selectedRecipes={selectedRecipes}
-        viewMode={viewMode}
-        isLoading={isLoading}
-        onSelectRecipe={handleSelectRecipe}
-        onSelectAll={handleSelectAll}
-        onRefresh={refreshRecipes}
-        stores={stores}
-      />
+      <div>
+        <h1 className="text-3xl font-bold">Recipe Administration</h1>
+        <p className="text-muted-foreground">
+          Manage recipe templates and monitor deployed recipes across all stores
+        </p>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="recipe-management">Recipe Management</TabsTrigger>
+          <TabsTrigger value="deployed-recipes">Deployed Recipes</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="recipe-management">
+          <RecipeManagementTab />
+        </TabsContent>
+
+        <TabsContent value="deployed-recipes" className="space-y-6">
+          <AdminRecipesHeader 
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            storeFilter={storeFilter}
+            setStoreFilter={setStoreFilter}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            stores={stores}
+          />
+          
+          <AdminRecipesMetrics metrics={recipeMetrics} />
+          
+          {selectedRecipes.length > 0 && (
+            <AdminRecipeBulkActions 
+              selectedCount={selectedRecipes.length}
+              onBulkAction={handleBulkAction}
+              onClearSelection={() => setSelectedRecipes([])}
+            />
+          )}
+          
+          <AdminRecipesList
+            recipes={filteredRecipes}
+            selectedRecipes={selectedRecipes}
+            viewMode={viewMode}
+            isLoading={isLoading}
+            onSelectRecipe={handleSelectRecipe}
+            onSelectAll={handleSelectAll}
+            onRefresh={refreshRecipes}
+            stores={stores}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
