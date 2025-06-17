@@ -12,6 +12,8 @@ import { AdminLayout } from '@/components/layout/AdminLayout';
 import AdminDashboard from '@/pages/Admin/AdminDashboard';
 import AdminStores from '@/pages/Admin/AdminStores';
 import AdminRecipes from '@/pages/Admin/AdminRecipes';
+import AdminCustomers from '@/pages/Admin/AdminCustomers';
+import AdminOrders from '@/pages/Admin/AdminOrders';
 import { AuthProvider } from '@/contexts/auth';
 import Inventory from '@/pages/Inventory';
 import CustomerManagement from '@/pages/Customers/CustomerManagement';
@@ -55,6 +57,26 @@ function App() {
                 <AdminProtectedRoute>
                   <AdminLayout>
                     <AdminRecipes />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/customers"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminCustomers />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/orders"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminOrders />
                   </AdminLayout>
                 </AdminProtectedRoute>
               }
