@@ -57,7 +57,13 @@ function App() {
                   <div className="min-h-screen bg-background">
                     <Routes>
                       <Route path="/login" element={<Login />} />
+                      {/* Both root and dashboard routes show the same Dashboard component */}
                       <Route path="/" element={
+                        <ProtectedRoute requireStoreAccess={true}>
+                          <MainLayout><Dashboard /></MainLayout>
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/dashboard" element={
                         <ProtectedRoute requireStoreAccess={true}>
                           <MainLayout><Dashboard /></MainLayout>
                         </ProtectedRoute>
