@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -11,6 +10,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import POS from './pages/POS';
 import Products from './pages/Products';
+import ProductCatalog from './pages/ProductCatalog';
 import Customers from './pages/Customers';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
@@ -72,6 +72,11 @@ function App() {
                       <Route path="/pos" element={
                         <ProtectedRoute requireStoreAccess={true}>
                           <MainLayout><POS /></MainLayout>
+                        </ProtectedRoute>
+                      } />
+                      <Route path="/product-catalog" element={
+                        <ProtectedRoute requireStoreAccess={true}>
+                          <MainLayout><ProductCatalog /></MainLayout>
                         </ProtectedRoute>
                       } />
                       <Route path="/production" element={
