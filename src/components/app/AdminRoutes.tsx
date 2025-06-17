@@ -1,5 +1,5 @@
 
-import { Routes, Route } from "react-router-dom";
+import { Route } from "react-router-dom";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import AdminDashboard from "@/pages/Admin/AdminDashboard";
@@ -11,19 +11,49 @@ import AdminReports from "@/pages/Admin/AdminReports";
 
 export function AdminRoutes() {
   return (
-    <Route path="/admin/*" element={
-      <AdminProtectedRoute>
-        <AdminLayout>
-          <Routes>
-            <Route index element={<AdminDashboard />} />
-            <Route path="stores" element={<AdminStores />} />
-            <Route path="recipes" element={<AdminRecipes />} />
-            <Route path="customers" element={<AdminCustomers />} />
-            <Route path="orders" element={<AdminOrders />} />
-            <Route path="reports" element={<AdminReports />} />
-          </Routes>
-        </AdminLayout>
-      </AdminProtectedRoute>
-    } />
+    <>
+      <Route path="/admin" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AdminDashboard />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/stores" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AdminStores />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/recipes" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AdminRecipes />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/customers" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AdminCustomers />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/orders" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AdminOrders />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/reports" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AdminReports />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+    </>
   );
 }
