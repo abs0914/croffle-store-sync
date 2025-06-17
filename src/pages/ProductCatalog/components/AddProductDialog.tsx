@@ -32,7 +32,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
   const [formData, setFormData] = useState({
     product_name: '',
     description: '',
-    price: '',
+    price: 0,
     is_available: true,
     display_order: 0
   });
@@ -97,7 +97,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
     setFormData({
       product_name: '',
       description: '',
-      price: '',
+      price: 0,
       is_available: true,
       display_order: 0
     });

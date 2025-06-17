@@ -30,7 +30,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   const [formData, setFormData] = useState({
     product_name: '',
     description: '',
-    price: '',
+    price: 0,
     is_available: true,
     display_order: 0
   });
@@ -40,7 +40,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
       setFormData({
         product_name: product.product_name,
         description: product.description || '',
-        price: product.price.toString(),
+        price: product.price,
         is_available: product.is_available,
         display_order: product.display_order
       });
