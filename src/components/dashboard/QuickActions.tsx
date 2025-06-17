@@ -1,32 +1,31 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Package, ShoppingCart, Users, BarChart3 } from "lucide-react";
+import { Package, ShoppingCart, Users, BarChart3, Factory } from "lucide-react";
 
 export default function QuickActions() {
   const navigate = useNavigate();
 
   const actions = [
     {
-      title: "Manage Inventory",
-      description: "Update stock levels and manage items",
+      title: "Production Management",
+      description: "Manage recipes, conversions, and production workflow",
+      icon: Factory,
+      onClick: () => navigate("/production"),
+      color: "bg-blue-500 hover:bg-blue-600"
+    },
+    {
+      title: "Store Inventory",
+      description: "View and manage store inventory levels",
       icon: Package,
       onClick: () => navigate("/inventory"),
-      color: "bg-blue-500 hover:bg-blue-600"
+      color: "bg-green-500 hover:bg-green-600"
     },
     {
       title: "Process Orders",
       description: "Handle pending orders and transactions",
       icon: ShoppingCart,
       onClick: () => navigate("/pos"),
-      color: "bg-green-500 hover:bg-green-600"
-    },
-    {
-      title: "Customer Management",
-      description: "View and manage customer data",
-      icon: Users,
-      onClick: () => navigate("/customers"),
       color: "bg-purple-500 hover:bg-purple-600"
     },
     {
