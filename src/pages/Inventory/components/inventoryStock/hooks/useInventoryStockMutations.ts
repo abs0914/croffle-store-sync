@@ -154,8 +154,9 @@ export const useInventoryStockMutations = (
   }, [stockMutation]);
 
   const handleStockTransfer = useCallback((
-    sourceId: string,
-    targetStoreId: string,
+    fromStoreId: string,
+    toStoreId: string,
+    inventoryItemId: string,
     quantity: number,
     notes?: string
   ) => {
@@ -165,8 +166,8 @@ export const useInventoryStockMutations = (
     }
     
     transferMutation.mutate({
-      sourceId,
-      targetStoreId,
+      sourceId: inventoryItemId,
+      targetStoreId: toStoreId,
       quantity,
       notes
     });
