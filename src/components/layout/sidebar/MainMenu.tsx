@@ -5,17 +5,16 @@ import { cn } from '@/lib/utils';
 import { 
   LayoutDashboard, 
   ShoppingCart, 
-  Package, 
   BarChart3, 
   Settings, 
   Store,
   Package2,
   Factory,
   Truck,
-  FileSpreadsheet,
   ClipboardList,
   Boxes,
-  ShoppingBag
+  ShoppingBag,
+  ChefHat
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 
@@ -67,40 +66,29 @@ export const MainMenu: React.FC = () => {
       to: '/product-catalog',
       icon: <ShoppingBag className="h-4 w-4" />,
       label: 'Product Catalog',
-      adminOnly: false,
-    },
-    {
-      to: '/products',
-      icon: <Package className="h-4 w-4" />,
-      label: 'Products',
-    },
-    {
-      to: '/inventory',
-      icon: <Package2 className="h-4 w-4" />,
-      label: 'Store Inventory',
     },
     {
       to: '/stock-orders',
       icon: <ClipboardList className="h-4 w-4" />,
       label: 'Stock Orders',
-      adminOnly: false,
+      managerOnly: true,
+    },
+    {
+      to: '/recipe-management',
+      icon: <ChefHat className="h-4 w-4" />,
+      label: 'Recipe Management',
+      adminOnly: true,
     },
     {
       to: '/production-management',
       icon: <Factory className="h-4 w-4" />,
-      label: 'Production',
+      label: 'Production Management',
       managerOnly: true,
     },
     {
-      to: '/commissary-inventory',
-      icon: <Boxes className="h-4 w-4" />,
-      label: 'Commissary',
-      adminOnly: true,
-    },
-    {
-      to: '/inventory-conversion',
-      icon: <Package className="h-4 w-4" />,
-      label: 'Inventory Conversion',
+      to: '/inventory',
+      icon: <Package2 className="h-4 w-4" />,
+      label: 'Store Inventory',
       managerOnly: true,
     },
     {
@@ -110,21 +98,16 @@ export const MainMenu: React.FC = () => {
       managerOnly: true,
     },
     {
+      to: '/commissary-inventory',
+      icon: <Boxes className="h-4 w-4" />,
+      label: 'Commissary Inventory',
+      adminOnly: true,
+    },
+    {
       to: '/reports',
       icon: <BarChart3 className="h-4 w-4" />,
       label: 'Reports',
-    },
-    {
-      to: '/bulk-upload',
-      icon: <FileSpreadsheet className="h-4 w-4" />,
-      label: 'Bulk Upload',
-      adminOnly: true,
-    },
-    {
-      to: '/stores',
-      icon: <Store className="h-4 w-4" />,
-      label: 'Stores',
-      adminOnly: true,
+      managerOnly: true,
     },
     {
       to: '/settings',

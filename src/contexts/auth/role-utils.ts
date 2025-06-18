@@ -40,10 +40,11 @@ export const ROUTE_PATHS = {
   ORDER_MANAGEMENT: '/order-management',
   SETTINGS: '/settings',
   INVENTORY: '/inventory',
-  PRODUCTION: '/production',
+  PRODUCTION: '/production-management',
+  RECIPE_MANAGEMENT: '/recipe-management',
   COMMISSARY_INVENTORY: '/commissary-inventory',
   BULK_UPLOAD: '/bulk-upload',
-  INVENTORY_CONVERSION: '/inventory-conversion'
+  STOCK_ORDERS: '/stock-orders'
 } as const;
 
 /**
@@ -64,19 +65,20 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string):
     manager: [
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
-      ROUTE_PATHS.PRODUCT_CATALOG, // Managers can manage product offerings
+      ROUTE_PATHS.PRODUCT_CATALOG,
       ROUTE_PATHS.CUSTOMERS,
       ROUTE_PATHS.REPORTS,
-      ROUTE_PATHS.ORDER_MANAGEMENT, // Managers can access order management for purchasing finished goods
-      ROUTE_PATHS.SETTINGS, // Limited settings access
-      ROUTE_PATHS.INVENTORY, // Managers can access inventory management
-      ROUTE_PATHS.INVENTORY_CONVERSION // Managers can handle inventory conversions
+      ROUTE_PATHS.ORDER_MANAGEMENT,
+      ROUTE_PATHS.SETTINGS,
+      ROUTE_PATHS.INVENTORY,
+      ROUTE_PATHS.PRODUCTION,
+      ROUTE_PATHS.STOCK_ORDERS
     ],
     cashier: [
-      ROUTE_PATHS.DASHBOARD, // Dashboard access for basic overview
-      ROUTE_PATHS.POS, // Primary function - Point of Sale
-      ROUTE_PATHS.PRODUCT_CATALOG, // Cashiers need to see available products for POS
-      ROUTE_PATHS.CUSTOMERS // Customer management for transactions
+      ROUTE_PATHS.DASHBOARD,
+      ROUTE_PATHS.POS,
+      ROUTE_PATHS.PRODUCT_CATALOG,
+      ROUTE_PATHS.CUSTOMERS
     ]
   };
   
@@ -96,9 +98,16 @@ export const canAccessAdminPanel = (userRole: UserRole | undefined): boolean => 
 };
 
 /**
- * Check if a user can access production management (commissary operations)
+ * Check if a user can access production management
  */
 export const canAccessProduction = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner' || userRole === 'manager';
+};
+
+/**
+ * Check if a user can access recipe management (admin-only)
+ */
+export const canAccessRecipeManagement = (userRole: UserRole | undefined): boolean => {
   return userRole === 'admin' || userRole === 'owner';
 };
 
@@ -113,13 +122,6 @@ export const canAccessInventory = (userRole: UserRole | undefined): boolean => {
  * Check if a user can access commissary inventory (admin-only)
  */
 export const canAccessCommissary = (userRole: UserRole | undefined): boolean => {
-  return userRole === 'admin' || userRole === 'owner';
-};
-
-/**
- * Check if a user can access recipe management (admin-only)
- */
-export const canAccessRecipeManagement = (userRole: UserRole | undefined): boolean => {
   return userRole === 'admin' || userRole === 'owner';
 };
 
@@ -150,10 +152,10 @@ export const getRouteAccessDescription = (route: string): string => {
     [ROUTE_PATHS.ORDER_MANAGEMENT]: 'Managers and above with store access',
     [ROUTE_PATHS.SETTINGS]: 'Managers and above',
     [ROUTE_PATHS.INVENTORY]: 'Managers and above with store access',
-    [ROUTE_PATHS.PRODUCTION]: 'Owners and admins only',
+    [ROUTE_PATHS.PRODUCTION]: 'Managers and above with store access',
+    [ROUTE_PATHS.RECIPE_MANAGEMENT]: 'Owners and admins only',
     [ROUTE_PATHS.COMMISSARY_INVENTORY]: 'Owners and admins only',
-    [ROUTE_PATHS.BULK_UPLOAD]: 'Managers and above',
-    [ROUTE_PATHS.INVENTORY_CONVERSION]: 'Managers and above with store access'
+    [ROUTE_PATHS.STOCK_ORDERS]: 'Managers and above with store access'
   };
   
   return accessMap[route] || 'Access level not defined';
