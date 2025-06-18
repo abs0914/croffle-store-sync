@@ -1,10 +1,8 @@
-
-
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
 import { useCart } from "@/contexts/cart/CartContext";
-import { useProductData } from "@/hooks/useProductData";
+import { useProductCatalogData } from "@/hooks/useProductCatalogData";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
@@ -29,14 +27,14 @@ export default function POS() {
     startNewSale
   } = useTransactionHandler();
 
-  // Load product data using consolidated hook
+  // Load product data from product_catalog using consolidated hook
   const { 
     products, 
     categories, 
     isLoading, 
     activeCategory, 
     setActiveCategory 
-  } = useProductData(currentStore?.id || null);
+  } = useProductCatalogData(currentStore?.id || null);
   
   // Check the product activation status - for debugging
   const activeProductsCount = products.filter(p => p.is_active).length;
@@ -169,4 +167,3 @@ export default function POS() {
     />
   );
 }
-
