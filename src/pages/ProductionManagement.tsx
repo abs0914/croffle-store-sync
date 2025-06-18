@@ -19,7 +19,7 @@ export default function ProductionManagement() {
         <div>
           <h1 className="text-3xl font-bold">Production Management</h1>
           <p className="text-muted-foreground">
-            Manage production conversions and workflows for {currentStore?.name || 'your store'}
+            Manage production conversions from commissary inventory to store products for {currentStore?.name || 'your store'}
           </p>
         </div>
       </div>
@@ -32,7 +32,7 @@ export default function ProductionManagement() {
           </TabsTrigger>
           <TabsTrigger value="conversions" className="flex items-center gap-2">
             <Factory className="h-4 w-4" />
-            Conversions
+            Production Conversions
           </TabsTrigger>
           <TabsTrigger value="bulk-upload" className="flex items-center gap-2">
             <Upload className="h-4 w-4" />
@@ -45,7 +45,7 @@ export default function ProductionManagement() {
             <CardHeader>
               <CardTitle>Production Overview</CardTitle>
               <CardDescription>
-                Monitor production activity, conversion efficiency, and inventory impact
+                Monitor production activity, conversion efficiency, and inventory impact for store operations
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -59,8 +59,8 @@ export default function ProductionManagement() {
             <CardHeader>
               <CardTitle>Production Conversions</CardTitle>
               <CardDescription>
-                Convert commissary inventory items into store-ready products. 
-                All ingredients are sourced from commissary inventory.
+                Convert commissary inventory items into store-ready products using production conversion workflows. 
+                All raw materials are sourced from commissary inventory.
               </CardDescription>
             </CardHeader>
             <CardContent>

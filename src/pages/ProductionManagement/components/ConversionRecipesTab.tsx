@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Factory, ArrowRight } from "lucide-react";
+import { Plus, Factory, ArrowRight, Package } from "lucide-react";
 import { 
   fetchConversionRecipes,
   fetchCommissaryItemsForConversion,
@@ -96,11 +96,11 @@ export function ConversionRecipesTab({ storeId }: ConversionRecipesTabProps) {
 
       if (conversion) {
         await loadData();
-        toast.success('Conversion completed successfully');
+        toast.success('Production conversion completed successfully');
       }
     } catch (error) {
-      console.error('Conversion error:', error);
-      toast.error('Failed to complete conversion');
+      console.error('Production conversion error:', error);
+      toast.error('Failed to complete production conversion');
     } finally {
       setConverting(false);
     }
@@ -127,14 +127,14 @@ export function ConversionRecipesTab({ storeId }: ConversionRecipesTabProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Conversion Recipes</h2>
+          <h2 className="text-2xl font-bold">Production Conversion Workflows</h2>
           <p className="text-muted-foreground">
-            Convert commissary raw materials into store inventory items
+            Execute production conversions from commissary raw materials to store inventory items
           </p>
         </div>
         <Button>
           <Plus className="h-4 w-4 mr-2" />
-          Create Recipe Template
+          Create Conversion Workflow
         </Button>
       </div>
 
@@ -144,8 +144,11 @@ export function ConversionRecipesTab({ storeId }: ConversionRecipesTabProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Factory className="h-5 w-5" />
-              Execute Conversion
+              Execute Production Conversion
             </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Convert commissary raw materials into store-ready products
+            </p>
           </CardHeader>
           <CardContent>
             <MultiIngredientConversionFormComponent
@@ -158,18 +161,24 @@ export function ConversionRecipesTab({ storeId }: ConversionRecipesTabProps) {
           </CardContent>
         </Card>
 
-        {/* Recipe Templates */}
+        {/* Production Workflow Templates */}
         <Card>
           <CardHeader>
-            <CardTitle>Recipe Templates</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Production Workflow Templates
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Pre-defined conversion workflows for consistent production
+            </p>
           </CardHeader>
           <CardContent>
             {conversionRecipes.length === 0 ? (
               <div className="text-center py-8">
                 <Factory className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">No conversion recipes yet</p>
+                <p className="text-muted-foreground">No production workflows yet</p>
                 <p className="text-sm text-muted-foreground">
-                  Create templates to streamline repeated conversions
+                  Create templates to streamline repeated production conversions
                 </p>
               </div>
             ) : (
@@ -189,7 +198,7 @@ export function ConversionRecipesTab({ storeId }: ConversionRecipesTabProps) {
                     </div>
                     
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{recipe.ingredients?.length || 0} ingredients</span>
+                      <span>{recipe.ingredients?.length || 0} commissary ingredients</span>
                       <ArrowRight className="h-3 w-3" />
                       <span className="font-medium">{recipe.finished_item_name}</span>
                     </div>
@@ -204,7 +213,7 @@ export function ConversionRecipesTab({ storeId }: ConversionRecipesTabProps) {
 
                     <div className="mt-3 flex gap-2">
                       <Button size="sm" variant="outline">
-                        Use Template
+                        Use Workflow
                       </Button>
                       <Button size="sm" variant="ghost">
                         Edit
