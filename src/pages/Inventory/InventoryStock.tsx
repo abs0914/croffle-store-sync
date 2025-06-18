@@ -12,12 +12,8 @@ import { StockAdjustmentModal } from "./components/inventoryStock/StockAdjustmen
 import { StockTransferModal } from "./components/inventoryStock/StockTransferModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 
 export default function InventoryStock() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  
   const {
     currentStore,
     stockItems,
@@ -73,14 +69,6 @@ export default function InventoryStock() {
     }
   });
 
-  const handleNavigationTabChange = (value: string) => {
-    if (value === "menu") {
-      navigate("/inventory");
-    } else if (value === "stock") {
-      navigate("/inventory/stock");
-    }
-  };
-
   if (!currentStore) {
     return (
       <div className="container mx-auto p-4">
@@ -94,35 +82,28 @@ export default function InventoryStock() {
     <div className="space-y-6">
       <InventoryHeader
         title="Store Inventory Management"
-        description="Manage finished goods inventory for your store operations. Stock is replenished through purchase orders and order management workflows."
+        description="Manage operational inventory including raw materials, supplies, and finished goods for your store operations."
         onExportCSV={handleExportCSV}
         onImportClick={handleImportClick}
         onDownloadTemplate={handleDownloadTemplate}
       />
 
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="font-semibold text-blue-800 mb-2">Store-Level Inventory</h3>
+        <h3 className="font-semibold text-blue-800 mb-2">Operational Inventory</h3>
         <p className="text-sm text-blue-700 mb-2">
-          This inventory contains finished goods and supplies specific to {currentStore.name}. 
-          Stock is replenished through:
+          Track inventory items needed for daily operations at {currentStore.name}. 
+          This includes:
         </p>
         <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
-          <li>Purchase orders from suppliers</li>
-          <li>Stock transfers from other stores</li>
-          <li>Order management workflows</li>
-          <li>Manual stock adjustments</li>
+          <li>Raw materials and ingredients</li>
+          <li>Packaging supplies and consumables</li>
+          <li>Finished goods ready for sale</li>
+          <li>Equipment and operational supplies</li>
         </ul>
         <p className="text-xs text-blue-600 mt-2 italic">
-          Note: Production conversions from commissary raw materials are handled in Production Management.
+          Note: Menu items and product catalog management is handled in the Admin Panel.
         </p>
       </div>
-      
-      <Tabs defaultValue="stock" value="stock" onValueChange={handleNavigationTabChange} className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="menu" className="flex-1 py-2">Menu Management</TabsTrigger>
-          <TabsTrigger value="stock" className="flex-1 py-2">Store Inventory</TabsTrigger>
-        </TabsList>
-      </Tabs>
       
       <div className="flex justify-between items-center mb-4">
         <Tabs defaultValue="all" value={filterTab} onValueChange={(v) => setFilterTab(v as any)}>
