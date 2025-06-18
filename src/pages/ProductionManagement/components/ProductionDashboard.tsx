@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { ChefHat, Package, TrendingUp, AlertTriangle } from "lucide-react";
 import { fetchInventoryConversions } from "@/services/inventoryManagement/inventoryConversionService";
 import { fetchInventoryStock } from "@/services/inventoryStock/inventoryStockFetch";
-import type { InventoryConversion, InventoryStock } from "@/types/inventoryManagement";
+import type { InventoryConversion } from "@/types/inventoryManagement";
+import type { InventoryStock } from "@/types/inventory";
 
 interface ProductionDashboardProps {
   storeId: string;
@@ -53,8 +54,10 @@ export function ProductionDashboard({ storeId }: ProductionDashboardProps) {
         conv => new Date(conv.conversion_date) >= weekAgo
       ).length;
 
+      // Use a default threshold of 10 for inventory from /types/inventory.ts
+      const defaultThreshold = 10;
       const lowStockItems = inventoryData.filter(
-        item => item.stock_quantity <= (item.minimum_threshold || 10)
+        item => item.stock_quantity <= defaultThreshold
       ).length;
 
       const totalValue = inventoryData.reduce(
@@ -187,7 +190,7 @@ export function ProductionDashboard({ storeId }: ProductionDashboardProps) {
             <CardTitle>Low Stock Alerts</CardTitle>
           </CardHeader>
           <CardContent>
-            {inventory.filter(item => item.stock_quantity <= (item.minimum_threshold || 10)).slice(0, 5).length === 0 ? (
+            {inventory.filter(item => item.stock_quantity <= 10).slice(0, 5).length === 0 ? (
               <div className="text-center py-8">
                 <Package className="h-12 w-12 mx-auto mb-4 text-green-500" />
                 <p className="text-green-600">All items well stocked</p>
@@ -195,7 +198,7 @@ export function ProductionDashboard({ storeId }: ProductionDashboardProps) {
             ) : (
               <div className="space-y-3">
                 {inventory
-                  .filter(item => item.stock_quantity <= (item.minimum_threshold || 10))
+                  .filter(item => item.stock_quantity <= 10)
                   .slice(0, 5)
                   .map((item) => (
                     <div key={item.id} className="flex items-center justify-between">
