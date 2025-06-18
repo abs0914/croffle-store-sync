@@ -1,6 +1,7 @@
 
 // Export types
-export type { RecipeTemplate, RecipeTemplateIngredient, DeploymentResult } from './types';
+export type { RecipeTemplate, RecipeTemplateIngredient } from './types';
+export type { DeploymentResult } from './recipeDeploymentService';
 
 // Export CRUD operations
 export {
