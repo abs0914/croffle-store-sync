@@ -32,6 +32,7 @@ export const checkPermission = (userRole: UserRole | undefined, requiredRole: Us
  * Route constants for better maintainability
  */
 export const ROUTE_PATHS = {
+  // Main App Routes
   DASHBOARD: '/dashboard',
   POS: '/pos',
   PRODUCT_CATALOG: '/product-catalog',
@@ -40,7 +41,20 @@ export const ROUTE_PATHS = {
   ORDER_MANAGEMENT: '/order-management',
   CUSTOMERS: '/customers',
   REPORTS: '/reports',
-  SETTINGS: '/settings'
+  SETTINGS: '/settings',
+  // Admin Routes
+  ADMIN_DASHBOARD: '/admin',
+  ADMIN_STORES: '/admin/stores',
+  ADMIN_RECIPES: '/admin/recipes',
+  COMMISSARY_INVENTORY: '/admin/commissary-inventory',
+  PRODUCTION: '/admin/production-management',
+  ADMIN_CUSTOMERS: '/admin/customers',
+  ADMIN_ORDERS: '/admin/orders',
+  ADMIN_ORDER_MANAGEMENT: '/admin/order-management',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_MANAGERS: '/admin/managers',
+  ADMIN_CASHIERS: '/admin/cashiers',
+  ADMIN_REPORTS: '/admin/reports'
 } as const;
 
 /**
@@ -147,7 +161,19 @@ export const getRouteAccessDescription = (route: string): string => {
     [ROUTE_PATHS.ORDER_MANAGEMENT]: 'Managers and above with store access',
     [ROUTE_PATHS.CUSTOMERS]: 'All authenticated users with store access',
     [ROUTE_PATHS.REPORTS]: 'Managers and above with store access',
-    [ROUTE_PATHS.SETTINGS]: 'Managers and above'
+    [ROUTE_PATHS.SETTINGS]: 'Managers and above',
+    [ROUTE_PATHS.ADMIN_DASHBOARD]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_STORES]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_RECIPES]: 'Admin and owner only',
+    [ROUTE_PATHS.COMMISSARY_INVENTORY]: 'Admin and owner only',
+    [ROUTE_PATHS.PRODUCTION]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_CUSTOMERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_ORDERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_ORDER_MANAGEMENT]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_USERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_MANAGERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_CASHIERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_REPORTS]: 'Admin and owner only'
   };
   
   return accessMap[route] || 'Access level not defined';
