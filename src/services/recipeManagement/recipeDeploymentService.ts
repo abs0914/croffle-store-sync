@@ -18,6 +18,28 @@ export const deployRecipeToProductCatalog = async (
   try {
     console.log(`Deploying recipe template "${template.name}" to store ${storeId}`);
 
+    // Check if recipe already exists in this store
+    const { data: existingRecipe, error: checkError } = await supabase
+      .from('recipes')
+      .select('id')
+      .eq('name', template.name)
+      .eq('store_id', storeId)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking for existing recipe:', checkError);
+      throw checkError;
+    }
+
+    if (existingRecipe) {
+      console.log(`Recipe "${template.name}" already exists in store ${storeId}`);
+      return {
+        storeId,
+        success: false,
+        error: `Recipe "${template.name}" already exists in this store`
+      };
+    }
+
     // Calculate recipe cost for product pricing
     const totalCost = template.ingredients.reduce((sum, ingredient) => 
       sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
