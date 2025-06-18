@@ -9,12 +9,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { useStore } from "@/contexts/StoreContext";
@@ -34,7 +28,9 @@ import {
   Users,
   BarChart3,
   Settings,
-  Truck
+  Truck,
+  ShoppingBag,
+  ClipboardList
 } from "lucide-react";
 import { 
   checkRouteAccess
@@ -105,18 +101,25 @@ export function Sidebar() {
     );
   }
 
-  // Phase 5: Simplified store-level navigation - no production management
+  // Store-level navigation with updated structure
   const getFilteredMenuItems = (): MenuItem[] => {
     const baseMenuItems: MenuItem[] = [
-      { path: "/", label: "Dashboard", icon: Home },
+      { path: "/dashboard", label: "Dashboard", icon: Home },
       { path: "/pos", label: "Point of Sale", icon: ShoppingCart },
-      { path: "/customers", label: "Customers", icon: Users },
+      { path: "/product-catalog", label: "Product Catalog", icon: ShoppingBag },
       { 
-        path: "/reports", 
-        label: "Reports", 
-        icon: BarChart3,
-        hidden: !checkRouteAccess(user?.role, "/reports") // Managers and above only
+        path: "/stock-orders", 
+        label: "Stock Orders", 
+        icon: ClipboardList,
+        hidden: !checkRouteAccess(user?.role, "/stock-orders") // Managers and above only
       },
+      { 
+        path: "/inventory", 
+        label: "Store Inventory", 
+        icon: Package,
+        hidden: !checkRouteAccess(user?.role, "/inventory") // Managers and above only
+      },
+      { path: "/customers", label: "Customers", icon: Users },
       {
         path: "/order-management", 
         label: "Order Management", 
@@ -124,10 +127,10 @@ export function Sidebar() {
         hidden: !checkRouteAccess(user?.role, "/order-management") // Managers and above only
       },
       { 
-        path: "/inventory", 
-        label: "Store Inventory", 
-        icon: Package,
-        hidden: !checkRouteAccess(user?.role, "/inventory") // Managers and above only
+        path: "/reports", 
+        label: "Reports", 
+        icon: BarChart3,
+        hidden: !checkRouteAccess(user?.role, "/reports") // Managers and above only
       },
       { 
         path: "/settings", 

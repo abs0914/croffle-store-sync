@@ -8,7 +8,6 @@ import {
   BarChart3, 
   Settings, 
   Package2,
-  Factory,
   Truck,
   ClipboardList,
   ShoppingBag
@@ -45,8 +44,7 @@ export const MainMenu: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  const isAdminOrOwner = user?.role === 'admin' || user?.role === 'owner';
-  const isManagerOrAbove = isAdminOrOwner || user?.role === 'manager';
+  const isManagerOrAbove = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'manager';
 
   const menuItems = [
     {
@@ -71,12 +69,6 @@ export const MainMenu: React.FC = () => {
       managerOnly: true,
     },
     {
-      to: '/production-management',
-      icon: <Factory className="h-4 w-4" />,
-      label: 'Production Management',
-      managerOnly: true,
-    },
-    {
       to: '/inventory',
       icon: <Package2 className="h-4 w-4" />,
       label: 'Store Inventory',
@@ -98,6 +90,7 @@ export const MainMenu: React.FC = () => {
       to: '/settings',
       icon: <Settings className="h-4 w-4" />,
       label: 'Settings',
+      managerOnly: true,
     },
   ];
 

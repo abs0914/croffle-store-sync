@@ -11,7 +11,6 @@ import Reports from '@/pages/Reports';
 import Settings from '@/pages/Settings';
 import OrderManagement from '@/pages/OrderManagement';
 import Inventory from '@/pages/Inventory';
-import ProductionManagement from '@/pages/ProductionManagement';
 import StockOrders from '@/pages/StockOrders';
 import ProductForm from '@/pages/Inventory/ProductForm';
 
@@ -40,11 +39,6 @@ export const MainAppRoutes = () => [
   <Route key="stock-orders" path="/stock-orders" element={
     <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
       <MainLayout><StockOrders /></MainLayout>
-    </ProtectedRoute>
-  } />,
-  <Route key="production-management" path="/production-management" element={
-    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-      <MainLayout><ProductionManagement /></MainLayout>
     </ProtectedRoute>
   } />,
   <Route key="inventory" path="/inventory" element={

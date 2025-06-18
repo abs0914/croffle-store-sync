@@ -9,27 +9,37 @@ import {
   BarChart3, 
   UserCheck,
   Truck,
-  Upload,
   ShoppingCart,
-  Warehouse
+  Warehouse,
+  Factory
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   {
-    name: 'Dashboard',
+    name: 'Admin Dashboard',
     href: '/admin',
     icon: LayoutDashboard,
   },
   {
-    name: 'Stores',
+    name: 'Stores Management',
     href: '/admin/stores',
     icon: Store,
   },
   {
-    name: 'Recipes',
+    name: 'Recipe Management',
     href: '/admin/recipes',
     icon: ChefHat,
+  },
+  {
+    name: 'Commissary Inventory',
+    href: '/admin/commissary-inventory',
+    icon: Warehouse,
+  },
+  {
+    name: 'Production Management',
+    href: '/admin/production-management',
+    icon: Factory,
   },
   {
     name: 'Customers',
@@ -47,11 +57,6 @@ const menuItems = [
     icon: Truck,
   },
   {
-    name: 'Commissary Inventory',
-    href: '/admin/commissary-inventory',
-    icon: Warehouse,
-  },
-  {
     name: 'Users',
     href: '/admin/users',
     icon: UserCheck,
@@ -65,11 +70,6 @@ const menuItems = [
     name: 'Cashiers',
     href: '/admin/cashiers',
     icon: UserCheck,
-  },
-  {
-    name: 'Bulk Upload',
-    href: '/admin/bulk-upload',
-    icon: Upload,
   },
   {
     name: 'Reports',

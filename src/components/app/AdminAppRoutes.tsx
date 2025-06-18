@@ -11,6 +11,7 @@ import AdminOrders from '@/pages/Admin/AdminOrders';
 import AdminReports from '@/pages/Admin/AdminReports';
 import OrderManagement from '@/pages/OrderManagement';
 import CommissaryInventory from '@/pages/CommissaryInventory';
+import ProductionManagement from '@/pages/ProductionManagement';
 import UsersPage from '@/pages/Settings/Users/UsersPage';
 import CashiersPage from '@/pages/Settings/Cashiers/CashiersPage';
 import ManagersPage from '@/pages/Settings/Managers/ManagersPage';
@@ -45,6 +46,22 @@ export const AdminAppRoutes = () => [
     </AdminProtectedRoute>
   } />,
   
+  <Route key="admin-commissary-inventory" path="/admin/commissary-inventory" element={
+    <AdminProtectedRoute>
+      <AdminLayout>
+        <CommissaryInventory />
+      </AdminLayout>
+    </AdminProtectedRoute>
+  } />,
+  
+  <Route key="admin-production-management" path="/admin/production-management" element={
+    <AdminProtectedRoute>
+      <AdminLayout>
+        <ProductionManagement />
+      </AdminLayout>
+    </AdminProtectedRoute>
+  } />,
+  
   <Route key="admin-customers" path="/admin/customers" element={
     <AdminProtectedRoute>
       <AdminLayout>
@@ -61,26 +78,18 @@ export const AdminAppRoutes = () => [
     </AdminProtectedRoute>
   } />,
   
-  <Route key="admin-reports" path="/admin/reports" element={
-    <AdminProtectedRoute>
-      <AdminLayout>
-        <AdminReports />
-      </AdminLayout>
-    </AdminProtectedRoute>
-  } />,
-
-  <Route key="admin-commissary-inventory" path="/admin/commissary-inventory" element={
-    <AdminProtectedRoute>
-      <AdminLayout>
-        <CommissaryInventory />
-      </AdminLayout>
-    </AdminProtectedRoute>
-  } />,
-  
   <Route key="admin-order-management" path="/admin/order-management" element={
     <AdminProtectedRoute>
       <AdminLayout>
         <OrderManagement />
+      </AdminLayout>
+    </AdminProtectedRoute>
+  } />,
+  
+  <Route key="admin-reports" path="/admin/reports" element={
+    <AdminProtectedRoute>
+      <AdminLayout>
+        <AdminReports />
       </AdminLayout>
     </AdminProtectedRoute>
   } />,
