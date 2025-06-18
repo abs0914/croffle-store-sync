@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { RecipeTemplate } from "./types";
 import { toast } from "sonner";
@@ -55,7 +56,8 @@ export const deployRecipeToProductCatalog = async (
         cost: totalCost,
         stock_quantity: 0,
         store_id: storeId,
-        is_active: true
+        is_active: true,
+        image_url: template.image_url // Include image from template
       })
       .select()
       .single();
@@ -76,7 +78,8 @@ export const deployRecipeToProductCatalog = async (
         price: totalCost * 1.5, // 50% markup as default
         store_id: storeId,
         is_available: true,
-        display_order: 0
+        display_order: 0,
+        image_url: template.image_url // Include image from template
       })
       .select()
       .single();
