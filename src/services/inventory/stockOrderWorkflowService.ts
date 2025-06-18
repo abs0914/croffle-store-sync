@@ -29,6 +29,7 @@ export interface StockOrderItem {
     unit: string;
     current_stock: number;
     minimum_threshold: number;
+    stock_quantity: number;
   };
 }
 
@@ -199,7 +200,12 @@ export const fetchStockOrders = async (
         *,
         items:stock_order_items(
           *,
-          inventory_stock:inventory_stock(*)
+          inventory_stock:inventory_stock(
+            item,
+            unit,
+            stock_quantity,
+            minimum_threshold
+          )
         ),
         store:stores(name)
       `)
@@ -216,7 +222,23 @@ export const fetchStockOrders = async (
     const { data, error } = await query;
 
     if (error) throw error;
-    return (data || []) as StockOrderWorkflow[];
+    
+    // Transform the data to match our interface
+    const transformedData = (data || []).map(order => ({
+      ...order,
+      items: order.items?.map((item: any) => ({
+        ...item,
+        inventory_stock: item.inventory_stock ? {
+          item: item.inventory_stock.item,
+          unit: item.inventory_stock.unit,
+          current_stock: item.inventory_stock.stock_quantity,
+          minimum_threshold: item.inventory_stock.minimum_threshold,
+          stock_quantity: item.inventory_stock.stock_quantity
+        } : undefined
+      })) || []
+    }));
+
+    return transformedData as StockOrderWorkflow[];
   } catch (error) {
     console.error('Error fetching stock orders:', error);
     toast.error('Failed to fetch stock orders');

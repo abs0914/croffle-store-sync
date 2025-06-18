@@ -2,62 +2,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export interface IngredientDeduction {
-  inventory_stock_id: string;
-  quantity_to_deduct: number;
-  current_stock: number;
-}
-
-export const checkIngredientAvailability = async (
-  productId: string,
-  quantity: number = 1
-): Promise<{ available: boolean; insufficientItems: string[] }> => {
-  try {
-    const { data: ingredients, error } = await supabase
-      .from('product_ingredients')
-      .select(`
-        *,
-        inventory_item:inventory_stock(*)
-      `)
-      .eq('product_catalog_id', productId);
-
-    if (error) throw error;
-
-    const insufficientItems: string[] = [];
-    let available = true;
-
-    for (const ingredient of ingredients || []) {
-      const requiredQuantity = ingredient.required_quantity * quantity;
-      const currentStock = ingredient.inventory_item?.stock_quantity || 0;
-
-      if (currentStock < requiredQuantity) {
-        available = false;
-        insufficientItems.push(ingredient.inventory_item?.item || 'Unknown item');
-      }
-    }
-
-    return { available, insufficientItems };
-  } catch (error) {
-    console.error('Error checking ingredient availability:', error);
-    return { available: false, insufficientItems: [] };
-  }
-};
-
 export const deductIngredientsForProduct = async (
   productId: string,
-  quantity: number = 1,
-  transactionId?: string
+  quantity: number,
+  transactionId: string
 ): Promise<boolean> => {
   try {
-    // First check availability
-    const { available, insufficientItems } = await checkIngredientAvailability(productId, quantity);
-    
-    if (!available) {
-      toast.error(`Insufficient stock for: ${insufficientItems.join(', ')}`);
-      return false;
-    }
+    console.log('Deducting ingredients for product:', { productId, quantity, transactionId });
 
-    // Get all ingredients for the product
+    // Get product ingredients
     const { data: ingredients, error } = await supabase
       .from('product_ingredients')
       .select(`
@@ -68,11 +21,21 @@ export const deductIngredientsForProduct = async (
 
     if (error) throw error;
 
-    // Deduct each ingredient
-    for (const ingredient of ingredients || []) {
-      const quantityToDeduct = ingredient.required_quantity * quantity;
+    if (!ingredients || ingredients.length === 0) {
+      console.warn('No ingredients found for product:', productId);
+      return true; // Allow products without ingredients
+    }
+
+    // Process each ingredient deduction
+    for (const ingredient of ingredients) {
+      const deductionAmount = ingredient.required_quantity * quantity;
       const currentStock = ingredient.inventory_item?.stock_quantity || 0;
-      const newStock = currentStock - quantityToDeduct;
+      const newStock = currentStock - deductionAmount;
+
+      if (newStock < 0) {
+        toast.error(`Insufficient stock for ${ingredient.inventory_item?.item || 'ingredient'}`);
+        return false;
+      }
 
       // Update inventory stock
       const { error: updateError } = await supabase
@@ -82,54 +45,32 @@ export const deductIngredientsForProduct = async (
 
       if (updateError) throw updateError;
 
-      // Create inventory transaction record
-      const { error: transactionError } = await supabase
-        .from('inventory_transactions')
+      // Create movement record
+      const { error: movementError } = await supabase
+        .from('inventory_movements')
         .insert({
-          store_id: ingredient.inventory_item?.store_id,
-          product_id: ingredient.inventory_stock_id,
-          transaction_type: 'sale_deduction',
-          quantity: quantityToDeduct,
+          inventory_stock_id: ingredient.inventory_stock_id,
+          movement_type: 'sale_deduction',
+          quantity_change: -deductionAmount,
           previous_quantity: currentStock,
           new_quantity: newStock,
           created_by: (await supabase.auth.getUser()).data.user?.id,
+          reference_type: 'transaction',
           reference_id: transactionId,
-          notes: `Automatic deduction for product sale`
+          notes: `Product sale: ${ingredient.inventory_item?.item} (${deductionAmount} ${ingredient.unit})`
         });
 
-      if (transactionError) {
-        console.error('Failed to create transaction record:', transactionError);
-        // Don't fail the whole operation for transaction logging issues
+      if (movementError) {
+        console.error('Failed to create movement record:', movementError);
+        // Don't fail the entire transaction for logging issues
       }
     }
 
+    console.log('Successfully deducted ingredients for product:', productId);
     return true;
   } catch (error) {
     console.error('Error deducting ingredients:', error);
-    toast.error('Failed to deduct ingredients from inventory');
+    toast.error('Failed to process ingredient deductions');
     return false;
-  }
-};
-
-export const getProductIngredients = async (productId: string): Promise<IngredientDeduction[]> => {
-  try {
-    const { data: ingredients, error } = await supabase
-      .from('product_ingredients')
-      .select(`
-        *,
-        inventory_item:inventory_stock(*)
-      `)
-      .eq('product_catalog_id', productId);
-
-    if (error) throw error;
-
-    return (ingredients || []).map(ingredient => ({
-      inventory_stock_id: ingredient.inventory_stock_id,
-      quantity_to_deduct: ingredient.required_quantity,
-      current_stock: ingredient.inventory_item?.stock_quantity || 0
-    }));
-  } catch (error) {
-    console.error('Error fetching product ingredients:', error);
-    return [];
   }
 };

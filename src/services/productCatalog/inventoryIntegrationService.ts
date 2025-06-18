@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { deductIngredientsForProduct } from "./ingredientDeductionService";
 import { toast } from "sonner";
@@ -108,7 +107,7 @@ export const checkAndTriggerAutoReorder = async (storeId: string): Promise<AutoR
       .from('inventory_stock')
       .select('*')
       .eq('store_id', storeId)
-      .lt('stock_quantity', supabase.rpc('get_minimum_threshold', { item_id: 'id' }))
+      .filter('stock_quantity', 'lt', 'minimum_threshold')
       .eq('is_active', true);
 
     if (error) throw error;
