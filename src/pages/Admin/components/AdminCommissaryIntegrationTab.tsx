@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,83 +15,117 @@ import {
   TrendingUp,
   Clock
 } from 'lucide-react';
+import { fetchCommissaryInventory } from '@/services/inventoryManagement/commissaryInventoryService';
+import { supabase } from '@/integrations/supabase/client';
+import { CommissaryInventoryItem } from '@/types/inventoryManagement';
+
+interface RecipeIngredient {
+  commissary_item_id: string;
+  commissary_item_name: string;
+  recipe_count: number;
+}
 
 export const AdminCommissaryIntegrationTab: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [commissaryItems, setCommissaryItems] = useState<CommissaryInventoryItem[]>([]);
+  const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for commissary integration
-  const integrationStats = {
-    totalCommissaryItems: 145,
-    itemsUsedInRecipes: 89,
-    unusedItems: 56,
-    lowStockItems: 12,
-    averageCostPerUnit: 2.45
-  };
+  useEffect(() => {
+    loadCommissaryData();
+  }, []);
 
-  const commissaryItems = [
-    {
-      id: '1',
-      name: 'All-Purpose Flour',
-      category: 'Baking',
-      currentStock: 250,
-      unit: 'kg',
-      unitCost: 0.50,
-      usedInRecipes: 15,
-      status: 'in_stock',
-      lastUpdated: '2024-01-15'
-    },
-    {
-      id: '2',
-      name: 'Premium Vanilla Extract',
-      category: 'Flavoring',
-      currentStock: 5,
-      unit: 'liters',
-      unitCost: 25.00,
-      usedInRecipes: 8,
-      status: 'low_stock',
-      lastUpdated: '2024-01-14'
-    },
-    {
-      id: '3',
-      name: 'Organic Raw Sugar',
-      category: 'Sweetener',
-      currentStock: 180,
-      unit: 'kg',
-      unitCost: 1.20,
-      usedInRecipes: 22,
-      status: 'in_stock',
-      lastUpdated: '2024-01-15'
-    },
-    {
-      id: '4',
-      name: 'Dark Chocolate Chips',
-      category: 'Baking',
-      currentStock: 0,
-      unit: 'kg',
-      unitCost: 8.50,
-      usedInRecipes: 6,
-      status: 'out_of_stock',
-      lastUpdated: '2024-01-10'
-    }
-  ];
+  const loadCommissaryData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch commissary inventory
+      const inventory = await fetchCommissaryInventory();
+      setCommissaryItems(inventory);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'in_stock':
-        return <Badge variant="default" className="bg-green-100 text-green-800">In Stock</Badge>;
-      case 'low_stock':
-        return <Badge variant="destructive" className="bg-amber-100 text-amber-800">Low Stock</Badge>;
-      case 'out_of_stock':
-        return <Badge variant="destructive">Out of Stock</Badge>;
-      default:
-        return <Badge variant="secondary">Unknown</Badge>;
+      // Fetch recipe ingredients usage data
+      const { data: recipeIngredientsData } = await supabase
+        .from('recipe_template_ingredients')
+        .select(`
+          commissary_item_id,
+          commissary_item_name,
+          recipe_template_id
+        `);
+
+      if (recipeIngredientsData) {
+        // Group by commissary item and count unique recipes
+        const ingredientUsage = recipeIngredientsData.reduce((acc, item) => {
+          const key = item.commissary_item_id || item.commissary_item_name;
+          if (!acc[key]) {
+            acc[key] = {
+              commissary_item_id: item.commissary_item_id,
+              commissary_item_name: item.commissary_item_name,
+              recipes: new Set()
+            };
+          }
+          acc[key].recipes.add(item.recipe_template_id);
+          return acc;
+        }, {} as any);
+
+        const usageArray = Object.values(ingredientUsage).map((item: any) => ({
+          commissary_item_id: item.commissary_item_id,
+          commissary_item_name: item.commissary_item_name,
+          recipe_count: item.recipes.size
+        }));
+
+        setRecipeIngredients(usageArray);
+      }
+    } catch (error) {
+      console.error('Error loading commissary data:', error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const getItemUsage = (itemId: string, itemName: string) => {
+    const usage = recipeIngredients.find(
+      ri => ri.commissary_item_id === itemId || ri.commissary_item_name.toLowerCase() === itemName.toLowerCase()
+    );
+    return usage?.recipe_count || 0;
+  };
+
+  const getStatusBadge = (item: CommissaryInventoryItem) => {
+    if (item.current_stock === 0) {
+      return <Badge variant="destructive">Out of Stock</Badge>;
+    } else if (item.current_stock <= item.minimum_threshold) {
+      return <Badge variant="destructive" className="bg-amber-100 text-amber-800">Low Stock</Badge>;
+    } else {
+      return <Badge variant="default" className="bg-green-100 text-green-800">In Stock</Badge>;
+    }
+  };
+
+  // Calculate integration metrics
+  const totalCommissaryItems = commissaryItems.length;
+  const itemsUsedInRecipes = recipeIngredients.length;
+  const unusedItems = totalCommissaryItems - itemsUsedInRecipes;
+  const lowStockItems = commissaryItems.filter(item => 
+    item.current_stock <= item.minimum_threshold && item.current_stock > 0
+  ).length;
+  const outOfStockItems = commissaryItems.filter(item => item.current_stock === 0).length;
+  const averageCostPerUnit = commissaryItems.length > 0 
+    ? commissaryItems.reduce((sum, item) => sum + (item.unit_cost || 0), 0) / commissaryItems.length 
+    : 0;
 
   const filteredItems = commissaryItems.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading commissary integration data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -112,7 +146,7 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
               <Package className="h-4 w-4 text-blue-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold">{integrationStats.totalCommissaryItems}</p>
+                <p className="text-2xl font-bold">{totalCommissaryItems}</p>
               </div>
             </div>
           </CardContent>
@@ -124,7 +158,7 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
               <CheckCircle className="h-4 w-4 text-green-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Used in Recipes</p>
-                <p className="text-2xl font-bold">{integrationStats.itemsUsedInRecipes}</p>
+                <p className="text-2xl font-bold">{itemsUsedInRecipes}</p>
               </div>
             </div>
           </CardContent>
@@ -136,7 +170,7 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
               <Clock className="h-4 w-4 text-gray-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Unused Items</p>
-                <p className="text-2xl font-bold">{integrationStats.unusedItems}</p>
+                <p className="text-2xl font-bold">{unusedItems}</p>
               </div>
             </div>
           </CardContent>
@@ -147,8 +181,8 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <div>
-                <p className="text-sm text-muted-foreground">Low Stock</p>
-                <p className="text-2xl font-bold">{integrationStats.lowStockItems}</p>
+                <p className="text-sm text-muted-foreground">Low/Out Stock</p>
+                <p className="text-2xl font-bold">{lowStockItems + outOfStockItems}</p>
               </div>
             </div>
           </CardContent>
@@ -160,7 +194,7 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
               <TrendingUp className="h-4 w-4 text-purple-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Avg Cost/Unit</p>
-                <p className="text-2xl font-bold">₱{integrationStats.averageCostPerUnit}</p>
+                <p className="text-2xl font-bold">₱{averageCostPerUnit.toFixed(2)}</p>
               </div>
             </div>
           </CardContent>
@@ -190,45 +224,57 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
                   className="pl-8 w-64"
                 />
               </div>
+              <Button onClick={loadCommissaryData} variant="outline" size="sm">
+                Refresh
+              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {filteredItems.map((item) => (
-              <div 
-                key={item.id} 
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <h4 className="font-medium">{item.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {item.category} • Used in {item.usedInRecipes} recipes
-                      </p>
+            {filteredItems.map((item) => {
+              const usageCount = getItemUsage(item.id, item.name);
+              return (
+                <div 
+                  key={item.id} 
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <h4 className="font-medium">{item.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {item.category.replace('_', ' ')} • Used in {usageCount} recipe{usageCount !== 1 ? 's' : ''}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="font-medium">
-                      {item.currentStock} {item.unit}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      ₱{item.unitCost.toFixed(2)}/{item.unit}
-                    </p>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="font-medium">
+                        {item.current_stock} {item.unit}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        ₱{(item.unit_cost || 0).toFixed(2)}/{item.unit}
+                      </p>
+                    </div>
+                    
+                    {getStatusBadge(item)}
+                    
+                    <Button variant="outline" size="sm">
+                      View Details
+                    </Button>
                   </div>
-                  
-                  {getStatusBadge(item.status)}
-                  
-                  <Button variant="outline" size="sm">
-                    View Details
-                  </Button>
                 </div>
+              );
+            })}
+            
+            {filteredItems.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                {searchQuery ? 'No items found matching your search.' : 'No commissary items found.'}
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
@@ -243,7 +289,7 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="h-20 flex-col gap-2">
+            <Button variant="outline" className="h-20 flex-col gap-2" onClick={loadCommissaryData}>
               <CheckCircle className="h-5 w-5" />
               <span className="text-sm">Sync Inventory</span>
             </Button>
