@@ -1,4 +1,3 @@
-
 import { UserRole } from "@/types";
 
 /**
@@ -41,7 +40,6 @@ export const ROUTE_PATHS = {
   SETTINGS: '/settings',
   INVENTORY: '/inventory',
   PRODUCTION: '/production-management',
-  RECIPE_MANAGEMENT: '/recipe-management',
   COMMISSARY_INVENTORY: '/commissary-inventory',
   BULK_UPLOAD: '/bulk-upload',
   STOCK_ORDERS: '/stock-orders'

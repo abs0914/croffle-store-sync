@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Download, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, Download, FileText, AlertCircle, CheckCircle, ChefHat } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface UploadResult {
@@ -15,7 +15,7 @@ interface UploadResult {
   errors: string[];
 }
 
-export const RecipeBulkUploadTab: React.FC = () => {
+export const AdminRecipeBulkUploadTab: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -24,7 +24,6 @@ export const RecipeBulkUploadTab: React.FC = () => {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      // Validate file type
       const allowedTypes = [
         'text/csv',
         'application/vnd.ms-excel',
@@ -47,7 +46,6 @@ export const RecipeBulkUploadTab: React.FC = () => {
     setUploadProgress(0);
 
     try {
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
@@ -58,31 +56,30 @@ export const RecipeBulkUploadTab: React.FC = () => {
         });
       }, 200);
 
-      // Simulate API call for bulk recipe upload
       await new Promise(resolve => setTimeout(resolve, 3000));
       
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      // Simulate upload result
       const result: UploadResult = {
-        success: 8,
-        failed: 2,
+        success: 12,
+        failed: 3,
         errors: [
-          'Row 5: Missing ingredient "Flour" not found in commissary inventory',
-          'Row 12: Invalid quantity format for ingredient "Sugar"'
+          'Row 5: Commissary item "Organic Flour" not found in inventory',
+          'Row 12: Invalid quantity format for ingredient "Sugar"',
+          'Row 18: Recipe name "Chocolate Cake" already exists'
         ]
       };
 
       setUploadResult(result);
-      toast.success(`Successfully uploaded ${result.success} recipes`);
+      toast.success(`Successfully uploaded ${result.success} recipe templates`);
 
       if (result.failed > 0) {
-        toast.warning(`${result.failed} recipes failed to upload. Check the results below.`);
+        toast.warning(`${result.failed} recipe templates failed to upload. Check the results below.`);
       }
 
     } catch (error) {
-      toast.error('Failed to upload recipes');
+      toast.error('Failed to upload recipe templates');
       console.error('Upload error:', error);
     } finally {
       setIsUploading(false);
@@ -90,25 +87,33 @@ export const RecipeBulkUploadTab: React.FC = () => {
   };
 
   const downloadTemplate = () => {
-    // Create a sample CSV template
-    const csvContent = `Recipe Name,Description,Category,Instructions,Ingredient Name,Quantity,Unit,Notes
-Chocolate Chip Cookie,Classic chocolate chip cookie,Baked Goods,"Mix dry ingredients. Add wet ingredients. Fold in chocolate chips. Bake at 350°F for 12 minutes.",All-Purpose Flour,2,cups,From commissary inventory
-Chocolate Chip Cookie,Classic chocolate chip cookie,Baked Goods,"Mix dry ingredients. Add wet ingredients. Fold in chocolate chips. Bake at 350°F for 12 minutes.",Granulated Sugar,1,cup,From commissary inventory
-Chocolate Chip Cookie,Classic chocolate chip cookie,Baked Goods,"Mix dry ingredients. Add wet ingredients. Fold in chocolate chips. Bake at 350°F for 12 minutes.",Chocolate Chips,1,cup,From commissary inventory
-Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. Bake at 375°F for 30 minutes.,Bread Flour,3,cups,From commissary inventory
-Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. Bake at 375°F for 30 minutes.,Active Dry Yeast,1,packet,From commissary inventory`;
+    const csvContent = `Recipe Name,Description,Category,Instructions,Yield Quantity,Serving Size,Ingredient Name,Quantity,Unit,Cost Per Unit,Notes
+Chocolate Chip Cookie,Classic chocolate chip cookie,Baked Goods,"Mix dry ingredients. Add wet ingredients. Fold in chocolate chips. Bake at 350°F for 12 minutes.",24,1,All-Purpose Flour,2,cups,0.50,From commissary inventory
+Chocolate Chip Cookie,Classic chocolate chip cookie,Baked Goods,"Mix dry ingredients. Add wet ingredients. Fold in chocolate chips. Bake at 350°F for 12 minutes.",24,1,Granulated Sugar,1,cup,0.75,From commissary inventory
+Chocolate Chip Cookie,Classic chocolate chip cookie,Baked Goods,"Mix dry ingredients. Add wet ingredients. Fold in chocolate chips. Bake at 350°F for 12 minutes.",24,1,Chocolate Chips,1,cup,2.00,From commissary inventory
+Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. Bake at 375°F for 30 minutes.,2,8,Bread Flour,3,cups,0.60,From commissary inventory
+Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. Bake at 375°F for 30 minutes.,2,8,Active Dry Yeast,1,packet,0.25,From commissary inventory`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'recipe_template.csv';
+    a.download = 'recipe_template_bulk_upload.csv';
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
   return (
     <div className="space-y-6">
+      {/* Context Alert */}
+      <Alert>
+        <ChefHat className="h-4 w-4" />
+        <AlertDescription>
+          Upload recipe templates that will be available for deployment to all stores. 
+          All ingredients must exist in commissary inventory.
+        </AlertDescription>
+      </Alert>
+
       {/* Template Download */}
       <Card>
         <CardHeader>
@@ -117,7 +122,7 @@ Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. B
             Download Template
           </CardTitle>
           <CardDescription>
-            Download a CSV template with the correct format for bulk recipe upload
+            Download a CSV template with the correct format for bulk recipe template upload
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -133,10 +138,10 @@ Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. B
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Upload Recipe File
+            Upload Recipe Templates
           </CardTitle>
           <CardDescription>
-            Upload a CSV or Excel file containing recipe data
+            Upload a CSV or Excel file containing recipe template data
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -163,7 +168,7 @@ Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. B
           {isUploading && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Uploading recipes...</span>
+                <span>Processing recipe templates...</span>
                 <span>{uploadProgress}%</span>
               </div>
               <Progress value={uploadProgress} />
@@ -176,11 +181,11 @@ Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. B
             className="w-full"
           >
             {isUploading ? (
-              <>Uploading...</>
+              <>Processing...</>
             ) : (
               <>
                 <Upload className="h-4 w-4 mr-2" />
-                Upload Recipes
+                Upload Recipe Templates
               </>
             )}
           </Button>
@@ -243,20 +248,24 @@ Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. B
             <div>
               <strong>Required Columns:</strong>
               <ul className="list-disc list-inside ml-4 mt-1">
-                <li>Recipe Name - The name of the recipe</li>
+                <li>Recipe Name - The name of the recipe template</li>
                 <li>Description - Brief description of the recipe</li>
                 <li>Category - Recipe category (e.g., Baked Goods, Beverages)</li>
                 <li>Instructions - Step-by-step cooking instructions</li>
-                <li>Ingredient Name - Must match commissary inventory items</li>
+                <li>Yield Quantity - Number of servings/items produced</li>
+                <li>Serving Size - Size per serving (optional)</li>
+                <li>Ingredient Name - Must match commissary inventory items exactly</li>
                 <li>Quantity - Numeric quantity of the ingredient</li>
                 <li>Unit - Unit of measurement (cups, grams, etc.)</li>
+                <li>Cost Per Unit - Cost per unit of ingredient (optional)</li>
               </ul>
             </div>
             <div>
               <strong>Important Notes:</strong>
               <ul className="list-disc list-inside ml-4 mt-1">
-                <li>Ingredient names must exactly match items in commissary inventory</li>
+                <li>All ingredient names must exactly match items in commissary inventory</li>
                 <li>Multiple ingredients for the same recipe should be on separate rows</li>
+                <li>Recipe templates can be deployed to multiple stores</li>
                 <li>Quantities must be numeric values</li>
                 <li>File size limit: 10MB</li>
               </ul>

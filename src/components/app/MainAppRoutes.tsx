@@ -12,10 +12,8 @@ import Settings from '@/pages/Settings';
 import OrderManagement from '@/pages/OrderManagement';
 import Inventory from '@/pages/Inventory';
 import ProductionManagement from '@/pages/ProductionManagement';
-import CommissaryInventory from '@/pages/CommissaryInventory';
 import StockOrders from '@/pages/StockOrders';
 import ProductForm from '@/pages/Inventory/ProductForm';
-import RecipeManagement from '@/pages/RecipeManagement';
 
 export const MainAppRoutes = () => [
   // Both root and dashboard routes show the same Dashboard component
@@ -42,11 +40,6 @@ export const MainAppRoutes = () => [
   <Route key="stock-orders" path="/stock-orders" element={
     <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
       <MainLayout><StockOrders /></MainLayout>
-    </ProtectedRoute>
-  } />,
-  <Route key="recipe-management" path="/recipe-management" element={
-    <ProtectedRoute allowedRoles={['admin', 'owner']}>
-      <MainLayout><RecipeManagement /></MainLayout>
     </ProtectedRoute>
   } />,
   <Route key="production-management" path="/production-management" element={
@@ -87,11 +80,6 @@ export const MainAppRoutes = () => [
   <Route key="order-management" path="/order-management" element={
     <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
       <MainLayout><OrderManagement /></MainLayout>
-    </ProtectedRoute>
-  } />,
-  <Route key="commissary-inventory" path="/commissary-inventory" element={
-    <ProtectedRoute allowedRoles={['admin', 'owner']}>
-      <MainLayout><CommissaryInventory /></MainLayout>
     </ProtectedRoute>
   } />
 ];

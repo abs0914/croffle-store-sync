@@ -6,6 +6,8 @@ import { AdminRecipesMetrics } from './components/AdminRecipesMetrics';
 import { AdminRecipesList } from './components/AdminRecipesList';
 import { AdminRecipeBulkActions } from './components/AdminRecipeBulkActions';
 import { RecipeManagementTab } from './components/RecipeManagementTab';
+import { AdminRecipeBulkUploadTab } from './components/AdminRecipeBulkUploadTab';
+import { AdminCommissaryIntegrationTab } from './components/AdminCommissaryIntegrationTab';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -13,7 +15,7 @@ import { toast } from 'sonner';
 export default function AdminRecipes() {
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeTab, setActiveTab] = useState('deployed-recipes');
+  const [activeTab, setActiveTab] = useState('recipe-templates');
   
   const {
     recipes,
@@ -127,17 +129,19 @@ export default function AdminRecipes() {
       <div>
         <h1 className="text-3xl font-bold">Recipe Administration</h1>
         <p className="text-muted-foreground">
-          Manage recipe templates and monitor deployed recipes across all stores
+          Manage recipe templates, deployed recipes, and commissary integration across all stores
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="recipe-management">Recipe Management</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="recipe-templates">Recipe Templates</TabsTrigger>
           <TabsTrigger value="deployed-recipes">Deployed Recipes</TabsTrigger>
+          <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
+          <TabsTrigger value="commissary-integration">Commissary Integration</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="recipe-management">
+        <TabsContent value="recipe-templates">
           <RecipeManagementTab />
         </TabsContent>
 
@@ -174,6 +178,14 @@ export default function AdminRecipes() {
             onRefresh={refreshRecipes}
             stores={stores}
           />
+        </TabsContent>
+
+        <TabsContent value="bulk-upload">
+          <AdminRecipeBulkUploadTab />
+        </TabsContent>
+
+        <TabsContent value="commissary-integration">
+          <AdminCommissaryIntegrationTab />
         </TabsContent>
       </Tabs>
     </div>

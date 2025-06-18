@@ -1,4 +1,3 @@
-
 import { UserRole } from '@/types';
 import { ROUTE_PATHS, checkRouteAccess } from '@/contexts/auth/role-utils';
 
@@ -67,12 +66,6 @@ export const auditRouteAccess = () => {
       description: 'Production management - accessible to managers and above with store access',
       allowedRoles: ['admin', 'owner', 'manager'],
       requiresStoreAccess: true
-    },
-    {
-      route: ROUTE_PATHS.RECIPE_MANAGEMENT,
-      description: 'Recipe management - accessible to owners and admins only',
-      allowedRoles: ['admin', 'owner'],
-      requiresStoreAccess: false
     },
     {
       route: ROUTE_PATHS.COMMISSARY_INVENTORY,

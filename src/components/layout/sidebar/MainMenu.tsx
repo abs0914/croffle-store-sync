@@ -7,14 +7,11 @@ import {
   ShoppingCart, 
   BarChart3, 
   Settings, 
-  Store,
   Package2,
   Factory,
   Truck,
   ClipboardList,
-  Boxes,
-  ShoppingBag,
-  ChefHat
+  ShoppingBag
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 
@@ -74,12 +71,6 @@ export const MainMenu: React.FC = () => {
       managerOnly: true,
     },
     {
-      to: '/recipe-management',
-      icon: <ChefHat className="h-4 w-4" />,
-      label: 'Recipe Management',
-      adminOnly: true,
-    },
-    {
       to: '/production-management',
       icon: <Factory className="h-4 w-4" />,
       label: 'Production Management',
@@ -96,12 +87,6 @@ export const MainMenu: React.FC = () => {
       icon: <Truck className="h-4 w-4" />,
       label: 'Order Management',
       managerOnly: true,
-    },
-    {
-      to: '/commissary-inventory',
-      icon: <Boxes className="h-4 w-4" />,
-      label: 'Commissary Inventory',
-      adminOnly: true,
     },
     {
       to: '/reports',
