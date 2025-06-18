@@ -25,13 +25,13 @@ export function useOptimizedInventory(storeId: string) {
     }
   );
 
-  // Optimized inventory movements with pagination
+  // Optimized inventory movements
   const {
     data: movements = [],
     isLoading: isLoadingMovements
   } = useOptimizedDataFetch(
     ['inventory-movements', storeId],
-    () => fetchInventoryMovements(storeId, { limit: 50 }),
+    () => fetchInventoryMovements(storeId),
     {
       enabled: !!storeId,
       cacheConfig: {
@@ -57,7 +57,7 @@ export function useOptimizedInventory(storeId: string) {
 
   // Optimized mutation for inventory updates
   const { mutate: updateInventory } = useOptimizedMutation(
-    updateInventoryItem,
+    ({ id, updates }: { id: string; updates: any }) => updateInventoryItem(id, updates),
     {
       onSuccess: () => {
         toast.success('Inventory updated successfully');

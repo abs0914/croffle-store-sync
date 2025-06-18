@@ -16,6 +16,7 @@ interface OptimizedInventoryListProps {
 
 const ITEM_HEIGHT = 80;
 const VISIBLE_ITEMS = 8;
+const LIST_WIDTH = '100%';
 
 export function OptimizedInventoryList({ storeId, onItemSelect }: OptimizedInventoryListProps) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -176,6 +177,7 @@ export function OptimizedInventoryList({ storeId, onItemSelect }: OptimizedInven
               height={ITEM_HEIGHT * Math.min(VISIBLE_ITEMS, filteredItems.length)}
               itemCount={filteredItems.length}
               itemSize={ITEM_HEIGHT}
+              width={LIST_WIDTH}
               className="border rounded-md"
             >
               {RowRenderer}

@@ -43,15 +43,24 @@ export class InventoryCacheService {
     const queries = [
       {
         queryKey: ['inventory-stock', storeId],
-        queryFn: () => import('@/services/inventoryManagement/inventoryItemService').then(m => m.fetchInventoryItems(storeId))
+        queryFn: async () => {
+          const { fetchInventoryItems } = await import('@/services/inventoryManagement/inventoryItemService');
+          return fetchInventoryItems(storeId);
+        }
       },
       {
         queryKey: ['inventory-movements', storeId],
-        queryFn: () => import('@/services/storeInventory/inventoryMovementService').then(m => m.fetchInventoryMovements(storeId))
+        queryFn: async () => {
+          const { fetchInventoryMovements } = await import('@/services/storeInventory/inventoryMovementService');
+          return fetchInventoryMovements(storeId);
+        }
       },
       {
         queryKey: ['stock-orders', storeId],
-        queryFn: () => import('@/services/inventory/stockOrderWorkflowService').then(m => m.fetchStockOrders(storeId))
+        queryFn: async () => {
+          const { fetchStockOrders } = await import('@/services/inventory/stockOrderWorkflowService');
+          return fetchStockOrders(storeId);
+        }
       }
     ];
 
