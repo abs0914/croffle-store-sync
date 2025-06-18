@@ -108,7 +108,7 @@ export const checkAndTriggerAutoReorder = async (storeId: string): Promise<AutoR
       .from('inventory_stock')
       .select('*')
       .eq('store_id', storeId)
-      .filter('stock_quantity', 'lt', supabase.raw('minimum_threshold'))
+      .lt('stock_quantity', supabase.rpc('get_minimum_threshold', { item_id: 'id' }))
       .eq('is_active', true);
 
     if (error) throw error;
@@ -121,6 +121,9 @@ export const checkAndTriggerAutoReorder = async (storeId: string): Promise<AutoR
       };
     }
 
+    // Generate order number
+    const orderNumber = `AUTO-${Date.now()}`;
+
     // Create stock order for low stock items
     const { data: stockOrder, error: orderError } = await supabase
       .from('stock_orders')
@@ -128,6 +131,7 @@ export const checkAndTriggerAutoReorder = async (storeId: string): Promise<AutoR
         store_id: storeId,
         status: 'requested',
         notes: 'Auto-generated order for low stock items',
+        order_number: orderNumber,
         requested_by: (await supabase.auth.getUser()).data.user?.id
       })
       .select()

@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CartItem, Customer } from '@/types';
 import { PaymentDialog } from './PaymentDialog';
@@ -214,7 +213,6 @@ export default function CartView({
           
           {/* Customer Selection */}
           <div className="space-y-2">
-            <Label>Customer (Optional)</Label>
             <CustomerSelector
               selectedCustomer={selectedCustomer}
               onCustomerSelect={setSelectedCustomer}

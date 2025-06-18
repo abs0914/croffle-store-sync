@@ -40,6 +40,9 @@ export const createStockOrder = async (
   try {
     console.log('Creating stock order:', { storeId, items, notes });
 
+    // Generate order number
+    const orderNumber = `SO-${Date.now()}`;
+
     // Create the stock order
     const { data: order, error: orderError } = await supabase
       .from('stock_orders')
@@ -47,6 +50,7 @@ export const createStockOrder = async (
         store_id: storeId,
         status: 'requested',
         notes: notes || 'Manual stock order request',
+        order_number: orderNumber,
         requested_by: (await supabase.auth.getUser()).data.user?.id
       })
       .select()
@@ -212,7 +216,7 @@ export const fetchStockOrders = async (
     const { data, error } = await query;
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as StockOrderWorkflow[];
   } catch (error) {
     console.error('Error fetching stock orders:', error);
     toast.error('Failed to fetch stock orders');
