@@ -31,8 +31,8 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
       category_id: undefined, // Product catalog doesn't use categories yet
       categoryId: undefined,
       category: undefined,
-      image_url: undefined, // Product catalog doesn't have images yet
-      image: undefined,
+      image_url: item.image_url || undefined, // Include image_url from product_catalog
+      image: item.image_url || undefined, // Map to frontend compatibility field
       is_active: item.is_available,
       isActive: item.is_available,
       store_id: item.store_id,
