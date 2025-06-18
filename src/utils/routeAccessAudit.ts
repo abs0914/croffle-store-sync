@@ -1,142 +1,156 @@
 
 import { UserRole } from '@/types';
-import { checkRouteAccess, ROUTE_PATHS, getRouteAccessDescription } from '@/contexts/auth/role-utils';
+import { ROUTE_PATHS, checkRouteAccess } from '@/contexts/auth/role-utils';
 
 interface RouteAccessTest {
   route: string;
-  role: UserRole;
-  expected: boolean;
-  actual: boolean;
-  passed: boolean;
-}
-
-interface AccessAuditResult {
-  totalTests: number;
-  passed: number;
-  failed: number;
-  tests: RouteAccessTest[];
+  description: string;
+  allowedRoles: UserRole[];
+  requiresStoreAccess: boolean;
 }
 
 /**
- * Comprehensive route access testing for all roles and routes
+ * Comprehensive route access audit for debugging and documentation
  */
-export const auditRouteAccess = (): AccessAuditResult => {
-  const routes = Object.values(ROUTE_PATHS);
-  const roles: UserRole[] = ['admin', 'owner', 'manager', 'cashier'];
-  
-  const tests: RouteAccessTest[] = [];
-  
-  // Define expected access patterns
-  const expectedAccess: Record<string, UserRole[]> = {
-    [ROUTE_PATHS.DASHBOARD]: ['admin', 'owner', 'manager', 'cashier'],
-    [ROUTE_PATHS.POS]: ['admin', 'owner', 'manager', 'cashier'],
-    [ROUTE_PATHS.PRODUCT_CATALOG]: ['admin', 'owner', 'manager', 'cashier'],
-    [ROUTE_PATHS.CUSTOMERS]: ['admin', 'owner', 'manager', 'cashier'],
-    [ROUTE_PATHS.REPORTS]: ['admin', 'owner', 'manager'],
-    [ROUTE_PATHS.ORDER_MANAGEMENT]: ['admin', 'owner', 'manager'],
-    [ROUTE_PATHS.SETTINGS]: ['admin', 'owner', 'manager'],
-    [ROUTE_PATHS.INVENTORY]: ['admin', 'owner', 'manager'],
-    [ROUTE_PATHS.PRODUCTION]: ['admin', 'owner'],
-    [ROUTE_PATHS.COMMISSARY_INVENTORY]: ['admin', 'owner'],
-    [ROUTE_PATHS.BULK_UPLOAD]: ['admin', 'owner', 'manager'],
-    [ROUTE_PATHS.INVENTORY_CONVERSION]: ['admin', 'owner', 'manager']
-  };
-  
-  // Run tests for each route and role combination
-  routes.forEach(route => {
-    roles.forEach(role => {
-      const expected = expectedAccess[route]?.includes(role) || false;
-      const actual = checkRouteAccess(role, route);
-      
-      tests.push({
-        route,
-        role,
-        expected,
-        actual,
-        passed: expected === actual
-      });
-    });
-  });
-  
-  const passed = tests.filter(test => test.passed).length;
-  const failed = tests.length - passed;
-  
-  return {
-    totalTests: tests.length,
-    passed,
-    failed,
-    tests
-  };
+export const auditRouteAccess = () => {
+  const routes: RouteAccessTest[] = [
+    {
+      route: ROUTE_PATHS.DASHBOARD,
+      description: 'Main dashboard - accessible to all authenticated users',
+      allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
+      requiresStoreAccess: false
+    },
+    {
+      route: ROUTE_PATHS.POS,
+      description: 'Point of Sale - accessible to all with store access',
+      allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
+      requiresStoreAccess: true
+    },
+    {
+      route: ROUTE_PATHS.PRODUCT_CATALOG,
+      description: 'Product catalog - accessible to all with store access',
+      allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
+      requiresStoreAccess: true
+    },
+    {
+      route: ROUTE_PATHS.CUSTOMERS,
+      description: 'Customer management - accessible to all with store access',
+      allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
+      requiresStoreAccess: true
+    },
+    {
+      route: ROUTE_PATHS.REPORTS,
+      description: 'Reports - accessible to managers and above with store access',
+      allowedRoles: ['admin', 'owner', 'manager'],
+      requiresStoreAccess: true
+    },
+    {
+      route: ROUTE_PATHS.ORDER_MANAGEMENT,
+      description: 'Order management - accessible to managers and above with store access',
+      allowedRoles: ['admin', 'owner', 'manager'],
+      requiresStoreAccess: true
+    },
+    {
+      route: ROUTE_PATHS.SETTINGS,
+      description: 'Settings - accessible to managers and above',
+      allowedRoles: ['admin', 'owner', 'manager'],
+      requiresStoreAccess: false
+    },
+    {
+      route: ROUTE_PATHS.INVENTORY,
+      description: 'Store inventory - accessible to managers and above with store access',
+      allowedRoles: ['admin', 'owner', 'manager'],
+      requiresStoreAccess: true
+    },
+    {
+      route: ROUTE_PATHS.PRODUCTION,
+      description: 'Production management - accessible to managers and above with store access',
+      allowedRoles: ['admin', 'owner', 'manager'],
+      requiresStoreAccess: true
+    },
+    {
+      route: ROUTE_PATHS.RECIPE_MANAGEMENT,
+      description: 'Recipe management - accessible to owners and admins only',
+      allowedRoles: ['admin', 'owner'],
+      requiresStoreAccess: false
+    },
+    {
+      route: ROUTE_PATHS.COMMISSARY_INVENTORY,
+      description: 'Commissary inventory - accessible to owners and admins only',
+      allowedRoles: ['admin', 'owner'],
+      requiresStoreAccess: false
+    },
+    {
+      route: ROUTE_PATHS.STOCK_ORDERS,
+      description: 'Stock orders - accessible to managers and above with store access',
+      allowedRoles: ['admin', 'owner', 'manager'],
+      requiresStoreAccess: true
+    }
+  ];
+
+  return routes;
 };
 
 /**
- * Log audit results to console (development only)
+ * Test route access for a specific user role and store access
  */
-export const logAuditResults = (results: AccessAuditResult): void => {
-  if (process.env.NODE_ENV !== 'development') return;
-  
-  console.group('🔍 Route Access Audit Results');
-  console.log(`Total Tests: ${results.totalTests}`);
-  console.log(`✅ Passed: ${results.passed}`);
-  console.log(`❌ Failed: ${results.failed}`);
-  console.log(`Success Rate: ${((results.passed / results.totalTests) * 100).toFixed(1)}%`);
-  
-  if (results.failed > 0) {
-    console.group('❌ Failed Tests');
-    results.tests
-      .filter(test => !test.passed)
-      .forEach(test => {
-        console.log(`${test.route} + ${test.role}: Expected ${test.expected}, Got ${test.actual}`);
-      });
-    console.groupEnd();
-  }
-  
-  console.groupEnd();
-};
-
-/**
- * Generate a route access matrix for documentation
- */
-export const generateAccessMatrix = (): string => {
-  const routes = Object.values(ROUTE_PATHS);
-  const roles: UserRole[] = ['admin', 'owner', 'manager', 'cashier'];
-  
-  let matrix = 'Route Access Matrix\n';
-  matrix += '===================\n\n';
-  matrix += 'Route'.padEnd(25) + roles.map(role => role.padEnd(10)).join('') + '\n';
-  matrix += '-'.repeat(25 + roles.length * 10) + '\n';
-  
-  routes.forEach(route => {
-    const routeName = route.replace('/', '').padEnd(25);
-    const access = roles.map(role => {
-      const hasAccess = checkRouteAccess(role, route);
-      return (hasAccess ? '✅' : '❌').padEnd(10);
-    }).join('');
-    
-    matrix += routeName + access + '\n';
-  });
-  
-  matrix += '\n\nRoute Descriptions:\n';
-  matrix += '==================\n';
-  routes.forEach(route => {
-    matrix += `${route}: ${getRouteAccessDescription(route)}\n`;
-  });
-  
-  return matrix;
-};
-
-/**
- * Test route access for a specific user context
- */
-export const testUserRouteAccess = (userRole: UserRole, userStoreIds: string[]): string[] => {
-  const routes = Object.values(ROUTE_PATHS);
+export const testUserRouteAccess = (userRole: UserRole, storeIds: string[]) => {
+  const routes = auditRouteAccess();
   const accessibleRoutes: string[] = [];
-  
+
   routes.forEach(route => {
-    if (checkRouteAccess(userRole, route)) {
-      accessibleRoutes.push(route);
+    const hasRoleAccess = route.allowedRoles.includes(userRole);
+    const hasStoreAccess = !route.requiresStoreAccess || storeIds.length > 0;
+    
+    if (hasRoleAccess && hasStoreAccess) {
+      accessibleRoutes.push(route.route);
     }
   });
-  
+
   return accessibleRoutes;
+};
+
+/**
+ * Log comprehensive audit results
+ */
+export const logAuditResults = (routes: RouteAccessTest[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    console.group('🔐 Route Access Audit Results');
+    routes.forEach(route => {
+      console.log(`${route.route}: ${route.description}`);
+      console.log(`  Allowed roles: ${route.allowedRoles.join(', ')}`);
+      console.log(`  Requires store access: ${route.requiresStoreAccess}`);
+    });
+    console.groupEnd();
+  }
+};
+
+/**
+ * Validate route access configuration
+ */
+export const validateRouteAccess = () => {
+  const routes = auditRouteAccess();
+  const errors: string[] = [];
+
+  routes.forEach(route => {
+    // Check if route exists in ROUTE_PATHS
+    const routeExists = Object.values(ROUTE_PATHS).includes(route.route as any);
+    if (!routeExists) {
+      errors.push(`Route ${route.route} not found in ROUTE_PATHS`);
+    }
+
+    // Check if allowed roles are valid
+    const validRoles: UserRole[] = ['admin', 'owner', 'manager', 'cashier'];
+    route.allowedRoles.forEach(role => {
+      if (!validRoles.includes(role)) {
+        errors.push(`Invalid role ${role} for route ${route.route}`);
+      }
+    });
+  });
+
+  if (errors.length > 0) {
+    console.error('🚨 Route Access Configuration Errors:', errors);
+  }
+
+  return errors;
 };
