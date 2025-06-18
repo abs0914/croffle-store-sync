@@ -32,7 +32,7 @@ export const deployRecipeToProductCatalog = async (
         yield_quantity: template.yield_quantity,
         serving_size: template.serving_size || 1,
         store_id: storeId,
-        product_id: '', // Will be updated when product is created
+        product_id: null, // Set to null instead of empty string
         category_name: template.category_name,
         approval_status: 'pending_approval',
         is_active: true,
