@@ -128,7 +128,7 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
 
     setIsDeploying(true);
     try {
-      await deployRecipeToMultipleStores(template, selectedStoreIds, pricing);
+      await deployRecipeToMultipleStores(template, selectedStoreIds);
       onSuccess();
       onClose();
     } catch (error) {
