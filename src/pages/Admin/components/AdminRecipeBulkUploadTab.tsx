@@ -87,38 +87,38 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `Product,Category,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit,Total Cost
-Tiramisu Croffle,Classic,Croissant,piece,1,30,
-Tiramisu Croffle,Classic,Whipped Cream,serving,1,8,
-Tiramisu Croffle,Classic,Tiramisu Sauce,portion,1,3.5,
-Tiramisu Croffle,Classic,Choco Flakes,portion,1,2.5,51.3
-Tiramisu Croffle,Classic,Take out Box,piece,1,6,
-Tiramisu Croffle,Classic,Chopstick,pair,1,0.6,
-Tiramisu Croffle,Classic,Waxpaper,piece,1,0.7,
-Choco Nut Croffle,Classic,Croissant,piece,1,30,
-Choco Nut Croffle,Classic,Whipped Cream,serving,1,8,
-Choco Nut Croffle,Classic,Chocolate Sauce,portion,1,2.5,
-Choco Nut Croffle,Classic,Peanut,portion,1,2.5,50.3
-Choco Nut Croffle,Classic,Take out Box,piece,1,6,
-Choco Nut Croffle,Classic,Chopstick,pair,1,0.6,
-Choco Nut Croffle,Classic,Waxpaper,piece,1,0.7,
-Croffle Overload,Overload,Croissant,piece,0.5,15,
-Croffle Overload,Overload,Vanilla Ice Cream,scoop,1,15.44,
-Croffle Overload,Overload,Colored Sprinkle,portion,1,2.5,37.74
-Croffle Overload,Overload,Peanut,portion,1,2.5,
-Croffle Overload,Overload,Choco Flakes,portion,1,2.5,
-Croffle Overload,Overload,Marshmallow,portion,1,2.5,
-Croffle Overload,Overload,Overload Cup,piece,1,4,
-Croffle Overload,Overload,Popsicle,piece,1,0.3,
-Croffle Overload,Overload,Spoon,piece,1,0.5,
-Mini Croffle,Mini,Croissant,piece,0.5,15,
-Mini Croffle,Mini,Whipped Cream,serving,0.5,4,
-Mini Croffle,Mini,Chocolate Sauce,portion,1,1.25,21.5
-Mini Croffle,Mini,Caramel Sauce,portion,1,1.25,
-Mini Croffle,Mini,Colored Sprinkle,portion,1,1.25,
-Mini Croffle,Mini,Peanut,portion,1,1.25,
-Mini Croffle,Mini,Mini Take out Box,piece,1,2.4,
-Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
+    const csvContent = `Product,Category,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit
+Tiramisu Croffle,Classic,Croissant,piece,1,30
+Tiramisu Croffle,Classic,Whipped Cream,serving,1,8
+Tiramisu Croffle,Classic,Tiramisu Sauce,portion,1,3.5
+Tiramisu Croffle,Classic,Choco Flakes,portion,1,2.5
+Tiramisu Croffle,Classic,Take out Box,piece,1,6
+Tiramisu Croffle,Classic,Chopstick,pair,1,0.6
+Tiramisu Croffle,Classic,Waxpaper,piece,1,0.7
+Choco Nut Croffle,Classic,Croissant,piece,1,30
+Choco Nut Croffle,Classic,Whipped Cream,serving,1,8
+Choco Nut Croffle,Classic,Chocolate Sauce,portion,1,2.5
+Choco Nut Croffle,Classic,Peanut,portion,1,2.5
+Choco Nut Croffle,Classic,Take out Box,piece,1,6
+Choco Nut Croffle,Classic,Chopstick,pair,1,0.6
+Choco Nut Croffle,Classic,Waxpaper,piece,1,0.7
+Croffle Overload,Overload,Croissant,piece,0.5,15
+Croffle Overload,Overload,Vanilla Ice Cream,scoop,1,15.44
+Croffle Overload,Overload,Colored Sprinkle,portion,1,2.5
+Croffle Overload,Overload,Peanut,portion,1,2.5
+Croffle Overload,Overload,Choco Flakes,portion,1,2.5
+Croffle Overload,Overload,Marshmallow,portion,1,2.5
+Croffle Overload,Overload,Overload Cup,piece,1,4
+Croffle Overload,Overload,Popsicle,piece,1,0.3
+Croffle Overload,Overload,Spoon,piece,1,0.5
+Mini Croffle,Mini,Croissant,piece,0.5,15
+Mini Croffle,Mini,Whipped Cream,serving,0.5,4
+Mini Croffle,Mini,Chocolate Sauce,portion,1,1.25
+Mini Croffle,Mini,Caramel Sauce,portion,1,1.25
+Mini Croffle,Mini,Colored Sprinkle,portion,1,1.25
+Mini Croffle,Mini,Peanut,portion,1,1.25
+Mini Croffle,Mini,Mini Take out Box,piece,1,2.4
+Mini Croffle,Mini,Popsicle,piece,1,0.3`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -280,7 +280,6 @@ Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
                 <li>Unit of Measure - Unit of measurement (piece, serving, portion, etc.)</li>
                 <li>Quantity Used - Numeric quantity of the ingredient</li>
                 <li>Cost per Unit - Cost per unit of ingredient (optional)</li>
-                <li>Total Cost - Total cost for the recipe (calculated automatically)</li>
               </ul>
             </div>
             <div>
@@ -290,7 +289,7 @@ Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
                 <li>Multiple ingredients for the same product should be on separate rows</li>
                 <li>Recipe templates can be deployed to multiple stores</li>
                 <li>Quantities must be numeric values</li>
-                <li>Total Cost will be calculated based on individual ingredient costs</li>
+                <li>Total cost will be calculated automatically during POS processing</li>
                 <li>File size limit: 10MB</li>
               </ul>
             </div>
