@@ -1026,6 +1026,7 @@ export type Database = {
           description: string | null
           display_order: number | null
           id: string
+          image_url: string | null
           is_available: boolean
           price: number
           product_name: string
@@ -1038,6 +1039,7 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           id?: string
+          image_url?: string | null
           is_available?: boolean
           price?: number
           product_name: string
@@ -1050,6 +1052,7 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           id?: string
+          image_url?: string | null
           is_available?: boolean
           price?: number
           product_name?: string
