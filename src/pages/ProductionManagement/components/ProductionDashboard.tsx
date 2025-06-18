@@ -1,177 +1,220 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Package, AlertTriangle, TrendingUp, Clock } from 'lucide-react';
-import { fetchInventoryStock } from '@/services/inventoryManagement/recipeService';
-import { InventoryStock } from '@/types/inventoryManagement';
-import { toast } from 'sonner';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ChefHat, Package, TrendingUp, AlertTriangle } from "lucide-react";
+import { fetchInventoryConversions } from "@/services/inventoryManagement/inventoryConversionService";
+import { fetchInventoryStock } from "@/services/inventoryStock/inventoryStockFetch";
+import type { InventoryConversion, InventoryStock } from "@/types/inventoryManagement";
 
 interface ProductionDashboardProps {
   storeId: string;
 }
 
+interface ProductionMetrics {
+  totalConversions: number;
+  recentConversions: number;
+  lowStockItems: number;
+  totalInventoryValue: number;
+}
+
 export function ProductionDashboard({ storeId }: ProductionDashboardProps) {
-  const [inventoryItems, setInventoryItems] = useState<InventoryStock[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [conversions, setConversions] = useState<InventoryConversion[]>([]);
+  const [inventory, setInventory] = useState<InventoryStock[]>([]);
+  const [metrics, setMetrics] = useState<ProductionMetrics>({
+    totalConversions: 0,
+    recentConversions: 0,
+    lowStockItems: 0,
+    totalInventoryValue: 0
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadInventoryItems();
+    loadDashboardData();
   }, [storeId]);
 
-  const loadInventoryItems = async () => {
-    setIsLoading(true);
+  const loadDashboardData = async () => {
+    if (!storeId) return;
+    
+    setLoading(true);
     try {
-      const data = await fetchInventoryStock(storeId);
-      // Ensure cost property is defined for all items
-      const itemsWithCost = data.map(item => ({
-        ...item,
-        cost: item.cost ?? 0
-      }));
-      setInventoryItems(itemsWithCost);
+      const [conversionsData, inventoryData] = await Promise.all([
+        fetchInventoryConversions(storeId),
+        fetchInventoryStock(storeId)
+      ]);
+
+      setConversions(conversionsData);
+      setInventory(inventoryData);
+
+      // Calculate metrics
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const recentConversions = conversionsData.filter(
+        conv => new Date(conv.conversion_date) >= weekAgo
+      ).length;
+
+      const lowStockItems = inventoryData.filter(
+        item => item.stock_quantity <= (item.minimum_threshold || 10)
+      ).length;
+
+      const totalValue = inventoryData.reduce(
+        (sum, item) => sum + (item.stock_quantity * (item.cost || 0)), 0
+      );
+
+      setMetrics({
+        totalConversions: conversionsData.length,
+        recentConversions,
+        lowStockItems,
+        totalInventoryValue: totalValue
+      });
     } catch (error) {
-      console.error('Error loading inventory items:', error);
-      toast.error('Failed to load inventory items');
+      console.error('Error loading dashboard data:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const lowStockItems = inventoryItems.filter(item => item.stock_quantity < 10 && item.stock_quantity > 0);
-  const outOfStockItems = inventoryItems.filter(item => item.stock_quantity === 0);
-  const totalValue = inventoryItems.reduce((sum, item) => sum + (item.stock_quantity * (item.cost || 0)), 0);
-
-  const stats = [
-    {
-      title: "Total Inventory Items",
-      value: inventoryItems.length,
-      icon: Package,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50"
-    },
-    {
-      title: "Low Stock Alerts",
-      value: lowStockItems.length,
-      icon: AlertTriangle,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50"
-    },
-    {
-      title: "Out of Stock",
-      value: outOfStockItems.length,
-      icon: Clock,
-      color: "text-red-600",
-      bgColor: "bg-red-50"
-    },
-    {
-      title: "Total Inventory Value",
-      value: `₱${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-      icon: TrendingUp,
-      color: "text-green-600",
-      bgColor: "bg-green-50"
-    }
-  ];
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Production Dashboard</h2>
-        <p className="text-muted-foreground">
-          Overview of your store's inventory and production status
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <div className={`p-2 rounded-full ${stat.bgColor}`}>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Low Stock Alerts */}
-      {lowStockItems.length > 0 && (
+      {/* Metrics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              Low Stock Alerts
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Preparations</CardTitle>
+            <ChefHat className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {lowStockItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                  <div>
-                    <span className="font-medium">{item.item}</span>
-                    <span className="text-sm text-muted-foreground ml-2">({item.unit})</span>
-                  </div>
-                  <Badge variant="outline" className="text-yellow-700 border-yellow-300">
-                    {item.stock_quantity} remaining
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Out of Stock Alerts */}
-      {outOfStockItems.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-red-600" />
-              Out of Stock Items
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {outOfStockItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                  <div>
-                    <span className="font-medium">{item.item}</span>
-                    <span className="text-sm text-muted-foreground ml-2">({item.unit})</span>
-                  </div>
-                  <Badge variant="destructive">
-                    Out of Stock
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {inventoryItems.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium mb-2">No inventory data available</h3>
-            <p className="text-muted-foreground">
-              Inventory items will appear here once they are added to your store.
+            <div className="text-2xl font-bold">{metrics.totalConversions}</div>
+            <p className="text-xs text-muted-foreground">
+              All time conversions
             </p>
           </CardContent>
         </Card>
-      )}
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">This Week</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.recentConversions}</div>
+            <p className="text-xs text-muted-foreground">
+              Recent preparations
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Low Stock Items</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{metrics.lowStockItems}</div>
+            <p className="text-xs text-muted-foreground">
+              Need attention
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Inventory Value</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₱{metrics.totalInventoryValue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Current stock value
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Preparations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {conversions.slice(0, 5).length === 0 ? (
+              <div className="text-center py-8">
+                <ChefHat className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">No preparations yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {conversions.slice(0, 5).map((conversion) => (
+                  <div key={conversion.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">
+                        {conversion.inventory_stock?.item || 'Unknown Item'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(conversion.conversion_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge variant="outline">
+                      {conversion.finished_goods_quantity} {conversion.inventory_stock?.unit}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Low Stock Alerts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {inventory.filter(item => item.stock_quantity <= (item.minimum_threshold || 10)).slice(0, 5).length === 0 ? (
+              <div className="text-center py-8">
+                <Package className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                <p className="text-green-600">All items well stocked</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {inventory
+                  .filter(item => item.stock_quantity <= (item.minimum_threshold || 10))
+                  .slice(0, 5)
+                  .map((item) => (
+                    <div key={item.id} className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{item.item}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Current: {item.stock_quantity} {item.unit}
+                        </p>
+                      </div>
+                      <Badge variant="destructive">
+                        Low Stock
+                      </Badge>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

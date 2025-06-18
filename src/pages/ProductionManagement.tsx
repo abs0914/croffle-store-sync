@@ -2,10 +2,10 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ConversionRecipesTab } from "./ProductionManagement/components/ConversionRecipesTab";
+import { InventoryPrepTab } from "./ProductionManagement/components/InventoryPrepTab";
 import { ProductionDashboard } from "./ProductionManagement/components/ProductionDashboard";
 import { useStore } from "@/contexts/StoreContext";
-import { Factory, BarChart3 } from "lucide-react";
+import { ChefHat, BarChart3 } from "lucide-react";
 
 export default function ProductionManagement() {
   const { currentStore } = useStore();
@@ -14,11 +14,11 @@ export default function ProductionManagement() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3">
-        <Factory className="h-8 w-8 text-croffle-accent" />
+        <ChefHat className="h-8 w-8 text-croffle-accent" />
         <div>
-          <h1 className="text-3xl font-bold">Production Management</h1>
+          <h1 className="text-3xl font-bold">Inventory Prep & Conversions</h1>
           <p className="text-muted-foreground">
-            Manage production conversions from commissary inventory to store products for {currentStore?.name || 'your store'}
+            Manage bulk preparation and inventory conversions for {currentStore?.name || 'your store'}
           </p>
         </div>
       </div>
@@ -29,9 +29,9 @@ export default function ProductionManagement() {
             <BarChart3 className="h-4 w-4" />
             Dashboard
           </TabsTrigger>
-          <TabsTrigger value="conversions" className="flex items-center gap-2">
-            <Factory className="h-4 w-4" />
-            Production Conversions
+          <TabsTrigger value="prep" className="flex items-center gap-2">
+            <ChefHat className="h-4 w-4" />
+            Inventory Prep
           </TabsTrigger>
         </TabsList>
 
@@ -40,7 +40,7 @@ export default function ProductionManagement() {
             <CardHeader>
               <CardTitle>Production Overview</CardTitle>
               <CardDescription>
-                Monitor production activity, conversion efficiency, and inventory impact for store operations
+                Monitor preparation activity, inventory usage, and production efficiency for store operations
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -49,17 +49,17 @@ export default function ProductionManagement() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="conversions">
+        <TabsContent value="prep">
           <Card>
             <CardHeader>
-              <CardTitle>Production Conversions</CardTitle>
+              <CardTitle>Inventory Preparation</CardTitle>
               <CardDescription>
-                Convert commissary inventory items into store-ready products using production conversion workflows. 
-                All raw materials are sourced from commissary inventory.
+                Execute bulk preparation and simple inventory conversions for store readiness.
+                Complex recipes are handled through the Product Catalog.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ConversionRecipesTab storeId={currentStore?.id || ""} />
+              <InventoryPrepTab storeId={currentStore?.id || ""} />
             </CardContent>
           </Card>
         </TabsContent>
