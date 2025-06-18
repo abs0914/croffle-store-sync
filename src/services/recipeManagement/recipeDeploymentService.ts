@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { RecipeTemplate } from "./types";
 import { toast } from "sonner";
@@ -17,6 +16,11 @@ export const deployRecipeToProductCatalog = async (
 ): Promise<DeploymentResult> => {
   try {
     console.log(`Deploying recipe template "${template.name}" to store ${storeId}`);
+
+    // Calculate recipe cost for product pricing
+    const totalCost = template.ingredients.reduce((sum, ingredient) => 
+      sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
+    );
 
     // First, create the recipe in the recipes table
     const { data: recipe, error: recipeError } = await supabase
@@ -43,6 +47,41 @@ export const deployRecipeToProductCatalog = async (
     }
 
     console.log(`Created recipe with ID: ${recipe.id}`);
+
+    // Create the product from the recipe template
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .insert({
+        name: template.name,
+        description: template.description,
+        sku: `RCP-${template.name.replace(/\s+/g, '-').toUpperCase()}-${Date.now()}`,
+        price: totalCost * 1.5, // 50% markup as default
+        cost: totalCost,
+        stock_quantity: 0,
+        store_id: storeId,
+        is_active: true,
+        image_url: template.image_url // Transfer the image from template to product
+      })
+      .select()
+      .single();
+
+    if (productError) {
+      console.error('Error creating product:', productError);
+      throw productError;
+    }
+
+    console.log(`Created product with ID: ${product.id}`);
+
+    // Update the recipe with the product_id
+    const { error: updateRecipeError } = await supabase
+      .from('recipes')
+      .update({ product_id: product.id })
+      .eq('id', recipe.id);
+
+    if (updateRecipeError) {
+      console.error('Error updating recipe with product_id:', updateRecipeError);
+      throw updateRecipeError;
+    }
 
     // Then, create recipe ingredients
     if (template.ingredients && template.ingredients.length > 0) {

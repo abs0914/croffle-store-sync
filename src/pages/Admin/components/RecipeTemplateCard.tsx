@@ -1,25 +1,18 @@
+
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
-  MoreHorizontal, 
   Edit, 
   Copy, 
   Trash2, 
-  Rocket, 
-  ChefHat,
-  Clock,
+  Rocket,
   Users,
-  Image as ImageIcon
+  Clock,
+  ChefHat,
+  ImageIcon
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { RecipeTemplate } from '@/services/recipeManagement/types';
 
 interface RecipeTemplateCardProps {
@@ -41,142 +34,121 @@ export const RecipeTemplateCard: React.FC<RecipeTemplateCardProps> = ({
     sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
   );
 
-  const costPerServing = template.serving_size ? totalCost / template.serving_size : totalCost;
-
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        {/* Recipe Image */}
+    <Card className="h-full flex flex-col hover:shadow-lg transition-shadow">
+      {/* Recipe Image */}
+      <div className="relative h-48 bg-gray-100 rounded-t-lg overflow-hidden">
         {template.image_url ? (
-          <div className="w-full h-32 mb-3 rounded-md overflow-hidden">
-            <img 
-              src={template.image_url} 
-              alt={template.name}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                console.error('Failed to load image:', template.image_url);
-                // Hide the image and show placeholder on error
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-              }}
-            />
-            <div className="w-full h-32 bg-gray-100 flex items-center justify-center hidden">
-              <ImageIcon className="h-8 w-8 text-gray-400" />
-            </div>
+          <img 
+            src={template.image_url} 
+            alt={template.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              // Fallback to placeholder if image fails to load
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+        ) : null}
+        <div className={`absolute inset-0 flex items-center justify-center bg-gray-200 ${template.image_url ? 'hidden' : ''}`}>
+          <div className="text-center text-gray-500">
+            <ImageIcon className="h-12 w-12 mx-auto mb-2" />
+            <span className="text-sm">No Image</span>
           </div>
-        ) : (
-          <div className="w-full h-32 mb-3 rounded-md bg-gray-100 flex items-center justify-center">
-            <ImageIcon className="h-8 w-8 text-gray-400" />
-          </div>
-        )}
-
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ChefHat className="h-5 w-5" />
-              {template.name}
-            </CardTitle>
-            {template.category_name && (
-              <Badge variant="outline" className="mt-2">
-                {template.category_name}
-              </Badge>
-            )}
-          </div>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(template)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDuplicate(template)}>
-                <Copy className="h-4 w-4 mr-2" />
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDeploy(template)}>
-                <Rocket className="h-4 w-4 mr-2" />
-                Deploy to Stores
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => onDelete(template)}
-                className="text-red-600"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
+        
+        {/* Status Badge */}
+        <div className="absolute top-2 right-2">
+          <Badge variant={template.is_active ? "default" : "secondary"}>
+            {template.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+        </div>
+      </div>
+
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg line-clamp-1">{template.name}</CardTitle>
+        {template.description && (
+          <CardDescription className="line-clamp-2">
+            {template.description}
+          </CardDescription>
+        )}
+        {template.category_name && (
+          <Badge variant="outline" className="w-fit">
+            {template.category_name}
+          </Badge>
+        )}
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {template.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {template.description}
-          </p>
-        )}
-
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center gap-2">
+      <CardContent className="flex-1 flex flex-col">
+        {/* Recipe Stats */}
+        <div className="grid grid-cols-3 gap-2 text-sm mb-4">
+          <div className="flex items-center gap-1">
             <Users className="h-4 w-4 text-muted-foreground" />
             <span>Yield: {template.yield_quantity}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span>Serving: {template.serving_size || 1}</span>
           </div>
+          <div className="flex items-center gap-1">
+            <ChefHat className="h-4 w-4 text-muted-foreground" />
+            <span>{template.ingredients.length} items</span>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Total Cost:</span>
+        {/* Cost Information */}
+        <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Total Cost:</span>
             <span className="font-medium">₱{totalCost.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Cost per Serving:</span>
-            <span className="font-medium">₱{costPerServing.toFixed(2)}</span>
+          <div className="flex justify-between items-center mt-1">
+            <span className="text-sm text-muted-foreground">Cost per Serving:</span>
+            <span className="font-medium">₱{(totalCost / (template.serving_size || 1)).toFixed(2)}</span>
           </div>
         </div>
 
-        <div className="pt-2 border-t">
-          <p className="text-xs text-muted-foreground mb-2">
-            {template.ingredients.length} ingredient{template.ingredients.length !== 1 ? 's' : ''}
-          </p>
-          <div className="space-y-1">
-            {template.ingredients.slice(0, 3).map((ingredient, index) => (
-              <div key={index} className="flex justify-between text-xs">
-                <span className="truncate">{ingredient.commissary_item_name}</span>
-                <span className="text-muted-foreground">
-                  {ingredient.quantity} {ingredient.unit}
-                </span>
-              </div>
-            ))}
-            {template.ingredients.length > 3 && (
-              <p className="text-xs text-muted-foreground">
-                +{template.ingredients.length - 3} more...
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center pt-2">
-          <Badge variant="secondary" className="text-xs">
-            v{template.version}
-          </Badge>
-          <Button
-            size="sm"
-            onClick={() => onDeploy(template)}
-            className="flex items-center gap-1"
+        {/* Action Buttons */}
+        <div className="mt-auto space-y-2">
+          <Button 
+            onClick={() => onDeploy(template)} 
+            className="w-full"
+            variant="default"
           >
-            <Rocket className="h-3 w-3" />
-            Deploy
+            <Rocket className="h-4 w-4 mr-2" />
+            Deploy to Stores
           </Button>
+          
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => onEdit(template)} 
+              variant="outline" 
+              size="sm"
+              className="flex-1"
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            
+            <Button 
+              onClick={() => onDuplicate(template)} 
+              variant="outline" 
+              size="sm"
+              className="flex-1"
+            >
+              <Copy className="h-4 w-4 mr-1" />
+              Copy
+            </Button>
+            
+            <Button 
+              onClick={() => onDelete(template)} 
+              variant="outline" 
+              size="sm"
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

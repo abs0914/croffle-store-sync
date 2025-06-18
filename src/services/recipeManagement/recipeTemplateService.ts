@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -12,6 +11,7 @@ export interface RecipeTemplateData {
   created_by: string;
   is_active: boolean;
   version: number;
+  image_url?: string;
 }
 
 export interface RecipeTemplateIngredientInput {
@@ -35,6 +35,7 @@ export interface RecipeTemplate {
   created_by: string;
   created_at: string;
   updated_at: string;
+  image_url?: string;
   ingredients: RecipeTemplateIngredient[];
 }
 
@@ -167,6 +168,7 @@ export const getRecipeTemplates = async (): Promise<RecipeTemplate[]> => {
       created_by: template.created_by || 'system',
       created_at: template.created_at,
       updated_at: template.updated_at,
+      image_url: template.image_url,
       ingredients: (template.recipe_template_ingredients || []).map((ing: any) => ({
         id: ing.id,
         recipe_template_id: template.id,
@@ -210,7 +212,8 @@ export const duplicateRecipeTemplate = async (templateId: string): Promise<boole
         category_name: original.category_name,
         version: 1,
         is_active: false,
-        created_by: original.created_by
+        created_by: original.created_by,
+        image_url: original.image_url
       })
       .select()
       .single();
