@@ -33,7 +33,12 @@ export const fetchInventoryAlerts = async (storeId: string): Promise<InventoryAl
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    // Type cast the alert_type to ensure it matches our interface
+    return (data || []).map(alert => ({
+      ...alert,
+      alert_type: alert.alert_type as 'low_stock' | 'out_of_stock' | 'reorder_point'
+    }));
   } catch (error) {
     console.error('Error fetching inventory alerts:', error);
     toast.error('Failed to fetch inventory alerts');

@@ -66,6 +66,60 @@ export const getTodayMetrics = async (storeId: string): Promise<StoreMetrics | n
   }
 };
 
+export const getDashboardSummary = async (storeId: string) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get today's metrics
+    const { data: todayMetrics } = await supabase
+      .from('store_metrics')
+      .select('*')
+      .eq('store_id', storeId)
+      .eq('metric_date', today)
+      .single();
+
+    // Get inventory alerts count
+    const { data: alertsData } = await supabase
+      .from('store_inventory_alerts')
+      .select('id')
+      .eq('store_id', storeId)
+      .eq('is_acknowledged', false);
+
+    // Get week ago metrics for comparison
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekAgoDate = weekAgo.toISOString().split('T')[0];
+    
+    const { data: weekAgoMetrics } = await supabase
+      .from('store_metrics')
+      .select('*')
+      .eq('store_id', storeId)
+      .eq('metric_date', weekAgoDate)
+      .single();
+
+    const todaySales = todayMetrics?.total_sales || 0;
+    const weekAgoSales = weekAgoMetrics?.total_sales || 0;
+    const weeklyGrowth = weekAgoSales > 0 ? ((todaySales - weekAgoSales) / weekAgoSales) * 100 : 0;
+
+    return {
+      todaySales,
+      todayOrders: todayMetrics?.total_orders || 0,
+      avgOrderValue: todayMetrics?.average_order_value || 0,
+      inventoryAlerts: alertsData?.length || 0,
+      weeklyGrowth
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard summary:', error);
+    return {
+      todaySales: 0,
+      todayOrders: 0,
+      avgOrderValue: 0,
+      inventoryAlerts: 0,
+      weeklyGrowth: 0
+    };
+  }
+};
+
 export const getInventoryMetrics = async (storeId: string) => {
   try {
     // Get inventory stock counts
