@@ -87,12 +87,38 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `Recipe Name,Description,Category,Instructions,Yield Quantity,Serving Size,Ingredient Name,Quantity,Unit,Cost Per Unit,Notes
-Chocolate Chip Cookie,Classic chocolate chip cookie,Baked Goods,"Mix dry ingredients. Add wet ingredients. Fold in chocolate chips. Bake at 350°F for 12 minutes.",24,1,All-Purpose Flour,2,cups,0.50,From commissary inventory
-Chocolate Chip Cookie,Classic chocolate chip cookie,Baked Goods,"Mix dry ingredients. Add wet ingredients. Fold in chocolate chips. Bake at 350°F for 12 minutes.",24,1,Granulated Sugar,1,cup,0.75,From commissary inventory
-Chocolate Chip Cookie,Classic chocolate chip cookie,Baked Goods,"Mix dry ingredients. Add wet ingredients. Fold in chocolate chips. Bake at 350°F for 12 minutes.",24,1,Chocolate Chips,1,cup,2.00,From commissary inventory
-Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. Bake at 375°F for 30 minutes.,2,8,Bread Flour,3,cups,0.60,From commissary inventory
-Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. Bake at 375°F for 30 minutes.,2,8,Active Dry Yeast,1,packet,0.25,From commissary inventory`;
+    const csvContent = `Product,Category,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit,Total Cost
+Tiramisu Croffle,Classic,Croissant,piece,1,30,
+Tiramisu Croffle,Classic,Whipped Cream,serving,1,8,
+Tiramisu Croffle,Classic,Tiramisu Sauce,portion,1,3.5,
+Tiramisu Croffle,Classic,Choco Flakes,portion,1,2.5,51.3
+Tiramisu Croffle,Classic,Take out Box,piece,1,6,
+Tiramisu Croffle,Classic,Chopstick,pair,1,0.6,
+Tiramisu Croffle,Classic,Waxpaper,piece,1,0.7,
+Choco Nut Croffle,Classic,Croissant,piece,1,30,
+Choco Nut Croffle,Classic,Whipped Cream,serving,1,8,
+Choco Nut Croffle,Classic,Chocolate Sauce,portion,1,2.5,
+Choco Nut Croffle,Classic,Peanut,portion,1,2.5,50.3
+Choco Nut Croffle,Classic,Take out Box,piece,1,6,
+Choco Nut Croffle,Classic,Chopstick,pair,1,0.6,
+Choco Nut Croffle,Classic,Waxpaper,piece,1,0.7,
+Croffle Overload,Overload,Croissant,piece,0.5,15,
+Croffle Overload,Overload,Vanilla Ice Cream,scoop,1,15.44,
+Croffle Overload,Overload,Colored Sprinkle,portion,1,2.5,37.74
+Croffle Overload,Overload,Peanut,portion,1,2.5,
+Croffle Overload,Overload,Choco Flakes,portion,1,2.5,
+Croffle Overload,Overload,Marshmallow,portion,1,2.5,
+Croffle Overload,Overload,Overload Cup,piece,1,4,
+Croffle Overload,Overload,Popsicle,piece,1,0.3,
+Croffle Overload,Overload,Spoon,piece,1,0.5,
+Mini Croffle,Mini,Croissant,piece,0.5,15,
+Mini Croffle,Mini,Whipped Cream,serving,0.5,4,
+Mini Croffle,Mini,Chocolate Sauce,portion,1,1.25,21.5
+Mini Croffle,Mini,Caramel Sauce,portion,1,1.25,
+Mini Croffle,Mini,Colored Sprinkle,portion,1,1.25,
+Mini Croffle,Mini,Peanut,portion,1,1.25,
+Mini Croffle,Mini,Mini Take out Box,piece,1,2.4,
+Mini Croffle,Mini,Popsicle,piece,1,0.3,`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -248,25 +274,23 @@ Basic Bread,Simple white bread recipe,Bakery,Mix ingredients. Knead. Let rise. B
             <div>
               <strong>Required Columns:</strong>
               <ul className="list-disc list-inside ml-4 mt-1">
-                <li>Recipe Name - The name of the recipe template</li>
-                <li>Description - Brief description of the recipe</li>
-                <li>Category - Recipe category (e.g., Baked Goods, Beverages)</li>
-                <li>Instructions - Step-by-step cooking instructions</li>
-                <li>Yield Quantity - Number of servings/items produced</li>
-                <li>Serving Size - Size per serving (optional)</li>
+                <li>Product - The name of the recipe/product</li>
+                <li>Category - Recipe category (e.g., Classic, Overload, Mini)</li>
                 <li>Ingredient Name - Must match commissary inventory items exactly</li>
-                <li>Quantity - Numeric quantity of the ingredient</li>
-                <li>Unit - Unit of measurement (cups, grams, etc.)</li>
-                <li>Cost Per Unit - Cost per unit of ingredient (optional)</li>
+                <li>Unit of Measure - Unit of measurement (piece, serving, portion, etc.)</li>
+                <li>Quantity Used - Numeric quantity of the ingredient</li>
+                <li>Cost per Unit - Cost per unit of ingredient (optional)</li>
+                <li>Total Cost - Total cost for the recipe (calculated automatically)</li>
               </ul>
             </div>
             <div>
               <strong>Important Notes:</strong>
               <ul className="list-disc list-inside ml-4 mt-1">
                 <li>All ingredient names must exactly match items in commissary inventory</li>
-                <li>Multiple ingredients for the same recipe should be on separate rows</li>
+                <li>Multiple ingredients for the same product should be on separate rows</li>
                 <li>Recipe templates can be deployed to multiple stores</li>
                 <li>Quantities must be numeric values</li>
+                <li>Total Cost will be calculated based on individual ingredient costs</li>
                 <li>File size limit: 10MB</li>
               </ul>
             </div>
