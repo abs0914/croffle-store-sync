@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { RecipeTemplate } from "./types";
 import { toast } from "sonner";
@@ -45,8 +44,31 @@ export const deployRecipeToProductCatalog = async (
       sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
     );
 
-    // Create the product in product_catalog table
+    // Create the product in products table first (required for recipe foreign key)
     const { data: product, error: productError } = await supabase
+      .from('products')
+      .insert({
+        name: template.name,
+        description: template.description,
+        sku: `RCP-${template.name.replace(/\s+/g, '-').toUpperCase()}-${Date.now()}`,
+        price: totalCost * 1.5, // 50% markup as default
+        cost: totalCost,
+        stock_quantity: 0,
+        store_id: storeId,
+        is_active: true
+      })
+      .select()
+      .single();
+
+    if (productError) {
+      console.error('Error creating product:', productError);
+      throw productError;
+    }
+
+    console.log(`Created product with ID: ${product.id}`);
+
+    // Create the product catalog entry
+    const { data: catalogProduct, error: catalogError } = await supabase
       .from('product_catalog')
       .insert({
         product_name: template.name,
@@ -59,14 +81,14 @@ export const deployRecipeToProductCatalog = async (
       .select()
       .single();
 
-    if (productError) {
-      console.error('Error creating product in catalog:', productError);
-      throw productError;
+    if (catalogError) {
+      console.error('Error creating product catalog entry:', catalogError);
+      throw catalogError;
     }
 
-    console.log(`Created product catalog entry with ID: ${product.id}`);
+    console.log(`Created product catalog entry with ID: ${catalogProduct.id}`);
 
-    // Create the recipe with reference to the product catalog
+    // Create the recipe with reference to the products table
     const { data: recipe, error: recipeError } = await supabase
       .from('recipes')
       .insert({
@@ -76,7 +98,7 @@ export const deployRecipeToProductCatalog = async (
         yield_quantity: template.yield_quantity,
         serving_size: template.serving_size || 1,
         store_id: storeId,
-        product_id: product.id, // Reference the product catalog entry
+        product_id: product.id, // Reference the products table entry
         category_name: template.category_name,
         approval_status: 'pending_approval',
         is_active: true,
@@ -93,14 +115,14 @@ export const deployRecipeToProductCatalog = async (
     console.log(`Created recipe with ID: ${recipe.id}`);
 
     // Update the product catalog with the recipe_id
-    const { error: updateProductError } = await supabase
+    const { error: updateCatalogError } = await supabase
       .from('product_catalog')
       .update({ recipe_id: recipe.id })
-      .eq('id', product.id);
+      .eq('id', catalogProduct.id);
 
-    if (updateProductError) {
-      console.error('Error linking recipe to product catalog:', updateProductError);
-      throw updateProductError;
+    if (updateCatalogError) {
+      console.error('Error linking recipe to product catalog:', updateCatalogError);
+      throw updateCatalogError;
     }
 
     // Create recipe ingredients with product_catalog ingredients
@@ -134,7 +156,7 @@ export const deployRecipeToProductCatalog = async (
 
         // Create product catalog ingredient entry
         productIngredientInserts.push({
-          product_catalog_id: product.id,
+          product_catalog_id: catalogProduct.id,
           inventory_stock_id: inventoryStock.id,
           commissary_item_id: ingredient.commissary_item_id,
           required_quantity: ingredient.quantity,
