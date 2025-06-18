@@ -13,11 +13,14 @@ import {
   Search,
   Package,
   TrendingUp,
-  Clock
+  Clock,
+  Download,
+  ChefHat
 } from 'lucide-react';
 import { fetchCommissaryInventory } from '@/services/inventoryManagement/commissaryInventoryService';
 import { supabase } from '@/integrations/supabase/client';
 import { CommissaryInventoryItem } from '@/types/inventoryManagement';
+import { toast } from 'sonner';
 
 interface RecipeIngredient {
   commissary_item_id: string;
@@ -82,6 +85,24 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
     }
   };
 
+  const downloadReference = () => {
+    const csvContent = [
+      'Item Name,Category,Unit,Current Stock,Unit Cost',
+      ...commissaryItems.map(item => 
+        `"${item.name}","${item.category}","${item.unit}",${item.current_stock},${item.unit_cost || 0}`
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'commissary_items_reference.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success('Reference file downloaded');
+  };
+
   const getItemUsage = (itemId: string, itemName: string) => {
     const usage = recipeIngredients.find(
       ri => ri.commissary_item_id === itemId || ri.commissary_item_name.toLowerCase() === itemName.toLowerCase()
@@ -137,6 +158,38 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
           Ensure all recipe ingredients are available and properly costed.
         </AlertDescription>
       </Alert>
+
+      {/* Quick Reference Section for Recipe CSV Uploads */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <ChefHat className="h-5 w-5" />
+                Recipe CSV Reference ({commissaryItems.length} items)
+              </CardTitle>
+              <CardDescription>
+                Download reference for recipe CSV uploads - use these exact names in your recipe files
+              </CardDescription>
+            </div>
+            <Button onClick={downloadReference} variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Download CSV Reference
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h4 className="font-medium text-blue-900 mb-2">Recipe Upload Tips:</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Use the exact item names shown below in your CSV</li>
+              <li>• Names are case-sensitive and must match exactly</li>
+              <li>• Download the reference file to see all available items</li>
+              <li>• Check that items have sufficient stock if needed</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Integration Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
