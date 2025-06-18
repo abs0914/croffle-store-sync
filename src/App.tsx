@@ -30,10 +30,10 @@ function App() {
                       <Route path="/login" element={<Login />} />
                       
                       {/* Main Application Routes */}
-                      <MainAppRoutes />
+                      {MainAppRoutes()}
                       
                       {/* Admin Routes */}
-                      <AdminAppRoutes />
+                      {AdminAppRoutes()}
                     </Routes>
                     <Toaster />
                   </div>

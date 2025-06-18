@@ -18,85 +18,81 @@ import ProductionManagement from '@/pages/ProductionManagement';
 import CommissaryInventory from '@/pages/CommissaryInventory';
 import ProductForm from '@/pages/Inventory/ProductForm';
 
-export const MainAppRoutes: React.FC = () => {
-  return (
-    <>
-      {/* Both root and dashboard routes show the same Dashboard component */}
-      <Route path="/" element={
-        <ProtectedRoute requireStoreAccess={true}>
-          <MainLayout><Dashboard /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/dashboard" element={
-        <ProtectedRoute requireStoreAccess={true}>
-          <MainLayout><Dashboard /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/pos" element={
-        <ProtectedRoute requireStoreAccess={true}>
-          <MainLayout><POS /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/product-catalog" element={
-        <ProtectedRoute requireStoreAccess={true}>
-          <MainLayout><ProductCatalog /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/production" element={
-        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-          <MainLayout><ProductionManagement /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/inventory" element={
-        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-          <MainLayout><Inventory /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/inventory/product/new" element={
-        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-          <MainLayout><ProductForm /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/inventory/product/:id" element={
-        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-          <MainLayout><ProductForm /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/inventory-conversion" element={
-        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-          <MainLayout><InventoryConversion /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/bulk-upload" element={
-        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
-          <MainLayout><BulkUpload /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/customers" element={
-        <ProtectedRoute requireStoreAccess={true}>
-          <MainLayout><Customers /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/reports" element={
-        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-          <MainLayout><Reports /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/settings" element={
-        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
-          <MainLayout><Settings /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/order-management" element={
-        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
-          <MainLayout><OrderManagement /></MainLayout>
-        </ProtectedRoute>
-      } />
-      <Route path="/commissary-inventory" element={
-        <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
-          <MainLayout><CommissaryInventory /></MainLayout>
-        </ProtectedRoute>
-      } />
-    </>
-  );
-};
+export const MainAppRoutes = () => [
+  // Both root and dashboard routes show the same Dashboard component
+  <Route key="root" path="/" element={
+    <ProtectedRoute requireStoreAccess={true}>
+      <MainLayout><Dashboard /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="dashboard" path="/dashboard" element={
+    <ProtectedRoute requireStoreAccess={true}>
+      <MainLayout><Dashboard /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="pos" path="/pos" element={
+    <ProtectedRoute requireStoreAccess={true}>
+      <MainLayout><POS /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="product-catalog" path="/product-catalog" element={
+    <ProtectedRoute requireStoreAccess={true}>
+      <MainLayout><ProductCatalog /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="production" path="/production" element={
+    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
+      <MainLayout><ProductionManagement /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="inventory" path="/inventory" element={
+    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
+      <MainLayout><Inventory /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="inventory-product-new" path="/inventory/product/new" element={
+    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
+      <MainLayout><ProductForm /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="inventory-product-edit" path="/inventory/product/:id" element={
+    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
+      <MainLayout><ProductForm /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="inventory-conversion" path="/inventory-conversion" element={
+    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
+      <MainLayout><InventoryConversion /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="bulk-upload" path="/bulk-upload" element={
+    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
+      <MainLayout><BulkUpload /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="customers" path="/customers" element={
+    <ProtectedRoute requireStoreAccess={true}>
+      <MainLayout><Customers /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="reports" path="/reports" element={
+    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
+      <MainLayout><Reports /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="settings" path="/settings" element={
+    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
+      <MainLayout><Settings /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="order-management" path="/order-management" element={
+    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']} requireStoreAccess={true}>
+      <MainLayout><OrderManagement /></MainLayout>
+    </ProtectedRoute>
+  } />,
+  <Route key="commissary-inventory" path="/commissary-inventory" element={
+    <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
+      <MainLayout><CommissaryInventory /></MainLayout>
+    </ProtectedRoute>
+  } />
+];
