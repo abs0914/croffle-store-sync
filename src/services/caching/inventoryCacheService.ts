@@ -1,0 +1,110 @@
+
+import { QueryClient } from '@tanstack/react-query';
+
+export class InventoryCacheService {
+  private static instance: InventoryCacheService;
+  private queryClient: QueryClient;
+  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+
+  constructor(queryClient: QueryClient) {
+    this.queryClient = queryClient;
+  }
+
+  static getInstance(queryClient: QueryClient): InventoryCacheService {
+    if (!InventoryCacheService.instance) {
+      InventoryCacheService.instance = new InventoryCacheService(queryClient);
+    }
+    return InventoryCacheService.instance;
+  }
+
+  // Memory cache for frequently accessed data
+  setMemoryCache(key: string, data: any, ttlMs: number = 60000) {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl: ttlMs
+    });
+  }
+
+  getMemoryCache(key: string): any | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+
+    if (Date.now() - cached.timestamp > cached.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return cached.data;
+  }
+
+  // Prefetch inventory data for better UX
+  async prefetchInventoryData(storeId: string) {
+    const queries = [
+      {
+        queryKey: ['inventory-stock', storeId],
+        queryFn: () => import('@/services/inventoryManagement/inventoryItemService').then(m => m.fetchInventoryItems(storeId))
+      },
+      {
+        queryKey: ['inventory-movements', storeId],
+        queryFn: () => import('@/services/storeInventory/inventoryMovementService').then(m => m.fetchInventoryMovements(storeId))
+      },
+      {
+        queryKey: ['stock-orders', storeId],
+        queryFn: () => import('@/services/inventory/stockOrderWorkflowService').then(m => m.fetchStockOrders(storeId))
+      }
+    ];
+
+    // Prefetch all queries concurrently
+    await Promise.allSettled(
+      queries.map(query => 
+        this.queryClient.prefetchQuery({
+          queryKey: query.queryKey,
+          queryFn: query.queryFn,
+          staleTime: 2 * 60 * 1000 // 2 minutes
+        })
+      )
+    );
+  }
+
+  // Batch update cache for multiple items
+  batchUpdateCache(updates: Array<{ queryKey: string[]; data: any }>) {
+    updates.forEach(({ queryKey, data }) => {
+      this.queryClient.setQueryData(queryKey, data);
+    });
+  }
+
+  // Optimize cache by removing stale data
+  cleanupStaleCache() {
+    const now = Date.now();
+    for (const [key, cached] of this.cache.entries()) {
+      if (now - cached.timestamp > cached.ttl) {
+        this.cache.delete(key);
+      }
+    }
+
+    // Remove unused queries from React Query cache
+    this.queryClient.getQueryCache().clear();
+  }
+
+  // Preload critical data patterns
+  async preloadCriticalData(storeId: string) {
+    const criticalKeys = [
+      `inventory-status-${storeId}`,
+      `low-stock-alerts-${storeId}`,
+      `pending-orders-${storeId}`
+    ];
+
+    const cached = criticalKeys.map(key => this.getMemoryCache(key)).filter(Boolean);
+    
+    if (cached.length < criticalKeys.length) {
+      // Load missing critical data
+      await this.prefetchInventoryData(storeId);
+    }
+
+    return cached;
+  }
+}
+
+export const createCacheService = (queryClient: QueryClient) => 
+  InventoryCacheService.getInstance(queryClient);
