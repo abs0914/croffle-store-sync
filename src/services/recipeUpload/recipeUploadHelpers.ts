@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface UploadData {
@@ -7,7 +8,7 @@ export interface UploadData {
   storeId: string; // Add storeId to the interface
 }
 
-export const fetchDataForUpload = async (storeId: string): Promise<UploadData> => {
+export const fetchDataForUpload = async (storeId?: string): Promise<UploadData> => {
   // Get commissary inventory for ingredient matching
   const { data: commissaryItems } = await supabase
     .from('commissary_inventory')
@@ -16,29 +17,35 @@ export const fetchDataForUpload = async (storeId: string): Promise<UploadData> =
 
   const commissaryMap = new Map(commissaryItems?.map(item => [item.name.toLowerCase(), item]) || []);
 
-  // Get existing categories for the store
-  const { data: existingCategories } = await supabase
-    .from('categories')
-    .select('id, name')
-    .eq('store_id', storeId)
-    .eq('is_active', true);
+  // Get existing categories for the store (only if storeId is provided)
+  let categoryMap = new Map();
+  if (storeId) {
+    const { data: existingCategories } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('store_id', storeId)
+      .eq('is_active', true);
 
-  const categoryMap = new Map(existingCategories?.map(cat => [cat.name.toLowerCase(), cat]) || []);
+    categoryMap = new Map(existingCategories?.map(cat => [cat.name.toLowerCase(), cat]) || []);
+  }
 
-  // Get store inventory items for the specific store
-  const { data: storeInventoryItems } = await supabase
-    .from('inventory_stock')
-    .select('id, item, store_id')
-    .eq('store_id', storeId)
-    .eq('is_active', true);
+  // Get store inventory items for the specific store (only if storeId is provided)
+  let storeInventoryMap = new Map();
+  if (storeId) {
+    const { data: storeInventoryItems } = await supabase
+      .from('inventory_stock')
+      .select('id, item, store_id')
+      .eq('store_id', storeId)
+      .eq('is_active', true);
 
-  const storeInventoryMap = new Map(storeInventoryItems?.map(item => [item.item.toLowerCase(), item]) || []);
+    storeInventoryMap = new Map(storeInventoryItems?.map(item => [item.item.toLowerCase(), item]) || []);
+  }
 
   return {
     commissaryMap,
     categoryMap,
     storeInventoryMap,
-    storeId // Include storeId in the returned data
+    storeId: storeId || '' // Include storeId in the returned data
   };
 };
 
