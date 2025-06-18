@@ -1,9 +1,11 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ShiftManager from "@/components/pos/ShiftManager";
 import CartView from "@/components/pos/CartView";
 import ProductGrid from "@/components/pos/product-grid";
+import { InventoryStatusIndicator } from "@/components/pos/InventoryStatusIndicator";
 import { useCart } from "@/contexts/cart/CartContext";
 import { Product, Category, Customer, ProductVariation } from "@/types";
 import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
@@ -11,6 +13,7 @@ import { useStoreDisplay } from "@/contexts/StoreDisplayContext";
 import { PrinterStatusIndicator } from "@/components/printer/PrinterStatusIndicator";
 import { ThermalPrinterSettings } from "@/components/printer/ThermalPrinterSettings";
 import { Settings } from "lucide-react";
+
 interface POSContentProps {
   activeCategory: string;
   setActiveCategory: (category: string) => void;
@@ -33,6 +36,7 @@ interface POSContentProps {
   }) => void;
   addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
 }
+
 export default function POSContent({
   activeCategory,
   setActiveCategory,
@@ -62,18 +66,24 @@ export default function POSContent({
   const {
     config
   } = useStoreDisplay();
-  return <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-4">
 
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
-          {currentStore && config.contentMode !== "hidden" && <StoreNameDisplay variant="badge" size="sm" showLogo={true} />}
-          {selectedCustomer && <Badge variant="secondary" className="text-sm">
+          {currentStore && config.contentMode !== "hidden" && (
+            <StoreNameDisplay variant="badge" size="sm" showLogo={true} />
+          )}
+          {selectedCustomer && (
+            <Badge variant="secondary" className="text-sm">
               Customer: {selectedCustomer.name}
-            </Badge>}
+            </Badge>
+          )}
         </div>
 
-        {/* Printer Status and Settings */}
+        {/* Status Indicators and Settings */}
         <div className="flex items-center gap-2">
+          <InventoryStatusIndicator />
           <PrinterStatusIndicator />
           <ThermalPrinterSettings>
             <Button variant="outline" size="sm" className="flex items-center gap-1">
@@ -92,7 +102,15 @@ export default function POSContent({
           
           <Card className="h-full border-croffle-primary/20">
             <CardContent className="p-4">
-              <ProductGrid products={products} categories={categories} activeCategory={activeCategory} setActiveCategory={setActiveCategory} addItemToCart={addItemToCart} isShiftActive={!!currentShift} isLoading={isLoading} />
+              <ProductGrid 
+                products={products} 
+                categories={categories} 
+                activeCategory={activeCategory} 
+                setActiveCategory={setActiveCategory} 
+                addItemToCart={addItemToCart} 
+                isShiftActive={!!currentShift} 
+                isLoading={isLoading} 
+              />
             </CardContent>
           </Card>
         </div>
@@ -101,10 +119,27 @@ export default function POSContent({
         <div className="w-full lg:w-96">
           <Card className="border-croffle-primary/20">
             <CardContent className="p-4">
-              <CartView items={items} subtotal={subtotal} tax={tax} total={total} discount={discount} discountType={discountType} discountIdNumber={discountIdNumber} removeItem={removeItem} updateQuantity={updateQuantity} clearCart={clearCart} selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} handleApplyDiscount={handleApplyDiscount} handlePaymentComplete={handlePaymentComplete} isShiftActive={!!currentShift} />
+              <CartView 
+                items={items} 
+                subtotal={subtotal} 
+                tax={tax} 
+                total={total} 
+                discount={discount} 
+                discountType={discountType} 
+                discountIdNumber={discountIdNumber} 
+                removeItem={removeItem} 
+                updateQuantity={updateQuantity} 
+                clearCart={clearCart} 
+                selectedCustomer={selectedCustomer} 
+                setSelectedCustomer={setSelectedCustomer} 
+                handleApplyDiscount={handleApplyDiscount} 
+                handlePaymentComplete={handlePaymentComplete} 
+                isShiftActive={!!currentShift} 
+              />
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 }
