@@ -1,3 +1,4 @@
+
 import { UserRole } from "@/types";
 
 /**
@@ -151,7 +152,6 @@ export const getRouteAccessDescription = (route: string): string => {
     [ROUTE_PATHS.SETTINGS]: 'Managers and above',
     [ROUTE_PATHS.INVENTORY]: 'Managers and above with store access',
     [ROUTE_PATHS.PRODUCTION]: 'Managers and above with store access',
-    [ROUTE_PATHS.RECIPE_MANAGEMENT]: 'Owners and admins only',
     [ROUTE_PATHS.COMMISSARY_INVENTORY]: 'Owners and admins only',
     [ROUTE_PATHS.STOCK_ORDERS]: 'Managers and above with store access'
   };

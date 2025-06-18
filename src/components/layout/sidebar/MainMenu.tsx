@@ -102,7 +102,6 @@ export const MainMenu: React.FC = () => {
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
-    if (item.adminOnly && !isAdminOrOwner) return false;
     if (item.managerOnly && !isManagerOrAbove) return false;
     return true;
   });
