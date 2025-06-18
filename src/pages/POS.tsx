@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
@@ -6,6 +7,7 @@ import { useProductCatalogData } from "@/hooks/useProductCatalogData";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
+import ActiveCashierDisplay from "@/components/pos/ActiveCashierDisplay";
 import { toast } from "sonner";
 import { TransactionItem } from "@/types/transaction";
 
@@ -148,22 +150,46 @@ export default function POS() {
   }
 
   return (
-    <POSContent
-      activeCategory={activeCategory}
-      setActiveCategory={setActiveCategory}
-      products={products}
-      categories={categories}
-      isLoading={isLoading}
-      currentStore={currentStore}
-      currentShift={currentShift}
-      selectedCustomer={selectedCustomer}
-      setSelectedCustomer={setSelectedCustomer}
-      discount={discount}
-      discountType={discountType as 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | undefined}
-      discountIdNumber={discountIdNumber}
-      handleApplyDiscount={handleApplyDiscount}
-      handlePaymentComplete={handlePaymentComplete}
-      addItemToCart={handleAddItemToCart}
-    />
+    <div className="flex flex-col h-screen">
+      {/* Store and Cashier Info Header */}
+      {(currentStore || currentShift?.cashierId) && (
+        <div className="bg-white border-b border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            {currentStore && (
+              <div className="flex items-center space-x-3">
+                <div>
+                  <h2 className="font-semibold text-gray-900">{currentStore.name}</h2>
+                  <p className="text-xs text-gray-500">{currentStore.address}</p>
+                </div>
+              </div>
+            )}
+            {currentShift?.cashierId && (
+              <ActiveCashierDisplay cashierId={currentShift.cashierId} />
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Main POS Content */}
+      <div className="flex-1 overflow-hidden">
+        <POSContent
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          products={products}
+          categories={categories}
+          isLoading={isLoading}
+          currentStore={currentStore}
+          currentShift={currentShift}
+          selectedCustomer={selectedCustomer}
+          setSelectedCustomer={setSelectedCustomer}
+          discount={discount}
+          discountType={discountType as 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | undefined}
+          discountIdNumber={discountIdNumber}
+          handleApplyDiscount={handleApplyDiscount}
+          handlePaymentComplete={handlePaymentComplete}
+          addItemToCart={handleAddItemToCart}
+        />
+      </div>
+    </div>
   );
 }

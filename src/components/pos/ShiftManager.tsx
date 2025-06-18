@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import StartShiftDialog from "./dialogs/StartShiftDialog";
 import EndShiftDialog from "./dialogs/EndShiftDialog";
+import ActiveCashierDisplay from "./ActiveCashierDisplay";
 import { fetchCashierById } from "@/services/cashier";
 import { toast } from "sonner";
 
@@ -90,7 +91,15 @@ export default function ShiftManager() {
   return (
     <Card className="mb-4">
       <CardHeader>
-        <CardTitle className="text-lg">Shift Management</CardTitle>
+        <CardTitle className="text-lg flex items-center justify-between">
+          <span>Shift Management</span>
+          {currentShift && (
+            <ActiveCashierDisplay 
+              cashierId={currentShift.cashierId} 
+              className="text-sm"
+            />
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {currentShift ? (

@@ -17,11 +17,12 @@ import { getPreviousShiftEndingCash } from "@/contexts/shift/shiftUtils";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 
-// Import the components
+// Import the new components
 import StartingCashSection from "./shift/StartingCashSection";
 import ShiftPhotoSection from "./shift/ShiftPhotoSection";
 import InventoryCountSection from "./shift/InventoryCountSection";
-import CashierSelectSection from "./shift/CashierSelectSection";
+import StoreInfoSection from "./shift/StoreInfoSection";
+import EnhancedCashierSelector from "./shift/EnhancedCashierSelector";
 
 interface StartShiftDialogProps {
   isOpen: boolean;
@@ -98,6 +99,22 @@ export default function StartShiftDialog({
     }
   }, [isOpen]);
 
+  // Auto-select cashier based on user role and available cashiers
+  useEffect(() => {
+    if (isOpen && cashiers.length > 0 && !selectedCashierId) {
+      const currentUserCashier = cashiers.find(cashier => cashier.userId === user?.id);
+      
+      if (currentUserCashier) {
+        // If current user is a cashier, auto-select them
+        const cashierIdToUse = currentUserCashier.userId ? `app_user:${currentUserCashier.id}` : currentUserCashier.id;
+        setSelectedCashierId(cashierIdToUse);
+      } else if (user?.role === 'manager' || user?.role === 'admin') {
+        // For managers/admins, don't auto-select - let them choose
+        setSelectedCashierId(null);
+      }
+    }
+  }, [isOpen, cashiers, selectedCashierId, user]);
+
   // Initialize inventory count with current stock quantities
   useEffect(() => {
     if (isOpen && inventoryItems.length > 0) {
@@ -170,6 +187,9 @@ export default function StartShiftDialog({
         </DialogHeader>
         
         <div className="space-y-4 py-4 flex-1 overflow-auto">
+          {/* Store Information Section */}
+          <StoreInfoSection storeId={storeId} />
+          
           {/* Cash Section */}
           <StartingCashSection 
             startingCash={startingCash}
@@ -178,12 +198,13 @@ export default function StartShiftDialog({
             isLoading={isLoading}
           />
           
-          {/* Cashier Section */}
-          <CashierSelectSection 
+          {/* Enhanced Cashier Section */}
+          <EnhancedCashierSelector 
             cashiers={cashiers}
             selectedCashierId={selectedCashierId}
             setSelectedCashierId={setSelectedCashierId}
             isLoading={isLoadingCashiers}
+            allowSelection={true}
           />
           
           {/* Photo Section */}

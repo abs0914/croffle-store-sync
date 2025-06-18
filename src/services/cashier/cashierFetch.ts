@@ -117,26 +117,58 @@ export const fetchActiveCashiers = async (storeId: string): Promise<Cashier[]> =
 
 export const fetchCashierById = async (id: string): Promise<Cashier | null> => {
   try {
-    const { data, error } = await supabase
-      .from('cashiers')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // Handle new cashier ID format for app_users
+    if (id.startsWith('app_user:')) {
+      const actualId = id.replace('app_user:', '');
+      const { data, error } = await supabase
+        .rpc('get_all_users')
+        .then(({ data: users, error }) => {
+          if (error) throw error;
+          const user = users?.find(u => u.id === actualId);
+          return { data: user, error: null };
+        });
 
-    if (error) {
-      throw error;
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        return {
+          id: data.id,
+          userId: data.user_id,
+          storeId: data.store_ids?.[0] || '', // Use first store ID
+          firstName: data.first_name,
+          lastName: data.last_name,
+          contactNumber: data.contact_number,
+          isActive: data.is_active,
+          fullName: `${data.first_name} ${data.last_name}`,
+        };
+      }
+    } else {
+      // Legacy cashier table lookup
+      const { data, error } = await supabase
+        .from('cashiers')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return {
+        id: data.id,
+        userId: data.user_id,
+        storeId: data.store_id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        contactNumber: data.contact_number,
+        isActive: data.is_active,
+        fullName: `${data.first_name} ${data.last_name}`,
+      };
     }
 
-    return {
-      id: data.id,
-      userId: data.user_id,
-      storeId: data.store_id,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      contactNumber: data.contact_number,
-      isActive: data.is_active,
-      fullName: `${data.first_name} ${data.last_name}`,
-    };
+    return null;
   } catch (error: any) {
     console.error('Error fetching cashier:', error);
     toast.error(`Failed to load cashier: ${error.message}`);
