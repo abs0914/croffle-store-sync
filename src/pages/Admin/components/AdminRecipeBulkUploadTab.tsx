@@ -8,6 +8,8 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Download, FileText, AlertCircle, CheckCircle, ChefHat } from 'lucide-react';
 import { toast } from 'sonner';
+import { parseRecipesCSV } from '@/utils/csvParser';
+import { bulkUploadRecipes } from '@/services/recipeUpload/recipeUploadCore';
 
 interface UploadResult {
   success: number;
@@ -30,7 +32,7 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       ];
       
-      if (allowedTypes.includes(selectedFile.type)) {
+      if (allowedTypes.includes(selectedFile.type) || selectedFile.name.endsWith('.csv')) {
         setFile(selectedFile);
         setUploadResult(null);
       } else {
@@ -46,43 +48,64 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
     setUploadProgress(0);
 
     try {
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Read and parse the CSV file
+      const text = await file.text();
+      setUploadProgress(20);
       
-      clearInterval(progressInterval);
+      console.log('Parsing CSV content:', text.substring(0, 200) + '...');
+      const recipes = parseRecipesCSV(text);
+      console.log('Parsed recipes:', recipes);
+      
+      if (recipes.length === 0) {
+        toast.error('No valid recipes found in the CSV file. Please check the format.');
+        setUploadResult({
+          success: 0,
+          failed: 1,
+          errors: ['No valid recipes found in the CSV file. Please check the format and ensure all required columns are present.']
+        });
+        return;
+      }
+
+      setUploadProgress(50);
+
+      // Upload recipes as templates
+      console.log(`Uploading ${recipes.length} recipe templates...`);
+      const success = await bulkUploadRecipes(recipes);
+      
       setUploadProgress(100);
 
-      const result: UploadResult = {
-        success: 12,
-        failed: 3,
-        errors: [
-          'Row 5: Commissary item "Organic Flour" not found in inventory',
-          'Row 12: Invalid quantity format for ingredient "Sugar"',
-          'Row 18: Recipe name "Chocolate Cake" already exists'
-        ]
-      };
-
-      setUploadResult(result);
-      toast.success(`Successfully uploaded ${result.success} recipe templates`);
-
-      if (result.failed > 0) {
-        toast.warning(`${result.failed} recipe templates failed to upload. Check the results below.`);
+      if (success) {
+        // For now, we'll show success for all recipes since bulkUploadRecipes returns a boolean
+        // In the future, we could modify bulkUploadRecipes to return detailed results
+        setUploadResult({
+          success: recipes.length,
+          failed: 0,
+          errors: []
+        });
+        toast.success(`Successfully created ${recipes.length} recipe templates`);
+        setFile(null);
+      } else {
+        setUploadResult({
+          success: 0,
+          failed: recipes.length,
+          errors: ['Upload failed. Please ensure all ingredient names match items in commissary inventory exactly.']
+        });
       }
 
     } catch (error) {
-      toast.error('Failed to upload recipe templates');
       console.error('Upload error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      setUploadResult({
+        success: 0,
+        failed: 1,
+        errors: [errorMessage]
+      });
+      
+      toast.error('Failed to upload recipe templates');
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -101,24 +124,7 @@ Choco Nut Croffle,Classic,Chocolate Sauce,portion,1,2.5
 Choco Nut Croffle,Classic,Peanut,portion,1,2.5
 Choco Nut Croffle,Classic,Take out Box,piece,1,6
 Choco Nut Croffle,Classic,Chopstick,pair,1,0.6
-Choco Nut Croffle,Classic,Waxpaper,piece,1,0.7
-Croffle Overload,Overload,Croissant,piece,0.5,15
-Croffle Overload,Overload,Vanilla Ice Cream,scoop,1,15.44
-Croffle Overload,Overload,Colored Sprinkle,portion,1,2.5
-Croffle Overload,Overload,Peanut,portion,1,2.5
-Croffle Overload,Overload,Choco Flakes,portion,1,2.5
-Croffle Overload,Overload,Marshmallow,portion,1,2.5
-Croffle Overload,Overload,Overload Cup,piece,1,4
-Croffle Overload,Overload,Popsicle,piece,1,0.3
-Croffle Overload,Overload,Spoon,piece,1,0.5
-Mini Croffle,Mini,Croissant,piece,0.5,15
-Mini Croffle,Mini,Whipped Cream,serving,0.5,4
-Mini Croffle,Mini,Chocolate Sauce,portion,1,1.25
-Mini Croffle,Mini,Caramel Sauce,portion,1,1.25
-Mini Croffle,Mini,Colored Sprinkle,portion,1,1.25
-Mini Croffle,Mini,Peanut,portion,1,1.25
-Mini Croffle,Mini,Mini Take out Box,piece,1,2.4
-Mini Croffle,Mini,Popsicle,piece,1,0.3`;
+Choco Nut Croffle,Classic,Waxpaper,piece,1,0.7`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -136,7 +142,7 @@ Mini Croffle,Mini,Popsicle,piece,1,0.3`;
         <ChefHat className="h-4 w-4" />
         <AlertDescription>
           Upload recipe templates that will be available for deployment to all stores. 
-          All ingredients must exist in commissary inventory.
+          All ingredients must exist in commissary inventory with exact name matching.
         </AlertDescription>
       </Alert>
 
@@ -167,7 +173,7 @@ Mini Croffle,Mini,Popsicle,piece,1,0.3`;
             Upload Recipe Templates
           </CardTitle>
           <CardDescription>
-            Upload a CSV or Excel file containing recipe template data
+            Upload a CSV file containing recipe template data
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -76,6 +76,9 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
   const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
   const recipes: Map<string, RecipeUpload> = new Map();
   
+  console.log('CSV Headers:', headers);
+  console.log('Total lines:', lines.length);
+  
   // Enhanced unit mapping for recipe ingredients
   const unitMapping: Record<string, string> = {
     'piece': 'pieces',
@@ -96,36 +99,45 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     'package': 'packs'
   };
   
-  lines.slice(1).forEach(line => {
+  lines.slice(1).forEach((line, index) => {
     if (!line.trim()) return;
     
     const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
     const rowData: any = {};
     
-    // Map CSV headers to data
+    console.log(`Processing line ${index + 2}:`, values);
+    
+    // Map CSV headers to data - handle multiple possible column names
     headers.forEach((header, index) => {
       rowData[header] = values[index] || '';
     });
     
-    const recipeName = rowData['name'] || rowData['recipe name'] || rowData['recipename'];
+    // Flexible column mapping to handle different naming conventions
+    const recipeName = rowData['product'] || rowData['name'] || rowData['recipe name'] || rowData['recipename'];
     const recipeCategory = rowData['category'] || rowData['recipe category'] || rowData['recipecategory'];
     const ingredientName = rowData['ingredient name'] || rowData['ingredientname'] || rowData['ingredient'];
     const unitOfMeasure = rowData['unit of measure'] || rowData['unitofmeasure'] || rowData['unit'] || rowData['uom'];
     const quantityUsed = rowData['quantity used'] || rowData['quantityused'] || rowData['quantity'] || rowData['qty'];
     const costPerUnit = rowData['cost per unit'] || rowData['costperunit'] || rowData['cost'] || rowData['unit cost'];
     
-    if (!recipeName || !ingredientName) return;
+    console.log(`Parsed: Recipe=${recipeName}, Ingredient=${ingredientName}, Quantity=${quantityUsed}, Unit=${unitOfMeasure}`);
+    
+    if (!recipeName || !ingredientName) {
+      console.log(`Skipping line ${index + 2}: Missing recipe name or ingredient name`);
+      return;
+    }
     
     if (!recipes.has(recipeName)) {
       recipes.set(recipeName, {
         name: recipeName,
-        category: recipeCategory || undefined, // Add category support
+        category: recipeCategory || 'General',
         description: `Recipe for ${recipeName}`,
         yield_quantity: 1,
         serving_size: 1,
         instructions: `Instructions for preparing ${recipeName}`,
         ingredients: []
       });
+      console.log(`Created new recipe: ${recipeName}`);
     }
     
     const recipe = recipes.get(recipeName)!;
@@ -133,14 +145,23 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
       // Apply unit mapping to ensure valid database enum values
       const mappedUnit = unitMapping[unitOfMeasure?.toLowerCase()] || unitOfMeasure || 'pieces';
       
-      recipe.ingredients.push({
+      const ingredient: RecipeIngredientUpload = {
         commissary_item_name: ingredientName,
         quantity: parseFloat(quantityUsed) || 1,
         unit: mappedUnit,
         cost_per_unit: parseFloat(costPerUnit) || undefined
-      });
+      };
+      
+      recipe.ingredients.push(ingredient);
+      console.log(`Added ingredient to ${recipeName}:`, ingredient);
     }
   });
   
-  return Array.from(recipes.values());
+  const result = Array.from(recipes.values());
+  console.log(`Final parsed recipes count: ${result.length}`);
+  result.forEach(recipe => {
+    console.log(`Recipe: ${recipe.name}, Ingredients: ${recipe.ingredients.length}`);
+  });
+  
+  return result;
 };
