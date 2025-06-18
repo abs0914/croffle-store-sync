@@ -84,7 +84,7 @@ export default function InventoryStock() {
   if (!currentStore) {
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Inventory Stock Management</h1>
+        <h1 className="text-2xl font-bold mb-4">Store Inventory Management</h1>
         <p>Please select a store first</p>
       </div>
     );
@@ -93,25 +93,34 @@ export default function InventoryStock() {
   return (
     <div className="space-y-6">
       <InventoryHeader
-        title="Store Inventory Stock Management"
-        description="Track and manage finished ingredients and supplies ready for use in menu items"
+        title="Store Inventory Management"
+        description="Manage finished goods inventory for your store operations. Stock is replenished through purchase orders and order management workflows."
         onExportCSV={handleExportCSV}
         onImportClick={handleImportClick}
         onDownloadTemplate={handleDownloadTemplate}
       />
 
-      <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-        <h3 className="font-semibold text-amber-800 mb-2">Store-Level Inventory</h3>
-        <p className="text-sm text-amber-700">
-          This inventory contains finished ingredients and supplies that are ready for use in menu items and recipes.
-          Raw materials are managed separately in the Commissary Inventory (admin access required).
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h3 className="font-semibold text-blue-800 mb-2">Store-Level Inventory</h3>
+        <p className="text-sm text-blue-700 mb-2">
+          This inventory contains finished goods and supplies specific to {currentStore.name}. 
+          Stock is replenished through:
+        </p>
+        <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
+          <li>Purchase orders from suppliers</li>
+          <li>Stock transfers from other stores</li>
+          <li>Order management workflows</li>
+          <li>Manual stock adjustments</li>
+        </ul>
+        <p className="text-xs text-blue-600 mt-2 italic">
+          Note: Production conversions from commissary raw materials are handled in Production Management.
         </p>
       </div>
       
       <Tabs defaultValue="stock" value="stock" onValueChange={handleNavigationTabChange} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="menu" className="flex-1 py-2">Menu Management</TabsTrigger>
-          <TabsTrigger value="stock" className="flex-1 py-2">Inventory Stock</TabsTrigger>
+          <TabsTrigger value="stock" className="flex-1 py-2">Store Inventory</TabsTrigger>
         </TabsList>
       </Tabs>
       
@@ -129,7 +138,7 @@ export default function InventoryStock() {
           onClick={() => setIsAddModalOpen(true)}
           className="bg-croffle-accent hover:bg-croffle-accent/90"
         >
-          <Plus className="mr-2 h-4 w-4" /> Add Store Inventory Item
+          <Plus className="mr-2 h-4 w-4" /> Add Inventory Item
         </Button>
       </div>
 

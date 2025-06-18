@@ -33,10 +33,7 @@ export const fetchInventoryAlerts = async (storeId: string): Promise<InventoryAl
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data || []).map(item => ({
-      ...item,
-      alert_type: item.alert_type as 'low_stock' | 'out_of_stock' | 'reorder_point'
-    }));
+    return data || [];
   } catch (error) {
     console.error('Error fetching inventory alerts:', error);
     toast.error('Failed to fetch inventory alerts');
@@ -56,6 +53,7 @@ export const acknowledgeAlert = async (alertId: string): Promise<boolean> => {
       .eq('id', alertId);
 
     if (error) throw error;
+    
     toast.success('Alert acknowledged');
     return true;
   } catch (error) {
@@ -65,11 +63,7 @@ export const acknowledgeAlert = async (alertId: string): Promise<boolean> => {
   }
 };
 
-export const getAlertCounts = async (storeId: string): Promise<{
-  lowStock: number;
-  outOfStock: number;
-  reorderPoint: number;
-}> => {
+export const getAlertSummary = async (storeId: string) => {
   try {
     const { data, error } = await supabase
       .from('store_inventory_alerts')
@@ -79,29 +73,21 @@ export const getAlertCounts = async (storeId: string): Promise<{
 
     if (error) throw error;
 
-    const counts = {
-      lowStock: 0,
-      outOfStock: 0,
-      reorderPoint: 0
+    const summary = {
+      lowStock: data?.filter(alert => alert.alert_type === 'low_stock').length || 0,
+      outOfStock: data?.filter(alert => alert.alert_type === 'out_of_stock').length || 0,
+      reorderPoint: data?.filter(alert => alert.alert_type === 'reorder_point').length || 0,
+      total: data?.length || 0
     };
 
-    data?.forEach(alert => {
-      switch (alert.alert_type) {
-        case 'low_stock':
-          counts.lowStock++;
-          break;
-        case 'out_of_stock':
-          counts.outOfStock++;
-          break;
-        case 'reorder_point':
-          counts.reorderPoint++;
-          break;
-      }
-    });
-
-    return counts;
+    return summary;
   } catch (error) {
-    console.error('Error getting alert counts:', error);
-    return { lowStock: 0, outOfStock: 0, reorderPoint: 0 };
+    console.error('Error fetching alert summary:', error);
+    return {
+      lowStock: 0,
+      outOfStock: 0,
+      reorderPoint: 0,
+      total: 0
+    };
   }
 };

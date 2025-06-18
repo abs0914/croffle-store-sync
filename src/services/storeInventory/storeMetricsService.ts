@@ -9,16 +9,16 @@ export interface StoreMetrics {
   total_sales: number;
   total_orders: number;
   average_order_value: number;
-  inventory_turnover: number;
   low_stock_items: number;
   out_of_stock_items: number;
+  inventory_turnover: number;
   created_at: string;
   updated_at: string;
 }
 
 export const fetchStoreMetrics = async (
-  storeId: string,
-  startDate?: string,
+  storeId: string, 
+  startDate?: string, 
   endDate?: string
 ): Promise<StoreMetrics[]> => {
   try {
@@ -47,59 +47,74 @@ export const fetchStoreMetrics = async (
   }
 };
 
-export const getDashboardSummary = async (storeId: string): Promise<{
-  todaySales: number;
-  todayOrders: number;
-  avgOrderValue: number;
-  inventoryAlerts: number;
-  weeklyGrowth: number;
-}> => {
+export const getTodayMetrics = async (storeId: string): Promise<StoreMetrics | null> => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    // Get today's metrics
-    const { data: todayMetrics } = await supabase
+    
+    const { data, error } = await supabase
       .from('store_metrics')
       .select('*')
       .eq('store_id', storeId)
       .eq('metric_date', today)
       .single();
 
-    // Get last week's metrics for comparison
-    const { data: lastWeekMetrics } = await supabase
-      .from('store_metrics')
-      .select('*')
-      .eq('store_id', storeId)
-      .eq('metric_date', lastWeek)
-      .single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data || null;
+  } catch (error) {
+    console.error('Error fetching today metrics:', error);
+    return null;
+  }
+};
 
-    // Get inventory alerts count
-    const { data: alerts } = await supabase
-      .from('store_inventory_alerts')
-      .select('id')
+export const getInventoryMetrics = async (storeId: string) => {
+  try {
+    // Get inventory stock counts
+    const { data: stockData, error: stockError } = await supabase
+      .from('inventory_stock')
+      .select('stock_quantity, minimum_threshold, is_active')
       .eq('store_id', storeId)
-      .eq('is_acknowledged', false);
+      .eq('is_active', true);
 
-    const todaySales = todayMetrics?.total_sales || 0;
-    const lastWeekSales = lastWeekMetrics?.total_sales || 0;
-    const weeklyGrowth = lastWeekSales > 0 ? ((todaySales - lastWeekSales) / lastWeekSales) * 100 : 0;
+    if (stockError) throw stockError;
+
+    const totalItems = stockData?.length || 0;
+    const lowStockItems = stockData?.filter(item => 
+      item.stock_quantity <= (item.minimum_threshold || 10)
+    ).length || 0;
+    const outOfStockItems = stockData?.filter(item => 
+      item.stock_quantity <= 0
+    ).length || 0;
+
+    // Calculate inventory value
+    const { data: valueData, error: valueError } = await supabase
+      .from('inventory_stock')
+      .select('stock_quantity, cost')
+      .eq('store_id', storeId)
+      .eq('is_active', true)
+      .not('cost', 'is', null);
+
+    if (valueError) throw valueError;
+
+    const totalValue = valueData?.reduce((sum, item) => 
+      sum + (item.stock_quantity * (item.cost || 0)), 0
+    ) || 0;
 
     return {
-      todaySales,
-      todayOrders: todayMetrics?.total_orders || 0,
-      avgOrderValue: todayMetrics?.average_order_value || 0,
-      inventoryAlerts: alerts?.length || 0,
-      weeklyGrowth
+      totalItems,
+      lowStockItems,
+      outOfStockItems,
+      totalValue,
+      stockHealthPercentage: totalItems > 0 ? 
+        Math.round(((totalItems - lowStockItems) / totalItems) * 100) : 100
     };
   } catch (error) {
-    console.error('Error fetching dashboard summary:', error);
+    console.error('Error fetching inventory metrics:', error);
     return {
-      todaySales: 0,
-      todayOrders: 0,
-      avgOrderValue: 0,
-      inventoryAlerts: 0,
-      weeklyGrowth: 0
+      totalItems: 0,
+      lowStockItems: 0,
+      outOfStockItems: 0,
+      totalValue: 0,
+      stockHealthPercentage: 100
     };
   }
 };

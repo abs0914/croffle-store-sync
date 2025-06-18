@@ -1,65 +1,54 @@
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Download, Import, Upload } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Download, Upload, FileSpreadsheet, Package } from "lucide-react";
 
 interface InventoryHeaderProps {
   title: string;
-  description?: string;
+  description: string;
   onExportCSV?: () => void;
   onImportClick?: () => void;
   onDownloadTemplate?: () => void;
 }
 
-const InventoryHeader = ({
-  title,
-  description,
-  onExportCSV,
-  onImportClick,
-  onDownloadTemplate
-}: InventoryHeaderProps) => {
-  // Determine if we should show action buttons (only when handlers are provided)
-  const showActions = onExportCSV || onImportClick || onDownloadTemplate;
-  const isMobile = useIsMobile();
-  
+export default function InventoryHeader({ 
+  title, 
+  description, 
+  onExportCSV, 
+  onImportClick, 
+  onDownloadTemplate 
+}: InventoryHeaderProps) {
   return (
-    <div className="mb-6">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+    <div className="flex items-start justify-between">
+      <div className="flex items-center gap-3">
+        <Package className="h-8 w-8 text-croffle-accent" />
         <div>
-          <h1 className="text-2xl font-bold text-croffle-primary mx-0 my-[15px]">{title}</h1>
-          {description && <p className="text-muted-foreground mt-1">{description}</p>}
+          <h1 className="text-3xl font-bold">{title}</h1>
+          <p className="text-muted-foreground max-w-2xl">{description}</p>
         </div>
-        {showActions && (
-          <div className="flex flex-wrap gap-2">
-            {onDownloadTemplate && (
-              <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={onDownloadTemplate}>
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Template</span>
-              </Button>
-            )}
-            {onImportClick && (
-              <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={onImportClick}>
-                <Import className="h-4 w-4" />
-                <span className="hidden sm:inline">Import</span>
-              </Button>
-            )}
-            {onExportCSV && (
-              <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={onExportCSV}>
-                <Upload className="h-4 w-4" />
-                <span className="hidden sm:inline">Export</span>
-              </Button>
-            )}
-            <Button size="sm" asChild>
-              <Link to="/inventory/product/new">Add Product</Link>
-            </Button>
-          </div>
+      </div>
+      
+      <div className="flex gap-2">
+        {onDownloadTemplate && (
+          <Button variant="outline" onClick={onDownloadTemplate}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            Template
+          </Button>
+        )}
+        
+        {onImportClick && (
+          <Button variant="outline" onClick={onImportClick}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import
+          </Button>
+        )}
+        
+        {onExportCSV && (
+          <Button variant="outline" onClick={onExportCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
         )}
       </div>
-      <Separator className="mt-4 bg-croffle-primary/20" />
     </div>
   );
-};
-
-export default InventoryHeader;
+}
