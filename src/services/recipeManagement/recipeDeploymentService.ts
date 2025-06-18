@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { RecipeTemplate } from "./types";
 import { toast } from "sonner";
@@ -22,33 +23,7 @@ export const deployRecipeToProductCatalog = async (
       sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
     );
 
-    // First, create the recipe in the recipes table
-    const { data: recipe, error: recipeError } = await supabase
-      .from('recipes')
-      .insert({
-        name: template.name,
-        description: template.description,
-        instructions: template.instructions,
-        yield_quantity: template.yield_quantity,
-        serving_size: template.serving_size || 1,
-        store_id: storeId,
-        product_id: null, // Set to null instead of empty string
-        category_name: template.category_name,
-        approval_status: 'pending_approval',
-        is_active: true,
-        version: template.version || 1
-      })
-      .select()
-      .single();
-
-    if (recipeError) {
-      console.error('Error creating recipe:', recipeError);
-      throw recipeError;
-    }
-
-    console.log(`Created recipe with ID: ${recipe.id}`);
-
-    // Create the product from the recipe template
+    // First, create the product
     const { data: product, error: productError } = await supabase
       .from('products')
       .insert({
@@ -72,16 +47,31 @@ export const deployRecipeToProductCatalog = async (
 
     console.log(`Created product with ID: ${product.id}`);
 
-    // Update the recipe with the product_id
-    const { error: updateRecipeError } = await supabase
+    // Then, create the recipe with the product_id
+    const { data: recipe, error: recipeError } = await supabase
       .from('recipes')
-      .update({ product_id: product.id })
-      .eq('id', recipe.id);
+      .insert({
+        name: template.name,
+        description: template.description,
+        instructions: template.instructions,
+        yield_quantity: template.yield_quantity,
+        serving_size: template.serving_size || 1,
+        store_id: storeId,
+        product_id: product.id, // Use the created product ID
+        category_name: template.category_name,
+        approval_status: 'pending_approval',
+        is_active: true,
+        version: template.version || 1
+      })
+      .select()
+      .single();
 
-    if (updateRecipeError) {
-      console.error('Error updating recipe with product_id:', updateRecipeError);
-      throw updateRecipeError;
+    if (recipeError) {
+      console.error('Error creating recipe:', recipeError);
+      throw recipeError;
     }
+
+    console.log(`Created recipe with ID: ${recipe.id}`);
 
     // Then, create recipe ingredients
     if (template.ingredients && template.ingredients.length > 0) {
