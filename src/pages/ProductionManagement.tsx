@@ -4,9 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConversionRecipesTab } from "./ProductionManagement/components/ConversionRecipesTab";
 import { ProductionDashboard } from "./ProductionManagement/components/ProductionDashboard";
-import { ProductionBulkUploadTab } from "./ProductionManagement/components/ProductionBulkUploadTab";
 import { useStore } from "@/contexts/StoreContext";
-import { Factory, BarChart3, Upload } from "lucide-react";
+import { Factory, BarChart3 } from "lucide-react";
 
 export default function ProductionManagement() {
   const { currentStore } = useStore();
@@ -25,7 +24,7 @@ export default function ProductionManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Dashboard
@@ -33,10 +32,6 @@ export default function ProductionManagement() {
           <TabsTrigger value="conversions" className="flex items-center gap-2">
             <Factory className="h-4 w-4" />
             Production Conversions
-          </TabsTrigger>
-          <TabsTrigger value="bulk-upload" className="flex items-center gap-2">
-            <Upload className="h-4 w-4" />
-            Bulk Upload
           </TabsTrigger>
         </TabsList>
 
@@ -65,20 +60,6 @@ export default function ProductionManagement() {
             </CardHeader>
             <CardContent>
               <ConversionRecipesTab storeId={currentStore?.id || ""} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="bulk-upload">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bulk Production Upload</CardTitle>
-              <CardDescription>
-                Upload multiple production conversions and workflows using CSV or Excel files.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ProductionBulkUploadTab storeId={currentStore?.id || ""} />
             </CardContent>
           </Card>
         </TabsContent>

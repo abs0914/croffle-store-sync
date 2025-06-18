@@ -9,7 +9,6 @@ import AdminRecipes from '@/pages/Admin/AdminRecipes';
 import AdminCustomers from '@/pages/Admin/AdminCustomers';
 import AdminOrders from '@/pages/Admin/AdminOrders';
 import AdminReports from '@/pages/Admin/AdminReports';
-import BulkUpload from '@/pages/BulkUpload';
 import OrderManagement from '@/pages/OrderManagement';
 import CommissaryInventory from '@/pages/CommissaryInventory';
 import UsersPage from '@/pages/Settings/Users/UsersPage';
@@ -66,14 +65,6 @@ export const AdminAppRoutes = () => [
     <AdminProtectedRoute>
       <AdminLayout>
         <AdminReports />
-      </AdminLayout>
-    </AdminProtectedRoute>
-  } />,
-
-  <Route key="admin-bulk-upload" path="/admin/bulk-upload" element={
-    <AdminProtectedRoute>
-      <AdminLayout>
-        <BulkUpload />
       </AdminLayout>
     </AdminProtectedRoute>
   } />,

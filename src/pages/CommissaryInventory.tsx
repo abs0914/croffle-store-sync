@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Package, AlertTriangle, CheckCircle, Warehouse, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, Edit, Package, AlertTriangle, CheckCircle, Warehouse, Trash2, Upload } from "lucide-react";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { 
   fetchCommissaryInventory, 
@@ -18,6 +19,7 @@ import { AddCommissaryItemDialog } from "./Inventory/components/AddCommissaryIte
 import { EditCommissaryItemDialog } from "./Inventory/components/EditCommissaryItemDialog";
 import { StockAdjustmentDialog } from "./Inventory/components/StockAdjustmentDialog";
 import { DeleteConfirmationDialog } from "./Inventory/components/DeleteConfirmationDialog";
+import { CommissaryBulkUpload } from "./CommissaryInventory/components/CommissaryBulkUpload";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/format";
 
@@ -32,6 +34,7 @@ export default function CommissaryInventory() {
   const [showStockDialog, setShowStockDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<CommissaryInventoryItem | null>(null);
+  const [activeTab, setActiveTab] = useState("inventory");
   const [filters, setFilters] = useState<CommissaryInventoryFilters>({
     category: 'all',
     stockLevel: 'all',
@@ -149,189 +152,208 @@ export default function CommissaryInventory() {
           Commissary Inventory
         </h1>
         <p className="text-muted-foreground">
-          Manage raw materials and supplies for conversion to store inventory. Raw materials uploaded through bulk upload will appear here.
+          Manage raw materials and supplies for conversion to store inventory.
         </p>
       </div>
 
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search items..."
-                value={filters.search || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                className="pl-10"
-              />
-            </div>
-            
-            <Select
-              value={filters.category || 'all'}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, category: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="raw_materials">Raw Materials</SelectItem>
-                <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
-                <SelectItem value="supplies">Supplies</SelectItem>
-              </SelectContent>
-            </Select>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Inventory Management
+          </TabsTrigger>
+          <TabsTrigger value="bulk-upload" className="flex items-center gap-2">
+            <Upload className="h-4 w-4" />
+            Bulk Upload
+          </TabsTrigger>
+        </TabsList>
 
-            <Select
-              value={filters.stockLevel || 'all'}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, stockLevel: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Stock Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Stock Levels</SelectItem>
-                <SelectItem value="good">Good Stock</SelectItem>
-                <SelectItem value="low">Low Stock</SelectItem>
-                <SelectItem value="out">Out of Stock</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={filters.supplier || 'none'}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value === 'none' ? '' : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Supplier" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">All Suppliers</SelectItem>
-                {suppliers.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Action Buttons */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setShowAddDialog(true)}
-            className="bg-croffle-accent hover:bg-croffle-accent/90"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Raw Material
-          </Button>
-          
-          <Button
-            onClick={handleRemoveDuplicates}
-            disabled={removingDuplicates}
-            variant="outline"
-            className="text-orange-600 hover:text-orange-700 border-orange-300 hover:border-orange-400"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            {removingDuplicates ? "Removing..." : "Remove Duplicates"}
-          </Button>
-        </div>
-      </div>
-
-      {/* Inventory Items */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Raw Materials & Supplies</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-16 bg-gray-200 rounded"></div>
+        <TabsContent value="inventory" className="space-y-6">
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Filters</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search items..."
+                    value={filters.search || ''}
+                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                    className="pl-10"
+                  />
                 </div>
-              ))}
-            </div>
-          ) : items.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">
-                No commissary inventory items found. Upload raw materials through the Bulk Upload feature to see them here.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {items.map((item) => {
-                const stockLevel = getCommissaryStockLevel(item);
-                return (
-                  <div key={item.id} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <h3 className="font-semibold">{item.name}</h3>
-                          {getStockLevelBadge(stockLevel)}
-                          <Badge variant="outline">{item.category.replace('_', ' ')}</Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
-                          <div>
-                            <span className="font-medium">Current Stock:</span> {item.current_stock} {item.unit}
-                          </div>
-                          <div>
-                            <span className="font-medium">Min Threshold:</span> {item.minimum_threshold} {item.unit}
-                          </div>
-                          <div>
-                            <span className="font-medium">Unit Cost:</span> {item.unit_cost ? formatCurrency(item.unit_cost) : 'N/A'}
-                          </div>
-                          <div>
-                            <span className="font-medium">Supplier:</span> {item.supplier?.name || 'N/A'}
-                          </div>
-                        </div>
-                        
-                        {item.sku && (
-                          <div className="text-sm text-muted-foreground">
-                            <span className="font-medium">SKU:</span> {item.sku}
-                          </div>
-                        )}
-                      </div>
+                
+                <Select
+                  value={filters.category || 'all'}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, category: value as any }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="raw_materials">Raw Materials</SelectItem>
+                    <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
+                    <SelectItem value="supplies">Supplies</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditItem(item)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleStockAdjustment(item)}
-                        >
-                          <Package className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteItem(item)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <AlertTriangle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                <Select
+                  value={filters.stockLevel || 'all'}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, stockLevel: value as any }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Stock Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Stock Levels</SelectItem>
+                    <SelectItem value="good">Good Stock</SelectItem>
+                    <SelectItem value="low">Low Stock</SelectItem>
+                    <SelectItem value="out">Out of Stock</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={filters.supplier || 'none'}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, supplier: value === 'none' ? '' : value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">All Suppliers</SelectItem>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex justify-between items-center">
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowAddDialog(true)}
+                className="bg-croffle-accent hover:bg-croffle-accent/90"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Raw Material
+              </Button>
+              
+              <Button
+                onClick={handleRemoveDuplicates}
+                disabled={removingDuplicates}
+                variant="outline"
+                className="text-orange-600 hover:text-orange-700 border-orange-300 hover:border-orange-400"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {removingDuplicates ? "Removing..." : "Remove Duplicates"}
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+
+          {/* Inventory Items List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Raw Materials & Supplies</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-16 bg-gray-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : items.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    No commissary inventory items found. Upload raw materials through the Bulk Upload feature to see them here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {items.map((item) => {
+                    const stockLevel = getCommissaryStockLevel(item);
+                    return (
+                      <div key={item.id} className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <h3 className="font-semibold">{item.name}</h3>
+                              {getStockLevelBadge(stockLevel)}
+                              <Badge variant="outline">{item.category.replace('_', ' ')}</Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                              <div>
+                                <span className="font-medium">Current Stock:</span> {item.current_stock} {item.unit}
+                              </div>
+                              <div>
+                                <span className="font-medium">Min Threshold:</span> {item.minimum_threshold} {item.unit}
+                              </div>
+                              <div>
+                                <span className="font-medium">Unit Cost:</span> {item.unit_cost ? formatCurrency(item.unit_cost) : 'N/A'}
+                              </div>
+                              <div>
+                                <span className="font-medium">Supplier:</span> {item.supplier?.name || 'N/A'}
+                              </div>
+                            </div>
+                            
+                            {item.sku && (
+                              <div className="text-sm text-muted-foreground">
+                                <span className="font-medium">SKU:</span> {item.sku}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditItem(item)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleStockAdjustment(item)}
+                            >
+                              <Package className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteItem(item)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <AlertTriangle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bulk-upload">
+          <CommissaryBulkUpload onSuccess={loadData} />
+        </TabsContent>
+      </Tabs>
 
       {/* Add Commissary Item Dialog */}
       <AddCommissaryItemDialog
