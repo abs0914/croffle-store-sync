@@ -10,7 +10,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
-import { fetchInventoryStock } from "@/services/inventoryStock";
+import { fetchInventoryStock } from "@/services/inventoryStock/inventoryStockFetch";
 import { fetchActiveCashiers } from "@/services/cashier";
 import { Camera } from "lucide-react";
 import { getPreviousShiftEndingCash } from "@/contexts/shift/shiftUtils";
@@ -46,12 +46,23 @@ export default function StartShiftDialog({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [selectedCashierId, setSelectedCashierId] = useState<string | null>(null);
 
-  // Fetch inventory items for this store
-  const { data: inventoryItems = [], isLoading: isLoadingInventory } = useQuery({
+  // Fetch inventory items for this store using the correct service
+  const { data: inventoryItems = [], isLoading: isLoadingInventory, error: inventoryError } = useQuery({
     queryKey: ["inventory-stock", storeId],
     queryFn: () => storeId ? fetchInventoryStock(storeId) : Promise.resolve([]),
     enabled: isOpen && !!storeId,
   });
+
+  // Debug inventory loading
+  useEffect(() => {
+    if (isOpen && storeId) {
+      console.log("StartShiftDialog: Loading inventory for store:", storeId);
+      console.log("StartShiftDialog: Inventory items loaded:", inventoryItems?.length || 0);
+      if (inventoryError) {
+        console.error("StartShiftDialog: Inventory loading error:", inventoryError);
+      }
+    }
+  }, [isOpen, storeId, inventoryItems, inventoryError]);
 
   // Fetch cashiers for this store
   const { data: cashiers = [], isLoading: isLoadingCashiers } = useQuery({
@@ -90,12 +101,14 @@ export default function StartShiftDialog({
   // Initialize inventory count with current stock quantities
   useEffect(() => {
     if (isOpen && inventoryItems.length > 0) {
+      console.log("StartShiftDialog: Initializing inventory count for", inventoryItems.length, "items");
       const initialCount = inventoryItems.reduce((acc, item) => {
         acc[item.id] = item.stock_quantity || 0;
         return acc;
       }, {} as Record<string, number>);
       
       setInventoryCount(initialCount);
+      console.log("StartShiftDialog: Initial inventory count set:", Object.keys(initialCount).length, "items");
     }
   }, [isOpen, inventoryItems]);
 
@@ -188,6 +201,13 @@ export default function StartShiftDialog({
             handleInventoryCountChange={handleInventoryCountChange}
             isLoadingInventory={isLoadingInventory}
           />
+          
+          {/* Debug info when no inventory items */}
+          {isOpen && !isLoadingInventory && inventoryItems.length === 0 && (
+            <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border">
+              No inventory items found for this store. You may need to add inventory items first.
+            </div>
+          )}
         </div>
         
         <DialogFooter>
