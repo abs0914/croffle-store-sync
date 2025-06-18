@@ -1,4 +1,3 @@
-
 import { RawIngredientUpload, RecipeUpload, RecipeIngredientUpload } from "@/types/commissary";
 
 export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] => {
@@ -6,7 +5,7 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
   const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
   
   return lines.slice(1).map(line => {
-    const values = line.split(',').map(v => v.trim());
+    const values = line.split(',').map(v => v.trim().replace(/"/g, '')); // Remove quotes
     const ingredient: any = {};
     
     headers.forEach((header, index) => {
@@ -17,7 +16,19 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
           ingredient.name = value;
           break;
         case 'category':
-          ingredient.category = value as 'raw_materials' | 'packaging_materials' | 'supplies';
+          // Ensure category values match the database constraint exactly
+          const categoryMapping: Record<string, string> = {
+            'raw materials': 'raw_materials',
+            'raw_materials': 'raw_materials',
+            'rawmaterials': 'raw_materials',
+            'packaging materials': 'packaging_materials',
+            'packaging_materials': 'packaging_materials',
+            'packagingmaterials': 'packaging_materials',
+            'supplies': 'supplies',
+            'supply': 'supplies'
+          };
+          const normalizedCategory = value.toLowerCase().replace(/[\s-_]/g, '');
+          ingredient.category = categoryMapping[normalizedCategory] || categoryMapping[value.toLowerCase()] || 'raw_materials';
           break;
         case 'unit':
           // Map common unit names to valid database units
@@ -67,8 +78,17 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
       }
     });
     
+    // Validate and set defaults for required fields
+    if (!ingredient.category) {
+      ingredient.category = 'raw_materials';
+    }
+    
+    if (!ingredient.unit) {
+      ingredient.unit = 'pieces';
+    }
+    
     return ingredient;
-  }).filter(ingredient => ingredient.name);
+  }).filter(ingredient => ingredient.name && ingredient.name.trim() !== '');
 };
 
 export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {

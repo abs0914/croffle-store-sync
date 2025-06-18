@@ -44,6 +44,8 @@ export const createCommissaryItem = async (item: Omit<CommissaryInventoryItem, '
 
 export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[]): Promise<boolean> => {
   try {
+    console.log('Starting bulk upload of ingredients:', ingredients);
+    
     // First, get existing suppliers to match names
     const { data: suppliers } = await supabase
       .from('suppliers')
@@ -51,30 +53,61 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
 
     const supplierMap = new Map(suppliers?.map(s => [s.name.toLowerCase(), s.id]) || []);
 
-    const processedIngredients = ingredients.map(ingredient => ({
-      name: ingredient.name,
-      category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-      unit: ingredient.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair',
-      unit_cost: ingredient.unit_cost || 0,
-      current_stock: ingredient.current_stock || 0,
-      minimum_threshold: ingredient.minimum_threshold || 0,
-      supplier_id: ingredient.supplier_name ? supplierMap.get(ingredient.supplier_name.toLowerCase()) : null,
-      sku: ingredient.sku,
-      storage_location: ingredient.storage_location,
-      is_active: true
-    }));
+    const processedIngredients = ingredients.map(ingredient => {
+      // Validate category values
+      const validCategories = ['raw_materials', 'packaging_materials', 'supplies'];
+      if (!validCategories.includes(ingredient.category)) {
+        console.warn(`Invalid category "${ingredient.category}" for ingredient "${ingredient.name}". Defaulting to "raw_materials".`);
+        ingredient.category = 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies';
+      }
+
+      // Validate unit values  
+      const validUnits = ['kg', 'g', 'pieces', 'liters', 'ml', 'boxes', 'packs', 'serving', 'portion', 'scoop', 'pair'];
+      if (!validUnits.includes(ingredient.unit)) {
+        console.warn(`Invalid unit "${ingredient.unit}" for ingredient "${ingredient.name}". Defaulting to "pieces".`);
+        ingredient.unit = 'pieces' as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair';
+      }
+
+      return {
+        name: ingredient.name,
+        category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+        unit: ingredient.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair',
+        unit_cost: ingredient.unit_cost || 0,
+        current_stock: ingredient.current_stock || 0,
+        minimum_threshold: ingredient.minimum_threshold || 0,
+        supplier_id: ingredient.supplier_name ? supplierMap.get(ingredient.supplier_name.toLowerCase()) : null,
+        sku: ingredient.sku,
+        storage_location: ingredient.storage_location,
+        is_active: true
+      };
+    });
+
+    console.log('Processed ingredients before insert:', processedIngredients);
 
     const { error } = await supabase
       .from('commissary_inventory')
       .insert(processedIngredients);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error during insert:', error);
+      throw error;
+    }
     
     toast.success(`Successfully uploaded ${ingredients.length} raw ingredients`);
     return true;
   } catch (error) {
     console.error('Error bulk uploading ingredients:', error);
-    toast.error('Failed to upload raw ingredients');
+    
+    // More specific error message based on the error type
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === '23514') {
+        toast.error('Invalid category or unit values in CSV. Please check your data format.');
+      } else {
+        toast.error(`Database error: ${error.message || 'Unknown error'}`);
+      }
+    } else {
+      toast.error('Failed to upload raw ingredients');
+    }
     return false;
   }
 };
