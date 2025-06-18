@@ -40,40 +40,41 @@ export class InventoryCacheService {
 
   // Prefetch inventory data for better UX
   async prefetchInventoryData(storeId: string) {
-    const queries = [
-      {
+    // Handle each prefetch separately with proper typing
+    const prefetchPromises = [
+      // Prefetch inventory items
+      this.queryClient.prefetchQuery({
         queryKey: ['inventory-stock', storeId],
         queryFn: async () => {
           const { fetchInventoryItems } = await import('@/services/inventoryManagement/inventoryItemService');
           return fetchInventoryItems(storeId);
-        }
-      },
-      {
+        },
+        staleTime: 2 * 60 * 1000 // 2 minutes
+      }),
+      
+      // Prefetch inventory movements
+      this.queryClient.prefetchQuery({
         queryKey: ['inventory-movements', storeId],
         queryFn: async () => {
           const { fetchInventoryMovements } = await import('@/services/storeInventory/inventoryMovementService');
           return fetchInventoryMovements(storeId);
-        }
-      },
-      {
+        },
+        staleTime: 2 * 60 * 1000 // 2 minutes
+      }),
+      
+      // Prefetch stock orders
+      this.queryClient.prefetchQuery({
         queryKey: ['stock-orders', storeId],
         queryFn: async () => {
           const { fetchStockOrders } = await import('@/services/inventory/stockOrderWorkflowService');
           return fetchStockOrders(storeId);
-        }
-      }
+        },
+        staleTime: 2 * 60 * 1000 // 2 minutes
+      })
     ];
 
     // Prefetch all queries concurrently
-    await Promise.allSettled(
-      queries.map(query => 
-        this.queryClient.prefetchQuery({
-          queryKey: query.queryKey,
-          queryFn: query.queryFn,
-          staleTime: 2 * 60 * 1000 // 2 minutes
-        })
-      )
-    );
+    await Promise.allSettled(prefetchPromises);
   }
 
   // Batch update cache for multiple items
