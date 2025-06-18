@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChefHat, Upload } from "lucide-react";
-import { RecipeBulkUpload } from "./RecipeBulkUpload";
+import { ChefHat } from "lucide-react";
 
 export const RecipeManagementTab: React.FC = () => {
   const [activeTab, setActiveTab] = useState("templates");
@@ -17,14 +16,10 @@ export const RecipeManagementTab: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <ChefHat className="h-4 w-4" />
             Recipe Templates
-          </TabsTrigger>
-          <TabsTrigger value="bulk-upload" className="flex items-center gap-2">
-            <Upload className="h-4 w-4" />
-            Bulk Upload
           </TabsTrigger>
         </TabsList>
 
@@ -35,10 +30,6 @@ export const RecipeManagementTab: React.FC = () => {
               Recipe template management interface coming soon
             </p>
           </div>
-        </TabsContent>
-
-        <TabsContent value="bulk-upload">
-          <RecipeBulkUpload />
         </TabsContent>
       </Tabs>
     </div>
