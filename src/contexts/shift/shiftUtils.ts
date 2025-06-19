@@ -20,7 +20,7 @@ export function mapShiftRowToShift(shiftData: ShiftRow): ShiftType {
     endPhoto: shiftData.end_photo || undefined,
     startInventoryCount: shiftData.start_inventory_count || undefined,
     endInventoryCount: shiftData.end_inventory_count || undefined,
-    cashierId: shiftData.cashier_id || undefined
+    cashier_id: shiftData.cashier_id || undefined
   };
 }
 

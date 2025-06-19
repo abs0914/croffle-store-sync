@@ -22,4 +22,7 @@ export interface Ingredient {
   cost_per_unit: number;
   supplier?: string;
   category?: string;
+  unit_type?: string;
+  stock_quantity?: number;
+  is_active?: boolean;
 }

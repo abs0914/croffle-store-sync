@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   name: string;
@@ -10,6 +11,10 @@ export interface Product {
   created_at?: string;
   updated_at?: string;
   product_variations?: ProductVariation[];
+  sku: string;
+  stock_quantity: number;
+  category?: string;
+  image?: string;
 }
 
 export interface ProductVariation {
