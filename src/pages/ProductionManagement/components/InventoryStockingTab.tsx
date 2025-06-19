@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ import {
 import type { CommissaryPurchase, CommissaryPurchaseForm } from "@/types/commissaryPurchases";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
+import { QuickSupplierAdd } from "./QuickSupplierAdd";
 
 export function InventoryStockingTab() {
   const { user } = useAuth();
