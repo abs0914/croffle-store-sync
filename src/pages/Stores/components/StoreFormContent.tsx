@@ -1,11 +1,10 @@
-
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CardContent } from "@/components/ui/card";
-import { MapPin, Truck } from "lucide-react";
+import { MapPin, Truck, Building2, Handshake } from "lucide-react";
 
 interface StoreFormContentProps {
   formData: {
@@ -22,6 +21,15 @@ interface StoreFormContentProps {
     region?: string;
     logistics_zone?: string;
     shipping_cost_multiplier?: number;
+    ownership_type?: 'company_owned' | 'franchisee';
+    franchise_agreement_date?: string;
+    franchise_fee_percentage?: number;
+    franchisee_contact_info?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      address?: string;
+    };
     is_active: boolean;
   };
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
@@ -35,8 +43,16 @@ export const StoreFormContent = ({
   handleSelectChange,
   handleSwitchChange 
 }: StoreFormContentProps) => {
+  const handleFranchiseeInfoChange = (field: string, value: string) => {
+    const updatedInfo = {
+      ...formData.franchisee_contact_info,
+      [field]: value
+    };
+    handleSelectChange('franchisee_contact_info', JSON.stringify(updatedInfo));
+  };
+
   return (
-    <CardContent className="space-y-4">
+    <CardContent className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Store Name <span className="text-red-500">*</span></Label>
@@ -51,30 +67,139 @@ export const StoreFormContent = ({
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="location_type">Location Type <span className="text-red-500">*</span></Label>
+          <Label htmlFor="ownership_type">Ownership Type <span className="text-red-500">*</span></Label>
           <Select
-            value={formData.location_type || 'inside_cebu'}
-            onValueChange={(value) => handleSelectChange('location_type', value)}
+            value={formData.ownership_type || 'company_owned'}
+            onValueChange={(value) => handleSelectChange('ownership_type', value)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select location type" />
+              <SelectValue placeholder="Select ownership type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="inside_cebu">
+              <SelectItem value="company_owned">
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-green-600" />
-                  Inside Cebu
+                  <Building2 className="h-4 w-4 text-green-600" />
+                  Company Owned
                 </div>
               </SelectItem>
-              <SelectItem value="outside_cebu">
+              <SelectItem value="franchisee">
                 <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-blue-600" />
-                  Outside Cebu
+                  <Handshake className="h-4 w-4 text-purple-600" />
+                  Franchisee
                 </div>
               </SelectItem>
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {formData.ownership_type === 'franchisee' && (
+        <div className="space-y-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+          <h3 className="text-lg font-semibold text-purple-800 flex items-center gap-2">
+            <Handshake className="h-5 w-5" />
+            Franchisee Information
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="franchisee_name">Franchisee Name</Label>
+              <Input
+                id="franchisee_name"
+                value={formData.franchisee_contact_info?.name || ""}
+                onChange={(e) => handleFranchiseeInfoChange('name', e.target.value)}
+                placeholder="John Doe"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="franchisee_email">Franchisee Email</Label>
+              <Input
+                id="franchisee_email"
+                type="email"
+                value={formData.franchisee_contact_info?.email || ""}
+                onChange={(e) => handleFranchiseeInfoChange('email', e.target.value)}
+                placeholder="franchisee@example.com"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="franchisee_phone">Franchisee Phone</Label>
+              <Input
+                id="franchisee_phone"
+                value={formData.franchisee_contact_info?.phone || ""}
+                onChange={(e) => handleFranchiseeInfoChange('phone', e.target.value)}
+                placeholder="+63 912 345 6789"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="franchise_agreement_date">Agreement Date</Label>
+              <Input
+                id="franchise_agreement_date"
+                name="franchise_agreement_date"
+                type="date"
+                value={formData.franchise_agreement_date || ""}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="franchise_fee_percentage">Franchise Fee %</Label>
+              <Input
+                id="franchise_fee_percentage"
+                name="franchise_fee_percentage"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={formData.franchise_fee_percentage || 0}
+                onChange={handleChange}
+                placeholder="15.00"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="franchisee_address">Franchisee Address</Label>
+            <Textarea
+              id="franchisee_address"
+              value={formData.franchisee_contact_info?.address || ""}
+              onChange={(e) => handleFranchiseeInfoChange('address', e.target.value)}
+              placeholder="Franchisee business address"
+              rows={2}
+            />
+          </div>
+        </div>
+      )}
+      
+      <div className="space-y-2">
+        <Label htmlFor="location_type">Location Type <span className="text-red-500">*</span></Label>
+        <Select
+          value={formData.location_type || 'inside_cebu'}
+          onValueChange={(value) => handleSelectChange('location_type', value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select location type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="inside_cebu">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-green-600" />
+                Inside Cebu
+              </div>
+            </SelectItem>
+            <SelectItem value="outside_cebu">
+              <div className="flex items-center gap-2">
+                <Truck className="h-4 w-4 text-blue-600" />
+                Outside Cebu
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       
       <div className="space-y-2">

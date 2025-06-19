@@ -19,6 +19,15 @@ interface StoreFormData {
   region?: string;
   logistics_zone?: string;
   shipping_cost_multiplier?: number;
+  ownership_type?: 'company_owned' | 'franchisee';
+  franchise_agreement_date?: string;
+  franchise_fee_percentage?: number;
+  franchisee_contact_info?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
   is_active: boolean;
 }
 
@@ -49,6 +58,15 @@ export const useStoreForm = (id?: string) => {
     region: "",
     logistics_zone: "",
     shipping_cost_multiplier: 1.0,
+    ownership_type: "company_owned",
+    franchise_agreement_date: "",
+    franchise_fee_percentage: 0,
+    franchisee_contact_info: {
+      name: "",
+      email: "",
+      phone: "",
+      address: ""
+    },
     is_active: true
   });
   
@@ -77,7 +95,15 @@ export const useStoreForm = (id?: string) => {
       if (data) {
         setFormData({
           ...data,
-          shipping_cost_multiplier: data.shipping_cost_multiplier || 1.0
+          shipping_cost_multiplier: data.shipping_cost_multiplier || 1.0,
+          ownership_type: data.ownership_type || 'company_owned',
+          franchise_fee_percentage: data.franchise_fee_percentage || 0,
+          franchisee_contact_info: data.franchisee_contact_info || {
+            name: "",
+            email: "",
+            phone: "",
+            address: ""
+          }
         });
       }
     } catch (error: any) {
@@ -93,12 +119,24 @@ export const useStoreForm = (id?: string) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ 
       ...prev, 
-      [name]: name === 'shipping_cost_multiplier' ? parseFloat(value) || 1.0 : value 
+      [name]: name === 'shipping_cost_multiplier' ? parseFloat(value) || 1.0 :
+              name === 'franchise_fee_percentage' ? parseFloat(value) || 0 :
+              value 
     }));
   };
 
   const handleSelectChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (field === 'franchisee_contact_info') {
+      try {
+        const parsedInfo = JSON.parse(value);
+        setFormData((prev) => ({ ...prev, franchisee_contact_info: parsedInfo }));
+      } catch {
+        // If parsing fails, treat as a simple string update for a single field
+        setFormData((prev) => ({ ...prev, [field]: value }));
+      }
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
   };
   
   const handleSwitchChange = (checked: boolean) => {
@@ -116,12 +154,20 @@ export const useStoreForm = (id?: string) => {
         setIsSaving(false);
         return;
       }
+
+      // Prepare data for submission
+      const submitData = {
+        ...formData,
+        franchise_agreement_date: formData.franchise_agreement_date || null,
+        franchise_fee_percentage: formData.ownership_type === 'franchisee' ? formData.franchise_fee_percentage : 0,
+        franchisee_contact_info: formData.ownership_type === 'franchisee' ? formData.franchisee_contact_info : null
+      };
       
       if (isEditing) {
         // Update existing store
         const { error } = await supabase
           .from("stores")
-          .update(formData)
+          .update(submitData)
           .eq("id", id);
           
         if (error) throw error;
@@ -131,7 +177,7 @@ export const useStoreForm = (id?: string) => {
         // Create new store
         const { error } = await supabase
           .from("stores")
-          .insert(formData);
+          .insert(submitData);
           
         if (error) throw error;
         

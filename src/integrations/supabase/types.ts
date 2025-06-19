@@ -2225,12 +2225,16 @@ export type Database = {
           country: string | null
           created_at: string | null
           email: string | null
+          franchise_agreement_date: string | null
+          franchise_fee_percentage: number | null
+          franchisee_contact_info: Json | null
           id: string
           is_active: boolean | null
           location_type: string | null
           logistics_zone: string | null
           logo_url: string | null
           name: string
+          ownership_type: string | null
           phone: string | null
           region: string | null
           shipping_cost_multiplier: number | null
@@ -2245,12 +2249,16 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           email?: string | null
+          franchise_agreement_date?: string | null
+          franchise_fee_percentage?: number | null
+          franchisee_contact_info?: Json | null
           id?: string
           is_active?: boolean | null
           location_type?: string | null
           logistics_zone?: string | null
           logo_url?: string | null
           name: string
+          ownership_type?: string | null
           phone?: string | null
           region?: string | null
           shipping_cost_multiplier?: number | null
@@ -2265,12 +2273,16 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           email?: string | null
+          franchise_agreement_date?: string | null
+          franchise_fee_percentage?: number | null
+          franchisee_contact_info?: Json | null
           id?: string
           is_active?: boolean | null
           location_type?: string | null
           logistics_zone?: string | null
           logo_url?: string | null
           name?: string
+          ownership_type?: string | null
           phone?: string | null
           region?: string | null
           shipping_cost_multiplier?: number | null

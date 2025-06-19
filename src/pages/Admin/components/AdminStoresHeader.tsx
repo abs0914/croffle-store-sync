@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Grid3X3, List, Download, Settings, MapPin, Truck } from 'lucide-react';
+import { Plus, Grid3X3, List, Download, Settings, MapPin, Truck, Building2, Handshake } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface AdminStoresHeaderProps {
@@ -13,6 +13,8 @@ interface AdminStoresHeaderProps {
   setStatusFilter: (status: string) => void;
   locationFilter?: string;
   setLocationFilter?: (location: string) => void;
+  ownershipFilter?: string;
+  setOwnershipFilter?: (ownership: string) => void;
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
 }
@@ -24,6 +26,8 @@ export const AdminStoresHeader: React.FC<AdminStoresHeaderProps> = ({
   setStatusFilter,
   locationFilter = 'all',
   setLocationFilter,
+  ownershipFilter = 'all',
+  setOwnershipFilter,
   viewMode,
   setViewMode
 }) => {
@@ -35,7 +39,7 @@ export const AdminStoresHeader: React.FC<AdminStoresHeaderProps> = ({
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Store Management</h1>
           <p className="text-gray-500">
-            Manage all store locations and configurations across Inside and Outside Cebu
+            Manage all store locations across Inside/Outside Cebu and Company/Franchise ownership
           </p>
         </div>
         
@@ -94,6 +98,29 @@ export const AdminStoresHeader: React.FC<AdminStoresHeaderProps> = ({
                 <div className="flex items-center gap-2">
                   <Truck className="h-4 w-4 text-blue-600" />
                   Outside Cebu
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+
+        {setOwnershipFilter && (
+          <Select value={ownershipFilter} onValueChange={setOwnershipFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Ownership" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Ownership</SelectItem>
+              <SelectItem value="company_owned">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-green-600" />
+                  Company Owned
+                </div>
+              </SelectItem>
+              <SelectItem value="franchisee">
+                <div className="flex items-center gap-2">
+                  <Handshake className="h-4 w-4 text-purple-600" />
+                  Franchisee
                 </div>
               </SelectItem>
             </SelectContent>

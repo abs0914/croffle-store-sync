@@ -14,6 +14,15 @@ export interface Store {
   region?: string;
   logistics_zone?: string;
   shipping_cost_multiplier?: number;
+  ownership_type?: 'company_owned' | 'franchisee';
+  franchise_agreement_date?: string;
+  franchise_fee_percentage?: number;
+  franchisee_contact_info?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
   is_active: boolean;
   logo_url?: string;
   created_at?: string;
