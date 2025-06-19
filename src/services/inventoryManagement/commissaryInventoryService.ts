@@ -78,26 +78,29 @@ export const createCommissaryInventoryItem = async (
         storage_location: item.storage_location,
         is_active: true
       })
-      .select(`
-        *,
-        supplier:suppliers(*)
-      `)
+      .select()
       .single();
 
     if (error) throw error;
 
-    // Safe supplier check
-    const supplierData = data.supplier && 
-                        typeof data.supplier === 'object' && 
-                        !Array.isArray(data.supplier) ? 
-                        data.supplier : null;
+    // Fetch supplier data if exists
+    let supplier = null;
+    if (data.supplier_id) {
+      const { data: supplierData } = await supabase
+        .from('suppliers')
+        .select('*')
+        .eq('id', data.supplier_id)
+        .single();
+      
+      supplier = supplierData;
+    }
 
     toast.success('Commissary inventory item created successfully');
     return {
       ...data,
       category: data.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       unit: data.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: supplierData
+      supplier: supplier
     };
   } catch (error) {
     console.error('Error creating commissary inventory item:', error);
@@ -108,26 +111,32 @@ export const createCommissaryInventoryItem = async (
 
 export const updateCommissaryInventoryItem = async (
   id: string,
-  updates: Partial<CommissaryInventoryItem>
+  updates: Partial<Omit<CommissaryInventoryItem, 'id' | 'created_at' | 'updated_at' | 'supplier'>>
 ): Promise<CommissaryInventoryItem | null> => {
   try {
+    // Clean the updates object to remove the supplier property if it exists
+    const { supplier, ...cleanUpdates } = updates as any;
+    
     const { data, error } = await supabase
       .from('commissary_inventory')
-      .update(updates)
+      .update(cleanUpdates)
       .eq('id', id)
-      .select(`
-        *,
-        supplier:suppliers(*)
-      `)
+      .select()
       .single();
 
     if (error) throw error;
 
-    // Safe supplier check
-    const supplierData = data.supplier && 
-                        typeof data.supplier === 'object' && 
-                        !Array.isArray(data.supplier) ? 
-                        data.supplier : null;
+    // Fetch supplier data if exists
+    let supplierData = null;
+    if (data.supplier_id) {
+      const { data: fetchedSupplier } = await supabase
+        .from('suppliers')
+        .select('*')
+        .eq('id', data.supplier_id)
+        .single();
+      
+      supplierData = fetchedSupplier;
+    }
 
     toast.success('Commissary inventory item updated successfully');
     return {
