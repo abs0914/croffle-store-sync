@@ -20,6 +20,10 @@ export default function ProductCard({
   // Check if product is active, handling both is_active and isActive properties
   const isActive = product.is_active || product.isActive;
   
+  const categoryName = product.category 
+    ? (typeof product.category === 'string' ? product.category : product.category.name)
+    : getCategoryName(product.category_id);
+  
   return (
     <TooltipProvider>
       <Tooltip>
@@ -49,9 +53,7 @@ export default function ProductCard({
               
               <div className="w-full p-3 bg-white">
                 <p className="font-medium text-sm truncate">{product.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {product.category ? product.category.name : getCategoryName(product.category_id)}
-                </p>
+                <p className="text-xs text-muted-foreground">{categoryName}</p>
                 {!isActive && (
                   <span className="inline-block bg-gray-200 text-gray-700 text-xs px-1 rounded mt-1">Inactive</span>
                 )}

@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { ShiftType } from "@/types";
+import { Shift as ShiftType } from "@/types";
 import { ShiftRow } from "./types";
 import { toast } from "sonner";
 import { debugInventoryPermissions, checkInventoryAccess, updateInventoryStockWithRetry } from "@/services/inventoryStock/inventoryStockDebug";

@@ -22,7 +22,7 @@ export interface Ingredient {
   cost_per_unit: number;
   supplier?: string;
   category?: string;
-  unit_type?: string; // Legacy/compatibility property
+  unit_type?: string; // Legacy/compatibility property, maps to unit
   stock_quantity?: number;
   is_active?: boolean;
   store_id?: string;

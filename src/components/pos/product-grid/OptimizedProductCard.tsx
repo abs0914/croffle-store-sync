@@ -25,7 +25,11 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
   }, [onClick, product]);
 
   const categoryName = React.useMemo(() => {
-    return product.category ? product.category.name : getCategoryName(product.category_id);
+    if (product.category) {
+      // Handle Category | string union type
+      return typeof product.category === 'string' ? product.category : product.category.name;
+    }
+    return getCategoryName(product.category_id);
   }, [product.category, product.category_id, getCategoryName]);
 
   const tooltipText = React.useMemo(() => {
