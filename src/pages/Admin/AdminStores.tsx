@@ -62,7 +62,7 @@ export default function AdminStores() {
       
       <AdminStoresMetrics metrics={storeMetrics} />
       
-      {selectedSt, length > 0 && (
+      {selectedStores.length > 0 && (
         <AdminBulkActions 
           selectedCount={selectedStores.length}
           onBulkAction={handleBulkAction}

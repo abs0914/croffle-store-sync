@@ -14,7 +14,10 @@ export const fetchLocationPricing = async (): Promise<LocationPricing[]> => {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      location_type: item.location_type as LocationType
+    }));
   } catch (error) {
     console.error('Error fetching location pricing:', error);
     toast.error('Failed to fetch location pricing');
@@ -82,7 +85,10 @@ export const fetchRegionalSuppliers = async (): Promise<RegionalSupplier[]> => {
       .order('location_type', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      location_type: item.location_type as LocationType
+    }));
   } catch (error) {
     console.error('Error fetching regional suppliers:', error);
     toast.error('Failed to fetch regional suppliers');

@@ -16,6 +16,7 @@ export default function StoreForm() {
     isSaving,
     formData,
     handleChange,
+    handleSelectChange,
     handleSwitchChange,
     handleSubmit,
   } = useStoreForm(id);
@@ -41,6 +42,7 @@ export default function StoreForm() {
             <StoreFormContent 
               formData={formData}
               handleChange={handleChange}
+              handleSelectChange={handleSelectChange}
               handleSwitchChange={handleSwitchChange}
             />
             <StoreFormActions 
