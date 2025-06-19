@@ -1,4 +1,5 @@
 
+
 export interface InventoryStock {
   id: string;
   item: string;
@@ -25,4 +26,5 @@ export interface Ingredient {
   unit_type?: string;
   stock_quantity?: number;
   is_active?: boolean;
+  store_id?: string;
 }

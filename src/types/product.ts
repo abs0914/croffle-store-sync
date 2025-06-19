@@ -1,4 +1,5 @@
 
+
 export interface Product {
   id: string;
   name: string;
@@ -15,6 +16,14 @@ export interface Product {
   stock_quantity: number;
   category?: string;
   image?: string;
+  // Legacy/compatibility properties
+  barcode?: string;
+  cost?: number;
+  stockQuantity?: number;
+  categoryId?: string;
+  isActive?: boolean;
+  storeId?: string;
+  variations?: ProductVariation[];
 }
 
 export interface ProductVariation {
@@ -39,6 +48,10 @@ export interface Category {
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
+  // Legacy/compatibility properties
+  image?: string;
+  isActive?: boolean;
+  storeId?: string;
 }
 
 export type ProductSize = 'regular' | 'mini' | 'croffle-overload';
