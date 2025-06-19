@@ -1,13 +1,13 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Shift as ShiftType } from "@/types";
+import { Shift } from "@/types/shift";
 import { ShiftRow } from "./types";
 import { toast } from "sonner";
 import { debugInventoryPermissions, checkInventoryAccess, updateInventoryStockWithRetry } from "@/services/inventoryStock/inventoryStockDebug";
 import { QueryClient } from "@tanstack/react-query";
 
 // Map from ShiftRow to Shift model
-export function mapShiftRowToShift(shiftData: ShiftRow): ShiftType {
+export function mapShiftRowToShift(shiftData: ShiftRow): Shift {
   return {
     id: shiftData.id,
     userId: shiftData.user_id,
