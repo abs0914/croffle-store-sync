@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Download, FileText, AlertCircle, CheckCircle, ChefHat } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseRecipesCSV } from '@/utils/csvParser';
-import { bulkUploadRecipes } from '@/services/recipeUpload/recipeUploadCore';
+import { bulkUploadRecipes } from '@/services/recipeUploadService';
 
 interface UploadResult {
   success: number;
