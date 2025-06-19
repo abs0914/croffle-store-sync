@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useShift } from "@/contexts/shift"; 
@@ -22,9 +22,9 @@ export default function ShiftManager() {
 
   // Fetch cashier details if available
   const { data: cashier } = useQuery({
-    queryKey: ["cashier", currentShift?.cashierId],
-    queryFn: () => currentShift?.cashierId ? fetchCashierById(currentShift.cashierId) : Promise.resolve(null),
-    enabled: !!currentShift?.cashierId
+    queryKey: ["cashier", currentShift?.cashier_id],
+    queryFn: () => currentShift?.cashier_id ? fetchCashierById(currentShift.cashier_id) : Promise.resolve(null),
+    enabled: !!currentShift?.cashier_id
   });
 
   const handleStartShift = async (
@@ -95,7 +95,7 @@ export default function ShiftManager() {
           <span>Shift Management</span>
           {currentShift && (
             <ActiveCashierDisplay 
-              cashierId={currentShift.cashierId} 
+              cashierId={currentShift.cashier_id} 
               className="text-sm"
             />
           )}

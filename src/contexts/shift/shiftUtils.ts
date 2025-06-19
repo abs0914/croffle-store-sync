@@ -1,5 +1,3 @@
-
-
 import { supabase } from "@/integrations/supabase/client";
 import { ShiftType } from "@/types";
 import { ShiftRow } from "./types";
@@ -396,3 +394,23 @@ export async function getPreviousShiftEndingCash(
     return 0;
   }
 }
+
+export const createShiftData = (
+  userId: string,
+  storeId: string,
+  startingCash: number,
+  startInventoryCount: Record<string, number>,
+  photo?: string,
+  cashierId?: string
+) => {
+  return {
+    user_id: userId,
+    store_id: storeId,
+    starting_cash: startingCash,
+    start_inventory_count: startInventoryCount,
+    start_photo: photo,
+    cashier_id: cashierId,
+    status: 'active' as const,
+    start_time: new Date().toISOString()
+  };
+};

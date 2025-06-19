@@ -1,8 +1,9 @@
 
+
 // Core types
 export type { UserRole, User } from './user';
 export type { Store, StoreSettings } from './store';
-export type { Product, ProductVariation, Category } from './product';
+export type { Product, ProductVariation, Category, ProductSize } from './product';
 export type { CartItem, Customer, Transaction, TransactionItem, Shift as ShiftType } from './transaction';
 export type { Recipe, RecipeIngredient } from './recipe';
 export type { Shift } from './shift';
@@ -23,3 +24,4 @@ export type { PurchaseOrder, PurchaseOrderItem, Supplier } from './orderManageme
 
 // Report types
 export * from './reports';
+

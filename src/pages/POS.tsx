@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
@@ -152,7 +151,7 @@ export default function POS() {
   return (
     <div className="flex flex-col h-screen">
       {/* Store and Cashier Info Header */}
-      {(currentStore || currentShift?.cashierId) && (
+      {(currentStore || currentShift?.cashier_id) && (
         <div className="bg-white border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             {currentStore && (
@@ -163,8 +162,8 @@ export default function POS() {
                 </div>
               </div>
             )}
-            {currentShift?.cashierId && (
-              <ActiveCashierDisplay cashierId={currentShift.cashierId} />
+            {currentShift?.cashier_id && (
+              <ActiveCashierDisplay cashierId={currentShift.cashier_id} />
             )}
           </div>
         </div>
