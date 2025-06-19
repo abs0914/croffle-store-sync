@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -147,7 +146,7 @@ export const useStoreForm = (id?: string) => {
         setFormData((prev) => ({ ...prev, franchisee_contact_info: parsedInfo }));
       } catch {
         // If parsing fails, treat as a simple string update for a single field
-        setFormData((prev) => ({ ...prev, [field]: value }));
+        console.error('Failed to parse franchisee contact info JSON');
       }
     } else {
       setFormData((prev) => ({ ...prev, [field]: value }));
