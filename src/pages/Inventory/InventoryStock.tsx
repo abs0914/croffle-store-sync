@@ -83,9 +83,6 @@ export default function InventoryStock() {
       <InventoryHeader
         title="Store Inventory Management"
         description="Manage operational inventory including raw materials, supplies, and finished goods for your store operations."
-        onExportCSV={handleExportCSV}
-        onImportClick={handleImportClick}
-        onDownloadTemplate={handleDownloadTemplate}
       />
 
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
