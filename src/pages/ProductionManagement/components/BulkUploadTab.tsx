@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,7 +35,19 @@ export function BulkUploadTab({ storeId }: BulkUploadTabProps) {
         .order('name');
 
       if (error) throw error;
-      setStores(data || []);
+      
+      // Cast the data to proper Store types
+      const typedStores = (data || []).map(store => ({
+        ...store,
+        ownership_type: (store.ownership_type as 'company_owned' | 'franchisee') || 'company_owned',
+        franchisee_contact_info: store.franchisee_contact_info ? 
+          (typeof store.franchisee_contact_info === 'object' ? 
+            store.franchisee_contact_info as { name?: string; email?: string; phone?: string; address?: string; } : 
+            { name: "", email: "", phone: "", address: "" }
+          ) : undefined
+      })) as Store[];
+      
+      setStores(typedStores);
     } catch (error) {
       console.error('Error fetching stores:', error);
     }

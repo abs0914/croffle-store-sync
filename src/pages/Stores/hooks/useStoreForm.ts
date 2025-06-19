@@ -94,7 +94,7 @@ export const useStoreForm = (id?: string) => {
       
       if (data) {
         // Cast the data to proper types
-        const ownershipType = data.ownership_type as 'company_owned' | 'franchisee';
+        const ownershipType = (data.ownership_type as 'company_owned' | 'franchisee') || 'company_owned';
         let franchiseeContactInfo = {
           name: "",
           email: "",
@@ -116,7 +116,7 @@ export const useStoreForm = (id?: string) => {
         setFormData({
           ...data,
           shipping_cost_multiplier: data.shipping_cost_multiplier || 1.0,
-          ownership_type: ownershipType || 'company_owned',
+          ownership_type: ownershipType,
           franchise_fee_percentage: data.franchise_fee_percentage || 0,
           franchisee_contact_info: franchiseeContactInfo
         });
