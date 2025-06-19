@@ -38,11 +38,17 @@ export const mapProductToCSVRow = (product: Product): string[] => {
   
   const hasVariations = product.variations && product.variations.length > 0;
   
+  // Helper function to get category name
+  const getCategoryName = (category: Product['category']) => {
+    if (!category) return '';
+    return typeof category === 'string' ? category : category.name;
+  };
+  
   return [
     product.name,
     product.sku,
     product.description || '',
-    product.category?.name || '',
+    getCategoryName(product.category),
     String(product.stockQuantity || product.stock_quantity || 0),
     (product.isActive || product.is_active) ? 'TRUE' : 'FALSE',
     hasVariations ? 'TRUE' : 'FALSE',

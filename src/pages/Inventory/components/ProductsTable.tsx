@@ -1,4 +1,3 @@
-
 import { Product } from "@/types";
 import { Button } from "@/components/ui/button";
 import { 
@@ -88,6 +87,11 @@ export const ProductsTable = ({
     }
   };
 
+  const getCategoryName = (category: Product['category']) => {
+    if (!category) return 'No Category';
+    return typeof category === 'string' ? category : category.name;
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center p-8">
@@ -168,7 +172,7 @@ export const ProductsTable = ({
                 </span>
               </TableCell>
               <TableCell>
-                {product.category?.name || 'No Category'}
+                {getCategoryName(product.category)}
               </TableCell>
               <TableCell>
                 {(product.is_active || product.isActive) ? (

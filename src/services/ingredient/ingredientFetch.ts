@@ -21,6 +21,7 @@ export const fetchIngredients = async (storeId: string): Promise<Ingredient[]> =
     const ingredients: Ingredient[] = data.map(product => ({
       id: product.id,
       name: product.name,
+      unit: 'pieces', // Default unit
       unit_type: 'pieces' as const,  // Default unit type
       store_id: product.store_id,
       stock_quantity: product.stock_quantity || 0,
@@ -55,6 +56,7 @@ export const fetchIngredient = async (id: string): Promise<Ingredient | null> =>
     const ingredient: Ingredient = {
       id: data.id,
       name: data.name,
+      unit: 'pieces', // Default unit
       unit_type: 'pieces' as const,  // Default unit type
       store_id: data.store_id,
       stock_quantity: data.stock_quantity || 0,
