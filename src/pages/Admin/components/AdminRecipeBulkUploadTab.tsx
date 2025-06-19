@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Download, FileText, AlertCircle, CheckCircle, ChefHat } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseRecipesCSV } from '@/utils/csvParser';
-import { bulkUploadRecipes } from '@/services/recipeUploadService';
+import { bulkUploadRecipes, RecipeUploadData } from '@/services/recipeUploadService';
 
 interface UploadResult {
   success: number;
@@ -68,9 +67,16 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
 
       setUploadProgress(50);
 
+      // Transform RecipeUpload[] to RecipeUploadData[] ensuring category is always present
+      const recipeUploadData: RecipeUploadData[] = recipes.map(recipe => ({
+        name: recipe.name,
+        category: recipe.category || 'General', // Ensure category is always present
+        ingredients: recipe.ingredients
+      }));
+
       // Upload recipes as templates
-      console.log(`Uploading ${recipes.length} recipe templates...`);
-      const success = await bulkUploadRecipes(recipes);
+      console.log(`Uploading ${recipeUploadData.length} recipe templates...`);
+      const success = await bulkUploadRecipes(recipeUploadData);
       
       setUploadProgress(100);
 
