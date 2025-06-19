@@ -6,49 +6,24 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  Plus, 
   Search, 
   Filter, 
   Eye,
   EyeOff,
-  Edit,
-  Trash2,
   Package,
-  Tag,
   Image as ImageIcon
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchProductCatalog, toggleProductAvailability, deleteProduct } from '@/services/productCatalog/productCatalogService';
+import { fetchProductCatalog, toggleProductAvailability } from '@/services/productCatalog/productCatalogService';
 import { ProductCatalog } from '@/services/productCatalog/types';
 import { toast } from 'sonner';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { AddProductDialog } from './components/AddProductDialog';
-import { EditProductDialog } from './components/EditProductDialog';
-import { BulkOperations } from './components/BulkOperations';
-import { CategoryManager } from './components/CategoryManager';
 
 export const ProductCatalogManagement: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<ProductCatalog | null>(null);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
-  const [productToEdit, setProductToEdit] = useState<ProductCatalog | null>(null);
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
   // Get user's first store for now (can be enhanced for multi-store)
   const storeId = user?.storeIds?.[0] || '';
@@ -59,48 +34,12 @@ export const ProductCatalogManagement: React.FC = () => {
     enabled: !!storeId,
   });
 
-  // Clear selections when products change
-  useEffect(() => {
-    setSelectedProducts([]);
-  }, [products]);
-
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesAvailability = !showAvailableOnly || product.is_available;
     return matchesSearch && matchesAvailability;
   });
-
-  const handleToggleAvailability = async (product: ProductCatalog) => {
-    const success = await toggleProductAvailability(product.id, !product.is_available);
-    if (success) {
-      refetch();
-    }
-  };
-
-  const handleDeleteProduct = async () => {
-    if (!productToDelete) return;
-
-    const success = await deleteProduct(productToDelete.id);
-    if (success) {
-      setDeleteDialogOpen(false);
-      setProductToDelete(null);
-      refetch();
-    }
-  };
-
-  const handleEditProduct = (product: ProductCatalog) => {
-    setProductToEdit(product);
-    setEditDialogOpen(true);
-  };
-
-  const handleProductSelection = (productId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedProducts(prev => [...prev, productId]);
-    } else {
-      setSelectedProducts(prev => prev.filter(id => id !== productId));
-    }
-  };
 
   const handleRefetch = () => {
     refetch();
@@ -121,17 +60,7 @@ export const ProductCatalogManagement: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Product Catalog</h1>
-          <p className="text-muted-foreground">Manage your store's product offerings</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
-            <Tag className="h-4 w-4 mr-2" />
-            Categories
-          </Button>
-          <Button className="flex items-center gap-2" onClick={() => setAddDialogOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Add Product
-          </Button>
+          <p className="text-muted-foreground">View your store's available products</p>
         </div>
       </div>
 
@@ -160,38 +89,16 @@ export const ProductCatalogManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Bulk Operations */}
-      {products.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <BulkOperations
-              products={filteredProducts}
-              selectedProducts={selectedProducts}
-              onSelectionChange={setSelectedProducts}
-              onProductsUpdated={handleRefetch}
-            />
-          </CardContent>
-        </Card>
-      )}
-
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredProducts.map((product) => (
           <Card key={product.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3 flex-1">
-                  <Checkbox
-                    checked={selectedProducts.includes(product.id)}
-                    onCheckedChange={(checked) => 
-                      handleProductSelection(product.id, checked as boolean)
-                    }
-                  />
-                  <div className="flex-1">
-                    <CardTitle className="text-base line-clamp-2">
-                      {product.product_name}
-                    </CardTitle>
-                  </div>
+                <div className="flex-1">
+                  <CardTitle className="text-base line-clamp-2">
+                    {product.product_name}
+                  </CardTitle>
                 </div>
               </div>
             </CardHeader>
@@ -230,39 +137,6 @@ export const ProductCatalogManagement: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              {/* Actions */}
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleToggleAvailability(product)}
-                  className="flex-1"
-                >
-                  {product.is_available ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleEditProduct(product)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => {
-                    setProductToDelete(product);
-                    setDeleteDialogOpen(true);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </div>
             </CardContent>
           </Card>
         ))}
@@ -274,54 +148,11 @@ export const ProductCatalogManagement: React.FC = () => {
             <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No products found</h3>
             <p className="text-muted-foreground mb-4">
-              {searchTerm ? 'Try adjusting your search terms.' : 'Start by adding your first product to the catalog.'}
+              {searchTerm ? 'Try adjusting your search terms.' : 'Products will appear here when deployed by admin.'}
             </p>
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
           </CardContent>
         </Card>
       )}
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Product</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{productToDelete?.product_name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProduct} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Add Product Dialog */}
-      <AddProductDialog
-        isOpen={addDialogOpen}
-        onClose={() => setAddDialogOpen(false)}
-        onProductAdded={handleRefetch}
-      />
-
-      {/* Edit Product Dialog */}
-      <EditProductDialog
-        isOpen={editDialogOpen}
-        onClose={() => setEditDialogOpen(false)}
-        onProductUpdated={handleRefetch}
-        product={productToEdit}
-      />
-
-      {/* Category Manager */}
-      <CategoryManager
-        isOpen={categoryManagerOpen}
-        onClose={() => setCategoryManagerOpen(false)}
-      />
     </div>
   );
 };

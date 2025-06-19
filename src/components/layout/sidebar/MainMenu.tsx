@@ -9,7 +9,6 @@ import {
   Settings, 
   Package2,
   Truck,
-  ClipboardList,
   ShoppingBag
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
@@ -61,12 +60,6 @@ export const MainMenu: React.FC = () => {
       to: '/product-catalog',
       icon: <ShoppingBag className="h-4 w-4" />,
       label: 'Product Catalog',
-    },
-    {
-      to: '/stock-orders',
-      icon: <ClipboardList className="h-4 w-4" />,
-      label: 'Stock Orders',
-      managerOnly: true,
     },
     {
       to: '/inventory',
