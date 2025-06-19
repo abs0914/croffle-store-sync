@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Shift } from "@/types/shift";
 import { ShiftRow } from "./types";
@@ -51,7 +50,7 @@ export async function createShift(
   startInventoryCount: Record<string, number>,
   startPhoto?: string,
   cashierId?: string
-): Promise<ShiftType | null> {
+): Promise<Shift | null> {
   try {
     // Verify authentication status
     const { data: { session } } = await supabase.auth.getSession();
@@ -346,7 +345,7 @@ async function synchronizeInventoryFromShift(
 export async function getActiveShift(
   userId: string,
   storeId: string
-): Promise<ShiftType | null> {
+): Promise<Shift | null> {
   try {
     const { data, error } = await supabase
       .from('shifts')
