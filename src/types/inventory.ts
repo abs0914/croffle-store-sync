@@ -27,4 +27,6 @@ export interface Ingredient {
   stock_quantity?: number;
   is_active?: boolean;
   store_id?: string;
+  created_at?: string;
+  updated_at?: string;
 }

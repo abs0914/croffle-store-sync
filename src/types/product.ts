@@ -14,7 +14,7 @@ export interface Product {
   product_variations?: ProductVariation[];
   sku: string;
   stock_quantity: number;
-  category?: string;
+  category?: Category | string; // Support both Category object and string
   image?: string;
   // Legacy/compatibility properties
   barcode?: string;
@@ -37,6 +37,9 @@ export interface ProductVariation {
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
+  // Legacy/compatibility properties
+  stockQuantity?: number;
+  isActive?: boolean;
 }
 
 export interface Category {
