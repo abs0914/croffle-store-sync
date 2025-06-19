@@ -17,57 +17,66 @@ export const bulkUploadRecipes = async (recipes: RecipeUploadData[]): Promise<bo
   try {
     console.log('Starting bulk recipe upload:', recipes);
     
-    // Create recipe templates (no store_id)
-    const recipeInserts = recipes.map(recipe => ({
+    // Create recipe templates (centralized templates, not store-specific)
+    const recipeTemplateInserts = recipes.map(recipe => ({
       name: recipe.name,
-      category: recipe.category,
-      description: `${recipe.category} recipe`,
+      category_name: recipe.category,
+      description: `${recipe.category} recipe template`,
       yield_quantity: 1,
-      serving_size: '1 serving',
+      serving_size: 1,
       instructions: 'Instructions to be added',
-      is_template: true, // Mark as template
+      is_active: true,
       created_at: new Date().toISOString()
     }));
 
-    const { data: insertedRecipes, error: recipeError } = await supabase
-      .from('recipes')
-      .insert(recipeInserts)
+    const { data: insertedTemplates, error: templateError } = await supabase
+      .from('recipe_templates')
+      .insert(recipeTemplateInserts)
       .select('id, name');
 
-    if (recipeError) {
-      console.error('Error inserting recipes:', recipeError);
+    if (templateError) {
+      console.error('Error inserting recipe templates:', templateError);
       toast.error('Failed to create recipe templates');
       return false;
     }
 
-    console.log('Created recipe templates:', insertedRecipes);
+    console.log('Created recipe templates:', insertedTemplates);
 
-    // Create recipe ingredients for each template
+    // Create recipe template ingredients for each template
     const ingredientInserts: any[] = [];
     
     for (let i = 0; i < recipes.length; i++) {
       const recipe = recipes[i];
-      const insertedRecipe = insertedRecipes[i];
+      const insertedTemplate = insertedTemplates[i];
       
       for (const ingredient of recipe.ingredients) {
+        // Try to find matching commissary item by name
+        const { data: commissaryItems } = await supabase
+          .from('commissary_inventory')
+          .select('id')
+          .eq('name', ingredient.name)
+          .limit(1);
+
+        const commissaryItemId = commissaryItems?.[0]?.id || null;
+
         ingredientInserts.push({
-          recipe_id: insertedRecipe.id,
-          ingredient_name: ingredient.name,
-          unit_of_measure: ingredient.unit,
-          quantity_used: ingredient.quantity,
-          cost_per_unit: ingredient.cost || 0,
-          total_cost: (ingredient.cost || 0) * ingredient.quantity
+          recipe_template_id: insertedTemplate.id,
+          commissary_item_name: ingredient.name,
+          commissary_item_id: commissaryItemId,
+          unit: ingredient.unit,
+          quantity: ingredient.quantity,
+          cost_per_unit: ingredient.cost || 0
         });
       }
     }
 
     if (ingredientInserts.length > 0) {
       const { error: ingredientError } = await supabase
-        .from('recipe_ingredients')
+        .from('recipe_template_ingredients')
         .insert(ingredientInserts);
 
       if (ingredientError) {
-        console.error('Error inserting recipe ingredients:', ingredientError);
+        console.error('Error inserting recipe template ingredients:', ingredientError);
         toast.error('Failed to add ingredients to recipe templates');
         return false;
       }

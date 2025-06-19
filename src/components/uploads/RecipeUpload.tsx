@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Upload, Download, ChefHat, Info } from "lucide-react";
 import { useStore } from "@/contexts/StoreContext";
 import { parseRecipesCSV } from "@/utils/csvParser";
-import { bulkUploadRecipes } from "@/services/recipeUploadService";
+import { bulkUploadRecipes, RecipeUploadData } from "@/services/recipeUploadService";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -31,8 +30,15 @@ export const RecipeUpload = () => {
         return;
       }
 
+      // Convert RecipeUpload[] to RecipeUploadData[] ensuring category is present
+      const recipeData: RecipeUploadData[] = recipes.map(recipe => ({
+        name: recipe.name,
+        category: recipe.category || 'General', // Ensure category is always present
+        ingredients: recipe.ingredients
+      }));
+
       // Upload recipes as templates (no store ID needed)
-      const success = await bulkUploadRecipes(recipes);
+      const success = await bulkUploadRecipes(recipeData);
       
       if (success) {
         setUploadFile(null);
