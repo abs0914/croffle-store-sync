@@ -33,6 +33,7 @@ export const checkPermission = (userRole: UserRole | undefined, requiredRole: Us
  */
 export const ROUTE_PATHS = {
   // Main App Routes
+  ROOT: '/',
   DASHBOARD: '/dashboard',
   POS: '/pos',
   PRODUCT_CATALOG: '/product-catalog',
@@ -68,11 +69,17 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string):
     return true;
   }
   
+  // Root route should be accessible to all authenticated users (redirects to dashboard)
+  if (route === ROUTE_PATHS.ROOT) {
+    return true;
+  }
+  
   // Define allowed routes for each role with detailed access control
   const roleRoutes: Record<UserRole, string[]> = {
     admin: [], // Admin gets everything, handled above
     owner: [], // Owner gets everything, handled above
     manager: [
+      ROUTE_PATHS.ROOT,
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
       ROUTE_PATHS.PRODUCT_CATALOG,
@@ -84,6 +91,7 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string):
       ROUTE_PATHS.SETTINGS
     ],
     cashier: [
+      ROUTE_PATHS.ROOT,
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
       ROUTE_PATHS.PRODUCT_CATALOG,
@@ -153,6 +161,7 @@ export const checkStoreAccess = (userStoreIds: string[] | undefined, storeId: st
  */
 export const getRouteAccessDescription = (route: string): string => {
   const accessMap: Record<string, string> = {
+    [ROUTE_PATHS.ROOT]: 'All authenticated users',
     [ROUTE_PATHS.DASHBOARD]: 'All authenticated users',
     [ROUTE_PATHS.POS]: 'All authenticated users with store access',
     [ROUTE_PATHS.PRODUCT_CATALOG]: 'All authenticated users with store access',
@@ -176,7 +185,7 @@ export const getRouteAccessDescription = (route: string): string => {
     [ROUTE_PATHS.ADMIN_REPORTS]: 'Admin and owner only'
   };
   
-  return accessMap[route] || 'Access level not defined';
+  return accessMap[route] || 'All authenticated users';
 };
 
 /**
