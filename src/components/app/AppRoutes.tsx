@@ -17,7 +17,6 @@ const OrderManagement = React.lazy(() => import('@/pages/OrderManagement'));
 const Reports = React.lazy(() => import('@/pages/Reports'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
 const Stores = React.lazy(() => import('@/pages/Stores'));
-const BulkUpload = React.lazy(() => import('@/pages/BulkUpload'));
 const ProductCatalog = React.lazy(() => import('@/pages/ProductCatalog'));
 const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
 
@@ -47,7 +46,6 @@ export const AppRoutes: React.FC = () => {
         <Route path="/reports/*" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
         <Route path="/settings/*" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/stores/*" element={<ProtectedRoute><Stores /></ProtectedRoute>} />
-        <Route path="/bulk-upload" element={<ProtectedRoute><BulkUpload /></ProtectedRoute>} />
         
         {/* Admin Routes */}
         <Route path="/admin/*" element={<AdminProtectedRoute><AdminRoutes /></AdminProtectedRoute>} />
