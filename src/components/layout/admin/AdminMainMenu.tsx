@@ -62,16 +62,6 @@ const menuItems = [
     icon: UserCheck,
   },
   {
-    name: 'Managers',
-    href: '/admin/managers',
-    icon: UserCheck,
-  },
-  {
-    name: 'Cashiers',
-    href: '/admin/cashiers',
-    icon: UserCheck,
-  },
-  {
     name: 'Reports',
     href: '/admin/reports',
     icon: BarChart3,
