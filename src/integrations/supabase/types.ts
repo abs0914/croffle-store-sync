@@ -138,6 +138,7 @@ export type Database = {
       }
       commissary_inventory: {
         Row: {
+          average_cost: number | null
           barcode: string | null
           category: string
           created_at: string
@@ -145,6 +146,8 @@ export type Database = {
           expiry_date: string | null
           id: string
           is_active: boolean
+          last_purchase_cost: number | null
+          last_purchase_date: string | null
           minimum_threshold: number
           name: string
           sku: string | null
@@ -155,6 +158,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          average_cost?: number | null
           barcode?: string | null
           category: string
           created_at?: string
@@ -162,6 +166,8 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           is_active?: boolean
+          last_purchase_cost?: number | null
+          last_purchase_date?: string | null
           minimum_threshold?: number
           name: string
           sku?: string | null
@@ -172,6 +178,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          average_cost?: number | null
           barcode?: string | null
           category?: string
           created_at?: string
@@ -179,6 +186,8 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           is_active?: boolean
+          last_purchase_cost?: number | null
+          last_purchase_date?: string | null
           minimum_threshold?: number
           name?: string
           sku?: string | null
@@ -189,6 +198,72 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      commissary_purchases: {
+        Row: {
+          batch_number: string | null
+          commissary_item_id: string
+          created_at: string
+          expiry_date: string | null
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          purchase_date: string
+          quantity_purchased: number
+          recorded_by: string
+          supplier_id: string | null
+          total_cost: number
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          commissary_item_id: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          purchase_date?: string
+          quantity_purchased?: number
+          recorded_by: string
+          supplier_id?: string | null
+          total_cost?: number
+          unit_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          commissary_item_id?: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          purchase_date?: string
+          quantity_purchased?: number
+          recorded_by?: string
+          supplier_id?: string | null
+          total_cost?: number
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissary_purchases_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissary_purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversion_ingredients: {
         Row: {
@@ -2323,6 +2398,18 @@ export type Database = {
           is_active: boolean
           created_at: string
           updated_at: string
+        }[]
+      }
+      get_commissary_purchase_history: {
+        Args: { item_id: string; limit_count?: number }
+        Returns: {
+          purchase_date: string
+          quantity_purchased: number
+          unit_cost: number
+          total_cost: number
+          supplier_name: string
+          batch_number: string
+          notes: string
         }[]
       }
       get_current_user_info: {

@@ -3,13 +3,13 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryPrepTab } from "./ProductionManagement/components/InventoryPrepTab";
-import { ProductionDashboard } from "./ProductionManagement/components/ProductionDashboard";
+import { InventoryStockingTab } from "./ProductionManagement/components/InventoryStockingTab";
 import { useStore } from "@/contexts/StoreContext";
-import { ChefHat, BarChart3 } from "lucide-react";
+import { ChefHat, ShoppingCart } from "lucide-react";
 
 export default function ProductionManagement() {
   const { currentStore } = useStore();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("stocking");
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -18,16 +18,16 @@ export default function ProductionManagement() {
         <div>
           <h1 className="text-3xl font-bold">Inventory Prep & Conversions</h1>
           <p className="text-muted-foreground">
-            Manage bulk preparation and inventory conversions for {currentStore?.name || 'your store'}
+            Manage inventory stocking, bulk preparation and conversions for {currentStore?.name || 'your store'}
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="dashboard" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Dashboard
+          <TabsTrigger value="stocking" className="flex items-center gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            Inventory Stocking
           </TabsTrigger>
           <TabsTrigger value="prep" className="flex items-center gap-2">
             <ChefHat className="h-4 w-4" />
@@ -35,16 +35,17 @@ export default function ProductionManagement() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dashboard">
+        <TabsContent value="stocking">
           <Card>
             <CardHeader>
-              <CardTitle>Production Overview</CardTitle>
+              <CardTitle>Inventory Stocking</CardTitle>
               <CardDescription>
-                Monitor preparation activity, inventory usage, and production efficiency for store operations
+                Record supplier purchases and manage commissary inventory restocking.
+                Track purchase costs, suppliers, and batch information for complete traceability.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProductionDashboard storeId={currentStore?.id || ""} />
+              <InventoryStockingTab />
             </CardContent>
           </Card>
         </TabsContent>
