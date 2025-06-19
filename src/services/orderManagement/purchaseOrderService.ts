@@ -32,7 +32,17 @@ export const createPurchaseOrder = async (
   try {
     const { data, error } = await supabase
       .from('purchase_orders')
-      .insert(purchaseOrder)
+      .insert({
+        order_number: purchaseOrder.order_number,
+        store_id: purchaseOrder.store_id,
+        supplier_id: null, // Commissary orders don't need a specific supplier
+        created_by: purchaseOrder.created_by,
+        approved_by: purchaseOrder.approved_by,
+        status: purchaseOrder.status,
+        total_amount: purchaseOrder.total_amount,
+        requested_delivery_date: purchaseOrder.requested_delivery_date,
+        notes: purchaseOrder.notes
+      })
       .select(`
         *,
         supplier:suppliers(*),
@@ -122,12 +132,12 @@ export const removePurchaseOrderItem = async (id: string): Promise<boolean> => {
 
 export const generatePurchaseOrderNumber = async (): Promise<string> => {
   try {
-    // Generate a simple order number with timestamp
+    // Generate a commissary order number with timestamp
     const timestamp = Date.now();
     const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `PO${timestamp}${randomSuffix}`;
+    return `CO${timestamp}${randomSuffix}`; // CO = Commissary Order
   } catch (error) {
     console.error('Error generating purchase order number:', error);
-    return `PO${Date.now()}`;
+    return `CO${Date.now()}`;
   }
 };
