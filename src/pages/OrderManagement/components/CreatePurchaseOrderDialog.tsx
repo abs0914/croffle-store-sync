@@ -207,10 +207,11 @@ export function CreatePurchaseOrderDialog({
               </Button>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-3">
               {items.map((item, index) => (
-                <div key={index} className="grid grid-cols-6 gap-2 items-end">
-                  <div className="col-span-2">
+                <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
+                  <div className="col-span-4">
+                    <Label className="text-xs">Item</Label>
                     <Select
                       value={item.inventory_stock_id}
                       onValueChange={(value) => updateItem(index, 'inventory_stock_id', value)}
@@ -228,44 +229,63 @@ export function CreatePurchaseOrderDialog({
                     </Select>
                   </div>
                   
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Quantity"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
-                  />
+                  <div className="col-span-2">
+                    <Label className="text-xs">Quantity</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
                   
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Unit Price"
-                    value={item.unit_price}
-                    onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                  />
+                  <div className="col-span-2">
+                    <Label className="text-xs">Unit Price</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={item.unit_price}
+                      onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
                   
-                  <Input
-                    placeholder="Specifications"
-                    value={item.specifications}
-                    onChange={(e) => updateItem(index, 'specifications', e.target.value)}
-                  />
+                  <div className="col-span-3">
+                    <Label className="text-xs">Specifications</Label>
+                    <Input
+                      placeholder="Optional specifications"
+                      value={item.specifications}
+                      onChange={(e) => updateItem(index, 'specifications', e.target.value)}
+                    />
+                  </div>
                   
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeItem(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="col-span-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeItem(index)}
+                      className="w-full"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
+              
+              {items.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                  <p>No items added yet</p>
+                  <p className="text-sm">Click "Add Item" to start building your purchase order</p>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
               type="button"
               variant="outline"
@@ -274,7 +294,7 @@ export function CreatePurchaseOrderDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || items.length === 0}>
               {loading ? 'Creating...' : 'Create Purchase Order'}
             </Button>
           </div>
