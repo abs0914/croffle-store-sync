@@ -2,8 +2,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -29,10 +27,7 @@ export default function Inventory() {
     activeCategory,
     setActiveCategory,
     activeTab,
-    setActiveTab,
-    handleExportCSV,
-    handleImportClick,
-    handleDownloadTemplate
+    setActiveTab
   } = useProductData();
 
   // Delete product mutation
@@ -84,9 +79,6 @@ export default function Inventory() {
       <InventoryHeader
         title="Store Inventory Management"
         description="Manage your store's product catalog and stock levels for customer orders and sales."
-        onExportCSV={handleExportCSV}
-        onImportClick={handleImportClick}
-        onDownloadTemplate={handleDownloadTemplate}
       />
 
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -105,13 +97,6 @@ export default function Inventory() {
             <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
           </TabsList>
         </Tabs>
-        
-        <Button
-          onClick={() => navigate("/inventory/product/new")}
-          className="bg-croffle-accent hover:bg-croffle-accent/90"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Product
-        </Button>
       </div>
 
       <SearchFilters

@@ -1,7 +1,6 @@
 
 import { useProductFetch } from "./product/useProductFetch";
 import { useProductFilters } from "./product/useProductFilters";
-import { useProductExportImport } from "./product/useProductExportImport";
 import { useCallback, useState } from "react";
 
 export function useProductData(storeId: string | null) {
@@ -39,13 +38,6 @@ export function useProductData(storeId: string | null) {
     // This is a placeholder - the useProductFetch will handle the actual refetch
     // based on the storeId dependency
   }, []);
-  
-  // Export/Import functionality
-  const { 
-    handleExportCSV,
-    handleImportClick,
-    handleDownloadTemplate 
-  } = useProductExportImport(products, storeId, refetch);
 
   return { 
     products, 
@@ -59,9 +51,6 @@ export function useProductData(storeId: string | null) {
     setActiveCategory,
     activeTab,
     setActiveTab,
-    handleExportCSV,
-    handleImportClick,
-    handleDownloadTemplate,
     refetch
   };
 }
