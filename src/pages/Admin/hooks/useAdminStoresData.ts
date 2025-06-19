@@ -12,6 +12,8 @@ interface StoreMetrics {
   alertsCount: number;
   insideCebuStores: number;
   outsideCebuStores: number;
+  companyOwnedStores: number;
+  franchiseeStores: number;
 }
 
 export const useAdminStoresData = () => {
@@ -19,6 +21,7 @@ export const useAdminStoresData = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
+  const [ownershipFilter, setOwnershipFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -37,7 +40,18 @@ export const useAdminStoresData = () => {
         throw error;
       }
 
-      setStores(data as Store[] || []);
+      // Cast the data to proper Store types
+      const typedStores = (data || []).map(store => ({
+        ...store,
+        ownership_type: (store.ownership_type as 'company_owned' | 'franchisee') || 'company_owned',
+        franchisee_contact_info: store.franchisee_contact_info ? 
+          (typeof store.franchisee_contact_info === 'object' ? 
+            store.franchisee_contact_info as { name?: string; email?: string; phone?: string; address?: string; } : 
+            { name: "", email: "", phone: "", address: "" }
+          ) : undefined
+      })) as Store[];
+
+      setStores(typedStores);
     } catch (error: any) {
       console.error('Error fetching stores:', error);
       toast.error('Failed to load stores');
@@ -74,14 +88,21 @@ export const useAdminStoresData = () => {
       filtered = filtered.filter(store => store.location_type === locationFilter);
     }
 
+    // Apply ownership filter
+    if (ownershipFilter !== 'all') {
+      filtered = filtered.filter(store => store.ownership_type === ownershipFilter);
+    }
+
     return filtered;
-  }, [stores, searchQuery, statusFilter, locationFilter]);
+  }, [stores, searchQuery, statusFilter, locationFilter, ownershipFilter]);
 
   const storeMetrics: StoreMetrics = useMemo(() => {
     const activeStores = stores.filter(store => store.is_active).length;
     const inactiveStores = stores.length - activeStores;
     const insideCebuStores = stores.filter(store => store.location_type === 'inside_cebu').length;
     const outsideCebuStores = stores.filter(store => store.location_type === 'outside_cebu').length;
+    const companyOwnedStores = stores.filter(store => store.ownership_type === 'company_owned').length;
+    const franchiseeStores = stores.filter(store => store.ownership_type === 'franchisee').length;
     
     return {
       totalStores: stores.length,
@@ -89,6 +110,8 @@ export const useAdminStoresData = () => {
       inactiveStores,
       insideCebuStores,
       outsideCebuStores,
+      companyOwnedStores,
+      franchiseeStores,
       averagePerformance: 87, // Mock data - would be calculated from real metrics
       alertsCount: inactiveStores + Math.floor(Math.random() * 3) // Mock alerts
     };
@@ -103,6 +126,8 @@ export const useAdminStoresData = () => {
     setStatusFilter,
     locationFilter,
     setLocationFilter,
+    ownershipFilter,
+    setOwnershipFilter,
     isLoading,
     refreshStores: fetchStores,
     storeMetrics

@@ -93,17 +93,32 @@ export const useStoreForm = (id?: string) => {
       if (error) throw error;
       
       if (data) {
+        // Cast the data to proper types
+        const ownershipType = data.ownership_type as 'company_owned' | 'franchisee';
+        let franchiseeContactInfo = {
+          name: "",
+          email: "",
+          phone: "",
+          address: ""
+        };
+
+        // Parse franchisee contact info if it exists
+        if (data.franchisee_contact_info && typeof data.franchisee_contact_info === 'object') {
+          const contactInfo = data.franchisee_contact_info as any;
+          franchiseeContactInfo = {
+            name: contactInfo.name || "",
+            email: contactInfo.email || "",
+            phone: contactInfo.phone || "",
+            address: contactInfo.address || ""
+          };
+        }
+
         setFormData({
           ...data,
           shipping_cost_multiplier: data.shipping_cost_multiplier || 1.0,
-          ownership_type: data.ownership_type || 'company_owned',
+          ownership_type: ownershipType || 'company_owned',
           franchise_fee_percentage: data.franchise_fee_percentage || 0,
-          franchisee_contact_info: data.franchisee_contact_info || {
-            name: "",
-            email: "",
-            phone: "",
-            address: ""
-          }
+          franchisee_contact_info: franchiseeContactInfo
         });
       }
     } catch (error: any) {
