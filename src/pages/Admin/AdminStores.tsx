@@ -17,6 +17,8 @@ export default function AdminStores() {
     setSearchQuery,
     statusFilter,
     setStatusFilter,
+    locationFilter,
+    setLocationFilter,
     isLoading,
     refreshStores,
     storeMetrics
@@ -52,13 +54,15 @@ export default function AdminStores() {
         setSearchQuery={setSearchQuery}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
+        locationFilter={locationFilter}
+        setLocationFilter={setLocationFilter}
         viewMode={viewMode}
         setViewMode={setViewMode}
       />
       
       <AdminStoresMetrics metrics={storeMetrics} />
       
-      {selectedStores.length > 0 && (
+      {selectedSt, length > 0 && (
         <AdminBulkActions 
           selectedCount={selectedStores.length}
           onBulkAction={handleBulkAction}

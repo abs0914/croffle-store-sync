@@ -1,16 +1,23 @@
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Store, Settings, MoreVertical, MapPin, Phone, Mail } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Store as StoreType } from '@/types';
+import { 
+  MapPin, 
+  Phone, 
+  Mail, 
+  Edit, 
+  QrCode, 
+  Settings,
+  Building2,
+  Truck
+} from 'lucide-react';
+import { Store } from '@/types';
 import { useNavigate } from 'react-router-dom';
 
 interface AdminStoreListItemProps {
-  store: StoreType;
+  store: Store;
   isSelected: boolean;
   onSelect: () => void;
 }
@@ -22,82 +29,104 @@ export const AdminStoreListItem: React.FC<AdminStoreListItemProps> = ({
 }) => {
   const navigate = useNavigate();
 
+  const getLocationBadgeColor = (locationType?: string) => {
+    switch (locationType) {
+      case 'inside_cebu':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'outside_cebu':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getLocationLabel = (locationType?: string) => {
+    switch (locationType) {
+      case 'inside_cebu':
+        return 'Inside Cebu';
+      case 'outside_cebu':
+        return 'Outside Cebu';
+      default:
+        return 'Unknown';
+    }
+  };
+
   return (
-    <Card className={`transition-all ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:shadow-sm'}`}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 flex-1">
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={onSelect}
-              onClick={(e) => e.stopPropagation()}
-            />
-            
-            <div className="flex items-center gap-3">
-              <Store className="h-5 w-5 text-blue-600" />
-              <div>
-                <h3 className="font-semibold">{store.name}</h3>
-                <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    <span>{store.address}</span>
-                  </div>
-                  {store.phone && (
-                    <div className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      <span>{store.phone}</span>
-                    </div>
-                  )}
-                  {store.email && (
-                    <div className="flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      <span>{store.email}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Badge variant={store.is_active ? 'default' : 'secondary'}>
+    <div className={`flex items-center gap-4 p-4 border rounded-lg transition-all duration-200 hover:shadow-sm ${
+      isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-white'
+    }`}>
+      <Checkbox
+        checked={isSelected}
+        onCheckedChange={onSelect}
+      />
+      
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <Building2 className="h-5 w-5 text-gray-600 flex-shrink-0" />
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold">{store.name}</h3>
+            {store.location_type && (
+              <Badge className={`text-xs ${getLocationBadgeColor(store.location_type)}`}>
+                {getLocationLabel(store.location_type)}
+              </Badge>
+            )}
+            <Badge variant={store.is_active ? 'default' : 'secondary'} className="text-xs">
               {store.is_active ? 'Active' : 'Inactive'}
             </Badge>
-            
-            <div className="text-xs text-gray-500">
-              {new Date(store.created_at || '').toLocaleDateString()}
+          </div>
+          <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+            <div className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              <span className="truncate max-w-xs">{store.address}</span>
             </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/admin/stores/${store.id}/settings`)}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Configure
-            </Button>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigate(`/stores/${store.id}`)}>
-                  Edit Store
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/admin/stores/${store.id}/settings`)}>
-                  Configure
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/admin/stores/${store.id}/analytics`)}>
-                  View Analytics
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {store.region && (
+              <div className="flex items-center gap-1">
+                <Truck className="h-3 w-3" />
+                <span>{store.region}</span>
+                {store.logistics_zone && (
+                  <span className="text-gray-400">• {store.logistics_zone}</span>
+                )}
+              </div>
+            )}
+            {store.phone && (
+              <div className="flex items-center gap-1">
+                <Phone className="h-3 w-3" />
+                <span>{store.phone}</span>
+              </div>
+            )}
+            {store.email && (
+              <div className="flex items-center gap-1">
+                <Mail className="h-3 w-3" />
+                <span>{store.email}</span>
+              </div>
+            )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(`/admin/stores/edit/${store.id}`)}
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(`/admin/stores/${store.id}/qr`)}
+        >
+          <QrCode className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(`/admin/stores/${store.id}/settings`)}
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 };

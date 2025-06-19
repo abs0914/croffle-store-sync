@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -14,6 +15,10 @@ interface StoreFormData {
   phone?: string;
   email?: string;
   tax_id?: string;
+  location_type?: string;
+  region?: string;
+  logistics_zone?: string;
+  shipping_cost_multiplier?: number;
   is_active: boolean;
 }
 
@@ -40,6 +45,10 @@ export const useStoreForm = (id?: string) => {
     phone: "",
     email: "",
     tax_id: "",
+    location_type: "inside_cebu",
+    region: "",
+    logistics_zone: "",
+    shipping_cost_multiplier: 1.0,
     is_active: true
   });
   
@@ -66,7 +75,10 @@ export const useStoreForm = (id?: string) => {
       if (error) throw error;
       
       if (data) {
-        setFormData(data);
+        setFormData({
+          ...data,
+          shipping_cost_multiplier: data.shipping_cost_multiplier || 1.0
+        });
       }
     } catch (error: any) {
       console.error("Error fetching store details:", error);
@@ -79,7 +91,14 @@ export const useStoreForm = (id?: string) => {
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: name === 'shipping_cost_multiplier' ? parseFloat(value) || 1.0 : value 
+    }));
+  };
+
+  const handleSelectChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
   
   const handleSwitchChange = (checked: boolean) => {
@@ -134,6 +153,7 @@ export const useStoreForm = (id?: string) => {
     isSaving,
     formData,
     handleChange,
+    handleSelectChange,
     handleSwitchChange,
     handleSubmit,
   };

@@ -10,12 +10,15 @@ interface StoreMetrics {
   inactiveStores: number;
   averagePerformance: number;
   alertsCount: number;
+  insideCebuStores: number;
+  outsideCebuStores: number;
 }
 
 export const useAdminStoresData = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -53,7 +56,9 @@ export const useAdminStoresData = () => {
         store.name.toLowerCase().includes(query) ||
         store.address.toLowerCase().includes(query) ||
         (store.email && store.email.toLowerCase().includes(query)) ||
-        (store.phone && store.phone.includes(query))
+        (store.phone && store.phone.includes(query)) ||
+        (store.region && store.region.toLowerCase().includes(query)) ||
+        (store.logistics_zone && store.logistics_zone.toLowerCase().includes(query))
       );
     }
 
@@ -64,17 +69,26 @@ export const useAdminStoresData = () => {
       );
     }
 
+    // Apply location filter
+    if (locationFilter !== 'all') {
+      filtered = filtered.filter(store => store.location_type === locationFilter);
+    }
+
     return filtered;
-  }, [stores, searchQuery, statusFilter]);
+  }, [stores, searchQuery, statusFilter, locationFilter]);
 
   const storeMetrics: StoreMetrics = useMemo(() => {
     const activeStores = stores.filter(store => store.is_active).length;
     const inactiveStores = stores.length - activeStores;
+    const insideCebuStores = stores.filter(store => store.location_type === 'inside_cebu').length;
+    const outsideCebuStores = stores.filter(store => store.location_type === 'outside_cebu').length;
     
     return {
       totalStores: stores.length,
       activeStores,
       inactiveStores,
+      insideCebuStores,
+      outsideCebuStores,
       averagePerformance: 87, // Mock data - would be calculated from real metrics
       alertsCount: inactiveStores + Math.floor(Math.random() * 3) // Mock alerts
     };
@@ -87,6 +101,8 @@ export const useAdminStoresData = () => {
     setSearchQuery,
     statusFilter,
     setStatusFilter,
+    locationFilter,
+    setLocationFilter,
     isLoading,
     refreshStores: fetchStores,
     storeMetrics

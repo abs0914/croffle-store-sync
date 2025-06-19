@@ -10,6 +10,10 @@ export interface Store {
   phone?: string;
   email?: string;
   tax_id?: string;
+  location_type?: string;
+  region?: string;
+  logistics_zone?: string;
+  shipping_cost_multiplier?: number;
   is_active: boolean;
   logo_url?: string;
   created_at?: string;
