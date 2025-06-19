@@ -1,5 +1,4 @@
 
-
 export interface Product {
   id: string;
   name: string;
@@ -38,6 +37,7 @@ export interface ProductVariation {
   created_at?: string;
   updated_at?: string;
   // Legacy/compatibility properties
+  productId?: string;
   stockQuantity?: number;
   isActive?: boolean;
 }
