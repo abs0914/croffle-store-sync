@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
@@ -15,7 +16,7 @@ export default function POS() {
   const { currentShift } = useShift();
   const { items, subtotal, tax, total, addItem } = useCart();
   
-  // Transaction handler hook
+  // Transaction handler hook with store ID for inventory integration
   const {
     completedTransaction,
     selectedCustomer,
@@ -26,7 +27,7 @@ export default function POS() {
     handleApplyDiscount,
     handlePaymentComplete: processPayment,
     startNewSale
-  } = useTransactionHandler();
+  } = useTransactionHandler(currentStore?.id || '');
 
   // Load product data from product_catalog using consolidated hook
   const { 
@@ -39,7 +40,7 @@ export default function POS() {
   
   // Check the product activation status - for debugging
   const activeProductsCount = products.filter(p => p.is_active).length;
-  console.log(`Total products: ${products.length}, Active products: ${activeProductsCount}`);
+  console.log(`POS: Total products: ${products.length}, Active products: ${activeProductsCount}`);
   
   // Enhanced wrapper for addItem with detailed logging
   const handleAddItemToCart = (product, quantity, variation) => {
@@ -68,7 +69,7 @@ export default function POS() {
     addItem(product, quantity, variation);
   };
   
-  // Wrapper for payment processing
+  // Wrapper for payment processing with inventory validation
   const handlePaymentComplete = async (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
     amountTendered: number,
@@ -90,11 +91,13 @@ export default function POS() {
     }
     
     try {
+      console.log("POS: Processing payment with inventory validation...");
+      
       // Convert cart items to the format expected by the transaction handler
       const cartItemsForTransaction = items.map(item => ({
         ...item,
-        id: item.productId, // Use productId as id
-        name: item.product.name // Get name from product object
+        id: item.productId,
+        name: item.product.name
       }));
 
       await processPayment(
@@ -120,7 +123,7 @@ export default function POS() {
     const transactionItems: TransactionItem[] = completedTransaction.items.map(item => ({
       productId: item.productId,
       variationId: item.variationId,
-      name: item.product?.name || item.name, // Use product.name if available, fallback to name
+      name: item.product?.name || item.name,
       quantity: item.quantity,
       unitPrice: item.price,
       totalPrice: item.price * item.quantity
@@ -136,7 +139,7 @@ export default function POS() {
       status: 'completed' as const,
       createdAt: completedTransaction.created_at,
       receiptNumber: completedTransaction.receipt_number,
-      items: transactionItems // Use properly formatted TransactionItems
+      items: transactionItems
     };
 
     return (

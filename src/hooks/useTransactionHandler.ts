@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem } from "@/contexts/cart/types";
 import { Store } from "@/types";
-import { ShiftType } from "@/types"; // Use ShiftType instead of Shift
+import { ShiftType } from "@/types";
 import { Customer } from "@/types";
-import { createInventoryMovement } from "@/services/storeInventory/inventoryMovementService";
+import { usePOSInventoryValidation } from "@/hooks/pos/usePOSInventoryValidation";
 
 export interface CompletedTransaction {
   id: string;
@@ -22,12 +22,14 @@ export interface CompletedTransaction {
   created_at: string;
 }
 
-export const useTransactionHandler = () => {
+export const useTransactionHandler = (storeId: string) => {
   const [completedTransaction, setCompletedTransaction] = useState<CompletedTransaction | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | ''>('');
   const [discountIdNumber, setDiscountIdNumber] = useState<string>('');
+
+  const { validateCartItems, processCartInventoryDeduction } = usePOSInventoryValidation(storeId);
 
   const handleApplyDiscount = useCallback((
     discountAmount: number, 
@@ -47,7 +49,7 @@ export const useTransactionHandler = () => {
 
   const handlePaymentComplete = useCallback(async (
     store: Store,
-    shift: ShiftType, // Use ShiftType instead of Shift
+    shift: ShiftType,
     items: CartItem[],
     subtotal: number,
     tax: number,
@@ -62,8 +64,15 @@ export const useTransactionHandler = () => {
     }
   ) => {
     try {
-      console.log("Starting transaction processing...");
+      console.log("Starting transaction processing with inventory validation...");
       
+      // Step 1: Validate inventory availability
+      const inventoryValid = await validateCartItems(items);
+      if (!inventoryValid) {
+        toast.error("Transaction cancelled due to insufficient inventory");
+        return false;
+      }
+
       const receiptNumber = generateReceiptNumber();
       const change = paymentMethod === 'cash' ? Math.max(0, amountTendered - total) : 0;
 
@@ -73,7 +82,7 @@ export const useTransactionHandler = () => {
         throw new Error("User not authenticated");
       }
 
-      // Create transaction record
+      // Step 2: Create transaction record
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
         .insert({
@@ -106,62 +115,19 @@ export const useTransactionHandler = () => {
 
       console.log("Transaction created:", transaction);
 
-      // Process inventory deductions for each item
-      for (const item of items) {
-        try {
-          // Get current inventory stock for this item
-          const { data: inventoryItems, error: inventoryError } = await supabase
-            .from('inventory_stock')
-            .select('*')
-            .eq('store_id', store.id)
-            .eq('item', item.name)
-            .eq('is_active', true);
-
-          if (inventoryError) {
-            console.warn(`Error fetching inventory for ${item.name}:`, inventoryError);
-            continue;
-          }
-
-          if (inventoryItems && inventoryItems.length > 0) {
-            const inventoryItem = inventoryItems[0];
-            const newQuantity = Math.max(0, inventoryItem.stock_quantity - item.quantity);
-            
-            // Update inventory stock
-            const { error: updateError } = await supabase
-              .from('inventory_stock')
-              .update({ 
-                stock_quantity: newQuantity,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', inventoryItem.id);
-
-            if (updateError) {
-              console.warn(`Error updating inventory for ${item.name}:`, updateError);
-              continue;
-            }
-
-            // Log inventory movement
-            await createInventoryMovement({
-              inventory_stock_id: inventoryItem.id,
-              movement_type: 'sale',
-              quantity_change: -item.quantity,
-              previous_quantity: inventoryItem.stock_quantity,
-              new_quantity: newQuantity,
-              reference_type: 'transaction',
-              reference_id: transaction.id,
-              notes: `Sale: ${item.name} (Receipt: ${receiptNumber})`
-            });
-
-            console.log(`Inventory updated for ${item.name}: ${inventoryItem.stock_quantity} -> ${newQuantity}`);
-          } else {
-            console.warn(`No inventory item found for ${item.name} in store ${store.name}`);
-          }
-        } catch (itemError) {
-          console.error(`Error processing inventory for item ${item.name}:`, itemError);
-        }
+      // Step 3: Process inventory deductions
+      const inventorySuccess = await processCartInventoryDeduction(items, transaction.id);
+      if (!inventorySuccess) {
+        // Rollback transaction if inventory update fails
+        await supabase
+          .from('transactions')
+          .update({ status: 'voided' })
+          .eq('id', transaction.id);
+        
+        throw new Error("Failed to update inventory - transaction voided");
       }
 
-      // Create inventory transactions for tracking
+      // Step 4: Create inventory transactions for audit trail
       const inventoryTransactions = items.map(item => ({
         store_id: store.id,
         product_id: item.productId,
@@ -171,7 +137,7 @@ export const useTransactionHandler = () => {
         previous_quantity: 0,
         new_quantity: 0,
         reference_id: transaction.id,
-        notes: `Sale transaction ${receiptNumber}`,
+        notes: `POS Sale transaction ${receiptNumber}`,
         created_by: user.id
       }));
 
@@ -181,7 +147,7 @@ export const useTransactionHandler = () => {
           .insert(inventoryTransactions);
 
         if (inventoryError) {
-          console.warn("Error creating inventory transactions:", inventoryError);
+          console.warn("Error creating inventory audit transactions:", inventoryError);
         }
       }
 
@@ -200,13 +166,14 @@ export const useTransactionHandler = () => {
       });
 
       toast.success("Transaction completed successfully!");
+      return true;
       
     } catch (error) {
       console.error("Transaction error:", error);
-      toast.error("Failed to complete transaction. Please try again.");
+      toast.error(`Failed to complete transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
-  }, [selectedCustomer, discount, discountType, discountIdNumber]);
+  }, [selectedCustomer, discount, discountType, discountIdNumber, validateCartItems, processCartInventoryDeduction]);
 
   const startNewSale = useCallback(() => {
     setCompletedTransaction(null);

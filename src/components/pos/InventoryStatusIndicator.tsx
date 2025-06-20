@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Package, TrendingDown, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getInventoryStatus } from '@/services/productCatalog/inventoryIntegrationService';
+import { getPOSInventoryStatus } from '@/services/pos/inventoryIntegrationService';
 import { useStore } from '@/contexts/StoreContext';
 
 interface InventoryStatus {
@@ -14,7 +14,7 @@ interface InventoryStatus {
 
 export const InventoryStatusIndicator: React.FC = () => {
   const { currentStore } = useStore();
-  const [status, setStatus] = useState<InventoryStatus>({
+  const [inventoryStatus, setInventoryStatus] = useState<InventoryStatus>({
     totalItems: 0,
     lowStockItems: 0,
     outOfStockItems: 0,
@@ -23,13 +23,13 @@ export const InventoryStatusIndicator: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStatus = async () => {
+    const fetchInventoryStatus = async () => {
       if (!currentStore?.id) return;
       
       setIsLoading(true);
       try {
-        const inventoryStatus = await getInventoryStatus(currentStore.id);
-        setStatus(inventoryStatus);
+        const status = await getPOSInventoryStatus(currentStore.id);
+        setInventoryStatus(status);
       } catch (error) {
         console.error('Error fetching inventory status:', error);
       } finally {
@@ -37,53 +37,61 @@ export const InventoryStatusIndicator: React.FC = () => {
       }
     };
 
-    fetchStatus();
+    fetchInventoryStatus();
     
     // Refresh every 30 seconds
-    const interval = setInterval(fetchStatus, 30000);
+    const interval = setInterval(fetchInventoryStatus, 30000);
     return () => clearInterval(interval);
   }, [currentStore?.id]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2">
-        <Package className="h-4 w-4 animate-spin" />
-        <span className="text-sm text-muted-foreground">Loading...</span>
+      <div className="flex items-center space-x-2 text-sm text-gray-500">
+        <Package className="h-4 w-4" />
+        <span>Loading inventory...</span>
       </div>
     );
   }
 
   const getStatusColor = () => {
-    if (status.outOfStockItems > 0) return 'destructive';
-    if (status.lowStockItems > 0) return 'secondary';
+    if (inventoryStatus.outOfStockItems > 0) return 'destructive';
+    if (inventoryStatus.lowStockItems > 5) return 'secondary';
     return 'default';
   };
 
   const getStatusIcon = () => {
-    if (status.outOfStockItems > 0) return <AlertTriangle className="h-3 w-3" />;
-    if (status.lowStockItems > 0) return <TrendingDown className="h-3 w-3" />;
-    return <TrendingUp className="h-3 w-3" />;
-  };
-
-  const getStatusText = () => {
-    if (status.outOfStockItems > 0) {
-      return `${status.outOfStockItems} out of stock`;
-    }
-    if (status.lowStockItems > 0) {
-      return `${status.lowStockItems} low stock`;
-    }
-    return 'Inventory healthy';
+    if (inventoryStatus.outOfStockItems > 0) return <AlertTriangle className="h-4 w-4" />;
+    if (inventoryStatus.lowStockItems > 0) return <TrendingDown className="h-4 w-4" />;
+    return <Tren<TrendingUp className="h-4 w-4" />;
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Badge variant={getStatusColor()} className="flex items-center gap-1">
-        {getStatusIcon()}
-        <span className="text-xs">{getStatusText()}</span>
-      </Badge>
-      <span className="text-xs text-muted-foreground">
-        {status.totalItems} total items
-      </span>
+    <div className="flex items-center space-x-3 text-sm">
+      <div className="flex items-center space-x-1">
+        <Package className="h-4 w-4 text-gray-500" />
+        <span className="text-gray-600">{inventoryStatus.totalItems} items</span>
+      </div>
+      
+      {inventoryStatus.lowStockItems > 0 && (
+        <Badge variant="secondary" className="flex items-center space-x-1">
+          <TrendingDown className="h-3 w-3" />
+          <span>{inventoryStatus.lowStockItems} low</span>
+        </Badge>
+      )}
+      
+      {inventoryStatus.outOfStockItems > 0 && (
+        <Badge variant="destructive" className="flex items-center space-x-1">
+          <AlertTriangle className="h-3 w-3" />
+          <span>{inventoryStatus.outOfStockItems} out</span>
+        </Badge>
+      )}
+      
+      {inventoryStatus.outOfStockItems === 0 && inventoryStatus.lowStockItems === 0 && (
+        <Badge variant="default" className="flex items-center space-x-1">
+          <TrendingUp className="h-3 w-3" />
+          <span>Healthy</span>
+        </Badge>
+      )}
     </div>
   );
 };
