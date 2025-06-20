@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { 
   generateReorderRecommendations, 
@@ -20,7 +19,7 @@ import {
   scheduleRestockingAlerts,
   RestockingNotification
 } from '@/services/inventory/restockingNotificationService';
-import { useAuth } from '@/components/Auth/AuthProvider';
+import { useAuth } from '@/contexts/auth/AuthProvider';
 
 export function useProactiveReordering(storeId: string) {
   const { user } = useAuth();

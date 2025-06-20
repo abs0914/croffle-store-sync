@@ -1,43 +1,14 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { InventoryOverview } from '@/components/Inventory/InventoryOverview';
-import { StockManagement } from '@/components/Inventory/StockManagement';
-import { OrdersManagement } from '@/components/Inventory/OrdersManagement';
-import { SuppliersManagement } from '@/components/Inventory/SuppliersManagement';
-import { ConversionsManagement } from '@/components/Inventory/ConversionsManagement';
-import { useStore } from '@/hooks/useStore';
 import { useToast } from '@/components/ui/use-toast';
-import { useInventory } from '@/hooks/useInventory';
-import { InventoryItem } from '@/types/inventoryManagement';
 import { ProactiveReorderingDashboard } from '@/components/Inventory/components/ProactiveReorderingDashboard';
 
 export default function Inventory() {
   const [activeTab, setActiveTab] = useState('overview');
-  const { userStore } = useStore();
   const { toast } = useToast();
-  const { createInventoryItem } = useInventory();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  const handleCreate = async (item: Omit<InventoryItem, 'id' | 'created_at' | 'updated_at' | 'last_updated' | 'supplier'>) => {
-    if (!userStore?.id) {
-      toast({
-        title: 'Error',
-        description: 'Please select a store first.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const newItem = {
-      ...item,
-      store_id: userStore.id,
-    };
-
-    await createInventoryItem(newItem);
-    setIsCreateModalOpen(false);
-  };
 
   return (
     <div className="space-y-6">
@@ -48,44 +19,40 @@ export default function Inventory() {
             Track stock levels, manage orders, and optimize inventory
           </p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
+        <Button onClick={() => toast({ title: 'Feature coming soon', description: 'Add item functionality will be available soon.' })}>
           <Plus className="mr-2 h-4 w-4" />
           Add Item
         </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="stock">Stock Management</TabsTrigger>
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="conversions">Conversions</TabsTrigger>
-          <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
           <TabsTrigger value="proactive">Proactive Reordering</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <InventoryOverview storeId={userStore?.id || ''} />
-        </TabsContent>
-
-        <TabsContent value="stock" className="space-y-4">
-          <StockManagement storeId={userStore?.id || ''} />
-        </TabsContent>
-
-        <TabsContent value="orders" className="space-y-4">
-          <OrdersManagement storeId={userStore?.id || ''} />
-        </TabsContent>
-
-        <TabsContent value="conversions" className="space-y-4">
-          <ConversionsManagement storeId={userStore?.id || ''} />
-        </TabsContent>
-
-        <TabsContent value="suppliers" className="space-y-4">
-          <SuppliersManagement storeId={userStore?.id || ''} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 border rounded-lg">
+              <h3 className="text-lg font-semibold mb-2">Total Items</h3>
+              <p className="text-2xl font-bold text-blue-600">0</p>
+              <p className="text-sm text-muted-foreground">Items in inventory</p>
+            </div>
+            <div className="p-6 border rounded-lg">
+              <h3 className="text-lg font-semibold mb-2">Low Stock</h3>
+              <p className="text-2xl font-bold text-orange-600">0</p>
+              <p className="text-sm text-muted-foreground">Items below threshold</p>
+            </div>
+            <div className="p-6 border rounded-lg">
+              <h3 className="text-lg font-semibold mb-2">Out of Stock</h3>
+              <p className="text-2xl font-bold text-red-600">0</p>
+              <p className="text-sm text-muted-foreground">Items unavailable</p>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="proactive">
-          <ProactiveReorderingDashboard storeId={userStore?.id || ''} />
+          <ProactiveReorderingDashboard storeId="default-store-id" />
         </TabsContent>
       </Tabs>
     </div>
