@@ -1407,6 +1407,39 @@ export type Database = {
           },
         ]
       }
+      product_addon_items: {
+        Row: {
+          category: string
+          created_at: string
+          display_order: number | null
+          id: string
+          is_available: boolean
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_available?: boolean
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_available?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_catalog: {
         Row: {
           created_at: string
@@ -1470,6 +1503,89 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_catalog_variations: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          id: string
+          is_available: boolean
+          is_default: boolean
+          name: string
+          price_modifier: number
+          product_catalog_id: string
+          updated_at: string
+          variation_type: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_available?: boolean
+          is_default?: boolean
+          name: string
+          price_modifier?: number
+          product_catalog_id: string
+          updated_at?: string
+          variation_type: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_available?: boolean
+          is_default?: boolean
+          name?: string
+          price_modifier?: number
+          product_catalog_id?: string
+          updated_at?: string
+          variation_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_catalog_variations_product_catalog_id_fkey"
+            columns: ["product_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "product_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_combo_rules: {
+        Row: {
+          base_item_category: string
+          combo_item_category: string
+          combo_price: number
+          created_at: string
+          discount_amount: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          base_item_category: string
+          combo_item_category: string
+          combo_price?: number
+          created_at?: string
+          discount_amount?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          base_item_category?: string
+          combo_item_category?: string
+          combo_price?: number
+          created_at?: string
+          discount_amount?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       product_ingredients: {
         Row: {
