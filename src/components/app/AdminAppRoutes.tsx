@@ -7,7 +7,6 @@ import AdminDashboard from '@/pages/Admin/AdminDashboard';
 import AdminStores from '@/pages/Admin/AdminStores';
 import AdminRecipes from '@/pages/Admin/AdminRecipes';
 import AdminCustomers from '@/pages/Admin/AdminCustomers';
-import AdminOrders from '@/pages/Admin/AdminOrders';
 import AdminReports from '@/pages/Admin/AdminReports';
 import OrderManagement from '@/pages/OrderManagement';
 import CommissaryInventory from '@/pages/CommissaryInventory';
@@ -70,14 +69,7 @@ export const AdminAppRoutes = () => [
     </AdminProtectedRoute>
   } />,
   
-  <Route key="admin-orders" path="/admin/orders" element={
-    <AdminProtectedRoute>
-      <AdminLayout>
-        <AdminOrders />
-      </AdminLayout>
-    </AdminProtectedRoute>
-  } />,
-  
+  // Consolidated Order Management (removed separate admin-orders route)
   <Route key="admin-order-management" path="/admin/order-management" element={
     <AdminProtectedRoute>
       <AdminLayout>
