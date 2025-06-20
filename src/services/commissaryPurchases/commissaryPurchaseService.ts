@@ -144,3 +144,6 @@ export const getLowStockCommissaryItems = async () => {
     return [];
   }
 };
+
+// Export alias for compatibility
+export const fetchSuppliers = fetchSuppliersForCommissary;

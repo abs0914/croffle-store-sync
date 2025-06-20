@@ -265,6 +265,161 @@ export type Database = {
           },
         ]
       }
+      commissary_restock_fulfillments: {
+        Row: {
+          commissary_item_id: string
+          created_at: string
+          fulfilled_by: string
+          id: string
+          notes: string | null
+          quantity_transferred: number
+          restock_request_id: string
+          store_id: string
+          total_cost: number
+          unit_cost: number
+        }
+        Insert: {
+          commissary_item_id: string
+          created_at?: string
+          fulfilled_by: string
+          id?: string
+          notes?: string | null
+          quantity_transferred?: number
+          restock_request_id: string
+          store_id: string
+          total_cost?: number
+          unit_cost?: number
+        }
+        Update: {
+          commissary_item_id?: string
+          created_at?: string
+          fulfilled_by?: string
+          id?: string
+          notes?: string | null
+          quantity_transferred?: number
+          restock_request_id?: string
+          store_id?: string
+          total_cost?: number
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissary_restock_fulfillments_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissary_restock_fulfillments_fulfilled_by_fkey"
+            columns: ["fulfilled_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "commissary_restock_fulfillments_restock_request_id_fkey"
+            columns: ["restock_request_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_restock_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissary_restock_fulfillments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commissary_restock_requests: {
+        Row: {
+          approved_by: string | null
+          approved_quantity: number | null
+          commissary_item_id: string
+          created_at: string
+          fulfilled_at: string | null
+          fulfilled_by: string | null
+          id: string
+          justification: string | null
+          priority: string
+          requested_by: string
+          requested_quantity: number
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          approved_quantity?: number | null
+          commissary_item_id: string
+          created_at?: string
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
+          id?: string
+          justification?: string | null
+          priority?: string
+          requested_by: string
+          requested_quantity?: number
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          approved_quantity?: number | null
+          commissary_item_id?: string
+          created_at?: string
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
+          id?: string
+          justification?: string | null
+          priority?: string
+          requested_by?: string
+          requested_quantity?: number
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissary_restock_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "commissary_restock_requests_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissary_restock_requests_fulfilled_by_fkey"
+            columns: ["fulfilled_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "commissary_restock_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "commissary_restock_requests_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversion_ingredients: {
         Row: {
           commissary_item_id: string
@@ -2713,6 +2868,17 @@ export type Database = {
       }
       is_user_admin_or_owner: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      transfer_commissary_to_store: {
+        Args: {
+          p_commissary_item_id: string
+          p_store_id: string
+          p_quantity: number
+          p_unit_cost: number
+          p_fulfilled_by: string
+          p_notes?: string
+        }
         Returns: boolean
       }
       transfer_inventory_stock: {
