@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { AlertTriangle, TrendingDown, Package, Clock, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useProactiveReordering } from '@/hooks/inventory/useProactiveReordering';
 
 interface ReorderAlert {
   id: string;
@@ -33,76 +34,28 @@ interface ConsumptionPattern {
   forecast_accuracy: number;
 }
 
-export const ProactiveReorderingSystem: React.FC = () => {
-  const [reorderAlerts, setReorderAlerts] = useState<ReorderAlert[]>([]);
+interface ProactiveReorderingSystemProps {
+  storeId?: string;
+}
+
+export const ProactiveReorderingSystem: React.FC<ProactiveReorderingSystemProps> = ({ 
+  storeId = 'default-store-id' 
+}) => {
+  const {
+    reorderRecommendations,
+    consumptionPatterns,
+    stockAlerts,
+    monitoringMetrics,
+    isLoading,
+    loadReorderData,
+    acknowledgeAlert,
+    criticalAlerts,
+    recommendationsCount,
+    estimatedSavings
+  } = useProactiveReordering(storeId);
+
   const [isRecommendationOpen, setIsRecommendationOpen] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<ReorderAlert | null>(null);
-  const [consumptionPatterns, setConsumptionPatterns] = useState<ConsumptionPattern[]>([]);
-
-  useEffect(() => {
-    loadReorderAlerts();
-    loadConsumptionPatterns();
-  }, []);
-
-  const loadReorderAlerts = async () => {
-    // Simulate loading reorder alerts
-    const mockAlerts: ReorderAlert[] = [
-      {
-        id: '1',
-        item_name: 'Croffle Mix Base',
-        current_stock: 15,
-        minimum_threshold: 20,
-        recommended_order_quantity: 50,
-        consumption_rate: 5.2,
-        days_until_stockout: 3,
-        urgency_level: 'critical',
-        cost_impact: 2600,
-        supplier_lead_time: 2,
-        last_order_date: '2024-06-15'
-      },
-      {
-        id: '2',
-        item_name: 'Nutella Sauce',
-        current_stock: 8,
-        minimum_threshold: 10,
-        recommended_order_quantity: 25,
-        consumption_rate: 2.1,
-        days_until_stockout: 4,
-        urgency_level: 'high',
-        cost_impact: 1250,
-        supplier_lead_time: 3,
-        last_order_date: '2024-06-12'
-      },
-      {
-        id: '3',
-        item_name: 'Coffee Beans (Arabica)',
-        current_stock: 25,
-        minimum_threshold: 30,
-        recommended_order_quantity: 40,
-        consumption_rate: 3.8,
-        days_until_stockout: 7,
-        urgency_level: 'medium',
-        cost_impact: 3200,
-        supplier_lead_time: 5,
-        last_order_date: '2024-06-10'
-      }
-    ];
-    setReorderAlerts(mockAlerts);
-  };
-
-  const loadConsumptionPatterns = async () => {
-    // Simulate loading consumption patterns
-    const mockPatterns: ConsumptionPattern[] = [
-      {
-        item_id: '1',
-        daily_average: 5.2,
-        weekly_trend: 0.15,
-        seasonal_factor: 1.2,
-        forecast_accuracy: 87.5
-      }
-    ];
-    setConsumptionPatterns(mockPatterns);
-  };
 
   const getUrgencyColor = (level: string) => {
     switch (level) {
@@ -137,17 +90,32 @@ export const ProactiveReorderingSystem: React.FC = () => {
       toast.success(`Purchase order created for ${alert.item_name}`);
       setIsRecommendationOpen(false);
       
-      // Update alert status
-      setReorderAlerts(prev => prev.filter(a => a.id !== alert.id));
+      // Refresh data after creating order
+      await loadReorderData();
     } catch (error) {
       toast.error('Failed to create purchase order');
     }
   };
 
-  const acknowledgeAlert = (alertId: string) => {
-    setReorderAlerts(prev => prev.filter(a => a.id !== alertId));
+  const acknowledgeAlertHandler = (alertId: string) => {
+    acknowledgeAlert(alertId);
     toast.success('Alert acknowledged');
   };
+
+  // Convert reorder recommendations to the alert format for display
+  const reorderAlerts: ReorderAlert[] = reorderRecommendations.map(rec => ({
+    id: rec.item_id,
+    item_name: rec.item_name,
+    current_stock: rec.current_stock,
+    minimum_threshold: rec.minimum_threshold,
+    recommended_order_quantity: rec.recommended_order_quantity,
+    consumption_rate: rec.consumption_rate,
+    days_until_stockout: rec.days_until_stockout,
+    urgency_level: rec.urgency_level,
+    cost_impact: rec.cost_impact,
+    supplier_lead_time: rec.supplier_lead_time,
+    last_order_date: rec.last_order_date
+  }));
 
   return (
     <div className="space-y-6">
@@ -156,8 +124,8 @@ export const ProactiveReorderingSystem: React.FC = () => {
           <h2 className="text-2xl font-bold">Proactive Reordering System</h2>
           <p className="text-muted-foreground">Smart inventory monitoring with consumption-based recommendations</p>
         </div>
-        <Button variant="outline" onClick={loadReorderAlerts}>
-          Refresh Alerts
+        <Button variant="outline" onClick={loadReorderData} disabled={isLoading}>
+          {isLoading ? 'Refreshing...' : 'Refresh Alerts'}
         </Button>
       </div>
 
@@ -169,9 +137,7 @@ export const ProactiveReorderingSystem: React.FC = () => {
               <AlertTriangle className="h-4 w-4 text-red-600" />
               <div className="text-sm text-muted-foreground">Critical Alerts</div>
             </div>
-            <div className="text-2xl font-bold text-red-600">
-              {reorderAlerts.filter(a => a.urgency_level === 'critical').length}
-            </div>
+            <div className="text-2xl font-bold text-red-600">{criticalAlerts}</div>
           </CardContent>
         </Card>
         <Card>
@@ -189,14 +155,14 @@ export const ProactiveReorderingSystem: React.FC = () => {
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">Total Financial Impact</div>
             <div className="text-2xl font-bold">
-              ₱{reorderAlerts.reduce((sum, alert) => sum + alert.cost_impact, 0).toLocaleString()}
+              ₱{estimatedSavings.toLocaleString()}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">Items Monitored</div>
-            <div className="text-2xl font-bold text-blue-600">{reorderAlerts.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{recommendationsCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -244,7 +210,7 @@ export const ProactiveReorderingSystem: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      <div>{alert.consumption_rate} units/day</div>
+                      <div>{alert.consumption_rate.toFixed(1)} units/day</div>
                       <div className="text-muted-foreground">Average</div>
                     </div>
                   </TableCell>
@@ -272,7 +238,7 @@ export const ProactiveReorderingSystem: React.FC = () => {
                       <Button size="sm" onClick={() => generateReorderRecommendation(alert)}>
                         Order
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => acknowledgeAlert(alert.id)}>
+                      <Button size="sm" variant="outline" onClick={() => acknowledgeAlertHandler(alert.id)}>
                         <CheckCircle className="h-4 w-4" />
                       </Button>
                     </div>
@@ -312,7 +278,7 @@ export const ProactiveReorderingSystem: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Daily Consumption</Label>
-                      <div>{selectedAlert.consumption_rate} units/day</div>
+                      <div>{selectedAlert.consumption_rate.toFixed(1)} units/day</div>
                     </div>
                     <div>
                       <Label>Supplier Lead Time</Label>
