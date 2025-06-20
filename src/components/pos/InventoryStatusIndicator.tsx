@@ -62,7 +62,7 @@ export const InventoryStatusIndicator: React.FC = () => {
   const getStatusIcon = () => {
     if (inventoryStatus.outOfStockItems > 0) return <AlertTriangle className="h-4 w-4" />;
     if (inventoryStatus.lowStockItems > 0) return <TrendingDown className="h-4 w-4" />;
-    return <Tren<TrendingUp className="h-4 w-4" />;
+    return <TrendingUp className="h-4 w-4" />;
   };
 
   return (
