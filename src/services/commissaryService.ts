@@ -48,6 +48,67 @@ export const createCommissaryItem = async (item: Omit<CommissaryInventoryItem, '
   }
 };
 
+// Helper function to normalize unit values to match database constraints
+const normalizeUnitValue = (unit: string): string => {
+  const unitMapping: Record<string, string> = {
+    // Standard weight units
+    '1 kilo': 'kg',
+    '1 kilogram': 'kg',
+    'kg': 'kg',
+    'kilogram': 'kg',
+    'kilograms': 'kg',
+    
+    // Gram variations
+    'gram': 'g',
+    'grams': 'g',
+    'g': 'g',
+    '900 grams': 'g',
+    '2500 grams': 'g',
+    '5000 grams': 'g',
+    '1000 grams': 'g',
+    '750 grams': 'g',
+    '454 grams': 'g',
+    '500 grams': 'g',
+    '680 grams': 'g',
+    '6000 grams': 'g',
+    '630 grams': 'g',
+    
+    // Volume units
+    '1 liter': 'liters',
+    '1 litre': 'liters',
+    'liter': 'liters',
+    'liters': 'liters',
+    'litre': 'liters',
+    'litres': 'liters',
+    'ml': 'ml',
+    'milliliter': 'ml',
+    'milliliters': 'ml',
+    
+    // Count units
+    'piece': 'pieces',
+    'pieces': 'pieces',
+    'pcs': 'pieces',
+    'pc': 'pieces',
+    
+    // Box/Package units
+    '1 box': 'boxes',
+    'box': 'boxes',
+    'boxes': 'boxes',
+    'pack': 'packs',
+    'packs': 'packs',
+    'pack of 25': 'packs',
+    'pack of 50': 'packs',
+    'pack of 100': 'packs',
+    'pack of 20': 'packs',
+    'pack of 32': 'packs',
+    'pack of 24': 'packs',
+    'pack of 27': 'packs'
+  };
+  
+  const normalizedInput = unit.toLowerCase().trim();
+  return unitMapping[normalizedInput] || 'pieces'; // Default to pieces if not found
+};
+
 export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[]): Promise<boolean> => {
   try {
     console.log('Starting bulk upload of ingredients:', ingredients);
@@ -67,10 +128,14 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
         ingredient.category = 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies';
       }
 
+      // Normalize the unit value to match database constraints
+      const normalizedUnit = normalizeUnitValue(ingredient.uom);
+      console.log(`Normalizing unit "${ingredient.uom}" to "${normalizedUnit}" for ingredient "${ingredient.name}"`);
+
       return {
         name: ingredient.name,
         category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-        unit: ingredient.uom, // Store UOM as unit in database for now
+        unit: normalizedUnit, // Use normalized unit value
         unit_cost: ingredient.unit_cost || 0,
         current_stock: ingredient.current_stock || 0,
         minimum_threshold: ingredient.minimum_threshold || 0,
@@ -100,7 +165,7 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
     // More specific error message based on the error type
     if (error && typeof error === 'object' && 'code' in error) {
       if (error.code === '23514') {
-        toast.error('Invalid category or UOM values in CSV. Please check your data format.');
+        toast.error('Invalid unit values in CSV. Units have been normalized to match database constraints.');
       } else {
         toast.error(`Database error: ${error.message || 'Unknown error'}`);
       }
