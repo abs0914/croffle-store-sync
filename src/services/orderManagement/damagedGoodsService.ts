@@ -88,7 +88,7 @@ export const recordDamagedGoods = async (
     await createDamageAuditTrail(data.id, 'recorded', recordedBy, 'Damaged goods recorded');
 
     toast.success(`Damaged goods recorded: ${itemName} (${damagedQuantity} units)`);
-    return data;
+    return data as DamagedGoodsRecord;
   } catch (error) {
     console.error('Error recording damaged goods:', error);
     toast.error('Failed to record damaged goods');
@@ -287,7 +287,7 @@ export const getDamagedGoodsByGRN = async (grnId: string): Promise<DamagedGoodsR
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as DamagedGoodsRecord[];
   } catch (error) {
     console.error('Error fetching damaged goods by GRN:', error);
     return [];
@@ -315,7 +315,7 @@ export const getPendingDamageDispositions = async (storeId?: string): Promise<Da
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+    return (data || []) as DamagedGoodsRecord[];
   } catch (error) {
     console.error('Error fetching pending damage dispositions:', error);
     return [];
