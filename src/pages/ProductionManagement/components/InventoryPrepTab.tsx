@@ -3,162 +3,81 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Package, AlertTriangle, CheckCircle, Search, Filter } from "lucide-react";
+import { CommissaryInventoryItem } from "@/types/inventoryManagement";
+import { fetchCommissaryInventory } from "@/services/inventoryManagement/commissaryInventoryService";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, ArrowRight, Clock } from "lucide-react";
-import { 
-  fetchCommissaryItemsForConversion,
-  fetchStoreInventoryForConversion,
-  createOrFindStoreInventoryItem,
-  fetchInventoryConversions
-} from "@/services/inventoryManagement/inventoryConversionService";
-import type { 
-  CommissaryInventoryItem, 
-  InventoryStock,
-  InventoryConversion
-} from "@/types/inventoryManagement";
-import { useAuth } from "@/contexts/auth";
-import { toast } from "sonner";
 
-interface InventoryPrepTabProps {
-  storeId: string;
-}
-
-interface SimpleConversionForm {
-  commissaryItemId: string;
-  quantityToConvert: number;
-  targetItemName: string;
-  targetUnit: string;
-  outputQuantity: number;
-  notes: string;
-}
-
-export function InventoryPrepTab({ storeId }: InventoryPrepTabProps) {
-  const { user } = useAuth();
-  const [commissaryItems, setCommissaryItems] = useState<CommissaryInventoryItem[]>([]);
-  const [storeItems, setStoreItems] = useState<InventoryStock[]>([]);
-  const [conversions, setConversions] = useState<InventoryConversion[]>([]);
+export function InventoryPrepTab() {
+  const [items, setItems] = useState<CommissaryInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [converting, setConverting] = useState(false);
-  
-  const [conversionForm, setConversionForm] = useState<SimpleConversionForm>({
-    commissaryItemId: '',
-    quantityToConvert: 0,
-    targetItemName: '',
-    targetUnit: '',
-    outputQuantity: 0,
-    notes: ''
-  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [stockFilter, setStockFilter] = useState('all');
 
   useEffect(() => {
-    loadData();
-  }, [storeId]);
+    loadItems();
+  }, []);
 
-  const loadData = async () => {
+  const loadItems = async () => {
     setLoading(true);
-    try {
-      const [commissary, store, conversionHistory] = await Promise.all([
-        fetchCommissaryItemsForConversion(),
-        fetchStoreInventoryForConversion(storeId),
-        fetchInventoryConversions(storeId)
-      ]);
-      
-      setCommissaryItems(commissary);
-      setStoreItems(store);
-      setConversions(conversionHistory.slice(0, 10)); // Recent 10 conversions
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Failed to load preparation data');
-    } finally {
-      setLoading(false);
-    }
+    const data = await fetchCommissaryInventory();
+    setItems(data);
+    setLoading(false);
   };
 
-  const handleSimpleConversion = async () => {
-    if (!user?.id) {
-      toast.error('Authentication required');
-      return;
-    }
-
-    if (!conversionForm.commissaryItemId || !conversionForm.targetItemName) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    setConverting(true);
-
-    try {
-      // Create or find target item
-      const targetItem = await createOrFindStoreInventoryItem(
-        storeId,
-        conversionForm.targetItemName,
-        conversionForm.targetUnit
-      );
-
-      if (!targetItem) {
-        toast.error('Failed to create target inventory item');
-        return;
-      }
-
-      // Create conversion using existing service
-      const conversionData = {
-        ingredients: [{
-          commissary_item_id: conversionForm.commissaryItemId,
-          quantity: conversionForm.quantityToConvert,
-          available_stock: 0, // Will be validated by service
-          unit_cost: 0
-        }],
-        inventory_stock_id: targetItem.id,
-        new_item_name: conversionForm.targetItemName,
-        new_item_unit: conversionForm.targetUnit,
-        finished_goods_quantity: conversionForm.outputQuantity,
-        notes: conversionForm.notes
-      };
-
-      // Use existing service function
-      const { createMultiIngredientConversion } = await import('@/services/inventoryManagement/inventoryConversionService');
-      
-      const result = await createMultiIngredientConversion(
-        conversionData,
-        storeId,
-        user.id
-      );
-
-      if (result) {
-        await loadData();
-        setConversionForm({
-          commissaryItemId: '',
-          quantityToConvert: 0,
-          targetItemName: '',
-          targetUnit: '',
-          outputQuantity: 0,
-          notes: ''
-        });
-        toast.success('Inventory preparation completed successfully');
-      }
-    } catch (error) {
-      console.error('Conversion error:', error);
-      toast.error('Failed to complete inventory preparation');
-    } finally {
-      setConverting(false);
-    }
+  const getStockStatus = (item: CommissaryInventoryItem) => {
+    if (item.current_stock === 0) return 'out';
+    if (item.current_stock <= item.minimum_threshold) return 'low';
+    return 'good';
   };
 
-  const selectedCommissaryItem = commissaryItems.find(item => item.id === conversionForm.commissaryItemId);
+  const getStockBadge = (item: CommissaryInventoryItem) => {
+    const status = getStockStatus(item);
+    const variants = {
+      good: { variant: 'default', className: 'bg-green-100 text-green-800', text: 'Good Stock' },
+      low: { variant: 'secondary', className: 'bg-yellow-100 text-yellow-800', text: 'Low Stock' },
+      out: { variant: 'destructive', className: '', text: 'Out of Stock' }
+    } as const;
+
+    const config = variants[status];
+    return (
+      <Badge variant={config.variant} className={config.className}>
+        {status === 'good' && <CheckCircle className="h-3 w-3 mr-1" />}
+        {status === 'low' && <AlertTriangle className="h-3 w-3 mr-1" />}
+        {status === 'out' && <Package className="h-3 w-3 mr-1" />}
+        {config.text}
+      </Badge>
+    );
+  };
+
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         item.category.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
+    
+    const matchesStock = stockFilter === 'all' || getStockStatus(item) === stockFilter;
+    
+    return matchesSearch && matchesCategory && matchesStock;
+  });
+
+  const stockStats = {
+    total: items.length,
+    good: items.filter(item => getStockStatus(item) === 'good').length,
+    low: items.filter(item => getStockStatus(item) === 'low').length,
+    out: items.filter(item => getStockStatus(item) === 'out').length
+  };
 
   if (loading) {
     return (
       <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <div className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </CardContent>
-          </Card>
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="animate-pulse">
+            <div className="h-24 bg-gray-200 rounded-lg"></div>
+          </div>
         ))}
       </div>
     );
@@ -166,178 +85,183 @@ export function InventoryPrepTab({ storeId }: InventoryPrepTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Simple Conversion Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Quick Inventory Prep
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Convert commissary items to store inventory for immediate use
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Source Item (Commissary)</Label>
-              <Select 
-                value={conversionForm.commissaryItemId} 
-                onValueChange={(value) => setConversionForm(prev => ({ ...prev, commissaryItemId: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select commissary item" />
-                </SelectTrigger>
-                <SelectContent>
-                  {commissaryItems.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name} ({item.current_stock} {item.unit} available)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedCommissaryItem && (
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  Available: {selectedCommissaryItem.current_stock} {selectedCommissaryItem.unit}
-                </p>
+      {/* Header & Summary */}
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Inventory Preparation</h2>
+        <p className="text-muted-foreground mb-4">
+          Monitor commissary inventory levels and prepare for production needs
+        </p>
+        
+        {/* Stock Summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">{stockStats.total}</div>
+                <div className="text-sm text-muted-foreground">Total Items</div>
               </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Quantity to Convert</Label>
-                <Input
-                  type="number"
-                  value={conversionForm.quantityToConvert}
-                  onChange={(e) => setConversionForm(prev => ({ ...prev, quantityToConvert: Number(e.target.value) }))}
-                  placeholder="0"
-                  min="0"
-                  max={selectedCommissaryItem?.current_stock || 999}
-                />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{stockStats.good}</div>
+                <div className="text-sm text-muted-foreground">Good Stock</div>
               </div>
-              <div className="space-y-2">
-                <Label>Output Quantity</Label>
-                <Input
-                  type="number"
-                  value={conversionForm.outputQuantity}
-                  onChange={(e) => setConversionForm(prev => ({ ...prev, outputQuantity: Number(e.target.value) }))}
-                  placeholder="0"
-                  min="0"
-                />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">{stockStats.low}</div>
+                <div className="text-sm text-muted-foreground">Low Stock</div>
               </div>
-            </div>
-
-            <div className="flex items-center justify-center py-2">
-              <ArrowRight className="h-6 w-6 text-muted-foreground" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Target Item Name</Label>
-                <Input
-                  value={conversionForm.targetItemName}
-                  onChange={(e) => setConversionForm(prev => ({ ...prev, targetItemName: e.target.value }))}
-                  placeholder="e.g., Croffle Mix (Ready)"
-                />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{stockStats.out}</div>
+                <div className="text-sm text-muted-foreground">Out of Stock</div>
               </div>
-              <div className="space-y-2">
-                <Label>Target Unit</Label>
-                <Select 
-                  value={conversionForm.targetUnit} 
-                  onValueChange={(value) => setConversionForm(prev => ({ ...prev, targetUnit: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="kg">Kilograms</SelectItem>
-                    <SelectItem value="g">Grams</SelectItem>
-                    <SelectItem value="pieces">Pieces</SelectItem>
-                    <SelectItem value="liters">Liters</SelectItem>
-                    <SelectItem value="ml">Milliliters</SelectItem>
-                    <SelectItem value="packs">Packs</SelectItem>
-                    <SelectItem value="boxes">Boxes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-            <div className="space-y-2">
-              <Label>Notes</Label>
+      {/* Alerts */}
+      {stockStats.low > 0 && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            {stockStats.low} item{stockStats.low !== 1 ? 's' : ''} {stockStats.low !== 1 ? 'are' : 'is'} running low on stock. 
+            Consider restocking before production.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {stockStats.out > 0 && (
+        <Alert variant="destructive">
+          <Package className="h-4 w-4" />
+          <AlertDescription>
+            {stockStats.out} item{stockStats.out !== 1 ? 's' : ''} {stockStats.out !== 1 ? 'are' : 'is'} out of stock. 
+            These items need immediate restocking.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                value={conversionForm.notes}
-                onChange={(e) => setConversionForm(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Optional preparation notes..."
+                placeholder="Search items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
               />
             </div>
+            
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="raw_materials">Raw Materials</SelectItem>
+                <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
+                <SelectItem value="supplies">Supplies</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <Button 
-              onClick={handleSimpleConversion}
-              disabled={converting || !conversionForm.commissaryItemId || !conversionForm.targetItemName}
-              className="w-full"
-            >
-              {converting ? (
-                <>Processing...</>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Complete Preparation
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+            <Select value={stockFilter} onValueChange={setStockFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Stock Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stock Levels</SelectItem>
+                <SelectItem value="good">Good Stock</SelectItem>
+                <SelectItem value="low">Low Stock</SelectItem>
+                <SelectItem value="out">Out of Stock</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Recent Preparations */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Recent Preparations
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Latest inventory preparation activities
-            </p>
-          </CardHeader>
-          <CardContent>
-            {conversions.length === 0 ? (
-              <div className="text-center py-8">
-                <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">No preparations yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Start with your first inventory preparation
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {conversions.map((conversion) => (
-                  <div key={conversion.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">
-                        {conversion.inventory_stock?.item || 'Unknown Item'}
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(conversion.conversion_date).toLocaleDateString()} • 
-                        {conversion.finished_goods_quantity} {conversion.inventory_stock?.unit}
-                      </p>
-                      {conversion.notes && (
-                        <p className="text-xs text-muted-foreground italic">
-                          {conversion.notes}
-                        </p>
-                      )}
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      Completed
+      {/* Inventory Items */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Commissary Inventory ({filteredItems.length} items)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {filteredItems.map((item) => (
+              <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-medium">{item.name}</h3>
+                    {getStockBadge(item)}
+                    <Badge variant="outline">
+                      {item.category.replace('_', ' ')}
                     </Badge>
                   </div>
-                ))}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
+                    <div>
+                      <span className="font-medium">Current:</span> {item.current_stock} {item.uom}
+                    </div>
+                    <div>
+                      <span className="font-medium">Min Threshold:</span> {item.minimum_threshold} {item.uom}
+                    </div>
+                    <div>
+                      <span className="font-medium">Unit Cost:</span> ₱{(item.unit_cost || 0).toFixed(2)}
+                    </div>
+                    <div>
+                      <span className="font-medium">Total Value:</span> ₱{((item.current_stock * (item.unit_cost || 0)).toFixed(2))}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    View Details
+                  </Button>
+                  {getStockStatus(item) !== 'good' && (
+                    <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700">
+                      Request Restock
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            {filteredItems.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No items found matching your search criteria.
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Action Buttons */}
+      <div className="flex gap-2">
+        <Button onClick={loadItems} variant="outline">
+          Refresh Data
+        </Button>
+        <Button variant="outline">
+          Export Report
+        </Button>
+        <Button variant="outline">
+          Generate Purchase Orders
+        </Button>
       </div>
     </div>
   );

@@ -9,6 +9,19 @@ import {
   MultiIngredientConversionForm
 } from "@/types/inventoryManagement";
 
+interface ConversionRecipeForm {
+  name: string;
+  description?: string;
+  finished_item_name: string;
+  finished_item_unit: string;
+  yield_quantity: number;
+  instructions?: string;
+  ingredients: {
+    commissary_item_id: string;
+    quantity: number;
+  }[];
+}
+
 export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInventoryItem[]> => {
   try {
     const { data, error } = await supabase
@@ -26,7 +39,8 @@ export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInv
     return (data || []).map(item => ({
       ...item,
       uom: item.unit || item.uom, // Map unit to uom for consistency
-      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies'
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      supplier: Array.isArray(item.supplier) && item.supplier.length > 0 ? item.supplier[0] : null
     }));
   } catch (error) {
     console.error('Error fetching commissary items for conversion:', error);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -89,7 +88,7 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
     const csvContent = [
       'Item Name,Category,Unit,Current Stock,Unit Cost',
       ...commissaryItems.map(item => 
-        `"${item.name}","${item.category}","${item.unit}",${item.current_stock},${item.unit_cost || 0}`
+        `"${item.name}","${item.category}","${item.uom}",${item.current_stock},${item.unit_cost || 0}`
       )
     ].join('\n');
 
@@ -306,10 +305,10 @@ export const AdminCommissaryIntegrationTab: React.FC = () => {
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="font-medium">
-                        {item.current_stock} {item.unit}
+                        {item.current_stock} {item.uom}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        ₱{(item.unit_cost || 0).toFixed(2)}/{item.unit}
+                        ₱{(item.unit_cost || 0).toFixed(2)}/{item.uom}
                       </p>
                     </div>
                     

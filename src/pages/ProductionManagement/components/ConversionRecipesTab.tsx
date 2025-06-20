@@ -3,121 +3,38 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Factory, ArrowRight, Package } from "lucide-react";
-import { 
-  fetchConversionRecipes,
-  fetchCommissaryItemsForConversion,
-  fetchStoreInventoryForConversion 
-} from "@/services/inventoryManagement/inventoryConversionService";
-import { MultiIngredientConversionFormComponent } from "@/pages/InventoryConversion/components/MultiIngredientConversionForm";
-import type { 
-  ConversionRecipe, 
-  CommissaryInventoryItem, 
-  InventoryStock,
-  MultiIngredientConversionForm 
-} from "@/types/inventoryManagement";
-import { useAuth } from "@/contexts/auth";
-import { createMultiIngredientConversion, createOrFindStoreInventoryItem } from "@/services/inventoryManagement/inventoryConversionService";
-import { toast } from "sonner";
+import { Plus, ChefHat, Edit, Trash2 } from "lucide-react";
+import { ConversionRecipe } from "@/types/inventoryManagement";
+import { fetchConversionRecipes } from "@/services/inventoryManagement/inventoryConversionService";
+import { CreateRecipeDialog } from "@/pages/InventoryConversion/components/CreateRecipeDialog";
 
-interface ConversionRecipesTabProps {
-  storeId: string;
-}
-
-export function ConversionRecipesTab({ storeId }: ConversionRecipesTabProps) {
-  const { user } = useAuth();
-  const [conversionRecipes, setConversionRecipes] = useState<ConversionRecipe[]>([]);
-  const [commissaryItems, setCommissaryItems] = useState<CommissaryInventoryItem[]>([]);
-  const [storeItems, setStoreItems] = useState<InventoryStock[]>([]);
+export function ConversionRecipesTab() {
+  const [recipes, setRecipes] = useState<ConversionRecipe[]>([]);
   const [loading, setLoading] = useState(true);
-  const [converting, setConverting] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, [storeId]);
+    loadRecipes();
+  }, []);
 
-  const loadData = async () => {
+  const loadRecipes = async () => {
     setLoading(true);
-    const [recipes, commissary, store] = await Promise.all([
-      fetchConversionRecipes(),
-      fetchCommissaryItemsForConversion(),
-      fetchStoreInventoryForConversion(storeId)
-    ]);
-    
-    setConversionRecipes(recipes);
-    setCommissaryItems(commissary);
-    setStoreItems(store);
+    const data = await fetchConversionRecipes();
+    setRecipes(data);
     setLoading(false);
   };
 
-  const handleConversion = async (formData: MultiIngredientConversionForm) => {
-    if (!user?.id) {
-      toast.error('Authentication required');
-      return;
-    }
-
-    setConverting(true);
-
-    try {
-      let inventoryStockId = formData.inventory_stock_id;
-
-      // If creating a new item, create it first
-      if (!inventoryStockId && formData.new_item_name && formData.new_item_unit) {
-        const newItem = await createOrFindStoreInventoryItem(
-          storeId,
-          formData.new_item_name,
-          formData.new_item_unit
-        );
-        
-        if (!newItem) {
-          toast.error('Failed to create new inventory item');
-          return;
-        }
-        
-        inventoryStockId = newItem.id;
-        await loadData(); // Refresh data
-      }
-
-      if (!inventoryStockId) {
-        toast.error('Please select or create a target inventory item');
-        return;
-      }
-
-      const conversionData = {
-        ...formData,
-        inventory_stock_id: inventoryStockId
-      };
-
-      const conversion = await createMultiIngredientConversion(
-        conversionData,
-        storeId,
-        user.id
-      );
-
-      if (conversion) {
-        await loadData();
-        toast.success('Production conversion completed successfully');
-      }
-    } catch (error) {
-      console.error('Production conversion error:', error);
-      toast.error('Failed to complete production conversion');
-    } finally {
-      setConverting(false);
-    }
+  const handleCreateSuccess = () => {
+    loadRecipes();
   };
 
   if (loading) {
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <div className="animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </CardContent>
-          </Card>
+          <div key={i} className="animate-pulse">
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+          </div>
         ))}
       </div>
     );
@@ -125,107 +42,108 @@ export function ConversionRecipesTab({ storeId }: ConversionRecipesTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Production Conversion Workflows</h2>
+          <h2 className="text-2xl font-bold">Conversion Recipes</h2>
           <p className="text-muted-foreground">
-            Execute production conversions from commissary raw materials to store inventory items
+            Manage standardized recipes for converting commissary items to store inventory
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Conversion Workflow
+          Create Recipe
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Conversion Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Factory className="h-5 w-5" />
-              Execute Production Conversion
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Convert commissary raw materials into store-ready products
-            </p>
-          </CardHeader>
-          <CardContent>
-            <MultiIngredientConversionFormComponent
-              commissaryItems={commissaryItems}
-              storeItems={storeItems}
-              conversionRecipes={conversionRecipes}
-              onSubmit={handleConversion}
-              loading={converting}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Production Workflow Templates */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Production Workflow Templates
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Pre-defined conversion workflows for consistent production
-            </p>
-          </CardHeader>
-          <CardContent>
-            {conversionRecipes.length === 0 ? (
-              <div className="text-center py-8">
-                <Factory className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">No production workflows yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Create templates to streamline repeated production conversions
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {conversionRecipes.map((recipe) => (
-                  <div key={recipe.id} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold">{recipe.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {recipe.description}
-                        </p>
-                      </div>
-                      <Badge variant="outline">
-                        Yields {recipe.yield_quantity} {recipe.finished_item_unit}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{recipe.ingredients?.length || 0} commissary ingredients</span>
-                      <ArrowRight className="h-3 w-3" />
-                      <span className="font-medium">{recipe.finished_item_name}</span>
-                    </div>
-                    
-                    {recipe.ingredients && recipe.ingredients.length > 0 && (
-                      <div className="mt-3 text-xs text-muted-foreground">
-                        Uses: {recipe.ingredients.map(ing => 
-                          `${ing.quantity} ${ing.commissary_item?.unit || ''} ${ing.commissary_item?.name || ''}`
-                        ).join(', ')}
-                      </div>
+      {/* Recipes List */}
+      <div className="grid gap-4">
+        {recipes.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <ChefHat className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">No Conversion Recipes</h3>
+              <p className="text-muted-foreground mb-4">
+                Create standardized recipes to streamline your inventory conversions
+              </p>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create First Recipe
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          recipes.map((recipe) => (
+            <Card key={recipe.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <ChefHat className="h-5 w-5" />
+                      {recipe.name}
+                    </CardTitle>
+                    {recipe.description && (
+                      <p className="text-muted-foreground mt-1">{recipe.description}</p>
                     )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Recipe Output */}
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      Yields: {recipe.yield_quantity} {recipe.finished_item_unit} of {recipe.finished_item_name}
+                    </Badge>
+                  </div>
 
-                    <div className="mt-3 flex gap-2">
-                      <Button size="sm" variant="outline">
-                        Use Workflow
-                      </Button>
-                      <Button size="sm" variant="ghost">
-                        Edit
-                      </Button>
+                  {/* Ingredients */}
+                  <div>
+                    <h4 className="font-medium mb-2">Ingredients ({recipe.ingredients?.length || 0})</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {recipe.ingredients?.map((ingredient, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                          <span className="text-sm">
+                            {ingredient.commissary_item?.name || 'Unknown Item'}
+                          </span>
+                          <Badge variant="outline">
+                            {ingredient.quantity} {ingredient.commissary_item?.uom || 'units'}
+                          </Badge>
+                        </div>
+                      )) || (
+                        <p className="text-muted-foreground text-sm">No ingredients specified</p>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                  {/* Instructions */}
+                  {recipe.instructions && (
+                    <div>
+                      <h4 className="font-medium mb-2">Instructions</h4>
+                      <p className="text-sm text-muted-foreground">{recipe.instructions}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
+
+      {/* Create Recipe Dialog */}
+      <CreateRecipeDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSuccess={handleCreateSuccess}
+      />
     </div>
   );
 }

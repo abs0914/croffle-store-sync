@@ -15,10 +15,10 @@ import {
 } from "@/services/inventoryManagement/commissaryInventoryService";
 import { fetchSuppliers } from "@/services/inventoryManagement/supplierService";
 import { useAuth } from "@/contexts/auth";
-import { AddCommissaryItemDialog } from "./Inventory/components/AddCommissaryItemDialog";
-import { EditCommissaryItemDialog } from "./Inventory/components/EditCommissaryItemDialog";
-import { StockAdjustmentDialog } from "./Inventory/components/StockAdjustmentDialog";
-import { DeleteConfirmationDialog } from "./Inventory/components/DeleteConfirmationDialog";
+import { AddCommissaryItemDialog } from "./CommissaryInventory/components/AddCommissaryItemDialog";
+import { EditCommissaryItemDialog } from "./CommissaryInventory/components/EditCommissaryItemDialog";
+import { StockAdjustmentDialog } from "./CommissaryInventory/components/StockAdjustmentDialog";
+import { DeleteConfirmationDialog } from "./CommissaryInventory/components/DeleteConfirmationDialog";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/format";
 
@@ -119,10 +119,9 @@ export default function CommissaryInventory() {
 
   const handleRemoveDuplicates = async () => {
     setRemovingDuplicates(true);
-    const success = await removeDuplicateCommissaryItems();
-    if (success) {
-      await loadData(); // Refresh the data after removing duplicates
-    }
+    const deduplicatedItems = removeDuplicateCommissaryItems(items);
+    setItems(deduplicatedItems);
+    toast.success('Duplicates removed successfully');
     setRemovingDuplicates(false);
   };
 
@@ -281,10 +280,10 @@ export default function CommissaryInventory() {
                         
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                           <div>
-                            <span className="font-medium">Current Stock:</span> {item.current_stock} {item.unit}
+                            <span className="font-medium">Current Stock:</span> {item.current_stock} {item.uom}
                           </div>
                           <div>
-                            <span className="font-medium">Min Threshold:</span> {item.minimum_threshold} {item.unit}
+                            <span className="font-medium">Min Threshold:</span> {item.minimum_threshold} {item.uom}
                           </div>
                           <div>
                             <span className="font-medium">Unit Cost:</span> {item.unit_cost ? formatCurrency(item.unit_cost) : 'N/A'}
