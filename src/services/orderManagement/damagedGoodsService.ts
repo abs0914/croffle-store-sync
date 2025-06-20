@@ -136,9 +136,9 @@ export const generateDamagedGoodsReport = async (
       .from('damaged_goods')
       .select(`
         *,
-        grn:goods_received_notes(
-          delivery_order:delivery_orders(
-            purchase_order:purchase_orders(store_id)
+        grn:goods_received_notes!inner(
+          delivery_order:delivery_orders!inner(
+            purchase_order:purchase_orders!inner(store_id)
           )
         )
       `)
@@ -164,13 +164,13 @@ export const generateDamagedGoodsReport = async (
     }
 
     // Calculate summary
-    const totalDamagedItems = damagedGoods.reduce((sum, item) => sum + item.damaged_quantity, 0);
-    const totalFinancialImpact = damagedGoods.reduce((sum, item) => sum + item.financial_impact, 0);
+    const totalDamagedItems = damagedGoods.reduce((sum: number, item: any) => sum + Number(item.damaged_quantity), 0);
+    const totalFinancialImpact = damagedGoods.reduce((sum: number, item: any) => sum + Number(item.financial_impact), 0);
     const totalIncidents = damagedGoods.length;
 
     // Group by supplier
     const bySupplier: Record<string, any> = {};
-    damagedGoods.forEach(item => {
+    damagedGoods.forEach((item: any) => {
       if (!bySupplier[item.supplier_id]) {
         bySupplier[item.supplier_id] = {
           damaged_items: 0,
@@ -178,14 +178,14 @@ export const generateDamagedGoodsReport = async (
           incidents: 0
         };
       }
-      bySupplier[item.supplier_id].damaged_items += item.damaged_quantity;
-      bySupplier[item.supplier_id].financial_impact += item.financial_impact;
+      bySupplier[item.supplier_id].damaged_items += Number(item.damaged_quantity);
+      bySupplier[item.supplier_id].financial_impact += Number(item.financial_impact);
       bySupplier[item.supplier_id].incidents += 1;
     });
 
     // Group by category
     const byCategory: Record<string, any> = {};
-    damagedGoods.forEach(item => {
+    damagedGoods.forEach((item: any) => {
       if (!byCategory[item.damage_category]) {
         byCategory[item.damage_category] = {
           damaged_items: 0,
@@ -193,8 +193,8 @@ export const generateDamagedGoodsReport = async (
           percentage: 0
         };
       }
-      byCategory[item.damage_category].damaged_items += item.damaged_quantity;
-      byCategory[item.damage_category].financial_impact += item.financial_impact;
+      byCategory[item.damage_category].damaged_items += Number(item.damaged_quantity);
+      byCategory[item.damage_category].financial_impact += Number(item.financial_impact);
     });
 
     // Calculate percentages for categories
@@ -204,18 +204,18 @@ export const generateDamagedGoodsReport = async (
 
     // Group by disposition
     const byDisposition: Record<string, number> = {};
-    damagedGoods.forEach(item => {
+    damagedGoods.forEach((item: any) => {
       byDisposition[item.disposition] = (byDisposition[item.disposition] || 0) + 1;
     });
 
     // Calculate trending issues
     const issueFrequency: Record<string, { frequency: number; impact: number }> = {};
-    damagedGoods.forEach(item => {
+    damagedGoods.forEach((item: any) => {
       if (!issueFrequency[item.damage_reason]) {
         issueFrequency[item.damage_reason] = { frequency: 0, impact: 0 };
       }
       issueFrequency[item.damage_reason].frequency += 1;
-      issueFrequency[item.damage_reason].impact += item.financial_impact;
+      issueFrequency[item.damage_reason].impact += Number(item.financial_impact);
     });
 
     const trendingIssues = Object.entries(issueFrequency)
@@ -300,9 +300,9 @@ export const getPendingDamageDispositions = async (storeId?: string): Promise<Da
       .from('damaged_goods')
       .select(`
         *,
-        grn:goods_received_notes(
-          delivery_order:delivery_orders(
-            purchase_order:purchase_orders(store_id)
+        grn:goods_received_notes!inner(
+          delivery_order:delivery_orders!inner(
+            purchase_order:purchase_orders!inner(store_id)
           )
         )
       `)

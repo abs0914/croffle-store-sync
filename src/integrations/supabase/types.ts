@@ -426,6 +426,113 @@ export type Database = {
           },
         ]
       }
+      damage_audit_trail: {
+        Row: {
+          action: string
+          created_at: string
+          damage_id: string
+          details: string | null
+          id: string
+          performed_by: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          damage_id: string
+          details?: string | null
+          id?: string
+          performed_by: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          damage_id?: string
+          details?: string | null
+          id?: string
+          performed_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "damage_audit_trail_damage_id_fkey"
+            columns: ["damage_id"]
+            isOneToOne: false
+            referencedRelation: "damaged_goods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      damaged_goods: {
+        Row: {
+          created_at: string
+          damage_category: string
+          damage_reason: string
+          damaged_quantity: number
+          disposition: string
+          disposition_notes: string | null
+          financial_impact: number
+          grn_id: string
+          id: string
+          item_id: string
+          item_name: string
+          photos: string[] | null
+          recorded_by: string
+          supplier_id: string | null
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          damage_category: string
+          damage_reason: string
+          damaged_quantity?: number
+          disposition?: string
+          disposition_notes?: string | null
+          financial_impact?: number
+          grn_id: string
+          id?: string
+          item_id: string
+          item_name: string
+          photos?: string[] | null
+          recorded_by: string
+          supplier_id?: string | null
+          unit_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          damage_category?: string
+          damage_reason?: string
+          damaged_quantity?: number
+          disposition?: string
+          disposition_notes?: string | null
+          financial_impact?: number
+          grn_id?: string
+          id?: string
+          item_id?: string
+          item_name?: string
+          photos?: string[] | null
+          recorded_by?: string
+          supplier_id?: string | null
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "damaged_goods_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_received_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "damaged_goods_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_orders: {
         Row: {
           actual_delivery_date: string | null

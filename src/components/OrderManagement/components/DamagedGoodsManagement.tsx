@@ -85,7 +85,7 @@ export const DamagedGoodsManagement: React.FC = () => {
       case 'pending': return 'secondary';
       case 'return_to_supplier': return 'default';
       case 'dispose': return 'destructive';
-      case 'partial_use': return 'warning';
+      case 'partial_use': return 'outline'; // Changed from 'warning' to 'outline'
       default: return 'secondary';
     }
   };
