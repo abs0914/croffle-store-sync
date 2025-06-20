@@ -10,7 +10,8 @@ import {
   UserCheck,
   Truck,
   Warehouse,
-  Factory
+  Factory,
+  ShoppingCart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +20,11 @@ const menuItems = [
     name: 'Admin Dashboard',
     href: '/admin',
     icon: LayoutDashboard,
+  },
+  {
+    name: 'Point of Sale',
+    href: '/pos',
+    icon: ShoppingCart,
   },
   {
     name: 'Stores Management',
