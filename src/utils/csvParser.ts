@@ -8,7 +8,7 @@ export interface RecipeUpload {
   instructions?: string;
   ingredients: {
     name: string;
-    unit: string;
+    uom: string; // Changed from unit to uom
     quantity: number;
     cost?: number;
   }[];
@@ -17,7 +17,7 @@ export interface RecipeUpload {
 export interface RawIngredientUpload {
   name: string;
   category: 'raw_materials' | 'packaging_materials' | 'supplies';
-  unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair';
+  uom: string; // Changed from unit to uom
   unit_cost?: number;
   current_stock?: number;
   minimum_threshold?: number;
@@ -46,11 +46,11 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     const recipeName = row['name'] || row['recipe name'] || row['product'];
     const category = row['category'];
     const ingredientName = row['ingredient name'];
-    const unit = row['unit of measure'] || row['unit'];
+    const uom = row['uom'] || row['unit of measure'] || row['unit']; // Support both UOM and unit columns
     const quantity = parseFloat(row['quantity used'] || row['quantity']) || 0;
     const cost = parseFloat(row['cost per unit']) || 0;
 
-    if (!recipeName || !ingredientName || !unit || quantity <= 0) continue;
+    if (!recipeName || !ingredientName || !uom || quantity <= 0) continue;
 
     if (!recipes.has(recipeName)) {
       recipes.set(recipeName, {
@@ -67,7 +67,7 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     const recipe = recipes.get(recipeName)!;
     recipe.ingredients.push({
       name: ingredientName,
-      unit: unit,
+      uom: uom,
       quantity: quantity,
       cost: cost
     });
@@ -97,7 +97,7 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
 
     const name = row['name'];
     const category = row['category'] as 'raw_materials' | 'packaging_materials' | 'supplies';
-    const unit = row['unit'] as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair';
+    const uom = row['uom'] || row['unit']; // Support both UOM and unit columns
     const unit_cost = parseFloat(row['unit_cost']) || undefined;
     const current_stock = parseFloat(row['current_stock']) || undefined;
     const minimum_threshold = parseFloat(row['minimum_threshold']) || undefined;
@@ -105,18 +105,16 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
     const sku = row['sku'] || undefined;
     const storage_location = row['storage_location'] || undefined;
 
-    if (!name || !category || !unit) continue;
+    if (!name || !category || !uom) continue;
 
-    // Validate category and unit values
+    // Validate category values
     const validCategories = ['raw_materials', 'packaging_materials', 'supplies'];
-    const validUnits = ['kg', 'g', 'pieces', 'liters', 'ml', 'boxes', 'packs', 'serving', 'portion', 'scoop', 'pair'];
-
-    if (!validCategories.includes(category) || !validUnits.includes(unit)) continue;
+    if (!validCategories.includes(category)) continue;
 
     ingredients.push({
       name,
       category,
-      unit,
+      uom,
       unit_cost,
       current_stock,
       minimum_threshold,

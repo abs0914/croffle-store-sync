@@ -5,7 +5,7 @@ export interface CommissaryInventoryItem {
   category: 'raw_materials' | 'packaging_materials' | 'supplies';
   current_stock: number;
   minimum_threshold: number;
-  unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair';
+  uom: string; // Changed from unit to uom and made it a string to support custom UOMs
   unit_cost?: number;
   supplier_id?: string;
   sku?: string;
@@ -19,7 +19,7 @@ export interface CommissaryInventoryItem {
 
 export interface RecipeUpload {
   name: string;
-  category?: string; // Added category support
+  category?: string;
   description?: string;
   yield_quantity: number;
   serving_size: number;
@@ -30,14 +30,14 @@ export interface RecipeUpload {
 export interface RecipeIngredientUpload {
   commissary_item_name: string;
   quantity: number;
-  unit: string;
+  uom: string; // Changed from unit to uom
   cost_per_unit?: number;
 }
 
 export interface RawIngredientUpload {
   name: string;
   category: 'raw_materials' | 'packaging_materials' | 'supplies';
-  unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair';
+  uom: string; // Changed from unit to uom
   unit_cost?: number;
   current_stock?: number;
   minimum_threshold?: number;
@@ -45,3 +45,28 @@ export interface RawIngredientUpload {
   sku?: string;
   storage_location?: string;
 }
+
+// Standard UOM options
+export const STANDARD_UOM_OPTIONS = [
+  '1 Box',
+  '1 Kilo',
+  '1 Liter',
+  '900 grams',
+  '2500 grams',
+  '5000 grams',
+  '1000 grams',
+  '750 grams',
+  '454 grams',
+  '500 grams',
+  '680 grams',
+  '6000 grams',
+  '630 grams',
+  'Piece',
+  'Pack of 25',
+  'Pack of 50',
+  'Pack of 100',
+  'Pack of 20',
+  'Pack of 32',
+  'Pack of 24',
+  'Pack of 27'
+];

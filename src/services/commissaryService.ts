@@ -13,11 +13,11 @@ export const fetchCommissaryInventory = async (): Promise<CommissaryInventoryIte
 
     if (error) throw error;
     
-    // Cast the data to ensure proper typing
+    // Cast the data to ensure proper typing, mapping unit to uom
     return (data || []).map(item => ({
       ...item,
-      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-      unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair'
+      uom: item.unit || item.uom, // Support both unit and uom columns during transition
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies'
     }));
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
@@ -28,9 +28,15 @@ export const fetchCommissaryInventory = async (): Promise<CommissaryInventoryIte
 
 export const createCommissaryItem = async (item: Omit<CommissaryInventoryItem, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
   try {
+    // Map uom to unit for database compatibility during transition
+    const dbItem = {
+      ...item,
+      unit: item.uom // Store UOM as unit in database for now
+    };
+    
     const { error } = await supabase
       .from('commissary_inventory')
-      .insert(item);
+      .insert(dbItem);
 
     if (error) throw error;
     toast.success('Commissary item created successfully');
@@ -61,17 +67,10 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
         ingredient.category = 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies';
       }
 
-      // Validate unit values  
-      const validUnits = ['kg', 'g', 'pieces', 'liters', 'ml', 'boxes', 'packs', 'serving', 'portion', 'scoop', 'pair'];
-      if (!validUnits.includes(ingredient.unit)) {
-        console.warn(`Invalid unit "${ingredient.unit}" for ingredient "${ingredient.name}". Defaulting to "pieces".`);
-        ingredient.unit = 'pieces' as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair';
-      }
-
       return {
         name: ingredient.name,
         category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-        unit: ingredient.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs' | 'serving' | 'portion' | 'scoop' | 'pair',
+        unit: ingredient.uom, // Store UOM as unit in database for now
         unit_cost: ingredient.unit_cost || 0,
         current_stock: ingredient.current_stock || 0,
         minimum_threshold: ingredient.minimum_threshold || 0,
@@ -101,7 +100,7 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
     // More specific error message based on the error type
     if (error && typeof error === 'object' && 'code' in error) {
       if (error.code === '23514') {
-        toast.error('Invalid category or unit values in CSV. Please check your data format.');
+        toast.error('Invalid category or UOM values in CSV. Please check your data format.');
       } else {
         toast.error(`Database error: ${error.message || 'Unknown error'}`);
       }

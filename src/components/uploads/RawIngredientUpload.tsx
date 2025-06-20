@@ -43,13 +43,13 @@ export const RawIngredientUpload = () => {
   };
 
   const downloadTemplate = () => {
-    const template = `name,category,unit,unit_cost,current_stock,minimum_threshold,supplier_name,sku,storage_location
-Flour,raw_materials,kg,45.00,100,20,ABC Suppliers,FL001,Dry Storage
-Sugar,raw_materials,kg,35.00,50,10,ABC Suppliers,SU001,Dry Storage
-Milk,raw_materials,liters,25.00,30,5,Fresh Dairy Co,MK001,Refrigerator
-Eggs,raw_materials,pieces,8.00,200,50,Farm Fresh,EG001,Refrigerator
-Whipped Cream,raw_materials,g,0.16,2500,500,Fresh Dairy Co,WC001,Refrigerator
-Chocolate Sauce,raw_materials,ml,0.025,5000,1000,Chocolate Suppliers Inc,CS001,Dry Storage`;
+    const template = `name,category,uom,unit_cost,current_stock,minimum_threshold,supplier_name,sku,storage_location
+Flour,raw_materials,1 Kilo,45.00,100,20,ABC Suppliers,FL001,Dry Storage
+Sugar,raw_materials,1 Kilo,35.00,50,10,ABC Suppliers,SU001,Dry Storage
+Milk,raw_materials,1 Liter,25.00,30,5,Fresh Dairy Co,MK001,Refrigerator
+Eggs,raw_materials,Piece,8.00,200,50,Farm Fresh,EG001,Refrigerator
+Whipped Cream,raw_materials,500 grams,0.16,2500,500,Fresh Dairy Co,WC001,Refrigerator
+Chocolate Sauce,raw_materials,1 Liter,0.025,5000,1000,Chocolate Suppliers Inc,CS001,Dry Storage`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -101,10 +101,10 @@ Chocolate Sauce,raw_materials,ml,0.025,5000,1000,Chocolate Suppliers Inc,CS001,D
         <div className="text-sm text-muted-foreground">
           <p className="font-medium mb-2">CSV Format Requirements:</p>
           <ul className="list-disc list-inside space-y-1">
-            <li>Required columns: name, category, unit</li>
+            <li>Required columns: name, category, uom</li>
             <li>Optional columns: unit_cost, current_stock, minimum_threshold, supplier_name, sku, storage_location</li>
             <li>Category must be: raw_materials, packaging_materials, or supplies</li>
-            <li>Unit must be: kg, g, pieces, liters, ml, boxes, or packs</li>
+            <li>UOM can be any of the standard options (1 Kilo, 1 Liter, 500 grams, Piece, Pack of 25, etc.) or custom values</li>
           </ul>
         </div>
       </CardContent>

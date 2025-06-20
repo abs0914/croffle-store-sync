@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CommissaryInventoryItem } from "@/types/inventoryManagement";
 import { updateCommissaryInventoryItem } from "@/services/inventoryManagement/commissaryInventoryService";
 import { fetchSuppliers } from "@/services/inventoryManagement/supplierService";
+import { UOMSelect } from "@/components/shared/UOMSelect";
 
 interface EditCommissaryItemDialogProps {
   open: boolean;
@@ -28,7 +29,7 @@ export function EditCommissaryItemDialog({
     name: '',
     category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies',
     minimum_threshold: 0,
-    unit: 'kg' as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+    uom: '', // Changed from unit to uom
     unit_cost: 0,
     supplier_id: '',
     sku: '',
@@ -45,7 +46,7 @@ export function EditCommissaryItemDialog({
           name: item.name,
           category: item.category,
           minimum_threshold: item.minimum_threshold,
-          unit: item.unit,
+          uom: item.unit || item.uom, // Support both unit and uom during transition
           unit_cost: item.unit_cost || 0,
           supplier_id: item.supplier_id || '',
           sku: item.sku || '',
@@ -95,6 +96,15 @@ export function EditCommissaryItemDialog({
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="uom">UOM *</Label>
+            <UOMSelect
+              value={formData.uom}
+              onChange={(value) => setFormData(prev => ({ ...prev, uom: value }))}
+              placeholder="Select UOM"
             />
           </div>
 
