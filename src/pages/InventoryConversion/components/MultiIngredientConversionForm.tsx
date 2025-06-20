@@ -50,8 +50,7 @@ export function MultiIngredientConversionForm({
   const [formData, setFormData] = useState({
     inventory_stock_id: '',
     finished_goods_quantity: 1,
-    conversion_recipe_i
-d: '',
+    conversion_recipe_id: '',
     notes: '',
     finished_item_name: '',
     finished_item_unit: ''
