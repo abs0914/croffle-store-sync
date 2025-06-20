@@ -19,6 +19,12 @@ import { realTimeAvailabilityService } from '@/services/inventory/realTimeAvaila
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
+interface RealTimeAvailabilityCheck {
+  isAvailable: boolean;
+  maxQuantity: number;
+  insufficientIngredients?: string[];
+}
+
 interface EnhancedProductGridProps {
   storeId: string;
   onCartUpdate?: (items: CartItem[]) => void;
@@ -26,8 +32,16 @@ interface EnhancedProductGridProps {
 
 export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
   storeId,
-  on
-}): Record<string, RealTimeAvailabilityCheck> = {};
+  onCartUpdate
+}) => {
+  const [products, setProducts] = useState<EnhancedProductCatalogItem[]>([]);
+  const [addOns, setAddOns] = useState<AddOnItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<EnhancedProductCatalogItem | null>(null);
+  const [productVariations, setProductVariations] = useState<ProductVariation[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [productAvailability, setProductAvailability] = useState<Record<string, RealTimeAvailabilityCheck>>({});
 
   useEffect(() => {
     loadData();
@@ -64,7 +78,7 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
   };
 
   const checkProductsAvailability = async (productList = products) => {
-    const availabilityResults: Record<string, any> = {};
+    const availabilityResults: Record<string, RealTimeAvailabilityCheck> = {};
     
     for (const product of productList) {
       try {
