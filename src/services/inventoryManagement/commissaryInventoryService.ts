@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
 import { toast } from "sonner";
@@ -29,7 +28,7 @@ export const fetchCommissaryInventory = async (filters?: any): Promise<Commissar
     // Cast the data to ensure proper typing, mapping unit to uom
     return (data || []).map(item => ({
       ...item,
-      uom: item.unit || item.uom || 'units', // Support both unit and uom columns during transition, with fallback
+      uom: item.unit || 'units', // Map unit to uom with fallback
       category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies'
     }));
   } catch (error) {

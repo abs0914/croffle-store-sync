@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import {
   CommissaryInventoryItem, 
   InventoryStock,
   ConversionRecipe,
-  MultiIngredientConversionForm
+  MultiIngredientConversionForm as MultiIngredientConversionFormData
 } from "@/types/inventoryManagement";
 import type { InventoryConversion } from "@/types/inventoryManagement";
 import { 
@@ -84,7 +85,7 @@ export default function InventoryConversion() {
     setConversionRecipes(data);
   };
 
-  const handleMultiIngredientConversion = async (formData: MultiIngredientConversionForm) => {
+  const handleMultiIngredientConversion = async (formData: MultiIngredientConversionFormData) => {
     if (!currentStore?.id || !user?.id) {
       toast.error('Missing required information');
       return;

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,7 @@ interface ConversionIngredient {
   commissary_item_id: string;
   quantity: number;
   unit_cost: number;
-  available_stock?: number; // Add optional available_stock property
+  available_stock: number;
 }
 
 export function MultiIngredientConversionForm({ 
@@ -52,8 +53,8 @@ export function MultiIngredientConversionForm({
     finished_goods_quantity: 1,
     conversion_recipe_id: '',
     notes: '',
-    finished_item_name: '',
-    finished_item_unit: ''
+    new_item_name: '',
+    new_item_unit: ''
   });
   
   const [ingredients, setIngredients] = useState<ConversionIngredient[]>([]);
@@ -72,14 +73,15 @@ export function MultiIngredientConversionForm({
         const recipeIngredients = recipe.ingredients?.map(ing => ({
           commissary_item_id: ing.commissary_item_id,
           quantity: ing.quantity,
-          unit_cost: ing.commissary_item?.unit_cost || 0
+          unit_cost: ing.commissary_item?.unit_cost || 0,
+          available_stock: ing.commissary_item?.current_stock || 0
         })) || [];
         
         setIngredients(recipeIngredients);
         setFormData(prev => ({
           ...prev,
-          finished_item_name: recipe.finished_item_name,
-          finished_item_unit: recipe.finished_item_unit
+          new_item_name: recipe.finished_item_name,
+          new_item_unit: recipe.finished_item_unit
         }));
       }
     } else {
@@ -104,7 +106,8 @@ export function MultiIngredientConversionForm({
     setIngredients(prev => [...prev, { 
       commissary_item_id: '', 
       quantity: 1, 
-      unit_cost: 0 
+      unit_cost: 0,
+      available_stock: 0
     }]);
   };
 
@@ -122,7 +125,7 @@ export function MultiIngredientConversionForm({
           const commissaryItem = commissaryItems.find(item => item.id === value);
           if (commissaryItem) {
             updated.unit_cost = commissaryItem.unit_cost || 0;
-            updated.available_stock = commissaryItem.current_stock; // Add available stock
+            updated.available_stock = commissaryItem.current_stock;
           }
         }
         
@@ -137,15 +140,15 @@ export function MultiIngredientConversionForm({
   };
 
   const handleCreateStoreItem = async () => {
-    if (!formData.finished_item_name || !formData.finished_item_unit) {
+    if (!formData.new_item_name || !formData.new_item_unit) {
       toast.error('Please specify finished item name and unit');
       return;
     }
 
     const newItem = await createOrFindStoreInventoryItem(
       storeId,
-      formData.finished_item_name,
-      formData.finished_item_unit
+      formData.new_item_name,
+      formData.new_item_unit
     );
 
     if (newItem) {
@@ -195,6 +198,8 @@ export function MultiIngredientConversionForm({
       finished_goods_quantity: formData.finished_goods_quantity,
       conversion_recipe_id: formData.conversion_recipe_id || undefined,
       notes: formData.notes,
+      new_item_name: formData.new_item_name,
+      new_item_unit: formData.new_item_unit,
       ingredients: validIngredients
     };
 
@@ -210,8 +215,8 @@ export function MultiIngredientConversionForm({
         finished_goods_quantity: 1,
         conversion_recipe_id: '',
         notes: '',
-        finished_item_name: '',
-        finished_item_unit: ''
+        new_item_name: '',
+        new_item_unit: ''
       });
       setIngredients([]);
     }
@@ -274,8 +279,8 @@ export function MultiIngredientConversionForm({
                 <Label htmlFor="finished_item_name">Finished Item Name *</Label>
                 <Input
                   id="finished_item_name"
-                  value={formData.finished_item_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, finished_item_name: e.target.value }))}
+                  value={formData.new_item_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, new_item_name: e.target.value }))}
                   required
                 />
               </div>
@@ -284,8 +289,8 @@ export function MultiIngredientConversionForm({
                 <Label htmlFor="finished_item_unit">Finished Item Unit *</Label>
                 <Input
                   id="finished_item_unit"
-                  value={formData.finished_item_unit}
-                  onChange={(e) => setFormData(prev => ({ ...prev, finished_item_unit: e.target.value }))}
+                  value={formData.new_item_unit}
+                  onChange={(e) => setFormData(prev => ({ ...prev, new_item_unit: e.target.value }))}
                   required
                 />
               </div>
@@ -301,7 +306,7 @@ export function MultiIngredientConversionForm({
                 onClick={handleCreateStoreItem}
                 size="sm"
                 variant="outline"
-                disabled={!formData.finished_item_name || !formData.finished_item_unit}
+                disabled={!formData.new_item_name || !formData.new_item_unit}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create New Item

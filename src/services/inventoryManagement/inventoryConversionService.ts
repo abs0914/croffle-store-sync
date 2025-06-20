@@ -8,7 +8,7 @@ import {
   MultiIngredientConversionForm
 } from "@/types/inventoryManagement";
 
-interface ConversionRecipeForm {
+export interface ConversionRecipeForm {
   name: string;
   description?: string;
   finished_item_name: string;
@@ -37,16 +37,16 @@ export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInv
     
     return (data || []).map(item => ({
       ...item,
-      uom: item.unit || item.uom || 'units', // Map unit to uom for consistency, with fallback
+      uom: item.unit || 'units', // Map unit to uom for consistency, with fallback
       category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       supplier: Array.isArray(item.supplier) && item.supplier.length > 0 
         ? {
-            id: item.supplier[0].id || '',
+            id: '',
             name: item.supplier[0].name || '',
-            lead_time_days: item.supplier[0].lead_time_days || 7,
-            is_active: item.supplier[0].is_active || true,
-            created_at: item.supplier[0].created_at || new Date().toISOString(),
-            updated_at: item.supplier[0].updated_at || new Date().toISOString()
+            lead_time_days: 7,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           }
         : null
     }));
@@ -233,7 +233,10 @@ export const fetchInventoryConversions = async (storeId: string): Promise<Invent
       ingredients: (item.ingredients || []).map((ing: any) => ({
         ...ing,
         commissary_item: ing.commissary_item && typeof ing.commissary_item === 'object' && 'id' in ing.commissary_item 
-          ? ing.commissary_item 
+          ? {
+              ...ing.commissary_item,
+              uom: ing.commissary_item.unit || 'units' // Map unit to uom
+            }
           : null
       }))
     })) as InventoryConversion[];
@@ -266,7 +269,10 @@ export const fetchConversionRecipes = async (): Promise<ConversionRecipe[]> => {
       ingredients: (item.ingredients || []).map((ing: any) => ({
         ...ing,
         commissary_item: ing.commissary_item && typeof ing.commissary_item === 'object' && 'id' in ing.commissary_item 
-          ? ing.commissary_item 
+          ? {
+              ...ing.commissary_item,
+              uom: ing.commissary_item.unit || 'units' // Map unit to uom
+            }
           : null
       }))
     })) as ConversionRecipe[];
