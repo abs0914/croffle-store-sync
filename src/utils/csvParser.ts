@@ -54,6 +54,37 @@ const normalizeHeader = (header: string): string => {
   return header.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
 };
 
+// Helper function to map category variations to valid database categories
+const mapCategoryToValidValue = (category: string): 'raw_materials' | 'packaging_materials' | 'supplies' | null => {
+  const normalizedCategory = category.toLowerCase().trim();
+  
+  // Map common category variations
+  const categoryMapping: Record<string, 'raw_materials' | 'packaging_materials' | 'supplies'> = {
+    // Raw materials variations
+    'raw_materials': 'raw_materials',
+    'raw_ingredients': 'raw_materials',
+    'ingredients': 'raw_materials',
+    'raw': 'raw_materials',
+    
+    // Packaging materials variations
+    'packaging_materials': 'packaging_materials',
+    'packaging': 'packaging_materials',
+    'packages': 'packaging_materials',
+    'containers': 'packaging_materials',
+    
+    // Supplies variations
+    'supplies': 'supplies',
+    'store_equipment': 'supplies',
+    'equipment': 'supplies',
+    'tools': 'supplies',
+    'store_supplies': 'supplies',
+    'misc': 'supplies',
+    'miscellaneous': 'supplies'
+  };
+  
+  return categoryMapping[normalizedCategory] || null;
+};
+
 // Create mapping for common header variations
 const createHeaderMapping = (headers: string[]): Record<string, number> => {
   const mapping: Record<string, number> = {};
@@ -154,7 +185,6 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
   console.log('Header mapping:', headerMapping);
   
   const ingredients: RawIngredientUpload[] = [];
-  const validCategories = ['raw_materials', 'packaging_materials', 'supplies'];
 
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
@@ -167,7 +197,7 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
 
     // Extract values using header mapping
     const name = values[headerMapping['name']] || '';
-    const category = values[headerMapping['category']] || '';
+    const rawCategory = values[headerMapping['category']] || '';
     const uom = values[headerMapping['uom']] || '';
     const unit_cost = parseFloat(values[headerMapping['unit_cost']] || '0') || undefined;
     const current_stock = parseFloat(values[headerMapping['current_stock']] || '0') || undefined;
@@ -176,23 +206,26 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
     const sku = values[headerMapping['sku']] || undefined;
     const storage_location = values[headerMapping['storage_location']] || undefined;
 
-    console.log(`Extracted data for line ${i}:`, { name, category, uom });
+    console.log(`Extracted data for line ${i}:`, { name, category: rawCategory, uom });
 
     // Validate required fields
-    if (!name || !category || !uom) {
-      console.log(`Skipping line ${i}: missing required fields (name: ${name}, category: ${category}, uom: ${uom})`);
+    if (!name || !rawCategory || !uom) {
+      console.log(`Skipping line ${i}: missing required fields (name: ${name}, category: ${rawCategory}, uom: ${uom})`);
       continue;
     }
 
-    // Validate category
-    if (!validCategories.includes(category as any)) {
-      console.log(`Skipping line ${i}: invalid category "${category}"`);
+    // Map category to valid database value
+    const mappedCategory = mapCategoryToValidValue(rawCategory);
+    if (!mappedCategory) {
+      console.log(`Skipping line ${i}: invalid category "${rawCategory}" - could not map to valid category`);
       continue;
     }
+
+    console.log(`Mapped category "${rawCategory}" to "${mappedCategory}"`);
 
     const ingredient: RawIngredientUpload = {
       name: name.trim(),
-      category: category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      category: mappedCategory,
       uom: uom.trim(),
       unit_cost,
       current_stock,
