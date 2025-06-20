@@ -260,10 +260,10 @@ export default function CommissaryInventory() {
                         
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
                           <div>
-                            <span className="font-medium">Current Stock:</span> {item.current_stock} {item.unit}
+                            <span className="font-medium">Current Stock:</span> {item.current_stock} {item.uom}
                           </div>
                           <div>
-                            <span className="font-medium">Min Threshold:</span> {item.minimum_threshold} {item.unit}
+                            <span className="font-medium">Min Threshold:</span> {item.minimum_threshold} {item.uom}
                           </div>
                           <div>
                             <span className="font-medium">Unit Cost:</span> {item.unit_cost ? formatCurrency(item.unit_cost) : 'N/A'}

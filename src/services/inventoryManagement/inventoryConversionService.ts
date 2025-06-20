@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
@@ -38,9 +37,18 @@ export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInv
     
     return (data || []).map(item => ({
       ...item,
-      uom: item.unit || item.uom, // Map unit to uom for consistency
+      uom: item.unit || item.uom || 'units', // Map unit to uom for consistency, with fallback
       category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-      supplier: Array.isArray(item.supplier) && item.supplier.length > 0 ? item.supplier[0] : null
+      supplier: Array.isArray(item.supplier) && item.supplier.length > 0 
+        ? {
+            id: item.supplier[0].id || '',
+            name: item.supplier[0].name || '',
+            lead_time_days: item.supplier[0].lead_time_days || 7,
+            is_active: item.supplier[0].is_active || true,
+            created_at: item.supplier[0].created_at || new Date().toISOString(),
+            updated_at: item.supplier[0].updated_at || new Date().toISOString()
+          }
+        : null
     }));
   } catch (error) {
     console.error('Error fetching commissary items for conversion:', error);

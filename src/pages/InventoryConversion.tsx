@@ -21,7 +21,7 @@ import {
 import { useAuth } from "@/contexts/auth";
 import { useStore } from "@/contexts/StoreContext";
 import { toast } from "sonner";
-import { MultiIngredientConversionFormComponent } from "./InventoryConversion/components/MultiIngredientConversionForm";
+import { MultiIngredientConversionForm } from "./InventoryConversion/components/MultiIngredientConversionForm";
 
 export default function InventoryConversion() {
   const { user } = useAuth();
@@ -197,12 +197,9 @@ export default function InventoryConversion() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Multi-Ingredient Conversion Form */}
-        <MultiIngredientConversionFormComponent
-          commissaryItems={commissaryItems}
-          storeItems={storeItems}
-          conversionRecipes={conversionRecipes}
-          onSubmit={handleMultiIngredientConversion}
-          loading={converting}
+        <MultiIngredientConversionForm
+          storeId={currentStore.id}
+          onSuccess={loadData}
         />
 
         {/* Recent Conversions */}

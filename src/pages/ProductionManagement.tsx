@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -85,7 +84,7 @@ export default function ProductionManagement() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <InventoryPrepTab storeId={currentStore?.id || ""} />
+              <InventoryPrepTab />
             </CardContent>
           </Card>
         </TabsContent>
@@ -99,7 +98,7 @@ export default function ProductionManagement() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <BulkUploadTab storeId={currentStore?.id || ""} />
+              <BulkUploadTab />
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +33,7 @@ interface ConversionIngredient {
   commissary_item_id: string;
   quantity: number;
   unit_cost: number;
+  available_stock?: number; // Add optional available_stock property
 }
 
 export function MultiIngredientConversionForm({ 
@@ -122,6 +122,7 @@ export function MultiIngredientConversionForm({
           const commissaryItem = commissaryItems.find(item => item.id === value);
           if (commissaryItem) {
             updated.unit_cost = commissaryItem.unit_cost || 0;
+            updated.available_stock = commissaryItem.current_stock; // Add available stock
           }
         }
         
