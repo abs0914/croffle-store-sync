@@ -8,6 +8,8 @@ import { AdminRecipeBulkActions } from './components/AdminRecipeBulkActions';
 import { RecipeManagementTab } from './components/RecipeManagementTab';
 import { AdminRecipeBulkUploadTab } from './components/AdminRecipeBulkUploadTab';
 import { AdminCommissaryIntegrationTab } from './components/AdminCommissaryIntegrationTab';
+import { MenuStructureTab } from './components/MenuStructureTab';
+import { EnhancedRecipeTemplateForm } from './components/EnhancedRecipeTemplateForm';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -15,7 +17,10 @@ import { toast } from 'sonner';
 export default function AdminRecipes() {
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeTab, setActiveTab] = useState('recipe-templates');
+  const [activeTab, setActiveTab] = useState('menu-structure');
+  const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
+  const [formCategory, setFormCategory] = useState<string>('');
+  const [formSubcategory, setFormSubcategory] = useState<string>('');
   
   const {
     recipes,
@@ -31,6 +36,12 @@ export default function AdminRecipes() {
     recipeMetrics,
     stores
   } = useAdminRecipesData();
+
+  const handleCreateRecipeTemplate = (category: string, subcategory?: string) => {
+    setFormCategory(category);
+    setFormSubcategory(subcategory || '');
+    setIsRecipeFormOpen(true);
+  };
 
   const handleSelectRecipe = (recipeId: string) => {
     setSelectedRecipes(prev => 
@@ -108,7 +119,7 @@ export default function AdminRecipes() {
 
         setSelectedRecipes([]);
         
-        toast.success(`Successfully deleted ${recipesCount || 0} recipe${(recipesCount || 0) !== 1 ? 's' : ''} and their ingredients`);
+        toast.success(`Successfully deleted ${recipeIds.length} recipe${recipeIds.length !== 1 ? 's' : ''} and their ingredients`);
         
         console.log('Refreshing recipes data...');
         await refreshRecipes();
@@ -134,12 +145,17 @@ export default function AdminRecipes() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="menu-structure">Menu Structure</TabsTrigger>
           <TabsTrigger value="recipe-templates">Recipe Templates</TabsTrigger>
           <TabsTrigger value="deployed-recipes">Deployed Recipes</TabsTrigger>
           <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
           <TabsTrigger value="commissary-integration">Commissary Integration</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="menu-structure">
+          <MenuStructureTab onCreateRecipeTemplate={handleCreateRecipeTemplate} />
+        </TabsContent>
 
         <TabsContent value="recipe-templates">
           <RecipeManagementTab />
@@ -188,6 +204,13 @@ export default function AdminRecipes() {
           <AdminCommissaryIntegrationTab />
         </TabsContent>
       </Tabs>
+
+      <EnhancedRecipeTemplateForm
+        isOpen={isRecipeFormOpen}
+        onClose={() => setIsRecipeFormOpen(false)}
+        category={formCategory}
+        subcategory={formSubcategory}
+      />
     </div>
   );
 }

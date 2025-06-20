@@ -1,8 +1,7 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, AlertTriangle } from "lucide-react";
 import InventoryHeader from "./components/InventoryHeader";
 import { useInventoryStockData } from "./components/inventoryStock/useInventoryStockData";
 import { InventoryStockList } from "./components/inventoryStock/InventoryStockList";
@@ -10,6 +9,7 @@ import { AddStockItemForm } from "./components/inventoryStock/AddStockItemForm";
 import { EditStockItemForm } from "./components/inventoryStock/EditStockItemForm";
 import { StockAdjustmentModal } from "./components/inventoryStock/StockAdjustmentModal";
 import { StockTransferModal } from "./components/inventoryStock/StockTransferModal";
+import { ProactiveReorderingSystem } from "@/components/Inventory/components/ProactiveReorderingSystem";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 
@@ -55,6 +55,7 @@ export default function InventoryStock() {
   } = useInventoryStockData();
 
   const [filterTab, setFilterTab] = useState<"all" | "active" | "inactive" | "low-stock">("all");
+  const [activeTab, setActiveTab] = useState("inventory");
   
   const filteredStockItems = stockItems.filter(item => {
     switch (filterTab) {
@@ -68,6 +69,11 @@ export default function InventoryStock() {
         return true;
     }
   });
+
+  // Calculate reorder alerts count
+  const reorderAlertsCount = stockItems.filter(item => 
+    item.stock_quantity <= (item.minimum_threshold || 10)
+  ).length;
 
   if (!currentStore) {
     return (
@@ -101,38 +107,61 @@ export default function InventoryStock() {
           Note: Menu items and product catalog management is handled in the Admin Panel.
         </p>
       </div>
-      
-      <div className="flex justify-between items-center mb-4">
-        <Tabs defaultValue="all" value={filterTab} onValueChange={(v) => setFilterTab(v as any)}>
-          <TabsList>
-            <TabsTrigger value="all">All Items</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="inactive">Inactive</TabsTrigger>
-            <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      
-        <Button
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-croffle-accent hover:bg-croffle-accent/90"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Inventory Item
-        </Button>
-      </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <InventoryStockList 
-            stockItems={filteredStockItems}
-            isLoading={isLoading}
-            onEdit={openEditModal}
-            onStockAdjust={openStockModal}
-            onStockTransfer={hasMultipleStores ? openTransferModal : undefined}
-            onDelete={openDeleteConfirm}
-            hasMultipleStores={hasMultipleStores}
-          />
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="inventory">Inventory Stock</TabsTrigger>
+          <TabsTrigger value="reordering" className="flex items-center gap-2">
+            Reorder Alerts
+            {reorderAlertsCount > 0 && (
+              <div className="flex items-center gap-1">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                  {reorderAlertsCount}
+                </span>
+              </div>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="inventory" className="space-y-4">
+          <div className="flex justify-between items-center mb-4">
+            <Tabs defaultValue="all" value={filterTab} onValueChange={(v) => setFilterTab(v as any)}>
+              <TabsList>
+                <TabsTrigger value="all">All Items</TabsTrigger>
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="inactive">Inactive</TabsTrigger>
+                <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-croffle-accent hover:bg-croffle-accent/90"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add Inventory Item
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-4">
+              <InventoryStockList 
+                stockItems={filteredStockItems}
+                isLoading={isLoading}
+                onEdit={openEditModal}
+                onStockAdjust={openStockModal}
+                onStockTransfer={hasMultipleStores ? openTransferModal : undefined}
+                onDelete={openDeleteConfirm}
+                hasMultipleStores={hasMultipleStores}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reordering">
+          <ProactiveReorderingSystem />
+        </TabsContent>
+      </Tabs>
 
       {/* Add Inventory Item Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
