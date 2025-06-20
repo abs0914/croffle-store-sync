@@ -26,15 +26,73 @@ export interface RawIngredientUpload {
   storage_location?: string;
 }
 
+// Helper function to parse CSV properly
+const parseCSVLine = (line: string): string[] => {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  result.push(current.trim());
+  return result;
+};
+
+// Helper function to normalize header names
+const normalizeHeader = (header: string): string => {
+  return header.toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+};
+
+// Create mapping for common header variations
+const createHeaderMapping = (headers: string[]): Record<string, number> => {
+  const mapping: Record<string, number> = {};
+  
+  headers.forEach((header, index) => {
+    const normalized = normalizeHeader(header);
+    
+    // Map common variations
+    const variations: Record<string, string[]> = {
+      'name': ['name', 'ingredient_name', 'item_name', 'product_name'],
+      'category': ['category', 'type', 'item_type'],
+      'uom': ['uom', 'unit', 'unit_of_measure', 'measure', 'units'],
+      'unit_cost': ['unit_cost', 'cost', 'price', 'cost_per_unit'],
+      'current_stock': ['current_stock', 'stock', 'quantity', 'qty'],
+      'minimum_threshold': ['minimum_threshold', 'min_threshold', 'reorder_point', 'minimum'],
+      'supplier_name': ['supplier_name', 'supplier', 'vendor', 'vendor_name'],
+      'sku': ['sku', 'code', 'item_code', 'product_code'],
+      'storage_location': ['storage_location', 'location', 'storage', 'warehouse']
+    };
+    
+    Object.entries(variations).forEach(([key, aliases]) => {
+      if (aliases.includes(normalized)) {
+        mapping[key] = index;
+      }
+    });
+  });
+  
+  return mapping;
+};
+
 export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
-  const lines = csvText.trim().split('\n');
+  const lines = csvText.trim().split('\n').filter(line => line.trim());
   if (lines.length < 2) return [];
 
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
   const recipes: Map<string, RecipeUpload> = new Map();
 
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim());
+    const values = parseCSVLine(lines[i]);
     
     if (values.length < headers.length) continue;
 
@@ -79,50 +137,75 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
 };
 
 export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] => {
-  const lines = csvText.trim().split('\n');
-  if (lines.length < 2) return [];
+  console.log('Starting CSV parsing, input length:', csvText.length);
+  
+  const lines = csvText.trim().split('\n').filter(line => line.trim());
+  console.log('Total lines found:', lines.length);
+  
+  if (lines.length < 2) {
+    console.log('Not enough lines in CSV');
+    return [];
+  }
 
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const headers = parseCSVLine(lines[0]);
+  console.log('Headers found:', headers);
+  
+  const headerMapping = createHeaderMapping(headers);
+  console.log('Header mapping:', headerMapping);
+  
   const ingredients: RawIngredientUpload[] = [];
+  const validCategories = ['raw_materials', 'packaging_materials', 'supplies'];
 
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim());
+    const values = parseCSVLine(lines[i]);
+    console.log(`Processing line ${i}:`, values);
     
-    if (values.length < headers.length) continue;
+    if (values.length < headers.length) {
+      console.log(`Skipping line ${i}: insufficient columns`);
+      continue;
+    }
 
-    const row: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index] || '';
-    });
+    // Extract values using header mapping
+    const name = values[headerMapping['name']] || '';
+    const category = values[headerMapping['category']] || '';
+    const uom = values[headerMapping['uom']] || '';
+    const unit_cost = parseFloat(values[headerMapping['unit_cost']] || '0') || undefined;
+    const current_stock = parseFloat(values[headerMapping['current_stock']] || '0') || undefined;
+    const minimum_threshold = parseFloat(values[headerMapping['minimum_threshold']] || '0') || undefined;
+    const supplier_name = values[headerMapping['supplier_name']] || undefined;
+    const sku = values[headerMapping['sku']] || undefined;
+    const storage_location = values[headerMapping['storage_location']] || undefined;
 
-    const name = row['name'];
-    const category = row['category'] as 'raw_materials' | 'packaging_materials' | 'supplies';
-    const uom = row['uom'] || row['unit']; // Support both UOM and unit columns
-    const unit_cost = parseFloat(row['unit_cost']) || undefined;
-    const current_stock = parseFloat(row['current_stock']) || undefined;
-    const minimum_threshold = parseFloat(row['minimum_threshold']) || undefined;
-    const supplier_name = row['supplier_name'] || undefined;
-    const sku = row['sku'] || undefined;
-    const storage_location = row['storage_location'] || undefined;
+    console.log(`Extracted data for line ${i}:`, { name, category, uom });
 
-    if (!name || !category || !uom) continue;
+    // Validate required fields
+    if (!name || !category || !uom) {
+      console.log(`Skipping line ${i}: missing required fields (name: ${name}, category: ${category}, uom: ${uom})`);
+      continue;
+    }
 
-    // Validate category values
-    const validCategories = ['raw_materials', 'packaging_materials', 'supplies'];
-    if (!validCategories.includes(category)) continue;
+    // Validate category
+    if (!validCategories.includes(category as any)) {
+      console.log(`Skipping line ${i}: invalid category "${category}"`);
+      continue;
+    }
 
-    ingredients.push({
-      name,
-      category,
-      uom,
+    const ingredient: RawIngredientUpload = {
+      name: name.trim(),
+      category: category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      uom: uom.trim(),
       unit_cost,
       current_stock,
       minimum_threshold,
-      supplier_name,
-      sku,
-      storage_location
-    });
+      supplier_name: supplier_name?.trim(),
+      sku: sku?.trim(),
+      storage_location: storage_location?.trim()
+    };
+
+    console.log(`Adding ingredient:`, ingredient);
+    ingredients.push(ingredient);
   }
 
+  console.log(`Parsed ${ingredients.length} valid ingredients`);
   return ingredients;
 };
