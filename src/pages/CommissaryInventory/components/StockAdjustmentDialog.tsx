@@ -133,7 +133,7 @@ export function StockAdjustmentDialog({
             <div className="flex justify-between items-center">
               <span className="font-medium">Current Stock:</span>
               <Badge variant="outline" className="text-lg">
-                {item.current_stock} {item.unit}
+                {item.current_stock} {item.uom}
               </Badge>
             </div>
           </div>
@@ -176,7 +176,7 @@ export function StockAdjustmentDialog({
                   required
                 />
                 <div className="flex items-center px-3 bg-muted rounded-md">
-                  <span className="text-sm text-muted-foreground">{item.unit}</span>
+                  <span className="text-sm text-muted-foreground">{item.uom}</span>
                 </div>
               </div>
               
@@ -196,13 +196,13 @@ export function StockAdjustmentDialog({
                   variant="outline" 
                   className={`${newStock <= item.minimum_threshold ? 'border-red-500 text-red-700' : 'border-blue-500 text-blue-700'}`}
                 >
-                  {newStock} {item.unit}
+                  {newStock} {item.uom}
                 </Badge>
               </div>
               {newStock <= item.minimum_threshold && (
                 <div className="flex items-center gap-2 text-red-600 text-xs mt-1">
                   <AlertTriangle className="h-3 w-3" />
-                  Below minimum threshold ({item.minimum_threshold} {item.unit})
+                  Below minimum threshold ({item.minimum_threshold} {item.uom})
                 </div>
               )}
             </div>

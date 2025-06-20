@@ -3,13 +3,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
 import { toast } from "sonner";
 
-export const fetchCommissaryInventory = async (): Promise<CommissaryInventoryItem[]> => {
+export const fetchCommissaryInventory = async (filters?: any): Promise<CommissaryInventoryItem[]> => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('commissary_inventory')
       .select('*')
       .eq('is_active', true)
       .order('name');
+
+    // Apply filters if provided
+    if (filters?.category && filters.category !== 'all') {
+      query = query.eq('category', filters.category);
+    }
+    if (filters?.search) {
+      query = query.ilike('name', `%${filters.search}%`);
+    }
+    if (filters?.supplier) {
+      query = query.eq('supplier_id', filters.supplier);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     
@@ -72,4 +85,73 @@ export const updateCommissaryInventoryItem = async (
     toast.error('Failed to update commissary item');
     return false;
   }
+};
+
+export const deleteCommissaryInventoryItem = async (id: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('commissary_inventory')
+      .update({ is_active: false })
+      .eq('id', id);
+
+    if (error) throw error;
+    toast.success('Commissary item deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error deleting commissary item:', error);
+    toast.error('Failed to delete commissary item');
+    return false;
+  }
+};
+
+export const adjustCommissaryInventoryStock = async (
+  id: string,
+  newStock: number,
+  reason: string,
+  userId: string
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('commissary_inventory')
+      .update({ 
+        current_stock: newStock,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+    toast.success('Stock adjusted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error adjusting stock:', error);
+    toast.error('Failed to adjust stock');
+    return false;
+  }
+};
+
+export const getCommissaryStockLevel = (item: CommissaryInventoryItem): 'good' | 'low' | 'out' => {
+  if (item.current_stock <= 0) return 'out';
+  if (item.current_stock <= item.minimum_threshold) return 'low';
+  return 'good';
+};
+
+export const getCommissaryStockLevelColor = (level: 'good' | 'low' | 'out'): string => {
+  switch (level) {
+    case 'good': return 'text-green-600';
+    case 'low': return 'text-yellow-600';
+    case 'out': return 'text-red-600';
+    default: return 'text-gray-600';
+  }
+};
+
+export const removeDuplicateCommissaryItems = (items: CommissaryInventoryItem[]): CommissaryInventoryItem[] => {
+  const seen = new Set();
+  return items.filter(item => {
+    const key = `${item.name}-${item.category}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 };

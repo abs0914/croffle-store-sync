@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,7 @@ export function DeleteConfirmationDialog({
                   <p className="font-medium mb-1">Warning:</p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>This action cannot be undone</li>
-                    <li>Current stock: {item.current_stock} {item.unit}</li>
+                    <li>Current stock: {item.current_stock} {item.uom}</li>
                     <li>Any conversion history will be preserved</li>
                     <li>This item will no longer be available for new conversions</li>
                   </ul>

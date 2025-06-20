@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -259,7 +258,7 @@ export default function InventoryConversion() {
                       {conversion.ingredients && conversion.ingredients.length > 0 && (
                         <div className="text-xs text-muted-foreground">
                           Used: {conversion.ingredients.map(ing => 
-                            `${ing.quantity_used} ${ing.commissary_item?.unit || ''} ${ing.commissary_item?.name || ''}`
+                            `${ing.quantity_used} ${ing.commissary_item?.uom || ''} ${ing.commissary_item?.name || ''}`
                           ).join(', ')}
                         </div>
                       )}

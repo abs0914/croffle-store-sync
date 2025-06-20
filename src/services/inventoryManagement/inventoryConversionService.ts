@@ -1,35 +1,35 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { 
   CommissaryInventoryItem, 
-  InventoryStock,
-  MultiIngredientConversionForm,
+  InventoryStock, 
   ConversionRecipe,
-  ConversionRecipeForm,
-  ConversionRecipeIngredientForm 
+  InventoryConversion,
+  MultiIngredientConversionForm
 } from "@/types/inventoryManagement";
-import type { InventoryConversion } from "@/types/inventoryManagement";
-import { toast } from "sonner";
 
 export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInventoryItem[]> => {
   try {
     const { data, error } = await supabase
       .from('commissary_inventory')
-      .select('*')
+      .select(`
+        *,
+        supplier:suppliers(name)
+      `)
       .eq('is_active', true)
       .gt('current_stock', 0)
       .order('name');
 
     if (error) throw error;
-
+    
     return (data || []).map(item => ({
       ...item,
-      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
-      unit: item.unit as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-      supplier: null
+      uom: item.unit || item.uom, // Map unit to uom for consistency
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies'
     }));
   } catch (error) {
-    console.error('Error fetching commissary items:', error);
+    console.error('Error fetching commissary items for conversion:', error);
     toast.error('Failed to fetch commissary items');
     return [];
   }
