@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,9 +50,15 @@ export function CommissaryInventoryTab() {
         let supplierData: { name: string } | undefined = undefined;
         
         if (item.supplier) {
+          // Check if supplier is an array with at least one item
           if (Array.isArray(item.supplier) && item.supplier.length > 0) {
-            supplierData = { name: item.supplier[0].name };
-          } else if (!Array.isArray(item.supplier) && typeof item.supplier === 'object' && item.supplier.name) {
+            const supplierItem = item.supplier[0];
+            if (supplierItem && typeof supplierItem === 'object' && 'name' in supplierItem) {
+              supplierData = { name: supplierItem.name };
+            }
+          } 
+          // Check if supplier is a single object with name property
+          else if (typeof item.supplier === 'object' && item.supplier !== null && 'name' in item.supplier) {
             supplierData = { name: item.supplier.name };
           }
         }
