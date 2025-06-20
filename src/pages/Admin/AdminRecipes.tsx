@@ -18,7 +18,7 @@ import { Package } from 'lucide-react';
 export default function AdminRecipes() {
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeTab, setActiveTab] = useState('menu-structure');
+  const [activeTab, setActiveTab] = useState('template-manager');
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
   const [formCategory, setFormCategory] = useState<string>('');
   const [formSubcategory, setFormSubcategory] = useState<string>('');
@@ -160,18 +160,23 @@ export default function AdminRecipes() {
       <div>
         <h1 className="text-3xl font-bold">Recipe Administration</h1>
         <p className="text-muted-foreground">
-          Manage recipe templates, deployed recipes, and commissary integration across all stores
+          Advanced recipe management with templates, deployment, and analytics
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="template-manager">Template Manager</TabsTrigger>
           <TabsTrigger value="menu-structure">Menu Structure</TabsTrigger>
           <TabsTrigger value="recipe-templates">Recipe Templates</TabsTrigger>
           <TabsTrigger value="deployed-recipes">Deployed Recipes</TabsTrigger>
           <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
           <TabsTrigger value="commissary-integration">Commissary Integration</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="template-manager">
+          <RecipeTemplateManager />
+        </TabsContent>
 
         <TabsContent value="menu-structure" className="space-y-4">
           <div className="flex justify-between items-center">
