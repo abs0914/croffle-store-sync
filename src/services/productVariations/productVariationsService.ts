@@ -13,7 +13,12 @@ export const fetchProductVariations = async (productCatalogId: string): Promise<
       .order('display_order');
 
     if (error) throw error;
-    return data || [];
+    
+    // Type cast the data to ensure proper typing
+    return (data || []).map(item => ({
+      ...item,
+      variation_type: item.variation_type as 'size' | 'temperature'
+    }));
   } catch (error) {
     console.error('Error fetching product variations:', error);
     toast.error('Failed to fetch product variations');
@@ -30,7 +35,12 @@ export const fetchAddOnItems = async (): Promise<AddOnItem[]> => {
       .order('category, display_order');
 
     if (error) throw error;
-    return data || [];
+    
+    // Type cast the data to ensure proper typing
+    return (data || []).map(item => ({
+      ...item,
+      category: item.category as 'classic_topping' | 'classic_sauce' | 'premium_topping' | 'premium_sauce' | 'biscuits'
+    }));
   } catch (error) {
     console.error('Error fetching add-on items:', error);
     toast.error('Failed to fetch add-on items');
@@ -67,7 +77,15 @@ export const fetchEnhancedProductCatalog = async (storeId: string): Promise<Enha
       .order('display_order');
 
     if (error) throw error;
-    return data || [];
+    
+    // Type cast the data to ensure proper typing for variations
+    return (data || []).map(item => ({
+      ...item,
+      variations: (item.variations || []).map((variation: any) => ({
+        ...variation,
+        variation_type: variation.variation_type as 'size' | 'temperature'
+      }))
+    }));
   } catch (error) {
     console.error('Error fetching enhanced product catalog:', error);
     toast.error('Failed to fetch product catalog');
