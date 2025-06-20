@@ -21,6 +21,15 @@ export interface MenuPricing {
   add_on_categories: string[];
 }
 
+export interface RecipeTemplateIngredient {
+  id: string;
+  ingredient_name: string;
+  quantity: number;
+  unit: string;
+  cost_per_unit?: number;
+  notes?: string;
+}
+
 export interface EnhancedRecipeTemplate {
   id: string;
   name: string;

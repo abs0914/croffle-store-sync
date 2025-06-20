@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Label } from '@/components/ui/label';
 import { AlertTriangle, TrendingDown, Package, Clock, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
