@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { PurchaseOrder, PurchaseOrderItem } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -35,7 +36,7 @@ export const createPurchaseOrder = async (
       .insert({
         order_number: purchaseOrder.order_number,
         store_id: purchaseOrder.store_id,
-        supplier_id: null, // Commissary orders don't need a specific supplier
+        supplier_id: purchaseOrder.supplier_id,
         created_by: purchaseOrder.created_by,
         approved_by: purchaseOrder.approved_by,
         status: purchaseOrder.status,
@@ -132,12 +133,12 @@ export const removePurchaseOrderItem = async (id: string): Promise<boolean> => {
 
 export const generatePurchaseOrderNumber = async (): Promise<string> => {
   try {
-    // Generate a commissary order number with timestamp
+    // Generate a standard purchase order number with timestamp
     const timestamp = Date.now();
     const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `CO${timestamp}${randomSuffix}`; // CO = Commissary Order
+    return `PO${timestamp}${randomSuffix}`;
   } catch (error) {
     console.error('Error generating purchase order number:', error);
-    return `CO${Date.now()}`;
+    return `PO${Date.now()}`;
   }
 };
