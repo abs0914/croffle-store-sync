@@ -66,7 +66,7 @@ export const StoreNameDisplay: React.FC<StoreNameDisplayProps> = ({
     
     case "compact":
       return (
-        <div className={cn("flex items-center gap-1.5 min-w-0", className)}>
+        <div className={cn("flex flex-col items-center gap-1 min-w-0 w-full", className)}>
           {showLogo && currentStore.logo_url && (
             <img 
               src={currentStore.logo_url} 
@@ -74,7 +74,7 @@ export const StoreNameDisplay: React.FC<StoreNameDisplayProps> = ({
               className="h-4 w-4 object-cover rounded-sm flex-shrink-0" 
             />
           )}
-          <span className={cn("truncate", sizeClasses[size])}>
+          <span className={cn("text-center leading-tight break-words hyphens-auto max-w-full", sizeClasses[size])}>
             {currentStore.name}
           </span>
         </div>

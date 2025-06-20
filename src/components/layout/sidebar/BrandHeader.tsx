@@ -19,11 +19,13 @@ export const BrandHeader: React.FC<BrandHeaderProps> = ({ isMobile = false }) =>
       <Logo />
       
       {showStoreName ? (
-        <StoreNameDisplay 
-          variant={config.sidebarMode === "full" ? "title" : "compact"}
-          size={isMobile ? "md" : "lg"}
-          className={`mt-${isMobile ? '1' : '2'}`}
-        />
+        <div className="mt-2 w-full max-w-full">
+          <StoreNameDisplay 
+            variant="compact"
+            size="sm"
+            className="text-center justify-center"
+          />
+        </div>
       ) : (
         <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold text-croffle-primary mt-${isMobile ? '1' : '2'}`}>
           PVOSyncPOS
