@@ -148,7 +148,7 @@ export interface CommissaryInventoryItem {
   category: 'raw_materials' | 'packaging_materials' | 'supplies';
   current_stock: number;
   minimum_threshold: number;
-  unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
+  uom: string; // Changed from unit to uom to match commissary.ts
   unit_cost?: number;
   supplier_id?: string;
   sku?: string;

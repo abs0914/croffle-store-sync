@@ -7,7 +7,7 @@ export interface RecipeUploadData {
   category: string;
   ingredients: {
     name: string;
-    unit: string;
+    uom: string; // Changed from unit to uom
     quantity: number;
     cost?: number;
   }[];
@@ -63,7 +63,7 @@ export const bulkUploadRecipes = async (recipes: RecipeUploadData[]): Promise<bo
           recipe_template_id: insertedTemplate.id,
           commissary_item_name: ingredient.name,
           commissary_item_id: commissaryItemId,
-          unit: ingredient.unit,
+          unit: ingredient.uom, // Use uom as unit for database compatibility
           quantity: ingredient.quantity,
           cost_per_unit: ingredient.cost || 0
         });
@@ -71,7 +71,7 @@ export const bulkUploadRecipes = async (recipes: RecipeUploadData[]): Promise<bo
     }
 
     if (ingredientInserts.length > 0) {
-      const { error: ingredientError } = await supabase
+      const { error: ingredientError } = await supabase  
         .from('recipe_template_ingredients')
         .insert(ingredientInserts);
 

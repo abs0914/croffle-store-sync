@@ -61,7 +61,7 @@ export const processRecipeUploadAsTemplate = async (
           commissary_item_id: commissaryItem.id,
           commissary_item_name: ingredient.commissary_item_name,
           quantity: ingredient.quantity,
-          unit: ingredient.unit,
+          unit: ingredient.uom, // Use uom instead of unit
           cost_per_unit: ingredient.cost_per_unit || commissaryItem.unit_cost || 0
         });
       }

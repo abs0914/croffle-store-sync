@@ -36,7 +36,7 @@ export const processRecipeIngredients = async (
     }
 
     // Ensure unit is mapped to valid enum value
-    const mappedUnit = unitMapping[ingredient.unit.toLowerCase()] || ingredient.unit;
+    const mappedUnit = unitMapping[ingredient.uom.toLowerCase()] || ingredient.uom; // Use uom instead of unit
     const finalUnit = validUnits.includes(mappedUnit) ? mappedUnit : 'pieces';
     
     ingredientInserts.push({
@@ -83,7 +83,7 @@ const findOrCreateStoreInventoryItem = async (
   }
 
   // Create new store inventory item
-  const mappedUnit = unitMapping[ingredient.unit.toLowerCase()] || ingredient.unit;
+  const mappedUnit = unitMapping[ingredient.uom.toLowerCase()] || ingredient.uom; // Use uom instead of unit
   
   console.log('Creating inventory stock item with store_id:', storeId);
   
