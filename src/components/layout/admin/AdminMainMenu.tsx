@@ -9,7 +9,6 @@ import {
   BarChart3, 
   UserCheck,
   Truck,
-  ShoppingCart,
   Warehouse,
   Factory
 } from 'lucide-react';
@@ -45,11 +44,6 @@ const menuItems = [
     name: 'Customers',
     href: '/admin/customers',
     icon: Users,
-  },
-  {
-    name: 'Orders',
-    href: '/admin/orders',
-    icon: ShoppingCart,
   },
   {
     name: 'Order Management',
