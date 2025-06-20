@@ -58,4 +58,6 @@ export interface CartItem {
   quantity: number;
   finalPrice: number;
   id: string;
+  productId?: string; // For compatibility with inventory validation
+  variationId?: string; // For compatibility with inventory validation
 }

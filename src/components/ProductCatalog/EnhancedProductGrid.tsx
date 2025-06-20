@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Search, Plus, Coffee, Package } from 'lucide-react';
+import { Search, Plus, Coffee, Package, AlertTriangle } from 'lucide-react';
 import { ProductVariationSelector } from './ProductVariationSelector';
 import { EnhancedProductCatalogItem, ProductVariation, AddOnItem, CartItem } from '@/types/productVariations';
 import { 
@@ -15,6 +15,7 @@ import {
   findComboDiscount,
   fetchComboRules
 } from '@/services/productVariations/productVariationsService';
+import { realTimeAvailabilityService } from '@/services/inventory/realTimeAvailabilityService';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
@@ -25,19 +26,21 @@ interface EnhancedProductGridProps {
 
 export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
   storeId,
-  onCartUpdate
-}) => {
-  const [products, setProducts] = useState<EnhancedProductCatalogItem[]>([]);
-  const [addOns, setAddOns] = useState<AddOnItem[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<EnhancedProductCatalogItem | null>(null);
-  const [productVariations, setProductVariations] = useState<ProductVariation[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  on
+}): Record<string, RealTimeAvailabilityCheck> = {};
 
   useEffect(() => {
     loadData();
   }, [storeId]);
+
+  useEffect(() => {
+    // Check availability for all products every 30 seconds
+    const interval = setInterval(() => {
+      checkProductsAvailability();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [products, storeId]);
 
   const loadData = async () => {
     setLoading(true);
@@ -49,12 +52,35 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
       
       setProducts(productsData);
       setAddOns(addOnsData);
+      
+      // Initial availability check
+      await checkProductsAvailability(productsData);
     } catch (error) {
       console.error('Error loading product data:', error);
       toast.error('Failed to load product data');
     } finally {
       setLoading(false);
     }
+  };
+
+  const checkProductsAvailability = async (productList = products) => {
+    const availabilityResults: Record<string, any> = {};
+    
+    for (const product of productList) {
+      try {
+        const availability = await realTimeAvailabilityService.checkProductAvailability(
+          product.product_name,
+          storeId,
+          1,
+          product.price
+        );
+        availabilityResults[product.id] = availability;
+      } catch (error) {
+        console.error(`Error checking availability for ${product.product_name}:`, error);
+      }
+    }
+    
+    setProductAvailability(availabilityResults);
   };
 
   const handleProductSelect = async (product: EnhancedProductCatalogItem) => {
@@ -68,12 +94,25 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
     }
   };
 
-  const handleAddToCart = (
+  const handleAddToCart = async (
     product: EnhancedProductCatalogItem,
     selectedVariations: ProductVariation[],
     selectedAddOns: AddOnItem[],
     finalPrice: number
   ) => {
+    // Check real-time availability before adding to cart
+    const availability = await realTimeAvailabilityService.checkProductAvailability(
+      product.product_name,
+      storeId,
+      1,
+      finalPrice
+    );
+
+    if (!availability.isAvailable) {
+      toast.error(`${product.product_name} is currently out of stock`);
+      return;
+    }
+
     const cartItem: CartItem = {
       id: `${product.id}-${Date.now()}`,
       product,
@@ -92,6 +131,9 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
 
     toast.success(`${product.product_name} added to cart`);
     setSelectedProduct(null);
+    
+    // Refresh availability after adding to cart
+    await checkProductsAvailability();
   };
 
   const filteredProducts = products.filter(product =>
@@ -110,6 +152,69 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
     p.product_name.toLowerCase().includes('americano') ||
     p.product_name.toLowerCase().includes('mocha')
   );
+
+  const renderProductCard = (product: EnhancedProductCatalogItem) => {
+    const availability = productAvailability[product.id];
+    const isAvailable = availability?.isAvailable ?? true;
+    const maxQuantity = availability?.maxQuantity ?? 0;
+
+    return (
+      <Card 
+        key={product.id} 
+        className={`hover:shadow-md transition-shadow ${!isAvailable ? 'opacity-60' : ''}`}
+      >
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <CardTitle className="text-base">{product.product_name}</CardTitle>
+            {!isAvailable && (
+              <Badge variant="destructive" className="text-xs">
+                Out of Stock
+              </Badge>
+            )}
+          </div>
+          {product.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {product.description}
+            </p>
+          )}
+        </CardHeader>
+        
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-lg font-semibold text-green-600">
+              From {formatCurrency(product.price - 60)}
+            </span>
+            <div className="flex items-center gap-2">
+              {availability && (
+                <Badge variant="outline" className="text-xs">
+                  Max: {maxQuantity}
+                </Badge>
+              )}
+              <Badge variant="outline">
+                {product.variations?.filter(v => v.variation_type === 'size').length || 0} sizes
+              </Badge>
+            </div>
+          </div>
+          
+          {!isAvailable && (
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Insufficient ingredients</span>
+            </div>
+          )}
+          
+          <Button 
+            className="w-full" 
+            onClick={() => handleProductSelect(product)}
+            disabled={!isAvailable}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {isAvailable ? 'Customize & Add' : 'Out of Stock'}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
@@ -142,37 +247,7 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {croffleProducts.map((product) => (
-              <Card key={product.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{product.product_name}</CardTitle>
-                  {product.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {product.description}
-                    </p>
-                  )}
-                </CardHeader>
-                
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold text-green-600">
-                      From {formatCurrency(product.price - 60)}
-                    </span>
-                    <Badge variant="outline">
-                      {product.variations?.filter(v => v.variation_type === 'size').length || 0} sizes
-                    </Badge>
-                  </div>
-                  
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handleProductSelect(product)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Customize & Add
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {croffleProducts.map(renderProductCard)}
           </div>
         </div>
       )}
@@ -187,35 +262,7 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {drinkProducts.map((product) => (
-              <Card key={product.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{product.product_name}</CardTitle>
-                  {product.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {product.description}
-                    </p>
-                  )}
-                </CardHeader>
-                
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold text-green-600">
-                      From {formatCurrency(product.price)}
-                    </span>
-                    <Badge variant="outline">Hot/Iced</Badge>
-                  </div>
-                  
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handleProductSelect(product)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Customize & Add
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+            {drinkProducts.map(renderProductCard)}
           </div>
         </div>
       )}

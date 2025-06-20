@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { deductIngredientsForProduct } from "./ingredientDeductionService";
 import { toast } from "sonner";
