@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminRecipesHeader } from './components/AdminRecipesHeader';
@@ -13,6 +12,8 @@ import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/Enhanc
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Package } from 'lucide-react';
 
 export default function AdminRecipes() {
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
@@ -41,6 +42,25 @@ export default function AdminRecipes() {
     setFormCategory(category);
     setFormSubcategory(subcategory || '');
     setIsRecipeFormOpen(true);
+  };
+
+  const handleBulkCreateMenuTemplates = async () => {
+    try {
+      const { CROFFLE_RECIPES, DRINK_RECIPES, COMBO_RECIPES } = await import('@/services/recipeManagement/menuRecipeService');
+      const { createBulkRecipeTemplates } = await import('@/services/recipeManagement/menuRecipeService');
+      
+      // Create all menu templates
+      const allTemplates = [...CROFFLE_RECIPES, ...DRINK_RECIPES, ...COMBO_RECIPES];
+      await createBulkRecipeTemplates(allTemplates);
+      
+      // Refresh the recipes data
+      await refreshRecipes();
+      
+      toast.success('Menu templates created successfully!');
+    } catch (error) {
+      console.error('Error creating menu templates:', error);
+      toast.error('Failed to create menu templates');
+    }
   };
 
   const handleSelectRecipe = (recipeId: string) => {
@@ -153,7 +173,20 @@ export default function AdminRecipes() {
           <TabsTrigger value="commissary-integration">Commissary Integration</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="menu-structure">
+        <TabsContent value="menu-structure" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Complete Menu Structure</h3>
+              <p className="text-sm text-muted-foreground">
+                Create templates for all menu items with exact pricing
+              </p>
+            </div>
+            <Button onClick={handleBulkCreateMenuTemplates} className="bg-green-600 hover:bg-green-700">
+              <Package className="h-4 w-4 mr-2" />
+              Create All Menu Templates
+            </Button>
+          </div>
+          
           <MenuStructureTab onCreateRecipeTemplate={handleCreateRecipeTemplate} />
         </TabsContent>
 

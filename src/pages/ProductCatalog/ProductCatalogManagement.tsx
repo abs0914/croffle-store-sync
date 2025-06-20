@@ -4,19 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
   Filter, 
-  Eye,
-  EyeOff,
   Package,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchProductCatalog, toggleProductAvailability } from '@/services/productCatalog/productCatalogService';
 import { ProductCatalog } from '@/services/productCatalog/types';
+import { EnhancedProductCatalogManager } from '@/components/ProductCatalog/EnhancedProductCatalogManager';
 import { toast } from 'sonner';
 
 export const ProductCatalogManagement: React.FC = () => {
@@ -24,6 +24,7 @@ export const ProductCatalogManagement: React.FC = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
+  const [activeTab, setActiveTab] = useState('enhanced');
 
   // Get user's first store for now (can be enhanced for multi-store)
   const storeId = user?.storeIds?.[0] || '';
@@ -59,100 +60,116 @@ export const ProductCatalogManagement: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Product Catalog</h1>
-          <p className="text-muted-foreground">View your store's available products</p>
+          <h1 className="text-2xl font-bold">Product Catalog Management</h1>
+          <p className="text-muted-foreground">Manage your store's menu with variations and pricing</p>
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex gap-4 items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button
-              variant={showAvailableOnly ? "default" : "outline"}
-              onClick={() => setShowAvailableOnly(!showAvailableOnly)}
-              className="flex items-center gap-2"
-            >
-              <Filter className="h-4 w-4" />
-              Available Only
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="enhanced">Enhanced Menu Manager</TabsTrigger>
+          <TabsTrigger value="catalog">Current Catalog</TabsTrigger>
+        </TabsList>
 
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filteredProducts.map((product) => (
-          <Card key={product.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-base line-clamp-2">
-                    {product.product_name}
-                  </CardTitle>
+        <TabsContent value="enhanced">
+          <EnhancedProductCatalogManager />
+        </TabsContent>
+
+        <TabsContent value="catalog" className="space-y-4">
+          {/* Search and Filters */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex gap-4 items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              {/* Product Image Placeholder */}
-              <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-                <ImageIcon className="h-12 w-12 text-gray-400" />
-              </div>
-
-              {/* Product Details */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-semibold text-green-600">
-                    ₱{product.price.toFixed(2)}
-                  </span>
-                  <Badge 
-                    variant={product.is_available ? "default" : "secondary"}
-                  >
-                    {product.is_available ? 'Available' : 'Unavailable'}
-                  </Badge>
-                </div>
-
-                {product.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {product.description}
-                  </p>
-                )}
-
-                {product.ingredients && product.ingredients.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">
-                      {product.ingredients.length} ingredient{product.ingredients.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                )}
+                <Button
+                  variant={showAvailableOnly ? "default" : "outline"}
+                  onClick={() => setShowAvailableOnly(!showAvailableOnly)}
+                  className="flex items-center gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  Available Only
+                </Button>
+                <Button onClick={handleRefetch} variant="outline">
+                  Refresh
+                </Button>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
 
-      {filteredProducts.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No products found</h3>
-            <p className="text-muted-foreground mb-4">
-              {searchTerm ? 'Try adjusting your search terms.' : 'Products will appear here when deployed by admin.'}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+          {/* Products Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredProducts.map((product) => (
+              <Card key={product.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-base line-clamp-2">
+                        {product.product_name}
+                      </CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {/* Product Image Placeholder */}
+                  <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                    <ImageIcon className="h-12 w-12 text-gray-400" />
+                  </div>
+
+                  {/* Product Details */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-semibold text-green-600">
+                        ₱{product.price.toFixed(2)}
+                      </span>
+                      <Badge 
+                        variant={product.is_available ? "default" : "secondary"}
+                      >
+                        {product.is_available ? 'Available' : 'Unavailable'}
+                      </Badge>
+                    </div>
+
+                    {product.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {product.description}
+                      </p>
+                    )}
+
+                    {product.ingredients && product.ingredients.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {product.ingredients.length} ingredient{product.ingredients.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {filteredProducts.length === 0 && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No products found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchTerm ? 'Try adjusting your search terms.' : 'Products will appear here when deployed by admin.'}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
