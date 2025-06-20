@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminRecipesHeader } from './components/AdminRecipesHeader';
@@ -9,6 +10,7 @@ import { AdminRecipeBulkUploadTab } from './components/AdminRecipeBulkUploadTab'
 import { AdminCommissaryIntegrationTab } from './components/AdminCommissaryIntegrationTab';
 import { MenuStructureTab } from '@/components/Admin/components/MenuStructureTab';
 import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/EnhancedRecipeTemplateForm';
+import { RecipeTemplateManager } from '@/components/Admin/components/RecipeTemplateManager';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
