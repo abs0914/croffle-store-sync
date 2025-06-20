@@ -44,7 +44,16 @@ export function CommissaryInventoryTab() {
         .order('name');
 
       if (error) throw error;
-      setItems(data || []);
+      
+      // Transform the data to match our interface
+      const transformedData = (data || []).map(item => ({
+        ...item,
+        supplier: Array.isArray(item.supplier) && item.supplier.length > 0 
+          ? item.supplier[0] 
+          : item.supplier || undefined
+      }));
+      
+      setItems(transformedData);
     } catch (error) {
       console.error('Error loading commissary items:', error);
     } finally {
