@@ -46,12 +46,30 @@ export function CommissaryInventoryTab() {
       if (error) throw error;
       
       // Transform the data to match our interface
-      const transformedData = (data || []).map(item => ({
-        ...item,
-        supplier: Array.isArray(item.supplier) && item.supplier.length > 0 
-          ? item.supplier[0] 
-          : item.supplier || undefined
-      }));
+      const transformedData: CommissaryItem[] = (data || []).map(item => {
+        // Handle supplier field - it comes as an array from the query
+        let supplierData: { name: string } | undefined = undefined;
+        
+        if (item.supplier) {
+          if (Array.isArray(item.supplier) && item.supplier.length > 0) {
+            supplierData = { name: item.supplier[0].name };
+          } else if (!Array.isArray(item.supplier) && typeof item.supplier === 'object' && item.supplier.name) {
+            supplierData = { name: item.supplier.name };
+          }
+        }
+        
+        return {
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          unit: item.unit,
+          current_stock: item.current_stock,
+          minimum_threshold: item.minimum_threshold,
+          unit_cost: item.unit_cost || 0,
+          last_purchase_date: item.last_purchase_date,
+          supplier: supplierData
+        };
+      });
       
       setItems(transformedData);
     } catch (error) {
