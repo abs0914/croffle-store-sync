@@ -141,14 +141,15 @@ export interface InventoryFilters {
   search?: string;
 }
 
-// Commissary Inventory Types (Admin-level raw materials)
+// Updated Commissary Inventory Types to match commissary.ts
 export interface CommissaryInventoryItem {
   id: string;
   name: string;
   category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  item_type: 'raw_material' | 'supply' | 'orderable_item';
   current_stock: number;
   minimum_threshold: number;
-  uom: string; // Changed from unit to uom to match commissary.ts
+  uom: string;
   unit_cost?: number;
   supplier_id?: string;
   sku?: string;
@@ -252,4 +253,5 @@ export interface CommissaryInventoryFilters {
   stockLevel?: StockLevel | 'all';
   supplier?: string;
   search?: string;
+  item_type?: 'raw_material' | 'supply' | 'orderable_item' | 'all';
 }

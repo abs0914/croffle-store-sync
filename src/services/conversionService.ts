@@ -80,14 +80,11 @@ export const executeConversion = async (conversionRequest: ConversionRequest): P
 
     // Update input items stock and create conversion ingredients records
     for (const inputItem of conversionRequest.input_items) {
-      // Update stock
+      // Update stock using simple arithmetic
       const { error: updateError } = await supabase
         .from('commissary_inventory')
         .update({
-          current_stock: supabase.rpc('subtract_stock', {
-            current_stock: supabase.raw('current_stock'),
-            quantity: inputItem.quantity
-          })
+          current_stock: supabase.sql`current_stock - ${inputItem.quantity}`
         })
         .eq('id', inputItem.commissary_item_id);
 
@@ -158,7 +155,8 @@ export const fetchAvailableRawMaterials = async (): Promise<CommissaryInventoryI
     return (data || []).map(item => ({
       ...item,
       uom: item.unit || 'units',
-      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies'
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
     }));
   } catch (error) {
     console.error('Error fetching raw materials:', error);

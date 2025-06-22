@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CommissaryInventoryItem } from "@/types/inventoryManagement";
+import { CommissaryInventoryItem } from "@/types/commissary";
 import { createCommissaryInventoryItem } from "@/services/inventoryManagement/commissaryInventoryService";
 import { fetchSuppliers } from "@/services/inventoryManagement/supplierService";
 import { UOMSelect } from "@/components/shared/UOMSelect";
@@ -25,9 +25,10 @@ export function AddCommissaryItemDialog({
   const [formData, setFormData] = useState({
     name: '',
     category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies',
+    item_type: 'raw_material' as 'raw_material' | 'supply' | 'orderable_item',
     current_stock: 0,
     minimum_threshold: 0,
-    uom: '', // Changed from unit to uom
+    uom: '',
     unit_cost: 0,
     supplier_id: '',
     sku: '',
@@ -41,6 +42,15 @@ export function AddCommissaryItemDialog({
       loadSuppliers();
     }
   }, [open]);
+
+  // Auto-set item_type based on category
+  useEffect(() => {
+    if (formData.category === 'raw_materials') {
+      setFormData(prev => ({ ...prev, item_type: 'raw_material' }));
+    } else {
+      setFormData(prev => ({ ...prev, item_type: 'supply' }));
+    }
+  }, [formData.category]);
 
   const loadSuppliers = async () => {
     const data = await fetchSuppliers();
@@ -69,9 +79,10 @@ export function AddCommissaryItemDialog({
       setFormData({
         name: '',
         category: 'raw_materials',
+        item_type: 'raw_material',
         current_stock: 0,
         minimum_threshold: 0,
-        uom: '', // Changed from unit to uom
+        uom: '',
         unit_cost: 0,
         supplier_id: '',
         sku: '',

@@ -2,12 +2,12 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { InventoryPrepTab } from "./ProductionManagement/components/InventoryPrepTab";
 import { InventoryStockingTab } from "./ProductionManagement/components/InventoryStockingTab";
 import { SuppliersTab } from "./ProductionManagement/components/SuppliersTab";
 import { BulkUploadTab } from "./ProductionManagement/components/BulkUploadTab";
+import { ConversionProcessTab } from "./ProductionManagement/components/ConversionProcessTab";
 import { useStore } from "@/contexts/StoreContext";
-import { ChefHat, ShoppingCart, Building2, Upload } from "lucide-react";
+import {  ShoppingCart, Building2, Upload, Package } from "lucide-react";
 
 export default function ProductionManagement() {
   const { currentStore } = useStore();
@@ -16,7 +16,7 @@ export default function ProductionManagement() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3">
-        <ChefHat className="h-8 w-8 text-croffle-accent" />
+        <Package className="h-8 w-8 text-croffle-accent" />
         <div>
           <h1 className="text-3xl font-bold">Production Management</h1>
           <p className="text-muted-foreground">
@@ -35,9 +35,9 @@ export default function ProductionManagement() {
             <Building2 className="h-4 w-4" />
             Suppliers
           </TabsTrigger>
-          <TabsTrigger value="prep" className="flex items-center gap-2">
-            <ChefHat className="h-4 w-4" />
-            Inventory Prep
+          <TabsTrigger value="conversion" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Conversion Process
           </TabsTrigger>
           <TabsTrigger value="bulk-upload" className="flex items-center gap-2">
             <Upload className="h-4 w-4" />
@@ -75,17 +75,17 @@ export default function ProductionManagement() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="prep">
+        <TabsContent value="conversion">
           <Card>
             <CardHeader>
-              <CardTitle>Inventory Preparation</CardTitle>
+              <CardTitle>Conversion Process</CardTitle>
               <CardDescription>
-                Execute bulk preparation and simple inventory conversions for store readiness.
-                Complex recipes are handled through the Product Catalog.
+                Convert raw materials into orderable inventory items for store distribution.
+                Track material usage and create finished goods ready for store ordering.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <InventoryPrepTab />
+              <ConversionProcessTab />
             </CardContent>
           </Card>
         </TabsContent>
