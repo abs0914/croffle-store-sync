@@ -38,6 +38,10 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       return false;
     }
 
+    // Get current user for created_by field
+    const { data: userData } = await supabase.auth.getUser();
+    const currentUserId = userData.user?.id;
+
     // Create conversion recipe templates
     const conversionRecipeInserts = validRecipes.map(recipe => ({
       name: recipe.name,
@@ -47,7 +51,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       yield_quantity: recipe.output_quantity,
       instructions: recipe.instructions,
       is_active: true,
-      created_by: (await supabase.auth.getUser()).data.user?.id
+      created_by: currentUserId
     }));
 
     const { data: insertedRecipes, error: recipeError } = await supabase
