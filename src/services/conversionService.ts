@@ -80,11 +80,25 @@ export const executeConversion = async (conversionRequest: ConversionRequest): P
 
     // Update input items stock and create conversion ingredients records
     for (const inputItem of conversionRequest.input_items) {
-      // Update stock using simple arithmetic
+      // Get current stock first
+      const { data: currentItem, error: fetchError } = await supabase
+        .from('commissary_inventory')
+        .select('current_stock')
+        .eq('id', inputItem.commissary_item_id)
+        .single();
+
+      if (fetchError) {
+        toast.error(`Error fetching current stock: ${fetchError.message}`);
+        return false;
+      }
+
+      const newStock = currentItem.current_stock - inputItem.quantity;
+
+      // Update stock with calculated value
       const { error: updateError } = await supabase
         .from('commissary_inventory')
         .update({
-          current_stock: supabase.sql`current_stock - ${inputItem.quantity}`
+          current_stock: newStock
         })
         .eq('id', inputItem.commissary_item_id);
 

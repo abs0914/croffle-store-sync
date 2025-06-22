@@ -39,6 +39,7 @@ export const fetchCommissaryItemsForConversion = async (): Promise<CommissaryInv
       ...item,
       uom: item.unit || 'units', // Map unit to uom for consistency, with fallback
       category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item', // Proper type casting
       supplier: Array.isArray(item.supplier) && item.supplier.length > 0 
         ? {
             id: '',
