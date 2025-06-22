@@ -1,4 +1,3 @@
-
 export interface RecipeUpload {
   name: string;
   category?: string;
@@ -24,6 +23,18 @@ export interface RawIngredientUpload {
   supplier_name?: string;
   sku?: string;
   storage_location?: string;
+}
+
+export interface ConversionRecipeUpload {
+  name: string;
+  description?: string;
+  input_item_name: string;
+  input_quantity: number;
+  input_unit: string;
+  output_product_name: string;
+  output_quantity: number;
+  output_unit: string;
+  instructions?: string;
 }
 
 // Helper function to parse CSV properly
@@ -103,6 +114,36 @@ const createHeaderMapping = (headers: string[]): Record<string, number> => {
       'supplier_name': ['supplier_name', 'supplier', 'vendor', 'vendor_name'],
       'sku': ['sku', 'code', 'item_code', 'product_code'],
       'storage_location': ['storage_location', 'location', 'storage', 'warehouse']
+    };
+    
+    Object.entries(variations).forEach(([key, aliases]) => {
+      if (aliases.includes(normalized)) {
+        mapping[key] = index;
+      }
+    });
+  });
+  
+  return mapping;
+};
+
+// Create mapping for conversion recipe headers
+const createConversionRecipeHeaderMapping = (headers: string[]): Record<string, number> => {
+  const mapping: Record<string, number> = {};
+  
+  headers.forEach((header, index) => {
+    const normalized = normalizeHeader(header);
+    
+    // Map common variations
+    const variations: Record<string, string[]> = {
+      'name': ['conversion_name', 'recipe_name', 'name'],
+      'description': ['description', 'desc', 'notes'],
+      'input_item_name': ['input_item_name', 'input_item', 'source_item', 'from_item'],
+      'input_quantity': ['input_quantity', 'input_qty', 'source_quantity', 'from_quantity'],
+      'input_unit': ['input_unit', 'input_uom', 'source_unit', 'from_unit'],
+      'output_product_name': ['output_product_name', 'output_item', 'target_item', 'to_item'],
+      'output_quantity': ['output_quantity', 'output_qty', 'target_quantity', 'to_quantity'],
+      'output_unit': ['output_unit', 'output_uom', 'target_unit', 'to_unit'],
+      'instructions': ['conversion_notes', 'instructions', 'process', 'method']
     };
     
     Object.entries(variations).forEach(([key, aliases]) => {
@@ -241,4 +282,79 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
 
   console.log(`Parsed ${ingredients.length} valid ingredients`);
   return ingredients;
+};
+
+export const parseConversionRecipesCSV = (csvText: string): ConversionRecipeUpload[] => {
+  console.log('Starting conversion recipe CSV parsing, input length:', csvText.length);
+  
+  const lines = csvText.trim().split('\n').filter(line => line.trim());
+  console.log('Total lines found:', lines.length);
+  
+  if (lines.length < 2) {
+    console.log('Not enough lines in CSV');
+    return [];
+  }
+
+  const headers = parseCSVLine(lines[0]);
+  console.log('Headers found:', headers);
+  
+  const headerMapping = createConversionRecipeHeaderMapping(headers);
+  console.log('Header mapping:', headerMapping);
+  
+  const recipes: ConversionRecipeUpload[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
+    console.log(`Processing line ${i}:`, values);
+    
+    if (values.length < headers.length) {
+      console.log(`Skipping line ${i}: insufficient columns`);
+      continue;
+    }
+
+    // Extract values using header mapping
+    const name = values[headerMapping['name']] || '';
+    const description = values[headerMapping['description']] || '';
+    const input_item_name = values[headerMapping['input_item_name']] || '';
+    const input_quantity = parseFloat(values[headerMapping['input_quantity']] || '0') || 0;
+    const input_unit = values[headerMapping['input_unit']] || '';
+    const output_product_name = values[headerMapping['output_product_name']] || '';
+    const output_quantity = parseFloat(values[headerMapping['output_quantity']] || '0') || 0;
+    const output_unit = values[headerMapping['output_unit']] || '';
+    const instructions = values[headerMapping['instructions']] || '';
+
+    console.log(`Extracted data for line ${i}:`, { 
+      name, 
+      input_item_name, 
+      input_quantity, 
+      input_unit, 
+      output_product_name, 
+      output_quantity, 
+      output_unit 
+    });
+
+    // Validate required fields
+    if (!name || !input_item_name || !input_unit || !output_product_name || !output_unit || input_quantity <= 0 || output_quantity <= 0) {
+      console.log(`Skipping line ${i}: missing required fields or invalid quantities`);
+      continue;
+    }
+
+    const recipe: ConversionRecipeUpload = {
+      name: name.trim(),
+      description: description.trim() || undefined,
+      input_item_name: input_item_name.trim(),
+      input_quantity,
+      input_unit: input_unit.trim(),
+      output_product_name: output_product_name.trim(),
+      output_quantity,
+      output_unit: output_unit.trim(),
+      instructions: instructions.trim() || undefined
+    };
+
+    console.log(`Adding conversion recipe:`, recipe);
+    recipes.push(recipe);
+  }
+
+  console.log(`Parsed ${recipes.length} valid conversion recipes`);
+  return recipes;
 };

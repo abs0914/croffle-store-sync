@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +9,7 @@ import { StoreSelector } from "@/components/uploads/StoreSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { Store } from "@/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ConversionRecipeUpload } from "@/components/uploads/ConversionRecipeUpload";
 
 interface BulkUploadTabProps {
   storeId: string;
@@ -234,17 +234,7 @@ export function BulkUploadTab({ storeId }: BulkUploadTabProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-medium mb-2">Conversion Recipe Upload</h3>
-                <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                  Bulk conversion recipe upload functionality is coming soon. 
-                  For now, you can create conversion recipes individually in the Inventory Prep tab.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Download the template above to prepare your conversion data for future upload.
-                </p>
-              </div>
+              <ConversionRecipeUpload />
             </CardContent>
           </Card>
         </TabsContent>
