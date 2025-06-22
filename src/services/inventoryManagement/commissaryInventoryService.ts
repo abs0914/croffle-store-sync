@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
 import { toast } from "sonner";
@@ -20,6 +21,9 @@ export const fetchCommissaryInventory = async (filters?: any): Promise<Commissar
     if (filters?.supplier) {
       query = query.eq('supplier_id', filters.supplier);
     }
+    if (filters?.item_type && filters.item_type !== 'all') {
+      query = query.eq('item_type', filters.item_type);
+    }
 
     const { data, error } = await query;
 
@@ -29,7 +33,8 @@ export const fetchCommissaryInventory = async (filters?: any): Promise<Commissar
     return (data || []).map(item => ({
       ...item,
       uom: item.unit || 'units', // Map unit to uom with fallback
-      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies'
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
     }));
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
@@ -153,4 +158,29 @@ export const removeDuplicateCommissaryItems = (items: CommissaryInventoryItem[])
     seen.add(key);
     return true;
   });
+};
+
+export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('commissary_inventory')
+      .select('*')
+      .eq('is_active', true)
+      .eq('item_type', 'orderable_item')
+      .gt('current_stock', 0)
+      .order('name');
+
+    if (error) throw error;
+    
+    return (data || []).map(item => ({
+      ...item,
+      uom: item.unit || 'units',
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
+    }));
+  } catch (error) {
+    console.error('Error fetching orderable items:', error);
+    toast.error('Failed to fetch orderable items');
+    return [];
+  }
 };

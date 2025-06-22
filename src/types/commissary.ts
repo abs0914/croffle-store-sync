@@ -3,6 +3,7 @@ export interface CommissaryInventoryItem {
   id: string;
   name: string;
   category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  item_type: 'raw_material' | 'supply' | 'orderable_item';
   current_stock: number;
   minimum_threshold: number;
   uom: string; // Changed from unit to uom and made it a string to support custom UOMs
@@ -44,6 +45,24 @@ export interface RawIngredientUpload {
   supplier_name?: string;
   sku?: string;
   storage_location?: string;
+}
+
+export interface ConversionRequest {
+  name: string;
+  description?: string;
+  input_items: {
+    commissary_item_id: string;
+    quantity: number;
+  }[];
+  output_item: {
+    name: string;
+    category: 'raw_materials' | 'packaging_materials' | 'supplies';
+    uom: string;
+    quantity: number;
+    unit_cost?: number;
+    sku?: string;
+    storage_location?: string;
+  };
 }
 
 // Standard UOM options

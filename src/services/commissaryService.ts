@@ -17,7 +17,8 @@ export const fetchCommissaryInventory = async (): Promise<CommissaryInventoryIte
     return (data || []).map(item => ({
       ...item,
       uom: item.unit || 'units', // Map unit to uom with fallback
-      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies'
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
     }));
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
@@ -109,7 +110,8 @@ const normalizeUnitValue = (unit: string): string => {
   return unitMapping[normalizedInput] || 'pieces'; // Default to pieces if not found
 };
 
-export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[]): Promise<boolean> => {
+export const bulkUploadRawIngredients = async (ingredients: RawIng
+edientUpload[]): Promise<boolean> => {
   try {
     console.log('Starting bulk upload of ingredients:', ingredients);
     
@@ -132,9 +134,16 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
       const normalizedUnit = normalizeUnitValue(ingredient.uom);
       console.log(`Normalizing unit "${ingredient.uom}" to "${normalizedUnit}" for ingredient "${ingredient.name}"`);
 
+      // Determine item_type based on category
+      let item_type: 'raw_material' | 'supply' = 'raw_material';
+      if (ingredient.category === 'packaging_materials' || ingredient.category === 'supplies') {
+        item_type = 'supply';
+      }
+
       return {
         name: ingredient.name,
         category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+        item_type: item_type,
         unit: normalizedUnit, // Use normalized unit value
         unit_cost: ingredient.unit_cost || 0,
         current_stock: ingredient.current_stock || 0,

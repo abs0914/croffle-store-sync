@@ -146,6 +146,7 @@ export type Database = {
           expiry_date: string | null
           id: string
           is_active: boolean
+          item_type: string
           last_purchase_cost: number | null
           last_purchase_date: string | null
           minimum_threshold: number
@@ -166,6 +167,7 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           is_active?: boolean
+          item_type?: string
           last_purchase_cost?: number | null
           last_purchase_date?: string | null
           minimum_threshold?: number
@@ -186,6 +188,7 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           is_active?: boolean
+          item_type?: string
           last_purchase_cost?: number | null
           last_purchase_date?: string | null
           minimum_threshold?: number
