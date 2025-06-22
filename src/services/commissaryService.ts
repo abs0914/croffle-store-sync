@@ -110,8 +110,7 @@ const normalizeUnitValue = (unit: string): string => {
   return unitMapping[normalizedInput] || 'pieces'; // Default to pieces if not found
 };
 
-export const bulkUploadRawIngredients = async (ingredients: RawIng
-edientUpload[]): Promise<boolean> => {
+export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[]): Promise<boolean> => {
   try {
     console.log('Starting bulk upload of ingredients:', ingredients);
     
