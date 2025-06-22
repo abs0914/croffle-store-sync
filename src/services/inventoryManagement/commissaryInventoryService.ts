@@ -70,10 +70,11 @@ export const updateCommissaryInventoryItem = async (
   updates: Partial<Omit<CommissaryInventoryItem, 'id' | 'created_at' | 'updated_at'>>
 ): Promise<boolean> => {
   try {
-    // Map uom to unit for database compatibility during transition
+    // Map uom to unit for database compatibility and exclude uom from database update
+    const { uom, ...otherUpdates } = updates;
     const dbUpdates = {
-      ...updates,
-      unit: updates.uom // Store UOM as unit in database for now
+      ...otherUpdates,
+      ...(uom && { unit: uom }) // Only include unit if uom is provided
     };
     
     const { error } = await supabase
