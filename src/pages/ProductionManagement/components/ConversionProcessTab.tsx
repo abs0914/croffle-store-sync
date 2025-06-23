@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Package, RefreshCw, Plus, Minus } from "lucide-react";
 import { CommissaryInventoryItem, ConversionRequest, STANDARD_UOM_OPTIONS } from "@/types/commissary";
-import { executeConversion, fetchConversionHistory, fetchAvailableRawMaterials } from "@/services/conversionService";
+import { executeConversion, fetchConversionHistory, fetchAvailableRawMaterials } from "@/services/conversion";
 import { toast } from "sonner";
 
 export function ConversionProcessTab() {
