@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 export const fetchConversionHistory = async (): Promise<any[]> => {
   try {
+    console.log('Fetching conversion history...');
+    
     const { data, error } = await supabase
       .from('inventory_conversions')
       .select(`
@@ -15,9 +17,15 @@ export const fetchConversionHistory = async (): Promise<any[]> => {
           commissary_item:commissary_inventory(name, unit)
         )
       `)
-      .order('conversion_date', { ascending: false });
+      .order('conversion_date', { ascending: false })
+      .limit(50);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error fetching conversion history:', error);
+      throw error;
+    }
+
+    console.log('Conversion history fetched successfully:', data);
     return data || [];
   } catch (error) {
     console.error('Error fetching conversion history:', error);
@@ -28,6 +36,8 @@ export const fetchConversionHistory = async (): Promise<any[]> => {
 
 export const fetchAvailableRawMaterials = async (): Promise<CommissaryInventoryItem[]> => {
   try {
+    console.log('Fetching available raw materials...');
+    
     const { data, error } = await supabase
       .from('commissary_inventory')
       .select('*')
@@ -36,7 +46,12 @@ export const fetchAvailableRawMaterials = async (): Promise<CommissaryInventoryI
       .gt('current_stock', 0)
       .order('name');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error fetching raw materials:', error);
+      throw error;
+    }
+    
+    console.log('Raw materials fetched successfully:', data);
     
     return (data || []).map(item => ({
       ...item,
