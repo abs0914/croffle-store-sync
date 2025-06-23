@@ -1,7 +1,39 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { ConversionRequest, CommissaryInventoryItem } from "@/types/commissary";
 import { toast } from "sonner";
+
+// Valid units that match the database constraint
+const VALID_UNITS = [
+  'kg', 'g', 'pieces', 'liters', 'ml', 'boxes', 'packs', 
+  '1 Box', '1 Kilo', '1 Liter', '900 grams', '2500 grams', 
+  '5000 grams', '1000 grams', '750 grams', '454 grams', 
+  '500 grams', '680 grams', '6000 grams', '630 grams', 
+  'Piece', 'Pack of 25', 'Pack of 50', 'Pack of 100', 
+  'Pack of 20', 'Pack of 32', 'Pack of 24', 'Pack of 27'
+];
+
+// Map common unit variations to valid database units
+const UNIT_MAPPING: Record<string, string> = {
+  'box': '1 Box',
+  'boxes': '1 Box', 
+  'piece': 'Piece',
+  'pieces': 'Piece',
+  'kg': '1 Kilo',
+  'kilo': '1 Kilo',
+  'kilos': '1 Kilo',
+  'liter': '1 Liter',
+  'liters': '1 Liter',
+  'ml': 'ml',
+  'g': 'g',
+  'grams': 'g',
+  'pack': 'Pack of 25',
+  'packs': 'Pack of 25'
+};
+
+const normalizeUnit = (unit: string): string => {
+  const lowerUnit = unit.toLowerCase().trim();
+  return UNIT_MAPPING[lowerUnit] || unit;
+};
 
 export const executeConversion = async (conversionRequest: ConversionRequest): Promise<boolean> => {
   try {
@@ -35,6 +67,18 @@ export const executeConversion = async (conversionRequest: ConversionRequest): P
       }
     }
 
+    // Normalize the output item unit
+    const normalizedUnit = normalizeUnit(conversionRequest.output_item.uom);
+    
+    console.log('Original unit:', conversionRequest.output_item.uom);
+    console.log('Normalized unit:', normalizedUnit);
+
+    // Validate the normalized unit
+    if (!VALID_UNITS.includes(normalizedUnit)) {
+      toast.error(`Invalid unit: ${conversionRequest.output_item.uom}. Please use a valid unit from the dropdown.`);
+      return false;
+    }
+
     // Create the output item as orderable_item
     const { data: newItem, error: createError } = await supabase
       .from('commissary_inventory')
@@ -44,7 +88,7 @@ export const executeConversion = async (conversionRequest: ConversionRequest): P
         item_type: 'orderable_item',
         current_stock: conversionRequest.output_item.quantity,
         minimum_threshold: 0,
-        unit: conversionRequest.output_item.uom,
+        unit: normalizedUnit, // Use normalized unit
         unit_cost: conversionRequest.output_item.unit_cost || 0,
         sku: conversionRequest.output_item.sku,
         storage_location: conversionRequest.output_item.storage_location,
@@ -54,6 +98,7 @@ export const executeConversion = async (conversionRequest: ConversionRequest): P
       .single();
 
     if (createError) {
+      console.error('Create error details:', createError);
       toast.error(`Error creating output item: ${createError.message}`);
       return false;
     }
