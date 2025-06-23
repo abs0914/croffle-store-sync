@@ -126,24 +126,24 @@ const createHeaderMapping = (headers: string[]): Record<string, number> => {
   return mapping;
 };
 
-// Create mapping for conversion recipe headers
+// Create mapping for conversion recipe headers - Updated to match your spreadsheet format
 const createConversionRecipeHeaderMapping = (headers: string[]): Record<string, number> => {
   const mapping: Record<string, number> = {};
   
   headers.forEach((header, index) => {
     const normalized = normalizeHeader(header);
     
-    // Map common variations
+    // Map common variations to match your spreadsheet columns
     const variations: Record<string, string[]> = {
-      'name': ['conversion_name', 'recipe_name', 'name'],
-      'description': ['description', 'desc', 'notes'],
-      'input_item_name': ['input_item_name', 'input_item', 'source_item', 'from_item'],
-      'input_quantity': ['input_quantity', 'input_qty', 'source_quantity', 'from_quantity'],
-      'input_unit': ['input_unit', 'input_uom', 'source_unit', 'from_unit'],
-      'output_product_name': ['output_product_name', 'output_item', 'target_item', 'to_item'],
-      'output_quantity': ['output_quantity', 'output_qty', 'target_quantity', 'to_quantity'],
-      'output_unit': ['output_unit', 'output_uom', 'target_unit', 'to_unit'],
-      'instructions': ['conversion_notes', 'instructions', 'process', 'method']
+      'name': ['conversion_name', 'recipe_name', 'name', 'conversion'],
+      'description': ['description', 'desc', 'notes', 'remarks'],
+      'input_item_name': ['input_item', 'input_item_name', 'source_item', 'from_item', 'raw_material', 'ingredient'],
+      'input_quantity': ['input_qty', 'input_quantity', 'source_quantity', 'from_quantity', 'qty_in', 'quantity_in'],
+      'input_unit': ['input_uom', 'input_unit', 'source_unit', 'from_unit', 'unit_in', 'input_measure'],
+      'output_product_name': ['output_item', 'output_product_name', 'target_item', 'to_item', 'finished_product', 'output_product'],
+      'output_quantity': ['output_qty', 'output_quantity', 'target_quantity', 'to_quantity', 'qty_out', 'quantity_out'],
+      'output_unit': ['output_uom', 'output_unit', 'target_unit', 'to_unit', 'unit_out', 'output_measure'],
+      'instructions': ['conversion_notes', 'instructions', 'process', 'method', 'notes']
     };
     
     Object.entries(variations).forEach(([key, aliases]) => {
@@ -284,6 +284,7 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
   return ingredients;
 };
 
+// Updated conversion recipe parser to match your spreadsheet format
 export const parseConversionRecipesCSV = (csvText: string): ConversionRecipeUpload[] => {
   console.log('Starting conversion recipe CSV parsing, input length:', csvText.length);
   
@@ -312,8 +313,8 @@ export const parseConversionRecipesCSV = (csvText: string): ConversionRecipeUplo
       continue;
     }
 
-    // Extract values using header mapping
-    const name = values[headerMapping['name']] || '';
+    // Extract values using header mapping - Updated to handle your spreadsheet columns
+    const name = values[headerMapping['name']] || values[0] || ''; // Default to first column if name not found
     const description = values[headerMapping['description']] || '';
     const input_item_name = values[headerMapping['input_item_name']] || '';
     const input_quantity = parseFloat(values[headerMapping['input_quantity']] || '0') || 0;
@@ -333,22 +334,25 @@ export const parseConversionRecipesCSV = (csvText: string): ConversionRecipeUplo
       output_unit 
     });
 
+    // Auto-generate name if not provided based on input/output items
+    const conversionName = name || `${input_item_name} to ${output_product_name}`;
+
     // Validate required fields
-    if (!name || !input_item_name || !input_unit || !output_product_name || !output_unit || input_quantity <= 0 || output_quantity <= 0) {
+    if (!input_item_name || !input_unit || !output_product_name || !output_unit || input_quantity <= 0 || output_quantity <= 0) {
       console.log(`Skipping line ${i}: missing required fields or invalid quantities`);
       continue;
     }
 
     const recipe: ConversionRecipeUpload = {
-      name: name.trim(),
-      description: description.trim() || undefined,
+      name: conversionName.trim(),
+      description: description.trim() || `Convert ${input_item_name} to ${output_product_name}`,
       input_item_name: input_item_name.trim(),
       input_quantity,
       input_unit: input_unit.trim(),
       output_product_name: output_product_name.trim(),
       output_quantity,
       output_unit: output_unit.trim(),
-      instructions: instructions.trim() || undefined
+      instructions: instructions.trim() || `Convert ${input_quantity} ${input_unit} of ${input_item_name} to ${output_quantity} ${output_unit} of ${output_product_name}`
     };
 
     console.log(`Adding conversion recipe:`, recipe);

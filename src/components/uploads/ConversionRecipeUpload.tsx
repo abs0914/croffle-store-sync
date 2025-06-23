@@ -45,10 +45,13 @@ export const ConversionRecipeUpload = () => {
   };
 
   const downloadTemplate = () => {
-    const template = `Conversion Name,Description,Input Item Name,Input Quantity,Input Unit,Output Product Name,Output Quantity,Output Unit,Conversion Notes
-Cookie Dough to Cookies,Bake cookie dough into finished cookies,Cookie Dough Mix,1,batch,Chocolate Chip Cookies,24,pieces,Bake at 350°F for 12 minutes
-Bread Dough to Loaves,Bake bread dough into finished loaves,Bread Dough,2,kg,White Bread Loaves,4,loaves,Bake at 375°F for 30 minutes
-Coffee Blend to Brew,Prepare coffee from blend,Premium Coffee Blend,500,g,Brewed Coffee,10,cups,Standard brewing ratio 1:15`;
+    // Updated template to match your conversion spreadsheet format
+    const template = `Input Item,Input Qty,Input UOM,Output Item,Output Qty,Output UOM,Notes
+Croissant Box,1,box,Croissant,12,pieces,Split box into individual croissants
+Whipped Cream Container,1,container,Whipped Cream Serving,20,servings,Portion into individual servings
+Cookie Dough Batch,2,kg,Chocolate Chip Cookies,48,pieces,Bake dough into finished cookies
+Bread Mix,5,kg,Bread Loaves,10,loaves,Mix and bake into finished bread loaves
+Coffee Beans,1,kg,Ground Coffee,1,kg,Grind beans for brewing`;
 
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -72,7 +75,7 @@ Coffee Blend to Brew,Prepare coffee from blend,Premium Coffee Blend,500,g,Brewed
           <Info className="h-4 w-4" />
           <AlertDescription>
             Upload conversion recipe templates that define how commissary items are transformed into store inventory products.
-            Each recipe should specify input ingredients and expected output products.
+            Each recipe should specify input ingredients and expected output products with quantities and units.
           </AlertDescription>
         </Alert>
 
@@ -108,10 +111,10 @@ Coffee Blend to Brew,Prepare coffee from blend,Premium Coffee Blend,500,g,Brewed
         <div className="text-sm text-muted-foreground">
           <p className="font-medium mb-2">CSV Format Requirements:</p>
           <ul className="list-disc list-inside space-y-1">
-            <li>Required columns: Conversion Name, Input Item Name, Input Quantity, Input Unit, Output Product Name, Output Quantity, Output Unit</li>
-            <li>Optional columns: Description, Conversion Notes</li>
-            <li>Input Item Name must match items in commissary inventory</li>
-            <li>Use standard units (kg, g, pieces, liters, ml, etc.)</li>
+            <li>Required columns: Input Item, Input Qty, Input UOM, Output Item, Output Qty, Output UOM</li>
+            <li>Optional columns: Notes (for conversion instructions)</li>
+            <li>Input Item must match items in commissary inventory exactly</li>
+            <li>Use standard units (kg, g, pieces, liters, ml, box, container, etc.)</li>
             <li>Each row represents one conversion recipe</li>
             <li>Templates can be used for inventory preparation processes</li>
           </ul>

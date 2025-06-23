@@ -71,13 +71,16 @@ export function BulkUploadTab({ storeId }: BulkUploadTabProps) {
         break;
 
       case 'conversion':
+        // Updated template to match your conversion spreadsheet format
         csvContent = [
-          'conversion_name,description,input_item_name,input_quantity,input_unit,output_product_name,output_quantity,output_unit,conversion_notes',
-          'Cookie Dough to Cookies,Bake cookie dough into finished cookies,Cookie Dough Mix,1,batch,Chocolate Chip Cookies,24,pieces,Bake at 350°F for 12 minutes',
-          'Bread Dough to Loaves,Bake bread dough into finished loaves,Bread Dough,2,kg,White Bread Loaves,4,loaves,Bake at 375°F for 30 minutes',
-          'Coffee Blend to Brew,Prepare coffee from blend,Premium Coffee Blend,500,grams,Brewed Coffee,10,cups,Standard brewing ratio 1:15'
+          'Input Item,Input Qty,Input UOM,Output Item,Output Qty,Output UOM,Notes',
+          'Croissant Box,1,box,Croissant,12,pieces,Split box into individual croissants',
+          'Whipped Cream Container,1,container,Whipped Cream Serving,20,servings,Portion into individual servings',
+          'Cookie Dough Batch,2,kg,Chocolate Chip Cookies,48,pieces,Bake dough into finished cookies',
+          'Bread Mix,5,kg,Bread Loaves,10,loaves,Mix and bake into finished bread loaves',
+          'Coffee Beans,1,kg,Ground Coffee,1,kg,Grind beans for brewing'
         ].join('\n');
-        filename = 'production_conversion_template.csv';
+        filename = 'conversion_recipes_template.csv';
         break;
 
       case 'menu':
