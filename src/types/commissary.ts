@@ -87,5 +87,11 @@ export const STANDARD_UOM_OPTIONS = [
   'Pack of 20',
   'Pack of 32',
   'Pack of 24',
-  'Pack of 27'
+  'Pack of 27',
+  'Box',
+  'Piping Bag',
+  'liter',
+  'packs',
+  'pack',
+  'piece'
 ];

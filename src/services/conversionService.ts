@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { ConversionRequest, CommissaryInventoryItem } from "@/types/commissary";
 import { toast } from "sonner";
@@ -9,25 +10,28 @@ const VALID_UNITS = [
   '5000 grams', '1000 grams', '750 grams', '454 grams', 
   '500 grams', '680 grams', '6000 grams', '630 grams', 
   'Piece', 'Pack of 25', 'Pack of 50', 'Pack of 100', 
-  'Pack of 20', 'Pack of 32', 'Pack of 24', 'Pack of 27'
+  'Pack of 20', 'Pack of 32', 'Pack of 24', 'Pack of 27',
+  'Box', 'Piping Bag', 'liter', 'pack', 'piece'
 ];
 
 // Map common unit variations to valid database units
 const UNIT_MAPPING: Record<string, string> = {
-  'box': '1 Box',
-  'boxes': '1 Box', 
-  'piece': 'Piece',
-  'pieces': 'Piece',
+  'box': 'Box',
+  'boxes': 'Box', 
+  'piece': 'piece',
+  'pieces': 'piece',
   'kg': '1 Kilo',
   'kilo': '1 Kilo',
   'kilos': '1 Kilo',
-  'liter': '1 Liter',
-  'liters': '1 Liter',
+  'liter': 'liter',
+  'liters': 'liter',
   'ml': 'ml',
   'g': 'g',
   'grams': 'g',
-  'pack': 'Pack of 25',
-  'packs': 'Pack of 25'
+  'pack': 'pack',
+  'packs': 'packs',
+  'piping bag': 'Piping Bag',
+  'piping_bag': 'Piping Bag'
 };
 
 const normalizeUnit = (unit: string): string => {
