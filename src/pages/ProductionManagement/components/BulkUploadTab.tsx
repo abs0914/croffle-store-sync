@@ -115,12 +115,7 @@ export function BulkUploadTab({
 
         <TabsContent value="commissary">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Factory className="h-5 w-5" />
-                Upload Commissary Inventory
-              </CardTitle>
-            </CardHeader>
+            
             <CardContent>
               <RawIngredientUpload />
             </CardContent>
