@@ -92,6 +92,23 @@ export interface ExpenseStats {
   }>;
 }
 
+// New audit trail types
+export interface ExpenseAuditTrail {
+  id: string;
+  entity_type: 'expense' | 'budget' | 'approval' | 'category';
+  entity_id: string;
+  action: 'create' | 'update' | 'delete' | 'approve' | 'reject';
+  old_values?: Record<string, any>;
+  new_values?: Record<string, any>;
+  changed_fields?: string[];
+  user_id: string;
+  user_name?: string;
+  user_role?: string;
+  store_id?: string;
+  reason?: string;
+  created_at: string;
+}
+
 export interface CreateExpenseRequest {
   store_id: string;
   category_id: string;

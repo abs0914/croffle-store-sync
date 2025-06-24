@@ -6,6 +6,7 @@ import ExpensesDashboard from '@/pages/Expenses/ExpensesDashboard';
 import AdminExpenseApprovals from './components/AdminExpenseApprovals';
 import AdminExpenseBudgets from './components/AdminExpenseBudgets';
 import AdminExpenseReports from './components/AdminExpenseReports';
+import AdminExpenseAuditTrail from './components/AdminExpenseAuditTrail';
 
 export default function AdminExpenses() {
   return (
@@ -16,11 +17,12 @@ export default function AdminExpenses() {
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="approvals">Approvals</TabsTrigger>
           <TabsTrigger value="budgets">Budgets</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="audit">Audit Trail</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard">
@@ -37,6 +39,10 @@ export default function AdminExpenses() {
 
         <TabsContent value="reports">
           <AdminExpenseReports />
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <AdminExpenseAuditTrail />
         </TabsContent>
       </Tabs>
     </div>

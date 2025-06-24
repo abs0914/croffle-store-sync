@@ -1,4 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { auditTrailService } from "./auditTrailService";
 import type { 
   Expense, 
   ExpenseCategory, 
@@ -68,13 +70,37 @@ export const expenseService = {
       .single();
     
     if (error) throw error;
-    return {
+
+    const result = {
       ...data,
       status: data.status as 'pending' | 'approved' | 'rejected'
     };
+
+    // Create audit trail
+    await auditTrailService.createAuditEntry({
+      entity_type: 'expense',
+      entity_id: result.id,
+      action: 'create',
+      new_values: {
+        amount: result.amount,
+        description: result.description,
+        category_id: result.category_id,
+        status: result.status
+      },
+      store_id: result.store_id
+    });
+
+    return result;
   },
 
   async updateExpense(id: string, updates: UpdateExpenseRequest): Promise<Expense> {
+    // Get current expense for audit trail
+    const { data: currentExpense } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('id', id)
+      .single();
+
     const updateData: any = { ...updates };
     
     if (updates.status === 'approved') {
@@ -94,19 +120,65 @@ export const expenseService = {
       .single();
     
     if (error) throw error;
-    return {
+
+    const result = {
       ...data,
       status: data.status as 'pending' | 'approved' | 'rejected'
     };
+
+    // Create audit trail
+    await auditTrailService.createAuditEntry({
+      entity_type: 'expense',
+      entity_id: id,
+      action: updates.status ? (updates.status === 'approved' ? 'approve' : updates.status === 'rejected' ? 'reject' : 'update') : 'update',
+      old_values: currentExpense ? {
+        amount: currentExpense.amount,
+        description: currentExpense.description,
+        status: currentExpense.status,
+        rejection_reason: currentExpense.rejection_reason
+      } : undefined,
+      new_values: {
+        amount: result.amount,
+        description: result.description,
+        status: result.status,
+        rejection_reason: result.rejection_reason
+      },
+      store_id: result.store_id,
+      reason: updates.rejection_reason
+    });
+
+    return result;
   },
 
   async deleteExpense(id: string): Promise<void> {
+    // Get expense details for audit trail
+    const { data: expense } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('id', id)
+      .single();
+
     const { error } = await supabase
       .from('expenses')
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+
+    // Create audit trail
+    if (expense) {
+      await auditTrailService.createAuditEntry({
+        entity_type: 'expense',
+        entity_id: id,
+        action: 'delete',
+        old_values: {
+          amount: expense.amount,
+          description: expense.description,
+          status: expense.status
+        },
+        store_id: expense.store_id
+      });
+    }
   },
 
   // Budgets
@@ -155,13 +227,37 @@ export const expenseService = {
       .single();
     
     if (error) throw error;
-    return {
+
+    const result = {
       ...data,
       budget_period: data.budget_period as 'monthly' | 'quarterly' | 'yearly'
     };
+
+    // Create audit trail
+    await auditTrailService.createAuditEntry({
+      entity_type: 'budget',
+      entity_id: result.id,
+      action: 'create',
+      new_values: {
+        allocated_amount: result.allocated_amount,
+        budget_period: result.budget_period,
+        budget_year: result.budget_year,
+        budget_month: result.budget_month
+      },
+      store_id: result.store_id
+    });
+
+    return result;
   },
 
   async updateBudget(id: string, allocated_amount: number): Promise<ExpenseBudget> {
+    // Get current budget for audit trail
+    const { data: currentBudget } = await supabase
+      .from('expense_budgets')
+      .select('*')
+      .eq('id', id)
+      .single();
+
     const { data, error } = await supabase
       .from('expense_budgets')
       .update({ allocated_amount })
@@ -174,10 +270,27 @@ export const expenseService = {
       .single();
     
     if (error) throw error;
-    return {
+
+    const result = {
       ...data,
       budget_period: data.budget_period as 'monthly' | 'quarterly' | 'yearly'
     };
+
+    // Create audit trail
+    await auditTrailService.createAuditEntry({
+      entity_type: 'budget',
+      entity_id: id,
+      action: 'update',
+      old_values: currentBudget ? {
+        allocated_amount: currentBudget.allocated_amount
+      } : undefined,
+      new_values: {
+        allocated_amount: result.allocated_amount
+      },
+      store_id: result.store_id
+    });
+
+    return result;
   },
 
   // Approval Limits
