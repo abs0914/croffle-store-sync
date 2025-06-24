@@ -7,6 +7,7 @@ import AdminStores from "@/pages/Admin/AdminStores";
 import AdminRecipes from "@/pages/Admin/AdminRecipes";
 import AdminCustomers from "@/pages/Admin/AdminCustomers";
 import AdminReports from "@/pages/Admin/AdminReports";
+import AdminExpenses from "@/pages/Admin/AdminExpenses";
 import OrderManagement from "@/pages/OrderManagement";
 import CommissaryManagement from "@/pages/Commissary/CommissaryManagement";
 
@@ -55,6 +56,15 @@ export function AdminRoutes() {
         <AdminProtectedRoute>
           <AdminLayout>
             <AdminReports />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+
+      {/* New Expense Management Route */}
+      <Route path="/admin/expenses" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AdminExpenses />
           </AdminLayout>
         </AdminProtectedRoute>
       } />

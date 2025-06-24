@@ -1,108 +1,84 @@
 
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { useLocation, Link } from "react-router-dom";
 import { 
   LayoutDashboard, 
   ShoppingCart, 
-  BarChart3, 
-  Settings, 
-  Package2,
-  Truck,
-  ShoppingBag
-} from 'lucide-react';
-import { useAuth } from '@/contexts/auth';
+  Package, 
+  FileText, 
+  Settings,
+  DollarSign
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface MenuItemProps {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-  isActive: boolean;
-  badge?: string;
-}
+const menuItems = [
+  {
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
+  },
+  {
+    title: "POS",
+    icon: ShoppingCart,
+    href: "/pos",
+  },
+  {
+    title: "Products",
+    icon: Package,
+    href: "/products",
+  },
+  {
+    title: "Inventory",
+    icon: Package,
+    href: "/inventory",
+  },
+  {
+    title: "Orders",
+    icon: FileText,
+    href: "/orders",
+  },
+  {
+    title: "Expenses", // New expense menu item for stores
+    icon: DollarSign,
+    href: "/expenses",
+  },
+  {
+    title: "Reports",
+    icon: FileText,
+    href: "/reports",
+  },
+  {
+    title: "Settings",
+    icon: Settings,
+    href: "/settings",
+  },
+];
 
-const MenuItem: React.FC<MenuItemProps> = ({ to, icon, label, isActive, badge }) => (
-  <Link
-    to={to}
-    className={cn(
-      "flex items-center gap-3 rounded-lg px-3 py-2 text-gray-500 transition-all hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50",
-      isActive && "bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50"
-    )}
-  >
-    {icon}
-    <span>{label}</span>
-    {badge && (
-      <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-        {badge}
-      </span>
-    )}
-  </Link>
-);
-
-export const MainMenu: React.FC = () => {
+export function MainMenu() {
   const location = useLocation();
-  const { user } = useAuth();
 
-  const isManagerOrAbove = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'manager';
-
-  const menuItems = [
-    {
-      to: '/dashboard',
-      icon: <LayoutDashboard className="h-4 w-4" />,
-      label: 'Dashboard',
-    },
-    {
-      to: '/pos',
-      icon: <ShoppingCart className="h-4 w-4" />,
-      label: 'Point of Sale',
-    },
-    {
-      to: '/product-catalog',
-      icon: <ShoppingBag className="h-4 w-4" />,
-      label: 'Product Catalog',
-    },
-    {
-      to: '/inventory',
-      icon: <Package2 className="h-4 w-4" />,
-      label: 'Store Inventory',
-      managerOnly: true,
-    },
-    {
-      to: '/order-management',
-      icon: <Truck className="h-4 w-4" />,
-      label: 'Order Management',
-      managerOnly: true,
-    },
-    {
-      to: '/reports',
-      icon: <BarChart3 className="h-4 w-4" />,
-      label: 'Reports',
-      managerOnly: true,
-    },
-    {
-      to: '/settings',
-      icon: <Settings className="h-4 w-4" />,
-      label: 'Settings',
-      managerOnly: true,
-    },
-  ];
-
-  const filteredMenuItems = menuItems.filter(item => {
-    if (item.managerOnly && !isManagerOrAbove) return false;
-    return true;
-  });
+  const isActiveLink = (href: string) => {
+    return location.pathname === href || 
+           (href !== "/dashboard" && location.pathname.startsWith(href));
+  };
 
   return (
-    <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-      {filteredMenuItems.map((item) => (
-        <MenuItem
-          key={item.to}
-          to={item.to}
-          icon={item.icon}
-          label={item.label}
-          isActive={location.pathname.startsWith(item.to)}
-        />
+    <nav className="space-y-2">
+      {menuItems.map((item) => (
+        <Link
+          key={item.href}
+          to={item.href}
+          className={cn(
+            "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+            isActiveLink(item.href)
+              ? "bg-croffle-accent text-white"
+              : "text-gray-700 hover:bg-gray-100"
+          )}
+        >
+          <item.icon className="h-4 w-4 mr-2" />
+          {item.title}
+        </Link>
       ))}
     </nav>
   );
-};
+}

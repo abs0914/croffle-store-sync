@@ -735,6 +735,249 @@ export type Database = {
           },
         ]
       }
+      expense_approval_limits: {
+        Row: {
+          created_at: string | null
+          id: string
+          max_amount: number
+          role: string
+          store_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          max_amount: number
+          role: string
+          store_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          max_amount?: number
+          role?: string
+          store_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_approval_limits_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_approvals: {
+        Row: {
+          approval_level: number
+          approved_at: string | null
+          approver_id: string
+          comments: string | null
+          created_at: string | null
+          expense_id: string
+          id: string
+          status: string
+        }
+        Insert: {
+          approval_level: number
+          approved_at?: string | null
+          approver_id: string
+          comments?: string | null
+          created_at?: string | null
+          expense_id: string
+          id?: string
+          status: string
+        }
+        Update: {
+          approval_level?: number
+          approved_at?: string | null
+          approver_id?: string
+          comments?: string | null
+          created_at?: string | null
+          expense_id?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_approvals_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_budgets: {
+        Row: {
+          allocated_amount: number
+          budget_month: number | null
+          budget_period: string
+          budget_quarter: number | null
+          budget_year: number
+          category_id: string
+          created_at: string | null
+          created_by: string
+          id: string
+          spent_amount: number | null
+          store_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          allocated_amount?: number
+          budget_month?: number | null
+          budget_period: string
+          budget_quarter?: number | null
+          budget_year: number
+          category_id: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          spent_amount?: number | null
+          store_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          allocated_amount?: number
+          budget_month?: number | null
+          budget_period?: string
+          budget_quarter?: number | null
+          budget_year?: number
+          category_id?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          spent_amount?: number | null
+          store_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_budgets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_category_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parent_category_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_category_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_parent_category_id_fkey"
+            columns: ["parent_category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          approval_level: number | null
+          approved_at: string | null
+          approved_by: string | null
+          category_id: string
+          created_at: string | null
+          created_by: string
+          description: string
+          expense_date: string
+          id: string
+          receipt_url: string | null
+          rejection_reason: string | null
+          status: string | null
+          store_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          approval_level?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category_id: string
+          created_at?: string | null
+          created_by: string
+          description: string
+          expense_date?: string
+          id?: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          store_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          approval_level?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          status?: string | null
+          store_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goods_received_notes: {
         Row: {
           created_at: string | null

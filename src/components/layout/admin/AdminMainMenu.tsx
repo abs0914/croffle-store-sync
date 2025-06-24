@@ -1,94 +1,158 @@
 
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React from "react";
+import { useLocation, Link } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Store, 
-  ChefHat, 
+  Package, 
   Users, 
-  BarChart3, 
-  UserCheck,
-  Truck,
-  Warehouse,
+  FileText, 
+  ShoppingCart,
   Factory,
-  ShoppingCart
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+  Receipt,
+  DollarSign,
+  ChevronDown
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const menuItems = [
   {
-    name: 'Admin Dashboard',
-    href: '/admin',
+    title: "Dashboard",
     icon: LayoutDashboard,
+    href: "/admin",
   },
   {
-    name: 'Point of Sale',
-    href: '/pos',
-    icon: ShoppingCart,
-  },
-  {
-    name: 'Stores Management',
-    href: '/admin/stores',
+    title: "Stores",
     icon: Store,
+    href: "/admin/stores",
   },
   {
-    name: 'Recipe Management',
-    href: '/admin/recipes',
-    icon: ChefHat,
+    title: "Inventory",
+    icon: Package,
+    items: [
+      { title: "Commissary Inventory", href: "/admin/commissary-inventory" },
+      { title: "Production Management", href: "/admin/production-management" },
+    ],
   },
   {
-    name: 'Commissary Inventory',
-    href: '/admin/commissary-inventory',
-    icon: Warehouse,
-  },
-  {
-    name: 'Production Management',
-    href: '/admin/production-management',
-    icon: Factory,
-  },
-  {
-    name: 'Customers',
-    href: '/admin/customers',
+    title: "Users",
     icon: Users,
+    items: [
+      { title: "All Users", href: "/admin/users" },
+      { title: "Cashiers", href: "/admin/cashiers" },
+      { title: "Managers", href: "/admin/managers" },
+    ],
   },
   {
-    name: 'Order Management',
-    href: '/admin/order-management',
-    icon: Truck,
+    title: "Orders",
+    icon: ShoppingCart,
+    href: "/admin/order-management",
   },
   {
-    name: 'Users',
-    href: '/admin/users',
-    icon: UserCheck,
+    title: "Recipes",
+    icon: Receipt,
+    href: "/admin/recipes",
   },
   {
-    name: 'Reports',
-    href: '/admin/reports',
-    icon: BarChart3,
+    title: "Expenses", // New expense menu item
+    icon: DollarSign,
+    href: "/admin/expenses",
+  },
+  {
+    title: "Customers",
+    icon: Users,
+    href: "/admin/customers",
+  },
+  {
+    title: "Reports",
+    icon: FileText,
+    href: "/admin/reports",
   },
 ];
 
-export const AdminMainMenu: React.FC = () => {
+export function AdminMainMenu() {
+  const location = useLocation();
+  const [openSections, setOpenSections] = React.useState<string[]>([]);
+
+  const toggleSection = (title: string) => {
+    setOpenSections(prev => 
+      prev.includes(title) 
+        ? prev.filter(item => item !== title)
+        : [...prev, title]
+    );
+  };
+
+  const isActiveLink = (href: string) => {
+    return location.pathname === href || 
+           (href !== "/admin" && location.pathname.startsWith(href));
+  };
+
+  const isActiveSectionItem = (items: { href: string }[]) => {
+    return items.some(item => isActiveLink(item.href));
+  };
+
   return (
-    <nav className="space-y-1 px-3">
-      {menuItems.map((item) => (
-        <NavLink
-          key={item.name}
-          to={item.href}
-          end={item.href === '/admin'}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-              isActive
-                ? 'bg-croffle-accent text-white'
-                : 'text-black hover:bg-croffle-accent/80 hover:text-white'
-            )
-          }
-        >
-          <item.icon className="h-5 w-5" />
-          {item.name}
-        </NavLink>
-      ))}
+    <nav className="space-y-2">
+      {menuItems.map((item) => {
+        if (item.items) {
+          const isOpen = openSections.includes(item.title);
+          const hasActiveChild = isActiveSectionItem(item.items);
+          
+          return (
+            <Collapsible key={item.title} open={isOpen} onOpenChange={() => toggleSection(item.title)}>
+              <CollapsibleTrigger asChild>
+                <button
+                  className={cn(
+                    "flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                    hasActiveChild
+                      ? "bg-croffle-accent text-white"
+                      : "text-gray-700 hover:bg-gray-100"
+                  )}
+                >
+                  <div className="flex items-center">
+                    <item.icon className="h-4 w-4 mr-3" />
+                    {item.title}
+                  </div>
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pl-6 space-y-1">
+                {item.items.map((subItem) => (
+                  <Link
+                    key={subItem.href}
+                    to={subItem.href}
+                    className={cn(
+                      "block px-3 py-2 text-sm rounded-md transition-colors",
+                      isActiveLink(subItem.href)
+                        ? "bg-croffle-accent text-white"
+                        : "text-gray-600 hover:bg-gray-100"
+                    )}
+                  >
+                    {subItem.title}
+                  </Link>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        }
+
+        return (
+          <Link
+            key={item.href}
+            to={item.href}
+            className={cn(
+              "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              isActiveLink(item.href)
+                ? "bg-croffle-accent text-white"
+                : "text-gray-700 hover:bg-gray-100"
+            )}
+          >
+            <item.icon className="h-4 w-4 mr-3" />
+            {item.title}
+          </Link>
+        );
+      })}
     </nav>
   );
-};
+}
