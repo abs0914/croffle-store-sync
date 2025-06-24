@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, TrendingUp, Clock, AlertTriangle, DollarSign, Receipt, BarChart3, Settings, Smartphone } from 'lucide-react';
+import { Plus, TrendingUp, Clock, AlertTriangle, DollarSign, Receipt, BarChart3, Settings, Smartphone, Camera } from 'lucide-react';
 import { expenseService } from '@/services/expense/expenseService';
 import { useAuth } from '@/contexts/auth';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
