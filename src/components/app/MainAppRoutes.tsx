@@ -8,9 +8,8 @@ import POS from '@/pages/POS';
 import Products from '@/pages/Products';
 import Inventory from '@/pages/Inventory';
 import Orders from '@/pages/Orders';
-import { Reports } from '@/pages/Reports';
+import Reports from '@/pages/Reports';
 import Settings from '@/pages/Settings';
-import ThermalPrinter from '@/pages/Settings/ThermalPrinter';
 import ExpensesDashboard from '@/pages/Expenses/ExpensesDashboard';
 
 export const MainAppRoutes = () => [
@@ -76,14 +75,6 @@ export const MainAppRoutes = () => [
     <ProtectedRoute>
       <MainLayout>
         <Settings />
-      </MainLayout>
-    </ProtectedRoute>
-  } />,
-  
-  <Route key="thermal-printer" path="/settings/thermal-printer" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <ThermalPrinter />
       </MainLayout>
     </ProtectedRoute>
   } />

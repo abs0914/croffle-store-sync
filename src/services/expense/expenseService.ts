@@ -32,9 +32,7 @@ export const expenseService = {
       .select(`
         *,
         category:expense_categories(name, description),
-        store:stores(name),
-        created_by_user:app_users!expenses_created_by_fkey(first_name, last_name),
-        approved_by_user:app_users!expenses_approved_by_fkey(first_name, last_name)
+        store:stores(name)
       `)
       .order('created_at', { ascending: false });
 
@@ -48,14 +46,11 @@ export const expenseService = {
     
     return (data || []).map(expense => ({
       ...expense,
+      status: expense.status as 'pending' | 'approved' | 'rejected',
       category: expense.category,
       store_name: expense.store?.name,
-      created_by_name: expense.created_by_user 
-        ? `${expense.created_by_user.first_name} ${expense.created_by_user.last_name}`
-        : 'Unknown',
-      approved_by_name: expense.approved_by_user
-        ? `${expense.approved_by_user.first_name} ${expense.approved_by_user.last_name}`
-        : undefined
+      created_by_name: 'Unknown', // We'll need to fetch this separately due to RLS
+      approved_by_name: undefined
     }));
   },
 
@@ -74,7 +69,10 @@ export const expenseService = {
       .single();
     
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      status: data.status as 'pending' | 'approved' | 'rejected'
+    };
   },
 
   async updateExpense(id: string, updates: UpdateExpenseRequest): Promise<Expense> {
@@ -97,7 +95,10 @@ export const expenseService = {
       .single();
     
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      status: data.status as 'pending' | 'approved' | 'rejected'
+    };
   },
 
   async deleteExpense(id: string): Promise<void> {
@@ -131,6 +132,7 @@ export const expenseService = {
     
     return (data || []).map(budget => ({
       ...budget,
+      budget_period: budget.budget_period as 'monthly' | 'quarterly' | 'yearly',
       category: budget.category,
       store_name: budget.store?.name,
       utilization_percentage: budget.allocated_amount > 0 
@@ -154,7 +156,10 @@ export const expenseService = {
       .single();
     
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      budget_period: data.budget_period as 'monthly' | 'quarterly' | 'yearly'
+    };
   },
 
   async updateBudget(id: string, allocated_amount: number): Promise<ExpenseBudget> {
@@ -170,7 +175,10 @@ export const expenseService = {
       .single();
     
     if (error) throw error;
-    return data;
+    return {
+      ...data,
+      budget_period: data.budget_period as 'monthly' | 'quarterly' | 'yearly'
+    };
   },
 
   // Approval Limits

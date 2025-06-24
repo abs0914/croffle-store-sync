@@ -204,8 +204,8 @@ export default function ExpensesDashboard() {
                 <div className="text-right">
                   <p className="font-medium">{formatCurrency(expense.amount)}</p>
                   <Badge variant={
-                    expense.status === 'approved' ? 'success' :
-                    expense.status === 'rejected' ? 'destructive' : 'default'
+                    expense.status === 'approved' ? 'default' :
+                    expense.status === 'rejected' ? 'destructive' : 'outline'
                   }>
                     {expense.status}
                   </Badge>
