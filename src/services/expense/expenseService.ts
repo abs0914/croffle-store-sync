@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { 
   Expense, 
@@ -31,7 +30,7 @@ export const expenseService = {
       .from('expenses')
       .select(`
         *,
-        category:expense_categories(name, description),
+        category:expense_categories(*),
         store:stores(name)
       `)
       .order('created_at', { ascending: false });
@@ -63,7 +62,7 @@ export const expenseService = {
       })
       .select(`
         *,
-        category:expense_categories(name, description),
+        category:expense_categories(*),
         store:stores(name)
       `)
       .single();
@@ -89,7 +88,7 @@ export const expenseService = {
       .eq('id', id)
       .select(`
         *,
-        category:expense_categories(name, description),
+        category:expense_categories(*),
         store:stores(name)
       `)
       .single();
@@ -116,7 +115,7 @@ export const expenseService = {
       .from('expense_budgets')
       .select(`
         *,
-        category:expense_categories(name, description),
+        category:expense_categories(*),
         store:stores(name)
       `)
       .order('budget_year', { ascending: false })
@@ -150,7 +149,7 @@ export const expenseService = {
       })
       .select(`
         *,
-        category:expense_categories(name, description),
+        category:expense_categories(*),
         store:stores(name)
       `)
       .single();
@@ -169,7 +168,7 @@ export const expenseService = {
       .eq('id', id)
       .select(`
         *,
-        category:expense_categories(name, description),
+        category:expense_categories(*),
         store:stores(name)
       `)
       .single();
