@@ -8,6 +8,7 @@ import { StoreProvider } from './contexts/StoreContext';
 import { ShiftProvider } from './contexts/shift';
 import { CartProvider } from './contexts/cart/CartProvider';
 import Login from './pages/Login';
+import Index from './pages/Index';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { MainAppRoutes } from './components/app/MainAppRoutes';
 import { AdminAppRoutes } from './components/app/AdminAppRoutes';
@@ -27,6 +28,9 @@ function App() {
                 <QueryClientProvider client={queryClient}>
                   <div className="min-h-screen bg-background">
                     <Routes>
+                      {/* Root route */}
+                      <Route path="/" element={<Index />} />
+                      
                       <Route path="/login" element={<Login />} />
                       
                       {/* Main Application Routes */}
