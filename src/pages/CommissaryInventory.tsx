@@ -120,9 +120,11 @@ export default function CommissaryInventory() {
 
   const handleRemoveDuplicates = async () => {
     setRemovingDuplicates(true);
-    const deduplicatedItems = removeDuplicateCommissaryItems(items);
-    setItems(deduplicatedItems);
-    toast.success('Duplicates removed successfully');
+    const success = await removeDuplicateCommissaryItems();
+    if (success) {
+      // Reload the data to reflect changes
+      await loadItems();
+    }
     setRemovingDuplicates(false);
   };
 
