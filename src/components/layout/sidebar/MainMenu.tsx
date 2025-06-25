@@ -1,84 +1,112 @@
 
-import React from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { 
-  LayoutDashboard, 
+  Home, 
   ShoppingCart, 
   Package, 
-  FileText, 
+  Users, 
+  BarChart3, 
   Settings,
+  Factory,
+  Warehouse,
+  ClipboardList,
   DollarSign
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-const menuItems = [
-  {
-    title: "Dashboard",
-    icon: LayoutDashboard,
-    href: "/dashboard",
-  },
-  {
-    title: "POS",
-    icon: ShoppingCart,
-    href: "/pos",
-  },
-  {
-    title: "Products",
-    icon: Package,
-    href: "/products",
-  },
-  {
-    title: "Inventory",
-    icon: Package,
-    href: "/inventory",
-  },
-  {
-    title: "Orders",
-    icon: FileText,
-    href: "/orders",
-  },
-  {
-    title: "Expenses", // New expense menu item for stores
-    icon: DollarSign,
-    href: "/expenses",
-  },
-  {
-    title: "Reports",
-    icon: FileText,
-    href: "/reports",
-  },
-  {
-    title: "Settings",
-    icon: Settings,
-    href: "/settings",
-  },
-];
+import { useAuth } from "@/contexts/auth";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export function MainMenu() {
+  const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const { 
+    canAccessOrderManagement,
+    canAccessExpenses,
+    canAccessReports,
+    canAccessInventory,
+    canAccessProducts,
+    canAccessCustomers 
+  } = usePermissions();
 
-  const isActiveLink = (href: string) => {
-    return location.pathname === href || 
-           (href !== "/dashboard" && location.pathname.startsWith(href));
-  };
+  const menuItems = [
+    {
+      title: "Dashboard",
+      icon: Home,
+      path: "/dashboard",
+      show: true
+    },
+    {
+      title: "POS",
+      icon: ShoppingCart,
+      path: "/pos",
+      show: true
+    },
+    {
+      title: "Products",
+      icon: Package,
+      path: "/products",
+      show: canAccessProducts().hasPermission
+    },
+    {
+      title: "Customers",
+      icon: Users,
+      path: "/customers",
+      show: canAccessCustomers().hasPermission
+    },
+    {
+      title: "Inventory",
+      icon: Warehouse,
+      path: "/inventory",
+      show: canAccessInventory().hasPermission
+    },
+    {
+      title: "Orders",
+      icon: ClipboardList,
+      path: "/orders",
+      show: canAccessOrderManagement().hasPermission
+    },
+    {
+      title: "Expenses",
+      icon: DollarSign,
+      path: "/expenses",
+      show: canAccessExpenses().hasPermission
+    },
+    {
+      title: "Reports",
+      icon: BarChart3,
+      path: "/reports",
+      show: canAccessReports().hasPermission
+    },
+    {
+      title: "Production",
+      icon: Factory,
+      path: "/production",
+      show: user?.role === 'admin' || user?.role === 'owner' || user?.role === 'manager'
+    },
+    {
+      title: "Settings",
+      icon: Settings,
+      path: "/settings",
+      show: user?.role === 'admin' || user?.role === 'owner'
+    }
+  ];
 
   return (
     <nav className="space-y-2">
-      {menuItems.map((item) => (
-        <Link
-          key={item.href}
-          to={item.href}
-          className={cn(
-            "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-            isActiveLink(item.href)
-              ? "bg-croffle-accent text-white"
-              : "text-gray-700 hover:bg-gray-100"
-          )}
-        >
-          <item.icon className="h-4 w-4 mr-2" />
-          {item.title}
-        </Link>
-      ))}
+      {menuItems
+        .filter(item => item.show)
+        .map((item) => (
+          <Button
+            key={item.path}
+            variant={location.pathname === item.path ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => navigate(item.path)}
+          >
+            <item.icon className="mr-2 h-4 w-4" />
+            {item.title}
+          </Button>
+        ))}
     </nav>
   );
 }

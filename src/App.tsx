@@ -18,6 +18,7 @@ import CommissaryInventoryPage from '@/pages/CommissaryInventory';
 import { StockOrdersManagement } from '@/pages/StockOrders/StockOrdersManagement';
 import PosPage from '@/pages/POS';
 import OrderManagementPage from '@/pages/OrderManagement';
+import ExpensesPage from '@/pages/Expenses';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StoreProvider } from '@/contexts/StoreContext';
@@ -35,7 +36,6 @@ function App() {
         <SecurityAuditProvider>
           <SimplifiedAuthProvider>
             <StoreProvider>
-              {/* Temporarily remove Suspense to debug loading issues */}
               <div>
                 <Toaster />
                 <Routes>
@@ -43,106 +43,16 @@ function App() {
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
 
-                  {/* MAIN DASHBOARD ROUTE - MOVED TO TOP FOR PRIORITY */}
+                  {/* MAIN DASHBOARD ROUTE */}
                   <Route path="/dashboard" element={
-                    (() => {
-                      console.log('🏠 MAIN /dashboard route hit - rendering full Dashboard');
-                      return (
-                        <ProtectedRoute>
-                          <MainLayout>
-                            <Dashboard />
-                          </MainLayout>
-                        </ProtectedRoute>
-                      );
-                    })()
-                  } />
-
-                  {/* Simple test route */}
-                  <Route path="/test" element={
-                    <div style={{ padding: '20px', background: 'lightgreen' }}>
-                      <h1>Test Route Working!</h1>
-                      <p>If you can see this, routing is working.</p>
-                    </div>
-                  } />
-
-                  {/* Test MainLayout directly without ProtectedRoute */}
-                  <Route path="/test-mainlayout-direct" element={
-                    (() => {
-                      console.log('🔍 Testing MainLayout directly');
-                      try {
-                        return (
-                          <MainLayout>
-                            <div style={{ padding: '20px', background: 'purple' }}>
-                              <h1>MainLayout Direct Test!</h1>
-                              <p>Testing MainLayout without ProtectedRoute.</p>
-                            </div>
-                          </MainLayout>
-                        );
-                      } catch (error) {
-                        console.error('🔍 Error in MainLayout:', error);
-                        return (
-                          <div style={{ padding: '20px', background: 'red', color: 'white' }}>
-                            <h1>MainLayout Error!</h1>
-                            <p>Error: {error.message}</p>
-                          </div>
-                        );
-                      }
-                    })()
-                  } />
-                  
-                  {/* Dashboard route moved to top for priority */}
-
-                  {/* Step-by-step debugging routes */}
-
-                  {/* Test ProtectedRoute only */}
-                  <Route path="/test-protected" element={
                     <ProtectedRoute>
-                      <div style={{ padding: '20px', background: 'yellow' }}>
-                        <h1>ProtectedRoute Working!</h1>
-                        <p>ProtectedRoute is allowing access.</p>
-                      </div>
+                      <MainLayout>
+                        <Dashboard />
+                      </MainLayout>
                     </ProtectedRoute>
                   } />
 
-                  {/* Test ProtectedRoute + MainLayout */}
-                  <Route path="/test-layout" element={
-                    <ProtectedRoute>
-                      {(() => {
-                        console.log('🔍 Inside ProtectedRoute children function');
-                        return (
-                          <MainLayout>
-                            {(() => {
-                              console.log('🔍 Inside MainLayout children function');
-                              return (
-                                <div style={{ padding: '20px', background: 'orange' }}>
-                                  <h1>MainLayout Working!</h1>
-                                  <p>Both ProtectedRoute and MainLayout are working.</p>
-                                </div>
-                              );
-                            })()}
-                          </MainLayout>
-                        );
-                      })()}
-                    </ProtectedRoute>
-                  } />
-
-                  {/* Original complex dashboard route for comparison */}
-                  <Route path="/dashboard-complex" element={
-                    <ErrorBoundary>
-                      <ProtectedRoute>
-                        <ErrorBoundary>
-                          <MainLayout>
-                            <ErrorBoundary>
-                              {(() => {
-                                console.log('🏠 Dashboard route element being rendered');
-                                return <Dashboard />;
-                              })()}
-                            </ErrorBoundary>
-                          </MainLayout>
-                        </ErrorBoundary>
-                      </ProtectedRoute>
-                    </ErrorBoundary>
-                  } />
+                  {/* POS and Store Operations */}
                   <Route path="/pos" element={
                     <ProtectedRoute requireStoreAccess>
                       <MainLayout>
@@ -178,6 +88,36 @@ function App() {
                       </MainLayout>
                     </ProtectedRoute>
                   } />
+                  <Route path="/expenses" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <ExpensesPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/inventory" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <InventoryPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/production" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <ProductionPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/stock-orders" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <StockOrdersManagement />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+
+                  {/* Admin and Settings */}
                   <Route path="/settings" element={
                     <ProtectedRoute>
                       <MainLayout>
@@ -199,31 +139,10 @@ function App() {
                       </MainLayout>
                     </ProtectedRoute>
                   } />
-                  <Route path="/inventory" element={
-                    <ProtectedRoute requireStoreAccess>
-                      <MainLayout>
-                        <InventoryPage />
-                      </MainLayout>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/production" element={
-                    <ProtectedRoute requireStoreAccess>
-                      <MainLayout>
-                        <ProductionPage />
-                      </MainLayout>
-                    </ProtectedRoute>
-                  } />
                   <Route path="/commissary" element={
                     <ProtectedRoute>
                       <MainLayout>
                         <CommissaryInventoryPage />
-                      </MainLayout>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/stock-orders" element={
-                    <ProtectedRoute requireStoreAccess>
-                      <MainLayout>
-                        <StockOrdersManagement />
                       </MainLayout>
                     </ProtectedRoute>
                   } />
