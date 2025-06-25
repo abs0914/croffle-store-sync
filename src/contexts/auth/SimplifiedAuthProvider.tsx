@@ -27,37 +27,51 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
   const authInitializedRef = useRef(false);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Add detailed logging for loading state changes
+  const setLoadingWithLog = (loading: boolean, reason: string) => {
+    console.log(`🔐 Auth Loading State: ${loading} - Reason: ${reason}`);
+    authDebugger.log(`Loading state changed to ${loading}`, { reason });
+    setIsLoading(loading);
+  };
+
   // Clear loading timeout
   const clearLoadingTimeout = () => {
     if (loadingTimeoutRef.current) {
+      console.log('🔐 Clearing loading timeout');
       clearTimeout(loadingTimeoutRef.current);
       loadingTimeoutRef.current = null;
     }
   };
 
-  // Force clear loading state after 1 second (reduced from 3s)
+  // Force clear loading state after 1 second
   const setLoadingTimeout = () => {
     clearLoadingTimeout();
+    console.log('🔐 Setting loading timeout (1 second)');
     loadingTimeoutRef.current = setTimeout(() => {
+      console.log('🔐 Loading timeout reached, forcing loading state to clear');
       authDebugger.log('Loading timeout reached, forcing loading state to clear', {}, 'warning');
-      setIsLoading(false);
-    }, 1000); // Reduced timeout to 1 second
+      setLoadingWithLog(false, 'timeout reached');
+    }, 1000);
   };
 
   // Cache session in localStorage
   const cacheSession = (session: Session | null) => {
     try {
       if (session) {
-        localStorage.setItem('cached_session', JSON.stringify({
+        const cacheData = {
           user: session.user,
           access_token: session.access_token,
           expires_at: session.expires_at,
           cached_at: Date.now()
-        }));
+        };
+        localStorage.setItem('cached_session', JSON.stringify(cacheData));
+        console.log('🔐 Session cached successfully');
       } else {
         localStorage.removeItem('cached_session');
+        console.log('🔐 Session cache cleared');
       }
     } catch (error) {
+      console.error('🔐 Failed to cache session:', error);
       authDebugger.log('Failed to cache session', { error }, 'warning');
     }
   };
@@ -70,10 +84,14 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
         const parsedCache = JSON.parse(cached);
         // Check if cache is less than 5 minutes old
         if (Date.now() - parsedCache.cached_at < 5 * 60 * 1000) {
+          console.log('🔐 Using cached session');
           return parsedCache;
+        } else {
+          console.log('🔐 Cached session expired');
         }
       }
     } catch (error) {
+      console.error('🔐 Failed to get cached session:', error);
       authDebugger.log('Failed to get cached session', { error }, 'warning');
     }
     return null;
@@ -81,6 +99,7 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
 
   // Simplified login with better error handling
   const login = async (email: string, password: string) => {
+    console.log('🔐 Login attempt started', { email });
     authDebugger.log('Login attempt started', { email });
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -89,12 +108,15 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        console.error('🔐 Login failed:', error.message);
         authDebugger.log('Login failed', { error: error.message, email }, 'error');
         throw error;
       }
       
+      console.log('🔐 Login successful', { email });
       authDebugger.log('Login successful', { email });
     } catch (error) {
+      console.error('🔐 Login error:', error);
       authDebugger.log('Login error', { 
         error: error instanceof Error ? error.message : 'Unknown error',
         email 
@@ -104,6 +126,7 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (email: string, password: string, userData?: any) => {
+    console.log('🔐 Registration attempt started', { email });
     authDebugger.log('Registration attempt started', { email });
     
     const { error } = await supabase.auth.signUp({
@@ -115,28 +138,34 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
+      console.error('🔐 Registration failed:', error.message);
       authDebugger.log('Registration failed', { error: error.message, email }, 'error');
       throw error;
     }
 
+    console.log('🔐 Registration successful', { email });
     authDebugger.log('Registration successful', { email });
   };
 
   const logout = async () => {
+    console.log('🔐 Logout initiated');
     authDebugger.log('Logout initiated');
     
     try {
       const { error } = await supabase.auth.signOut();
       
       if (error) {
+        console.error('🔐 Logout error:', error.message);
         authDebugger.log('Logout error', { error: error.message }, 'error');
       } else {
+        console.log('🔐 Logout successful');
         authDebugger.log('Logout successful');
         setUser(null);
         setSession(null);
         cacheSession(null);
       }
     } catch (error) {
+      console.error('🔐 Logout failed:', error);
       authDebugger.log('Logout failed', { 
         error: error instanceof Error ? error.message : 'Unknown error' 
       }, 'error');
@@ -149,6 +178,7 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
 
   // Create user from session data only (no database calls)
   const createUserFromSession = (supabaseUser: any): User => {
+    console.log('🔐 Creating user from session data only', { userId: supabaseUser.id });
     authDebugger.log('Creating user from session data only', { userId: supabaseUser.id });
     
     const email = supabaseUser.email || 'unknown@example.com';
@@ -172,26 +202,38 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
 
   // Simplified auth initialization
   useEffect(() => {
-    if (authInitializedRef.current) return;
+    if (authInitializedRef.current) {
+      console.log('🔐 Auth already initialized, skipping');
+      return;
+    }
     authInitializedRef.current = true;
 
+    console.log('🔐 Initializing authentication system');
     authDebugger.log('Initializing authentication system');
     
     // Try to use cached session first for immediate UI update
     const cachedSession = getCachedSession();
     if (cachedSession) {
+      console.log('🔐 Using cached session for immediate load', { userId: cachedSession.user.id });
       authDebugger.log('Using cached session for immediate load', { userId: cachedSession.user.id });
       const user = createUserFromSession(cachedSession.user);
       setUser(user);
       setSession(cachedSession);
-      setIsLoading(false);
+      setLoadingWithLog(false, 'cached session loaded');
     } else {
+      console.log('🔐 No cached session, starting loading timeout');
       setLoadingTimeout(); // Start loading timeout protection only if no cache
     }
 
     // Set up auth state listener
+    console.log('🔐 Setting up auth state listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        console.log('🔐 Auth state change event', { 
+          event, 
+          hasSession: !!newSession,
+          userId: newSession?.user?.id 
+        });
         authDebugger.log('Auth state change event', { 
           event, 
           hasSession: !!newSession,
@@ -208,6 +250,11 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
             // Use session data only - no database calls
             const mappedUser = createUserFromSession(newSession.user);
             setUser(mappedUser);
+            console.log('🔐 User authenticated from session', { 
+              userId: mappedUser.id,
+              email: mappedUser.email,
+              role: mappedUser.role 
+            });
             authDebugger.log('User authenticated from session', { 
               userId: mappedUser.id,
               email: mappedUser.email,
@@ -215,9 +262,11 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
             });
           } else {
             setUser(null);
+            console.log('🔐 User not authenticated');
             authDebugger.log('User not authenticated');
           }
         } catch (error) {
+          console.error('🔐 Error in auth state change handler:', error);
           authDebugger.log('Error in auth state change handler', { 
             error: error instanceof Error ? error.message : 'Unknown error' 
           }, 'error');
@@ -225,7 +274,7 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
           setSession(null);
           cacheSession(null);
         } finally {
-          setIsLoading(false);
+          setLoadingWithLog(false, 'auth state change processed');
         }
       }
     );
@@ -233,6 +282,7 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     // Check for existing session with 1 second timeout
     const checkInitialSession = async () => {
       try {
+        console.log('🔐 Checking for existing session');
         authDebugger.log('Checking for existing session');
         
         // Add 1 second timeout to session check
@@ -247,38 +297,47 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
         ]) as any;
         
         if (error) {
+          console.error('🔐 Session check error:', error.message);
           authDebugger.log('Session check error', { error: error.message }, 'error');
-          setIsLoading(false);
+          setLoadingWithLog(false, 'session check error');
           clearLoadingTimeout();
           return;
         }
         
         if (currentSession?.user) {
+          console.log('🔐 Existing session found', { 
+            userId: currentSession.user.id,
+            email: currentSession.user.email 
+          });
           authDebugger.log('Existing session found', { 
             userId: currentSession.user.id,
             email: currentSession.user.email 
           });
           // The auth state change handler will process this
         } else {
+          console.log('🔐 No existing session found');
           authDebugger.log('No existing session found');
-          setIsLoading(false);
+          setLoadingWithLog(false, 'no existing session');
           clearLoadingTimeout();
         }
       } catch (error) {
+        console.error('🔐 Session check failed or timed out:', error);
         authDebugger.log('Session check failed or timed out', { 
           error: error instanceof Error ? error.message : 'Unknown error' 
         }, 'error');
-        setIsLoading(false);
+        setLoadingWithLog(false, 'session check timeout');
         clearLoadingTimeout();
       }
     };
 
     // Only check session if we don't have a cached one
     if (!cachedSession) {
+      console.log('🔐 No cached session, checking for existing session');
       checkInitialSession();
     }
 
     return () => {
+      console.log('🔐 Cleaning up auth provider');
       subscription.unsubscribe();
       clearLoadingTimeout();
     };
@@ -293,6 +352,13 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     if (!user) return false;
     return checkStoreAccess(user.storeIds, storeId, user.role);
   };
+
+  console.log('🔐 Auth Provider Render:', { 
+    isLoading, 
+    isAuthenticated: !!user, 
+    hasUser: !!user,
+    hasSession: !!session 
+  });
 
   return (
     <AuthContext.Provider

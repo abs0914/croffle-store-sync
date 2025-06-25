@@ -10,21 +10,31 @@ const Index = () => {
   const [showTimeout, setShowTimeout] = useState(false);
 
   useEffect(() => {
+    console.log('📍 Index page - Auth state check', { isAuthenticated, isLoading });
     authDebugger.log('Index page - Auth state check', { isAuthenticated, isLoading });
 
     // Reduced timeout to 1 second for Index page
     const timeout = setTimeout(() => {
       if (isLoading) {
+        console.log('📍 Index page loading timeout');
         authDebugger.log('Index page loading timeout', {}, 'warning');
         setShowTimeout(true);
       }
-    }, 1000); // Reduced from 4 seconds to 1 second
+    }, 1000);
 
     return () => clearTimeout(timeout);
   }, [isAuthenticated, isLoading]);
 
+  // Add detailed logging for render state
+  console.log('📍 Index page render state:', { 
+    isAuthenticated, 
+    isLoading, 
+    showTimeout 
+  });
+
   // Show timeout error with navigation options
   if (showTimeout) {
+    console.log('📍 Showing timeout error');
     return (
       <div className="flex items-center justify-center min-h-screen bg-croffle-background">
         <div className="text-center p-6 max-w-md">
@@ -53,6 +63,7 @@ const Index = () => {
 
   // Show loading while checking authentication with 1 second timeout
   if (isLoading) {
+    console.log('📍 Index page showing loading');
     return (
       <div className="flex items-center justify-center min-h-screen bg-croffle-background">
         <div className="flex items-center space-x-2">
@@ -65,9 +76,11 @@ const Index = () => {
 
   // Redirect based on authentication status
   if (isAuthenticated) {
+    console.log('📍 Index: Redirecting to dashboard (authenticated)');
     authDebugger.log('Index: Redirecting to dashboard (authenticated)');
     return <Navigate to="/dashboard" replace />;
   } else {
+    console.log('📍 Index: Redirecting to login (not authenticated)');
     authDebugger.log('Index: Redirecting to login (not authenticated)');
     return <Navigate to="/login" replace />;
   }

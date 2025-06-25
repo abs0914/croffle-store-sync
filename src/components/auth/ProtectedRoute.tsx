@@ -24,6 +24,19 @@ export function ProtectedRoute({
   const [showTimeoutError, setShowTimeoutError] = useState(false);
 
   useEffect(() => {
+    console.log('🛡️ ProtectedRoute check', {
+      pathname: location.pathname,
+      authLoading,
+      storeLoading,
+      isAuthenticated,
+      hasUser: !!user,
+      hasCurrentStore: !!currentStore,
+      requiredRole,
+      requireStoreAccess,
+      userRole: user?.role,
+      userStoreIds: user?.storeIds
+    });
+    
     authDebugger.log('ProtectedRoute check', {
       pathname: location.pathname,
       authLoading,
@@ -40,6 +53,7 @@ export function ProtectedRoute({
     // Reduced timeout to 1 second for faster error display
     const timeout = setTimeout(() => {
       if (authLoading) {
+        console.log('🛡️ ProtectedRoute loading timeout reached');
         authDebugger.log('ProtectedRoute loading timeout reached', {
           authLoading,
           storeLoading,
@@ -47,13 +61,14 @@ export function ProtectedRoute({
         }, 'warning');
         setShowTimeoutError(true);
       }
-    }, 1000); // Reduced timeout to 1 second
+    }, 1000);
 
     return () => clearTimeout(timeout);
   }, [authLoading, storeLoading, isAuthenticated, user, currentStore, location.pathname, requiredRole, requireStoreAccess]);
 
   // Show timeout error if loading takes too long
   if (showTimeoutError) {
+    console.log('🛡️ Showing timeout error');
     authDebugger.log('Showing timeout error', {}, 'error');
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -85,17 +100,23 @@ export function ProtectedRoute({
 
   // Show loading while checking authentication - with 1 second timeout
   if (authLoading) {
+    console.log('🛡️ ProtectedRoute showing auth loading');
     return <LoadingFallback message="Authenticating..." />;
   }
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
+    console.log('🛡️ Redirecting to login - not authenticated');
     authDebugger.log('Redirecting to login - not authenticated');
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Check role-based permissions
   if (requiredRole && !hasPermission(requiredRole)) {
+    console.log('🛡️ Access denied - insufficient role', { 
+      userRole: user?.role, 
+      requiredRole 
+    });
     authDebugger.log('Access denied - insufficient role', { 
       userRole: user?.role, 
       requiredRole 
@@ -115,12 +136,17 @@ export function ProtectedRoute({
 
   // Make store loading optional - don't block dashboard access
   if (requireStoreAccess && storeLoading) {
+    console.log('🛡️ Store loading, showing brief loading');
     // Only show brief loading, don't block indefinitely
     return <LoadingFallback message="Loading store information..." />;
   }
 
   // Check store-specific access only if store is available
   if (requireStoreAccess && currentStore && !hasStoreAccess(currentStore.id)) {
+    console.log('🛡️ Access denied - no store access', { 
+      storeId: currentStore.id, 
+      storeName: currentStore.name 
+    });
     authDebugger.log('Access denied - no store access', { 
       storeId: currentStore.id, 
       storeName: currentStore.name 
@@ -140,10 +166,14 @@ export function ProtectedRoute({
 
   // Allow access even if no store is available (make store loading optional)
   if (requireStoreAccess && !currentStore && !storeLoading) {
+    console.log('🛡️ No store available but allowing access');
     authDebugger.log('No store available but allowing access', {}, 'info');
     // Don't block access - let the component handle the no-store case
   }
 
+  console.log('🛡️ ProtectedRoute - access granted', { 
+    pathname: location.pathname 
+  });
   authDebugger.log('ProtectedRoute - access granted', { 
     pathname: location.pathname 
   });
