@@ -36,13 +36,13 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Force clear loading state after timeout
+  // Force clear loading state after timeout - reduced from 5s to 3s
   const setLoadingTimeout = () => {
     clearLoadingTimeout();
     loadingTimeoutRef.current = setTimeout(() => {
       authDebugger.log('Loading timeout reached, forcing loading state to clear', {}, 'warning');
       setIsLoading(false);
-    }, 5000); // 5 second maximum loading time
+    }, 3000); // Reduced timeout for faster fallback
   };
 
   // Simplified login with better error handling
@@ -111,15 +111,15 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Simplified user mapping with timeout protection
+  // Simplified user mapping with shorter timeout
   const mapUserSafely = async (supabaseUser: any) => {
     try {
       authDebugger.log('Starting safe user mapping', { userId: supabaseUser.id });
       
-      // Set a race condition with timeout
+      // Reduced timeout from 3s to 2s for faster fallback
       const mappingPromise = enhancedMapSupabaseUser(supabaseUser);
       const timeoutPromise = new Promise<User>((_, reject) => 
-        setTimeout(() => reject(new Error('User mapping timeout')), 3000)
+        setTimeout(() => reject(new Error('User mapping timeout')), 2000)
       );
 
       const mappedUser = await Promise.race([mappingPromise, timeoutPromise]);
@@ -150,7 +150,7 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Simplified auth initialization
+  // Simplified auth initialization with better timeout handling
   useEffect(() => {
     if (authInitializedRef.current) return;
     authInitializedRef.current = true;
@@ -197,11 +197,21 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Check for existing session with simplified logic
+    // Check for existing session with timeout protection
     const checkInitialSession = async () => {
       try {
         authDebugger.log('Checking for existing session');
-        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        // Add timeout to session check
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 2000)
+        );
+
+        const { data: { session: currentSession }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
         
         if (error) {
           authDebugger.log('Session check error', { error: error.message }, 'error');
@@ -222,7 +232,7 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
           clearLoadingTimeout();
         }
       } catch (error) {
-        authDebugger.log('Session check failed', { 
+        authDebugger.log('Session check failed or timed out', { 
           error: error instanceof Error ? error.message : 'Unknown error' 
         }, 'error');
         setIsLoading(false);

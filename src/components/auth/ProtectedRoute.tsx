@@ -37,7 +37,7 @@ export function ProtectedRoute({
       userStoreIds: user?.storeIds
     });
 
-    // Set a reasonable timeout for loading
+    // Reduced timeout from 8s to 5s for faster error display
     const timeout = setTimeout(() => {
       if (authLoading || (requireStoreAccess && storeLoading)) {
         authDebugger.log('ProtectedRoute loading timeout reached', {
@@ -47,7 +47,7 @@ export function ProtectedRoute({
         }, 'warning');
         setShowTimeoutError(true);
       }
-    }, 8000); // 8 second timeout
+    }, 5000); // Reduced timeout
 
     return () => clearTimeout(timeout);
   }, [authLoading, storeLoading, isAuthenticated, user, currentStore, location.pathname, requiredRole, requireStoreAccess]);
@@ -64,9 +64,19 @@ export function ProtectedRoute({
           </p>
           <button 
             onClick={() => window.location.reload()} 
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2"
           >
             Reload Page
+          </button>
+          <button 
+            onClick={() => {
+              setShowTimeoutError(false);
+              // Force clear loading states
+              window.location.href = '/login';
+            }} 
+            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+          >
+            Go to Login
           </button>
         </div>
       </div>
@@ -94,7 +104,7 @@ export function ProtectedRoute({
     );
   }
 
-  // Show loading while checking authentication
+  // Show loading while checking authentication - with shorter timeout
   if (authLoading) {
     return <LoadingFallback message="Authenticating..." />;
   }
