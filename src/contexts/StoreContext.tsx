@@ -4,7 +4,7 @@ import { Store } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth/SimplifiedAuthProvider';
 import { toast } from 'sonner';
-import { authDebugger, withTimeout } from '@/utils/authDebug';
+import { authDebugger } from '@/utils/authDebug';
 
 interface StoreState {
   stores: Store[];
@@ -22,12 +22,17 @@ const StoreContext = createContext<StoreState | undefined>(undefined);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // Fetch stores when the user is authenticated or their store assignments change
+  // Fetch stores when the user is authenticated
   useEffect(() => {
+    if (authLoading) {
+      // Don't fetch stores while auth is still loading
+      return;
+    }
+
     if (isAuthenticated && user) {
       authDebugger.log('Store context: User authenticated, fetching stores', { 
         userId: user.id, 
@@ -41,7 +46,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSelectedStore(null);
       setIsLoading(false);
     }
-  }, [isAuthenticated, user?.storeIds, user?.id]);
+  }, [isAuthenticated, user?.storeIds, user?.id, authLoading]);
 
   const fetchStores = async () => {
     try {
@@ -83,12 +88,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Add timeout protection for store query
-      const { data, error: queryError } = await withTimeout(
-        query,
-        10000, // 10 second timeout
-        'Store fetch request timed out'
-      );
+      // Execute the query
+      const { data, error: queryError } = await query;
 
       if (queryError) {
         authDebugger.log('Error fetching stores', { error: queryError.message }, 'error');

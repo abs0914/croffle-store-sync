@@ -21,7 +21,7 @@ export function ProtectedRoute({
   const { user, isLoading: authLoading, isAuthenticated, hasPermission, hasStoreAccess } = useAuth();
   const { currentStore, isLoading: storeLoading, error: storeError } = useStore();
   const location = useLocation();
-  const [timeoutReached, setTimeoutReached] = useState(false);
+  const [showTimeoutError, setShowTimeoutError] = useState(false);
 
   useEffect(() => {
     authDebugger.log('ProtectedRoute check', {
@@ -37,36 +37,27 @@ export function ProtectedRoute({
       userStoreIds: user?.storeIds
     });
 
-    // Set timeout for loading state
+    // Set a reasonable timeout for loading
     const timeout = setTimeout(() => {
-      if (authLoading || (requireStoreAccess && storeLoading)) {
-        authDebugger.log('ProtectedRoute timeout reached', { 
-          authLoading, 
-          storeLoading, 
-          requireStoreAccess 
-        }, 'warning');
-        setTimeoutReached(true);
+      if (authLoading && !isAuthenticated) {
+        authDebugger.log('Auth loading timeout reached', {}, 'warning');
+        setShowTimeoutError(true);
       }
-    }, 15000); // 15 second timeout
+    }, 10000); // 10 second timeout
 
     return () => clearTimeout(timeout);
   }, [authLoading, storeLoading, isAuthenticated, user, currentStore, location.pathname, requiredRole, requireStoreAccess]);
 
   // Show timeout error if loading takes too long
-  if (timeoutReached && (authLoading || (requireStoreAccess && storeLoading))) {
+  if (showTimeoutError) {
     authDebugger.log('Showing timeout error', {}, 'error');
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center p-6 max-w-md">
           <h2 className="text-2xl font-bold mb-4 text-red-600">Loading Timeout</h2>
           <p className="text-gray-600 mb-4">
-            The application is taking longer than expected to load. This might be due to:
+            The application is taking longer than expected to load.
           </p>
-          <ul className="text-sm text-gray-500 text-left mb-4">
-            <li>• Network connectivity issues</li>
-            <li>• Database connection problems</li>
-            <li>• User permissions not properly configured</li>
-          </ul>
           <button 
             onClick={() => window.location.reload()} 
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
@@ -101,7 +92,7 @@ export function ProtectedRoute({
 
   // Show loading while checking authentication
   if (authLoading) {
-    return <LoadingFallback message="Verifying authentication..." />;
+    return <LoadingFallback message="Loading..." />;
   }
 
   // Redirect to login if not authenticated
@@ -129,7 +120,7 @@ export function ProtectedRoute({
     );
   }
 
-  // Show loading while checking store access
+  // Show loading while checking store access (but only briefly)
   if (requireStoreAccess && storeLoading) {
     return <LoadingFallback message="Loading store information..." />;
   }

@@ -15,7 +15,7 @@ export default function Login() {
   const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Show loading spinner while checking authentication - but with timeout
+  // Show loading spinner while checking authentication
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-croffle-background">
@@ -46,7 +46,7 @@ export default function Login() {
     try {
       await login(email, password);
       toast.success("Login successful");
-      navigate("/dashboard");
+      // Navigation will be handled by the auth state change
     } catch (error: any) {
       console.error("Login failed:", error);
       toast.error(error.message || "Login failed");
