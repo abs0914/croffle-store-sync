@@ -60,6 +60,30 @@ function App() {
                     </div>
                   } />
 
+                  {/* Step-by-step debugging routes */}
+
+                  {/* Test ProtectedRoute only */}
+                  <Route path="/test-protected" element={
+                    <ProtectedRoute>
+                      <div style={{ padding: '20px', background: 'yellow' }}>
+                        <h1>ProtectedRoute Working!</h1>
+                        <p>ProtectedRoute is allowing access.</p>
+                      </div>
+                    </ProtectedRoute>
+                  } />
+
+                  {/* Test ProtectedRoute + MainLayout */}
+                  <Route path="/test-layout" element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <div style={{ padding: '20px', background: 'orange' }}>
+                          <h1>MainLayout Working!</h1>
+                          <p>Both ProtectedRoute and MainLayout are working.</p>
+                        </div>
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+
                   {/* Original complex dashboard route for comparison */}
                   <Route path="/dashboard-complex" element={
                     <ErrorBoundary>
