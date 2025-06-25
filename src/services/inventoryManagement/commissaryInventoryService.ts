@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
 import { toast } from "sonner";
@@ -163,22 +162,32 @@ export const removeDuplicateCommissaryItems = (items: CommissaryInventoryItem[])
 
 export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> => {
   try {
+    console.log('Fetching orderable items...');
+    
     const { data, error } = await supabase
       .from('commissary_inventory')
       .select('*')
       .eq('is_active', true)
-      .eq('item_type', 'orderable_item')
-      .gt('current_stock', 0)
+      .eq('item_type', 'orderable_item') // Only fetch converted/finished products
+      .gt('current_stock', 0) // Only items with stock > 0
       .order('name');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching orderable items:', error);
+      throw error;
+    }
     
-    return (data || []).map(item => ({
+    console.log('Raw orderable items from DB:', data);
+    
+    const processedItems = (data || []).map(item => ({
       ...item,
       uom: item.unit || 'units',
       category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
     }));
+    
+    console.log('Processed orderable items:', processedItems);
+    return processedItems;
   } catch (error) {
     console.error('Error fetching orderable items:', error);
     toast.error('Failed to fetch orderable items');

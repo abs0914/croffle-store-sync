@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -30,6 +29,16 @@ interface OrderItem {
   selected: boolean;
 }
 
+// Business-relevant category mapping for display
+const BUSINESS_CATEGORIES = {
+  'Regular Croissants': ['regular croissant', 'plain croissant', 'butter croissant'],
+  'Flavored Croissants': ['chocolate croissant', 'almond croissant', 'cheese croissant', 'ham croissant'],
+  'Sauces & Spreads': ['sauce', 'spread', 'cream', 'jam', 'butter'],
+  'Toppings & Add-ons': ['topping', 'sprinkle', 'powder', 'syrup'],
+  'Packaging & Boxes': ['box', 'bag', 'container', 'packaging'],
+  'Miscellaneous': [] // catch-all for items that don't match other categories
+};
+
 export function CreatePurchaseOrderDialog({
   open,
   onOpenChange,
@@ -55,16 +64,33 @@ export function CreatePurchaseOrderDialog({
     }
   }, [open]);
 
+  const categorizeItem = (item: CommissaryInventoryItem): string => {
+    const itemName = item.name.toLowerCase();
+    
+    for (const [category, keywords] of Object.entries(BUSINESS_CATEGORIES)) {
+      if (keywords.length === 0) continue; // Skip miscellaneous for now
+      
+      if (keywords.some(keyword => itemName.includes(keyword))) {
+        return category;
+      }
+    }
+    
+    return 'Miscellaneous';
+  };
+
   const loadOrderableItems = async () => {
     setItemsLoading(true);
     try {
       const itemsData = await fetchOrderableItems();
       console.log('Loaded orderable items:', itemsData);
-      setOrderableItems(itemsData);
       
-      // Group items by category for better organization
-      const grouped = itemsData.reduce((acc, item) => {
-        const category = item.category || 'Other';
+      // Filter to only show orderable items (converted products)
+      const orderableOnly = itemsData.filter(item => item.item_type === 'orderable_item');
+      setOrderableItems(orderableOnly);
+      
+      // Group items by business categories
+      const grouped = orderableOnly.reduce((acc, item) => {
+        const category = categorizeItem(item);
         if (!acc[category]) acc[category] = [];
         acc[category].push(item);
         return acc;
@@ -73,7 +99,7 @@ export function CreatePurchaseOrderDialog({
       setGroupedItems(grouped);
       
       // Initialize items array with all orderable items
-      const initialItems = itemsData.map(item => ({
+      const initialItems = orderableOnly.map(item => ({
         commissary_item_id: item.id,
         quantity: 0,
         unit_price: item.unit_cost || 0,
@@ -114,7 +140,7 @@ export function CreatePurchaseOrderDialog({
     const categoryItems = groupedItems[category] || [];
     const updatedItems = items.map(item => {
       const itemDetails = getItemDetails(item.commissary_item_id);
-      if (itemDetails && itemDetails.category === category) {
+      if (itemDetails && categorizeItem(itemDetails) === category) {
         return { ...item, selected, quantity: selected ? 1 : 0 };
       }
       return item;
@@ -190,7 +216,7 @@ export function CreatePurchaseOrderDialog({
               inventory_stock_id: inventoryStockId,
               quantity: item.quantity,
               unit_price: item.unit_price,
-              specifications: `${item.specifications} - Commissary Item: ${itemDetails?.name || 'Unknown'}`
+              specifications: `${item.specifications} - Finished Product: ${itemDetails?.name || 'Unknown'}`
             });
           }
         }
@@ -226,9 +252,9 @@ export function CreatePurchaseOrderDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Purchase Order - Commissary Items</DialogTitle>
+          <DialogTitle>Create Purchase Order - Finished Products</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Select items from commissary inventory to create your purchase order
+            Select finished products (converted items) from commissary inventory for your store
           </p>
         </DialogHeader>
 
@@ -279,27 +305,33 @@ export function CreatePurchaseOrderDialog({
                 <span className="font-medium text-amber-800">Low Stock Alert</span>
               </div>
               <p className="text-sm text-amber-700 mb-2">
-                {lowStockItems.length} item{lowStockItems.length !== 1 ? 's' : ''} below minimum threshold
+                {lowStockItems.length} finished product{lowStockItems.length !== 1 ? 's' : ''} below minimum threshold
               </p>
             </div>
           )}
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Available Items ({selectedItems.length} selected)</Label>
+              <Label>Available Finished Products ({selectedItems.length} selected)</Label>
               <div className="text-sm font-medium">
                 Total: ₱{totalAmount.toFixed(2)}
               </div>
             </div>
             
             {itemsLoading ? (
-              <div className="text-center py-8">Loading items...</div>
+              <div className="text-center py-8">Loading finished products...</div>
+            ) : Object.keys(groupedItems).length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  No finished products available. Please create conversions in Production Management first.
+                </p>
+              </div>
             ) : (
               <div className="space-y-6">
                 {Object.entries(groupedItems).map(([category, categoryItems]) => (
                   <div key={category} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-semibold text-lg">{category.toUpperCase()}</h3>
+                      <h3 className="font-semibold text-lg">{category}</h3>
                       <div className="flex items-center gap-2">
                         <Button
                           type="button"

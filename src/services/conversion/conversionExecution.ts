@@ -4,20 +4,53 @@ import { ConversionRequest } from "@/types/commissary";
 import { toast } from "sonner";
 import { normalizeUnit } from "./conversionValidation";
 
+// Map business categories to database categories
+const CATEGORY_MAPPING = {
+  'regular_croissants': 'supplies',
+  'flavored_croissants': 'supplies', 
+  'sauces': 'supplies',
+  'toppings': 'supplies',
+  'packaging': 'packaging_materials',
+  'miscellaneous': 'supplies'
+} as const;
+
 export const createOutputItem = async (conversionRequest: ConversionRequest) => {
   const normalizedUnit = normalizeUnit(conversionRequest.output_item.uom);
+  
+  // Map business category to database category
+  const dbCategory = CATEGORY_MAPPING[conversionRequest.output_item.category as keyof typeof CATEGORY_MAPPING] || 'supplies';
+  
+  // Calculate total cost from input items if not provided
+  let totalCost = conversionRequest.output_item.unit_cost || 0;
+  if (totalCost === 0) {
+    // Calculate cost based on input materials
+    for (const input of conversionRequest.input_items) {
+      const { data: item } = await supabase
+        .from('commissary_inventory')
+        .select('unit_cost')
+        .eq('id', input.commissary_item_id)
+        .single();
+      
+      if (item?.unit_cost) {
+        totalCost += (item.unit_cost * input.quantity);
+      }
+    }
+    
+    // Add 10% processing cost
+    totalCost = totalCost * 1.1;
+  }
   
   const { data: newItem, error: createError } = await supabase
     .from('commissary_inventory')
     .insert({
       name: conversionRequest.output_item.name,
-      category: conversionRequest.output_item.category,
-      item_type: 'orderable_item',
+      category: dbCategory,
+      item_type: 'orderable_item', // This is key - marking as orderable
       current_stock: conversionRequest.output_item.quantity,
-      minimum_threshold: 0,
+      minimum_threshold: Math.max(1, Math.floor(conversionRequest.output_item.quantity * 0.1)), // 10% of initial stock
       unit: normalizedUnit,
-      unit_cost: conversionRequest.output_item.unit_cost || 0,
-      sku: conversionRequest.output_item.sku,
+      unit_cost: totalCost / conversionRequest.output_item.quantity, // Cost per unit
+      sku: conversionRequest.output_item.sku || `ORD-${Date.now()}`,
       storage_location: conversionRequest.output_item.storage_location,
       is_active: true
     })
@@ -30,6 +63,7 @@ export const createOutputItem = async (conversionRequest: ConversionRequest) => 
     return null;
   }
 
+  console.log('Created orderable item:', newItem);
   return newItem;
 };
 
