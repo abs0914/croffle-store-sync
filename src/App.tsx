@@ -42,17 +42,40 @@ function App() {
                   {/* Root route using Index component for proper auth handling */}
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
+
+                  {/* Simple test route */}
+                  <Route path="/test" element={
+                    <div style={{ padding: '20px', background: 'lightgreen' }}>
+                      <h1>Test Route Working!</h1>
+                      <p>If you can see this, routing is working.</p>
+                    </div>
+                  } />
                   
-                  {/* Protected routes with MainLayout */}
+                  {/* Simplified dashboard route for debugging */}
                   <Route path="/dashboard" element={
-                    <ProtectedRoute>
-                      <MainLayout>
-                        {(() => {
-                          console.log('🏠 Dashboard route element being rendered');
-                          return <Dashboard />;
-                        })()}
-                      </MainLayout>
-                    </ProtectedRoute>
+                    <div style={{ padding: '20px', background: 'lightblue', minHeight: '100vh' }}>
+                      <h1>Dashboard Route Working!</h1>
+                      <p>This is a simplified dashboard to test routing.</p>
+                      <p>If you can see this, the /dashboard route is working.</p>
+                    </div>
+                  } />
+
+                  {/* Original complex dashboard route for comparison */}
+                  <Route path="/dashboard-complex" element={
+                    <ErrorBoundary>
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <MainLayout>
+                            <ErrorBoundary>
+                              {(() => {
+                                console.log('🏠 Dashboard route element being rendered');
+                                return <Dashboard />;
+                              })()}
+                            </ErrorBoundary>
+                          </MainLayout>
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    </ErrorBoundary>
                   } />
                   <Route path="/pos" element={
                     <ProtectedRoute requireStoreAccess>
