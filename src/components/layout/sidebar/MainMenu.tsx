@@ -99,6 +99,18 @@ export function MainMenu() {
     }
   ];
 
+  // Debug logging to help identify permission issues
+  console.log('MainMenu Debug:', {
+    user: user?.role,
+    canAccessProducts: canAccessProducts().hasPermission,
+    canAccessCustomers: canAccessCustomers().hasPermission,
+    canAccessInventory: canAccessInventory().hasPermission,
+    canAccessOrderManagement: canAccessOrderManagement().hasPermission,
+    canAccessExpenses: canAccessExpenses().hasPermission,
+    canAccessReports: canAccessReports().hasPermission,
+    filteredItems: menuItems.filter(item => item.show).map(item => item.title)
+  });
+
   return (
     <nav className="space-y-2">
       {menuItems

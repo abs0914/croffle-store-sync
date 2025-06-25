@@ -29,15 +29,12 @@ import {
   BarChart3,
   Settings,
   Truck,
-  ShoppingBag,
   ClipboardList,
   DollarSign,
   Warehouse,
   Factory
 } from "lucide-react";
-import { 
-  checkRouteAccess
-} from "@/contexts/auth/role-utils";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface MenuItem {
   path?: string;
@@ -52,6 +49,14 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { currentStore, setCurrentStore, stores } = useStore();
+  const { 
+    canAccessOrderManagement,
+    canAccessExpenses,
+    canAccessReports,
+    canAccessInventory,
+    canAccessProducts,
+    canAccessCustomers 
+  } = usePermissions();
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -109,56 +114,63 @@ export function Sidebar() {
     const baseMenuItems: MenuItem[] = [
       { path: "/dashboard", label: "Dashboard", icon: Home },
       { path: "/pos", label: "Point of Sale", icon: ShoppingCart },
-      { path: "/products", label: "Products", icon: Package },
-      { path: "/customers", label: "Customers", icon: Users },
+      { 
+        path: "/products", 
+        label: "Products", 
+        icon: Package,
+        hidden: !canAccessProducts().hasPermission
+      },
+      { 
+        path: "/customers", 
+        label: "Customers", 
+        icon: Users,
+        hidden: !canAccessCustomers().hasPermission
+      },
       { 
         path: "/inventory", 
         label: "Inventory", 
         icon: Warehouse,
-        hidden: !checkRouteAccess(user?.role, "/inventory")
+        hidden: !canAccessInventory().hasPermission
       },
       { 
         path: "/stock-orders", 
         label: "Stock Orders", 
         icon: Truck,
-        hidden: !checkRouteAccess(user?.role, "/stock-orders")
+        hidden: !canAccessOrderManagement().hasPermission
       },
       {
         path: "/orders", 
         label: "Order Management", 
         icon: ClipboardList,
-        hidden: !checkRouteAccess(user?.role, "/orders")
+        hidden: !canAccessOrderManagement().hasPermission
       },
       { 
         path: "/expenses", 
         label: "Expenses", 
         icon: DollarSign,
-        hidden: !checkRouteAccess(user?.role, "/expenses")
+        hidden: !canAccessExpenses().hasPermission
       },
       { 
         path: "/reports", 
         label: "Reports", 
         icon: BarChart3,
-        hidden: !checkRouteAccess(user?.role, "/reports")
+        hidden: !canAccessReports().hasPermission
       },
       { 
         path: "/production", 
         label: "Production", 
         icon: Factory,
-        hidden: !checkRouteAccess(user?.role, "/production")
+        hidden: !(user?.role === 'admin' || user?.role === 'owner' || user?.role === 'manager')
       },
       { 
         path: "/settings", 
         label: "Settings", 
         icon: Settings,
-        hidden: !checkRouteAccess(user?.role, "/settings")
+        hidden: !(user?.role === 'admin' || user?.role === 'owner')
       },
     ];
 
-    return baseMenuItems.filter(item => {
-      if (item.hidden) return false;
-      return item.path ? checkRouteAccess(user?.role, item.path) : true;
-    });
+    return baseMenuItems.filter(item => !item.hidden);
   };
 
   const menuItems = getFilteredMenuItems();
@@ -179,20 +191,16 @@ export function Sidebar() {
         </SheetHeader>
         <Separator className="my-4" />
 
-        {menuItems.map((item, index) => {
-          if (item.hidden) return null;
-
-          return (
-            <button
-              key={index}
-              onClick={() => navigate(item.path || "")}
-              className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent w-full text-left ${isActive(item.path || "") ? 'bg-secondary' : ''}`}
-            >
-              <item.icon className="h-4 w-4" />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
+        {menuItems.map((item, index) => (
+          <button
+            key={index}
+            onClick={() => navigate(item.path || "")}
+            className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent w-full text-left ${isActive(item.path || "") ? 'bg-secondary' : ''}`}
+          >
+            <item.icon className="h-4 w-4" />
+            <span>{item.label}</span>
+          </button>
+        ))}
 
         <Separator className="my-4" />
 

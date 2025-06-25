@@ -1,65 +1,49 @@
-
-import { useAuth } from "@/contexts/auth";
-import { useStore } from "@/contexts/StoreContext";
-
-export interface Permission {
-  hasPermission: boolean;
-  reason?: string;
-}
+import { useAuth } from '@/contexts/auth';
+import { useStore } from '@/contexts/StoreContext';
+import { canPerformAction } from '@/contexts/auth/role-utils';
 
 export function usePermissions() {
   const { user } = useAuth();
   const { currentStore } = useStore();
 
-  const hasPermission = (requiredRole: string | string[], requireStoreAccess: boolean = false): Permission => {
-    // Check if user is authenticated
-    if (!user) {
-      return { hasPermission: false, reason: "User not authenticated" };
+  const checkPermission = (action: string) => {
+    if (!user?.role) {
+      return { hasPermission: false, reason: 'No user role' };
     }
 
-    // Check if store access is required but no store is selected
-    if (requireStoreAccess && !currentStore) {
-      return { hasPermission: false, reason: "No store selected" };
-    }
+    const hasPermission = canPerformAction(user.role, action);
+    return { 
+      hasPermission, 
+      reason: hasPermission ? 'Permission granted' : 'Insufficient permissions' 
+    };
+  };
 
-    // Admin and owner always have access
-    if (user.role === 'admin' || user.role === 'owner') {
-      return { hasPermission: true };
-    }
-
-    // Check role-based permissions
-    const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+  const checkStoreAccess = () => {
+    if (!user) return { hasPermission: false, reason: 'No user' };
+    if (!currentStore) return { hasPermission: false, reason: 'No store selected' };
     
-    if (!allowedRoles.includes(user.role)) {
-      return { 
-        hasPermission: false, 
-        reason: `Requires ${allowedRoles.join(' or ')} role, but user has ${user.role} role` 
-      };
+    // Admin and owner can access all stores
+    if (user.role === 'admin' || user.role === 'owner') {
+      return { hasPermission: true, reason: 'Admin/Owner access' };
     }
-
-    // Check store access for non-admin/owner users
-    if (requireStoreAccess && currentStore && !['admin', 'owner'].includes(user.role)) {
-      const hasStoreAccess = user.storeIds?.includes(currentStore.id);
-      if (!hasStoreAccess) {
-        return { 
-          hasPermission: false, 
-          reason: `User does not have access to store: ${currentStore.name}` 
-        };
-      }
+    
+    // Other roles need explicit store access
+    if (user.storeIds && user.storeIds.includes(currentStore.id)) {
+      return { hasPermission: true, reason: 'Store access granted' };
     }
-
-    return { hasPermission: true };
+    
+    return { hasPermission: false, reason: 'No store access' };
   };
 
   return {
-    hasPermission,
-    // Convenience methods for common permission checks
-    canAccessOrderManagement: () => hasPermission(['manager', 'admin', 'owner'], true),
-    canAccessExpenses: () => hasPermission(['cashier', 'manager', 'admin', 'owner'], true),
-    canAccessReports: () => hasPermission(['manager', 'admin', 'owner'], true),
-    canAccessSettings: () => hasPermission(['admin', 'owner'], false),
-    canAccessInventory: () => hasPermission(['cashier', 'manager', 'admin', 'owner'], true),
-    canAccessProducts: () => hasPermission(['manager', 'admin', 'owner'], true),
-    canAccessCustomers: () => hasPermission(['cashier', 'manager', 'admin', 'owner'], true),
+    canAccessProducts: () => checkPermission('manage_products'),
+    canAccessCustomers: () => checkPermission('process_transactions'),
+    canAccessInventory: () => checkPermission('manage_inventory'),
+    canAccessOrderManagement: () => checkPermission('manage_orders'),
+    canAccessExpenses: () => checkPermission('manage_expenses'),
+    canAccessReports: () => checkPermission('view_reports'),
+    canAccessSettings: () => checkPermission('manage_users'),
+    hasStoreAccess: checkStoreAccess,
+    checkPermission,
   };
 }
