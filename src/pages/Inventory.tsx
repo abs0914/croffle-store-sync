@@ -52,7 +52,7 @@ export default function Inventory() {
         </TabsContent>
 
         <TabsContent value="proactive">
-          <ProactiveReorderingDashboard storeId="default-store-id" />
+          <ProactiveReorderingDashboard />
         </TabsContent>
       </Tabs>
     </div>

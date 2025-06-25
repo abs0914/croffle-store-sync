@@ -75,7 +75,7 @@ export function usePermissionAudit() {
 
     setAuditResult({
       userId: user.id,
-      userRole: user.role,
+      userRole: user.role as UserRole, // Explicit cast to ensure type compatibility
       userStoreIds: user.storeIds,
       currentStoreId: currentStore?.id || null,
       hasStoreAccess,

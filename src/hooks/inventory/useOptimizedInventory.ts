@@ -35,7 +35,7 @@ export function useOptimizedInventory(storeId?: string) {
         throw error;
       }
 
-      // Transform to InventoryItem format
+      // Transform to InventoryItem format with proper field mapping
       return (data || []).map(item => ({
         id: item.id,
         name: item.item,
@@ -47,6 +47,7 @@ export function useOptimizedInventory(storeId?: string) {
         unit: item.unit,
         unit_cost: item.cost || 0,
         last_restocked: item.last_restocked,
+        last_updated: item.updated_at, // Map updated_at to last_updated
         store_id: item.store_id,
         is_active: item.is_active,
         created_at: item.created_at,
