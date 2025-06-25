@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth/SimplifiedAuthProvider';
-import { useStore } from '@/contexts/StoreContext';
+import { useSafeStore } from '@/hooks/useSafeStore';
 import { LoadingFallback } from '@/components/ui/LoadingFallback';
 import { UserRole } from '@/types';
 import { authDebugger } from '@/utils/authDebug';
@@ -19,7 +19,7 @@ export function ProtectedRoute({
   requireStoreAccess = false 
 }: ProtectedRouteProps) {
   const { user, isLoading: authLoading, isAuthenticated, hasPermission, hasStoreAccess } = useAuth();
-  const { currentStore, isLoading: storeLoading, error: storeError } = useStore();
+  const { currentStore, isLoading: storeLoading, error: storeError } = useSafeStore();
   const location = useLocation();
   const [showTimeoutError, setShowTimeoutError] = useState(false);
 
@@ -37,7 +37,7 @@ export function ProtectedRoute({
       userStoreIds: user?.storeIds
     });
 
-    // Set a shorter, more reasonable timeout for loading
+    // Set a reasonable timeout for loading
     const timeout = setTimeout(() => {
       if (authLoading || (requireStoreAccess && storeLoading)) {
         authDebugger.log('ProtectedRoute loading timeout reached', {
@@ -73,8 +73,8 @@ export function ProtectedRoute({
     );
   }
 
-  // Show store error if there's an issue loading stores
-  if (storeError && requireStoreAccess) {
+  // Show store error if there's an issue loading stores (but only if store access is required)
+  if (storeError && requireStoreAccess && storeError !== 'Store context not available') {
     authDebugger.log('Showing store error', { storeError }, 'error');
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -94,7 +94,7 @@ export function ProtectedRoute({
     );
   }
 
-  // Show loading while checking authentication (with shorter timeout)
+  // Show loading while checking authentication
   if (authLoading) {
     return <LoadingFallback message="Authenticating..." />;
   }
@@ -149,7 +149,7 @@ export function ProtectedRoute({
   }
 
   // Show message if store access is required but no store is available
-  if (requireStoreAccess && !currentStore && !storeLoading) {
+  if (requireStoreAccess && !currentStore && !storeLoading && storeError !== 'Store context not available') {
     authDebugger.log('No store available for store-required route', {}, 'warning');
     return (
       <div className="flex items-center justify-center min-h-screen">

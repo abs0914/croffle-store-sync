@@ -17,7 +17,19 @@ interface StoreState {
   refreshStores: () => Promise<void>;
 }
 
-const StoreContext = createContext<StoreState | undefined>(undefined);
+// Create default context value to prevent "hook used outside provider" errors
+const defaultStoreState: StoreState = {
+  stores: [],
+  selectedStore: null,
+  currentStore: null,
+  isLoading: false,
+  error: null,
+  selectStore: () => {},
+  setCurrentStore: () => {},
+  refreshStores: async () => {},
+};
+
+const StoreContext = createContext<StoreState>(defaultStoreState);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [stores, setStores] = useState<Store[]>([]);
@@ -112,13 +124,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
 
       // Execute the query with timeout protection
-      const queryPromise = query;
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Store query timeout')), 5000)
-      );
-
-      const result = await Promise.race([queryPromise, timeoutPromise]);
-      const { data, error: queryError } = result as { data: any[] | null; error: any | null };
+      const { data, error: queryError } = await query;
 
       clearLoadingTimeout();
 
@@ -231,8 +237,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
 export function useStore() {
   const context = useContext(StoreContext);
+  
+  // Add safety check with better error message
   if (context === undefined) {
-    throw new Error('useStore must be used within a StoreProvider');
+    authDebugger.log('useStore called outside of StoreProvider', {}, 'error');
+    throw new Error('useStore must be used within a StoreProvider. Make sure your component is wrapped with StoreProvider.');
   }
+  
   return context;
 }

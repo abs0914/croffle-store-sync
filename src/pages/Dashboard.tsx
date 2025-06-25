@@ -1,5 +1,5 @@
 
-import { useStore } from "@/contexts/StoreContext";
+import { useSafeStore } from "@/hooks/useSafeStore";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StoreInfo } from "@/components/dashboard/StoreInfo";
 import QuickActions from "@/components/dashboard/QuickActions";
@@ -10,7 +10,7 @@ import RecentTransactions from "@/components/dashboard/RecentTransactions";
 export default function Dashboard() {
   console.log('Dashboard component rendering...');
   
-  const { currentStore } = useStore();
+  const { currentStore } = useSafeStore();
   console.log('Current store:', currentStore);
 
   if (!currentStore) {
