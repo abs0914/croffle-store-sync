@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Store } from '@/types';
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -28,6 +29,7 @@ export const StoreSelector = ({ selectedStores, setSelectedStores }: StoreSelect
       // Transform the data to match the Store interface
       return (data || []).map(store => ({
         ...store,
+        address: store.address || '',
         location: store.address || `${store.city || ''}, ${store.country || ''}`.trim() || 'Unknown Location'
       })) as Store[];
     }

@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Store } from '@/types';
 import {
   Select,
@@ -33,6 +34,7 @@ export const OptimizedStoreSelector = ({ selectedStores, setSelectedStores }: Op
       // Transform the data to match the Store interface
       return (data || []).map(store => ({
         ...store,
+        address: store.address || '',
         location: store.address || `${store.city || ''}, ${store.country || ''}`.trim() || 'Unknown Location'
       })) as Store[];
     }
@@ -44,9 +46,11 @@ export const OptimizedStoreSelector = ({ selectedStores, setSelectedStores }: Op
     }
   }, [stores]);
 
-  const handleStoreChange = (storeIds: string[]) => {
-    const newSelectedStores = allStores.filter(store => storeIds.includes(store.id));
-    setSelectedStores(newSelectedStores);
+  const handleStoreChange = (storeId: string) => {
+    const selectedStore = allStores.find(store => store.id === storeId);
+    if (selectedStore) {
+      setSelectedStores([selectedStore]);
+    }
   };
 
   const selectedStoreIds = selectedStores.map(store => store.id);
@@ -54,8 +58,7 @@ export const OptimizedStoreSelector = ({ selectedStores, setSelectedStores }: Op
   return (
     <Select
       onValueChange={handleStoreChange}
-      defaultValue={selectedStoreIds.join(',')}
-      multiple
+      defaultValue={selectedStoreIds[0] || ''}
     >
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Select store" />

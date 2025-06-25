@@ -1,13 +1,18 @@
+
 import React, { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Store } from '@/types';
 
-export const BulkUploadTab = () => {
+interface BulkUploadTabProps {
+  storeId?: string;
+}
+
+export const BulkUploadTab = ({ storeId }: BulkUploadTabProps) => {
   const [uploadedData, setUploadedData] = useState<any[]>([]);
   const { toast } = useToast();
 
@@ -73,6 +78,7 @@ export const BulkUploadTab = () => {
       // Transform the data to match the Store interface
       return (data || []).map(store => ({
         ...store,
+        address: store.address || '',
         location: store.address || `${store.city || ''}, ${store.country || ''}`.trim() || 'Unknown Location'
       })) as Store[];
     }

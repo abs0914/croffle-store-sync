@@ -1,149 +1,94 @@
-
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { useParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Store } from '@/types';
+import { toast } from 'sonner';
 
-export interface StoreSettings {
-  id?: string;
-  store_id: string;
-  receipt_header: string;
-  receipt_footer: string;
-  tax_percentage: number;
-  is_tax_inclusive: boolean;
-  currency: string;
-  timezone: string;
-}
-
-export const useStoreSettings = (storeId?: string) => {
-  const navigate = useNavigate();
-  
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [store, setStore] = useState<Store | null>(null);
-  const [settings, setSettings] = useState<StoreSettings>({
-    store_id: storeId || '',
-    receipt_header: '',
-    receipt_footer: '',
-    tax_percentage: 12.0,
-    is_tax_inclusive: false,
+export const useStoreSettings = () => {
+  const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState({
+    vat_rate: 0,
     currency: 'PHP',
-    timezone: 'Asia/Manila',
+    receipt_header: '',
+    receipt_footer: ''
   });
-  
-  useEffect(() => {
-    if (storeId) {
-      fetchStoreAndSettings();
-    }
-  }, [storeId]);
-  
-  const fetchStoreAndSettings = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch store details
-      const { data: storeData, error: storeError } = await supabase
+
+  const { data: store, isLoading, error } = useQuery({
+    queryKey: ['store', id],
+    queryFn: async () => {
+      if (!id) throw new Error('Store ID is required');
+      
+      const { data, error } = await supabase
         .from('stores')
         .select('*')
-        .eq('id', storeId)
+        .eq('id', id)
         .single();
       
-      if (storeError) throw storeError;
-      setStore(storeData as Store);
+      if (error) throw error;
       
-      // Fetch store settings
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('store_settings')
-        .select('*')
-        .eq('store_id', storeId)
-        .maybeSingle();
-      
-      if (settingsError) throw settingsError;
-      
-      if (settingsData) {
-        setSettings(settingsData);
-      } else {
-        // Create default settings
-        setSettings({
-          store_id: storeId || '',
-          receipt_header: `${storeData.name}\n${storeData.address}${storeData.phone ? `\nTel: ${storeData.phone}` : ''}`,
-          receipt_footer: 'Thank you for your purchase!\nVisit us again soon.',
-          tax_percentage: 12.0,
-          is_tax_inclusive: false,
-          currency: 'PHP',
-          timezone: 'Asia/Manila',
-        });
-      }
-    } catch (error: any) {
-      console.error('Error fetching store settings:', error);
-      toast.error('Failed to load store settings');
-      navigate('/stores');
-    } finally {
-      setIsLoading(false);
+      // Transform the data to match the Store interface
+      return {
+        ...data,
+        address: data.address || '',
+        location: data.address || `${data.city || ''}, ${data.country || ''}`.trim() || 'Unknown Location'
+      } as Store;
+    },
+    enabled: !!id
+  });
+
+  useEffect(() => {
+    if (store) {
+      setFormData({
+        vat_rate: store.vat_rate || 0,
+        currency: store.currency || 'PHP',
+        receipt_header: store.receipt_header || '',
+        receipt_footer: store.receipt_footer || ''
+      });
     }
-  };
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setSettings((prev) => ({ ...prev, [name]: value }));
-  };
-  
-  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setSettings((prev) => ({ ...prev, [name]: parseFloat(value) || 0 }));
-  };
-  
-  const handleSwitchChange = (checked: boolean) => {
-    setSettings((prev) => ({ ...prev, is_tax_inclusive: checked }));
-  };
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    
+  }, [store]);
+
+  const updateStoreMutation = useMutation({
+    mutationFn: async (updates: Partial<Store>) => {
+      if (!id) throw new Error('Store ID is required');
+      
+      const { error } = await supabase
+        .from('stores')
+        .update(updates)
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      toast.success('Store settings updated successfully!');
+      await queryClient.invalidateQueries({ queryKey: ['store', id] });
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to update store settings: ${error.message}`);
+    }
+  });
+
+  const handleSubmit = async () => {
     try {
-      if (settings.id) {
-        // Update existing settings
-        const { error } = await supabase
-          .from('store_settings')
-          .update({
-            receipt_header: settings.receipt_header,
-            receipt_footer: settings.receipt_footer,
-            tax_percentage: settings.tax_percentage,
-            is_tax_inclusive: settings.is_tax_inclusive,
-            currency: settings.currency,
-            timezone: settings.timezone
-          })
-          .eq('id', settings.id);
-          
-        if (error) throw error;
-      } else {
-        // Create new settings
-        const { error } = await supabase
-          .from('store_settings')
-          .insert([settings]);
-          
-        if (error) throw error;
-      }
-      
-      toast.success('Store settings saved successfully');
-      navigate('/stores');
-    } catch (error: any) {
-      console.error('Error saving store settings:', error);
-      toast.error(error.message || 'Failed to save store settings');
-    } finally {
-      setIsSaving(false);
+      await updateStoreMutation.mutateAsync({
+        vat_rate: formData.vat_rate,
+        currency: formData.currency,
+        receipt_header: formData.receipt_header,
+        receipt_footer: formData.receipt_footer
+      });
+    } catch (error) {
+      console.error("Error updating store settings:", error);
     }
   };
-  
+
   return {
     store,
-    settings,
     isLoading,
-    isSaving,
-    handleChange,
-    handleNumberChange,
-    handleSwitchChange,
-    handleSubmit
+    error,
+    formData,
+    setFormData,
+    handleSubmit,
+    isUpdating: updateStoreMutation.isPending
   };
 };

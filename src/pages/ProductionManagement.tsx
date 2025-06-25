@@ -99,7 +99,7 @@ export default function ProductionManagement() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <BulkUploadTab storeId={currentStore?.id || ''} />
+              <BulkUploadTab storeId={currentStore?.id} />
             </CardContent>
           </Card>
         </TabsContent>
