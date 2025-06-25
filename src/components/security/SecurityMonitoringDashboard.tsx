@@ -61,7 +61,19 @@ export function SecurityMonitoringDashboard() {
         // Fallback to mock data if database query fails
         setEvents([]);
       } else {
-        setEvents(auditEvents || []);
+        // Transform the data to match our SecurityEvent interface
+        const transformedEvents: SecurityEvent[] = (auditEvents || []).map(event => ({
+          id: event.id,
+          event_type: event.event_type,
+          event_details: event.event_details,
+          created_at: event.created_at,
+          user_id: event.user_id || '',
+          ip_address: event.ip_address ? String(event.ip_address) : undefined,
+          user_agent: event.user_agent || undefined,
+          severity: event.severity as 'info' | 'warning' | 'error' | 'critical'
+        }));
+        
+        setEvents(transformedEvents);
       }
       
       // Calculate stats from the fetched events
