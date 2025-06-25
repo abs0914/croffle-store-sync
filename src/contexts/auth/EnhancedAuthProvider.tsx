@@ -63,7 +63,7 @@ export function EnhancedAuthProvider({ children }: { children: ReactNode }) {
       return result;
     } catch (error: any) {
       failedLoginAttempts.current++;
-      lastFailedLoginTime.current = now;
+      lastFailedLoginTime.current = new Date();
       await logSecurityEvent('login_failed', { email, error: error.message });
       throw error;
     }

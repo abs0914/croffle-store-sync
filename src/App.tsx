@@ -15,7 +15,7 @@ import ReportsPage from '@/pages/Reports';
 import InventoryPage from '@/pages/Inventory';
 import ProductionPage from '@/pages/ProductionManagement';
 import CommissaryInventoryPage from '@/pages/CommissaryInventory';
-import StockOrdersPage from '@/pages/StockOrders/StockOrdersManagement';
+import { StockOrdersManagement } from '@/pages/StockOrders/StockOrdersManagement';
 import PosPage from '@/pages/POS';
 import OrderManagementPage from '@/pages/OrderManagement';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -57,7 +57,7 @@ function App() {
                 <Route path="/inventory" element={<ProtectedRoute requireStoreAccess><InventoryPage /></ProtectedRoute>} />
                 <Route path="/production" element={<ProtectedRoute requireStoreAccess><ProductionPage /></ProtectedRoute>} />
                 <Route path="/commissary" element={<ProtectedRoute><CommissaryInventoryPage /></ProtectedRoute>} />
-                <Route path="/stock-orders" element={<ProtectedRoute requireStoreAccess><StockOrdersPage /></ProtectedRoute>} />
+                <Route path="/stock-orders" element={<ProtectedRoute requireStoreAccess><StockOrdersManagement /></ProtectedRoute>} />
                 <Route path="/security" element={<ProtectedRoute requiredRole="admin"><SecurityMonitoringDashboard /></ProtectedRoute>} />
               </Routes>
             </StoreProvider>
