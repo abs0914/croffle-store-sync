@@ -36,8 +36,17 @@ export const createOutputItem = async (conversionRequest: ConversionRequest) => 
       }
     }
     
-    // Add 10% processing cost
-    totalCost = totalCost * 1.1;
+    // For 1:1 conversions (like croissant repackaging), minimal processing cost
+    const isOneToOneConversion = conversionRequest.input_items.length === 1 && 
+                                 conversionRequest.input_items[0].quantity === conversionRequest.output_item.quantity;
+    
+    if (isOneToOneConversion) {
+      // Add minimal 2% processing/certification cost for 1:1 conversions
+      totalCost = totalCost * 1.02;
+    } else {
+      // Add 10% processing cost for complex conversions
+      totalCost = totalCost * 1.1;
+    }
   }
   
   const { data: newItem, error: createError } = await supabase
@@ -51,7 +60,7 @@ export const createOutputItem = async (conversionRequest: ConversionRequest) => 
       unit: normalizedUnit,
       unit_cost: totalCost / conversionRequest.output_item.quantity, // Cost per unit
       sku: conversionRequest.output_item.sku || `ORD-${Date.now()}`,
-      storage_location: conversionRequest.output_item.storage_location,
+      storage_location: conversionRequest.output_item.storage_location || 'Finished Goods',
       is_active: true
     })
     .select()

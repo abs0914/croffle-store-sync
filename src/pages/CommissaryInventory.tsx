@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Package, AlertTriangle, CheckCircle, Warehouse, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Package, AlertTriangle, CheckCircle, Warehouse, Trash2, Upload } from "lucide-react";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { 
   fetchCommissaryInventory, 
@@ -21,6 +20,7 @@ import { StockAdjustmentDialog } from "./CommissaryInventory/components/StockAdj
 import { DeleteConfirmationDialog } from "./CommissaryInventory/components/DeleteConfirmationDialog";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/format";
+import { BulkUploadRawMaterialsDialog } from "./CommissaryInventory/components/BulkUploadRawMaterialsDialog";
 
 export default function CommissaryInventory() {
   const { user } = useAuth();
@@ -32,6 +32,7 @@ export default function CommissaryInventory() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showStockDialog, setShowStockDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<CommissaryInventoryItem | null>(null);
   const [filters, setFilters] = useState<CommissaryInventoryFilters>({
     category: 'all',
@@ -232,6 +233,15 @@ export default function CommissaryInventory() {
           </Button>
           
           <Button
+            onClick={() => setShowBulkUploadDialog(true)}
+            variant="outline"
+            className="text-blue-600 hover:text-blue-700 border-blue-300 hover:border-blue-400"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Upload Raw Materials
+          </Button>
+          
+          <Button
             onClick={handleRemoveDuplicates}
             disabled={removingDuplicates}
             variant="outline"
@@ -361,6 +371,13 @@ export default function CommissaryInventory() {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         item={selectedItem}
+        onSuccess={loadData}
+      />
+
+      {/* Bulk Upload Raw Materials Dialog */}
+      <BulkUploadRawMaterialsDialog
+        open={showBulkUploadDialog}
+        onOpenChange={setShowBulkUploadDialog}
         onSuccess={loadData}
       />
     </div>

@@ -39,7 +39,7 @@ export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOu
             id="output-name"
             value={outputItem.name}
             onChange={(e) => setOutputItem(prev => ({ ...prev, name: e.target.value }))}
-            placeholder="e.g., Regular Croissant + Whipped Cream"
+            placeholder="e.g., Ready Croissant or Croissant + Whipped Cream"
           />
         </div>
         
@@ -101,8 +101,11 @@ export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOu
             min="0"
             value={outputItem.unit_cost}
             onChange={(e) => setOutputItem(prev => ({ ...prev, unit_cost: parseFloat(e.target.value) || 0 }))}
-            placeholder="Cost per unit"
+            placeholder="Leave blank for auto-calculation"
           />
+          <p className="text-xs text-muted-foreground mt-1">
+            Auto-calculated from input costs + minimal processing overhead
+          </p>
         </div>
         
         <div>
@@ -111,7 +114,7 @@ export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOu
             id="output-sku"
             value={outputItem.sku}
             onChange={(e) => setOutputItem(prev => ({ ...prev, sku: e.target.value }))}
-            placeholder="Product SKU"
+            placeholder="Auto-generated if empty"
           />
         </div>
       </div>
@@ -122,8 +125,15 @@ export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOu
           id="storage-location"
           value={outputItem.storage_location}
           onChange={(e) => setOutputItem(prev => ({ ...prev, storage_location: e.target.value }))}
-          placeholder="Where this product will be stored"
+          placeholder="e.g., Finished Goods, Cold Storage"
         />
+      </div>
+      
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-700">
+          <strong>Tip:</strong> For simple repackaging (like croissants), use the same UOM as input. 
+          Cost will be auto-calculated with minimal processing overhead.
+        </p>
       </div>
     </div>
   );
