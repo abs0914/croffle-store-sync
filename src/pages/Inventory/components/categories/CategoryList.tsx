@@ -1,89 +1,96 @@
 
 import React from 'react';
 import { Category } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
 
 interface CategoryListProps {
   categories: Category[];
+  isLoading: boolean;
   onEdit: (category: Category) => void;
-  onDelete: (category: Category) => void;
+  onDelete: (category: Category) => Promise<void>;
 }
 
-export function CategoryList({ categories, onEdit, onDelete }: CategoryListProps) {
-  return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      <table className="w-full">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Category
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Description
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Status
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {categories.map((category) => (
-            <tr key={category.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="flex items-center">
-                  {category.image_url && (
-                    <img
-                      className="h-10 w-10 rounded-full mr-3 object-cover"
-                      src={category.image_url}
-                      alt={category.name}
-                    />
-                  )}
-                  <div className="text-sm font-medium text-gray-900">
-                    {category.name}
-                  </div>
-                </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {category.description || 'No description'}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <Badge variant={category.is_active ? 'default' : 'secondary'}>
-                  {category.is_active ? 'Active' : 'Inactive'}
-                </Badge>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEdit(category)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDelete(category)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+export function CategoryList({ categories, isLoading, onEdit, onDelete }: CategoryListProps) {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
+  }
 
-      {categories.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-gray-500">No categories found</p>
-        </div>
-      )}
+  if (categories.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium text-muted-foreground mb-2">No categories found</h3>
+          <p className="text-sm text-muted-foreground text-center">
+            Create your first category to organize your products
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {categories.map((category) => (
+        <Card key={category.id} className="relative">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <CardTitle className="text-lg">{category.name}</CardTitle>
+                {category.description && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {category.description}
+                  </p>
+                )}
+              </div>
+              <Badge variant={category.is_active ? 'default' : 'secondary'}>
+                {category.is_active ? 'Active' : 'Inactive'}
+              </Badge>
+            </div>
+          </CardHeader>
+          
+          {category.image_url && (
+            <div className="px-6 pb-3">
+              <img 
+                src={category.image_url} 
+                alt={category.name}
+                className="w-full h-32 object-cover rounded-md"
+              />
+            </div>
+          )}
+          
+          <CardContent className="pt-0">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onEdit(category)}
+                className="flex-1"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDelete(category)}
+                className="flex-1 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

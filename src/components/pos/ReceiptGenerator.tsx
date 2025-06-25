@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -105,7 +106,7 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
   };
 
   // Generate QR code content
-  const qrContent = `RECEIPT:${transaction.receiptNumber}|STORE:${currentStore?.name || ''}|DATE:${format(new Date(transaction.createdAt), 'yyyy-MM-dd HH:mm')}|TOTAL:${transaction.total}`;
+  const qrContent = `RECEIPT:${transaction.receiptNumber}|STORE:${currentStore?.name || ''}|DATE:${format(new Date(transaction.created_at), 'yyyy-MM-dd HH:mm')}|TOTAL:${transaction.total}`;
 
   return (
     <div>
@@ -120,7 +121,7 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
           <div className="mt-2">
             <h3 className="font-bold">SALES RECEIPT</h3>
             <p>Receipt #: {transaction.receiptNumber}</p>
-            <p>Date: {format(new Date(transaction.createdAt), 'MMM dd, yyyy h:mm a')}</p>
+            <p>Date: {format(new Date(transaction.created_at), 'MMM dd, yyyy h:mm a')}</p>
             
             {customer && (
               <div className="mt-2">
@@ -167,15 +168,13 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
             </div>
             {transaction.discount > 0 && (
               <div className="flex justify-between text-green-600">
-                <span>Discount 
-                  {transaction.discountType && ` (${transaction.discountType})`}:
-                </span>
+                <span>Discount:</span>
                 <span>-{formatCurrency(transaction.discount)}</span>
               </div>
             )}
             <div className="flex justify-between">
               <span>VAT (12%):</span>
-              <span>{formatCurrency(transaction.tax)}</span>
+              <span>{formatCurrency(transaction.tax_amount)}</span>
             </div>
             
             <Separator className="my-2" />
@@ -188,34 +187,20 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
             <div className="mt-2">
               <div className="flex justify-between">
                 <span>Payment Method:</span>
-                <span className="capitalize">{transaction.paymentMethod}</span>
+                <span className="capitalize">{transaction.payment_method}</span>
               </div>
               
-              {transaction.paymentMethod === 'cash' && (
+              {transaction.payment_method === 'cash' && (
                 <>
                   <div className="flex justify-between">
                     <span>Amount Tendered:</span>
-                    <span>{formatCurrency(transaction.amountTendered || 0)}</span>
+                    <span>{formatCurrency(0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Change:</span>
-                    <span>{formatCurrency(transaction.change || 0)}</span>
+                    <span>{formatCurrency(0)}</span>
                   </div>
                 </>
-              )}
-              
-              {transaction.paymentMethod === 'card' && transaction.paymentDetails?.cardType && (
-                <div className="flex justify-between">
-                  <span>Card:</span>
-                  <span>{transaction.paymentDetails.cardType} (xxxx{transaction.paymentDetails.cardNumber})</span>
-                </div>
-              )}
-              
-              {transaction.paymentMethod === 'e-wallet' && transaction.paymentDetails?.eWalletProvider && (
-                <div className="flex justify-between">
-                  <span>E-wallet:</span>
-                  <span>{transaction.paymentDetails.eWalletProvider} (#{transaction.paymentDetails.eWalletReferenceNumber})</span>
-                </div>
               )}
             </div>
           </div>

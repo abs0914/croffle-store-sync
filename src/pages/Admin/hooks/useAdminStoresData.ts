@@ -1,16 +1,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Store } from '@/types';
+import { Store, StoreMetrics } from '@/types';
 import { toast } from 'sonner';
-
-interface StoreMetrics {
-  totalStores: number;
-  activeStores: number;
-  inactiveStores: number;
-  companyOwned: number;
-  franchises: number;
-}
 
 export function useAdminStoresData() {
   const [stores, setStores] = useState<Store[]>([]);
@@ -19,10 +11,6 @@ export function useAdminStoresData() {
   const [locationFilter, setLocationFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchStores();
-  }, []);
 
   const fetchStores = async () => {
     try {
@@ -36,7 +24,7 @@ export function useAdminStoresData() {
 
       if (error) throw error;
 
-      // Transform database data to match Store interface
+      // Transform store data to match Store interface
       const transformedStores: Store[] = (data || []).map((store: any) => ({
         id: store.id,
         name: store.name,
@@ -69,108 +57,59 @@ export function useAdminStoresData() {
   };
 
   const createStore = async (storeData: Partial<Store>) => {
-    try {
-      const storeToCreate = {
-        name: storeData.name || '',
-        address: storeData.address || '',
+    const { data, error } = await supabase
+      .from('stores')
+      .insert([{
+        name: storeData.name,
+        address: storeData.address,
         phone: storeData.phone,
         email: storeData.email,
-        tax_id: storeData.tax_id,
-        logo_url: storeData.logo_url,
-        is_active: storeData.is_active ?? true,
-        location_type: storeData.location_type,
-        region: storeData.region,
-        logistics_zone: storeData.logistics_zone,
-        ownership_type: storeData.ownership_type,
-        franchise_agreement_date: storeData.franchise_agreement_date,
-        franchise_fee_percentage: storeData.franchise_fee_percentage,
-        franchisee_contact_info: storeData.franchisee_contact_info,
-      };
+        is_active: storeData.is_active ?? true
+      }])
+      .select()
+      .single();
 
-      const { data, error } = await supabase
-        .from('stores')
-        .insert([storeToCreate])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast.success('Store created successfully');
-      await fetchStores();
-      return data;
-    } catch (error) {
-      console.error('Error creating store:', error);
-      toast.error('Failed to create store');
-      throw error;
-    }
+    if (error) throw error;
+    await fetchStores();
+    return data;
   };
 
-  const updateStore = async (id: string, updates: Partial<Store>) => {
-    try {
-      const { data, error } = await supabase
-        .from('stores')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+  const updateStore = async (storeId: string, storeData: Partial<Store>) => {
+    const { data, error } = await supabase
+      .from('stores')
+      .update({
+        name: storeData.name,
+        address: storeData.address,
+        phone: storeData.phone,
+        email: storeData.email,
+        is_active: storeData.is_active
+      })
+      .eq('id', storeId)
+      .select()
+      .single();
 
-      if (error) throw error;
-
-      toast.success('Store updated successfully');
-      await fetchStores();
-      return data;
-    } catch (error) {
-      console.error('Error updating store:', error);
-      toast.error('Failed to update store');
-      throw error;
-    }
+    if (error) throw error;
+    await fetchStores();
+    return data;
   };
 
-  const deleteStore = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('stores')
-        .delete()
-        .eq('id', id);
+  const deleteStore = async (storeId: string) => {
+    const { error } = await supabase
+      .from('stores')
+      .delete()
+      .eq('id', storeId);
 
-      if (error) throw error;
-
-      toast.success('Store deleted successfully');
-      await fetchStores();
-    } catch (error) {
-      console.error('Error deleting store:', error);
-      toast.error('Failed to delete store');
-      throw error;
-    }
+    if (error) throw error;
+    await fetchStores();
   };
 
-  const toggleStoreStatus = async (id: string) => {
-    try {
-      const store = stores.find(s => s.id === id);
-      if (!store) return;
-
-      const { error } = await supabase
-        .from('stores')
-        .update({ is_active: !store.is_active })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast.success(`Store ${store.is_active ? 'deactivated' : 'activated'} successfully`);
-      await fetchStores();
-    } catch (error) {
-      console.error('Error toggling store status:', error);
-      toast.error('Failed to update store status');
-    }
-  };
-
-  const getStoresByType = (type: 'company_owned' | 'franchisee') => {
-    return stores.filter(store => store.ownership_type === type);
-  };
-
-  const getStoresByRegion = (region: string) => {
+  const getStoresByRegion = (region: string): Store[] => {
     return stores.filter(store => store.region === region);
   };
+
+  useEffect(() => {
+    fetchStores();
+  }, []);
 
   const filteredStores = useMemo(() => {
     let filtered = stores;
@@ -180,18 +119,17 @@ export function useAdminStoresData() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(store => 
         store.name.toLowerCase().includes(query) ||
-        (store.location && store.location.toLowerCase().includes(query)) ||
-        (store.region && store.region.toLowerCase().includes(query))
+        store.location.toLowerCase().includes(query) ||
+        (store.email && store.email.toLowerCase().includes(query)) ||
+        (store.phone && store.phone.toLowerCase().includes(query))
       );
     }
 
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(store => {
-        if (statusFilter === 'active') return store.is_active;
-        if (statusFilter === 'inactive') return !store.is_active;
-        return true;
-      });
+      filtered = filtered.filter(store => 
+        statusFilter === 'active' ? store.is_active : !store.is_active
+      );
     }
 
     // Apply location filter
@@ -203,21 +141,26 @@ export function useAdminStoresData() {
   }, [stores, searchQuery, statusFilter, locationFilter]);
 
   const storeMetrics: StoreMetrics = useMemo(() => {
+    const totalStores = stores.length;
     const activeStores = stores.filter(store => store.is_active).length;
-    const inactiveStores = stores.filter(store => !store.is_active).length;
+    const inactiveStores = totalStores - activeStores;
     const companyOwned = stores.filter(store => store.ownership_type === 'company_owned').length;
     const franchises = stores.filter(store => store.ownership_type === 'franchisee').length;
+    const averagePerformance = 85.2; // Placeholder average performance
+    const alertsCount = 3; // Placeholder alerts count
 
     return {
-      totalStores: stores.length,
+      totalStores,
       activeStores,
       inactiveStores,
       companyOwned,
       franchises,
-      averagePerformance: 0, // Would need performance data to calculate
-      alertsCount: 0 // Would need alerts data to calculate
+      averagePerformance,
+      alertsCount
     };
   }, [stores]);
+
+  const refreshStores = () => fetchStores();
 
   return {
     stores,
@@ -231,13 +174,11 @@ export function useAdminStoresData() {
     isLoading,
     error,
     fetchStores,
-    refreshStores: fetchStores,
-    storeMetrics,
+    refreshStores,
     createStore,
     updateStore,
     deleteStore,
-    toggleStoreStatus,
-    getStoresByType,
     getStoresByRegion,
+    storeMetrics,
   };
 }

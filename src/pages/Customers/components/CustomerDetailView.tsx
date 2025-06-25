@@ -87,7 +87,7 @@ export default function CustomerDetailView({ customer }: CustomerDetailViewProps
                         Receipt #{transaction.receiptNumber}
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {formatDate(transaction.createdAt || '')}
+                        {formatDate(transaction.created_at || '')}
                       </span>
                     </div>
                     <div className="border-t pt-2 mt-1">
