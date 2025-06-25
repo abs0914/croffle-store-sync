@@ -23,31 +23,26 @@ export function StoreSidebar() {
   };
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <button className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground bg-muted hover:bg-muted-foreground hover:text-accent-foreground h-10 px-4 py-2 w-full">
-          Menu
-        </button>
-      </SheetTrigger>
-      <SheetContent className="w-full sm:w-[280px]">
-        <SheetHeader>
-          <SheetTitle>Menu</SheetTitle>
-          <SheetDescription>
-            Navigate your store
-          </SheetDescription>
-        </SheetHeader>
-        <Separator className="my-4" />
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold">Store Management</h2>
+        <p className="text-sm text-muted-foreground">Navigate your store</p>
+      </div>
 
+      {/* Navigation Menu */}
+      <div className="flex-1 p-4 space-y-4">
         <SidebarMenu navigate={navigate} isActive={isActive} />
-
-        <Separator className="my-4" />
-
-        <UserDropdown />
-
-        <Separator className="my-4" />
-
+        
+        <Separator />
+        
         <StoreSelector />
-      </SheetContent>
-    </Sheet>
+      </div>
+
+      {/* User Profile Section */}
+      <div className="border-t p-4">
+        <UserDropdown />
+      </div>
+    </div>
   );
 }

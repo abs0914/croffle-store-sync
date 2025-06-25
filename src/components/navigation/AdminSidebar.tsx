@@ -9,59 +9,35 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuth } from "@/contexts/auth";
+import { useLocation, useNavigate } from "react-router-dom";
+import { SidebarMenu } from './SidebarMenu';
+import { UserDropdown } from './UserDropdown';
 
 export function AdminSidebar() {
-  const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <button className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground bg-muted hover:bg-muted-foreground hover:text-accent-foreground h-10 px-4 py-2 w-full">
-          Admin Menu
-        </button>
-      </SheetTrigger>
-      <SheetContent className="w-full sm:w-[280px]">
-        <SheetHeader>
-          <SheetTitle>Admin Menu</SheetTitle>
-          <SheetDescription>
-            System administration
-          </SheetDescription>
-        </SheetHeader>
-        <Separator className="my-4" />
-        
-        <div className="text-center text-sm text-muted-foreground">
-          Please use the main admin sidebar for navigation
-        </div>
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold">Admin Panel</h2>
+        <p className="text-sm text-muted-foreground">System administration</p>
+      </div>
 
-        <Separator className="my-4" />
+      {/* Navigation Menu */}
+      <div className="flex-1 p-4">
+        <SidebarMenu navigate={navigate} isActive={isActive} />
+      </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground bg-muted hover:bg-muted-foreground hover:text-accent-foreground h-10 px-4 py-2 w-full">
-              <Avatar className="mr-2">
-                <AvatarImage src="https://github.com/shadcn.png" />
-                <AvatarFallback>CN</AvatarFallback>
-              </Avatar>
-              {user?.email}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => logout()}>Logout</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SheetContent>
-    </Sheet>
+      {/* User Profile Section */}
+      <div className="border-t p-4">
+        <UserDropdown />
+      </div>
+    </div>
   );
 }
