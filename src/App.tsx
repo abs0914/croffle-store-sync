@@ -26,6 +26,7 @@ import { SimplifiedAuthProvider } from '@/contexts/auth/SimplifiedAuthProvider';
 import { SecurityMonitoringDashboard } from './components/security/SecurityMonitoringDashboard';
 import { LoadingFallback } from '@/components/ui/LoadingFallback';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { AuthDebugPanel } from '@/components/debug/AuthDebugPanel';
 
 function App() {
   return (
@@ -144,6 +145,9 @@ function App() {
                   {/* Catch all - redirect to root for proper auth handling */}
                   <Route path="*" element={<Index />} />
                 </Routes>
+                
+                {/* Debug panel for development */}
+                <AuthDebugPanel />
               </React.Suspense>
             </StoreProvider>
           </SimplifiedAuthProvider>

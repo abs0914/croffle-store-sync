@@ -4,6 +4,7 @@ import { Store } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth/SimplifiedAuthProvider';
 import { toast } from 'sonner';
+import { authDebugger, withTimeout } from '@/utils/authDebug';
 
 interface StoreState {
   stores: Store[];
@@ -27,49 +28,74 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Fetch stores when the user is authenticated or their store assignments change
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
+      authDebugger.log('Store context: User authenticated, fetching stores', { 
+        userId: user.id, 
+        role: user.role,
+        storeIds: user.storeIds 
+      });
       fetchStores();
     } else {
+      authDebugger.log('Store context: User not authenticated, clearing stores');
       setStores([]);
       setSelectedStore(null);
       setIsLoading(false);
     }
-  }, [isAuthenticated, user?.storeIds]);
+  }, [isAuthenticated, user?.storeIds, user?.id]);
 
   const fetchStores = async () => {
     try {
       setIsLoading(true);
+      setError(null);
+      authDebugger.log('Fetching stores for user', { 
+        userId: user?.id, 
+        role: user?.role, 
+        storeIds: user?.storeIds 
+      });
 
-      if (!isAuthenticated) {
+      if (!isAuthenticated || !user) {
+        authDebugger.log('No authenticated user, skipping store fetch');
         setStores([]);
         setSelectedStore(null);
+        setIsLoading(false);
         return;
       }
 
-      // Fetch stores based on user permissions
+      // Build query based on user permissions
       let query = supabase.from('stores').select('*');
 
       // Admin and owner users can see all stores
       if (user.role === 'admin' || user.role === 'owner') {
-        // Fetch all stores for admin/owner users
+        authDebugger.log('Admin/Owner user - fetching all stores');
         query = query.order('name');
       } else {
         // Regular users (cashier, manager) only see their assigned stores
         if (user.storeIds && user.storeIds.length > 0) {
+          authDebugger.log('Regular user - fetching assigned stores', { storeIds: user.storeIds });
           query = query.in('id', user.storeIds).order('name');
         } else {
           // User has no assigned stores
-          console.warn('User has no assigned stores:', user.email);
+          authDebugger.log('User has no assigned stores', { email: user.email }, 'warning');
           setStores([]);
           setSelectedStore(null);
+          setIsLoading(false);
           return;
         }
       }
 
-      const { data, error } = await query;
+      // Add timeout protection for store query
+      const { data, error: queryError } = await withTimeout(
+        query,
+        10000, // 10 second timeout
+        'Store fetch request timed out'
+      );
 
-      if (error) {
-        throw error;
+      if (queryError) {
+        authDebugger.log('Error fetching stores', { error: queryError.message }, 'error');
+        setError(`Failed to fetch stores: ${queryError.message}`);
+        toast.error('Failed to fetch stores');
+        setIsLoading(false);
+        return;
       }
 
       if (data && data.length > 0) {
@@ -77,7 +103,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const transformedStores: Store[] = data.map(store => ({
           id: store.id,
           name: store.name,
-          location: store.address || store.city || 'N/A', // Use address or city as location
+          location: store.address || store.city || 'N/A',
           phone: store.phone,
           email: store.email,
           address: store.address,
@@ -88,6 +114,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           updated_at: store.updated_at,
         }));
 
+        authDebugger.log('Stores fetched successfully', { storeCount: transformedStores.length });
         setStores(transformedStores);
 
         // Set the current store based on user's assigned stores
@@ -100,7 +127,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           } else {
             // For regular users, use their first assigned store
             if (user.storeIds && user.storeIds.length > 0) {
-              // Find the first assigned store in the fetched data
               defaultStore = transformedStores.find(store => store.id === user.storeIds[0]) || transformedStores[0];
             } else {
               defaultStore = transformedStores[0];
@@ -108,16 +134,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
 
           if (defaultStore) {
-            console.log('Setting default store for user:', user.email, 'to:', defaultStore.name);
+            authDebugger.log('Setting default store', { 
+              storeId: defaultStore.id, 
+              storeName: defaultStore.name 
+            });
             setSelectedStore(defaultStore);
           }
         }
       } else {
+        authDebugger.log('No stores found for user', {}, 'warning');
         setStores([]);
         setSelectedStore(null);
       }
     } catch (error) {
-      console.error('Error fetching stores:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      authDebugger.log('Store fetch failed', { error: errorMessage }, 'error');
+      setError(`Failed to fetch stores: ${errorMessage}`);
       toast.error('Failed to fetch stores');
     } finally {
       setIsLoading(false);
@@ -125,16 +157,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const selectStore = (store: Store) => {
+    authDebugger.log('Store selected', { storeId: store.id, storeName: store.name });
     setSelectedStore(store);
     localStorage.setItem('selectedStoreId', store.id);
   };
 
   const setCurrentStore = (store: Store) => {
+    authDebugger.log('Current store set', { storeId: store.id, storeName: store.name });
     setSelectedStore(store);
     localStorage.setItem('selectedStoreId', store.id);
   };
 
   const refreshStores = async () => {
+    authDebugger.log('Refreshing stores');
     await fetchStores();
   };
 
@@ -143,7 +178,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       value={{
         stores,
         selectedStore,
-        currentStore: selectedStore, // For backward compatibility
+        currentStore: selectedStore,
         isLoading,
         error,
         selectStore,
