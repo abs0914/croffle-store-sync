@@ -22,7 +22,7 @@ export const fetchCustomers = async (storeId: string): Promise<Customer[]> => {
       phone: item.phone,
       store_id: item.store_id,
       storeId: item.store_id,
-      address: item.address || undefined,
+      address: (item as any).address || undefined,
       created_at: item.created_at,
       updated_at: item.updated_at
     })) || [];
@@ -53,7 +53,7 @@ export const fetchCustomer = async (id: string): Promise<Customer | null> => {
       phone: data.phone,
       store_id: data.store_id,
       storeId: data.store_id,
-      address: data.address || undefined,
+      address: (data as any).address || undefined,
       created_at: data.created_at,
       updated_at: data.updated_at
     };
@@ -92,7 +92,7 @@ export const createCustomer = async (customerData: Omit<Customer, "id" | "create
       store_id: data.store_id,
       storeId: data.store_id,
       storeName: customerData.storeName,
-      address: data.address || undefined,
+      address: (data as any).address || undefined,
       created_at: data.created_at,
       updated_at: data.updated_at,
     };
@@ -130,7 +130,7 @@ export const updateCustomer = async (id: string, customerData: Partial<Customer>
       phone: data.phone,
       store_id: data.store_id,
       storeId: data.store_id,
-      address: data.address || undefined,
+      address: (data as any).address || undefined,
       created_at: data.created_at,
       updated_at: data.updated_at,
     };

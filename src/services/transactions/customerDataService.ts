@@ -26,7 +26,7 @@ export const fetchCustomerData = async (storeId: string): Promise<Customer[]> =>
       phone: item.phone,
       store_id: item.store_id,
       storeId: item.store_id,
-      address: item.address || undefined,
+      address: (item as any).address || undefined,
       created_at: item.created_at,
       updated_at: item.updated_at
     })) || [];
@@ -58,8 +58,8 @@ export const fetchCustomerTransactions = async (customerId: string): Promise<Tra
       shift_id: item.shift_id,
       total: item.total,
       subtotal: item.subtotal,
-      tax_amount: item.tax || item.tax_amount || 0,
-      tax: item.tax || item.tax_amount || 0,
+      tax_amount: (item as any).tax || (item as any).tax_amount || 0,
+      tax: (item as any).tax || (item as any).tax_amount || 0,
       discount: item.discount,
       payment_method: item.payment_method,
       status: (item.status === 'completed' || item.status === 'pending' || item.status === 'cancelled' || item.status === 'voided') 
@@ -67,7 +67,7 @@ export const fetchCustomerTransactions = async (customerId: string): Promise<Tra
         : 'completed' as const,
       items: typeof item.items === 'string' ? JSON.parse(item.items) : item.items,
       created_at: item.created_at,
-      updated_at: item.updated_at || item.created_at
+      updated_at: (item as any).updated_at || item.created_at
     })) || [];
   } catch (error) {
     console.error("Error fetching customer transactions:", error);
@@ -102,7 +102,7 @@ export const searchCustomers = async (query: string, storeId?: string): Promise<
       phone: item.phone,
       store_id: item.store_id,
       storeId: item.store_id,
-      address: item.address || undefined,
+      address: (item as any).address || undefined,
       created_at: item.created_at,
       updated_at: item.updated_at
     })) || [];
@@ -141,7 +141,7 @@ export const registerStoreCustomer = async (customerData: Omit<Customer, "id">, 
       phone: data.phone,
       store_id: data.store_id,
       storeId: data.store_id,
-      address: data.address || undefined,
+      address: (data as any).address || undefined,
       created_at: data.created_at,
       updated_at: data.updated_at
     };
@@ -173,7 +173,7 @@ export const fetchCustomerByPhone = async (phone: string): Promise<Customer | nu
       phone: data.phone,
       store_id: data.store_id,
       storeId: data.store_id,
-      address: data.address || undefined,
+      address: (data as any).address || undefined,
       created_at: data.created_at,
       updated_at: data.updated_at
     };
@@ -210,7 +210,7 @@ export const createOrUpdateCustomer = async (customerData: Omit<Customer, "id"> 
         phone: data.phone,
         store_id: data.store_id,
         storeId: data.store_id,
-        address: data.address || undefined,
+        address: (data as any).address || undefined,
         created_at: data.created_at,
         updated_at: data.updated_at
       };
@@ -239,7 +239,7 @@ export const createOrUpdateCustomer = async (customerData: Omit<Customer, "id"> 
         phone: data.phone,
         store_id: data.store_id,
         storeId: data.store_id,
-        address: data.address || undefined,
+        address: (data as any).address || undefined,
         created_at: data.created_at,
         updated_at: data.updated_at
       };
