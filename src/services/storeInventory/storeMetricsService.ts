@@ -22,6 +22,11 @@ export const fetchStoreMetrics = async (
   endDate?: string
 ): Promise<StoreMetrics[]> => {
   try {
+    if (!storeId) {
+      console.warn('No store ID provided to fetchStoreMetrics');
+      return [];
+    }
+
     let query = supabase
       .from('store_metrics')
       .select('*')
@@ -52,6 +57,11 @@ export const fetchStoreMetrics = async (
 
 export const getTodayMetrics = async (storeId: string): Promise<StoreMetrics | null> => {
   try {
+    if (!storeId) {
+      console.warn('No store ID provided to getTodayMetrics');
+      return null;
+    }
+
     const today = new Date().toISOString().split('T')[0];
     
     const { data, error } = await supabase
@@ -79,12 +89,23 @@ export const getTodayMetrics = async (storeId: string): Promise<StoreMetrics | n
 
 export const getDashboardSummary = async (storeId: string) => {
   try {
+    if (!storeId) {
+      console.warn('No store ID provided to getDashboardSummary');
+      return {
+        todaySales: 0,
+        todayOrders: 0,
+        avgOrderValue: 0,
+        inventoryAlerts: 0,
+        weeklyGrowth: 0
+      };
+    }
+
     const today = new Date().toISOString().split('T')[0];
     
     // Get today's metrics
     const todayMetrics = await getTodayMetrics(storeId);
     
-    // Get inventory alerts count
+    // Get real inventory alerts count from inventory_stock table
     let alertsCount = 0;
     try {
       const { data: alertsData, error: alertsError } = await supabase
@@ -125,6 +146,14 @@ export const getDashboardSummary = async (storeId: string) => {
       console.log('Weekly metrics comparison not available');
     }
 
+    console.log(`📊 Dashboard Summary for store ${storeId}:`, {
+      todaySales: todayMetrics?.total_sales || 0,
+      todayOrders: todayMetrics?.total_orders || 0,
+      avgOrderValue: todayMetrics?.average_order_value || 0,
+      inventoryAlerts: alertsCount,
+      weeklyGrowth
+    });
+
     return {
       todaySales: todayMetrics?.total_sales || 0,
       todayOrders: todayMetrics?.total_orders || 0,
@@ -146,7 +175,18 @@ export const getDashboardSummary = async (storeId: string) => {
 
 export const getInventoryMetrics = async (storeId: string) => {
   try {
-    // Get inventory stock counts
+    if (!storeId) {
+      console.warn('No store ID provided to getInventoryMetrics');
+      return {
+        totalItems: 0,
+        lowStockItems: 0,
+        outOfStockItems: 0,
+        totalValue: 0,
+        stockHealthPercentage: 100
+      };
+    }
+
+    // Get real inventory stock counts from inventory_stock table
     const { data: stockData, error: stockError } = await supabase
       .from('inventory_stock')
       .select('stock_quantity, minimum_threshold, is_active, cost')
@@ -166,7 +206,7 @@ export const getInventoryMetrics = async (storeId: string) => {
 
     const totalItems = stockData?.length || 0;
     const lowStockItems = stockData?.filter(item => 
-      item.stock_quantity <= (item.minimum_threshold || 10)
+      item.stock_quantity <= (item.minimum_threshold || 10) && item.stock_quantity > 0
     ).length || 0;
     const outOfStockItems = stockData?.filter(item => 
       item.stock_quantity <= 0
@@ -176,13 +216,23 @@ export const getInventoryMetrics = async (storeId: string) => {
       sum + (item.stock_quantity * (item.cost || 0)), 0
     ) || 0;
 
+    const stockHealthPercentage = totalItems > 0 ? 
+      Math.round(((totalItems - lowStockItems - outOfStockItems) / totalItems) * 100) : 100;
+
+    console.log(`📦 Inventory Metrics for store ${storeId}:`, {
+      totalItems,
+      lowStockItems,
+      outOfStockItems,
+      totalValue,
+      stockHealthPercentage
+    });
+
     return {
       totalItems,
       lowStockItems,
       outOfStockItems,
       totalValue,
-      stockHealthPercentage: totalItems > 0 ? 
-        Math.round(((totalItems - lowStockItems) / totalItems) * 100) : 100
+      stockHealthPercentage
     };
   } catch (error) {
     console.error('Error fetching inventory metrics:', error);

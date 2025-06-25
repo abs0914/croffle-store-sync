@@ -28,6 +28,7 @@ import { SecurityMonitoringDashboard } from './components/security/SecurityMonit
 import { LoadingFallback } from '@/components/ui/LoadingFallback';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthDebugPanel } from '@/components/debug/AuthDebugPanel';
+import { PermissionAuditPanel } from '@/components/debug/PermissionAuditPanel';
 
 function App() {
   return (
@@ -158,8 +159,9 @@ function App() {
                   <Route path="*" element={<Index />} />
                 </Routes>
 
-                {/* Debug panel for development */}
+                {/* Debug panels for development */}
                 <AuthDebugPanel />
+                <PermissionAuditPanel />
               </div>
             </StoreProvider>
           </SimplifiedAuthProvider>
