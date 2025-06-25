@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -5,14 +6,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { Store } from '@/types';
 import { toast } from 'sonner';
 
-export const useStoreSettings = () => {
-  const { id } = useParams<{ id: string }>();
+export const useStoreSettings = (id?: string) => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     vat_rate: 0,
     currency: 'PHP',
     receipt_header: '',
-    receipt_footer: ''
+    receipt_footer: '',
+    tax_percentage: 0,
+    is_tax_inclusive: false,
+    timezone: 'Asia/Manila'
   });
 
   const { data: store, isLoading, error } = useQuery({
@@ -44,7 +47,10 @@ export const useStoreSettings = () => {
         vat_rate: store.vat_rate || 0,
         currency: store.currency || 'PHP',
         receipt_header: store.receipt_header || '',
-        receipt_footer: store.receipt_footer || ''
+        receipt_footer: store.receipt_footer || '',
+        tax_percentage: store.vat_rate || 0,
+        is_tax_inclusive: false,
+        timezone: 'Asia/Manila'
       });
     }
   }, [store]);
@@ -69,7 +75,8 @@ export const useStoreSettings = () => {
     }
   });
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       await updateStoreMutation.mutateAsync({
         vat_rate: formData.vat_rate,
@@ -82,6 +89,27 @@ export const useStoreSettings = () => {
     }
   };
 
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleNumberChange = (field: string, value: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSwitchChange = (field: string, value: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   return {
     store,
     isLoading,
@@ -89,6 +117,11 @@ export const useStoreSettings = () => {
     formData,
     setFormData,
     handleSubmit,
-    isUpdating: updateStoreMutation.isPending
+    isUpdating: updateStoreMutation.isPending,
+    settings: formData,
+    isSaving: updateStoreMutation.isPending,
+    handleChange,
+    handleNumberChange,
+    handleSwitchChange
   };
 };

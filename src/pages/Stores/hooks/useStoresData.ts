@@ -1,9 +1,12 @@
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Store } from '@/types';
 
 export const useStoresData = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+
   const { data: stores = [], isLoading, error, refetch } = useQuery({
     queryKey: ['stores'],
     queryFn: async () => {
@@ -25,10 +28,34 @@ export const useStoresData = () => {
     }
   });
 
+  const filteredStores = stores.filter(store =>
+    store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    store.location.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleDeleteStore = async (storeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('stores')
+        .delete()
+        .eq('id', storeId);
+      
+      if (error) throw error;
+      
+      await refetch();
+    } catch (error) {
+      console.error('Error deleting store:', error);
+    }
+  };
+
   return {
     stores,
+    filteredStores,
+    searchQuery,
+    setSearchQuery,
     isLoading,
     error,
-    refetch
+    refetch,
+    handleDeleteStore
   };
 };

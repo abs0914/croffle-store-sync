@@ -5,13 +5,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { Store } from '@/types';
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface StoreSelectorProps {
   selectedStores: Store[];
   setSelectedStores: (stores: Store[]) => void;
+  selectedStoreId?: string;
+  onSelectStore?: (storeId: string) => void;
 }
 
-export const StoreSelector = ({ selectedStores, setSelectedStores }: StoreSelectorProps) => {
+export const StoreSelector = ({ 
+  selectedStores, 
+  setSelectedStores, 
+  selectedStoreId, 
+  onSelectStore 
+}: StoreSelectorProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [availableStores, setAvailableStores] = useState<Store[]>([]);
 
@@ -39,6 +53,26 @@ export const StoreSelector = ({ selectedStores, setSelectedStores }: StoreSelect
     setAvailableStores(stores);
   }, [stores]);
 
+  // Single store selector for admin use
+  if (onSelectStore && selectedStoreId !== undefined) {
+    return (
+      <Select value={selectedStoreId} onValueChange={onSelectStore}>
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="Select store" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Stores</SelectItem>
+          {availableStores.map((store) => (
+            <SelectItem key={store.id} value={store.id}>
+              {store.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  // Multi-select for regular use
   const handleStoreSelection = (store: Store) => {
     const isSelected = selectedStores.some((s) => s.id === store.id);
 

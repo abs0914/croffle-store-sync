@@ -21,27 +21,35 @@ export const BulkUploadTab = ({ storeId }: BulkUploadTabProps) => {
       const reader = new FileReader();
 
       reader.onload = (e: any) => {
-        const binaryStr = e.target.result;
-        const workbook = XLSX.read(binaryStr, { type: 'binary' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        try {
+          const binaryStr = e.target.result;
+          const workbook = XLSX.read(binaryStr, { type: 'binary' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        // Process the data (skip header row)
-        const header = data[0] as string[];
-        const items = data.slice(1).map((row: any) => {
-          const item: any = {};
-          header.forEach((key, index) => {
-            item[key] = row[index];
+          // Process the data (skip header row)
+          const header = data[0] as string[];
+          const items = data.slice(1).map((row: any) => {
+            const item: any = {};
+            header.forEach((key, index) => {
+              item[key] = row[index];
+            });
+            return item;
           });
-          return item;
-        });
 
-        setUploadedData(items);
-        toast({
-          title: "Data uploaded!",
-          description: "Check the console for the parsed data.",
-        })
+          setUploadedData(items);
+          toast({
+            title: "Data uploaded!",
+            description: "Check the console for the parsed data.",
+          });
+        } catch (error) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "There was an error parsing the file.",
+          });
+        }
       };
 
       reader.onerror = () => {
@@ -49,12 +57,12 @@ export const BulkUploadTab = ({ storeId }: BulkUploadTabProps) => {
           variant: "destructive",
           title: "Error",
           description: "There was an error reading the file.",
-        })
+        });
       };
 
       reader.readAsBinaryString(file);
     });
-  }
+  };
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
