@@ -28,6 +28,11 @@ export interface Recipe {
   created_at: string;
   updated_at: string;
   rejection_reason?: string;
+  ingredients: RecipeIngredient[];
+  // Legacy compatibility
+  productId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RecipeIngredient {
@@ -39,6 +44,12 @@ export interface RecipeIngredient {
   unit: string;
   cost_per_unit?: number;
   created_at: string;
+  // Legacy compatibility
+  recipeId?: string;
+  ingredientId?: string;
+  ingredient_id?: string;
+  unit_type?: string;
+  ingredient_name?: string;
 }
 
 // Ingredient type for inventory management
@@ -114,6 +125,7 @@ export interface Product {
   // Legacy/compatibility properties
   stockQuantity?: number;
   categoryId?: string;
+  storeId?: string;
   variations?: ProductVariation[];
   product_variations?: ProductVariation[];
 }
@@ -129,6 +141,7 @@ export interface Category {
   updated_at?: string;
   // Legacy compatibility
   isActive?: boolean;
+  storeId?: string;
 }
 
 export interface ProductVariation {
@@ -142,6 +155,10 @@ export interface ProductVariation {
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
+  // Legacy compatibility
+  productId?: string;
+  stockQuantity?: number;
+  isActive?: boolean;
 }
 
 export interface Customer {
@@ -154,6 +171,8 @@ export interface Customer {
   storeName?: string;
   created_at: string;
   updated_at: string;
+  // Legacy compatibility
+  storeId?: string;
 }
 
 export interface CartItem {
@@ -197,6 +216,30 @@ export interface Transaction {
   stores?: {
     name: string;
   };
+  // Additional fields for POS transactions
+  shift_id?: string;
+  user_id?: string;
+  tax?: number;
+  discount_type?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
+  discount_id_number?: string;
+  amount_tendered?: number;
+  change?: number;
+  payment_details?: {
+    cardType?: string;
+    cardNumber?: string;
+    eWalletProvider?: string;
+    eWalletReferenceNumber?: string;
+  };
+  // Legacy compatibility
+  shiftId?: string;
+  storeId?: string;
+  userId?: string;
+  customerId?: string;
+  discountType?: string;
+  discountIdNumber?: string;
+  amountTendered?: number;
+  paymentMethod?: string;
+  createdAt?: string;
 }
 
 export interface Shift {

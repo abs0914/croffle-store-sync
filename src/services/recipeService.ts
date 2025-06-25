@@ -21,7 +21,7 @@ export const fetchRecipe = async (productId: string, variationId?: string): Prom
 };
 
 // Save or update a recipe
-export const saveRecipe = async (recipe: Omit<Recipe, "id" | "createdAt" | "updatedAt">): Promise<Recipe | null> => {
+export const saveRecipe = async (recipe: Omit<Recipe, "id" | "created_at" | "updated_at">): Promise<Recipe | null> => {
   try {
     console.log("Saving recipe:", recipe);
     
@@ -32,12 +32,14 @@ export const saveRecipe = async (recipe: Omit<Recipe, "id" | "createdAt" | "upda
     // Return mock data as if the recipe was saved
     return {
       id: "pending-recipe-id",
-      productId: recipe.productId || recipe.product_id || "",
+      product_id: recipe.product_id || recipe.productId || "",
       name: recipe.name || "",
       instructions: recipe.instructions || "",
       ingredients: recipe.ingredients || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      store_id: recipe.store_id || "",
+      yield_quantity: recipe.yield_quantity || 1
     };
   } catch (error) {
     console.error("Error saving recipe:", error);

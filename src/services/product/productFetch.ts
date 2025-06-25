@@ -35,7 +35,6 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
         is_active: item.category.is_active !== null ? item.category.is_active : true,
         isActive: item.category.is_active !== null ? item.category.is_active : true,
         image_url: item.category.image_url || undefined,
-        image: item.category.image_url || undefined,
         description: item.category.description || undefined,
         store_id: storeId, // Since we're filtering by storeId, this is the store_id
         storeId: storeId // For frontend compatibility
@@ -50,7 +49,9 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       barcode: item.barcode || undefined,
       cost: item.cost || undefined,
       stock_quantity: item.stock_quantity,
-      stockQuantity: item.stock_quantity
+      stockQuantity: item.stock_quantity,
+      created_at: item.created_at,
+      updated_at: item.updated_at
     })) || [];
   } catch (error) {
     console.error("Error fetching products:", error);
@@ -91,7 +92,6 @@ export const fetchProduct = async (id: string): Promise<Product | null> => {
         is_active: data.category.is_active !== null ? data.category.is_active : true,
         isActive: data.category.is_active !== null ? data.category.is_active : true,
         image_url: data.category.image_url || undefined,
-        image: data.category.image_url || undefined,
         description: data.category.description || undefined,
         store_id: storeId,
         storeId: storeId
@@ -106,7 +106,9 @@ export const fetchProduct = async (id: string): Promise<Product | null> => {
       barcode: data.barcode || undefined,
       cost: data.cost || undefined,
       stock_quantity: data.stock_quantity,
-      stockQuantity: data.stock_quantity
+      stockQuantity: data.stock_quantity,
+      created_at: data.created_at,
+      updated_at: data.updated_at
     };
   } catch (error) {
     console.error("Error fetching product:", error);

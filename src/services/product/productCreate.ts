@@ -50,7 +50,9 @@ export const createProduct = async (product: Omit<Product, "id">): Promise<Produ
       barcode: data.barcode || undefined,
       cost: data.cost || undefined,
       stock_quantity: data.stock_quantity,
-      stockQuantity: data.stock_quantity
+      stockQuantity: data.stock_quantity,
+      created_at: data.created_at,
+      updated_at: data.updated_at
     };
   } catch (error) {
     console.error("Error creating product:", error);
