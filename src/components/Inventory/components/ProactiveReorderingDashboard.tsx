@@ -15,16 +15,18 @@ import {
   CheckCircle,
   Clock,
   DollarSign,
-  BarChart3,
-  Loader2
+  BarChart3
 } from 'lucide-react';
 import { useProactiveReordering } from '@/hooks/inventory/useProactiveReordering';
-import { useStore } from '@/contexts/StoreContext';
+import { ProactiveReorderingSystem } from './ProactiveReorderingSystem';
 
-export const ProactiveReorderingDashboard: React.FC = () => {
-  const { currentStore } = useStore();
-  const [activeTab, setActiveTab] = useState('overview');
+interface ProactiveReorderingDashboardProps {
+  storeId: string;
+}
 
+export const ProactiveReorderingDashboard: React.FC<ProactiveReorderingDashboardProps> = ({
+  storeId
+}) => {
   const {
     reorderRecommendations,
     consumptionPatterns,
@@ -45,23 +47,13 @@ export const ProactiveReorderingDashboard: React.FC = () => {
     criticalAlerts,
     recommendationsCount,
     estimatedSavings
-  } = useProactiveReordering(currentStore?.id || '');
+  } = useProactiveReordering(storeId);
 
-  // Show store selection message if no store is selected
-  if (!currentStore) {
-    return (
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          Please select a store to view proactive reordering dashboard.
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  const [activeTab, setActiveTab] = useState('overview');
 
   if (error) {
     return (
-      <Alert variant="destructive">
+      <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>{error}</AlertDescription>
       </Alert>
@@ -74,28 +66,16 @@ export const ProactiveReorderingDashboard: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold">Proactive Reordering System</h2>
           <p className="text-muted-foreground">
-            AI-powered inventory management for {currentStore.name}
+            AI-powered inventory management with consumption-based predictions
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={loadReorderData} 
-            disabled={isLoading}
-            className="gap-2"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Refreshing...
-              </>
-            ) : (
-              'Refresh Data'
-            )}
+          <Button variant="outline" onClick={loadReorderData} disabled={isLoading}>
+            {isLoading ? 'Refreshing...' : 'Refresh Data'}
           </Button>
           {unreadNotifications.length > 0 && (
-            <Badge variant="destructive" className="relative gap-1">
-              <Bell className="h-4 w-4" />
+            <Badge variant="destructive" className="relative">
+              <Bell className="h-4 w-4 mr-1" />
               {unreadNotifications.length} alerts
             </Badge>
           )}
@@ -172,33 +152,7 @@ export const ProactiveReorderingDashboard: React.FC = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          {isLoading ? (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
-                <p>Loading overview data...</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>System Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-center py-8">
-                    <BarChart3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">
-                      Real-time data integration active for {currentStore.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Store ID: {currentStore.id}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <ProactiveReorderingSystem />
         </TabsContent>
 
         <TabsContent value="recommendations" className="space-y-4">
@@ -207,55 +161,48 @@ export const ProactiveReorderingDashboard: React.FC = () => {
               <CardTitle>Reorder Recommendations</CardTitle>
             </CardHeader>
             <CardContent>
-              {reorderRecommendations.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No reorder recommendations at this time</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead>Current Stock</TableHead>
-                      <TableHead>Consumption Rate</TableHead>
-                      <TableHead>Days Until Stockout</TableHead>
-                      <TableHead>Recommended Order</TableHead>
-                      <TableHead>Urgency</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reorderRecommendations.map((rec) => (
-                      <TableRow key={rec.item_id}>
-                        <TableCell className="font-medium">{rec.item_name}</TableCell>
-                        <TableCell>{rec.current_stock} units</TableCell>
-                        <TableCell>{rec.consumption_rate.toFixed(1)}/day</TableCell>
-                        <TableCell>
-                          <Badge variant={rec.days_until_stockout <= 3 ? "destructive" : "outline"}>
-                            {rec.days_until_stockout} days
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{rec.recommended_order_quantity} units</div>
-                            <div className="text-sm text-muted-foreground">
-                              ₱{rec.cost_impact.toLocaleString()}
-                            </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Current Stock</TableHead>
+                    <TableHead>Consumption Rate</TableHead>
+                    <TableHead>Days Until Stockout</TableHead>
+                    <TableHead>Recommended Order</TableHead>
+                    <TableHead>Urgency</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reorderRecommendations.map((rec) => (
+                    <TableRow key={rec.item_id}>
+                      <TableCell className="font-medium">{rec.item_name}</TableCell>
+                      <TableCell>{rec.current_stock} units</TableCell>
+                      <TableCell>{rec.consumption_rate.toFixed(1)}/day</TableCell>
+                      <TableCell>
+                        <Badge variant={rec.days_until_stockout <= 3 ? "destructive" : "outline"}>
+                          {rec.days_until_stockout} days
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{rec.recommended_order_quantity} units</div>
+                          <div className="text-sm text-muted-foreground">
+                            ₱{rec.cost_impact.toLocaleString()}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            rec.urgency_level === 'critical' ? 'destructive' :
-                            rec.urgency_level === 'high' ? 'secondary' : 'outline'
-                          }>
-                            {rec.urgency_level.toUpperCase()}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          rec.urgency_level === 'critical' ? 'destructive' :
+                          rec.urgency_level === 'high' ? 'secondary' : 'outline'
+                        }>
+                          {rec.urgency_level.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -266,28 +213,60 @@ export const ProactiveReorderingDashboard: React.FC = () => {
               <CardTitle>Top Consuming Items</CardTitle>
             </CardHeader>
             <CardContent>
-              {topConsumingItems.length === 0 ? (
-                <div className="text-center py-8">
-                  <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No consumption data available</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {topConsumingItems.map((item) => (
-                    <div key={item.item_id} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{item.item_name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {item.daily_average.toFixed(1)} units/day
-                        </span>
-                      </div>
-                      <Progress 
-                        value={Math.min(100, (item.daily_average / Math.max(...topConsumingItems.map(i => i.daily_average))) * 100)} 
-                      />
+              <div className="space-y-4">
+                {topConsumingItems.map((item) => (
+                  <div key={item.item_id} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">{item.item_name}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {item.daily_average.toFixed(1)} units/day
+                      </span>
                     </div>
+                    <Progress 
+                      value={Math.min(100, (item.daily_average / Math.max(...topConsumingItems.map(i => i.daily_average))) * 100)} 
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Menu Sales Impact</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Total Sales</TableHead>
+                    <TableHead>Ingredients Consumed</TableHead>
+                    <TableHead>Top Ingredient</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {salesConsumption.map((product) => (
+                    <TableRow key={product.product_id}>
+                      <TableCell className="font-medium">{product.product_name}</TableCell>
+                      <TableCell>{product.total_sales} units</TableCell>
+                      <TableCell>{product.ingredient_consumption.length} items</TableCell>
+                      <TableCell>
+                        {product.ingredient_consumption.length > 0 && (
+                          <div>
+                            <div className="text-sm font-medium">
+                              {product.ingredient_consumption[0].item_name}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {product.ingredient_consumption[0].total_consumed.toFixed(1)} consumed
+                            </div>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </div>
-              )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -295,33 +274,32 @@ export const ProactiveReorderingDashboard: React.FC = () => {
         <TabsContent value="alerts" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Stock Alerts</CardTitle>
+              <CardTitle>Active Stock Alerts</CardTitle>
             </CardHeader>
             <CardContent>
-              {stockAlerts.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
-                  <p className="text-muted-foreground">No stock alerts - all items are well stocked!</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {stockAlerts.map((alert) => (
-                    <Alert key={alert.id} variant={alert.urgency === 'critical' ? 'destructive' : 'default'}>
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription className="flex justify-between items-center">
-                        <span>{alert.message}</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => acknowledgeAlert(alert.id)}
-                        >
-                          Acknowledge
-                        </Button>
-                      </AlertDescription>
-                    </Alert>
-                  ))}
-                </div>
-              )}
+              <div className="space-y-4">
+                {stockAlerts.map((alert) => (
+                  <Alert key={alert.id} className={
+                    alert.urgency === 'critical' ? 'border-red-500' :
+                    alert.urgency === 'high' ? 'border-orange-500' : ''
+                  }>
+                    <AlertTriangle className="h-4 w-4" />
+                    <div className="flex-1">
+                      <div className="font-medium">{alert.message}</div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {alert.recommended_action}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => acknowledgeAlert(alert.id)}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </Button>
+                  </Alert>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -329,42 +307,55 @@ export const ProactiveReorderingDashboard: React.FC = () => {
         <TabsContent value="notifications" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Notifications</CardTitle>
+              <CardTitle>Recent Notifications</CardTitle>
             </CardHeader>
             <CardContent>
-              {notifications.length === 0 ? (
-                <div className="text-center py-8">
-                  <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">No notifications</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {notifications.map((notification) => (
-                    <Alert key={notification.id}>
-                      <Bell className="h-4 w-4" />
-                      <AlertDescription className="flex justify-between items-center">
-                        <span>{notification.message}</span>
-                        <div className="flex gap-2">
+              <div className="space-y-4">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`p-4 border rounded-lg ${
+                      notification.read ? 'opacity-60' : ''
+                    } ${
+                      notification.urgency === 'critical' ? 'border-red-200 bg-red-50' :
+                      notification.urgency === 'high' ? 'border-orange-200 bg-orange-50' :
+                      'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="font-medium">{notification.title}</div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {notification.message}
+                        </div>
+                        {notification.action_text && (
+                          <div className="text-sm font-medium text-blue-600 mt-2">
+                            {notification.action_text}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        {!notification.read && (
                           <Button
-                            variant="outline"
                             size="sm"
+                            variant="ghost"
                             onClick={() => markNotificationAsRead(notification.id)}
                           >
                             Mark Read
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => dismissNotification(notification.id)}
-                          >
-                            Dismiss
-                          </Button>
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  ))}
-                </div>
-              )}
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => dismissNotification(notification.id)}
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

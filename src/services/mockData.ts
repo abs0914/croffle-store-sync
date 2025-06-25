@@ -1,8 +1,6 @@
 
 import { Product, Category, Customer, Shift } from "@/types";
 
-const mockTimestamp = new Date().toISOString();
-
 export const mockProducts: Product[] = [
   {
     id: "1",
@@ -22,36 +20,30 @@ export const mockProducts: Product[] = [
     stock_quantity: 50,
     store_id: "1",
     storeId: "1",
-    created_at: mockTimestamp,
-    updated_at: mockTimestamp,
     variations: [
       {
         id: "1-1",
         name: "With Ice Cream",
         price: 150,
-        is_active: true,
         isActive: true,
+        is_active: true,
         stockQuantity: 30,
         stock_quantity: 30,
         product_id: "1",
         productId: "1",
-        sku: "CRF-001-IC",
-        created_at: mockTimestamp,
-        updated_at: mockTimestamp
+        sku: "CRF-001-IC"
       },
       {
         id: "1-2",
         name: "With Chocolate Sauce",
         price: 135,
-        is_active: true,
         isActive: true,
+        is_active: true,
         stockQuantity: 40,
         stock_quantity: 40,
         product_id: "1",
         productId: "1",
-        sku: "CRF-001-CS",
-        created_at: mockTimestamp,
-        updated_at: mockTimestamp
+        sku: "CRF-001-CS"
       },
     ],
   },
@@ -73,8 +65,6 @@ export const mockProducts: Product[] = [
     stock_quantity: 45,
     store_id: "1",
     storeId: "1",
-    created_at: mockTimestamp,
-    updated_at: mockTimestamp,
   },
   {
     id: "3",
@@ -94,8 +84,6 @@ export const mockProducts: Product[] = [
     stock_quantity: 35,
     store_id: "1",
     storeId: "1",
-    created_at: mockTimestamp,
-    updated_at: mockTimestamp,
   },
   {
     id: "4",
@@ -115,8 +103,6 @@ export const mockProducts: Product[] = [
     stock_quantity: 40,
     store_id: "1",
     storeId: "1",
-    created_at: mockTimestamp,
-    updated_at: mockTimestamp,
   },
   {
     id: "5",
@@ -134,22 +120,18 @@ export const mockProducts: Product[] = [
     stock_quantity: 100,
     store_id: "1",
     storeId: "1",
-    created_at: mockTimestamp,
-    updated_at: mockTimestamp,
     variations: [
       {
         id: "5-1",
         name: "Large",
         price: 110,
-        is_active: true,
         isActive: true,
+        is_active: true,
         stockQuantity: 70,
         stock_quantity: 70,
         product_id: "5",
         productId: "5",
-        sku: "DRK-001-L",
-        created_at: mockTimestamp,
-        updated_at: mockTimestamp
+        sku: "DRK-001-L"
       },
     ],
   },
@@ -169,8 +151,6 @@ export const mockProducts: Product[] = [
     stock_quantity: 80,
     store_id: "1",
     storeId: "1",
-    created_at: mockTimestamp,
-    updated_at: mockTimestamp,
   },
 ];
 
@@ -183,8 +163,6 @@ export const mockCategories: Category[] = [
     is_active: true,
     storeId: "1",
     store_id: "1",
-    created_at: mockTimestamp,
-    updated_at: mockTimestamp,
   },
   {
     id: "2",
@@ -194,8 +172,6 @@ export const mockCategories: Category[] = [
     is_active: true,
     storeId: "1",
     store_id: "1",
-    created_at: mockTimestamp,
-    updated_at: mockTimestamp,
   },
 ];
 
@@ -206,24 +182,14 @@ export const mockCustomers: Customer[] = [
     email: "john@example.com",
     phone: "555-123-4567",
     address: "123 Main St",
-    store_id: "1",
-    storeId: "1",
-    storeName: "Main Store",
     loyaltyPoints: 150,
-    created_at: mockTimestamp,
-    updated_at: mockTimestamp,
   },
   {
     id: "2",
     name: "Jane Smith",
     email: "jane@example.com",
     phone: "555-987-6543",
-    store_id: "1",
-    storeId: "1",
-    storeName: "Main Store",
     loyaltyPoints: 75,
-    created_at: mockTimestamp,
-    updated_at: mockTimestamp,
   },
 ];
 

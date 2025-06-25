@@ -1,110 +1,138 @@
-import { useState } from 'react';
-import { Product, ProductVariation, ProductSize } from '@/types';
 
-export const useProductFormState = (editingProduct?: Product | null) => {
-  const [formData, setFormData] = useState<Partial<Product>>(() => ({
-    name: editingProduct?.name || '',
-    description: editingProduct?.description || '',
-    price: editingProduct?.price || 0,
-    cost: editingProduct?.cost || 0,
-    sku: editingProduct?.sku || '',
-    barcode: editingProduct?.barcode || '',
-    category_id: editingProduct?.category_id || '',
-    stock_quantity: editingProduct?.stock_quantity || 0,
-    is_active: editingProduct?.is_active ?? true,
-    image_url: editingProduct?.image_url || '',
-  }));
+import { useState, useEffect } from "react";
+import { Product, ProductSize } from "@/types";
 
-  const [variations, setVariations] = useState<ProductVariation[]>(editingProduct?.product_variations || []);
+export interface StockAdjustment {
+  quantity: number;
+  notes: string;
+  type: "adjustment" | "add" | "remove";
+}
 
-  const handleFieldChange = (field: keyof Product, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const resetForm = () => {
-    if (editingProduct) {
-      setFormData({
-        name: editingProduct.name,
-        description: editingProduct.description,
-        price: editingProduct.price,
-        cost: editingProduct.cost,
-        sku: editingProduct.sku,
-        barcode: editingProduct.barcode,
-        category_id: editingProduct.category_id,
-        stock_quantity: editingProduct.stock_quantity,
-        is_active: editingProduct.is_active,
-        image_url: editingProduct.image_url,
-      });
-      
-      if (editingProduct.product_variations) {
-        setVariations(editingProduct.product_variations.map(v => ({
-          ...v,
-          stock_quantity: v.stock_quantity
-        })));
-      }
-    } else {
-      setFormData({
-        name: '',
-        description: '',
-        price: 0,
-        cost: 0,
-        sku: '',
-        barcode: '',
-        category_id: '',
-        stock_quantity: 0,
-        is_active: true,
-        image_url: '',
-      });
-      setVariations([]);
-    }
-  };
-
-  const addVariation = () => {
-    const newVariation: ProductVariation = {
-      id: `temp-${Date.now()}`,
-      product_id: '',
-      name: '',
-      price: formData.price || 0,
-      stock_quantity: 0,
-      is_active: true,
-      sku: '',
-      size: 'regular' as ProductSize,
-    };
-    setVariations(prev => [...prev, newVariation]);
-  };
-
-  const removeVariation = (index: number) => {
-    setVariations(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updateVariation = (index: number, field: keyof ProductVariation, value: any) => {
-    setVariations(prev => prev.map((variation, i) => 
-      i === index ? { ...variation, [field]: value } : variation
-    ));
-  };
-
-  const getTotalStock = () => {
-    return variations.length > 0 
-      ? variations.reduce((sum, v) => sum + v.stock_quantity, 0)
-      : formData.stock_quantity || 0;
-  };
-
-  const getFormattedProduct = (): Partial<Product> => ({
-    ...formData,
-    stock_quantity: getTotalStock(),
+export function useProductFormState({ product, isEditing }: { 
+  product?: Product | null;
+  isEditing: boolean;
+}) {
+  // Basic form state
+  const [formData, setFormData] = useState<Partial<Product>>({
+    name: "",
+    description: "",
+    sku: "",
+    barcode: "",
+    cost: 0,
+    stockQuantity: 0,
+    categoryId: "uncategorized",
+    isActive: true,
   });
+
+  // Image state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Size variations state
+  const [hasVariations, setHasVariations] = useState(true);
+  const [regularPrice, setRegularPrice] = useState<number>(0);
+  const [miniPrice, setMiniPrice] = useState<number>(0);
+  const [overloadPrice, setOverloadPrice] = useState<number>(0);
+  const [regularStock, setRegularStock] = useState<number>(0);
+  const [miniStock, setMiniStock] = useState<number>(0);
+  const [overloadStock, setOverloadStock] = useState<number>(0);
+  
+  // Stock adjustment state
+  const [stockAdjustment, setStockAdjustment] = useState<StockAdjustment>({
+    quantity: 0,
+    notes: "",
+    type: "adjustment"
+  });
+  const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
+
+  // Set form data when product is loaded
+  useEffect(() => {
+    if (product) {
+      setFormData({
+        name: product.name,
+        description: product.description || "",
+        sku: product.sku,
+        barcode: product.barcode || "",
+        cost: product.cost || 0,
+        stockQuantity: product.stockQuantity,
+        categoryId: product.categoryId || "uncategorized",
+        isActive: product.isActive,
+      });
+
+      if (product.image) {
+        setImagePreview(product.image);
+      }
+      
+      // Set variation data if available
+      if (product.variations && product.variations.length > 0) {
+        setHasVariations(true);
+        
+        const regularVariation = product.variations.find(v => v.size === 'regular');
+        const miniVariation = product.variations.find(v => v.size === 'mini');
+        const overloadVariation = product.variations.find(v => v.size === 'croffle-overload');
+        
+        if (regularVariation) {
+          setRegularPrice(regularVariation.price);
+          setRegularStock(regularVariation.stockQuantity || 0);
+        } else {
+          setRegularPrice(product.price || 0);
+          setRegularStock(Math.floor((product.stockQuantity || 0) / 3));
+        }
+        
+        if (miniVariation) {
+          setMiniPrice(miniVariation.price);
+          setMiniStock(miniVariation.stockQuantity || 0);
+        } else {
+          setMiniPrice((product.price || 0) * 0.7);
+          setMiniStock(Math.floor((product.stockQuantity || 0) / 3));
+        }
+        
+        if (overloadVariation) {
+          setOverloadPrice(overloadVariation.price);
+          setOverloadStock(overloadVariation.stockQuantity || 0);
+        } else {
+          setOverloadPrice((product.price || 0) * 1.3);
+          setOverloadStock(Math.floor((product.stockQuantity || 0) / 3));
+        }
+      } else {
+        setHasVariations(false);
+        setRegularPrice(product.price || 0);
+        setRegularStock(product.stockQuantity || 0);
+        setMiniPrice((product.price || 0) * 0.7);
+        setMiniStock(0);
+        setOverloadPrice((product.price || 0) * 1.3);
+        setOverloadStock(0);
+      }
+    }
+  }, [product]);
 
   return {
     formData,
-    variations,
-    handleFieldChange,
-    resetForm,
-    addVariation,
-    removeVariation,
-    updateVariation,
-    getFormattedProduct,
+    setFormData,
+    imageFile,
+    setImageFile,
+    imagePreview,
+    setImagePreview,
+    isSubmitting,
+    setIsSubmitting,
+    hasVariations,
+    setHasVariations,
+    regularPrice,
+    setRegularPrice,
+    miniPrice,
+    setMiniPrice,
+    overloadPrice,
+    setOverloadPrice,
+    regularStock,
+    setRegularStock,
+    miniStock,
+    setMiniStock,
+    overloadStock,
+    setOverloadStock,
+    stockAdjustment,
+    setStockAdjustment,
+    isAdjustmentDialogOpen,
+    setIsAdjustmentDialogOpen
   };
-};
+}

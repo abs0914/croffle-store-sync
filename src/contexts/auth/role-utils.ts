@@ -1,131 +1,203 @@
 
-import { UserRole } from '@/types';
+import { UserRole } from "@/types";
 
-// Role hierarchy (higher number = more permissions)
-export const ROLE_HIERARCHY: Record<UserRole, number> = {
-  staff: 1,
-  cashier: 2,
-  manager: 3,
-  owner: 4,
-  admin: 5,
+/**
+ * Maps a user email to a role (temporary solution, to be replaced with database roles)
+ */
+export const mapUserRole = (email: string): UserRole => {
+  if (email === 'admin@example.com') return 'admin';
+  if (email === 'owner@example.com') return 'owner';
+  if (email.includes('manager') || email === 'rbsons.north.manager@croffle.com') return 'manager';
+  if (email === 'marasabaras@croffle.com' || email === 'robinsons.north@croffle.com') return 'cashier';
+  return 'cashier'; // Default role
 };
 
-// Route paths for role-based access control
+/**
+ * Checks if a user has permission based on role hierarchy
+ */
+export const checkPermission = (userRole: UserRole | undefined, requiredRole: UserRole): boolean => {
+  if (!userRole) return false;
+  
+  const roleHierarchy: Record<UserRole, number> = {
+    admin: 4,
+    owner: 3,
+    manager: 2,
+    cashier: 1
+  };
+  
+  return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+};
+
+/**
+ * Route constants for better maintainability
+ */
 export const ROUTE_PATHS = {
+  // Main App Routes
+  ROOT: '/',
   DASHBOARD: '/dashboard',
   POS: '/pos',
-  PRODUCTS: '/products',
-  CUSTOMERS: '/customers',
-  INVENTORY: '/inventory',
+  PRODUCT_CATALOG: '/product-catalog',
   STOCK_ORDERS: '/stock-orders',
-  ORDERS: '/orders',
-  EXPENSES: '/expenses',
+  INVENTORY: '/inventory',
+  ORDER_MANAGEMENT: '/order-management',
+  CUSTOMERS: '/customers',
   REPORTS: '/reports',
-  PRODUCTION: '/production',
   SETTINGS: '/settings',
-  COMMISSARY_INVENTORY: '/commissary-inventory',
+  // Admin Routes
+  ADMIN_DASHBOARD: '/admin',
+  ADMIN_STORES: '/admin/stores',
+  ADMIN_RECIPES: '/admin/recipes',
+  COMMISSARY_INVENTORY: '/admin/commissary-inventory',
+  PRODUCTION: '/admin/production-management',
+  ADMIN_CUSTOMERS: '/admin/customers',
+  ADMIN_ORDERS: '/admin/orders',
+  ADMIN_ORDER_MANAGEMENT: '/admin/order-management',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_MANAGERS: '/admin/managers',
+  ADMIN_CASHIERS: '/admin/cashiers',
+  ADMIN_REPORTS: '/admin/reports'
 } as const;
 
-// Check if user has required permission level
-export function hasPermission(userRole: UserRole, requiredRole: UserRole): boolean {
-  return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredRole];
-}
-
-// Check if user can access a specific store
-export function canAccessStore(userRole: UserRole, userStoreIds: string[], storeId: string): boolean {
-  // Admin and owner can access all stores
+/**
+ * Check if a user has access to a specific route based on their role
+ */
+export const checkRouteAccess = (userRole: UserRole | undefined, route: string): boolean => {
+  if (!userRole) return false;
+  
+  // Admin and owner have access to everything
   if (userRole === 'admin' || userRole === 'owner') {
     return true;
   }
   
-  // Other roles need explicit store access
-  return userStoreIds.includes(storeId);
-}
-
-// Get user's display name based on role
-export function getRoleDisplayName(role: UserRole): string {
-  const roleNames: Record<UserRole, string> = {
-    staff: 'Staff',
-    cashier: 'Cashier',
-    manager: 'Manager',
-    owner: 'Owner',
-    admin: 'Administrator',
-  };
+  // Root route should be accessible to all authenticated users (redirects to dashboard)
+  if (route === ROUTE_PATHS.ROOT) {
+    return true;
+  }
   
-  return roleNames[role] || role;
-}
-
-// Check if user can access a specific route
-export function checkRouteAccess(userRole: UserRole | undefined, route: string): boolean {
-  if (!userRole) return false;
-  
-  const allowedRoutes = getAllowedRoutes(userRole);
-  return allowedRoutes.includes(route);
-}
-
-// Get allowed routes based on user role
-export function getAllowedRoutes(role: UserRole): string[] {
-  const routePermissions: Record<UserRole, string[]> = {
-    staff: ['/dashboard', '/pos'],
-    cashier: ['/dashboard', '/pos', '/customers', '/expenses'],
+  // Define allowed routes for each role with detailed access control
+  const roleRoutes: Record<UserRole, string[]> = {
+    admin: [], // Admin gets everything, handled above
+    owner: [], // Owner gets everything, handled above
     manager: [
-      '/dashboard',
-      '/pos',
-      '/products',
-      '/customers',
-      '/inventory',
-      '/stock-orders',
-      '/orders',
-      '/expenses',
-      '/reports',
-      '/settings'
+      ROUTE_PATHS.ROOT,
+      ROUTE_PATHS.DASHBOARD,
+      ROUTE_PATHS.POS,
+      ROUTE_PATHS.PRODUCT_CATALOG,
+      ROUTE_PATHS.STOCK_ORDERS,
+      ROUTE_PATHS.INVENTORY,
+      ROUTE_PATHS.ORDER_MANAGEMENT,
+      ROUTE_PATHS.CUSTOMERS,
+      ROUTE_PATHS.REPORTS,
+      ROUTE_PATHS.SETTINGS
     ],
-    owner: [
-      '/dashboard',
-      '/pos',
-      '/products',
-      '/customers',
-      '/inventory',
-      '/stock-orders',
-      '/orders',
-      '/expenses',
-      '/reports',
-      '/production',
-      '/settings',
-      '/commissary-inventory'
-    ],
-    admin: [
-      '/dashboard',
-      '/pos',
-      '/products',
-      '/customers',
-      '/inventory',
-      '/stock-orders',
-      '/orders',
-      '/expenses',
-      '/reports',
-      '/production',
-      '/settings',
-      '/commissary-inventory'
-    ],
+    cashier: [
+      ROUTE_PATHS.ROOT,
+      ROUTE_PATHS.DASHBOARD,
+      ROUTE_PATHS.POS,
+      ROUTE_PATHS.PRODUCT_CATALOG,
+      ROUTE_PATHS.CUSTOMERS
+    ]
   };
+  
+  const allowedRoutes = roleRoutes[userRole] || [];
+  
+  // Check if the route starts with any allowed route pattern
+  return allowedRoutes.some(allowedRoute => 
+    route === allowedRoute || route.startsWith(allowedRoute + '/')
+  );
+};
 
-  return routePermissions[role] || [];
-}
+/**
+ * Check if a user can access admin panel
+ */
+export const canAccessAdminPanel = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner';
+};
 
-// Check if user can perform specific actions
-export function canPerformAction(userRole: UserRole, action: string): boolean {
-  const actionPermissions: Record<string, UserRole[]> = {
-    'manage_products': ['manager', 'owner', 'admin'],
-    'view_reports': ['manager', 'owner', 'admin'],
-    'manage_users': ['owner', 'admin'],
-    'manage_stores': ['owner', 'admin'],
-    'process_transactions': ['cashier', 'manager', 'owner', 'admin'],
-    'manage_inventory': ['manager', 'owner', 'admin'],
-    'manage_orders': ['manager', 'owner', 'admin'],
-    'manage_expenses': ['cashier', 'manager', 'owner', 'admin'],
+/**
+ * Check if a user can access store inventory management
+ */
+export const canAccessStoreInventory = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner' || userRole === 'manager';
+};
+
+/**
+ * Check if a user can access recipe management (admin-only)
+ */
+export const canAccessRecipeManagement = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner';
+};
+
+/**
+ * Check if a user can access commissary inventory (admin-only)
+ */
+export const canAccessCommissary = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner';
+};
+
+/**
+ * Check if a user can access production management (admin-only)
+ */
+export const canAccessProduction = (userRole: UserRole | undefined): boolean => {
+  return userRole === 'admin' || userRole === 'owner';
+};
+
+/**
+ * Checks if a user has access to a specific store
+ * Admin and owner users have access to all stores
+ */
+export const checkStoreAccess = (userStoreIds: string[] | undefined, storeId: string, userRole?: UserRole): boolean => {
+  // Admin and owner users have access to all stores
+  if (userRole === 'admin' || userRole === 'owner') {
+    return true;
+  }
+  
+  if (!userStoreIds) return false;
+  return userStoreIds.includes(storeId);
+};
+
+/**
+ * Get route access level description for documentation
+ */
+export const getRouteAccessDescription = (route: string): string => {
+  const accessMap: Record<string, string> = {
+    [ROUTE_PATHS.ROOT]: 'All authenticated users',
+    [ROUTE_PATHS.DASHBOARD]: 'All authenticated users',
+    [ROUTE_PATHS.POS]: 'All authenticated users with store access',
+    [ROUTE_PATHS.PRODUCT_CATALOG]: 'All authenticated users with store access',
+    [ROUTE_PATHS.STOCK_ORDERS]: 'Managers and above with store access',
+    [ROUTE_PATHS.INVENTORY]: 'Managers and above with store access',
+    [ROUTE_PATHS.ORDER_MANAGEMENT]: 'Managers and above with store access',
+    [ROUTE_PATHS.CUSTOMERS]: 'All authenticated users with store access',
+    [ROUTE_PATHS.REPORTS]: 'Managers and above with store access',
+    [ROUTE_PATHS.SETTINGS]: 'Managers and above',
+    [ROUTE_PATHS.ADMIN_DASHBOARD]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_STORES]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_RECIPES]: 'Admin and owner only',
+    [ROUTE_PATHS.COMMISSARY_INVENTORY]: 'Admin and owner only',
+    [ROUTE_PATHS.PRODUCTION]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_CUSTOMERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_ORDERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_ORDER_MANAGEMENT]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_USERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_MANAGERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_CASHIERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_REPORTS]: 'Admin and owner only'
   };
+  
+  return accessMap[route] || 'All authenticated users';
+};
 
-  const allowedRoles = actionPermissions[action] || [];
-  return allowedRoles.includes(userRole);
-}
+/**
+ * Debug function to log access decisions
+ */
+export const debugRouteAccess = (userRole: UserRole | undefined, route: string, hasStoreAccess: boolean): void => {
+  if (process.env.NODE_ENV === 'development') {
+    console.group(`🔐 Route Access Check: ${route}`);
+    console.log(`User Role: ${userRole || 'undefined'}`);
+    console.log(`Has Store Access: ${hasStoreAccess}`);
+    console.log(`Route Access: ${checkRouteAccess(userRole, route)}`);
+    console.log(`Access Description: ${getRouteAccessDescription(route)}`);
+    console.groupEnd();
+  }
+};

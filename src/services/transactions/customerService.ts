@@ -1,191 +1,152 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Customer } from "@/types";
 import { toast } from "sonner";
 
-export const fetchCustomers = async (storeId: string): Promise<Customer[]> => {
-  try {
-    const { data, error } = await supabase
-      .from("customers")
-      .select("*")
-      .eq("store_id", storeId)
-      .order("name");
-    
-    if (error) {
-      throw new Error(error.message);
-    }
-    
-    // Map database fields to our TypeScript interface
-    return data?.map(item => ({
-      id: item.id,
-      name: item.name,
-      email: item.email || undefined,
-      phone: item.phone,
-      store_id: item.store_id,
-      storeId: item.store_id,
-      address: (item as any).address || undefined,
-      created_at: item.created_at,
-      updated_at: item.updated_at
-    })) || [];
-  } catch (error) {
-    console.error("Error fetching customers:", error);
-    toast.error("Failed to load customers");
-    return [];
-  }
-};
+// Type definition for customer data from Supabase
+interface CustomerRow {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone: string;
+  store_id?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
 
-export const fetchCustomer = async (id: string): Promise<Customer | null> => {
+/**
+ * Fetches a customer by phone number
+ */
+export const fetchCustomerByPhone = async (phone: string): Promise<Customer | null> => {
   try {
     const { data, error } = await supabase
       .from("customers")
-      .select("*")
-      .eq("id", id)
+      .select(`
+        *,
+        stores:store_id (
+          name
+        )
+      `)
+      .eq("phone", phone)
       .single();
     
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
       throw new Error(error.message);
     }
     
-    // Map database fields to our TypeScript interface
+    if (!data) return null;
+    
+    // Map the database customer row to our Customer type
+    const customerData = data as CustomerRow & { stores: { name: string } | null };
+    
     return {
-      id: data.id,
-      name: data.name,
-      email: data.email || undefined,
-      phone: data.phone,
-      store_id: data.store_id,
-      storeId: data.store_id,
-      address: (data as any).address || undefined,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      id: customerData.id,
+      name: customerData.name,
+      email: customerData.email || undefined,
+      phone: customerData.phone,
+      storeId: customerData.store_id || undefined,
+      storeName: customerData.stores?.name,
+      // These properties might not exist in the database schema
+      address: undefined, // We don't have this field in the DB
+      loyaltyPoints: 0    // We don't have this field in the DB
     };
   } catch (error) {
     console.error("Error fetching customer:", error);
-    toast.error("Failed to load customer details");
+    toast.error("Failed to fetch customer details");
     return null;
   }
 };
 
-export const createCustomer = async (customerData: Omit<Customer, "id" | "created_at" | "updated_at">): Promise<Customer | null> => {
+/**
+ * Creates or updates a customer
+ */
+export const createOrUpdateCustomer = async (customer: Omit<Customer, "id"> & { id?: string }): Promise<Customer | null> => {
   try {
-    const { data, error } = await supabase
-      .from("customers")
-      .insert({
-        name: customerData.name,
-        email: customerData.email,
-        phone: customerData.phone,
-        store_id: customerData.store_id,
-        address: customerData.address
-      })
-      .select()
-      .single();
+    const { currentStore } = await import("@/contexts/StoreContext").then(m => m.useStore());
+    const storeId = currentStore?.id || customer.storeId;
 
-    if (error) {
-      throw new Error(error.message);
+    if (!storeId) {
+      toast.error("Store ID is required to create or update a customer");
+      return null;
     }
 
-    toast.success("Customer created successfully");
+    // Get the store name for the response if possible
+    let storeName = customer.storeName;
+    if (storeId && !storeName) {
+      const { data: storeData } = await supabase
+        .from("stores")
+        .select("name")
+        .eq("id", storeId)
+        .single();
+      
+      if (storeData) {
+        storeName = storeData.name;
+      }
+    }
 
-    return {
-      id: data.id,
-      name: data.name,
-      email: data.email || undefined,
-      phone: data.phone,
-      store_id: data.store_id,
-      storeId: data.store_id,
-      storeName: customerData.storeName,
-      address: (data as any).address || undefined,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-    };
+    if (customer.id) {
+      // Update existing customer
+      const { data, error } = await supabase
+        .from("customers")
+        .update({
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          store_id: storeId // Ensure we keep the store_id when updating
+        })
+        .eq("id", customer.id)
+        .select()
+        .single();
+      
+      if (error) throw new Error(error.message);
+      
+      toast.success("Customer updated successfully");
+      
+      // Map the returned customer data to our Customer type
+      return {
+        id: data.id,
+        name: data.name,
+        email: data.email || undefined,
+        phone: data.phone,
+        storeId: data.store_id || undefined,
+        storeName,
+        // These fields don't exist in the database schema
+        address: customer.address, // Keep the value provided by the user
+        loyaltyPoints: 0 // Default value since it doesn't exist in DB
+      };
+    } else {
+      // Create new customer
+      const { data, error } = await supabase
+        .from("customers")
+        .insert({
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          store_id: storeId // Set the store_id when creating
+        })
+        .select()
+        .single();
+      
+      if (error) throw new Error(error.message);
+      
+      toast.success("Customer created successfully");
+      
+      // Map the returned customer data to our Customer type
+      return {
+        id: data.id,
+        name: data.name,
+        email: data.email || undefined,
+        phone: data.phone,
+        storeId: data.store_id || undefined,
+        storeName,
+        // These fields don't exist in the database schema
+        address: customer.address, // Keep the value provided by the user
+        loyaltyPoints: 0 // Default value since it doesn't exist in DB
+      };
+    }
   } catch (error) {
-    console.error("Error creating customer:", error);
-    toast.error("Failed to create customer");
+    console.error("Error saving customer:", error);
+    toast.error("Failed to save customer details");
     return null;
   }
-};
-
-export const updateCustomer = async (id: string, customerData: Partial<Customer>): Promise<Customer | null> => {
-  try {
-    const { data, error } = await supabase
-      .from("customers")
-      .update({
-        name: customerData.name,
-        email: customerData.email,
-        phone: customerData.phone,
-        address: customerData.address
-      })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    toast.success("Customer updated successfully");
-
-    return {
-      id: data.id,
-      name: data.name,
-      email: data.email || undefined,
-      phone: data.phone,
-      store_id: data.store_id,
-      storeId: data.store_id,
-      address: (data as any).address || undefined,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-    };
-  } catch (error) {
-    console.error("Error updating customer:", error);
-    toast.error("Failed to update customer");
-    return null;
-  }
-};
-
-export const deleteCustomer = async (id: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from("customers")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    toast.success("Customer deleted successfully");
-    return true;
-  } catch (error) {
-    console.error("Error deleting customer:", error);
-    toast.error("Failed to delete customer");
-    return false;
-  }
-};
-
-export const generateSampleCustomers = (): Customer[] => {
-  const mockTimestamp = new Date().toISOString();
-  
-  return [
-    {
-      id: "sample-1",
-      name: "Sample Customer 1",
-      email: "sample1@example.com",
-      phone: "+63-917-111-1111",
-      store_id: "store-1",
-      storeId: "store-1",
-      storeName: "Sample Store",
-      created_at: mockTimestamp,
-      updated_at: mockTimestamp,
-    },
-    {
-      id: "sample-2", 
-      name: "Sample Customer 2",
-      email: "sample2@example.com",
-      phone: "+63-917-222-2222",
-      store_id: "store-1",
-      storeId: "store-1",
-      storeName: "Sample Store",
-      created_at: mockTimestamp,
-      updated_at: mockTimestamp,
-    },
-  ];
 };

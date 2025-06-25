@@ -5,13 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Search, Package, AlertTriangle, TrendingUp, Loader2 } from 'lucide-react';
+import { Search, Package, AlertTriangle, TrendingUp } from 'lucide-react';
 import { useOptimizedInventory } from '@/hooks/inventory/useOptimizedInventory';
-import { useStore } from '@/contexts/StoreContext';
 import { InventoryItem } from '@/types/inventoryManagement';
 
 interface OptimizedInventoryListProps {
+  storeId: string;
   onItemSelect?: (item: InventoryItem) => void;
 }
 
@@ -19,19 +18,16 @@ const ITEM_HEIGHT = 80;
 const VISIBLE_ITEMS = 8;
 const LIST_WIDTH = '100%';
 
-export function OptimizedInventoryList({ onItemSelect }: OptimizedInventoryListProps) {
+export function OptimizedInventoryList({ storeId, onItemSelect }: OptimizedInventoryListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const { currentStore } = useStore();
 
   const {
     inventoryItems,
     isLoading,
-    error,
     computedStats,
-    createOptimizedFilter,
-    activeStoreId
-  } = useOptimizedInventory();
+    createOptimizedFilter
+  } = useOptimizedInventory(storeId);
 
   // Memoized filtered items
   const filteredItems = useMemo(() => {
@@ -101,35 +97,11 @@ export function OptimizedInventoryList({ onItemSelect }: OptimizedInventoryListP
     );
   }, [filteredItems, onItemSelect]);
 
-  // Show store selection message if no store is selected
-  if (!currentStore) {
-    return (
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          Please select a store to view inventory items.
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  // Show error if there's an issue fetching data
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          Error loading inventory: {error instanceof Error ? error.message : 'Unknown error'}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
   if (isLoading) {
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+          <Package className="h-8 w-8 mx-auto mb-2 animate-spin" />
           <p>Loading inventory...</p>
         </CardContent>
       </Card>
@@ -167,18 +139,6 @@ export function OptimizedInventoryList({ onItemSelect }: OptimizedInventoryListP
           </Card>
         </div>
       )}
-
-      {/* Store Information */}
-      <Card>
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Package className="h-4 w-4" />
-            <span>Store: {currentStore.name}</span>
-            <span>•</span>
-            <span>ID: {activeStoreId}</span>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Search and Filters */}
       <Card>
@@ -226,9 +186,6 @@ export function OptimizedInventoryList({ onItemSelect }: OptimizedInventoryListP
             <div className="text-center py-8 text-muted-foreground">
               <Package className="h-8 w-8 mx-auto mb-2" />
               <p>No inventory items found</p>
-              {searchTerm && (
-                <p className="text-xs mt-1">Try adjusting your search terms</p>
-              )}
             </div>
           )}
         </CardContent>

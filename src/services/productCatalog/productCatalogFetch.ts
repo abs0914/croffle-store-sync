@@ -42,9 +42,7 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
       cost: undefined,
       stock_quantity: 100, // Default stock for now since product_catalog doesn't track stock
       stockQuantity: 100,
-      variations: [], // Product catalog doesn't have variations yet
-      created_at: item.created_at,
-      updated_at: item.updated_at
+      variations: [] // Product catalog doesn't have variations yet
     })) || [];
   } catch (error) {
     console.error("Error fetching product catalog for POS:", error);

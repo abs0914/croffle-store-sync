@@ -13,7 +13,6 @@ import { Store } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Store as StoreType } from '@/types';
 
 export type ReportType = 'sales' | 'inventory' | 'profit_loss' | 'x_reading' | 'z_reading' | 'daily_summary' | 'vat' | 'cashier' | 'stock';
 
@@ -30,7 +29,6 @@ export default function Reports() {
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedStoreId, setSelectedStoreId] = useState<string>("");
-  const [selectedStores, setSelectedStores] = useState<StoreType[]>([]);
   const isMobile = useIsMobile();
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
@@ -42,7 +40,6 @@ export default function Reports() {
         storeName: currentStore.name 
       });
       setSelectedStoreId(currentStore.id);
-      setSelectedStores([currentStore]);
     }
   }, [currentStore, selectedStoreId]);
 
@@ -56,13 +53,6 @@ export default function Reports() {
       newStoreId: storeId === 'all' ? 'ALL_STORES' : storeId.slice(0, 8)
     });
     setSelectedStoreId(storeId);
-    
-    // Update selectedStores array for compatibility
-    if (storeId === 'all') {
-      setSelectedStores([]);
-    } else if (currentStore && currentStore.id === storeId) {
-      setSelectedStores([currentStore]);
-    }
   };
 
   // Handle store loading state
@@ -144,8 +134,6 @@ export default function Reports() {
                     Select Store
                   </h3>
                   <StoreSelector
-                    selectedStores={selectedStores}
-                    setSelectedStores={setSelectedStores}
                     selectedStoreId={selectedStoreId}
                     onSelectStore={handleStoreSelection}
                   />

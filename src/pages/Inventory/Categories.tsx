@@ -62,12 +62,9 @@ export default function Categories() {
       />
       
       <CategoryForm
-        open={isDialogOpen}
+        isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onSubmit={handleSubmit}
-        onCancel={() => {
-          setIsDialogOpen(false);
-        }}
         editingCategory={editingCategory}
       />
     </div>

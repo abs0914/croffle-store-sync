@@ -1,9 +1,9 @@
 
-import { useState } from 'react';
-import { Product, ProductVariation } from '@/types';
-import { useProductFormState } from './product-form/useProductFormState';
-import { useFormHandlers } from './product-form/useFormHandlers';
-import { useProductSubmit } from './product-form/useProductSubmit';
+import { useProductFormState } from "./product-form/useProductFormState";
+import { useFormHandlers } from "./product-form/useFormHandlers";
+import { useStockOperations } from "./product-form/useStockOperations";
+import { useProductSubmit } from "./product-form/useProductSubmit";
+import { Product } from "@/types";
 
 interface UseProductFormProps {
   product?: Product | null;
@@ -12,104 +12,85 @@ interface UseProductFormProps {
 }
 
 export const useProductForm = ({ product, isEditing, productId }: UseProductFormProps) => {
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
-  const [hasVariations, setHasVariations] = useState(false);
-  const [regularPrice, setRegularPrice] = useState(0);
-  const [regularStock, setRegularStock] = useState(0);
-  const [miniPrice, setMiniPrice] = useState(0);
-  const [miniStock, setMiniStock] = useState(0);
-  const [overloadPrice, setOverloadPrice] = useState(0);
-  const [overloadStock, setOverloadStock] = useState(0);
-  const [stockAdjustment, setStockAdjustment] = useState({
-    quantity: 0,
-    notes: "",
-    type: "adjustment"
-  });
-  const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const {
-    formData,
-    variations,
-    handleFieldChange,
-    resetForm,
-    addVariation,
-    removeVariation,
-    updateVariation,
-    getFormattedProduct,
-  } = useProductFormState(product);
-
+  // Get state management
+  const state = useProductFormState({ product, isEditing });
+  
+  // Form handlers
   const handlers = useFormHandlers({
-    formData,
-    handleFieldChange,
-    setImageFile,
-    setImagePreview,
-    setHasVariations,
-    setRegularPrice,
-    setRegularStock,
-    setMiniPrice,
-    setMiniStock,
-    setOverloadPrice,
-    setOverloadStock,
-    setStockAdjustment,
-    setIsAdjustmentDialogOpen
+    formData: state.formData,
+    setFormData: state.setFormData,
+    setImageFile: state.setImageFile,
+    setImagePreview: state.setImagePreview,
+    setHasVariations: state.setHasVariations,
+    setRegularPrice: state.setRegularPrice,
+    setRegularStock: state.setRegularStock,
+    setMiniPrice: state.setMiniPrice,
+    setMiniStock: state.setMiniStock,
+    setOverloadPrice: state.setOverloadPrice,
+    setOverloadStock: state.setOverloadStock,
+    setStockAdjustment: state.setStockAdjustment,
+    setIsAdjustmentDialogOpen: state.setIsAdjustmentDialogOpen
   });
-
+  
+  // Stock operations
+  const stockOps = useStockOperations({ 
+    productId: product?.id || productId
+  });
+  
+  // Form submission
   const { handleSubmit } = useProductSubmit({
     isEditing,
     productId,
-    formData,
-    imageFile,
-    hasVariations,
-    regularPrice,
-    miniPrice,
-    overloadPrice,
-    regularStock,
-    miniStock,
-    overloadStock,
-    setIsSubmitting
+    formData: state.formData,
+    imageFile: state.imageFile,
+    hasVariations: state.hasVariations,
+    regularPrice: state.regularPrice,
+    miniPrice: state.miniPrice,
+    overloadPrice: state.overloadPrice,
+    regularStock: state.regularStock,
+    miniStock: state.miniStock,
+    overloadStock: state.overloadStock,
+    setIsSubmitting: state.setIsSubmitting
   });
-
-  const handleSaveStockAdjustment = async () => {
-    // Implementation for saving stock adjustment
-    setIsAdjustmentDialogOpen(false);
+  
+  // Handle stock adjustment save
+  const handleSaveStockAdjustment = () => {
+    return stockOps.handleSaveStockAdjustment();
   };
-
+  
   return {
-    formData,
-    variations,
-    handleFieldChange,
-    resetForm,
-    addVariation,
-    removeVariation,
-    updateVariation,
-    getFormattedProduct,
-    imageFile,
-    setImageFile,
-    imagePreview,
-    setImagePreview,
-    hasVariations,
-    setHasVariations,
-    regularPrice,
-    setRegularPrice,
-    regularStock,
-    setRegularStock,
-    miniPrice,
-    setMiniPrice,
-    miniStock,
-    setMiniStock,
-    overloadPrice,
-    setOverloadPrice,
-    overloadStock,
-    setOverloadStock,
-    stockAdjustment,
-    setStockAdjustment,
-    isAdjustmentDialogOpen,
-    setIsAdjustmentDialogOpen,
-    isSubmitting,
-    ...handlers,
-    handleSubmit,
+    // State
+    formData: state.formData,
+    imagePreview: state.imagePreview,
+    isSubmitting: state.isSubmitting,
+    hasVariations: state.hasVariations,
+    regularPrice: state.regularPrice,
+    miniPrice: state.miniPrice,
+    overloadPrice: state.overloadPrice,
+    regularStock: state.regularStock, 
+    miniStock: state.miniStock,
+    overloadStock: state.overloadStock,
+    stockAdjustment: state.stockAdjustment,
+    isAdjustmentDialogOpen: state.isAdjustmentDialogOpen,
+    
+    // Handlers
+    handleInputChange: handlers.handleInputChange,
+    handleCheckboxChange: handlers.handleCheckboxChange,
+    handleSelectChange: handlers.handleSelectChange,
+    handleImageChange: handlers.handleImageChange,
+    handleRemoveImage: handlers.handleRemoveImage,
+    handleVariationPriceChange: handlers.handleVariationPriceChange,
+    handleVariationStockChange: handlers.handleVariationStockChange,
+    handleAdjustStock: handlers.handleAdjustStock,
+    handleStockAdjustmentInputChange: handlers.handleStockAdjustmentInputChange,
+    
+    // Stock operations
     handleSaveStockAdjustment,
+    
+    // Form submission
+    handleSubmit,
+    
+    // Dialog state
+    setIsAdjustmentDialogOpen: state.setIsAdjustmentDialogOpen,
   };
 };

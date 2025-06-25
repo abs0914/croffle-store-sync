@@ -6,7 +6,7 @@ import { ConversionProcessTab } from "./components/ConversionProcessTab";
 import { Factory, Upload, Package } from "lucide-react";
 
 interface ProductionManagementProps {
-  storeId?: string;
+  storeId: string;
 }
 
 export default function ProductionManagement({ storeId }: ProductionManagementProps) {

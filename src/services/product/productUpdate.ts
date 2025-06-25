@@ -55,13 +55,12 @@ export const updateProduct = async (id: string, product: Partial<Product>): Prom
       is_active: data.is_active !== null ? data.is_active : true,
       isActive: data.is_active !== null ? data.is_active : true,
       store_id: data.store_id,
+      storeId: data.store_id,
       sku: data.sku,
       barcode: data.barcode || undefined,
       cost: data.cost || undefined,
       stock_quantity: data.stock_quantity,
-      stockQuantity: data.stock_quantity,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      stockQuantity: data.stock_quantity
     };
   } catch (error) {
     console.error("Error updating product:", error);

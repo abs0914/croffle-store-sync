@@ -1,53 +1,50 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { ChangeEvent } from "react";
 
 interface TaxSettingsProps {
   taxPercentage: number;
   isTaxInclusive: boolean;
-  onTaxPercentageChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onTaxInclusiveChange: (checked: boolean) => void;
+  handleNumberChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleSwitchChange: (checked: boolean) => void;
 }
 
-export const TaxSettings = ({
-  taxPercentage,
-  isTaxInclusive,
-  onTaxPercentageChange,
-  onTaxInclusiveChange
+export const TaxSettings = ({ 
+  taxPercentage, 
+  isTaxInclusive, 
+  handleNumberChange, 
+  handleSwitchChange 
 }: TaxSettingsProps) => {
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Tax Settings</CardTitle>
-        <CardDescription>
-          Configure tax rates and calculation methods for this store
-        </CardDescription>
+        <CardTitle className="text-xl">Tax Settings</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="tax-percentage">Tax Percentage (%)</Label>
-          <Input
-            id="tax-percentage"
-            type="number"
-            step="0.01"
-            min="0"
-            max="100"
-            value={taxPercentage}
-            onChange={onTaxPercentageChange}
-            placeholder="Enter tax percentage"
-          />
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="tax-inclusive"
-            checked={isTaxInclusive}
-            onCheckedChange={onTaxInclusiveChange}
-          />
-          <Label htmlFor="tax-inclusive">Tax Inclusive Pricing</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="tax_percentage">Tax Percentage (%)</Label>
+            <Input
+              id="tax_percentage"
+              name="tax_percentage"
+              type="number"
+              min="0"
+              step="0.01"
+              value={taxPercentage}
+              onChange={handleNumberChange}
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2 h-full">
+            <Switch 
+              checked={isTaxInclusive} 
+              onCheckedChange={handleSwitchChange}
+              id="is_tax_inclusive"
+            />
+            <Label htmlFor="is_tax_inclusive">Prices include tax</Label>
+          </div>
         </div>
       </CardContent>
     </Card>

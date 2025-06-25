@@ -1,130 +1,112 @@
 
-import { useState, useEffect } from 'react';
-import { Category } from '@/types';
-import { useStore } from '@/contexts/StoreContext';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from "react";
+import { useStore } from "@/contexts/StoreContext";
+import { useQuery } from "@tanstack/react-query";
 import { 
   fetchCategories, 
   createCategory, 
   updateCategory, 
-  deleteCategory,
-  createDefaultCategories,
-  CategoryFormData
-} from '@/services/inventoryManagement/categoryService';
-import { toast } from 'sonner';
+  deleteCategory 
+} from "@/services/categoryService";
+import { createDefaultCategories } from "@/services/product/createDefaultCategories";
+import { Category } from "@/types";
+import { toast } from "sonner";
+import { CategoryFormData } from "../components/categories/CategoryForm";
 
 export const useCategoryData = () => {
   const { currentStore } = useStore();
-  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const { data: categories = [], isLoading, error } = useQuery({
-    queryKey: ['categories', currentStore?.id],
+  
+  const { data: categories = [], isLoading, refetch } = useQuery({
+    queryKey: ["categories", currentStore?.id],
     queryFn: () => currentStore?.id ? fetchCategories(currentStore.id) : Promise.resolve([]),
     enabled: !!currentStore?.id,
   });
-
-  const createMutation = useMutation({
-    mutationFn: (data: CategoryFormData) => createCategory({ ...data, store_id: currentStore!.id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories', currentStore?.id] });
-      setIsFormOpen(false);
-      toast.success('Category created successfully');
-    },
-    onError: (error) => {
-      console.error('Error creating category:', error);
-      toast.error('Failed to create category');
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: CategoryFormData }) => updateCategory(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories', currentStore?.id] });
-      setIsFormOpen(false);
-      setEditingCategory(null);
-      toast.success('Category updated successfully');
-    },
-    onError: (error) => {
-      console.error('Error updating category:', error);
-      toast.error('Failed to update category');
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteCategory(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories', currentStore?.id] });
-      toast.success('Category deleted successfully');
-    },
-    onError: (error) => {
-      console.error('Error deleting category:', error);
-      toast.error('Failed to delete category');
-    }
-  });
-
-  const createDefaultMutation = useMutation({
-    mutationFn: () => createDefaultCategories(currentStore!.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['categories', currentStore?.id] });
-      toast.success('Default categories created successfully');
-    },
-    onError: (error) => {
-      console.error('Error creating default categories:', error);
-      toast.error('Failed to create default categories');
-    }
-  });
-
+  
+  const filteredCategories = categories.filter(category => 
+    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    category.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
   const handleAdd = () => {
     setEditingCategory(null);
-    setIsFormOpen(true);
+    setIsDialogOpen(true);
   };
-
+  
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
-    setIsFormOpen(true);
+    setIsDialogOpen(true);
   };
-
-  const handleDelete = async (category: Category) => {
-    if (window.confirm(`Are you sure you want to delete "${category.name}"?`)) {
-      deleteMutation.mutate(category.id);
+  
+  const handleSubmit = async (formData: CategoryFormData) => {
+    if (!currentStore) {
+      toast.error("No store selected");
+      return;
+    }
+    
+    if (!formData.name.trim()) {
+      toast.error("Category name is required");
+      return;
+    }
+    
+    try {
+      if (editingCategory) {
+        // Update existing category
+        await updateCategory(editingCategory.id, {
+          name: formData.name,
+          description: formData.description || null,
+          is_active: formData.is_active
+        });
+      } else {
+        // Create new category
+        await createCategory({
+          name: formData.name,
+          description: formData.description || null,
+          store_id: currentStore.id,
+          is_active: formData.is_active
+        });
+      }
+      
+      refetch();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Error saving category:", error);
     }
   };
-
-  const handleSubmit = async (data: CategoryFormData) => {
-    if (editingCategory) {
-      updateMutation.mutate({ id: editingCategory.id, data });
-    } else {
-      createMutation.mutate(data);
+  
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCategory(id);
+      refetch();
+    } catch (error) {
+      console.error("Error deleting category:", error);
     }
   };
-
-  const handleCreateDefaultCategories = () => {
-    if (window.confirm('This will create default categories for your store. Continue?')) {
-      createDefaultMutation.mutate();
+  
+  const handleCreateDefaultCategories = async () => {
+    if (!currentStore?.id) {
+      toast.error("No store selected");
+      return;
     }
+    
+    await createDefaultCategories(currentStore.id);
+    refetch();
   };
-
+  
   return {
-    categories,
+    categories: filteredCategories,
     isLoading,
-    error,
-    editingCategory,
-    isFormOpen,
-    setIsFormOpen,
     searchTerm,
     setSearchTerm,
-    isDialogOpen: isFormOpen,
-    setIsDialogOpen: setIsFormOpen,
+    isDialogOpen,
+    setIsDialogOpen,
+    editingCategory,
     handleAdd,
     handleEdit,
-    handleDelete,
     handleSubmit,
-    handleCreateDefaultCategories,
-    isCreating: createMutation.isPending,
-    isUpdating: updateMutation.isPending,
-    isDeleting: deleteMutation.isPending,
+    handleDelete,
+    handleCreateDefaultCategories
   };
 };

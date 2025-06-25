@@ -1,9 +1,10 @@
 
-import { useState, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { User, Session } from './types';
+import { useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { User, Session } from "./types";
+import { toast } from "sonner";
 
-export function useAuthState() {
+export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -16,7 +17,7 @@ export function useAuthState() {
     }
 
     if (session.expires_at) {
-      const refreshTime = (session.expires_at * 1000) - Date.now() - 60000;
+      const refreshTime = (session.expires_at * 1000) - Date.now() - 60000; // Refresh 1 minute before expiry
       if (refreshTime > 0) {
         refreshTimeoutRef.current = setTimeout(async () => {
           try {
@@ -27,7 +28,8 @@ export function useAuthState() {
               setupTokenRefresh(data.session);
             }
           } catch (error) {
-            console.error('Token refresh failed:', error);
+            console.error("Token refresh failed:", error);
+            toast.error("Session expired. Please log in again.");
             logout();
           }
         }, refreshTime);
@@ -46,12 +48,14 @@ export function useAuthState() {
     }
   };
 
-  const register = async (email: string, password: string, userData?: any) => {
+  const register = async (email: string, password: string, name: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: userData || {},
+        data: {
+          name: name,
+        },
       },
     });
 
@@ -68,9 +72,11 @@ export function useAuthState() {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Logout error:", error);
+      toast.error("Error logging out");
     } else {
       setUser(null);
       setSession(null);
+      toast.success("Logged out successfully");
     }
   };
 
@@ -88,4 +94,4 @@ export function useAuthState() {
     register,
     logout
   };
-}
+};

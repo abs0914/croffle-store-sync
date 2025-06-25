@@ -2460,39 +2460,6 @@ export type Database = {
           },
         ]
       }
-      security_audit_log: {
-        Row: {
-          created_at: string | null
-          event_details: Json | null
-          event_type: string
-          id: string
-          ip_address: unknown | null
-          severity: string | null
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          event_details?: Json | null
-          event_type: string
-          id?: string
-          ip_address?: unknown | null
-          severity?: string | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          event_details?: Json | null
-          event_type?: string
-          id?: string
-          ip_address?: unknown | null
-          severity?: string | null
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       shifts: {
         Row: {
           cashier_id: string | null

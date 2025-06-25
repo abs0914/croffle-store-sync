@@ -1,26 +1,72 @@
 
-import React from 'react';
-import { Sidebar } from '@/components/navigation/Sidebar';
+import { ReactNode, useEffect } from "react";
+import Sidebar from "./sidebar";
+import { useAuth } from "@/contexts/auth";
+import { Spinner } from "../ui/spinner";
+import { useNavigate } from "react-router-dom";
+import { verifyDesignCompliance } from "@/utils/design";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useMobileExpenseFeatures } from "@/hooks/useMobileExpenseFeatures";
 
 interface MainLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
+  const { isLoading, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const { isOnline, offlineQueue } = useMobileExpenseFeatures();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
+  // Verify design compliance in development mode
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      verifyDesignCompliance();
+    }
+  }, []);
+
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-croffle-background">
+        <Spinner className="h-8 w-8 text-croffle-accent" />
+        <span className="ml-2 text-croffle-primary font-semibold">Loading...</span>
+      </div>
+    );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Render main layout if authenticated
   return (
-    <div className="min-h-screen bg-background">
-      <div className="flex h-screen">
-        {/* Navigation Sidebar */}
-        <div className="w-64 border-r bg-card">
-          <Sidebar />
-        </div>
+    <div className="flex h-screen bg-background" data-component="main-layout">
+      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Mobile offline indicator */}
+        {isMobile && !isOnline && (
+          <div className="bg-amber-500 text-white px-4 py-2 text-sm flex items-center justify-between">
+            <span>Working offline</span>
+            {offlineQueue.length > 0 && (
+              <span className="text-xs bg-amber-600 px-2 py-1 rounded">
+                {offlineQueue.length} pending
+              </span>
+            )}
+          </div>
+        )}
         
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <main className="flex-1 overflow-y-auto p-6">
-            {children}
-          </main>
-        </div>
+        <main className={`flex-1 overflow-y-auto p-4 md:p-6 bg-croffle-background/30 ${isMobile ? 'pt-16' : ''}`}>
+          {children}
+        </main>
       </div>
     </div>
   );

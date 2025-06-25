@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier';
 
 export interface Session {

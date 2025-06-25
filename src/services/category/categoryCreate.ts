@@ -31,12 +31,11 @@ export const createCategory = async (category: Omit<Category, "id">): Promise<Ca
       name: data.name,
       description: data.description || undefined,
       image_url: data.image_url || undefined,
+      image: data.image_url || undefined, 
       is_active: data.is_active !== null ? data.is_active : true,
       isActive: data.is_active !== null ? data.is_active : true,
       store_id: data.store_id,
-      storeId: data.store_id,
-      created_at: data.created_at,
-      updated_at: data.updated_at
+      storeId: data.store_id
     };
   } catch (error) {
     console.error("Error creating category:", error);

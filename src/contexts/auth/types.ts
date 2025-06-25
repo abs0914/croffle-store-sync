@@ -1,25 +1,22 @@
 
-import { UserRole } from '@/types';
+import { UserRole } from "@/types";
 
 export interface User {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  name: string; // Full name computed from firstName + lastName
+  name: string;
   role: UserRole;
   storeIds: string[];
   avatar?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface Session {
   access_token: string;
   refresh_token: string;
-  expires_at?: number; // Make this optional to match Supabase's Session type
-  user: any;
+  expires_at?: number;
+  expires_in?: number;
+  token_type?: string;
+  user?: any;
 }
 
 export interface AuthState {
@@ -28,8 +25,8 @@ export interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, userData?: any) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
-  hasPermission: (role: UserRole) => boolean;
+  hasPermission: (requiredRole: UserRole) => boolean;
   hasStoreAccess: (storeId: string) => boolean;
 }

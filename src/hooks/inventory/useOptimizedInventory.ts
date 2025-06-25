@@ -1,118 +1,148 @@
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useStore } from '@/contexts/StoreContext';
-import { InventoryItem } from '@/types/inventoryManagement';
+import { useMemo, useCallback } from 'react';
+import { useOptimizedDataFetch, useOptimizedMutation } from '@/hooks/useOptimizedDataFetch';
+import { fetchInventoryItems, updateInventoryItem } from '@/services/inventoryManagement/inventoryItemService';
+import { fetchInventoryMovements } from '@/services/storeInventory/inventoryMovementService';
+import { getInventoryStatus } from '@/services/productCatalog/inventoryIntegrationService';
+import { toast } from 'sonner';
 
-interface OptimizedInventoryStats {
-  totalItems: number;
-  healthyItems: number;
-  lowStockItems: number;
-  outOfStockItems: number;
-  totalValue: number;
-}
-
-export function useOptimizedInventory(storeId?: string) {
-  const { currentStore } = useStore();
-  const activeStoreId = storeId || currentStore?.id;
-
-  // Fetch real inventory stock data
-  const { data: inventoryItems = [], isLoading, error } = useQuery({
-    queryKey: ['optimized-inventory', activeStoreId],
-    queryFn: async () => {
-      if (!activeStoreId) return [];
-      
-      const { data, error } = await supabase
-        .from('inventory_stock')
-        .select('*')
-        .eq('store_id', activeStoreId)
-        .eq('is_active', true)
-        .order('item', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching inventory:', error);
-        throw error;
+export function useOptimizedInventory(storeId: string) {
+  // Optimized inventory items fetch with smart caching
+  const {
+    data: inventoryItems = [],
+    isLoading: isLoadingItems,
+    error: itemsError,
+    refetch: refetchItems
+  } = useOptimizedDataFetch(
+    ['inventory-items', storeId],
+    () => fetchInventoryItems(storeId),
+    {
+      enabled: !!storeId,
+      cacheConfig: {
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        cacheTime: 5 * 60 * 1000, // 5 minutes
       }
-
-      // Transform to InventoryItem format with proper field mapping
-      return (data || []).map(item => ({
-        id: item.id,
-        name: item.item,
-        sku: item.sku || '',
-        category: 'supplies' as const, // Use valid category from InventoryItem type
-        current_stock: item.stock_quantity,
-        minimum_threshold: item.minimum_threshold || 10,
-        maximum_capacity: item.maximum_capacity || 1000,
-        unit: item.unit,
-        unit_cost: item.cost || 0,
-        last_restocked: item.last_restocked,
-        last_updated: item.updated_at, // Map updated_at to last_updated
-        store_id: item.store_id,
-        is_active: item.is_active,
-        created_at: item.created_at,
-        updated_at: item.updated_at
-      })) as InventoryItem[];
-    },
-    enabled: !!activeStoreId
-  });
-
-  // Compute real-time statistics
-  const computedStats = useMemo((): OptimizedInventoryStats => {
-    if (!inventoryItems.length) {
-      return {
-        totalItems: 0,
-        healthyItems: 0,
-        lowStockItems: 0,
-        outOfStockItems: 0,
-        totalValue: 0
-      };
     }
+  );
 
-    const stats = inventoryItems.reduce((acc, item) => {
-      const isOutOfStock = item.current_stock <= 0;
-      const isLowStock = item.current_stock <= (item.minimum_threshold || 10) && !isOutOfStock;
-      const itemValue = (item.current_stock || 0) * (item.unit_cost || 0);
+  // Optimized inventory movements
+  const {
+    data: movements = [],
+    isLoading: isLoadingMovements
+  } = useOptimizedDataFetch(
+    ['inventory-movements', storeId],
+    () => fetchInventoryMovements(storeId),
+    {
+      enabled: !!storeId,
+      cacheConfig: {
+        staleTime: 1 * 60 * 1000, // 1 minute
+      }
+    }
+  );
 
-      return {
-        totalItems: acc.totalItems + 1,
-        outOfStockItems: acc.outOfStockItems + (isOutOfStock ? 1 : 0),
-        lowStockItems: acc.lowStockItems + (isLowStock ? 1 : 0),
-        healthyItems: acc.healthyItems + (!isOutOfStock && !isLowStock ? 1 : 0),
-        totalValue: acc.totalValue + itemValue
-      };
-    }, {
-      totalItems: 0,
-      healthyItems: 0,
-      lowStockItems: 0,
-      outOfStockItems: 0,
-      totalValue: 0
-    });
+  // Optimized inventory status
+  const {
+    data: inventoryStatus,
+    isLoading: isLoadingStatus
+  } = useOptimizedDataFetch(
+    ['inventory-status', storeId],
+    () => getInventoryStatus(storeId),
+    {
+      enabled: !!storeId,
+      cacheConfig: {
+        staleTime: 30 * 1000, // 30 seconds
+      }
+    }
+  );
 
-    return stats;
+  // Optimized mutation for inventory updates
+  const { mutate: updateInventory } = useOptimizedMutation(
+    ({ id, updates }: { id: string; updates: any }) => updateInventoryItem(id, updates),
+    {
+      onSuccess: () => {
+        toast.success('Inventory updated successfully');
+      },
+      onError: (error) => {
+        toast.error(`Failed to update inventory: ${error.message}`);
+      },
+      invalidateQueries: [
+        ['inventory-items', storeId],
+        ['inventory-status', storeId],
+        ['inventory-movements', storeId]
+      ]
+    }
+  );
+
+  // Memoized computed values
+  const computedStats = useMemo(() => {
+    if (!inventoryItems.length) return null;
+
+    const totalItems = inventoryItems.length;
+    const lowStockItems = inventoryItems.filter(item => 
+      item.current_stock <= (item.minimum_threshold || 10)
+    ).length;
+    const outOfStockItems = inventoryItems.filter(item => 
+      item.current_stock <= 0
+    ).length;
+    const totalValue = inventoryItems.reduce((sum, item) => 
+      sum + (item.current_stock * (item.unit_cost || 0)), 0
+    );
+
+    return {
+      totalItems,
+      lowStockItems,
+      outOfStockItems,
+      totalValue,
+      healthyItems: totalItems - lowStockItems
+    };
   }, [inventoryItems]);
 
-  // Optimized filtering function
-  const createOptimizedFilter = useCallback((searchTerm: string, categoryFilter: string) => {
+  // Optimized search and filter
+  const createOptimizedFilter = useCallback((searchTerm: string, category?: string) => {
     if (!inventoryItems.length) return [];
 
-    return inventoryItems.filter(item => {
+    const filtered = inventoryItems.filter(item => {
       const matchesSearch = !searchTerm || 
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-        
-      const matchesCategory = !categoryFilter || item.category === categoryFilter;
+        item.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = !category || item.category === category;
       
       return matchesSearch && matchesCategory;
     });
+
+    return filtered.sort((a, b) => {
+      // Prioritize low stock items
+      if (a.current_stock <= (a.minimum_threshold || 10) && 
+          b.current_stock > (b.minimum_threshold || 10)) {
+        return -1;
+      }
+      return a.name.localeCompare(b.name);
+    });
   }, [inventoryItems]);
 
+  const isLoading = isLoadingItems || isLoadingMovements || isLoadingStatus;
+
   return {
+    // Data
     inventoryItems,
-    isLoading,
-    error,
+    movements,
+    inventoryStatus,
     computedStats,
+    
+    // Loading states
+    isLoading,
+    isLoadingItems,
+    isLoadingMovements,
+    isLoadingStatus,
+    
+    // Errors
+    error: itemsError,
+    
+    // Actions
+    updateInventory,
+    refetchItems,
     createOptimizedFilter,
-    activeStoreId
+    
+    // Performance metrics
+    cacheHitRate: inventoryItems.length > 0 ? 1 : 0
   };
 }

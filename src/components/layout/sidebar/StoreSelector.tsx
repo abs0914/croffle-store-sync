@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,20 +9,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Store } from "lucide-react";
-import { useSafeStore } from "@/hooks/useSafeStore";
-import { useAuth } from "@/contexts/auth/SimplifiedAuthProvider";
+import { useStore } from "@/contexts/StoreContext";
+import { useAuth } from "@/contexts/auth";
 
 export const StoreSelector: React.FC = () => {
-  const { currentStore, stores, setCurrentStore } = useSafeStore();
+  const { currentStore, stores, setCurrentStore } = useStore();
   const { user } = useAuth();
   
   // Hide store selector for cashier users
   if (user?.role === 'cashier') {
-    return null;
-  }
-
-  // Don't render if no stores are available
-  if (!stores || stores.length === 0) {
     return null;
   }
   

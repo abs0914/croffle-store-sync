@@ -1,81 +1,101 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Customer, Store } from '@/types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { Store } from '@/types';
+import { CustomerWithStats } from '../types/adminTypes';
 
 interface CustomerMetrics {
   totalCustomers: number;
   activeCustomers: number;
-  newThisMonth: number;
-  averageOrderValue: number;
   newCustomers: number;
   topStoreCustomers: number;
   averageLifetimeValue: number;
 }
 
-export function useAdminCustomersData() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+export const useAdminCustomersData = () => {
+  const [customers, setCustomers] = useState<CustomerWithStats[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [storeFilter, setStoreFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchData();
+    fetchCustomers();
+    fetchStores();
   }, []);
 
-  const fetchData = async () => {
+  const fetchCustomers = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
+      const { data: customersData, error: customersError } = await supabase
+        .from('customers')
+        .select(`
+          *,
+          stores:store_id(name)
+        `)
+        .order('created_at', { ascending: false });
 
-      // Fetch customers and stores in parallel
-      const [customersResponse, storesResponse] = await Promise.all([
-        supabase
-          .from('customers')
-          .select('*')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('stores')
-          .select('*')
-          .order('name')
-      ]);
+      if (customersError) {
+        throw customersError;
+      }
 
-      if (customersResponse.error) throw customersResponse.error;
-      if (storesResponse.error) throw storesResponse.error;
+      // Fetch transaction data for each customer
+      const customersWithStats = await Promise.all(
+        (customersData || []).map(async (customer) => {
+          const { data: transactions } = await supabase
+            .from('transactions')
+            .select('total, created_at')
+            .eq('customer_id', customer.id);
 
-      // Transform store data to match Store interface
-      const transformedStores: Store[] = (storesResponse.data || []).map((store: any) => ({
-        id: store.id,
-        name: store.name,
-        location: store.address || store.city || 'N/A',
-        phone: store.phone,
-        email: store.email,
-        address: store.address,
-        tax_id: store.tax_id,
-        logo_url: store.logo_url,
-        is_active: store.is_active,
-        created_at: store.created_at,
-        updated_at: store.updated_at,
-        location_type: store.location_type,
-        region: store.region,
-        logistics_zone: store.logistics_zone,
-        ownership_type: store.ownership_type,
-        franchise_agreement_date: store.franchise_agreement_date,
-        franchise_fee_percentage: store.franchise_fee_percentage,
-        franchisee_contact_info: store.franchisee_contact_info,
-      }));
+          const totalOrders = transactions?.length || 0;
+          const totalSpent = transactions?.reduce((sum, t) => sum + t.total, 0) || 0;
+          const lastOrderDate = transactions?.length > 0 
+            ? transactions[transactions.length - 1].created_at 
+            : undefined;
 
-      setStores(transformedStores);
-      setCustomers(customersResponse.data || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setError('Failed to fetch data');
-      toast.error('Failed to fetch data');
+          return {
+            id: customer.id,
+            name: customer.name,
+            email: customer.email || undefined,
+            phone: customer.phone,
+            storeId: customer.store_id || undefined,
+            storeName: customer.stores?.name,
+            address: undefined,
+            loyaltyPoints: 0,
+            totalOrders,
+            totalSpent,
+            lastOrderDate,
+            registrationDate: customer.created_at || new Date().toISOString()
+          } as CustomerWithStats;
+        })
+      );
+
+      setCustomers(customersWithStats);
+    } catch (error: any) {
+      console.error('Error fetching customers:', error);
+      toast.error('Failed to load customers');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchStores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) {
+        throw error;
+      }
+
+      setStores(data as Store[] || []);
+    } catch (error: any) {
+      console.error('Error fetching stores:', error);
+      toast.error('Failed to load stores');
     }
   };
 
@@ -88,36 +108,65 @@ export function useAdminCustomersData() {
       filtered = filtered.filter(customer => 
         customer.name.toLowerCase().includes(query) ||
         (customer.email && customer.email.toLowerCase().includes(query)) ||
-        customer.phone.toLowerCase().includes(query)
+        customer.phone.includes(query)
       );
     }
 
     // Apply store filter
     if (storeFilter !== 'all') {
-      filtered = filtered.filter(customer => customer.store_id === storeFilter);
+      filtered = filtered.filter(customer => customer.storeId === storeFilter);
+    }
+
+    // Apply status filter (based on recent activity)
+    if (statusFilter !== 'all') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      if (statusFilter === 'active') {
+        filtered = filtered.filter(customer => 
+          customer.lastOrderDate && new Date(customer.lastOrderDate) > thirtyDaysAgo
+        );
+      } else if (statusFilter === 'inactive') {
+        filtered = filtered.filter(customer => 
+          !customer.lastOrderDate || new Date(customer.lastOrderDate) <= thirtyDaysAgo
+        );
+      }
     }
 
     return filtered;
-  }, [customers, searchQuery, storeFilter]);
+  }, [customers, searchQuery, storeFilter, statusFilter]);
 
   const customerMetrics: CustomerMetrics = useMemo(() => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    const newThisMonth = customers.filter(customer => 
-      new Date(customer.created_at) >= startOfMonth
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const activeCustomers = customers.filter(customer => 
+      customer.lastOrderDate && new Date(customer.lastOrderDate) > thirtyDaysAgo
     ).length;
+
+    const newCustomers = customers.filter(customer => 
+      new Date(customer.registrationDate) > thirtyDaysAgo
+    ).length;
+
+    // Find store with most customers
+    const storeCustomerCounts = stores.map(store => ({
+      store,
+      count: customers.filter(customer => customer.storeId === store.id).length
+    }));
+    const topStoreCustomers = Math.max(...storeCustomerCounts.map(s => s.count), 0);
+
+    const averageLifetimeValue = customers.length > 0 
+      ? customers.reduce((sum, customer) => sum + customer.totalSpent, 0) / customers.length 
+      : 0;
 
     return {
       totalCustomers: customers.length,
-      activeCustomers: customers.length, // Assuming all customers are active
-      newThisMonth,
-      averageOrderValue: 0, // Would need transaction data to calculate
-      newCustomers: newThisMonth,
-      topStoreCustomers: 0, // Would need more complex calculation
-      averageLifetimeValue: 0 // Would need transaction data to calculate
+      activeCustomers,
+      newCustomers,
+      topStoreCustomers,
+      averageLifetimeValue
     };
-  }, [customers]);
+  }, [customers, stores]);
 
   return {
     customers,
@@ -130,9 +179,7 @@ export function useAdminCustomersData() {
     statusFilter,
     setStatusFilter,
     isLoading,
-    error,
-    fetchData,
-    refreshCustomers: fetchData,
-    customerMetrics,
+    refreshCustomers: fetchCustomers,
+    customerMetrics
   };
-}
+};
