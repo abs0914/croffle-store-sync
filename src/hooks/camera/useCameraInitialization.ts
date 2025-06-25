@@ -12,6 +12,7 @@ interface UseCameraInitializationProps {
   setCameraError: (error: string | null) => void;
   setCameraInitialized: (initialized: boolean) => void;
   setIsStartingCamera: (starting: boolean) => void;
+  selectedCameraId?: string;
 }
 
 export function useCameraInitialization({
@@ -23,7 +24,8 @@ export function useCameraInitialization({
   setShowCamera,
   setCameraError,
   setCameraInitialized,
-  setIsStartingCamera
+  setIsStartingCamera,
+  selectedCameraId
 }: UseCameraInitializationProps) {
   const maxRetries = 3;
   
@@ -53,8 +55,6 @@ export function useCameraInitialization({
       let videoElement = videoRef.current;
       if (!videoElement) {
         console.log('[Camera] Video element not immediately available, waiting...');
-        
-        // Wait longer for ref to connect
         await new Promise(resolve => setTimeout(resolve, 200));
         videoElement = videoRef.current;
         
@@ -66,33 +66,54 @@ export function useCameraInitialization({
       
       console.log('[Camera] Video element found, requesting camera access');
       
-      // Try different constraint sets for better compatibility
-      const constraintSets = [
-        // Primary constraints - prefer back camera
-        { 
+      // Build constraint sets with device selection support
+      const constraintSets = [];
+      
+      if (selectedCameraId) {
+        // Primary: Use selected camera with optimal settings
+        constraintSets.push({
           video: { 
-            facingMode: 'environment',
+            deviceId: { exact: selectedCameraId },
             width: { ideal: 1080 },
             height: { ideal: 1440 },
             aspectRatio: { ideal: 3/4 }
           },
           audio: false
-        },
-        // Fallback 1 - any camera with specific resolution
-        { 
+        });
+        
+        // Fallback: Use selected camera with basic settings
+        constraintSets.push({
           video: { 
-            width: { ideal: 720 },
-            height: { ideal: 960 },
-            aspectRatio: { ideal: 3/4 }
+            deviceId: { exact: selectedCameraId }
           },
           audio: false
-        },
-        // Fallback 2 - basic constraints
-        { 
-          video: true,
-          audio: false
-        }
-      ];
+        });
+      } else {
+        // Original constraint sets when no specific camera selected
+        constraintSets.push(
+          { 
+            video: { 
+              facingMode: 'environment',
+              width: { ideal: 1080 },
+              height: { ideal: 1440 },
+              aspectRatio: { ideal: 3/4 }
+            },
+            audio: false
+          },
+          { 
+            video: { 
+              width: { ideal: 720 },
+              height: { ideal: 960 },
+              aspectRatio: { ideal: 3/4 }
+            },
+            audio: false
+          },
+          { 
+            video: true,
+            audio: false
+          }
+        );
+      }
       
       let stream: MediaStream | null = null;
       let lastError: Error | null = null;
@@ -149,7 +170,7 @@ export function useCameraInitialization({
         console.log('[Camera] Video is now playing successfully');
         setCameraInitialized(true);
         setIsStartingCamera(false);
-        setCameraError(null); // Clear any previous errors
+        setCameraError(null);
       };
       
       // Handle video errors
@@ -180,7 +201,9 @@ export function useCameraInitialization({
           errorMessage = 'Camera access denied. Please allow camera permissions and refresh the page.';
           break;
         case 'NotFoundError':
-          errorMessage = 'No camera found on this device.';
+          errorMessage = selectedCameraId 
+            ? 'Selected camera not found. It may have been disconnected.' 
+            : 'No camera found on this device.';
           break;
         case 'OverconstrainedError':
           errorMessage = 'Camera constraints not supported. Using basic camera settings.';
@@ -205,7 +228,8 @@ export function useCameraInitialization({
     setShowCamera, 
     setCameraError, 
     setCameraInitialized, 
-    setIsStartingCamera
+    setIsStartingCamera,
+    selectedCameraId
   ]);
   
   return { startCamera };

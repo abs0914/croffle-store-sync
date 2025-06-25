@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { expenseService } from '@/services/expense/expenseService';
 import { useStore } from '@/contexts/StoreContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useCameraSelection } from '@/hooks/useCameraSelection';
+import CameraSelector from '@/components/camera/CameraSelector';
 import type { CreateExpenseRequest } from '@/types/expense';
 
 interface MobileExpenseEntryProps {
@@ -28,6 +30,15 @@ export default function MobileExpenseEntry({ onSuccess }: MobileExpenseEntryProp
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [useCamera, setUseCamera] = useState(false);
+
+  // Camera selection for mobile camera capture
+  const {
+    availableCameras,
+    selectedCameraId,
+    selectCamera,
+    getSelectedCamera,
+    isLoading: isLoadingCameras
+  } = useCameraSelection();
 
   const form = useForm<CreateExpenseRequest>({
     defaultValues: {
@@ -63,9 +74,19 @@ export default function MobileExpenseEntry({ onSuccess }: MobileExpenseEntryProp
 
   const handleCameraCapture = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
+      if (!selectedCameraId) {
+        toast.error('Please select a camera first');
+        return;
+      }
+
+      const constraints = {
+        video: {
+          deviceId: { exact: selectedCameraId },
+          facingMode: getSelectedCamera()?.kind === 'back' ? 'environment' : 'user'
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       const video = document.createElement('video');
       video.srcObject = stream;
@@ -76,7 +97,7 @@ export default function MobileExpenseEntry({ onSuccess }: MobileExpenseEntryProp
       
       // Note: In a real implementation, you'd create a full camera component
       // For now, we'll simulate the camera functionality
-      toast.info('Camera functionality would be implemented here');
+      toast.info(`Using ${getSelectedCamera()?.label || 'selected camera'} for capture`);
       
     } catch (error) {
       console.error('Camera access denied:', error);
@@ -201,6 +222,16 @@ export default function MobileExpenseEntry({ onSuccess }: MobileExpenseEntryProp
             <div className="space-y-3">
               <Label>Receipt</Label>
               
+              {/* Camera Selection for Camera Capture */}
+              {availableCameras.length > 1 && (
+                <CameraSelector
+                  cameras={availableCameras}
+                  selectedCameraId={selectedCameraId}
+                  onCameraSelect={selectCamera}
+                  isLoading={isLoadingCameras}
+                />
+              )}
+              
               {!receiptFile ? (
                 <div className="grid grid-cols-2 gap-3">
                   <Button
@@ -208,9 +239,12 @@ export default function MobileExpenseEntry({ onSuccess }: MobileExpenseEntryProp
                     variant="outline"
                     className="h-20 flex-col"
                     onClick={handleCameraCapture}
+                    disabled={!selectedCameraId && availableCameras.length > 0}
                   >
                     <Camera className="h-6 w-6 mb-2" />
-                    Camera
+                    <span className="text-xs">
+                      {getSelectedCamera()?.label || 'Camera'}
+                    </span>
                   </Button>
                   
                   <Label className="flex flex-col items-center justify-center h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useCamera } from "@/hooks/camera";  
 import CameraContainer from "./CameraContainer";
+import CameraSelector from "@/components/camera/CameraSelector";
 import { toast } from "sonner";
 
 interface ShiftCameraProps {
@@ -29,7 +30,13 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     cameraInitialized,
     isStartingCamera,
     capturePhoto,
-    setShowCamera
+    setShowCamera,
+    // Camera selection
+    availableCameras,
+    selectedCameraId,
+    selectCamera,
+    getSelectedCamera,
+    isLoadingCameras
   } = useCamera();
   
   // Clean up resources when component unmounts
@@ -40,10 +47,10 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     };
   }, [stopCamera]);
   
-  // Initialize camera when component mounts, but with retry logic
+  // Initialize camera when component mounts or when camera selection changes
   useEffect(() => {
-    if (!attemptedInit && retryCount < maxRetries) {
-      console.log(`[ShiftCamera] Auto-initializing camera (attempt ${retryCount + 1})`);
+    if (!attemptedInit && retryCount < maxRetries && selectedCameraId) {
+      console.log(`[ShiftCamera] Auto-initializing camera (attempt ${retryCount + 1}) with camera: ${getSelectedCamera()?.label}`);
       setAttemptedInit(true);
       setShowCamera(true);
       
@@ -68,7 +75,23 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         });
       }, delay);
     }
-  }, [attemptedInit, retryCount, startCamera, setShowCamera, setCameraError]);
+  }, [attemptedInit, retryCount, startCamera, setShowCamera, setCameraError, selectedCameraId, getSelectedCamera]);
+
+  // Handle camera selection change
+  const handleCameraSelect = (deviceId: string) => {
+    console.log('[ShiftCamera] Camera selection changed, restarting camera');
+    
+    // Stop current camera
+    stopCamera();
+    
+    // Reset states
+    setAttemptedInit(false);
+    setCameraError(null);
+    setRetryCount(0);
+    
+    // Select new camera
+    selectCamera(deviceId);
+  };
 
   const handleCaptureClick = () => {
     try {
@@ -115,12 +138,20 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
   };
   
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       <Label>Capture Photo</Label>
+      
+      {/* Camera Selection */}
+      <CameraSelector
+        cameras={availableCameras}
+        selectedCameraId={selectedCameraId}
+        onCameraSelect={handleCameraSelect}
+        isLoading={isLoadingCameras}
+      />
       
       {retryCount >= maxRetries && cameraError && (
         <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border">
-          Camera initialization failed after {maxRetries} attempts. You can still continue without a photo, or try the manual retry button below.
+          Camera initialization failed after {maxRetries} attempts. You can still continue without a photo, or try selecting a different camera or the manual retry button below.
         </div>
       )}
       
