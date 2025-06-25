@@ -11,7 +11,8 @@ import {
   Factory,
   Warehouse,
   ClipboardList,
-  DollarSign
+  DollarSign,
+  Truck
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -59,6 +60,12 @@ export function MainMenu() {
       icon: Warehouse,
       path: "/inventory",
       show: canAccessInventory().hasPermission
+    },
+    {
+      title: "Stock Orders",
+      icon: Truck,
+      path: "/stock-orders",
+      show: canAccessOrderManagement().hasPermission
     },
     {
       title: "Orders",

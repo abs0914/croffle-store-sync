@@ -14,14 +14,15 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
 export const ROUTE_PATHS = {
   DASHBOARD: '/dashboard',
   POS: '/pos',
-  PRODUCT_CATALOG: '/product-catalog',
-  STOCK_ORDERS: '/stock-orders',
-  INVENTORY: '/inventory',
-  ORDER_MANAGEMENT: '/order-management',
+  PRODUCTS: '/products',
   CUSTOMERS: '/customers',
+  INVENTORY: '/inventory',
+  STOCK_ORDERS: '/stock-orders',
+  ORDERS: '/orders',
+  EXPENSES: '/expenses',
   REPORTS: '/reports',
-  SETTINGS: '/settings',
   PRODUCTION: '/production',
+  SETTINGS: '/settings',
   COMMISSARY_INVENTORY: '/commissary-inventory',
 } as const;
 
@@ -66,42 +67,45 @@ export function checkRouteAccess(userRole: UserRole | undefined, route: string):
 export function getAllowedRoutes(role: UserRole): string[] {
   const routePermissions: Record<UserRole, string[]> = {
     staff: ['/dashboard', '/pos'],
-    cashier: ['/dashboard', '/pos', '/customers'],
+    cashier: ['/dashboard', '/pos', '/customers', '/expenses'],
     manager: [
       '/dashboard',
       '/pos',
-      '/product-catalog',
-      '/stock-orders',
-      '/inventory',
-      '/order-management',
+      '/products',
       '/customers',
+      '/inventory',
+      '/stock-orders',
+      '/orders',
+      '/expenses',
       '/reports',
       '/settings'
     ],
     owner: [
       '/dashboard',
       '/pos',
-      '/product-catalog',
-      '/stock-orders',
-      '/inventory',
-      '/order-management',
+      '/products',
       '/customers',
+      '/inventory',
+      '/stock-orders',
+      '/orders',
+      '/expenses',
       '/reports',
-      '/settings',
       '/production',
+      '/settings',
       '/commissary-inventory'
     ],
     admin: [
       '/dashboard',
       '/pos',
-      '/product-catalog',
-      '/stock-orders',
-      '/inventory',
-      '/order-management',
+      '/products',
       '/customers',
+      '/inventory',
+      '/stock-orders',
+      '/orders',
+      '/expenses',
       '/reports',
-      '/settings',
       '/production',
+      '/settings',
       '/commissary-inventory'
     ],
   };
@@ -119,6 +123,7 @@ export function canPerformAction(userRole: UserRole, action: string): boolean {
     'process_transactions': ['cashier', 'manager', 'owner', 'admin'],
     'manage_inventory': ['manager', 'owner', 'admin'],
     'manage_orders': ['manager', 'owner', 'admin'],
+    'manage_expenses': ['cashier', 'manager', 'owner', 'admin'],
   };
 
   const allowedRoles = actionPermissions[action] || [];

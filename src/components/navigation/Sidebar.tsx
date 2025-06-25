@@ -30,7 +30,10 @@ import {
   Settings,
   Truck,
   ShoppingBag,
-  ClipboardList
+  ClipboardList,
+  DollarSign,
+  Warehouse,
+  Factory
 } from "lucide-react";
 import { 
   checkRouteAccess
@@ -106,37 +109,49 @@ export function Sidebar() {
     const baseMenuItems: MenuItem[] = [
       { path: "/dashboard", label: "Dashboard", icon: Home },
       { path: "/pos", label: "Point of Sale", icon: ShoppingCart },
-      { path: "/product-catalog", label: "Product Catalog", icon: ShoppingBag },
+      { path: "/products", label: "Products", icon: Package },
+      { path: "/customers", label: "Customers", icon: Users },
+      { 
+        path: "/inventory", 
+        label: "Inventory", 
+        icon: Warehouse,
+        hidden: !checkRouteAccess(user?.role, "/inventory")
+      },
       { 
         path: "/stock-orders", 
         label: "Stock Orders", 
+        icon: Truck,
+        hidden: !checkRouteAccess(user?.role, "/stock-orders")
+      },
+      {
+        path: "/orders", 
+        label: "Order Management", 
         icon: ClipboardList,
-        hidden: !checkRouteAccess(user?.role, "/stock-orders") // Managers and above only
+        hidden: !checkRouteAccess(user?.role, "/orders")
       },
       { 
-        path: "/inventory", 
-        label: "Store Inventory", 
-        icon: Package,
-        hidden: !checkRouteAccess(user?.role, "/inventory") // Managers and above only
-      },
-      { path: "/customers", label: "Customers", icon: Users },
-      {
-        path: "/order-management", 
-        label: "Order Management", 
-        icon: Truck,
-        hidden: !checkRouteAccess(user?.role, "/order-management") // Managers and above only
+        path: "/expenses", 
+        label: "Expenses", 
+        icon: DollarSign,
+        hidden: !checkRouteAccess(user?.role, "/expenses")
       },
       { 
         path: "/reports", 
         label: "Reports", 
         icon: BarChart3,
-        hidden: !checkRouteAccess(user?.role, "/reports") // Managers and above only
+        hidden: !checkRouteAccess(user?.role, "/reports")
+      },
+      { 
+        path: "/production", 
+        label: "Production", 
+        icon: Factory,
+        hidden: !checkRouteAccess(user?.role, "/production")
       },
       { 
         path: "/settings", 
         label: "Settings", 
         icon: Settings,
-        hidden: !checkRouteAccess(user?.role, "/settings") // Managers and above only
+        hidden: !checkRouteAccess(user?.role, "/settings")
       },
     ];
 
@@ -171,7 +186,7 @@ export function Sidebar() {
             <button
               key={index}
               onClick={() => navigate(item.path || "")}
-              className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent ${isActive(item.path || "") ? 'bg-secondary' : ''}`}
+              className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent w-full text-left ${isActive(item.path || "") ? 'bg-secondary' : ''}`}
             >
               <item.icon className="h-4 w-4" />
               <span>{item.label}</span>

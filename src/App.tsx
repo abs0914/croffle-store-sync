@@ -17,8 +17,8 @@ import ProductionPage from '@/pages/ProductionManagement';
 import CommissaryInventoryPage from '@/pages/CommissaryInventory';
 import { StockOrdersManagement } from '@/pages/StockOrders/StockOrdersManagement';
 import PosPage from '@/pages/POS';
-import OrderManagementPage from '@/pages/OrderManagement';
-import ExpensesPage from '@/pages/Expenses';
+import OrderManagementPage from '@/pages/OrderManagement/OrderManagementPage';
+import ExpensesDashboard from '@/pages/Expenses/ExpensesDashboard';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StoreProvider } from '@/contexts/StoreContext';
@@ -92,7 +92,7 @@ function App() {
                   <Route path="/expenses" element={
                     <ProtectedRoute requireStoreAccess>
                       <MainLayout>
-                        <ExpensesPage />
+                        <ExpensesDashboard />
                       </MainLayout>
                     </ProtectedRoute>
                   } />
