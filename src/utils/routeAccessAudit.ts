@@ -1,3 +1,4 @@
+
 import { UserRole } from '@/types';
 import { ROUTE_PATHS, checkRouteAccess } from '@/contexts/auth/role-utils';
 
@@ -16,24 +17,24 @@ export const auditRouteAccess = () => {
     {
       route: ROUTE_PATHS.DASHBOARD,
       description: 'Main dashboard - accessible to all authenticated users',
-      allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
+      allowedRoles: ['admin', 'owner', 'manager', 'cashier', 'staff'],
       requiresStoreAccess: false
     },
     {
       route: ROUTE_PATHS.POS,
       description: 'Point of Sale - accessible to all with store access',
-      allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
+      allowedRoles: ['admin', 'owner', 'manager', 'cashier', 'staff'],
       requiresStoreAccess: true
     },
     {
-      route: ROUTE_PATHS.PRODUCT_CATALOG,
-      description: 'Product catalog - accessible to all with store access',
-      allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
+      route: ROUTE_PATHS.PRODUCTS,
+      description: 'Product management - accessible to managers and above with store access',
+      allowedRoles: ['admin', 'owner', 'manager'],
       requiresStoreAccess: true
     },
     {
       route: ROUTE_PATHS.CUSTOMERS,
-      description: 'Customer management - accessible to all with store access',
+      description: 'Customer management - accessible to cashiers and above with store access',
       allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
       requiresStoreAccess: true
     },
@@ -44,15 +45,21 @@ export const auditRouteAccess = () => {
       requiresStoreAccess: true
     },
     {
-      route: ROUTE_PATHS.ORDER_MANAGEMENT,
+      route: ROUTE_PATHS.ORDERS,
       description: 'Order management - accessible to managers and above with store access',
       allowedRoles: ['admin', 'owner', 'manager'],
       requiresStoreAccess: true
     },
     {
+      route: ROUTE_PATHS.EXPENSES,
+      description: 'Expense management - accessible to cashiers and above with store access',
+      allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
+      requiresStoreAccess: true
+    },
+    {
       route: ROUTE_PATHS.SETTINGS,
-      description: 'Settings - accessible to managers and above',
-      allowedRoles: ['admin', 'owner', 'manager'],
+      description: 'Settings - accessible to owners and above',
+      allowedRoles: ['admin', 'owner'],
       requiresStoreAccess: false
     },
     {
@@ -63,8 +70,8 @@ export const auditRouteAccess = () => {
     },
     {
       route: ROUTE_PATHS.PRODUCTION,
-      description: 'Production management - accessible to managers and above with store access',
-      allowedRoles: ['admin', 'owner', 'manager'],
+      description: 'Production management - accessible to owners and above with store access',
+      allowedRoles: ['admin', 'owner'],
       requiresStoreAccess: true
     },
     {
