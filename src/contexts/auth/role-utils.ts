@@ -1,3 +1,4 @@
+
 import { UserRole } from '@/types';
 
 // Role hierarchy (higher number = more permissions)
@@ -8,6 +9,21 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
   owner: 4,
   admin: 5,
 };
+
+// Route paths for role-based access control
+export const ROUTE_PATHS = {
+  DASHBOARD: '/dashboard',
+  POS: '/pos',
+  PRODUCT_CATALOG: '/product-catalog',
+  STOCK_ORDERS: '/stock-orders',
+  INVENTORY: '/inventory',
+  ORDER_MANAGEMENT: '/order-management',
+  CUSTOMERS: '/customers',
+  REPORTS: '/reports',
+  SETTINGS: '/settings',
+  PRODUCTION: '/production',
+  COMMISSARY_INVENTORY: '/commissary-inventory',
+} as const;
 
 // Check if user has required permission level
 export function hasPermission(userRole: UserRole, requiredRole: UserRole): boolean {
@@ -38,6 +54,14 @@ export function getRoleDisplayName(role: UserRole): string {
   return roleNames[role] || role;
 }
 
+// Check if user can access a specific route
+export function checkRouteAccess(userRole: UserRole | undefined, route: string): boolean {
+  if (!userRole) return false;
+  
+  const allowedRoutes = getAllowedRoutes(userRole);
+  return allowedRoutes.includes(route);
+}
+
 // Get allowed routes based on user role
 export function getAllowedRoutes(role: UserRole): string[] {
   const routePermissions: Record<UserRole, string[]> = {
@@ -54,8 +78,32 @@ export function getAllowedRoutes(role: UserRole): string[] {
       '/reports',
       '/settings'
     ],
-    owner: [],
-    admin: [],
+    owner: [
+      '/dashboard',
+      '/pos',
+      '/product-catalog',
+      '/stock-orders',
+      '/inventory',
+      '/order-management',
+      '/customers',
+      '/reports',
+      '/settings',
+      '/production',
+      '/commissary-inventory'
+    ],
+    admin: [
+      '/dashboard',
+      '/pos',
+      '/product-catalog',
+      '/stock-orders',
+      '/inventory',
+      '/order-management',
+      '/customers',
+      '/reports',
+      '/settings',
+      '/production',
+      '/commissary-inventory'
+    ],
   };
 
   return routePermissions[role] || [];

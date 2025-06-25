@@ -4,6 +4,24 @@ export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier' | 'staff';
 // Shift type alias
 export type ShiftType = Shift;
 
+// Product size type
+export type ProductSize = 'regular' | 'mini' | 'croffle-overload';
+
+// Ingredient type for inventory management
+export interface Ingredient {
+  id: string;
+  name: string;
+  unit: string;
+  stock_quantity: number;
+  cost?: number;
+  minimum_threshold?: number;
+  maximum_capacity?: number;
+  store_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Store {
   id: string;
   name: string;
@@ -20,6 +38,15 @@ export interface Store {
   location_type?: string;
   region?: string;
   logistics_zone?: string;
+  ownership_type?: 'company_owned' | 'franchisee';
+  franchise_agreement_date?: string;
+  franchise_fee_percentage?: number;
+  franchisee_contact_info?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  };
 }
 
 export interface Product {
@@ -40,6 +67,11 @@ export interface Product {
   category?: Category | string;
   created_at: string;
   updated_at: string;
+  // Legacy/compatibility properties
+  stockQuantity?: number;
+  categoryId?: string;
+  variations?: ProductVariation[];
+  product_variations?: ProductVariation[];
 }
 
 export interface Category {
@@ -51,6 +83,8 @@ export interface Category {
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
+  // Legacy compatibility
+  isActive?: boolean;
 }
 
 export interface ProductVariation {

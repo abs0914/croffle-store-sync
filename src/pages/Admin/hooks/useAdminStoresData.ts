@@ -1,135 +1,159 @@
 
-import { useState, useEffect, useMemo } from 'react';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Store } from '@/types';
+import { toast } from 'sonner';
 
-interface StoreMetrics {
-  totalStores: number;
-  activeStores: number;
-  inactiveStores: number;
-  averagePerformance: number;
-  alertsCount: number;
-  insideCebuStores: number;
-  outsideCebuStores: number;
-  companyOwnedStores: number;
-  franchiseeStores: number;
-}
-
-export const useAdminStoresData = () => {
+export function useAdminStoresData() {
   const [stores, setStores] = useState<Store[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [locationFilter, setLocationFilter] = useState('all');
-  const [ownershipFilter, setOwnershipFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStores();
   }, []);
 
   const fetchStores = async () => {
-    setIsLoading(true);
     try {
+      setIsLoading(true);
+      setError(null);
+
       const { data, error } = await supabase
         .from('stores')
         .select('*')
         .order('name');
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      // Cast the data to proper Store types
-      const typedStores = (data || []).map(store => ({
-        ...store,
-        ownership_type: (store.ownership_type as 'company_owned' | 'franchisee') || 'company_owned',
-        franchisee_contact_info: store.franchisee_contact_info ? 
-          (typeof store.franchisee_contact_info === 'object' ? 
-            store.franchisee_contact_info as { name?: string; email?: string; phone?: string; address?: string; } : 
-            { name: "", email: "", phone: "", address: "" }
-          ) : undefined
-      })) as Store[];
+      // Transform database data to match Store interface
+      const transformedStores: Store[] = (data || []).map((store: any) => ({
+        id: store.id,
+        name: store.name,
+        location: store.address || store.city || 'N/A',
+        phone: store.phone,
+        email: store.email,
+        address: store.address,
+        tax_id: store.tax_id,
+        logo_url: store.logo_url,
+        is_active: store.is_active,
+        created_at: store.created_at,
+        updated_at: store.updated_at,
+        location_type: store.location_type,
+        region: store.region,
+        logistics_zone: store.logistics_zone,
+        ownership_type: store.ownership_type,
+        franchise_agreement_date: store.franchise_agreement_date,
+        franchise_fee_percentage: store.franchise_fee_percentage,
+        franchisee_contact_info: store.franchisee_contact_info,
+      }));
 
-      setStores(typedStores);
-    } catch (error: any) {
+      setStores(transformedStores);
+    } catch (error) {
       console.error('Error fetching stores:', error);
-      toast.error('Failed to load stores');
+      setError('Failed to fetch stores');
+      toast.error('Failed to fetch stores');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredStores = useMemo(() => {
-    let filtered = stores;
+  const createStore = async (storeData: Partial<Store>) => {
+    try {
+      const { data, error } = await supabase
+        .from('stores')
+        .insert([storeData])
+        .select()
+        .single();
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(store => 
-        store.name.toLowerCase().includes(query) ||
-        store.address.toLowerCase().includes(query) ||
-        (store.email && store.email.toLowerCase().includes(query)) ||
-        (store.phone && store.phone.includes(query)) ||
-        (store.region && store.region.toLowerCase().includes(query)) ||
-        (store.logistics_zone && store.logistics_zone.toLowerCase().includes(query))
-      );
+      if (error) throw error;
+
+      toast.success('Store created successfully');
+      await fetchStores();
+      return data;
+    } catch (error) {
+      console.error('Error creating store:', error);
+      toast.error('Failed to create store');
+      throw error;
     }
+  };
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(store => 
-        statusFilter === 'active' ? store.is_active : !store.is_active
-      );
+  const updateStore = async (id: string, updates: Partial<Store>) => {
+    try {
+      const { data, error } = await supabase
+        .from('stores')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('Store updated successfully');
+      await fetchStores();
+      return data;
+    } catch (error) {
+      console.error('Error updating store:', error);
+      toast.error('Failed to update store');
+      throw error;
     }
+  };
 
-    // Apply location filter
-    if (locationFilter !== 'all') {
-      filtered = filtered.filter(store => store.location_type === locationFilter);
+  const deleteStore = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('stores')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('Store deleted successfully');
+      await fetchStores();
+    } catch (error) {
+      console.error('Error deleting store:', error);
+      toast.error('Failed to delete store');
+      throw error;
     }
+  };
 
-    // Apply ownership filter
-    if (ownershipFilter !== 'all') {
-      filtered = filtered.filter(store => store.ownership_type === ownershipFilter);
+  const toggleStoreStatus = async (id: string) => {
+    try {
+      const store = stores.find(s => s.id === id);
+      if (!store) return;
+
+      const { error } = await supabase
+        .from('stores')
+        .update({ is_active: !store.is_active })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success(`Store ${store.is_active ? 'deactivated' : 'activated'} successfully`);
+      await fetchStores();
+    } catch (error) {
+      console.error('Error toggling store status:', error);
+      toast.error('Failed to update store status');
     }
+  };
 
-    return filtered;
-  }, [stores, searchQuery, statusFilter, locationFilter, ownershipFilter]);
+  const getStoresByType = (type: 'company_owned' | 'franchisee') => {
+    return stores.filter(store => store.ownership_type === type);
+  };
 
-  const storeMetrics: StoreMetrics = useMemo(() => {
-    const activeStores = stores.filter(store => store.is_active).length;
-    const inactiveStores = stores.length - activeStores;
-    const insideCebuStores = stores.filter(store => store.location_type === 'inside_cebu').length;
-    const outsideCebuStores = stores.filter(store => store.location_type === 'outside_cebu').length;
-    const companyOwnedStores = stores.filter(store => store.ownership_type === 'company_owned').length;
-    const franchiseeStores = stores.filter(store => store.ownership_type === 'franchisee').length;
-    
-    return {
-      totalStores: stores.length,
-      activeStores,
-      inactiveStores,
-      insideCebuStores,
-      outsideCebuStores,
-      companyOwnedStores,
-      franchiseeStores,
-      averagePerformance: 87, // Mock data - would be calculated from real metrics
-      alertsCount: inactiveStores + Math.floor(Math.random() * 3) // Mock alerts
-    };
-  }, [stores]);
+  const getStoresByRegion = (region: string) => {
+    return stores.filter(store => store.region === region);
+  };
 
   return {
     stores,
-    filteredStores,
-    searchQuery,
-    setSearchQuery,
-    statusFilter,
-    setStatusFilter,
-    locationFilter,
-    setLocationFilter,
-    ownershipFilter,
-    setOwnershipFilter,
     isLoading,
-    refreshStores: fetchStores,
-    storeMetrics
+    error,
+    fetchStores,
+    createStore,
+    updateStore,
+    deleteStore,
+    toggleStoreStatus,
+    getStoresByType,
+    getStoresByRegion,
   };
-};
+}
