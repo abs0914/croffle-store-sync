@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Customer } from "@/types";
 import { toast } from "sonner";
@@ -72,7 +73,8 @@ export const createCustomer = async (customerData: Omit<Customer, "id" | "create
         name: customerData.name,
         email: customerData.email,
         phone: customerData.phone,
-        store_id: customerData.store_id
+        store_id: customerData.store_id,
+        address: customerData.address
       })
       .select()
       .single();
@@ -91,6 +93,7 @@ export const createCustomer = async (customerData: Omit<Customer, "id" | "create
       store_id: data.store_id,
       storeId: data.store_id,
       storeName: customerData.storeName,
+      address: data.address || undefined,
       created_at: data.created_at,
       updated_at: data.updated_at,
     };

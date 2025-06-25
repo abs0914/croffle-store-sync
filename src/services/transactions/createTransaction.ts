@@ -24,13 +24,14 @@ interface TransactionRow {
   payment_details?: object;
   status: 'completed' | 'voided';
   created_at: string;
+  updated_at: string;
   receipt_number: string;
 }
 
 /**
  * Creates a new transaction in the database
  */
-export const createTransaction = async (transaction: Omit<Transaction, "id" | "created_at" | "receiptNumber">): Promise<Transaction | null> => {
+export const createTransaction = async (transaction: Omit<Transaction, "id" | "created_at" | "receiptNumber" | "updated_at">): Promise<Transaction | null> => {
   try {
     // Generate a receipt number based on date and time
     const now = new Date();
@@ -68,7 +69,8 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
       payment_details: transaction.payment_details ? JSON.stringify(transaction.payment_details) : null,
       status: transaction.status,
       receipt_number: receiptNumber,
-      created_at: now.toISOString()
+      created_at: now.toISOString(),
+      updated_at: now.toISOString()
     };
     
     // Remove customer object before sending to Supabase
@@ -120,6 +122,7 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
       status: transactionData.status,
       created_at: transactionData.created_at,
       createdAt: transactionData.created_at,
+      updated_at: transactionData.updated_at,
       receipt_number: transactionData.receipt_number,
       receiptNumber: transactionData.receipt_number
     };

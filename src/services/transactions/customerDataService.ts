@@ -37,10 +37,204 @@ export const fetchCustomerTransactions = async (customerId: string): Promise<Tra
       throw new Error(error.message);
     }
     
-    return data || [];
+    // Map database fields to Transaction interface
+    return data?.map(item => ({
+      id: item.id,
+      receiptNumber: item.receipt_number,
+      receipt_number: item.receipt_number,
+      customer_id: item.customer_id,
+      store_id: item.store_id,
+      user_id: item.user_id,
+      shift_id: item.shift_id,
+      total: item.total,
+      subtotal: item.subtotal,
+      tax_amount: item.tax,
+      tax: item.tax,
+      discount: item.discount,
+      payment_method: item.payment_method,
+      status: item.status,
+      items: typeof item.items === 'string' ? JSON.parse(item.items) : item.items,
+      created_at: item.created_at,
+      updated_at: item.updated_at || item.created_at
+    })) || [];
   } catch (error) {
     console.error("Error fetching customer transactions:", error);
     return [];
+  }
+};
+
+export const searchCustomers = async (query: string, storeId?: string): Promise<Customer[]> => {
+  try {
+    let queryBuilder = supabase
+      .from("customers")
+      .select("*");
+    
+    if (storeId) {
+      queryBuilder = queryBuilder.eq("store_id", storeId);
+    }
+    
+    if (query.trim()) {
+      queryBuilder = queryBuilder.or(`name.ilike.%${query}%,phone.ilike.%${query}%`);
+    }
+    
+    const { data, error } = await queryBuilder.order("name");
+    
+    if (error) {
+      throw new Error(error.message);
+    }
+    
+    return data?.map(item => ({
+      id: item.id,
+      name: item.name,
+      email: item.email || undefined,
+      phone: item.phone,
+      store_id: item.store_id,
+      storeId: item.store_id,
+      address: item.address || undefined,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    })) || [];
+  } catch (error) {
+    console.error("Error searching customers:", error);
+    return [];
+  }
+};
+
+export const fetchCustomerPurchaseHistory = async (customerId: string): Promise<Transaction[]> => {
+  return fetchCustomerTransactions(customerId);
+};
+
+export const registerStoreCustomer = async (customerData: Omit<Customer, "id">, storeId: string): Promise<Customer | null> => {
+  try {
+    const { data, error } = await supabase
+      .from("customers")
+      .insert({
+        name: customerData.name,
+        email: customerData.email,
+        phone: customerData.phone,
+        store_id: storeId,
+        address: customerData.address
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email || undefined,
+      phone: data.phone,
+      store_id: data.store_id,
+      storeId: data.store_id,
+      address: data.address || undefined,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  } catch (error) {
+    console.error("Error registering customer:", error);
+    return null;
+  }
+};
+
+export const fetchCustomerByPhone = async (phone: string): Promise<Customer | null> => {
+  try {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("*")
+      .eq("phone", phone)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null; // No customer found
+      }
+      throw new Error(error.message);
+    }
+    
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email || undefined,
+      phone: data.phone,
+      store_id: data.store_id,
+      storeId: data.store_id,
+      address: data.address || undefined,
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  } catch (error) {
+    console.error("Error fetching customer by phone:", error);
+    return null;
+  }
+};
+
+export const createOrUpdateCustomer = async (customerData: Omit<Customer, "id"> & { id?: string }): Promise<Customer | null> => {
+  try {
+    if (customerData.id) {
+      // Update existing customer
+      const { data, error } = await supabase
+        .from("customers")
+        .update({
+          name: customerData.name,
+          email: customerData.email,
+          phone: customerData.phone,
+          address: customerData.address
+        })
+        .eq("id", customerData.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return {
+        id: data.id,
+        name: data.name,
+        email: data.email || undefined,
+        phone: data.phone,
+        store_id: data.store_id,
+        storeId: data.store_id,
+        address: data.address || undefined,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+    } else {
+      // Create new customer
+      const { data, error } = await supabase
+        .from("customers")
+        .insert({
+          name: customerData.name,
+          email: customerData.email,
+          phone: customerData.phone,
+          store_id: customerData.store_id,
+          address: customerData.address
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return {
+        id: data.id,
+        name: data.name,
+        email: data.email || undefined,
+        phone: data.phone,
+        store_id: data.store_id,
+        storeId: data.store_id,
+        address: data.address || undefined,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      };
+    }
+  } catch (error) {
+    console.error("Error creating/updating customer:", error);
+    return null;
   }
 };
 
