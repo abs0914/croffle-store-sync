@@ -55,13 +55,6 @@ export function EnhancedAuthProvider({ children }: { children: ReactNode }) {
       
       const result = await baseLogin(email, password);
       
-      if (result.error) {
-        failedLoginAttempts.current++;
-        lastFailedLoginTime.current = now;
-        await logSecurityEvent('login_failed', { email, error: result.error.message });
-        throw result.error;
-      }
-      
       // Reset failed attempts on successful login
       failedLoginAttempts.current = 0;
       lastFailedLoginTime.current = null;
@@ -69,7 +62,9 @@ export function EnhancedAuthProvider({ children }: { children: ReactNode }) {
       await logSecurityEvent('login_success', { email });
       return result;
     } catch (error: any) {
-      await logSecurityEvent('login_error', { email, error: error.message });
+      failedLoginAttempts.current++;
+      lastFailedLoginTime.current = now;
+      await logSecurityEvent('login_failed', { email, error: error.message });
       throw error;
     }
   };
@@ -79,15 +74,10 @@ export function EnhancedAuthProvider({ children }: { children: ReactNode }) {
     try {
       const result = await baseRegister(email, password, userData);
       
-      if (result.error) {
-        await logSecurityEvent('register_failed', { email, error: result.error.message });
-        throw result.error;
-      }
-      
       await logSecurityEvent('register_success', { email });
       return result;
     } catch (error: any) {
-      await logSecurityEvent('register_error', { email, error: error.message });
+      await logSecurityEvent('register_failed', { email, error: error.message });
       throw error;
     }
   };

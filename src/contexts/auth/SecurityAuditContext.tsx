@@ -11,12 +11,14 @@ const SecurityAuditContext = createContext<SecurityAuditContextType | undefined>
 export function SecurityAuditProvider({ children }: { children: ReactNode }) {
   const logSecurityEvent = async (eventType: string, details?: any) => {
     try {
-      const { error } = await supabase.rpc('log_security_event', {
-        p_event_type: eventType,
-        p_event_details: details ? JSON.stringify(details) : null,
-        p_ip_address: null, // Could be enhanced with IP detection
-        p_user_agent: navigator.userAgent
-      });
+      // Since the RPC function might not be available yet, we'll insert directly
+      const { error } = await supabase
+        .from('security_audit_log')
+        .insert({
+          event_type: eventType,
+          event_details: details ? JSON.stringify(details) : null,
+          user_agent: navigator.userAgent
+        });
       
       if (error) {
         console.error('Failed to log security event:', error);
