@@ -91,11 +91,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } else {
       console.log("CartContext: Creating new item for cart");
       const newItem: CartItem = {
+        id: `${product.id}-${variation?.id || 'base'}-${Date.now()}`, // Generate unique ID
         productId: product.id,
         product: {
           ...product,
           is_active: product.is_active || product.isActive || true,
-          stock_quantity: product.stock_quantity || product.stockQuantity || 0,
+          stock_quantity: product.stock_quantity || 0,
         },
         quantity,
         price: itemPrice,

@@ -1,6 +1,9 @@
 
 export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier' | 'staff';
 
+// Shift type alias
+export type ShiftType = Shift;
+
 export interface Store {
   id: string;
   name: string;
@@ -13,6 +16,10 @@ export interface Store {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Additional properties for admin components
+  location_type?: string;
+  region?: string;
+  logistics_zone?: string;
 }
 
 export interface Product {
@@ -115,6 +122,7 @@ export interface Transaction {
   change?: number;
   status: 'pending' | 'completed' | 'cancelled' | 'refunded';
   receiptNumber: string;
+  receipt_number?: string; // Database compatibility
   items: TransactionItem[];
   created_at: string;
   createdAt?: string; // Legacy compatibility

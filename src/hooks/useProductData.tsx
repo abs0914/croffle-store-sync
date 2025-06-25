@@ -1,56 +1,71 @@
 
-import { useProductFetch } from "./product/useProductFetch";
-import { useProductFilters } from "./product/useProductFilters";
-import { useCallback, useState } from "react";
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Product, Category } from '@/types';
+import { toast } from 'sonner';
 
 export function useProductData(storeId: string | null) {
-  // Fetch base product data
-  const { products, categories, isLoading, error } = useProductFetch(storeId);
-  
-  // Filter functionality with search term and category filter
-  const { 
-    searchTerm, 
-    setSearchTerm, 
-    activeCategory, 
-    setActiveCategory, 
-    filteredProducts: categoryFilteredProducts 
-  } = useProductFilters(products);
-  
-  // Tab filtering (active, inactive, low-stock)
-  const [activeTab, setActiveTab] = useState("all");
-  
-  // Further filter products based on active tab
-  const filteredProducts = categoryFilteredProducts.filter(product => {
-    switch (activeTab) {
-      case "active":
-        return product.is_active || product.isActive;
-      case "inactive":
-        return !(product.is_active || product.isActive);
-      case "low-stock":
-        return (product.stock_quantity || product.stockQuantity || 0) <= 10;
-      default:
-        return true;
-    }
-  });
-  
-  // Manual refetch function
-  const refetch = useCallback(async () => {
-    // This is a placeholder - the useProductFetch will handle the actual refetch
-    // based on the storeId dependency
-  }, []);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState<string>('all');
 
-  return { 
-    products, 
-    categories, 
-    filteredProducts,
+  useEffect(() => {
+    if (!storeId) {
+      setProducts([]);
+      setCategories([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+
+        // Fetch products
+        const { data: productData, error: productError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('store_id', storeId)
+          .eq('is_active', true)
+          .order('name');
+
+        if (productError) throw productError;
+
+        // Transform to ensure stock_quantity is used
+        const transformedProducts: Product[] = (productData || []).map(item => ({
+          ...item,
+          stock_quantity: item.stock_quantity || 0,
+        }));
+
+        // Fetch categories
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('store_id', storeId)
+          .eq('is_active', true)
+          .order('name');
+
+        if (categoryError) throw categoryError;
+
+        setProducts(transformedProducts);
+        setCategories(categoryData || []);
+      } catch (error) {
+        console.error('Error fetching product data:', error);
+        toast.error('Failed to load products');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [storeId]);
+
+  return {
+    products,
+    categories,
     isLoading,
-    error,
-    searchTerm,
-    setSearchTerm,
     activeCategory,
     setActiveCategory,
-    activeTab,
-    setActiveTab,
-    refetch
   };
 }

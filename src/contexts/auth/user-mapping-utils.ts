@@ -1,77 +1,64 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { User as AppUser } from "@/types";
-import { mapUserRole } from "./role-utils";
-import { handleSpecialCases } from "./special-cases-utils";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { User } from './types';
+import { UserRole } from '@/types';
 
-interface AppUserData {
-  role: string;
-  store_ids: string[];
-  first_name: string;
-  last_name: string;
-  email: string;
+export function createUserFromSupabaseData(userData: any, supabaseUser: any): User {
+  const firstName = userData?.first_name || '';
+  const lastName = userData?.last_name || '';
+  const fullName = `${firstName} ${lastName}`.trim() || supabaseUser?.email?.split('@')[0] || 'User';
+
+  return {
+    id: userData?.id || supabaseUser?.id,
+    email: userData?.email || supabaseUser?.email || '',
+    firstName,
+    lastName,
+    name: fullName,
+    role: (userData?.role as UserRole) || 'staff',
+    storeIds: userData?.store_ids || [],
+    avatar: userData?.avatar || supabaseUser?.user_metadata?.avatar_url,
+    isActive: userData?.is_active !== false,
+    createdAt: userData?.created_at || new Date().toISOString(),
+    updatedAt: userData?.updated_at || new Date().toISOString(),
+  };
 }
 
-/**
- * Maps Supabase user to our app's User type
- */
-export const mapSupabaseUser = async (supabaseUser: SupabaseUser): Promise<AppUser> => {
-  if (!supabaseUser) {
-    throw new Error('No Supabase user provided');
+export function updateUserProfile(existingUser: User, updates: Partial<User>): User {
+  const updatedUser = { ...existingUser, ...updates };
+  
+  // Recompute full name if firstName or lastName changed
+  if (updates.firstName !== undefined || updates.lastName !== undefined) {
+    updatedUser.name = `${updatedUser.firstName} ${updatedUser.lastName}`.trim() || updatedUser.email.split('@')[0] || 'User';
   }
   
-  // Get email to determine initial role mapping
-  const email = supabaseUser.email || '';
-  let role = mapUserRole(email);
-  let storeIds: string[] = [];
-  
-  console.log('Mapping Supabase user:', supabaseUser.email);
-  
-  try {
-    // Try to get user info from the app_users table using RPC function
-    const { data, error } = await supabase
-      .rpc('get_current_user_info', { user_email: email });
+  return updatedUser;
+}
 
-    if (error) { 
-      console.error('Error fetching user info from database:', error);
-    } 
+export function validateUserData(userData: any): boolean {
+  return !!(
+    userData &&
+    userData.id &&
+    userData.email &&
+    userData.role &&
+    Array.isArray(userData.store_ids)
+  );
+}
 
-    // If user exists in app_users, use that data
-    if (data && data.length > 0) {
-      const appUserData = data[0] as AppUserData;
-      console.log('Found existing app_user record:', appUserData.email);
-      role = appUserData.role as any;
-      storeIds = appUserData.store_ids || [];
-      
-      // Use the name from app_users if available
-      const name = `${appUserData.first_name} ${appUserData.last_name}`.trim();
-      
-      return {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        name: name || supabaseUser.user_metadata?.name || (supabaseUser.email || '').split('@')[0],
-        role: role,
-        storeIds: storeIds,
-        avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
-      };
-    } 
-  } catch (error) {
-    console.error('Error checking app_users data:', error);
+export function getUserInitials(user: User): string {
+  if (user.firstName && user.lastName) {
+    return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
   }
+  
+  if (user.name) {
+    const nameParts = user.name.split(' ');
+    if (nameParts.length >= 2) {
+      return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase();
+    }
+    return user.name.substring(0, 2).toUpperCase();
+  }
+  
+  return user.email.substring(0, 2).toUpperCase();
+}
 
-  // Handle special cases and create default app_user record if needed
-  const specialCaseResult = await handleSpecialCases(supabaseUser, email, role);
-  role = specialCaseResult.role;
-  storeIds = specialCaseResult.storeIds;
-
-  // Return the user with the determined role and store access
-  return {
-    id: supabaseUser.id,
-    email: supabaseUser.email || '',
-    name: supabaseUser.user_metadata?.name || (supabaseUser.email || '').split('@')[0],
-    role: role,
-    storeIds: storeIds,
-    avatar: supabaseUser.user_metadata?.avatar_url || 'https://github.com/shadcn.png',
-  };
-};
+export function formatUserDisplayName(user: User): string {
+  return user.name || `${user.firstName} ${user.lastName}`.trim() || user.email;
+}

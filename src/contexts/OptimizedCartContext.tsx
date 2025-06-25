@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useContext,
@@ -35,6 +36,43 @@ export function useOptimizedCart() {
     throw new Error('useOptimizedCart must be used within a OptimizedCartProvider');
   }
   return context;
+}
+
+// Export individual hooks for backwards compatibility
+export function useCartState() {
+  const { items } = useOptimizedCart();
+  return { items };
+}
+
+export function useCartActions() {
+  const { addToCart, removeFromCart, updateQuantity, clearCart } = useOptimizedCart();
+  return { 
+    addItem: addToCart,
+    removeItem: (index: number) => {
+      // Convert index-based removal to product-based removal
+      const item = useOptimizedCart().items[index];
+      if (item) {
+        removeFromCart(item.productId, item.variationId);
+      }
+    },
+    updateQuantity: (index: number, quantity: number) => {
+      // Convert index-based update to product-based update
+      const item = useOptimizedCart().items[index];
+      if (item) {
+        updateQuantity(item.productId, item.variationId, quantity);
+      }
+    },
+    clearCart 
+  };
+}
+
+export function useCartCalculations() {
+  const { getSubtotal, items } = useOptimizedCart();
+  const subtotal = getSubtotal();
+  const tax = subtotal * 0.12; // 12% VAT
+  const total = subtotal;
+  
+  return { subtotal, tax, total };
 }
 
 export function OptimizedCartProvider({ children }: { children: ReactNode }) {
