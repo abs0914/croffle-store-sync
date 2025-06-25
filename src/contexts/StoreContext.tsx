@@ -41,13 +41,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     loadingTimeoutRef.current = setTimeout(() => {
       authDebugger.log('Store context loading timeout, clearing loading state', {}, 'warning');
       setIsLoading(false);
-    }, 3000); // 3 second timeout for store loading
+    }, 3000);
   };
 
   // Fetch stores when the user is authenticated
   useEffect(() => {
     if (authLoading) {
-      // Don't fetch stores while auth is still loading
       authDebugger.log('Store context: Auth still loading, waiting...');
       return;
     }
@@ -72,7 +71,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       setError(null);
-      setLoadingTimeout(); // Start timeout protection
+      setLoadingTimeout();
       
       authDebugger.log('Fetching stores for user', { 
         userId: user?.id, 
@@ -89,7 +88,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Build query based on user permissions with simplified timeout
+      // Build query based on user permissions
       let query = supabase.from('stores').select('*');
 
       // Admin and owner users can see all stores
@@ -112,15 +111,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Execute the query with race condition timeout
+      // Execute the query with timeout protection
       const queryPromise = query;
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Store query timeout')), 5000)
       );
 
-      const { data, error: queryError } = await Promise.race([queryPromise, timeoutPromise]);
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      const { data, error: queryError } = result as { data: any[] | null; error: any | null };
 
-      clearLoadingTimeout(); // Clear timeout since query completed
+      clearLoadingTimeout();
 
       if (queryError) {
         authDebugger.log('Error fetching stores', { error: queryError.message }, 'error');
