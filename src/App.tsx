@@ -43,6 +43,20 @@ function App() {
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
 
+                  {/* MAIN DASHBOARD ROUTE - MOVED TO TOP FOR PRIORITY */}
+                  <Route path="/dashboard" element={
+                    (() => {
+                      console.log('🏠 MAIN /dashboard route hit - rendering full Dashboard');
+                      return (
+                        <ProtectedRoute>
+                          <MainLayout>
+                            <Dashboard />
+                          </MainLayout>
+                        </ProtectedRoute>
+                      );
+                    })()
+                  } />
+
                   {/* Simple test route */}
                   <Route path="/test" element={
                     <div style={{ padding: '20px', background: 'lightgreen' }}>
@@ -76,14 +90,7 @@ function App() {
                     })()
                   } />
                   
-                  {/* Simplified dashboard route for debugging */}
-                  <Route path="/dashboard" element={
-                    <div style={{ padding: '20px', background: 'lightblue', minHeight: '100vh' }}>
-                      <h1>Dashboard Route Working!</h1>
-                      <p>This is a simplified dashboard to test routing.</p>
-                      <p>If you can see this, the /dashboard route is working.</p>
-                    </div>
-                  } />
+                  {/* Dashboard route moved to top for priority */}
 
                   {/* Step-by-step debugging routes */}
 
