@@ -74,7 +74,7 @@ const Index = () => {
     );
   }
 
-  // Redirect based on authentication status
+  // Redirect based on authentication status - use replace to avoid history issues
   if (isAuthenticated) {
     console.log('📍 Index: Redirecting to dashboard (authenticated)');
     authDebugger.log('Index: Redirecting to dashboard (authenticated)');
