@@ -48,3 +48,34 @@ export interface CreateProductIngredientForm {
   required_quantity: number;
   unit: string;
 }
+
+// Stock Order related types
+export interface StockOrder {
+  id: string;
+  order_number: string;
+  store_id: string;
+  status: 'requested' | 'pending' | 'approved' | 'fulfilled' | 'cancelled';
+  requested_by: string;
+  approved_by?: string;
+  order_date: string;
+  fulfilled_date?: string;
+  notes?: string;
+  items?: StockOrderItem[];
+}
+
+export interface StockOrderItem {
+  id: string;
+  stock_order_id: string;
+  inventory_stock_id: string;
+  requested_quantity: number;
+  approved_quantity?: number;
+  unit_cost?: number;
+  notes?: string;
+  created_at: string;
+  inventory_item?: {
+    id: string;
+    item: string;
+    unit: string;
+    stock_quantity: number;
+  };
+}
