@@ -22,8 +22,8 @@ export async function enhancedMapSupabaseUser(supabaseUser: SupabaseUser): Promi
   authDebugger.log('Starting user mapping', { userId: supabaseUser.id, email: supabaseUser.email });
   
   try {
-    // Create the query and execute it to get a Promise
-    const appUserQuery = supabase
+    // Create the query and execute it with timeout protection
+    const queryPromise = supabase
       .from('app_users')
       .select('*')
       .eq('user_id', supabaseUser.id)
@@ -31,7 +31,7 @@ export async function enhancedMapSupabaseUser(supabaseUser: SupabaseUser): Promi
 
     // Execute the query and wrap in timeout
     const { data: appUser, error } = await withTimeout(
-      appUserQuery,
+      queryPromise,
       10000, // 10 second timeout
       'Database query timeout while fetching user data'
     );
