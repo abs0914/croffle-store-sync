@@ -13,14 +13,14 @@ const Index = () => {
     console.log('📍 Index page - Auth state check', { isAuthenticated, isLoading });
     authDebugger.log('Index page - Auth state check', { isAuthenticated, isLoading });
 
-    // Reduced timeout to 1 second for Index page
+    // Increased timeout to 8 seconds for Index page
     const timeout = setTimeout(() => {
       if (isLoading) {
         console.log('📍 Index page loading timeout');
         authDebugger.log('Index page loading timeout', {}, 'warning');
         setShowTimeout(true);
       }
-    }, 1000);
+    }, 8000);
 
     return () => clearTimeout(timeout);
   }, [isAuthenticated, isLoading]);

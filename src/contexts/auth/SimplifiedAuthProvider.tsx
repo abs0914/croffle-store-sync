@@ -5,6 +5,7 @@ import { User, Session, AuthState } from "./types";
 import { checkPermission, checkStoreAccess } from "./utils";
 import { authDebugger } from "@/utils/authDebug";
 import { UserRole } from "@/types";
+import { trackAuth, endMetric } from "@/utils/performanceMonitor";
 
 const initialState: AuthState = {
   user: null,
@@ -43,15 +44,15 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Force clear loading state after 1 second
+  // Force clear loading state after 5 seconds (increased from 1 second)
   const setLoadingTimeout = () => {
     clearLoadingTimeout();
-    console.log('🔐 Setting loading timeout (1 second)');
+    console.log('🔐 Setting loading timeout (5 seconds)');
     loadingTimeoutRef.current = setTimeout(() => {
       console.log('🔐 Loading timeout reached, forcing loading state to clear');
       authDebugger.log('Loading timeout reached, forcing loading state to clear', {}, 'warning');
       setLoadingWithLog(false, 'timeout reached');
-    }, 1000);
+    }, 5000);
   };
 
   // Cache session in localStorage
@@ -99,6 +100,7 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
 
   // Simplified login with better error handling
   const login = async (email: string, password: string) => {
+    trackAuth('login');
     console.log('🔐 Login attempt started', { email });
     authDebugger.log('Login attempt started', { email });
     try {
@@ -110,17 +112,20 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('🔐 Login failed:', error.message);
         authDebugger.log('Login failed', { error: error.message, email }, 'error');
+        endMetric('auth_login', { success: false, error: error.message });
         throw error;
       }
-      
+
       console.log('🔐 Login successful', { email });
       authDebugger.log('Login successful', { email });
+      endMetric('auth_login', { success: true, email });
     } catch (error) {
       console.error('🔐 Login error:', error);
-      authDebugger.log('Login error', { 
+      authDebugger.log('Login error', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        email 
+        email
       }, 'error');
+      endMetric('auth_login', { success: false, error: error instanceof Error ? error.message : 'Unknown error' });
       throw error;
     }
   };
@@ -285,10 +290,10 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
         console.log('🔐 Checking for existing session');
         authDebugger.log('Checking for existing session');
         
-        // Add 1 second timeout to session check
+        // Add 10 second timeout to session check (increased from 1 second)
         const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session check timeout')), 1000)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Session check timeout')), 10000)
         );
 
         const { data: { session: currentSession }, error } = await Promise.race([

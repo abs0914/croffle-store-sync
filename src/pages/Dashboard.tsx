@@ -6,14 +6,27 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
+import { trackComponentLoad, endMetric } from "@/utils/performanceMonitor";
+import { useEffect } from "react";
 
 export default function Dashboard() {
   console.log('Dashboard component rendering...');
-  
+
   const { currentStore, isLoading, error } = useSafeStore();
   console.log('Current store:', currentStore, 'Loading:', isLoading, 'Error:', error);
 
-  // Show loading state briefly
+  // Track dashboard loading performance
+  useEffect(() => {
+    trackComponentLoad('Dashboard');
+    return () => {
+      endMetric('component_load_Dashboard', {
+        hasStore: !!currentStore,
+        storeId: currentStore?.id
+      });
+    };
+  }, [currentStore]);
+
+  // Show loading state only for a brief moment to avoid blocking UI
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -23,6 +36,9 @@ export default function Dashboard() {
             <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
             <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
           </div>
+          <p className="text-sm text-gray-500 mt-4">
+            This should only take a moment...
+          </p>
         </div>
       </div>
     );

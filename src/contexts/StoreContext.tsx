@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth/SimplifiedAuthProvider';
 import { toast } from 'sonner';
 import { authDebugger } from '@/utils/authDebug';
+import { trackStoreOperation, endMetric } from '@/utils/performanceMonitor';
 
 interface StoreState {
   stores: Store[];
@@ -103,14 +104,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated, user?.storeIds, user?.id, authLoading]);
 
   const fetchStores = async () => {
+    trackStoreOperation('fetch_stores');
     try {
-      setIsLoading(true);
+      // Don't set loading to true if we have cached stores to avoid blocking UI
+      const cachedStores = getCachedStores();
+      if (!cachedStores || cachedStores.length === 0) {
+        setIsLoading(true);
+      }
       setError(null);
-      
-      authDebugger.log('Fetching stores for user', { 
-        userId: user?.id, 
-        role: user?.role, 
-        storeIds: user?.storeIds 
+
+      authDebugger.log('Fetching stores for user', {
+        userId: user?.id,
+        role: user?.role,
+        storeIds: user?.storeIds,
+        hasCachedStores: !!(cachedStores && cachedStores.length > 0)
       });
 
       if (!isAuthenticated || !user) {
@@ -143,10 +150,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Execute the query with 1 second timeout
+      // Execute the query with 15 second timeout (increased from 1 second)
       const queryPromise = query;
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Store fetch timeout')), 1000)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Store fetch timeout')), 15000)
       );
 
       const { data, error: queryError } = await Promise.race([
@@ -156,7 +163,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       if (queryError) {
         authDebugger.log('Error fetching stores', { error: queryError.message }, 'error');
-        setError(`Failed to fetch stores: ${queryError.message}`);
+
+        // If we have cached stores, use them instead of showing error
+        const cachedStores = getCachedStores();
+        if (cachedStores && cachedStores.length > 0) {
+          authDebugger.log('Using cached stores due to fetch error', { storeCount: cachedStores.length });
+          setStores(cachedStores);
+          if (!selectedStore) {
+            setSelectedStore(cachedStores[0]);
+          }
+          setError(null); // Clear error since we have fallback data
+        } else {
+          setError(`Failed to fetch stores: ${queryError.message}`);
+        }
         setIsLoading(false);
         return;
       }
@@ -210,16 +229,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setStores([]);
         setSelectedStore(null);
       }
+
+      endMetric('store_fetch_stores', { success: true, storeCount: stores.length });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       authDebugger.log('Store fetch failed or timed out', { error: errorMessage }, 'error');
-      
+
       // Don't show error toast for timeout if we have cached stores
       const cachedStores = getCachedStores();
       if (!cachedStores || cachedStores.length === 0) {
         setError(`Failed to fetch stores: ${errorMessage}`);
         toast.error('Failed to fetch stores - using cached data');
       }
+
+      endMetric('store_fetch_stores', { success: false, error: errorMessage });
     } finally {
       setIsLoading(false);
     }

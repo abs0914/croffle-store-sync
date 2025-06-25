@@ -35,7 +35,7 @@ function App() {
         <SecurityAuditProvider>
           <SimplifiedAuthProvider>
             <StoreProvider>
-              <React.Suspense fallback={<LoadingFallback message="Loading application..." />}>
+              <React.Suspense fallback={<LoadingFallback message="Loading application..." size="lg" />}>
                 <Toaster />
                 <Routes>
                   {/* Root route using Index component for proper auth handling */}

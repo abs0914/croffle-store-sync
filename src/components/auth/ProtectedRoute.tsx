@@ -50,7 +50,7 @@ export function ProtectedRoute({
       userStoreIds: user?.storeIds
     });
 
-    // Reduced timeout to 1 second for faster error display
+    // Increased timeout to 10 seconds for better user experience
     const timeout = setTimeout(() => {
       if (authLoading) {
         console.log('🛡️ ProtectedRoute loading timeout reached');
@@ -61,7 +61,7 @@ export function ProtectedRoute({
         }, 'warning');
         setShowTimeoutError(true);
       }
-    }, 1000);
+    }, 10000);
 
     return () => clearTimeout(timeout);
   }, [authLoading, storeLoading, isAuthenticated, user, currentStore, location.pathname, requiredRole, requireStoreAccess]);
