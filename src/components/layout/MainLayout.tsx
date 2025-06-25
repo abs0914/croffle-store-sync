@@ -33,11 +33,10 @@ export function MainLayout({ children }: MainLayoutProps) {
     }
   }, []);
 
-  // FIXED: Remove authentication checks since ProtectedRoute already handles them
-  // MainLayout should only focus on layout, not authentication
-  console.log('🏗️ MainLayout: Rendering children (auth handled by ProtectedRoute)');
+  // MainLayout should only focus on layout, auth is handled by ProtectedRoute
+  console.log('🏗️ MainLayout: Rendering layout with auth state:', { isAuthenticated, hasUser: !!user });
 
-  // Render main layout if authenticated
+  // Render main layout - auth is already verified by ProtectedRoute
   return (
     <div className="flex h-screen bg-background" data-component="main-layout">
       <Sidebar />

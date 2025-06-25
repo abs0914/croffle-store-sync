@@ -38,11 +38,17 @@ export const fetchStoreMetrics = async (
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      // Handle case where store_metrics table doesn't exist
+      if (error.code === '42P01' || error.message.includes('does not exist')) {
+        console.log('Store metrics table not found, returning empty data');
+        return [];
+      }
+      throw error;
+    }
     return data || [];
   } catch (error) {
     console.error('Error fetching store metrics:', error);
-    toast.error('Failed to fetch store metrics');
     return [];
   }
 };
@@ -58,7 +64,14 @@ export const getTodayMetrics = async (storeId: string): Promise<StoreMetrics | n
       .eq('metric_date', today)
       .single();
 
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error) {
+      // Handle case where store_metrics table doesn't exist or no data
+      if (error.code === '42P01' || error.code === 'PGRST116' || error.message.includes('does not exist')) {
+        console.log('Store metrics not found, returning null');
+        return null;
+      }
+      throw error;
+    }
     return data || null;
   } catch (error) {
     console.error('Error fetching today metrics:', error);
@@ -70,42 +83,59 @@ export const getDashboardSummary = async (storeId: string) => {
   try {
     const today = new Date().toISOString().split('T')[0];
     
-    // Get today's metrics
-    const { data: todayMetrics } = await supabase
-      .from('store_metrics')
-      .select('*')
-      .eq('store_id', storeId)
-      .eq('metric_date', today)
-      .single();
+    // Try to get today's metrics, but handle gracefully if table doesn't exist
+    let todayMetrics = null;
+    try {
+      const { data } = await supabase
+        .from('store_metrics')
+        .select('*')
+        .eq('store_id', storeId)
+        .eq('metric_date', today)
+        .single();
+      todayMetrics = data;
+    } catch (error) {
+      console.log('Store metrics not available, using fallback data');
+    }
 
-    // Get inventory alerts count
-    const { data: alertsData } = await supabase
-      .from('store_inventory_alerts')
-      .select('id')
-      .eq('store_id', storeId)
-      .eq('is_acknowledged', false);
+    // Try to get inventory alerts, but handle gracefully if table doesn't exist
+    let alertsCount = 0;
+    try {
+      const { data: alertsData } = await supabase
+        .from('store_inventory_alerts')
+        .select('id')
+        .eq('store_id', storeId)
+        .eq('is_acknowledged', false);
+      alertsCount = alertsData?.length || 0;
+    } catch (error) {
+      console.log('Store inventory alerts not available');
+    }
 
-    // Get week ago metrics for comparison
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekAgoDate = weekAgo.toISOString().split('T')[0];
-    
-    const { data: weekAgoMetrics } = await supabase
-      .from('store_metrics')
-      .select('*')
-      .eq('store_id', storeId)
-      .eq('metric_date', weekAgoDate)
-      .single();
+    // Try to get week ago metrics for comparison
+    let weeklyGrowth = 0;
+    try {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoDate = weekAgo.toISOString().split('T')[0];
+      
+      const { data: weekAgoMetrics } = await supabase
+        .from('store_metrics')
+        .select('*')
+        .eq('store_id', storeId)
+        .eq('metric_date', weekAgoDate)
+        .single();
 
-    const todaySales = todayMetrics?.total_sales || 0;
-    const weekAgoSales = weekAgoMetrics?.total_sales || 0;
-    const weeklyGrowth = weekAgoSales > 0 ? ((todaySales - weekAgoSales) / weekAgoSales) * 100 : 0;
+      const todaySales = todayMetrics?.total_sales || 0;
+      const weekAgoSales = weekAgoMetrics?.total_sales || 0;
+      weeklyGrowth = weekAgoSales > 0 ? ((todaySales - weekAgoSales) / weekAgoSales) * 100 : 0;
+    } catch (error) {
+      console.log('Weekly metrics comparison not available');
+    }
 
     return {
-      todaySales,
+      todaySales: todayMetrics?.total_sales || 0,
       todayOrders: todayMetrics?.total_orders || 0,
       avgOrderValue: todayMetrics?.average_order_value || 0,
-      inventoryAlerts: alertsData?.length || 0,
+      inventoryAlerts: alertsCount,
       weeklyGrowth
     };
   } catch (error) {
