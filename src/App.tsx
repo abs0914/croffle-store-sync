@@ -50,6 +50,31 @@ function App() {
                       <p>If you can see this, routing is working.</p>
                     </div>
                   } />
+
+                  {/* Test MainLayout directly without ProtectedRoute */}
+                  <Route path="/test-mainlayout-direct" element={
+                    (() => {
+                      console.log('🔍 Testing MainLayout directly');
+                      try {
+                        return (
+                          <MainLayout>
+                            <div style={{ padding: '20px', background: 'purple' }}>
+                              <h1>MainLayout Direct Test!</h1>
+                              <p>Testing MainLayout without ProtectedRoute.</p>
+                            </div>
+                          </MainLayout>
+                        );
+                      } catch (error) {
+                        console.error('🔍 Error in MainLayout:', error);
+                        return (
+                          <div style={{ padding: '20px', background: 'red', color: 'white' }}>
+                            <h1>MainLayout Error!</h1>
+                            <p>Error: {error.message}</p>
+                          </div>
+                        );
+                      }
+                    })()
+                  } />
                   
                   {/* Simplified dashboard route for debugging */}
                   <Route path="/dashboard" element={
@@ -75,12 +100,22 @@ function App() {
                   {/* Test ProtectedRoute + MainLayout */}
                   <Route path="/test-layout" element={
                     <ProtectedRoute>
-                      <MainLayout>
-                        <div style={{ padding: '20px', background: 'orange' }}>
-                          <h1>MainLayout Working!</h1>
-                          <p>Both ProtectedRoute and MainLayout are working.</p>
-                        </div>
-                      </MainLayout>
+                      {(() => {
+                        console.log('🔍 Inside ProtectedRoute children function');
+                        return (
+                          <MainLayout>
+                            {(() => {
+                              console.log('🔍 Inside MainLayout children function');
+                              return (
+                                <div style={{ padding: '20px', background: 'orange' }}>
+                                  <h1>MainLayout Working!</h1>
+                                  <p>Both ProtectedRoute and MainLayout are working.</p>
+                                </div>
+                              );
+                            })()}
+                          </MainLayout>
+                        );
+                      })()}
                     </ProtectedRoute>
                   } />
 
