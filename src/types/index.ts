@@ -1,3 +1,4 @@
+
 export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier' | 'staff';
 
 // Shift type alias
@@ -23,31 +24,39 @@ export interface Ingredient {
   cost?: number;
 }
 
+// Use the Store interface from types/store.ts to avoid conflicts
 export interface Store {
   id: string;
   name: string;
+  address: string;
   location: string;
+  city?: string;
+  country?: string;
+  zip_code?: string;
   phone?: string;
   email?: string;
-  address?: string;
-  tax_id?: string;
-  logo_url?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  // Additional properties for admin components
-  location_type?: string;
-  region?: string;
-  logistics_zone?: string;
+  created_at?: string;
+  updated_at?: string;
+  is_active?: boolean;
   ownership_type?: 'company_owned' | 'franchisee';
-  franchise_agreement_date?: string;
   franchise_fee_percentage?: number;
+  franchise_agreement_date?: string;
   franchisee_contact_info?: {
     name?: string;
     email?: string;
     phone?: string;
     address?: string;
   };
+  vat_rate?: number;
+  currency?: string;
+  receipt_footer?: string;
+  receipt_header?: string;
+  // Additional properties for admin components
+  location_type?: string;
+  region?: string;
+  logistics_zone?: string;
+  tax_id?: string;
+  logo_url?: string;
 }
 
 export interface Product {
