@@ -23,14 +23,14 @@ export async function enhancedMapSupabaseUser(supabaseUser: SupabaseUser): Promi
   
   try {
     // Add timeout protection for database query
-    const appUserPromise = supabase
+    const appUserQuery = supabase
       .from('app_users')
       .select('*')
       .eq('user_id', supabaseUser.id)
       .single();
 
     const { data: appUser, error } = await withTimeout(
-      appUserPromise,
+      appUserQuery,
       10000, // 10 second timeout
       'Database query timeout while fetching user data'
     );
