@@ -19,6 +19,7 @@ import { StockOrdersManagement } from '@/pages/StockOrders/StockOrdersManagement
 import PosPage from '@/pages/POS';
 import OrderManagementPage from '@/pages/OrderManagement';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { StoreProvider } from '@/contexts/StoreContext';
 import { SecurityAuditProvider } from '@/contexts/auth/SecurityAuditContext';
 import { SimplifiedAuthProvider } from '@/contexts/auth/SimplifiedAuthProvider';
@@ -40,21 +41,105 @@ function App() {
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
                   
-                  {/* Protected routes */}
-                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                  <Route path="/pos" element={<ProtectedRoute requireStoreAccess><PosPage /></ProtectedRoute>} />
-                  <Route path="/products" element={<ProtectedRoute requireStoreAccess><ProductsPage /></ProtectedRoute>} />
-                  <Route path="/customers" element={<ProtectedRoute requireStoreAccess><CustomersPage /></ProtectedRoute>} />
-                  <Route path="/reports" element={<ProtectedRoute requireStoreAccess><ReportsPage /></ProtectedRoute>} />
-                  <Route path="/orders" element={<ProtectedRoute requireStoreAccess><OrderManagementPage /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                  <Route path="/settings/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
-                  <Route path="/settings/stores" element={<ProtectedRoute><StoresPage /></ProtectedRoute>} />
-                  <Route path="/inventory" element={<ProtectedRoute requireStoreAccess><InventoryPage /></ProtectedRoute>} />
-                  <Route path="/production" element={<ProtectedRoute requireStoreAccess><ProductionPage /></ProtectedRoute>} />
-                  <Route path="/commissary" element={<ProtectedRoute><CommissaryInventoryPage /></ProtectedRoute>} />
-                  <Route path="/stock-orders" element={<ProtectedRoute requireStoreAccess><StockOrdersManagement /></ProtectedRoute>} />
-                  <Route path="/security" element={<ProtectedRoute requiredRole="admin"><SecurityMonitoringDashboard /></ProtectedRoute>} />
+                  {/* Protected routes with MainLayout */}
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <Dashboard />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/pos" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <PosPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/products" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <ProductsPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/customers" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <CustomersPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/reports" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <ReportsPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/orders" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <OrderManagementPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <Settings />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings/users" element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <UsersPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings/stores" element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <StoresPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/inventory" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <InventoryPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/production" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <ProductionPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/commissary" element={
+                    <ProtectedRoute>
+                      <MainLayout>
+                        <CommissaryInventoryPage />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/stock-orders" element={
+                    <ProtectedRoute requireStoreAccess>
+                      <MainLayout>
+                        <StockOrdersManagement />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/security" element={
+                    <ProtectedRoute requiredRole="admin">
+                      <MainLayout>
+                        <SecurityMonitoringDashboard />
+                      </MainLayout>
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Catch all - redirect to root for proper auth handling */}
                   <Route path="*" element={<Index />} />
