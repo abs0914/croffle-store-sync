@@ -91,18 +91,18 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Simplified auth initialization with timeout
+  // Simplified auth initialization with shorter timeout
   useEffect(() => {
     if (authInitializedRef.current) return;
     authInitializedRef.current = true;
 
     console.log('🔐 Initializing simplified authentication...');
     
-    // Set loading timeout - if auth takes too long, show error state
+    // Set loading timeout - shorter timeout for better UX
     const loadingTimeout = setTimeout(() => {
-      console.warn('⚠️ Authentication initialization timeout');
+      console.warn('⚠️ Authentication initialization timeout - setting not loading');
       setIsLoading(false);
-    }, 10000); // 10 second timeout
+    }, 5000); // 5 second timeout instead of 10
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -129,8 +129,17 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+    // Check for existing session with shorter timeout
+    const sessionCheckPromise = supabase.auth.getSession();
+    const sessionTimeout = setTimeout(() => {
+      console.warn('⚠️ Session check timeout');
+      clearTimeout(loadingTimeout);
+      setIsLoading(false);
+    }, 3000); // 3 second timeout for session check
+
+    sessionCheckPromise.then(async ({ data: { session: currentSession } }) => {
+      clearTimeout(sessionTimeout);
+      
       if (currentSession?.user) {
         console.log('🔐 Existing session found');
         try {
@@ -148,12 +157,14 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     }).catch(error => {
       console.error('Error checking session:', error);
       clearTimeout(loadingTimeout);
+      clearTimeout(sessionTimeout);
       setIsLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
       clearTimeout(loadingTimeout);
+      clearTimeout(sessionTimeout);
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }

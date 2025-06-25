@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/auth";
+import { useAuth } from "@/contexts/auth/SimplifiedAuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +15,7 @@ export default function Login() {
   const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already authenticated
-  if (isAuthenticated && !isLoading) {
-    navigate("/");
-    return null;
-  }
-
-  // Show loading spinner while checking authentication
+  // Show loading spinner while checking authentication - but with timeout
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-croffle-background">
@@ -31,6 +25,12 @@ export default function Login() {
         </div>
       </div>
     );
+  }
+
+  // Redirect if already authenticated
+  if (isAuthenticated) {
+    navigate("/dashboard");
+    return null;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,10 +46,10 @@ export default function Login() {
     try {
       await login(email, password);
       toast.success("Login successful");
-      navigate("/");
-    } catch (error) {
-      // Error is already handled in the login function with toast
+      navigate("/dashboard");
+    } catch (error: any) {
       console.error("Login failed:", error);
+      toast.error(error.message || "Login failed");
     } finally {
       setIsSubmitting(false);
     }
