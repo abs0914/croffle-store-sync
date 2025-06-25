@@ -131,17 +131,51 @@ export function CreatePurchaseOrderDialog({
       });
 
       if (purchaseOrder) {
-        // Note: This will need to be adapted since purchase_order_items expects inventory_stock_id
-        // For now, we'll create a note in specifications mentioning the commissary item
+        // Create a mapping from commissary items to inventory items
         for (const item of items) {
           if (item.commissary_item_id && item.quantity > 0) {
+            // First check if corresponding inventory_stock item exists
+            let inventoryStockId = item.commissary_item_id; // Use commissary ID as fallback
+            
             const itemDetails = getItemDetails(item.commissary_item_id);
+            if (itemDetails) {
+              // Try to find or create corresponding inventory_stock item
+              const { data: existingStock } = await supabase
+                .from('inventory_stock')
+                .select('id')
+                .eq('store_id', user.storeIds[0])
+                .eq('item', itemDetails.name)
+                .eq('unit', itemDetails.uom)
+                .single();
+              
+              if (existingStock) {
+                inventoryStockId = existingStock.id;
+              } else {
+                // Create new inventory_stock item for this store
+                const { data: newStock } = await supabase
+                  .from('inventory_stock')
+                  .insert({
+                    store_id: user.storeIds[0],
+                    item: itemDetails.name,
+                    unit: itemDetails.uom,
+                    stock_quantity: 0,
+                    cost: item.unit_price
+                  })
+                  .select('id')
+                  .single();
+                
+                if (newStock) {
+                  inventoryStockId = newStock.id;
+                }
+              }
+            }
+
             await addPurchaseOrderItem({
               purchase_order_id: purchaseOrder.id,
-              inventory_stock_id: item.commissary_item_id, // This will need schema adjustment
+              inventory_stock_id: inventoryStockId,
               quantity: item.quantity,
               unit_price: item.unit_price,
-              specifications: `${item.specifications} - Commissary Item: ${itemDetails?.name}`
+              specifications: `${item.specifications} - Commissary Item: ${itemDetails?.name || 'Unknown'}`
             });
           }
         }
