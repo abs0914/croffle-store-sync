@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Store } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +12,7 @@ interface StoreState {
   isLoading: boolean;
   error: string | null;
   selectStore: (store: Store) => void;
+  setCurrentStore: (store: Store) => void;
   refreshStores: () => Promise<void>;
 }
 
@@ -71,7 +73,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
 
       if (data && data.length > 0) {
-        setStores(data as Store[]);
+        // Transform the data to match our Store interface
+        const transformedStores: Store[] = data.map(store => ({
+          id: store.id,
+          name: store.name,
+          location: store.address || store.city || 'N/A', // Use address or city as location
+          phone: store.phone,
+          email: store.email,
+          address: store.address,
+          tax_id: store.tax_id,
+          logo_url: store.logo_url,
+          is_active: store.is_active,
+          created_at: store.created_at,
+          updated_at: store.updated_at,
+        }));
+
+        setStores(transformedStores);
 
         // Set the current store based on user's assigned stores
         if (!selectedStore) {
@@ -79,14 +96,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
           if (user.role === 'admin' || user.role === 'owner') {
             // For admin/owner, use the first store alphabetically
-            defaultStore = data[0] as Store;
+            defaultStore = transformedStores[0];
           } else {
             // For regular users, use their first assigned store
             if (user.storeIds && user.storeIds.length > 0) {
               // Find the first assigned store in the fetched data
-              defaultStore = data.find(store => store.id === user.storeIds[0]) as Store || data[0] as Store;
+              defaultStore = transformedStores.find(store => store.id === user.storeIds[0]) || transformedStores[0];
             } else {
-              defaultStore = data[0] as Store;
+              defaultStore = transformedStores[0];
             }
           }
 
@@ -112,6 +129,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('selectedStoreId', store.id);
   };
 
+  const setCurrentStore = (store: Store) => {
+    setSelectedStore(store);
+    localStorage.setItem('selectedStoreId', store.id);
+  };
+
   const refreshStores = async () => {
     await fetchStores();
   };
@@ -125,6 +147,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         isLoading,
         error,
         selectStore,
+        setCurrentStore,
         refreshStores,
       }}
     >

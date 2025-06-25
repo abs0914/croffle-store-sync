@@ -18,7 +18,7 @@ export interface User {
 export interface Session {
   access_token: string;
   refresh_token: string;
-  expires_at: number;
+  expires_at?: number; // Make this optional to match Supabase's Session type
   user: any;
 }
 

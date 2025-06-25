@@ -5,20 +5,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Customer } from "@/types";
 
+interface CustomerFormData {
+  name: string;
+  phone: string;
+  email?: string;
+  address?: string;
+}
+
 interface CustomerFormProps {
   initialData?: Partial<Customer>;
-  onSubmit: (data: Omit<Customer, "id"> & { id?: string }) => void;
+  onSubmit: (data: CustomerFormData) => void;
   onBack: () => void;
 }
 
 export default function CustomerForm({ initialData, onSubmit, onBack }: CustomerFormProps) {
-  const { register, handleSubmit, formState: { errors } } = useForm<Omit<Customer, "id"> & { id?: string }>({
+  const { register, handleSubmit, formState: { errors } } = useForm<CustomerFormData>({
     defaultValues: {
       name: initialData?.name || "",
       phone: initialData?.phone || "",
       email: initialData?.email || "",
       address: initialData?.address || "",
-      storeId: initialData?.storeId
     }
   });
 
