@@ -10,16 +10,45 @@ import RecentTransactions from "@/components/dashboard/RecentTransactions";
 export default function Dashboard() {
   console.log('Dashboard component rendering...');
   
-  const { currentStore } = useSafeStore();
-  console.log('Current store:', currentStore);
+  const { currentStore, isLoading, error } = useSafeStore();
+  console.log('Current store:', currentStore, 'Loading:', isLoading, 'Error:', error);
 
+  // Show loading state briefly
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Loading Dashboard...</h1>
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there's an error (but still allow access)
+  if (error && error !== 'Store context not available') {
+    console.log('Store error but allowing access:', error);
+  }
+
+  // Allow dashboard access even without store selection (store loading is now optional)
   if (!currentStore) {
     console.log('No store selected, showing store selection message');
     return (
       <div className="container mx-auto p-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Welcome to your POS System</h1>
-          <p className="text-muted-foreground">Please select a store from the sidebar to get started.</p>
+          <p className="text-muted-foreground mb-4">
+            {error && error !== 'Store context not available' 
+              ? `Store loading error: ${error}. Please try refreshing the page.`
+              : 'Please select a store from the sidebar to access store-specific features.'
+            }
+          </p>
+          <div className="mt-6">
+            <QuickActions />
+          </div>
         </div>
       </div>
     );

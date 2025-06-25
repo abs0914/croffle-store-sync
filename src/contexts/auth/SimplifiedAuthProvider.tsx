@@ -3,7 +3,6 @@ import React, { createContext, useContext, ReactNode, useEffect, useRef, useStat
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session, AuthState } from "./types";
 import { checkPermission, checkStoreAccess } from "./utils";
-import { enhancedMapSupabaseUser } from "./enhancedUserMapping";
 import { authDebugger } from "@/utils/authDebug";
 import { UserRole } from "@/types";
 
@@ -36,13 +35,48 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Force clear loading state after timeout - reduced from 5s to 3s
+  // Force clear loading state after 1 second (reduced from 3s)
   const setLoadingTimeout = () => {
     clearLoadingTimeout();
     loadingTimeoutRef.current = setTimeout(() => {
       authDebugger.log('Loading timeout reached, forcing loading state to clear', {}, 'warning');
       setIsLoading(false);
-    }, 3000); // Reduced timeout for faster fallback
+    }, 1000); // Reduced timeout to 1 second
+  };
+
+  // Cache session in localStorage
+  const cacheSession = (session: Session | null) => {
+    try {
+      if (session) {
+        localStorage.setItem('cached_session', JSON.stringify({
+          user: session.user,
+          access_token: session.access_token,
+          expires_at: session.expires_at,
+          cached_at: Date.now()
+        }));
+      } else {
+        localStorage.removeItem('cached_session');
+      }
+    } catch (error) {
+      authDebugger.log('Failed to cache session', { error }, 'warning');
+    }
+  };
+
+  // Get cached session
+  const getCachedSession = () => {
+    try {
+      const cached = localStorage.getItem('cached_session');
+      if (cached) {
+        const parsedCache = JSON.parse(cached);
+        // Check if cache is less than 5 minutes old
+        if (Date.now() - parsedCache.cached_at < 5 * 60 * 1000) {
+          return parsedCache;
+        }
+      }
+    } catch (error) {
+      authDebugger.log('Failed to get cached session', { error }, 'warning');
+    }
+    return null;
   };
 
   // Simplified login with better error handling
@@ -100,6 +134,7 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
         authDebugger.log('Logout successful');
         setUser(null);
         setSession(null);
+        cacheSession(null);
       }
     } catch (error) {
       authDebugger.log('Logout failed', { 
@@ -108,57 +143,53 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       // Force clear state even if logout fails
       setUser(null);
       setSession(null);
+      cacheSession(null);
     }
   };
 
-  // Simplified user mapping with shorter timeout
-  const mapUserSafely = async (supabaseUser: any) => {
-    try {
-      authDebugger.log('Starting safe user mapping', { userId: supabaseUser.id });
-      
-      // Reduced timeout from 3s to 2s for faster fallback
-      const mappingPromise = enhancedMapSupabaseUser(supabaseUser);
-      const timeoutPromise = new Promise<User>((_, reject) => 
-        setTimeout(() => reject(new Error('User mapping timeout')), 2000)
-      );
+  // Create user from session data only (no database calls)
+  const createUserFromSession = (supabaseUser: any): User => {
+    authDebugger.log('Creating user from session data only', { userId: supabaseUser.id });
+    
+    const email = supabaseUser.email || 'unknown@example.com';
+    const firstName = supabaseUser.user_metadata?.first_name || email.split('@')[0];
+    const lastName = supabaseUser.user_metadata?.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim() || email.split('@')[0] || 'User';
 
-      const mappedUser = await Promise.race([mappingPromise, timeoutPromise]);
-      authDebugger.log('User mapping completed successfully', { 
-        userId: mappedUser.id,
-        role: mappedUser.role 
-      });
-      return mappedUser;
-    } catch (error) {
-      authDebugger.log('User mapping failed, using fallback', { 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        userId: supabaseUser.id 
-      }, 'error');
-      
-      // Create fallback user to prevent loading lock
-      return {
-        id: supabaseUser.id,
-        email: supabaseUser.email || 'unknown@example.com',
-        firstName: supabaseUser.user_metadata?.first_name || 'User',
-        lastName: supabaseUser.user_metadata?.last_name || '',
-        name: supabaseUser.user_metadata?.first_name || supabaseUser.email?.split('@')[0] || 'User',
-        role: 'staff' as UserRole,
-        storeIds: [],
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-    }
+    return {
+      id: supabaseUser.id,
+      email,
+      firstName,
+      lastName,
+      name: fullName,
+      role: (supabaseUser.user_metadata?.role as UserRole) || 'staff',
+      storeIds: supabaseUser.user_metadata?.store_ids || [],
+      isActive: true,
+      createdAt: supabaseUser.created_at || new Date().toISOString(),
+      updatedAt: supabaseUser.updated_at || new Date().toISOString(),
+    };
   };
 
-  // Simplified auth initialization with better timeout handling
+  // Simplified auth initialization
   useEffect(() => {
     if (authInitializedRef.current) return;
     authInitializedRef.current = true;
 
     authDebugger.log('Initializing authentication system');
-    setLoadingTimeout(); // Start loading timeout protection
+    
+    // Try to use cached session first for immediate UI update
+    const cachedSession = getCachedSession();
+    if (cachedSession) {
+      authDebugger.log('Using cached session for immediate load', { userId: cachedSession.user.id });
+      const user = createUserFromSession(cachedSession.user);
+      setUser(user);
+      setSession(cachedSession);
+      setIsLoading(false);
+    } else {
+      setLoadingTimeout(); // Start loading timeout protection only if no cache
+    }
 
-    // Set up auth state listener with simplified logic
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         authDebugger.log('Auth state change event', { 
@@ -171,12 +202,13 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
         
         try {
           setSession(newSession);
+          cacheSession(newSession);
           
           if (newSession?.user) {
-            // Use simplified user mapping with timeout protection
-            const mappedUser = await mapUserSafely(newSession.user);
+            // Use session data only - no database calls
+            const mappedUser = createUserFromSession(newSession.user);
             setUser(mappedUser);
-            authDebugger.log('User authenticated and mapped', { 
+            authDebugger.log('User authenticated from session', { 
               userId: mappedUser.id,
               email: mappedUser.email,
               role: mappedUser.role 
@@ -191,21 +223,22 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
           }, 'error');
           setUser(null);
           setSession(null);
+          cacheSession(null);
         } finally {
           setIsLoading(false);
         }
       }
     );
 
-    // Check for existing session with timeout protection
+    // Check for existing session with 1 second timeout
     const checkInitialSession = async () => {
       try {
         authDebugger.log('Checking for existing session');
         
-        // Add timeout to session check
+        // Add 1 second timeout to session check
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session check timeout')), 2000)
+          setTimeout(() => reject(new Error('Session check timeout')), 1000)
         );
 
         const { data: { session: currentSession }, error } = await Promise.race([
@@ -240,7 +273,10 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    checkInitialSession();
+    // Only check session if we don't have a cached one
+    if (!cachedSession) {
+      checkInitialSession();
+    }
 
     return () => {
       subscription.unsubscribe();

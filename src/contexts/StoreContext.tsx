@@ -37,23 +37,34 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const loadingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Clear loading timeout
-  const clearLoadingTimeout = () => {
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-      loadingTimeoutRef.current = null;
+  // Get cached stores
+  const getCachedStores = () => {
+    try {
+      const cached = localStorage.getItem('cached_stores');
+      if (cached) {
+        const parsedCache = JSON.parse(cached);
+        // Check if cache is less than 10 minutes old
+        if (Date.now() - parsedCache.cached_at < 10 * 60 * 1000) {
+          return parsedCache.stores;
+        }
+      }
+    } catch (error) {
+      authDebugger.log('Failed to get cached stores', { error }, 'warning');
     }
+    return null;
   };
 
-  // Set loading timeout protection
-  const setLoadingTimeout = () => {
-    clearLoadingTimeout();
-    loadingTimeoutRef.current = setTimeout(() => {
-      authDebugger.log('Store context loading timeout, clearing loading state', {}, 'warning');
-      setIsLoading(false);
-    }, 3000);
+  // Cache stores in localStorage
+  const cacheStores = (stores: Store[]) => {
+    try {
+      localStorage.setItem('cached_stores', JSON.stringify({
+        stores,
+        cached_at: Date.now()
+      }));
+    } catch (error) {
+      authDebugger.log('Failed to cache stores', { error }, 'warning');
+    }
   };
 
   // Fetch stores when the user is authenticated
@@ -69,13 +80,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         role: user.role,
         storeIds: user.storeIds 
       });
+      
+      // Try to use cached stores first
+      const cachedStores = getCachedStores();
+      if (cachedStores && cachedStores.length > 0) {
+        authDebugger.log('Using cached stores', { storeCount: cachedStores.length });
+        setStores(cachedStores);
+        if (!selectedStore) {
+          const defaultStore = cachedStores[0];
+          setSelectedStore(defaultStore);
+        }
+      }
+      
+      // Fetch fresh stores in background
       fetchStores();
     } else {
       authDebugger.log('Store context: User not authenticated, clearing stores');
       setStores([]);
       setSelectedStore(null);
       setIsLoading(false);
-      clearLoadingTimeout();
     }
   }, [isAuthenticated, user?.storeIds, user?.id, authLoading]);
 
@@ -83,7 +106,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       setError(null);
-      setLoadingTimeout();
       
       authDebugger.log('Fetching stores for user', { 
         userId: user?.id, 
@@ -96,11 +118,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setStores([]);
         setSelectedStore(null);
         setIsLoading(false);
-        clearLoadingTimeout();
         return;
       }
 
-      // Build query based on user permissions
+      // Build query based on user permissions with 1 second timeout
       let query = supabase.from('stores').select('*');
 
       // Admin and owner users can see all stores
@@ -118,20 +139,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setStores([]);
           setSelectedStore(null);
           setIsLoading(false);
-          clearLoadingTimeout();
           return;
         }
       }
 
-      // Execute the query with timeout protection
-      const { data, error: queryError } = await query;
+      // Execute the query with 1 second timeout
+      const queryPromise = query;
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Store fetch timeout')), 1000)
+      );
 
-      clearLoadingTimeout();
+      const { data, error: queryError } = await Promise.race([
+        queryPromise,
+        timeoutPromise
+      ]) as any;
 
       if (queryError) {
         authDebugger.log('Error fetching stores', { error: queryError.message }, 'error');
         setError(`Failed to fetch stores: ${queryError.message}`);
-        toast.error('Failed to fetch stores');
         setIsLoading(false);
         return;
       }
@@ -154,6 +179,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
         authDebugger.log('Stores fetched successfully', { storeCount: transformedStores.length });
         setStores(transformedStores);
+        cacheStores(transformedStores);
 
         // Set the current store based on user's assigned stores
         if (!selectedStore) {
@@ -186,12 +212,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      authDebugger.log('Store fetch failed', { error: errorMessage }, 'error');
-      setError(`Failed to fetch stores: ${errorMessage}`);
-      toast.error('Failed to fetch stores');
+      authDebugger.log('Store fetch failed or timed out', { error: errorMessage }, 'error');
+      
+      // Don't show error toast for timeout if we have cached stores
+      const cachedStores = getCachedStores();
+      if (!cachedStores || cachedStores.length === 0) {
+        setError(`Failed to fetch stores: ${errorMessage}`);
+        toast.error('Failed to fetch stores - using cached data');
+      }
     } finally {
       setIsLoading(false);
-      clearLoadingTimeout();
     }
   };
 
@@ -211,11 +241,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     authDebugger.log('Refreshing stores');
     await fetchStores();
   };
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => clearLoadingTimeout();
-  }, []);
 
   return (
     <StoreContext.Provider

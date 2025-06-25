@@ -12,13 +12,13 @@ const Index = () => {
   useEffect(() => {
     authDebugger.log('Index page - Auth state check', { isAuthenticated, isLoading });
 
-    // Add timeout for Index page loading
+    // Reduced timeout to 1 second for Index page
     const timeout = setTimeout(() => {
       if (isLoading) {
         authDebugger.log('Index page loading timeout', {}, 'warning');
         setShowTimeout(true);
       }
-    }, 4000); // 4 second timeout for Index page
+    }, 1000); // Reduced from 4 seconds to 1 second
 
     return () => clearTimeout(timeout);
   }, [isAuthenticated, isLoading]);
@@ -51,7 +51,7 @@ const Index = () => {
     );
   }
 
-  // Show loading while checking authentication with shorter timeout
+  // Show loading while checking authentication with 1 second timeout
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-croffle-background">
