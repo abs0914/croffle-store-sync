@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth/SimplifiedAuthProvider';
 import { toast } from 'sonner';
 import { authDebugger } from '@/utils/authDebug';
-import { trackStoreOperation, endMetric } from '@/utils/performanceMonitor';
 
 interface StoreState {
   stores: Store[];
@@ -70,6 +69,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Fetch stores when the user is authenticated
   useEffect(() => {
+    console.log('🏪 Store context effect triggered', {
+      isAuthenticated,
+      hasUser: !!user,
+      authLoading,
+      userId: user?.id,
+      userRole: user?.role,
+      userEmail: user?.email
+    });
+
     if (authLoading) {
       authDebugger.log('Store context: Auth still loading, waiting...');
       return;
@@ -109,7 +117,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated, user?.storeIds, user?.id, authLoading]);
 
   const fetchStores = async () => {
-    trackStoreOperation('fetch_stores');
     try {
       // Don't set loading to true if we have cached stores to avoid blocking UI
       const cachedStores = getCachedStores();
@@ -162,7 +169,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setStores([]);
           setSelectedStore(null);
           setIsLoading(false);
-          endMetric('store_fetch_stores', { success: false, reason: 'no_assigned_stores' });
+          // Removed performance tracking for debugging
           return;
         }
       }
@@ -247,7 +254,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setSelectedStore(null);
       }
 
-      endMetric('store_fetch_stores', { success: true, storeCount: stores.length });
+      // Removed performance tracking for debugging
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       authDebugger.log('Store fetch failed or timed out', { error: errorMessage }, 'error');
@@ -259,7 +266,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         toast.error('Failed to fetch stores - using cached data');
       }
 
-      endMetric('store_fetch_stores', { success: false, error: errorMessage });
+      // Removed performance tracking for debugging
     } finally {
       setIsLoading(false);
     }

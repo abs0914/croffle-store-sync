@@ -13,10 +13,13 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
+  console.log('🏗️ MainLayout rendering');
   const { isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { isOnline, offlineQueue } = useMobileExpenseFeatures();
+
+  console.log('🏗️ MainLayout state:', { isLoading, isAuthenticated });
 
   // Redirect to login if not authenticated
   useEffect(() => {

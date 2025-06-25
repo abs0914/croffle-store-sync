@@ -9,10 +9,18 @@ import { authDebugger } from '@/utils/authDebug';
  */
 export function useSafeStore() {
   try {
-    return useStore();
+    const storeContext = useStore();
+    console.log('🏪 useSafeStore: Store context available', {
+      hasStores: storeContext.stores.length > 0,
+      currentStore: storeContext.currentStore?.name || 'none',
+      isLoading: storeContext.isLoading,
+      error: storeContext.error
+    });
+    return storeContext;
   } catch (error) {
+    console.log('🏪 useSafeStore: StoreProvider not available, using fallbacks', { error });
     authDebugger.log('useSafeStore: StoreProvider not available, using fallbacks', { error }, 'warning');
-    
+
     // Return safe fallback values
     return {
       stores: [],

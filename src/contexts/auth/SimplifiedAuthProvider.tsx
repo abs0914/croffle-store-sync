@@ -5,8 +5,6 @@ import { User, Session, AuthState } from "./types";
 import { checkPermission, checkStoreAccess } from "./utils";
 import { authDebugger } from "@/utils/authDebug";
 import { UserRole } from "@/types";
-import { trackAuth, endMetric } from "@/utils/performanceMonitor";
-import { handleSpecialCases } from "./special-cases-utils";
 
 const initialState: AuthState = {
   user: null,
@@ -102,7 +100,6 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
 
   // Simplified login with better error handling
   const login = async (email: string, password: string) => {
-    trackAuth('login');
     console.log('🔐 Login attempt started', { email });
     authDebugger.log('Login attempt started', { email });
     try {
@@ -114,20 +111,17 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('🔐 Login failed:', error.message);
         authDebugger.log('Login failed', { error: error.message, email }, 'error');
-        endMetric('auth_login', { success: false, error: error.message });
         throw error;
       }
 
       console.log('🔐 Login successful', { email });
       authDebugger.log('Login successful', { email });
-      endMetric('auth_login', { success: true, email });
     } catch (error) {
       console.error('🔐 Login error:', error);
       authDebugger.log('Login error', {
         error: error instanceof Error ? error.message : 'Unknown error',
         email
       }, 'error');
-      endMetric('auth_login', { success: false, error: error instanceof Error ? error.message : 'Unknown error' });
       throw error;
     }
   };
@@ -183,23 +177,29 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Create user from session data with special case handling
-  const createUserFromSession = async (supabaseUser: any): Promise<User> => {
-    console.log('🔐 Creating user from session data with special cases', { userId: supabaseUser.id });
-    authDebugger.log('Creating user from session data with special cases', { userId: supabaseUser.id });
+  // Create user from session data (simplified for debugging)
+  const createUserFromSession = (supabaseUser: any): User => {
+    console.log('🔐 Creating user from session data (simplified)', { userId: supabaseUser.id });
+    authDebugger.log('Creating user from session data (simplified)', { userId: supabaseUser.id });
 
     const email = supabaseUser.email || 'unknown@example.com';
     const firstName = supabaseUser.user_metadata?.first_name || email.split('@')[0];
     const lastName = supabaseUser.user_metadata?.last_name || '';
     const fullName = `${firstName} ${lastName}`.trim() || email.split('@')[0] || 'User';
 
-    // Handle special cases (like admin@example.com)
-    const specialCase = await handleSpecialCases(supabaseUser.user_metadata, email, 'staff');
+    // Simplified role assignment for debugging
+    let role: UserRole = 'staff';
+    let storeIds: string[] = [];
 
-    console.log('🔐 Special case handling result', {
+    if (email === 'admin@example.com') {
+      role = 'admin';
+      storeIds = ['store1', 'store2', 'store3', 'store4', 'store5', 'store6']; // Mock store IDs
+    }
+
+    console.log('🔐 User creation result', {
       email,
-      role: specialCase.role,
-      storeIds: specialCase.storeIds
+      role,
+      storeIds
     });
 
     return {
@@ -208,8 +208,8 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       firstName,
       lastName,
       name: fullName,
-      role: specialCase.role,
-      storeIds: specialCase.storeIds,
+      role,
+      storeIds,
       isActive: true,
       createdAt: supabaseUser.created_at || new Date().toISOString(),
       updatedAt: supabaseUser.updated_at || new Date().toISOString(),
@@ -233,15 +233,16 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       console.log('🔐 Using cached session for immediate load', { userId: cachedSession.user.id });
       authDebugger.log('Using cached session for immediate load', { userId: cachedSession.user.id });
 
-      // Handle async user creation
-      createUserFromSession(cachedSession.user).then(user => {
+      // Create user from cached session
+      try {
+        const user = createUserFromSession(cachedSession.user);
         setUser(user);
         setSession(cachedSession);
         setLoadingWithLog(false, 'cached session loaded');
-      }).catch(error => {
+      } catch (error) {
         console.error('🔐 Error creating user from cached session:', error);
         setLoadingTimeout(); // Fallback to timeout protection
-      });
+      }
     } else {
       console.log('🔐 No cached session, starting loading timeout');
       setLoadingTimeout(); // Start loading timeout protection only if no cache
@@ -278,8 +279,9 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
           cacheSession(newSession);
           
           if (newSession?.user) {
-            // Use session data with special case handling
-            createUserFromSession(newSession.user).then(mappedUser => {
+            // Create user from session data
+            try {
+              const mappedUser = createUserFromSession(newSession.user);
               setUser(mappedUser);
               console.log('🔐 User authenticated from session', {
                 userId: mappedUser.id,
@@ -291,10 +293,10 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
                 email: mappedUser.email,
                 role: mappedUser.role
               });
-            }).catch(error => {
+            } catch (error) {
               console.error('🔐 Error creating user from session:', error);
               setUser(null);
-            });
+            }
           } else {
             setUser(null);
             console.log('🔐 User not authenticated');

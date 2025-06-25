@@ -6,25 +6,19 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
-import { trackComponentLoad, endMetric } from "@/utils/performanceMonitor";
-import { useEffect } from "react";
 
 export default function Dashboard() {
-  console.log('Dashboard component rendering...');
+  console.log('🏠 Dashboard component rendering...');
 
   const { currentStore, isLoading, error } = useSafeStore();
-  console.log('Current store:', currentStore, 'Loading:', isLoading, 'Error:', error);
+  console.log('🏠 Dashboard store state:', {
+    currentStore: currentStore?.name || 'none',
+    isLoading,
+    error,
+    hasStore: !!currentStore
+  });
 
-  // Track dashboard loading performance
-  useEffect(() => {
-    trackComponentLoad('Dashboard');
-    return () => {
-      endMetric('component_load_Dashboard', {
-        hasStore: !!currentStore,
-        storeId: currentStore?.id
-      });
-    };
-  }, [currentStore]);
+  // Removed performance tracking for debugging
 
   // Show loading state only for a brief moment to avoid blocking UI
   if (isLoading) {

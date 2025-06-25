@@ -35,7 +35,8 @@ function App() {
         <SecurityAuditProvider>
           <SimplifiedAuthProvider>
             <StoreProvider>
-              <React.Suspense fallback={<LoadingFallback message="Loading application..." size="lg" />}>
+              {/* Temporarily remove Suspense to debug loading issues */}
+              <div>
                 <Toaster />
                 <Routes>
                   {/* Root route using Index component for proper auth handling */}
@@ -46,7 +47,10 @@ function App() {
                   <Route path="/dashboard" element={
                     <ProtectedRoute>
                       <MainLayout>
-                        <Dashboard />
+                        {(() => {
+                          console.log('🏠 Dashboard route element being rendered');
+                          return <Dashboard />;
+                        })()}
                       </MainLayout>
                     </ProtectedRoute>
                   } />
@@ -145,10 +149,10 @@ function App() {
                   {/* Catch all - redirect to root for proper auth handling */}
                   <Route path="*" element={<Index />} />
                 </Routes>
-                
+
                 {/* Debug panel for development */}
                 <AuthDebugPanel />
-              </React.Suspense>
+              </div>
             </StoreProvider>
           </SimplifiedAuthProvider>
         </SecurityAuditProvider>
