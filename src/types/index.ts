@@ -171,6 +171,7 @@ export interface Customer {
   storeName?: string;
   created_at: string;
   updated_at: string;
+  loyaltyPoints?: number; // Add this for legacy compatibility
   // Legacy compatibility
   storeId?: string;
 }
@@ -206,7 +207,7 @@ export interface Transaction {
   tax_amount: number;
   discount: number;
   payment_method: string;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'pending' | 'completed' | 'cancelled' | 'voided'; // Add voided status
   items: any[];
   created_at: string;
   updated_at: string;
@@ -275,6 +276,7 @@ export interface InventoryStock {
   unit: string;
   stock_quantity: number;
   cost?: number;
+  sku?: string; // Add sku property
   minimum_threshold?: number;
   maximum_capacity?: number;
   is_active: boolean;
