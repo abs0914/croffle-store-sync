@@ -20,38 +20,44 @@ import OrderManagementPage from '@/pages/OrderManagement';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { StoreProvider } from '@/contexts/StoreContext';
 import { SecurityAuditProvider } from '@/contexts/auth/SecurityAuditContext';
-import { EnhancedAuthProvider } from '@/contexts/auth/EnhancedAuthProvider';
+import { SimplifiedAuthProvider } from '@/contexts/auth/SimplifiedAuthProvider';
 import { SecurityMonitoringDashboard } from './components/security/SecurityMonitoringDashboard';
+import { LoadingFallback } from '@/components/ui/LoadingFallback';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 function App() {
   return (
-    <BrowserRouter>
-      <SecurityAuditProvider>
-        <EnhancedAuthProvider>
-          <StoreProvider>
-            <Toaster />
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/pos" element={<ProtectedRoute requireStoreAccess><PosPage /></ProtectedRoute>} />
-              <Route path="/products" element={<ProtectedRoute requireStoreAccess><ProductsPage /></ProtectedRoute>} />
-              <Route path="/customers" element={<ProtectedRoute requireStoreAccess><CustomersPage /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute requireStoreAccess><ReportsPage /></ProtectedRoute>} />
-              <Route path="/orders" element={<ProtectedRoute requireStoreAccess><OrderManagementPage /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
-              <Route path="/settings/stores" element={<ProtectedRoute><StoresPage /></ProtectedRoute>} />
-              <Route path="/inventory" element={<ProtectedRoute requireStoreAccess><InventoryPage /></ProtectedRoute>} />
-              <Route path="/production" element={<ProtectedRoute requireStoreAccess><ProductionPage /></ProtectedRoute>} />
-              <Route path="/commissary" element={<ProtectedRoute><CommissaryInventoryPage /></ProtectedRoute>} />
-              <Route path="/stock-orders" element={<ProtectedRoute requireStoreAccess><StockOrdersManagement /></ProtectedRoute>} />
-              <Route path="/security" element={<ProtectedRoute requiredRole="admin"><SecurityMonitoringDashboard /></ProtectedRoute>} />
-            </Routes>
-          </StoreProvider>
-        </EnhancedAuthProvider>
-      </SecurityAuditProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <SecurityAuditProvider>
+          <SimplifiedAuthProvider>
+            <StoreProvider>
+              <React.Suspense fallback={<LoadingFallback message="Loading application..." />}>
+                <Toaster />
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="/pos" element={<ProtectedRoute requireStoreAccess><PosPage /></ProtectedRoute>} />
+                  <Route path="/products" element={<ProtectedRoute requireStoreAccess><ProductsPage /></ProtectedRoute>} />
+                  <Route path="/customers" element={<ProtectedRoute requireStoreAccess><CustomersPage /></ProtectedRoute>} />
+                  <Route path="/reports" element={<ProtectedRoute requireStoreAccess><ReportsPage /></ProtectedRoute>} />
+                  <Route path="/orders" element={<ProtectedRoute requireStoreAccess><OrderManagementPage /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/settings/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+                  <Route path="/settings/stores" element={<ProtectedRoute><StoresPage /></ProtectedRoute>} />
+                  <Route path="/inventory" element={<ProtectedRoute requireStoreAccess><InventoryPage /></ProtectedRoute>} />
+                  <Route path="/production" element={<ProtectedRoute requireStoreAccess><ProductionPage /></ProtectedRoute>} />
+                  <Route path="/commissary" element={<ProtectedRoute><CommissaryInventoryPage /></ProtectedRoute>} />
+                  <Route path="/stock-orders" element={<ProtectedRoute requireStoreAccess><StockOrdersManagement /></ProtectedRoute>} />
+                  <Route path="/security" element={<ProtectedRoute requiredRole="admin"><SecurityMonitoringDashboard /></ProtectedRoute>} />
+                </Routes>
+              </React.Suspense>
+            </StoreProvider>
+          </SimplifiedAuthProvider>
+        </SecurityAuditProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 
