@@ -2,8 +2,16 @@
 import { useState } from 'react';
 import { Product, ProductVariation } from '@/types';
 import { useProductFormState } from './product-form/useProductFormState';
+import { useFormHandlers } from './product-form/useFormHandlers';
+import { useProductSubmit } from './product-form/useProductSubmit';
 
-export const useProductForm = (editingProduct?: Product | null) => {
+interface UseProductFormProps {
+  product?: Product | null;
+  isEditing: boolean;
+  productId?: string;
+}
+
+export const useProductForm = ({ product, isEditing, productId }: UseProductFormProps) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [hasVariations, setHasVariations] = useState(false);
@@ -13,8 +21,13 @@ export const useProductForm = (editingProduct?: Product | null) => {
   const [miniStock, setMiniStock] = useState(0);
   const [overloadPrice, setOverloadPrice] = useState(0);
   const [overloadStock, setOverloadStock] = useState(0);
-  const [stockAdjustment, setStockAdjustment] = useState(0);
+  const [stockAdjustment, setStockAdjustment] = useState({
+    quantity: 0,
+    notes: "",
+    type: "adjustment"
+  });
   const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     formData,
@@ -25,7 +38,43 @@ export const useProductForm = (editingProduct?: Product | null) => {
     removeVariation,
     updateVariation,
     getFormattedProduct,
-  } = useProductFormState(editingProduct);
+  } = useProductFormState(product);
+
+  const handlers = useFormHandlers({
+    formData,
+    handleFieldChange,
+    setImageFile,
+    setImagePreview,
+    setHasVariations,
+    setRegularPrice,
+    setRegularStock,
+    setMiniPrice,
+    setMiniStock,
+    setOverloadPrice,
+    setOverloadStock,
+    setStockAdjustment,
+    setIsAdjustmentDialogOpen
+  });
+
+  const { handleSubmit } = useProductSubmit({
+    isEditing,
+    productId,
+    formData,
+    imageFile,
+    hasVariations,
+    regularPrice,
+    miniPrice,
+    overloadPrice,
+    regularStock,
+    miniStock,
+    overloadStock,
+    setIsSubmitting
+  });
+
+  const handleSaveStockAdjustment = async () => {
+    // Implementation for saving stock adjustment
+    setIsAdjustmentDialogOpen(false);
+  };
 
   return {
     formData,
@@ -58,5 +107,9 @@ export const useProductForm = (editingProduct?: Product | null) => {
     setStockAdjustment,
     isAdjustmentDialogOpen,
     setIsAdjustmentDialogOpen,
+    isSubmitting,
+    ...handlers,
+    handleSubmit,
+    handleSaveStockAdjustment,
   };
 };
