@@ -46,19 +46,3 @@ class AuthDebugLogger {
 }
 
 export const authDebugger = new AuthDebugLogger();
-
-// Helper function for timeout promises - specifically designed for Supabase queries
-export const withTimeout = async <T>(
-  queryBuilder: { then: (resolve: (value: T) => void, reject: (reason?: any) => void) => void },
-  timeoutMs: number,
-  timeoutMessage: string
-): Promise<T> => {
-  return Promise.race([
-    new Promise<T>((resolve, reject) => {
-      queryBuilder.then(resolve, reject);
-    }),
-    new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
-    )
-  ]);
-};

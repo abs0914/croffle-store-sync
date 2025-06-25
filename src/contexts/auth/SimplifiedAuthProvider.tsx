@@ -26,6 +26,24 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const authInitializedRef = useRef(false);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clear loading timeout
+  const clearLoadingTimeout = () => {
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  };
+
+  // Force clear loading state after timeout
+  const setLoadingTimeout = () => {
+    clearLoadingTimeout();
+    loadingTimeoutRef.current = setTimeout(() => {
+      authDebugger.log('Loading timeout reached, forcing loading state to clear', {}, 'warning');
+      setIsLoading(false);
+    }, 5000); // 5 second maximum loading time
+  };
 
   // Simplified login with better error handling
   const login = async (email: string, password: string) => {
@@ -93,14 +111,54 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Simplified user mapping with timeout protection
+  const mapUserSafely = async (supabaseUser: any) => {
+    try {
+      authDebugger.log('Starting safe user mapping', { userId: supabaseUser.id });
+      
+      // Set a race condition with timeout
+      const mappingPromise = enhancedMapSupabaseUser(supabaseUser);
+      const timeoutPromise = new Promise<User>((_, reject) => 
+        setTimeout(() => reject(new Error('User mapping timeout')), 3000)
+      );
+
+      const mappedUser = await Promise.race([mappingPromise, timeoutPromise]);
+      authDebugger.log('User mapping completed successfully', { 
+        userId: mappedUser.id,
+        role: mappedUser.role 
+      });
+      return mappedUser;
+    } catch (error) {
+      authDebugger.log('User mapping failed, using fallback', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId: supabaseUser.id 
+      }, 'error');
+      
+      // Create fallback user to prevent loading lock
+      return {
+        id: supabaseUser.id,
+        email: supabaseUser.email || 'unknown@example.com',
+        firstName: supabaseUser.user_metadata?.first_name || 'User',
+        lastName: supabaseUser.user_metadata?.last_name || '',
+        name: supabaseUser.user_metadata?.first_name || supabaseUser.email?.split('@')[0] || 'User',
+        role: 'staff' as UserRole,
+        storeIds: [],
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+  };
+
   // Simplified auth initialization
   useEffect(() => {
     if (authInitializedRef.current) return;
     authInitializedRef.current = true;
 
     authDebugger.log('Initializing authentication system');
+    setLoadingTimeout(); // Start loading timeout protection
 
-    // Set up auth state listener
+    // Set up auth state listener with simplified logic
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         authDebugger.log('Auth state change event', { 
@@ -109,12 +167,14 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
           userId: newSession?.user?.id 
         });
         
+        clearLoadingTimeout(); // Clear timeout since we got an event
+        
         try {
           setSession(newSession);
           
           if (newSession?.user) {
-            // Map user in background to avoid blocking UI
-            const mappedUser = await enhancedMapSupabaseUser(newSession.user);
+            // Use simplified user mapping with timeout protection
+            const mappedUser = await mapUserSafely(newSession.user);
             setUser(mappedUser);
             authDebugger.log('User authenticated and mapped', { 
               userId: mappedUser.id,
@@ -137,14 +197,16 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Check for existing session
+    // Check for existing session with simplified logic
     const checkInitialSession = async () => {
       try {
+        authDebugger.log('Checking for existing session');
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         if (error) {
           authDebugger.log('Session check error', { error: error.message }, 'error');
           setIsLoading(false);
+          clearLoadingTimeout();
           return;
         }
         
@@ -153,22 +215,27 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
             userId: currentSession.user.id,
             email: currentSession.user.email 
           });
-          // Let the auth state change handler deal with this
+          // The auth state change handler will process this
         } else {
           authDebugger.log('No existing session found');
           setIsLoading(false);
+          clearLoadingTimeout();
         }
       } catch (error) {
         authDebugger.log('Session check failed', { 
           error: error instanceof Error ? error.message : 'Unknown error' 
         }, 'error');
         setIsLoading(false);
+        clearLoadingTimeout();
       }
     };
 
     checkInitialSession();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearLoadingTimeout();
+    };
   }, []);
 
   const hasPermission = (requiredRole: UserRole): boolean => {

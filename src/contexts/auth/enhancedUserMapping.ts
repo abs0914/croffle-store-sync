@@ -3,7 +3,7 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 import { UserRole } from '@/types';
-import { authDebugger, withTimeout } from '@/utils/authDebug';
+import { authDebugger } from '@/utils/authDebug';
 
 interface AppUserData {
   id: string;
@@ -19,19 +19,15 @@ interface AppUserData {
 }
 
 export async function enhancedMapSupabaseUser(supabaseUser: SupabaseUser): Promise<User> {
-  authDebugger.log('Starting user mapping', { userId: supabaseUser.id, email: supabaseUser.email });
+  authDebugger.log('Starting optimized user mapping', { userId: supabaseUser.id, email: supabaseUser.email });
   
   try {
-    // Execute the query and wrap in timeout protection
-    const { data: appUser, error } = await withTimeout(
-      supabase
-        .from('app_users')
-        .select('*')
-        .eq('user_id', supabaseUser.id)
-        .single(),
-      10000, // 10 second timeout
-      'Database query timeout while fetching user data'
-    );
+    // Simple, direct query without complex timeout wrapper
+    const { data: appUser, error } = await supabase
+      .from('app_users')
+      .select('*')
+      .eq('user_id', supabaseUser.id)
+      .single();
 
     if (error) {
       authDebugger.log('Database error fetching app user', { 

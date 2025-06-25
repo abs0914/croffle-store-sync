@@ -25,11 +25,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const loadingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Clear loading timeout
+  const clearLoadingTimeout = () => {
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  };
+
+  // Set loading timeout protection
+  const setLoadingTimeout = () => {
+    clearLoadingTimeout();
+    loadingTimeoutRef.current = setTimeout(() => {
+      authDebugger.log('Store context loading timeout, clearing loading state', {}, 'warning');
+      setIsLoading(false);
+    }, 3000); // 3 second timeout for store loading
+  };
 
   // Fetch stores when the user is authenticated
   useEffect(() => {
     if (authLoading) {
       // Don't fetch stores while auth is still loading
+      authDebugger.log('Store context: Auth still loading, waiting...');
       return;
     }
 
@@ -45,6 +64,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setStores([]);
       setSelectedStore(null);
       setIsLoading(false);
+      clearLoadingTimeout();
     }
   }, [isAuthenticated, user?.storeIds, user?.id, authLoading]);
 
@@ -52,6 +72,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       setError(null);
+      setLoadingTimeout(); // Start timeout protection
+      
       authDebugger.log('Fetching stores for user', { 
         userId: user?.id, 
         role: user?.role, 
@@ -63,10 +85,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setStores([]);
         setSelectedStore(null);
         setIsLoading(false);
+        clearLoadingTimeout();
         return;
       }
 
-      // Build query based on user permissions
+      // Build query based on user permissions with simplified timeout
       let query = supabase.from('stores').select('*');
 
       // Admin and owner users can see all stores
@@ -84,12 +107,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setStores([]);
           setSelectedStore(null);
           setIsLoading(false);
+          clearLoadingTimeout();
           return;
         }
       }
 
-      // Execute the query
-      const { data, error: queryError } = await query;
+      // Execute the query with race condition timeout
+      const queryPromise = query;
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Store query timeout')), 5000)
+      );
+
+      const { data, error: queryError } = await Promise.race([queryPromise, timeoutPromise]);
+
+      clearLoadingTimeout(); // Clear timeout since query completed
 
       if (queryError) {
         authDebugger.log('Error fetching stores', { error: queryError.message }, 'error');
@@ -154,6 +185,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       toast.error('Failed to fetch stores');
     } finally {
       setIsLoading(false);
+      clearLoadingTimeout();
     }
   };
 
@@ -173,6 +205,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     authDebugger.log('Refreshing stores');
     await fetchStores();
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => clearLoadingTimeout();
+  }, []);
 
   return (
     <StoreContext.Provider

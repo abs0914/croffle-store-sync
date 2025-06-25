@@ -1,12 +1,13 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth/SimplifiedAuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { authDebugger } from "@/utils/authDebug";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -14,9 +15,14 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Show loading spinner while checking authentication
+  // Get the redirect path from location state or default to dashboard
+  const from = location.state?.from?.pathname || "/dashboard";
+
+  // Show loading spinner while checking authentication with timeout
   if (isLoading) {
+    authDebugger.log('Login page: Auth loading', { isLoading });
     return (
       <div className="flex items-center justify-center min-h-screen bg-croffle-background">
         <div className="flex items-center space-x-2">
@@ -29,7 +35,8 @@ export default function Login() {
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    navigate("/dashboard");
+    authDebugger.log('Login page: Already authenticated, redirecting', { from });
+    navigate(from, { replace: true });
     return null;
   }
 
@@ -44,10 +51,16 @@ export default function Login() {
     setIsSubmitting(true);
     
     try {
+      authDebugger.log('Login form: Attempting login', { email });
       await login(email, password);
+      
+      authDebugger.log('Login form: Login successful, will redirect after auth state change');
       toast.success("Login successful");
-      // Navigation will be handled by the auth state change
+      
+      // Don't navigate here - let the auth state change handle the redirect
+      // The auth context will update and trigger navigation
     } catch (error: any) {
+      authDebugger.log('Login form: Login failed', { error: error.message }, 'error');
       console.error("Login failed:", error);
       toast.error(error.message || "Login failed");
     } finally {

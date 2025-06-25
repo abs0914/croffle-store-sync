@@ -37,13 +37,17 @@ export function ProtectedRoute({
       userStoreIds: user?.storeIds
     });
 
-    // Set a reasonable timeout for loading
+    // Set a shorter, more reasonable timeout for loading
     const timeout = setTimeout(() => {
-      if (authLoading && !isAuthenticated) {
-        authDebugger.log('Auth loading timeout reached', {}, 'warning');
+      if (authLoading || (requireStoreAccess && storeLoading)) {
+        authDebugger.log('ProtectedRoute loading timeout reached', {
+          authLoading,
+          storeLoading,
+          requireStoreAccess
+        }, 'warning');
         setShowTimeoutError(true);
       }
-    }, 10000); // 10 second timeout
+    }, 8000); // 8 second timeout
 
     return () => clearTimeout(timeout);
   }, [authLoading, storeLoading, isAuthenticated, user, currentStore, location.pathname, requiredRole, requireStoreAccess]);
@@ -90,9 +94,9 @@ export function ProtectedRoute({
     );
   }
 
-  // Show loading while checking authentication
+  // Show loading while checking authentication (with shorter timeout)
   if (authLoading) {
-    return <LoadingFallback message="Loading..." />;
+    return <LoadingFallback message="Authenticating..." />;
   }
 
   // Redirect to login if not authenticated
@@ -120,7 +124,7 @@ export function ProtectedRoute({
     );
   }
 
-  // Show loading while checking store access (but only briefly)
+  // Show brief loading for store access (only if actually required)
   if (requireStoreAccess && storeLoading) {
     return <LoadingFallback message="Loading store information..." />;
   }
