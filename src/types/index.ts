@@ -7,6 +7,40 @@ export type ShiftType = Shift;
 // Product size type
 export type ProductSize = 'regular' | 'mini' | 'croffle-overload';
 
+// Recipe types
+export interface Recipe {
+  id: string;
+  name: string;
+  description?: string;
+  instructions?: string;
+  store_id: string;
+  yield_quantity: number;
+  total_cost?: number;
+  cost_per_serving?: number;
+  approval_status?: string;
+  approved_by?: string;
+  approved_at?: string;
+  product_id: string;
+  variation_id?: string;
+  version?: number;
+  is_active?: boolean;
+  category_name?: string;
+  created_at: string;
+  updated_at: string;
+  rejection_reason?: string;
+}
+
+export interface RecipeIngredient {
+  id: string;
+  recipe_id: string;
+  inventory_stock_id: string;
+  commissary_item_id?: string;
+  quantity: number;
+  unit: string;
+  cost_per_unit?: number;
+  created_at: string;
+}
+
 // Ingredient type for inventory management
 export interface Ingredient {
   id: string;

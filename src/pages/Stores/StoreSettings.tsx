@@ -39,20 +39,22 @@ export default function StoreSettings() {
           <ReceiptSettings 
             receiptHeader={settings.receipt_header}
             receiptFooter={settings.receipt_footer}
-            handleChange={handleChange}
+            onReceiptHeaderChange={(e) => handleChange('receipt_header', e.target.value)}
+            onReceiptFooterChange={(e) => handleChange('receipt_footer', e.target.value)}
           />
           
           <TaxSettings 
             taxPercentage={settings.tax_percentage}
             isTaxInclusive={settings.is_tax_inclusive}
-            handleNumberChange={handleNumberChange}
-            handleSwitchChange={handleSwitchChange}
+            onTaxPercentageChange={(e) => handleNumberChange('tax_percentage', parseFloat(e.target.value) || 0)}
+            onTaxInclusiveChange={(checked) => handleSwitchChange('is_tax_inclusive', checked)}
           />
           
           <RegionalSettings 
             currency={settings.currency}
             timezone={settings.timezone}
-            handleChange={handleChange}
+            onCurrencyChange={(e) => handleChange('currency', e.target.value)}
+            onTimezoneChange={(e) => handleChange('timezone', e.target.value)}
           />
           
           <SettingsActions isSaving={isSaving} />
