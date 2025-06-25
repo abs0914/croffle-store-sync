@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier' | 'staff';
 
 // Shift type alias
@@ -11,15 +10,17 @@ export type ProductSize = 'regular' | 'mini' | 'croffle-overload';
 export interface Ingredient {
   id: string;
   name: string;
-  unit: string;
+  unit_type: string; // Changed from unit to unit_type
   stock_quantity: number;
-  cost?: number;
+  cost_per_unit: number; // Added cost_per_unit
   minimum_threshold?: number;
-  maximum_capacity?: number;
   store_id: string;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
+  // Legacy compatibility
+  unit?: string;
+  cost?: number;
 }
 
 export interface Store {
@@ -134,33 +135,25 @@ export interface TransactionItem {
 
 export interface Transaction {
   id: string;
-  store_id: string;
+  receiptNumber: string;
+  receipt_number: string;
   customer_id?: string;
-  cashier_id?: string;
+  store_id: string;
   total: number;
   subtotal: number;
-  tax: number;
-  tax_amount?: number;
+  tax_amount: number;
   discount: number;
-  discount_amount?: number;
-  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
   payment_method: string;
-  paymentMethod?: string; // Legacy compatibility
-  paymentDetails?: {
-    cardType?: string;
-    cardNumber?: string;
-    eWalletProvider?: string;
-    eWalletReferenceNumber?: string;
-  };
-  amountTendered?: number;
-  change?: number;
-  status: 'pending' | 'completed' | 'cancelled' | 'refunded';
-  receiptNumber: string;
-  receipt_number?: string; // Database compatibility
-  items: TransactionItem[];
+  status: 'pending' | 'completed' | 'cancelled';
+  items: any[];
   created_at: string;
-  createdAt?: string; // Legacy compatibility
   updated_at: string;
+  customers?: {
+    name: string;
+  };
+  stores?: {
+    name: string;
+  };
 }
 
 export interface Shift {
@@ -216,4 +209,41 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CustomerMetrics {
+  totalCustomers: number;
+  activeCustomers: number;
+  newThisMonth: number;
+  averageOrderValue: number;
+  newCustomers: number;
+  topStoreCustomers: number;
+  averageLifetimeValue: number;
+}
+
+export interface CustomerWithStats extends Customer {
+  loyaltyPoints: number;
+  totalOrders: number;
+  totalSpent: number;
+  registrationDate: string;
+}
+
+export interface StoreMetrics {
+  totalStores: number;
+  activeStores: number;
+  inactiveStores: number;
+  companyOwned: number;
+  franchises: number;
+  averagePerformance: number;
+  alertsCount: number;
+}
+
+export interface ReportMetrics {
+  totalRevenue: number;
+  totalTransactions: number;
+  averageOrderValue: number;
+  topSellingProduct: string;
+  revenueGrowth: number;
+  topPerformingStore: string;
+  growthRate: number;
 }

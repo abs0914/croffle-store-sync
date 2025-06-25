@@ -48,7 +48,27 @@ export const useAdminReportsData = () => {
         throw transactionsError;
       }
 
-      setTransactions(transactionsData || []);
+      // Transform data to match Transaction interface
+      const transformedTransactions: Transaction[] = (transactionsData || []).map((transaction: any) => ({
+        id: transaction.id,
+        receiptNumber: transaction.receipt_number,
+        receipt_number: transaction.receipt_number,
+        customer_id: transaction.customer_id,
+        store_id: transaction.store_id,
+        total: transaction.total,
+        subtotal: transaction.subtotal,
+        tax_amount: transaction.tax_amount,
+        discount: transaction.discount,
+        payment_method: transaction.payment_method,
+        status: transaction.status,
+        items: transaction.items || [],
+        created_at: transaction.created_at,
+        updated_at: transaction.updated_at,
+        customers: transaction.customers,
+        stores: transaction.stores,
+      }));
+
+      setTransactions(transformedTransactions);
     } catch (error: any) {
       console.error('Error fetching reports data:', error);
       toast.error('Failed to load reports data');
@@ -106,7 +126,7 @@ export const useAdminReportsData = () => {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(transaction => 
         transaction.receiptNumber.toLowerCase().includes(query) ||
-        (transaction.customer_id && transaction.customers?.name && 
+        (transaction.customers?.name && 
          transaction.customers.name.toLowerCase().includes(query))
       );
     }
@@ -143,7 +163,9 @@ export const useAdminReportsData = () => {
       totalTransactions,
       averageOrderValue,
       topSellingProduct,
-      revenueGrowth
+      revenueGrowth,
+      topPerformingStore: 'N/A', // Would need store performance data
+      growthRate: 0 // Would need historical data to calculate
     };
   }, [filteredTransactions]);
 

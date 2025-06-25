@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, Store } from '@/types';
@@ -9,6 +8,9 @@ interface CustomerMetrics {
   activeCustomers: number;
   newThisMonth: number;
   averageOrderValue: number;
+  newCustomers: number;
+  topStoreCustomers: number;
+  averageLifetimeValue: number;
 }
 
 export function useAdminCustomersData() {
@@ -110,7 +112,10 @@ export function useAdminCustomersData() {
       totalCustomers: customers.length,
       activeCustomers: customers.length, // Assuming all customers are active
       newThisMonth,
-      averageOrderValue: 0 // Would need transaction data to calculate
+      averageOrderValue: 0, // Would need transaction data to calculate
+      newCustomers: newThisMonth,
+      topStoreCustomers: 0, // Would need more complex calculation
+      averageLifetimeValue: 0 // Would need transaction data to calculate
     };
   }, [customers]);
 

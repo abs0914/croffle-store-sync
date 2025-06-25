@@ -1,102 +1,114 @@
-
-import { useState } from "react";
-import { useStore } from "@/contexts/StoreContext";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from 'react';
+import { Category } from '@/types';
+import { useStore } from '@/contexts/StoreContext';
+import { toast } from 'sonner';
 import { 
   fetchCategories, 
   createCategory, 
   updateCategory, 
-  deleteCategory 
-} from "@/services/categoryService";
-import { createDefaultCategories } from "@/services/product/createDefaultCategories";
-import { Category } from "@/types";
-import { toast } from "sonner";
-import { CategoryFormData } from "../components/categories/CategoryForm";
+  deleteCategory,
+  createDefaultCategories 
+} from "@/services/inventoryManagement/categoryService";
+import { CategoryFormData } from '../components/categories/CategoryForm';
 
 export const useCategoryData = () => {
-  const { currentStore } = useStore();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  
-  const { data: categories = [], isLoading, refetch } = useQuery({
-    queryKey: ["categories", currentStore?.id],
-    queryFn: () => currentStore?.id ? fetchCategories(currentStore.id) : Promise.resolve([]),
-    enabled: !!currentStore?.id,
-  });
-  
-  const filteredCategories = categories.filter(category => 
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
+  const { currentStore } = useStore();
+
+  const fetchCategories = async () => {
+    if (!currentStore) return;
+    setIsLoading(true);
+    try {
+      const data = await fetchCategories(currentStore.id);
+      setCategories(data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      toast.error("Failed to load categories");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, [currentStore]);
+
+  useEffect(() => {
+    if (!searchTerm) {
+      fetchCategories();
+      return;
+    }
+
+    const filtered = categories.filter(cat =>
+      cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cat.description && cat.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    setCategories(filtered);
+  }, [searchTerm]);
+
   const handleAdd = () => {
     setEditingCategory(null);
     setIsDialogOpen(true);
   };
-  
+
   const handleEdit = (category: Category) => {
     setEditingCategory(category);
     setIsDialogOpen(true);
   };
-  
+
+  const handleDelete = async (category: Category) => {
+    if (!category.id) return;
+    
+    try {
+      const success = await deleteCategory(category.id);
+      if (success) {
+        await fetchCategories();
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+    }
+  };
+
   const handleSubmit = async (formData: CategoryFormData) => {
-    if (!currentStore) {
-      toast.error("No store selected");
-      return;
-    }
-    
-    if (!formData.name.trim()) {
-      toast.error("Category name is required");
-      return;
-    }
-    
+    if (!currentStore) return;
+
     try {
       if (editingCategory) {
-        // Update existing category
-        await updateCategory(editingCategory.id, {
-          name: formData.name,
-          description: formData.description || null,
-          is_active: formData.is_active
-        });
+        await updateCategory(editingCategory.id, formData);
       } else {
-        // Create new category
-        await createCategory({
-          name: formData.name,
-          description: formData.description || null,
-          store_id: currentStore.id,
-          is_active: formData.is_active
-        });
+        await createCategory({ ...formData, store_id: currentStore.id });
       }
       
-      refetch();
       setIsDialogOpen(false);
+      setEditingCategory(null);
+      await fetchCategories();
     } catch (error) {
-      console.error("Error saving category:", error);
+      console.error('Error saving category:', error);
     }
   };
-  
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteCategory(id);
-      refetch();
-    } catch (error) {
-      console.error("Error deleting category:", error);
-    }
-  };
-  
+
   const handleCreateDefaultCategories = async () => {
-    if (!currentStore?.id) {
-      toast.error("No store selected");
-      return;
+    if (!currentStore) return;
+
+    try {
+      setIsLoading(true);
+      await createDefaultCategories(currentStore.id);
+      toast.success('Default categories created successfully!');
+      await fetchCategories();
+    } catch (error) {
+      console.error('Error creating default categories:', error);
+      toast.error('Failed to create default categories');
+    } finally {
+      setIsLoading(false);
     }
-    
-    await createDefaultCategories(currentStore.id);
-    refetch();
   };
-  
+
   return {
-    categories: filteredCategories,
+    categories,
     isLoading,
     searchTerm,
     setSearchTerm,

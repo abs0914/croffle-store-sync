@@ -14,12 +14,12 @@ export default function AdminReports() {
   const [storeFilter, setStoreFilter] = useState('all');
   
   const {
-    reportData,
+    filteredTransactions: reportData,
     reportMetrics,
     stores,
     isLoading,
     refreshReports
-  } = useAdminReportsData(reportType, dateRange, storeFilter);
+  } = useAdminReportsData();
 
   return (
     <div className="space-y-6">

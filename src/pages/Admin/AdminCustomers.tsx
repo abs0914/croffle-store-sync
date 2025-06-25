@@ -5,6 +5,7 @@ import { AdminCustomersMetrics } from './components/AdminCustomersMetrics';
 import { AdminCustomersList } from './components/AdminCustomersList';
 import { AdminCustomerBulkActions } from './components/AdminCustomerBulkActions';
 import { useAdminCustomersData } from './hooks/useAdminCustomersData';
+import { Customer, CustomerWithStats } from '@/types';
 
 export default function AdminCustomers() {
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
@@ -47,6 +48,15 @@ export default function AdminCustomers() {
     await refreshCustomers();
   };
 
+  // Transform customers to include stats for the list component
+  const customersWithStats: CustomerWithStats[] = filteredCustomers.map(customer => ({
+    ...customer,
+    loyaltyPoints: 0,
+    totalOrders: 0,
+    totalSpent: 0,
+    registrationDate: customer.created_at || new Date().toISOString()
+  }));
+
   return (
     <div className="space-y-6">
       <AdminCustomersHeader 
@@ -72,7 +82,7 @@ export default function AdminCustomers() {
       )}
       
       <AdminCustomersList
-        customers={filteredCustomers}
+        customers={customersWithStats}
         selectedCustomers={selectedCustomers}
         viewMode={viewMode}
         isLoading={isLoading}

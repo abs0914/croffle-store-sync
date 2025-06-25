@@ -70,9 +70,26 @@ export function useAdminStoresData() {
 
   const createStore = async (storeData: Partial<Store>) => {
     try {
+      const storeToCreate = {
+        name: storeData.name || '',
+        address: storeData.address || '',
+        phone: storeData.phone,
+        email: storeData.email,
+        tax_id: storeData.tax_id,
+        logo_url: storeData.logo_url,
+        is_active: storeData.is_active ?? true,
+        location_type: storeData.location_type,
+        region: storeData.region,
+        logistics_zone: storeData.logistics_zone,
+        ownership_type: storeData.ownership_type,
+        franchise_agreement_date: storeData.franchise_agreement_date,
+        franchise_fee_percentage: storeData.franchise_fee_percentage,
+        franchisee_contact_info: storeData.franchisee_contact_info,
+      };
+
       const { data, error } = await supabase
         .from('stores')
-        .insert([storeData])
+        .insert([storeToCreate])
         .select()
         .single();
 
@@ -196,7 +213,9 @@ export function useAdminStoresData() {
       activeStores,
       inactiveStores,
       companyOwned,
-      franchises
+      franchises,
+      averagePerformance: 0, // Would need performance data to calculate
+      alertsCount: 0 // Would need alerts data to calculate
     };
   }, [stores]);
 
