@@ -37,8 +37,8 @@ export function usePermissions() {
       };
     }
 
-    // Check store access for non-admin users
-    if (requireStoreAccess && currentStore && user.role !== 'admin' && user.role !== 'owner') {
+    // Check store access for non-admin/owner users
+    if (requireStoreAccess && currentStore && !['admin', 'owner'].includes(user.role)) {
       const hasStoreAccess = user.storeIds?.includes(currentStore.id);
       if (!hasStoreAccess) {
         return { 
