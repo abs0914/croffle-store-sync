@@ -19,7 +19,17 @@ export const fetchCustomerData = async (storeId: string): Promise<Customer[]> =>
       throw new Error(error.message);
     }
     
-    return data || [];
+    return data?.map(item => ({
+      id: item.id,
+      name: item.name,
+      email: item.email || undefined,
+      phone: item.phone,
+      store_id: item.store_id,
+      storeId: item.store_id,
+      address: item.address || undefined,
+      created_at: item.created_at,
+      updated_at: item.updated_at
+    })) || [];
   } catch (error) {
     console.error("Error fetching customer data:", error);
     return [];
@@ -48,11 +58,13 @@ export const fetchCustomerTransactions = async (customerId: string): Promise<Tra
       shift_id: item.shift_id,
       total: item.total,
       subtotal: item.subtotal,
-      tax_amount: item.tax,
-      tax: item.tax,
+      tax_amount: item.tax || item.tax_amount || 0,
+      tax: item.tax || item.tax_amount || 0,
       discount: item.discount,
       payment_method: item.payment_method,
-      status: item.status,
+      status: (item.status === 'completed' || item.status === 'pending' || item.status === 'cancelled' || item.status === 'voided') 
+        ? item.status 
+        : 'completed' as const,
       items: typeof item.items === 'string' ? JSON.parse(item.items) : item.items,
       created_at: item.created_at,
       updated_at: item.updated_at || item.created_at
