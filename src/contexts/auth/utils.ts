@@ -22,11 +22,16 @@ export async function mapSupabaseUser(supabaseUser: SupabaseUser): Promise<User>
       throw new Error('User not found in app_users table');
     }
 
+    const firstName = appUser.first_name || '';
+    const lastName = appUser.last_name || '';
+    const fullName = `${firstName} ${lastName}`.trim() || appUser.email?.split('@')[0] || 'User';
+
     return {
       id: appUser.id,
       email: appUser.email,
-      firstName: appUser.first_name,
-      lastName: appUser.last_name,
+      firstName,
+      lastName,
+      name: fullName,
       role: appUser.role as UserRole,
       storeIds: appUser.store_ids || [],
       isActive: appUser.is_active,

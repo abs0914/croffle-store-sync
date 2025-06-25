@@ -18,7 +18,7 @@ export function ProtectedRoute({
   requireStoreAccess = false 
 }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated, hasPermission, hasStoreAccess } = useAuth();
-  const { selectedStore } = useStore();
+  const { currentStore } = useStore(); // Use currentStore instead of selectedStore
   const location = useLocation();
 
   if (isLoading) {
@@ -45,14 +45,14 @@ export function ProtectedRoute({
   }
 
   // Check store-specific access
-  if (requireStoreAccess && selectedStore && !hasStoreAccess(selectedStore.id)) {
+  if (requireStoreAccess && currentStore && !hasStoreAccess(currentStore.id)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Store Access Required</h2>
           <p className="text-gray-600">You don't have access to this store.</p>
           <p className="text-sm text-gray-500 mt-2">
-            Store: {selectedStore.name}
+            Store: {currentStore.name}
           </p>
         </div>
       </div>

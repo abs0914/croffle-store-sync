@@ -1,50 +1,46 @@
-
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { Store } from "@/types";
-import { useAuth } from "@/contexts/auth";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Store } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/auth/SimplifiedAuthProvider';
+import { toast } from 'sonner';
 
 interface StoreState {
   stores: Store[];
+  selectedStore: Store | null;
   currentStore: Store | null;
   isLoading: boolean;
-  setCurrentStore: (store: Store) => void;
+  error: string | null;
+  selectStore: (store: Store) => void;
+  refreshStores: () => Promise<void>;
 }
 
-const initialState: StoreState = {
-  stores: [],
-  currentStore: null,
-  isLoading: true,
-  setCurrentStore: () => {},
-};
-
-const StoreContext = createContext<StoreState>(initialState);
+const StoreContext = createContext<StoreState | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
-  const [currentStore, setCurrentStore] = useState<Store | null>(null);
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user, isAuthenticated } = useAuth();
 
   // Fetch stores when the user is authenticated or their store assignments change
   useEffect(() => {
-    if (user) {
+    if (isAuthenticated) {
       fetchStores();
     } else {
       setStores([]);
-      setCurrentStore(null);
+      setSelectedStore(null);
       setIsLoading(false);
     }
-  }, [user, user?.storeIds]);
+  }, [isAuthenticated, user?.storeIds]);
 
   const fetchStores = async () => {
     try {
       setIsLoading(true);
 
-      if (!user) {
+      if (!isAuthenticated) {
         setStores([]);
-        setCurrentStore(null);
+        setSelectedStore(null);
         return;
       }
 
@@ -63,7 +59,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           // User has no assigned stores
           console.warn('User has no assigned stores:', user.email);
           setStores([]);
-          setCurrentStore(null);
+          setSelectedStore(null);
           return;
         }
       }
@@ -78,7 +74,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setStores(data as Store[]);
 
         // Set the current store based on user's assigned stores
-        if (!currentStore) {
+        if (!selectedStore) {
           let defaultStore: Store | null = null;
 
           if (user.role === 'admin' || user.role === 'owner') {
@@ -96,12 +92,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
           if (defaultStore) {
             console.log('Setting default store for user:', user.email, 'to:', defaultStore.name);
-            setCurrentStore(defaultStore);
+            setSelectedStore(defaultStore);
           }
         }
       } else {
         setStores([]);
-        setCurrentStore(null);
+        setSelectedStore(null);
       }
     } catch (error) {
       console.error('Error fetching stores:', error);
@@ -111,13 +107,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const selectStore = (store: Store) => {
+    setSelectedStore(store);
+    localStorage.setItem('selectedStoreId', store.id);
+  };
+
+  const refreshStores = async () => {
+    await fetchStores();
+  };
+
   return (
     <StoreContext.Provider
       value={{
         stores,
-        currentStore,
+        selectedStore,
+        currentStore: selectedStore, // For backward compatibility
         isLoading,
-        setCurrentStore,
+        error,
+        selectStore,
+        refreshStores,
       }}
     >
       {children}
@@ -125,4 +133,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export const useStore = () => useContext(StoreContext);
+export function useStore() {
+  const context = useContext(StoreContext);
+  if (context === undefined) {
+    throw new Error('useStore must be used within a StoreProvider');
+  }
+  return context;
+}

@@ -6,8 +6,10 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  name: string; // Full name computed from firstName + lastName
   role: UserRole;
   storeIds: string[];
+  avatar?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
