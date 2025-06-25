@@ -58,8 +58,31 @@ export function BulkUploadTab({
     let filename = '';
     switch (type) {
       case 'commissary':
-        csvContent = ['name,category,unit,unit_cost,current_stock,minimum_threshold,supplier_name,sku,storage_location', 'All-Purpose Flour,raw_materials,kg,0.50,100,20,Flour Supplier Inc,FL001,Storage Room A', 'Vanilla Extract,raw_materials,ml,0.25,50,10,Flavor Co,VE001,Storage Room B', 'Food Grade Boxes,packaging_materials,pieces,0.15,200,50,Package Pro,BOX001,Storage Room C'].join('\n');
-        filename = 'commissary_inventory_template.csv';
+        // Enhanced template with actual raw materials from the screenshot
+        csvContent = [
+          'name,category,uom,unit_cost,current_stock,minimum_threshold,supplier_name,sku,storage_location',
+          'Regular Croissant,raw_materials,1 Box,150.00,10,2,Supplier Name,RAW-CROIS-REG,Cold Storage',
+          'Biscoff Crushed,raw_materials,1 Kilo,180.00,5,1,Biscoff Supplier,RAW-BISC-CRUSH,Dry Storage',
+          'Biscoff Spread,raw_materials,680 grams,320.00,8,2,Biscoff Supplier,RAW-BISC-SPREAD,Dry Storage',
+          'Chocolate Bar Crushed,raw_materials,500 grams,250.00,6,1,Chocolate Co,RAW-CHOC-CRUSH,Dry Storage',
+          'Chocolate Chips,raw_materials,1 Kilo,380.00,4,1,Chocolate Co,RAW-CHOC-CHIPS,Dry Storage',
+          'Chocolate Syrup,raw_materials,630 grams,200.00,12,3,Chocolate Co,RAW-CHOC-SYR,Dry Storage',
+          'Whipped Cream,raw_materials,1 Liter,120.00,15,3,Dairy Co,RAW-CREAM-WHIP,Cold Storage',
+          'Ice Cream,raw_materials,2500 grams,280.00,8,2,Dairy Co,RAW-ICECREAM,Freezer',
+          'Almonds Crushed,raw_materials,454 grams,420.00,5,1,Nuts Co,RAW-ALMOND-CRUSH,Dry Storage',
+          'Almonds Sliced,raw_materials,454 grams,400.00,6,1,Nuts Co,RAW-ALMOND-SLICE,Dry Storage',
+          'Peanuts,raw_materials,1 Kilo,180.00,4,1,Nuts Co,RAW-PEANUTS,Dry Storage',
+          'Banana,raw_materials,1 Kilo,80.00,20,5,Fresh Fruits,RAW-BANANA,Room Temperature',
+          'Strawberry,raw_materials,500 grams,150.00,10,3,Fresh Fruits,RAW-STRAWBERRY,Cold Storage',
+          'Caramel Sauce,raw_materials,750 grams,180.00,8,2,Sauce Co,RAW-CARAMEL,Dry Storage',
+          'Nutella,raw_materials,900 grams,450.00,6,2,Nutella Co,RAW-NUTELLA,Dry Storage',
+          'Peanut Butter,raw_materials,510 grams,220.00,7,2,PB Co,RAW-PB,Dry Storage',
+          'Milk,raw_materials,1 Liter,65.00,25,5,Dairy Co,RAW-MILK,Cold Storage',
+          'Croissant Box,packaging_materials,Pack of 50,125.00,20,5,Packaging Co,PKG-CROIS-BOX,Storage Room',
+          'Food Container Small,packaging_materials,Pack of 100,180.00,15,3,Packaging Co,PKG-CONT-SM,Storage Room',
+          'Food Container Large,packaging_materials,Pack of 50,220.00,12,3,Packaging Co,PKG-CONT-LG,Storage Room'
+        ].join('\n');
+        filename = 'commissary_raw_materials_template.csv';
         break;
       case 'conversion':
         // Updated template to match your conversion spreadsheet format
@@ -97,6 +120,12 @@ export function BulkUploadTab({
 
         <TabsContent value="commissary">
           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Factory className="h-5 w-5" />
+                Upload Raw Materials & Supplies
+              </CardTitle>
+            </CardHeader>
             <CardContent>
               <RawIngredientUpload />
             </CardContent>
@@ -118,27 +147,56 @@ export function BulkUploadTab({
         </TabsContent>
       </Tabs>
 
-      {/* Upload Guidelines */}
+      {/* Enhanced Upload Guidelines */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Upload Guidelines
+            Upload Guidelines & Templates
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
             <div>
-              <h4 className="font-medium mb-2">Commissary Items</h4>
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Factory className="h-4 w-4" />
+                Commissary Raw Materials
+              </h4>
+              <div className="space-y-2 mb-4">
+                <Button 
+                  onClick={() => handleDownloadTemplate('commissary')}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Raw Materials Template
+                </Button>
+              </div>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Raw materials, packaging, supplies</li>
+                <li>• Support for custom UOM (1 Box, 1 Kilo, 680 grams, etc.)</li>
                 <li>• Include supplier information</li>
                 <li>• Set proper stock thresholds</li>
-                <li>• Use standard units (kg, g, pieces, etc.)</li>
+                <li>• Specify storage locations</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-medium mb-2">Conversion Recipes</h4>
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Conversion Recipes
+              </h4>
+              <div className="space-y-2 mb-4">
+                <Button 
+                  onClick={() => handleDownloadTemplate('conversion')}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Conversion Template
+                </Button>
+              </div>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Transform commissary items to products</li>
                 <li>• Include input/output quantities</li>
