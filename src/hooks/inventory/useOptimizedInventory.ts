@@ -40,7 +40,7 @@ export function useOptimizedInventory(storeId?: string) {
         id: item.id,
         name: item.item,
         sku: item.sku || '',
-        category: 'General', // Default category since not in inventory_stock
+        category: 'supplies' as const, // Use valid category from InventoryItem type
         current_stock: item.stock_quantity,
         minimum_threshold: item.minimum_threshold || 10,
         maximum_capacity: item.maximum_capacity || 1000,
