@@ -1,11 +1,22 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Customer, Store } from '@/types';
 import { toast } from 'sonner';
 
+interface CustomerMetrics {
+  totalCustomers: number;
+  activeCustomers: number;
+  newThisMonth: number;
+  averageOrderValue: number;
+}
+
 export function useAdminCustomersData() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [storeFilter, setStoreFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,11 +77,57 @@ export function useAdminCustomersData() {
     }
   };
 
+  const filteredCustomers = useMemo(() => {
+    let filtered = customers;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(customer => 
+        customer.name.toLowerCase().includes(query) ||
+        (customer.email && customer.email.toLowerCase().includes(query)) ||
+        customer.phone.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply store filter
+    if (storeFilter !== 'all') {
+      filtered = filtered.filter(customer => customer.store_id === storeFilter);
+    }
+
+    return filtered;
+  }, [customers, searchQuery, storeFilter]);
+
+  const customerMetrics: CustomerMetrics = useMemo(() => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const newThisMonth = customers.filter(customer => 
+      new Date(customer.created_at) >= startOfMonth
+    ).length;
+
+    return {
+      totalCustomers: customers.length,
+      activeCustomers: customers.length, // Assuming all customers are active
+      newThisMonth,
+      averageOrderValue: 0 // Would need transaction data to calculate
+    };
+  }, [customers]);
+
   return {
     customers,
     stores,
+    filteredCustomers,
+    searchQuery,
+    setSearchQuery,
+    storeFilter,
+    setStoreFilter,
+    statusFilter,
+    setStatusFilter,
     isLoading,
     error,
     fetchData,
+    refreshCustomers: fetchData,
+    customerMetrics,
   };
 }

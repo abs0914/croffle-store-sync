@@ -1,11 +1,22 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Store } from '@/types';
 import { toast } from 'sonner';
 
+interface StoreMetrics {
+  totalStores: number;
+  activeStores: number;
+  inactiveStores: number;
+  companyOwned: number;
+  franchises: number;
+}
+
 export function useAdminStoresData() {
   const [stores, setStores] = useState<Store[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -144,11 +155,65 @@ export function useAdminStoresData() {
     return stores.filter(store => store.region === region);
   };
 
+  const filteredStores = useMemo(() => {
+    let filtered = stores;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(store => 
+        store.name.toLowerCase().includes(query) ||
+        (store.location && store.location.toLowerCase().includes(query)) ||
+        (store.region && store.region.toLowerCase().includes(query))
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(store => {
+        if (statusFilter === 'active') return store.is_active;
+        if (statusFilter === 'inactive') return !store.is_active;
+        return true;
+      });
+    }
+
+    // Apply location filter
+    if (locationFilter !== 'all') {
+      filtered = filtered.filter(store => store.location_type === locationFilter);
+    }
+
+    return filtered;
+  }, [stores, searchQuery, statusFilter, locationFilter]);
+
+  const storeMetrics: StoreMetrics = useMemo(() => {
+    const activeStores = stores.filter(store => store.is_active).length;
+    const inactiveStores = stores.filter(store => !store.is_active).length;
+    const companyOwned = stores.filter(store => store.ownership_type === 'company_owned').length;
+    const franchises = stores.filter(store => store.ownership_type === 'franchisee').length;
+
+    return {
+      totalStores: stores.length,
+      activeStores,
+      inactiveStores,
+      companyOwned,
+      franchises
+    };
+  }, [stores]);
+
   return {
     stores,
+    filteredStores,
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
+    locationFilter,
+    setLocationFilter,
     isLoading,
     error,
     fetchStores,
+    refreshStores: fetchStores,
+    storeMetrics,
     createStore,
     updateStore,
     deleteStore,
