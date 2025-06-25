@@ -8,7 +8,7 @@ import { Plus, Package, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/types";
-import { InventoryHeader } from "./components/InventoryHeader";
+import InventoryHeader from "./components/InventoryHeader";
 import { ProductsTable } from "./components/ProductsTable";
 import { SearchFilters } from "./components/SearchFilters";
 import { useInventoryData } from "./hooks/useInventoryData";
@@ -87,9 +87,9 @@ export default function Inventory() {
               <div className="space-y-4">
                 <SearchFilters
                   searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
+                  onSearchChange={setSearchTerm}
                   activeCategory={activeCategory}
-                  setActiveCategory={setActiveCategory}
+                  onCategoryChange={setActiveCategory}
                   categories={categories}
                 />
                 

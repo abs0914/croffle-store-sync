@@ -18,6 +18,7 @@ export const useCategoryData = () => {
   const queryClient = useQueryClient();
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: categories = [], isLoading, error } = useQuery({
     queryKey: ['categories', currentStore?.id],
@@ -100,7 +101,7 @@ export const useCategoryData = () => {
     }
   };
 
-  const handleCreateDefaults = () => {
+  const handleCreateDefaultCategories = () => {
     if (window.confirm('This will create default categories for your store. Continue?')) {
       createDefaultMutation.mutate();
     }
@@ -113,11 +114,15 @@ export const useCategoryData = () => {
     editingCategory,
     isFormOpen,
     setIsFormOpen,
+    searchTerm,
+    setSearchTerm,
+    isDialogOpen: isFormOpen,
+    setIsDialogOpen: setIsFormOpen,
     handleAdd,
     handleEdit,
     handleDelete,
     handleSubmit,
-    handleCreateDefaults,
+    handleCreateDefaultCategories,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
