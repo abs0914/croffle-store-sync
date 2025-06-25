@@ -1,5 +1,5 @@
 
-export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier';
+export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier' | 'staff';
 
 export interface Session {
   access_token: string;
