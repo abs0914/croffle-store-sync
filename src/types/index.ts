@@ -1,27 +1,55 @@
 
+export type UserRole = 'admin' | 'owner' | 'manager' | 'cashier' | 'staff';
 
-// Core types
-export type { UserRole, User } from './user';
-export type { Store, StoreSettings } from './store';
-export type { Product, ProductVariation, Category, ProductSize } from './product';
-export type { CartItem, Customer, Transaction, TransactionItem, Shift as ShiftType } from './transaction';
-export type { Recipe, RecipeIngredient } from './recipe';
-export type { Shift } from './shift';
-export type { Manager, ManagerFormData } from './manager';
-export type { Cashier, CashierFormData } from './cashier';
-export type { AppUser, AppUserFormData } from './appUser';
+export interface Store {
+  id: string;
+  name: string;
+  location: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
-// Inventory types
-export type { InventoryStock, Ingredient } from './inventory';
+export interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  description?: string;
+  price: number;
+  cost?: number;
+  stock_quantity: number;
+  category_id?: string;
+  store_id: string;
+  image_url?: string;
+  barcode?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
-// Commissary types
-export type { CommissaryInventoryItem, RecipeUpload, RecipeIngredientUpload, RawIngredientUpload } from './commissary';
-export type { CommissaryPurchase, CommissaryPurchaseForm, PurchaseHistory } from './commissaryPurchases';
-export type { LocationType, LocationPricing, RegionalSupplier, LocationPricingInfo } from './location';
+export interface Customer {
+  id: string;
+  name: string;
+  email?: string;
+  phone: string;
+  store_id: string;
+  created_at: string;
+  updated_at: string;
+}
 
-// Order management types
-export type { PurchaseOrder, PurchaseOrderItem, Supplier } from './orderManagement';
-
-// Report types
-export * from './reports';
-
+export interface Transaction {
+  id: string;
+  store_id: string;
+  customer_id?: string;
+  cashier_id?: string;
+  total: number;
+  tax_amount?: number;
+  discount_amount?: number;
+  payment_method: string;
+  status: 'pending' | 'completed' | 'cancelled' | 'refunded';
+  created_at: string;
+  updated_at: string;
+}

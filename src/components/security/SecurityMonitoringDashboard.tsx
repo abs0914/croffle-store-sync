@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/auth';
+import { useAuth } from '@/contexts/auth/SimplifiedAuthProvider';
 import { Shield, AlertTriangle, Eye, RefreshCw, TrendingUp, Activity } from 'lucide-react';
 import { format } from 'date-fns';
+import { LoadingFallback } from '@/components/ui/LoadingFallback';
 
 interface SecurityEvent {
   id: string;
@@ -23,6 +24,7 @@ export function SecurityMonitoringDashboard() {
   const { hasPermission } = useAuth();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
     totalEvents: 0,
     failedLogins: 0,
@@ -48,17 +50,27 @@ export function SecurityMonitoringDashboard() {
   const fetchSecurityEvents = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       
-      // Fetch recent security events from the new audit log table
-      const { data: auditEvents, error } = await supabase
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+      
+      const queryPromise = supabase
         .from('security_audit_log')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
+      
+      const { data: auditEvents, error: queryError } = await Promise.race([
+        queryPromise,
+        timeoutPromise
+      ]) as any;
 
-      if (error) {
-        console.error('Error fetching security events:', error);
-        // Fallback to mock data if database query fails
+      if (queryError) {
+        console.error('Error fetching security events:', queryError);
+        setError('Failed to load security events');
         setEvents([]);
       } else {
         // Transform the data to match our SecurityEvent interface
@@ -99,8 +111,9 @@ export function SecurityMonitoringDashboard() {
         criticalEvents,
         lastUpdate: new Date()
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching security events:', error);
+      setError(error.message || 'Failed to load security events');
       setEvents([]);
     } finally {
       setIsLoading(false);
@@ -110,15 +123,36 @@ export function SecurityMonitoringDashboard() {
   useEffect(() => {
     fetchSecurityEvents();
     
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchSecurityEvents, 30000);
+    // Reduced refresh interval and add cleanup
+    const interval = setInterval(fetchSecurityEvents, 60000); // 1 minute instead of 30 seconds
     return () => clearInterval(interval);
   }, []);
+
+  if (isLoading && events.length === 0) {
+    return <LoadingFallback message="Loading security monitoring dashboard..." />;
+  }
+
+  if (error && events.length === 0) {
+    return (
+      <Card className="border-red-200">
+        <CardContent className="pt-6">
+          <div className="text-center text-red-600">
+            <AlertTriangle className="h-12 w-12 mx-auto mb-2" />
+            <p className="font-medium">Error Loading Security Data</p>
+            <p className="text-sm mt-1">{error}</p>
+            <Button onClick={fetchSecurityEvents} className="mt-4" variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const getSeverityVariant = (severity: string) => {
     switch (severity) {
       case 'critical':
-        return 'destructive';
       case 'error':
         return 'destructive';
       case 'warning':
@@ -146,7 +180,6 @@ export function SecurityMonitoringDashboard() {
     if (!details) return '';
     if (typeof details === 'string') return details;
     
-    // Format common details nicely
     const formatted = [];
     if (details.email) formatted.push(`Email: ${details.email}`);
     if (details.error) formatted.push(`Error: ${details.error}`);
@@ -181,7 +214,7 @@ export function SecurityMonitoringDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalEvents}</div>
-            <p className="text-xs text-muted-foreground">Last 24 hours</p>
+            <p className="text-xs text-muted-foreground">Recent activity</p>
           </CardContent>
         </Card>
         
@@ -271,13 +304,6 @@ export function SecurityMonitoringDashboard() {
                 <Shield className="h-12 w-12 mx-auto mb-2 opacity-30" />
                 <p>No security events found</p>
                 <p className="text-sm">This is a good sign!</p>
-              </div>
-            )}
-
-            {isLoading && (
-              <div className="text-center text-gray-500 py-8">
-                <RefreshCw className="h-8 w-8 mx-auto mb-2 animate-spin" />
-                <p>Loading security events...</p>
               </div>
             )}
           </div>
