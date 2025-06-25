@@ -25,20 +25,34 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const authInitializedRef = useRef(false);
+  const sessionCheckAttempts = useRef(0);
 
-  // Simplified login without security audit logging during initial load
+  // Enhanced login with better error handling
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    console.log('🔐 Attempting login for:', email);
+    try {
+      // Clear any existing session first
+      await supabase.auth.signOut();
+      
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
+      if (error) {
+        console.error('🔐 Login error:', error);
+        throw error;
+      }
+      
+      console.log('🔐 Login successful');
+    } catch (error) {
+      console.error('🔐 Login failed:', error);
       throw error;
     }
   };
 
   const register = async (email: string, password: string, userData?: any) => {
+    console.log('🔐 Attempting registration for:', email);
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -48,19 +62,29 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
+      console.error('🔐 Registration error:', error);
       throw error;
     }
   };
 
   const logout = async () => {
+    console.log('🔐 Logging out...');
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
     }
     
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Logout error:", error);
-    } else {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("🔐 Logout error:", error);
+      } else {
+        console.log('🔐 Logout successful');
+        setUser(null);
+        setSession(null);
+      }
+    } catch (error) {
+      console.error("🔐 Logout failed:", error);
+      // Force clear state even if logout fails
       setUser(null);
       setSession(null);
     }
@@ -73,98 +97,144 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
 
     if (session.expires_at) {
       const refreshTime = (session.expires_at * 1000) - Date.now() - 60000;
+      console.log('🔐 Setting up token refresh in:', Math.round(refreshTime / 1000), 'seconds');
+      
       if (refreshTime > 0) {
         refreshTimeoutRef.current = setTimeout(async () => {
+          console.log('🔐 Attempting token refresh...');
           try {
             const { data, error } = await supabase.auth.refreshSession();
-            if (error) throw error;
+            if (error) {
+              console.error('🔐 Token refresh error:', error);
+              // If refresh fails, try to get current session
+              const { data: currentSession } = await supabase.auth.getSession();
+              if (!currentSession.session) {
+                console.log('🔐 No valid session after refresh failure, logging out');
+                await logout();
+              }
+              return;
+            }
+            
             if (data.session) {
+              console.log('🔐 Token refresh successful');
               setSession(data.session);
               setupTokenRefresh(data.session);
             }
           } catch (error) {
-            console.error("Token refresh failed:", error);
-            logout();
+            console.error("🔐 Token refresh failed:", error);
+            // Force logout on refresh failure
+            await logout();
           }
         }, refreshTime);
       }
     }
   };
 
-  // Simplified auth initialization with shorter timeout
+  // Enhanced auth initialization with retry logic
   useEffect(() => {
     if (authInitializedRef.current) return;
     authInitializedRef.current = true;
 
     console.log('🔐 Initializing simplified authentication...');
     
-    // Set loading timeout - shorter timeout for better UX
+    // Set loading timeout with retry capability
     const loadingTimeout = setTimeout(() => {
-      console.warn('⚠️ Authentication initialization timeout - setting not loading');
-      setIsLoading(false);
-    }, 5000); // 5 second timeout instead of 10
+      console.warn('⚠️ Authentication initialization timeout');
+      if (sessionCheckAttempts.current < 2) {
+        console.log('🔐 Retrying session check...');
+        sessionCheckAttempts.current++;
+        authInitializedRef.current = false;
+        // Retry initialization
+        setTimeout(() => {
+          if (!authInitializedRef.current) {
+            authInitializedRef.current = true;
+            checkInitialSession();
+          }
+        }, 1000);
+      } else {
+        console.log('🔐 Max retry attempts reached, setting not loading');
+        setIsLoading(false);
+      }
+    }, 5000);
 
-    // Set up auth state listener
+    // Enhanced auth state listener with error handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log(`🔐 Auth event: ${event}`);
+        console.log(`🔐 Auth event: ${event}`, newSession ? 'with session' : 'no session');
         
-        setSession(newSession);
+        clearTimeout(loadingTimeout);
         
-        if (newSession?.user) {
-          try {
+        try {
+          setSession(newSession);
+          
+          if (newSession?.user) {
             const mappedUser = await mapSupabaseUser(newSession.user);
             setUser(mappedUser);
             setupTokenRefresh(newSession);
-          } catch (error) {
-            console.error('Error mapping user:', error);
+            console.log('🔐 User authenticated:', mappedUser.email);
+          } else {
             setUser(null);
+            console.log('🔐 User not authenticated');
           }
-        } else {
+        } catch (error) {
+          console.error('🔐 Error in auth state change:', error);
           setUser(null);
+          setSession(null);
         }
         
-        clearTimeout(loadingTimeout);
         setIsLoading(false);
       }
     );
 
-    // Check for existing session with shorter timeout
-    const sessionCheckPromise = supabase.auth.getSession();
-    const sessionTimeout = setTimeout(() => {
-      console.warn('⚠️ Session check timeout');
-      clearTimeout(loadingTimeout);
-      setIsLoading(false);
-    }, 3000); // 3 second timeout for session check
-
-    sessionCheckPromise.then(async ({ data: { session: currentSession } }) => {
-      clearTimeout(sessionTimeout);
-      
-      if (currentSession?.user) {
-        console.log('🔐 Existing session found');
-        try {
-          const mappedUser = await mapSupabaseUser(currentSession.user);
-          setSession(currentSession);
-          setUser(mappedUser);
-          setupTokenRefresh(currentSession);
-        } catch (error) {
-          console.error('Error mapping existing user:', error);
+    // Enhanced session check with error handling
+    const checkInitialSession = async () => {
+      console.log('🔐 Checking for existing session...');
+      try {
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('🔐 Session check error:', error);
+          // Handle specific refresh token errors
+          if (error.message.includes('refresh_token_not_found') || error.message.includes('Invalid Refresh Token')) {
+            console.log('🔐 Invalid refresh token, clearing local storage');
+            localStorage.removeItem('supabase.auth.token');
+            setSession(null);
+            setUser(null);
+          }
+          setIsLoading(false);
+          return;
         }
+        
+        if (currentSession?.user) {
+          console.log('🔐 Existing session found for:', currentSession.user.email);
+          try {
+            const mappedUser = await mapSupabaseUser(currentSession.user);
+            setSession(currentSession);
+            setUser(mappedUser);
+            setupTokenRefresh(currentSession);
+          } catch (error) {
+            console.error('🔐 Error mapping existing user:', error);
+            setSession(null);
+            setUser(null);
+          }
+        } else {
+          console.log('🔐 No existing session found');
+        }
+        
+        clearTimeout(loadingTimeout);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('🔐 Session check failed:', error);
+        clearTimeout(loadingTimeout);
+        setIsLoading(false);
       }
-      
-      clearTimeout(loadingTimeout);
-      setIsLoading(false);
-    }).catch(error => {
-      console.error('Error checking session:', error);
-      clearTimeout(loadingTimeout);
-      clearTimeout(sessionTimeout);
-      setIsLoading(false);
-    });
+    };
+
+    checkInitialSession();
 
     return () => {
       subscription.unsubscribe();
       clearTimeout(loadingTimeout);
-      clearTimeout(sessionTimeout);
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }

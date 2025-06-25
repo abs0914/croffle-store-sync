@@ -3,6 +3,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
+import Index from '@/pages/Index';
 import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
 import Settings from '@/pages/Settings';
@@ -35,8 +36,11 @@ function App() {
               <React.Suspense fallback={<LoadingFallback message="Loading application..." />}>
                 <Toaster />
                 <Routes>
+                  {/* Root route using Index component for proper auth handling */}
+                  <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Login />} />
-                  <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  
+                  {/* Protected routes */}
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/pos" element={<ProtectedRoute requireStoreAccess><PosPage /></ProtectedRoute>} />
                   <Route path="/products" element={<ProtectedRoute requireStoreAccess><ProductsPage /></ProtectedRoute>} />
@@ -51,6 +55,9 @@ function App() {
                   <Route path="/commissary" element={<ProtectedRoute><CommissaryInventoryPage /></ProtectedRoute>} />
                   <Route path="/stock-orders" element={<ProtectedRoute requireStoreAccess><StockOrdersManagement /></ProtectedRoute>} />
                   <Route path="/security" element={<ProtectedRoute requiredRole="admin"><SecurityMonitoringDashboard /></ProtectedRoute>} />
+                  
+                  {/* Catch all - redirect to root for proper auth handling */}
+                  <Route path="*" element={<Index />} />
                 </Routes>
               </React.Suspense>
             </StoreProvider>
