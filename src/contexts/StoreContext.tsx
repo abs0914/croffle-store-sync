@@ -76,12 +76,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     if (isAuthenticated && user) {
-      authDebugger.log('Store context: User authenticated, fetching stores', { 
-        userId: user.id, 
+      authDebugger.log('Store context: User authenticated, fetching stores', {
+        userId: user.id,
         role: user.role,
-        storeIds: user.storeIds 
+        storeIds: user.storeIds,
+        email: user.email
       });
-      
+
       // Try to use cached stores first
       const cachedStores = getCachedStores();
       if (cachedStores && cachedStores.length > 0) {
@@ -92,11 +93,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setSelectedStore(defaultStore);
         }
       }
-      
+
       // Fetch fresh stores in background
       fetchStores();
     } else {
-      authDebugger.log('Store context: User not authenticated, clearing stores');
+      authDebugger.log('Store context: User not authenticated, clearing stores', {
+        isAuthenticated,
+        hasUser: !!user,
+        authLoading
+      });
       setStores([]);
       setSelectedStore(null);
       setIsLoading(false);
@@ -133,19 +138,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       // Admin and owner users can see all stores
       if (user.role === 'admin' || user.role === 'owner') {
-        authDebugger.log('Admin/Owner user - fetching all stores');
+        authDebugger.log('Admin/Owner user - fetching all stores', {
+          role: user.role,
+          email: user.email
+        });
         query = query.order('name');
       } else {
         // Regular users (cashier, manager) only see their assigned stores
         if (user.storeIds && user.storeIds.length > 0) {
-          authDebugger.log('Regular user - fetching assigned stores', { storeIds: user.storeIds });
+          authDebugger.log('Regular user - fetching assigned stores', {
+            storeIds: user.storeIds,
+            role: user.role,
+            email: user.email
+          });
           query = query.in('id', user.storeIds).order('name');
         } else {
           // User has no assigned stores
-          authDebugger.log('User has no assigned stores', { email: user.email }, 'warning');
+          authDebugger.log('User has no assigned stores', {
+            email: user.email,
+            role: user.role,
+            storeIds: user.storeIds
+          }, 'warning');
           setStores([]);
           setSelectedStore(null);
           setIsLoading(false);
+          endMetric('store_fetch_stores', { success: false, reason: 'no_assigned_stores' });
           return;
         }
       }

@@ -6,6 +6,7 @@ import { checkPermission, checkStoreAccess } from "./utils";
 import { authDebugger } from "@/utils/authDebug";
 import { UserRole } from "@/types";
 import { trackAuth, endMetric } from "@/utils/performanceMonitor";
+import { handleSpecialCases } from "./special-cases-utils";
 
 const initialState: AuthState = {
   user: null,
@@ -27,6 +28,7 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const authInitializedRef = useRef(false);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastProcessedEventRef = useRef<string | null>(null);
 
   // Add detailed logging for loading state changes
   const setLoadingWithLog = (loading: boolean, reason: string) => {
@@ -181,15 +183,24 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Create user from session data only (no database calls)
-  const createUserFromSession = (supabaseUser: any): User => {
-    console.log('🔐 Creating user from session data only', { userId: supabaseUser.id });
-    authDebugger.log('Creating user from session data only', { userId: supabaseUser.id });
-    
+  // Create user from session data with special case handling
+  const createUserFromSession = async (supabaseUser: any): Promise<User> => {
+    console.log('🔐 Creating user from session data with special cases', { userId: supabaseUser.id });
+    authDebugger.log('Creating user from session data with special cases', { userId: supabaseUser.id });
+
     const email = supabaseUser.email || 'unknown@example.com';
     const firstName = supabaseUser.user_metadata?.first_name || email.split('@')[0];
     const lastName = supabaseUser.user_metadata?.last_name || '';
     const fullName = `${firstName} ${lastName}`.trim() || email.split('@')[0] || 'User';
+
+    // Handle special cases (like admin@example.com)
+    const specialCase = await handleSpecialCases(supabaseUser.user_metadata, email, 'staff');
+
+    console.log('🔐 Special case handling result', {
+      email,
+      role: specialCase.role,
+      storeIds: specialCase.storeIds
+    });
 
     return {
       id: supabaseUser.id,
@@ -197,8 +208,8 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
       firstName,
       lastName,
       name: fullName,
-      role: (supabaseUser.user_metadata?.role as UserRole) || 'staff',
-      storeIds: supabaseUser.user_metadata?.store_ids || [],
+      role: specialCase.role,
+      storeIds: specialCase.storeIds,
       isActive: true,
       createdAt: supabaseUser.created_at || new Date().toISOString(),
       updatedAt: supabaseUser.updated_at || new Date().toISOString(),
@@ -221,10 +232,16 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     if (cachedSession) {
       console.log('🔐 Using cached session for immediate load', { userId: cachedSession.user.id });
       authDebugger.log('Using cached session for immediate load', { userId: cachedSession.user.id });
-      const user = createUserFromSession(cachedSession.user);
-      setUser(user);
-      setSession(cachedSession);
-      setLoadingWithLog(false, 'cached session loaded');
+
+      // Handle async user creation
+      createUserFromSession(cachedSession.user).then(user => {
+        setUser(user);
+        setSession(cachedSession);
+        setLoadingWithLog(false, 'cached session loaded');
+      }).catch(error => {
+        console.error('🔐 Error creating user from cached session:', error);
+        setLoadingTimeout(); // Fallback to timeout protection
+      });
     } else {
       console.log('🔐 No cached session, starting loading timeout');
       setLoadingTimeout(); // Start loading timeout protection only if no cache
@@ -234,17 +251,26 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
     console.log('🔐 Setting up auth state listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log('🔐 Auth state change event', { 
-          event, 
+        const eventKey = `${event}_${newSession?.user?.id || 'null'}`;
+
+        // Skip duplicate events within short timeframe
+        if (lastProcessedEventRef.current === eventKey) {
+          console.log('🔐 Skipping duplicate auth event', { event });
+          return;
+        }
+        lastProcessedEventRef.current = eventKey;
+
+        console.log('🔐 Auth state change event', {
+          event,
           hasSession: !!newSession,
-          userId: newSession?.user?.id 
+          userId: newSession?.user?.id
         });
-        authDebugger.log('Auth state change event', { 
-          event, 
+        authDebugger.log('Auth state change event', {
+          event,
           hasSession: !!newSession,
-          userId: newSession?.user?.id 
+          userId: newSession?.user?.id
         });
-        
+
         clearLoadingTimeout(); // Clear timeout since we got an event
         
         try {
@@ -252,18 +278,22 @@ export function SimplifiedAuthProvider({ children }: { children: ReactNode }) {
           cacheSession(newSession);
           
           if (newSession?.user) {
-            // Use session data only - no database calls
-            const mappedUser = createUserFromSession(newSession.user);
-            setUser(mappedUser);
-            console.log('🔐 User authenticated from session', { 
-              userId: mappedUser.id,
-              email: mappedUser.email,
-              role: mappedUser.role 
-            });
-            authDebugger.log('User authenticated from session', { 
-              userId: mappedUser.id,
-              email: mappedUser.email,
-              role: mappedUser.role 
+            // Use session data with special case handling
+            createUserFromSession(newSession.user).then(mappedUser => {
+              setUser(mappedUser);
+              console.log('🔐 User authenticated from session', {
+                userId: mappedUser.id,
+                email: mappedUser.email,
+                role: mappedUser.role
+              });
+              authDebugger.log('User authenticated from session', {
+                userId: mappedUser.id,
+                email: mappedUser.email,
+                role: mappedUser.role
+              });
+            }).catch(error => {
+              console.error('🔐 Error creating user from session:', error);
+              setUser(null);
             });
           } else {
             setUser(null);
