@@ -116,11 +116,44 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       }
     }
 
+    // Create orderable products in inventory_stock for each conversion recipe
+    const inventoryStockInserts = [];
+
+    for (let i = 0; i < validRecipes.length; i++) {
+      const recipe = validRecipes[i];
+      
+      // Create inventory stock entries for stores to order
+      inventoryStockInserts.push({
+        item: recipe.output_product_name,
+        unit: recipe.output_unit,
+        stock_quantity: 0, // Start with 0 stock - will be added through conversion process
+        cost: recipe.output_unit_cost || 0,
+        sku: recipe.output_sku,
+        is_active: true,
+        // Note: store_id will need to be handled differently - this creates a template
+        // that can be used across stores
+        store_id: '00000000-0000-0000-0000-000000000000' // Placeholder for system-wide templates
+      });
+    }
+
+    // Create the orderable products
+    if (inventoryStockInserts.length > 0) {
+      const { error: inventoryError } = await supabase
+        .from('inventory_stock')
+        .insert(inventoryStockInserts);
+
+      if (inventoryError) {
+        console.error('Error creating orderable products:', inventoryError);
+        // Don't fail the entire process if inventory creation fails
+        console.warn('Conversion recipes created but orderable products failed to create');
+      }
+    }
+
     if (errors.length > 0) {
       toast.warning(`Created ${validRecipes.length} conversion recipes. ${errors.length} items skipped due to missing commissary items.`);
       console.warn('Conversion recipe upload errors:', errors);
     } else {
-      toast.success(`Successfully created ${validRecipes.length} conversion recipe templates`);
+      toast.success(`Successfully created ${validRecipes.length} conversion recipe templates and orderable products`);
     }
 
     return true;

@@ -58,9 +58,16 @@ export function BulkUploadTab({
         filename = 'commissary_raw_materials_template.csv';
         break;
       case 'conversion':
-        // Updated template to match your conversion spreadsheet format
-        csvContent = ['Input Item,Input Qty,Input UOM,Output Item,Output Qty,Output UOM,Notes', 'Croissant Box,1,box,Croissant,12,pieces,Split box into individual croissants', 'Whipped Cream Container,1,container,Whipped Cream Serving,20,servings,Portion into individual servings', 'Cookie Dough Batch,2,kg,Chocolate Chip Cookies,48,pieces,Bake dough into finished cookies', 'Bread Mix,5,kg,Bread Loaves,10,loaves,Mix and bake into finished bread loaves', 'Coffee Beans,1,kg,Ground Coffee,1,kg,Grind beans for brewing'].join('\n');
-        filename = 'conversion_recipes_template.csv';
+        // Updated comprehensive template to match frontend fields
+        csvContent = [
+          'Conversion Name,Description,Input Item,Input Qty,Input UOM,Output Product Name,Output Product Category,Output Qty,Output UOM,Output Unit Cost,Output SKU,Output Storage Location,Instructions',
+          'Croissant Portioning,Split box into individual croissants,Croissant Box,1,box,Croissant,raw_materials,12,pieces,12.50,CROIS-INDIV,Cold Storage,Split box into individual croissants for retail sale',
+          'Whipped Cream Portioning,Portion into individual servings,Whipped Cream Container,1,container,Whipped Cream Serving,raw_materials,20,servings,6.00,CREAM-SERV,Cold Storage,Portion into individual servings for drink preparation',
+          'Cookie Production,Bake dough into finished cookies,Cookie Dough Batch,2,kg,Chocolate Chip Cookies,raw_materials,48,pieces,5.20,COOKIE-CHOC,Display Case,Bake dough batch into finished cookies',
+          'Bread Production,Mix and bake into finished bread loaves,Bread Mix,5,kg,Bread Loaves,raw_materials,10,loaves,15.00,BREAD-LOAF,Display Case,Mix and bake into finished bread loaves',
+          'Coffee Grinding,Grind beans for brewing,Coffee Beans,1,kg,Ground Coffee,raw_materials,1,kg,180.00,COFFEE-GROUND,Dry Storage,Grind beans for brewing and retail sale'
+        ].join('\n');
+        filename = 'conversion_recipes_comprehensive_template.csv';
         break;
       default:
         return;

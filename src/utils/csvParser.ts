@@ -1,4 +1,3 @@
-
 export interface RecipeUpload {
   name: string;
   category?: string;
@@ -35,8 +34,12 @@ export interface ConversionRecipeUpload {
   input_quantity: number;
   input_unit: string;
   output_product_name: string;
+  output_product_category: 'raw_materials' | 'packaging_materials' | 'supplies';
   output_quantity: number;
   output_unit: string;
+  output_unit_cost?: number;
+  output_sku?: string;
+  output_storage_location?: string;
   instructions?: string;
 }
 
@@ -131,14 +134,14 @@ const createHeaderMapping = (headers: string[]): Record<string, number> => {
   return mapping;
 };
 
-// Create mapping for conversion recipe headers - Updated to match your spreadsheet format
+// Create mapping for conversion recipe headers - Updated to match comprehensive spreadsheet format
 const createConversionRecipeHeaderMapping = (headers: string[]): Record<string, number> => {
   const mapping: Record<string, number> = {};
   
   headers.forEach((header, index) => {
     const normalized = normalizeHeader(header);
     
-    // Map common variations to match your spreadsheet columns
+    // Map comprehensive variations to match the updated spreadsheet columns
     const variations: Record<string, string[]> = {
       'name': ['conversion_name', 'recipe_name', 'name', 'conversion'],
       'description': ['description', 'desc', 'notes', 'remarks'],
@@ -146,8 +149,12 @@ const createConversionRecipeHeaderMapping = (headers: string[]): Record<string, 
       'input_quantity': ['input_qty', 'input_quantity', 'source_quantity', 'from_quantity', 'qty_in', 'quantity_in'],
       'input_unit': ['input_uom', 'input_unit', 'source_unit', 'from_unit', 'unit_in', 'input_measure'],
       'output_product_name': ['output_item', 'output_product_name', 'target_item', 'to_item', 'finished_product', 'output_product'],
+      'output_product_category': ['output_category', 'output_product_category', 'target_category', 'product_category'],
       'output_quantity': ['output_qty', 'output_quantity', 'target_quantity', 'to_quantity', 'qty_out', 'quantity_out'],
       'output_unit': ['output_uom', 'output_unit', 'target_unit', 'to_unit', 'unit_out', 'output_measure'],
+      'output_unit_cost': ['output_unit_cost', 'unit_cost', 'cost_per_unit', 'output_cost'],
+      'output_sku': ['output_sku', 'sku', 'product_sku', 'item_code'],
+      'output_storage_location': ['output_storage_location', 'storage_location', 'location', 'storage'],
       'instructions': ['conversion_notes', 'instructions', 'process', 'method', 'notes']
     };
     
@@ -293,7 +300,7 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
   return ingredients;
 };
 
-// Updated conversion recipe parser to match your spreadsheet format
+// Updated conversion recipe parser to handle comprehensive spreadsheet format
 export const parseConversionRecipesCSV = (csvText: string): ConversionRecipeUpload[] => {
   console.log('Starting conversion recipe CSV parsing, input length:', csvText.length);
   
@@ -322,15 +329,19 @@ export const parseConversionRecipesCSV = (csvText: string): ConversionRecipeUplo
       continue;
     }
 
-    // Extract values using header mapping - Updated to handle your spreadsheet columns
-    const name = values[headerMapping['name']] || values[0] || ''; // Default to first column if name not found
+    // Extract values using header mapping - Updated to handle comprehensive fields
+    const name = values[headerMapping['name']] || '';
     const description = values[headerMapping['description']] || '';
     const input_item_name = values[headerMapping['input_item_name']] || '';
     const input_quantity = parseFloat(values[headerMapping['input_quantity']] || '0') || 0;
     const input_unit = values[headerMapping['input_unit']] || '';
     const output_product_name = values[headerMapping['output_product_name']] || '';
+    const raw_output_category = values[headerMapping['output_product_category']] || '';
     const output_quantity = parseFloat(values[headerMapping['output_quantity']] || '0') || 0;
     const output_unit = values[headerMapping['output_unit']] || '';
+    const output_unit_cost = parseFloat(values[headerMapping['output_unit_cost']] || '0') || undefined;
+    const output_sku = values[headerMapping['output_sku']] || '';
+    const output_storage_location = values[headerMapping['output_storage_location']] || '';
     const instructions = values[headerMapping['instructions']] || '';
 
     console.log(`Extracted data for line ${i}:`, { 
@@ -339,9 +350,40 @@ export const parseConversionRecipesCSV = (csvText: string): ConversionRecipeUplo
       input_quantity, 
       input_unit, 
       output_product_name, 
+      raw_output_category,
       output_quantity, 
-      output_unit 
+      output_unit,
+      output_unit_cost,
+      output_sku,
+      output_storage_location
     });
+
+    // Map category to valid database value
+    const mapCategoryToValidValue = (category: string): 'raw_materials' | 'packaging_materials' | 'supplies' => {
+      const normalizedCategory = category.toLowerCase().trim();
+      
+      const categoryMapping: Record<string, 'raw_materials' | 'packaging_materials' | 'supplies'> = {
+        'raw_materials': 'raw_materials',
+        'raw_ingredients': 'raw_materials',
+        'ingredients': 'raw_materials',
+        'raw': 'raw_materials',
+        'packaging_materials': 'packaging_materials',
+        'packaging': 'packaging_materials',
+        'packages': 'packaging_materials',
+        'containers': 'packaging_materials',
+        'supplies': 'supplies',
+        'store_equipment': 'supplies',
+        'equipment': 'supplies',
+        'tools': 'supplies',
+        'store_supplies': 'supplies',
+        'misc': 'supplies',
+        'miscellaneous': 'supplies'
+      };
+      
+      return categoryMapping[normalizedCategory] || 'raw_materials';
+    };
+
+    const output_product_category = mapCategoryToValidValue(raw_output_category);
 
     // Auto-generate name if not provided based on input/output items
     const conversionName = name || `${input_item_name} to ${output_product_name}`;
@@ -359,8 +401,12 @@ export const parseConversionRecipesCSV = (csvText: string): ConversionRecipeUplo
       input_quantity,
       input_unit: input_unit.trim(),
       output_product_name: output_product_name.trim(),
+      output_product_category,
       output_quantity,
       output_unit: output_unit.trim(),
+      output_unit_cost: output_unit_cost && output_unit_cost > 0 ? output_unit_cost : undefined,
+      output_sku: output_sku.trim() || undefined,
+      output_storage_location: output_storage_location.trim() || undefined,
       instructions: instructions.trim() || `Convert ${input_quantity} ${input_unit} of ${input_item_name} to ${output_quantity} ${output_unit} of ${output_product_name}`
     };
 
