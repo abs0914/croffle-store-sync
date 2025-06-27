@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -237,25 +238,6 @@ export default function CommissaryInventory() {
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Raw Material
-          </Button>
-          
-          <Button
-            onClick={handleBulkUploadNavigation}
-            variant="outline"
-            className="text-blue-600 hover:text-blue-700 border-blue-300 hover:border-blue-400"
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Bulk Upload via CSV
-          </Button>
-          
-          <Button
-            onClick={handleRemoveDuplicates}
-            disabled={removingDuplicates}
-            variant="outline"
-            className="text-orange-600 hover:text-orange-700 border-orange-300 hover:border-orange-400"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            {removingDuplicates ? "Removing..." : "Remove Duplicates"}
           </Button>
         </div>
       </div>
