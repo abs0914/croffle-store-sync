@@ -8,6 +8,8 @@ export interface CommissaryInventoryItem {
   minimum_threshold: number;
   uom: string; // Changed from unit to uom and made it a string to support custom UOMs
   unit_cost?: number;
+  item_price?: number; // Added support for item price
+  item_quantity?: number; // Added support for item quantity
   supplier_id?: string;
   sku?: string;
   barcode?: string;
@@ -40,6 +42,8 @@ export interface RawIngredientUpload {
   category: 'raw_materials' | 'packaging_materials' | 'supplies';
   uom: string; // Changed from unit to uom
   unit_cost?: number;
+  item_price?: number; // Added support for item price
+  item_quantity?: number; // Added support for item quantity
   current_stock?: number;
   minimum_threshold?: number;
   supplier_name?: string;

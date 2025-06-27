@@ -146,6 +146,8 @@ export type Database = {
           expiry_date: string | null
           id: string
           is_active: boolean
+          item_price: number | null
+          item_quantity: number | null
           item_type: string
           last_purchase_cost: number | null
           last_purchase_date: string | null
@@ -167,6 +169,8 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           is_active?: boolean
+          item_price?: number | null
+          item_quantity?: number | null
           item_type?: string
           last_purchase_cost?: number | null
           last_purchase_date?: string | null
@@ -188,6 +192,8 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           is_active?: boolean
+          item_price?: number | null
+          item_quantity?: number | null
           item_type?: string
           last_purchase_cost?: number | null
           last_purchase_date?: string | null

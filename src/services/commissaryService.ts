@@ -145,6 +145,8 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
         item_type: item_type,
         unit: normalizedUnit, // Use normalized unit value
         unit_cost: ingredient.unit_cost || 0,
+        item_price: ingredient.item_price, // Include item_price
+        item_quantity: ingredient.item_quantity, // Include item_quantity
         current_stock: ingredient.current_stock || 0,
         minimum_threshold: ingredient.minimum_threshold || 0,
         supplier_id: ingredient.supplier_name ? supplierMap.get(ingredient.supplier_name.toLowerCase()) : null,
