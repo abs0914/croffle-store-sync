@@ -3,49 +3,71 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.crofflestore.pos',
-  appName: 'Croffle Store POS',
+  appName: 'Croffle Store POS Kiosk',
   webDir: 'dist',
+  // Note: For kiosk mode, the URL is handled directly in MainActivity
+  // This configuration is kept for compatibility but not used in kiosk mode
   server: {
     url: 'https://crofflestore.pvosyncpos.com/',
     cleartext: true
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 1000,
       launchAutoHide: true,
       backgroundColor: "#ffffff",
       androidSplashResourceName: "splash",
       androidScaleType: "CENTER_CROP",
-      showSpinner: false,
+      showSpinner: true,
       androidSpinnerStyle: "large",
       iosSpinnerStyle: "small",
-      spinnerColor: "#999999",
+      spinnerColor: "#007bff",
       splashFullScreen: true,
       splashImmersive: true,
       layoutName: "launch_screen",
-      useDialog: true,
+      useDialog: false,
     },
     StatusBar: {
-      style: "DARK",
+      style: "LIGHT",
       backgroundColor: "#ffffff",
+      overlay: false,
     },
     Keyboard: {
       resize: "body",
-      style: "dark",
+      style: "light",
       resizeOnFullScreen: true,
     },
+    App: {
+      appendUserAgent: "CroffleStorePOSKiosk/1.0",
+    },
+    Device: {
+      // Enable device info for debugging
+    },
+    Network: {
+      // Enable network monitoring
+    },
+    Haptics: {
+      // Enable haptic feedback for touch interactions
+    }
   },
   android: {
     allowMixedContent: true,
     captureInput: true,
-    webContentsDebuggingEnabled: true,
-    appendUserAgent: "CroffleStorePOS/1.0",
-    overrideUserAgent: "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36 CroffleStorePOS/1.0",
+    webContentsDebuggingEnabled: false, // Disable in production
+    appendUserAgent: "CroffleStorePOSKiosk/1.0",
+    overrideUserAgent: "Mozilla/5.0 (Linux; Android 12; Kiosk) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 CroffleStorePOSKiosk/1.0",
     backgroundColor: "#ffffff",
-    loggingBehavior: "debug",
+    loggingBehavior: "none", // Disable logging in production
     mixedContentMode: "always_allow",
     themeColor: "#ffffff",
     toolbarColor: "#ffffff",
+    // Kiosk-specific settings
+    hideLogs: true,
+    minWebViewVersion: 120,
+    // Enable hardware acceleration
+    hardwareAccelerated: true,
+    // Optimize for kiosk performance
+    useLegacyBridge: false,
   },
 };
 

@@ -21,14 +21,27 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    // Use relative paths for assets to work with file:// protocol
+    assetsDir: 'assets',
     rollupOptions: {
-      external: mode === 'development' ? [] : [
+      // For kiosk mode, externalize Capacitor modules since they'll be provided by the native app
+      external: [
         '@capacitor/core',
         '@capacitor/android',
-        '@capacitor/ios'
+        '@capacitor/ios',
+        '@capacitor/status-bar',
+        '@capacitor/splash-screen',
+        '@capacitor/keyboard',
+        '@capacitor/app',
+        '@capacitor/device',
+        '@capacitor/network',
+        '@capacitor/haptics',
+        '@capacitor-community/bluetooth-le'
       ]
     }
   },
+  // Use relative base for file:// protocol compatibility
+  base: './',
   define: {
     global: 'globalThis',
   },
