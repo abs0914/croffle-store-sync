@@ -58,7 +58,7 @@ export function BulkUploadTab({
     let filename = '';
     switch (type) {
       case 'commissary':
-        // Enhanced template with actual raw materials from the screenshot - Added item_price and item_quantity columns
+        // Updated template with item_price and item_quantity columns
         csvContent = [
           'name,category,uom,unit_cost,item_price,item_quantity,current_stock,minimum_threshold,supplier_name,sku,storage_location',
           'Regular Croissant,raw_materials,1 Box,150.00,12.50,12,10,2,Supplier Name,RAW-CROIS-REG,Cold Storage',
