@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Download, Plus, AlertCircle } from "lucide-react";
+import { Upload, AlertCircle } from "lucide-react";
 import { parseRawIngredientsCSV } from "@/utils/csvParser";
 import { bulkUploadRawIngredients } from "@/services/commissaryService";
 import { toast } from "sonner";
@@ -41,24 +41,6 @@ export const RawIngredientUpload = () => {
     }
   };
 
-  const downloadTemplate = () => {
-    const template = `name,category,uom,unit_cost,current_stock,minimum_threshold,supplier_name,sku,storage_location
-Regular Croissant,raw_materials,1 Box,150.00,10,2,Supplier Name,RAW-CROIS-REG,Cold Storage
-Biscoff Crushed,raw_materials,1 Kilo,180.00,5,1,Biscoff Supplier,RAW-BISC-CRUSH,Dry Storage
-Biscoff Spread,raw_materials,680 grams,320.00,8,2,Biscoff Supplier,RAW-BISC-SPREAD,Dry Storage
-Chocolate Bar Crushed,raw_materials,500 grams,250.00,6,1,Chocolate Co,RAW-CHOC-CRUSH,Dry Storage
-Whipped Cream,raw_materials,1 Liter,120.00,15,3,Dairy Co,RAW-CREAM-WHIP,Cold Storage
-Croissant Box,packaging_materials,Pack of 50,125.00,20,5,Packaging Co,PKG-CROIS-BOX,Storage Room`;
-
-    const blob = new Blob([template], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'raw_materials_template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -76,6 +58,7 @@ Croissant Box,packaging_materials,Pack of 50,125.00,20,5,Packaging Co,PKG-CROIS-
           <p className="text-sm text-blue-700">
             This is the primary method for uploading raw materials to the commissary inventory. 
             Supports custom UOM formats like "1 Box", "680 grams", "Pack of 50", etc.
+            Unit cost will be automatically calculated from item_price ÷ item_quantity when both are provided.
           </p>
         </div>
 
@@ -90,33 +73,24 @@ Croissant Box,packaging_materials,Pack of 50,125.00,20,5,Packaging Co,PKG-CROIS-
             />
           </div>
 
-          <div className="flex gap-2">
-            <Button 
-              onClick={handleFileUpload}
-              disabled={!uploadFile || isUploading}
-              className="flex-1"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              {isUploading ? "Uploading..." : "Upload Raw Materials"}
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              onClick={downloadTemplate}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download Template
-            </Button>
-          </div>
+          <Button 
+            onClick={handleFileUpload}
+            disabled={!uploadFile || isUploading}
+            className="w-full"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {isUploading ? "Uploading..." : "Upload Raw Materials"}
+          </Button>
         </div>
 
         <div className="text-sm text-muted-foreground">
           <p className="font-medium mb-2">CSV Format Requirements:</p>
           <ul className="list-disc list-inside space-y-1">
             <li>Required columns: name, category, uom</li>
-            <li>Optional columns: unit_cost, current_stock, minimum_threshold, supplier_name, sku, storage_location</li>
+            <li>Optional columns: unit_cost, item_price, item_quantity, current_stock, minimum_threshold, supplier_name, sku, storage_location</li>
             <li>Category must be: raw_materials, packaging_materials, or supplies</li>
             <li>UOM supports custom formats: "1 Box", "1 Kilo", "680 grams", "Pack of 50", etc.</li>
+            <li>Unit cost calculation: unit_cost = item_price ÷ item_quantity (when both provided)</li>
             <li>Storage locations: Cold Storage, Dry Storage, Freezer, Room Temperature, Storage Room</li>
           </ul>
         </div>

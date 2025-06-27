@@ -133,6 +133,13 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
       const normalizedUnit = normalizeUnitValue(ingredient.uom);
       console.log(`Normalizing unit "${ingredient.uom}" to "${normalizedUnit}" for ingredient "${ingredient.name}"`);
 
+      // Calculate unit_cost from item_price and item_quantity if available
+      let calculatedUnitCost = ingredient.unit_cost || 0;
+      if (ingredient.item_price && ingredient.item_quantity && ingredient.item_quantity > 0) {
+        calculatedUnitCost = ingredient.item_price / ingredient.item_quantity;
+        console.log(`Calculated unit_cost: ${ingredient.item_price} ÷ ${ingredient.item_quantity} = ${calculatedUnitCost}`);
+      }
+
       // Determine item_type based on category
       let item_type: 'raw_material' | 'supply' = 'raw_material';
       if (ingredient.category === 'packaging_materials' || ingredient.category === 'supplies') {
@@ -144,7 +151,7 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
         category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies',
         item_type: item_type,
         unit: normalizedUnit, // Use normalized unit value
-        unit_cost: ingredient.unit_cost || 0,
+        unit_cost: calculatedUnitCost, // Use calculated unit cost
         item_price: ingredient.item_price, // Include item_price
         item_quantity: ingredient.item_quantity, // Include item_quantity
         current_stock: ingredient.current_stock || 0,
