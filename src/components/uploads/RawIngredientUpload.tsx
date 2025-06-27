@@ -35,15 +35,13 @@ export const RawIngredientUpload = () => {
     }
   };
   return <Card>
-      <CardHeader>
-        
-      </CardHeader>
+      
       <CardContent className="space-y-6">
         
 
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="ingredient-file">CSV File</Label>
+          <div className="space-y-2 my-0 py-[6px]">
+            <Label htmlFor="ingredient-file" className="py-0">CSV File</Label>
             <Input id="ingredient-file" type="file" accept=".csv" onChange={e => setUploadFile(e.target.files?.[0] || null)} />
           </div>
 
