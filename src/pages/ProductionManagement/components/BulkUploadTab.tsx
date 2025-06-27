@@ -7,6 +7,7 @@ import { Download, Upload, Package, Factory, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Store } from "@/types";
 import { ConversionRecipeUpload } from "@/components/uploads/ConversionRecipeUpload";
+
 interface BulkUploadTabProps {
   storeId: string;
 }
@@ -108,7 +109,7 @@ export function BulkUploadTab({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Upload Conversion Recipe Templates
+                Upload Finished Product (Conversion)
               </CardTitle>
             </CardHeader>
             <CardContent>
