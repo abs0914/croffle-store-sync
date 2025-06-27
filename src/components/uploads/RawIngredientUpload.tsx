@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,27 +7,22 @@ import { Upload, AlertCircle } from "lucide-react";
 import { parseRawIngredientsCSV } from "@/utils/csvParser";
 import { bulkUploadRawIngredients } from "@/services/commissaryService";
 import { toast } from "sonner";
-
 export const RawIngredientUpload = () => {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-
   const handleFileUpload = async () => {
     if (!uploadFile) {
       toast.error("Please select a file to upload");
       return;
     }
-
     setIsUploading(true);
     try {
       const text = await uploadFile.text();
       const ingredients = parseRawIngredientsCSV(text);
-      
       if (ingredients.length === 0) {
         toast.error("No valid ingredients found in the file");
         return;
       }
-
       const success = await bulkUploadRawIngredients(ingredients);
       if (success) {
         setUploadFile(null);
@@ -40,44 +34,20 @@ export const RawIngredientUpload = () => {
       setIsUploading(false);
     }
   };
-
-  return (
-    <Card>
+  return <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          Upload Raw Materials & Supplies
-        </CardTitle>
+        
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertCircle className="h-4 w-4 text-blue-600" />
-            <span className="font-medium text-blue-800">Enhanced CSV Upload</span>
-          </div>
-          <p className="text-sm text-blue-700">
-            This is the primary method for uploading raw materials to the commissary inventory. 
-            Supports custom UOM formats like "1 Box", "680 grams", "Pack of 50", etc.
-            Unit cost will be automatically calculated from item_price ÷ item_quantity when both are provided.
-          </p>
-        </div>
+        
 
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="ingredient-file">CSV File</Label>
-            <Input
-              id="ingredient-file"
-              type="file"
-              accept=".csv"
-              onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-            />
+            <Input id="ingredient-file" type="file" accept=".csv" onChange={e => setUploadFile(e.target.files?.[0] || null)} />
           </div>
 
-          <Button 
-            onClick={handleFileUpload}
-            disabled={!uploadFile || isUploading}
-            className="w-full"
-          >
+          <Button onClick={handleFileUpload} disabled={!uploadFile || isUploading} className="w-full">
             <Upload className="h-4 w-4 mr-2" />
             {isUploading ? "Uploading..." : "Upload Raw Materials"}
           </Button>
@@ -95,6 +65,5 @@ export const RawIngredientUpload = () => {
           </ul>
         </div>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
