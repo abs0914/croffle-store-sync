@@ -3145,6 +3145,10 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_recipe_cost: {
+        Args: { recipe_id: number }
+        Returns: number
+      }
       can_access_user_record: {
         Args: { target_user_id: string; target_store_ids: string[] }
         Returns: boolean
@@ -3219,14 +3223,10 @@ export type Database = {
         }[]
       }
       get_location_suppliers: {
-        Args: { store_location: string }
+        Args: Record<PropertyKey, never> | { store_location: string }
         Returns: {
-          supplier_id: string
+          supplier_id: number
           supplier_name: string
-          priority: number
-          is_preferred: boolean
-          shipping_cost: number
-          lead_time_days: number
         }[]
       }
       get_store_users: {

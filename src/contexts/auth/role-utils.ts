@@ -61,8 +61,8 @@ export const ROUTE_PATHS = {
 /**
  * Check if a user has access to a specific route based on their role
  */
-export const checkRouteAccess = (userRole: UserRole | undefined, route: string): boolean => {
-  if (!userRole) return false;
+export const checkRouteAccess = (userRole: UserRole | undefined, route: string | undefined): boolean => {
+  if (!userRole || !route) return false;
   
   // Admin and owner have access to everything
   if (userRole === 'admin' || userRole === 'owner') {
