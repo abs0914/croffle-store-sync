@@ -1,49 +1,41 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChangeEvent } from "react";
 
 interface ReceiptSettingsProps {
   receiptHeader: string;
   receiptFooter: string;
-  onReceiptHeaderChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
-  onReceiptFooterChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
+  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
 }
 
-export const ReceiptSettings = ({
-  receiptHeader,
-  receiptFooter,
-  onReceiptHeaderChange,
-  onReceiptFooterChange
-}: ReceiptSettingsProps) => {
+export const ReceiptSettings = ({ receiptHeader, receiptFooter, handleChange }: ReceiptSettingsProps) => {
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Receipt Settings</CardTitle>
-        <CardDescription>
-          Customize the header and footer text that appears on customer receipts
-        </CardDescription>
+        <CardTitle className="text-xl">Receipt Configuration</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="receipt-header">Receipt Header</Label>
+          <Label htmlFor="receipt_header">Receipt Header</Label>
           <Textarea
-            id="receipt-header"
-            placeholder="Enter header text for receipts..."
+            id="receipt_header"
+            name="receipt_header"
             value={receiptHeader}
-            onChange={onReceiptHeaderChange}
+            onChange={handleChange}
+            placeholder="Store name and address that appears at the top of receipts"
             rows={3}
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="receipt-footer">Receipt Footer</Label>
+          <Label htmlFor="receipt_footer">Receipt Footer</Label>
           <Textarea
-            id="receipt-footer"
-            placeholder="Enter footer text for receipts..."
+            id="receipt_footer"
+            name="receipt_footer"
             value={receiptFooter}
-            onChange={onReceiptFooterChange}
+            onChange={handleChange}
+            placeholder="Thank you message that appears at the bottom of receipts"
             rows={3}
           />
         </div>

@@ -1,182 +1,126 @@
 
-import React, { useEffect, useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/auth/SimplifiedAuthProvider';
-import { useSafeStore } from '@/hooks/useSafeStore';
-import { LoadingFallback } from '@/components/ui/LoadingFallback';
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth';
 import { UserRole } from '@/types';
-import { authDebugger } from '@/utils/authDebug';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { checkRouteAccess, debugRouteAccess, getRouteAccessDescription, ROUTE_PATHS } from '@/contexts/auth/role-utils';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: UserRole;
+  allowedRoles?: UserRole[];
+  fallbackPath?: string;
   requireStoreAccess?: boolean;
 }
 
 export function ProtectedRoute({ 
   children, 
   requiredRole, 
-  requireStoreAccess = false 
+  allowedRoles, 
+  fallbackPath = ROUTE_PATHS.DASHBOARD,
+  requireStoreAccess = false
 }: ProtectedRouteProps) {
-  const { user, isLoading: authLoading, isAuthenticated, hasPermission, hasStoreAccess } = useAuth();
-  const { currentStore, isLoading: storeLoading, error: storeError } = useSafeStore();
-  const location = useLocation();
-  const [showTimeoutError, setShowTimeoutError] = useState(false);
+  const { user, isLoading, isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    console.log('🛡️ ProtectedRoute check', {
-      pathname: location.pathname,
-      authLoading,
-      storeLoading,
-      isAuthenticated,
-      hasUser: !!user,
-      hasCurrentStore: !!currentStore,
-      requiredRole,
-      requireStoreAccess,
-      userRole: user?.role,
-      userStoreIds: user?.storeIds
-    });
-    
-    authDebugger.log('ProtectedRoute check', {
-      pathname: location.pathname,
-      authLoading,
-      storeLoading,
-      isAuthenticated,
-      hasUser: !!user,
-      hasCurrentStore: !!currentStore,
-      requiredRole,
-      requireStoreAccess,
-      userRole: user?.role,
-      userStoreIds: user?.storeIds
-    });
-
-    // Increased timeout to 10 seconds for better user experience
-    const timeout = setTimeout(() => {
-      if (authLoading) {
-        console.log('🛡️ ProtectedRoute loading timeout reached');
-        authDebugger.log('ProtectedRoute loading timeout reached', {
-          authLoading,
-          storeLoading,
-          requireStoreAccess
-        }, 'warning');
-        setShowTimeoutError(true);
-      }
-    }, 10000);
-
-    return () => clearTimeout(timeout);
-  }, [authLoading, storeLoading, isAuthenticated, user, currentStore, location.pathname, requiredRole, requireStoreAccess]);
-
-  // Show timeout error if loading takes too long
-  if (showTimeoutError) {
-    console.log('🛡️ Showing timeout error');
-    authDebugger.log('Showing timeout error', {}, 'error');
+  // Show loading state while authentication is being checked
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center p-6 max-w-md">
-          <h2 className="text-2xl font-bold mb-4 text-red-600">Loading Timeout</h2>
-          <p className="text-gray-600 mb-4">
-            The application is taking longer than expected to load.
-          </p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2"
-          >
-            Reload Page
-          </button>
-          <button 
-            onClick={() => {
-              setShowTimeoutError(false);
-              // Force clear loading states
-              window.location.href = '/login';
-            }} 
-            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-          >
-            Go to Login
-          </button>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-croffle-accent"></div>
       </div>
     );
   }
 
-  // Show loading while checking authentication - with 1 second timeout
-  if (authLoading) {
-    console.log('🛡️ ProtectedRoute showing auth loading');
-    return <LoadingFallback message="Authenticating..." />;
-  }
-
-  // Redirect to login if not authenticated
+  // Redirect to login page if not authenticated
   if (!isAuthenticated) {
-    console.log('🛡️ Redirecting to login - not authenticated');
-    authDebugger.log('Redirecting to login - not authenticated');
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  // Check role-based permissions
-  if (requiredRole && !hasPermission(requiredRole)) {
-    console.log('🛡️ Access denied - insufficient role', { 
-      userRole: user?.role, 
-      requiredRole 
-    });
-    authDebugger.log('Access denied - insufficient role', { 
-      userRole: user?.role, 
-      requiredRole 
-    }, 'warning');
+  // Check role-based access
+  const hasRoleAccess = () => {
+    if (!user?.role) return false;
+    
+    // If specific allowed roles are provided, check against them
+    if (allowedRoles && allowedRoles.length > 0) {
+      return allowedRoles.includes(user.role);
+    }
+    
+    // If a required role is specified, check role hierarchy
+    if (requiredRole) {
+      const roleHierarchy: Record<UserRole, number> = {
+        admin: 4,
+        owner: 3,
+        manager: 2,
+        cashier: 1
+      };
+      
+      return roleHierarchy[user.role] >= roleHierarchy[requiredRole];
+    }
+    
+    // Check route-based access using current path
+    const currentPath = window.location.pathname;
+    return checkRouteAccess(user.role, currentPath);
+  };
+
+  // Check store access if required
+  const hasStoreAccess = () => {
+    if (!requireStoreAccess) return true;
+    
+    // Admin and owner have access to all stores
+    if (user?.role === 'admin' || user?.role === 'owner') {
+      return true;
+    }
+    
+    // For other roles, check if they have at least one store assigned
+    return user?.storeIds && user.storeIds.length > 0;
+  };
+
+  const roleAccess = hasRoleAccess();
+  const storeAccess = hasStoreAccess();
+  const currentPath = window.location.pathname;
+
+  // Debug logging in development
+  debugRouteAccess(user?.role, currentPath, storeAccess);
+
+  // Show access denied page if user doesn't have permission
+  if (!roleAccess || !storeAccess) {
+    const accessDescription = getRouteAccessDescription(currentPath);
+    
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-          <p className="text-gray-600">You don't have permission to access this page.</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Required role: {requiredRole} | Your role: {user?.role}
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 p-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-semibold text-gray-900">Access Denied</h2>
+          <p className="text-gray-600 max-w-md">
+            You don't have permission to access this page. Please contact your administrator if you believe this is an error.
           </p>
+          <div className="text-sm text-gray-500 mt-4 space-y-1">
+            <div>Your role: <span className="font-medium capitalize">{user?.role}</span></div>
+            <div>Required access: <span className="font-medium">{accessDescription}</span></div>
+          </div>
+          {requireStoreAccess && (!user?.storeIds || user.storeIds.length === 0) && (
+            <div className="text-sm text-red-500 mt-2">
+              No store access assigned. Please contact your administrator.
+            </div>
+          )}
+          {!roleAccess && (
+            <div className="text-sm text-red-500 mt-2">
+              Insufficient role permissions for this route.
+            </div>
+          )}
         </div>
+        <Button asChild variant="outline">
+          <Link to={fallbackPath}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </Button>
       </div>
     );
   }
 
-  // Make store loading optional - don't block dashboard access
-  if (requireStoreAccess && storeLoading) {
-    console.log('🛡️ Store loading, showing brief loading');
-    // Only show brief loading, don't block indefinitely
-    return <LoadingFallback message="Loading store information..." />;
-  }
-
-  // Check store-specific access only if store is available
-  if (requireStoreAccess && currentStore && !hasStoreAccess(currentStore.id)) {
-    console.log('🛡️ Access denied - no store access', { 
-      storeId: currentStore.id, 
-      storeName: currentStore.name 
-    });
-    authDebugger.log('Access denied - no store access', { 
-      storeId: currentStore.id, 
-      storeName: currentStore.name 
-    }, 'warning');
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Store Access Required</h2>
-          <p className="text-gray-600">You don't have access to this store.</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Store: {currentStore.name}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Allow access even if no store is available (make store loading optional)
-  if (requireStoreAccess && !currentStore && !storeLoading) {
-    console.log('🛡️ No store available but allowing access');
-    authDebugger.log('No store available but allowing access', {}, 'info');
-    // Don't block access - let the component handle the no-store case
-  }
-
-  console.log('🛡️ ProtectedRoute - access granted', { 
-    pathname: location.pathname 
-  });
-  authDebugger.log('ProtectedRoute - access granted', { 
-    pathname: location.pathname 
-  });
-
+  // Render the protected content
   return <>{children}</>;
 }

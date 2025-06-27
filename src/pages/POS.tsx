@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
@@ -133,16 +134,12 @@ export default function POS() {
       ...completedTransaction,
       shiftId: currentShift?.id || '',
       storeId: currentStore?.id || '',
-      store_id: currentStore?.id || '',
       userId: '',
       paymentMethod: completedTransaction.payment_method as 'cash' | 'card' | 'e-wallet',
       status: 'completed' as const,
       createdAt: completedTransaction.created_at,
-      created_at: completedTransaction.created_at,
       receiptNumber: completedTransaction.receipt_number,
-      items: transactionItems,
-      tax_amount: completedTransaction.tax || 0,
-      updated_at: completedTransaction.created_at
+      items: transactionItems
     };
 
     return (

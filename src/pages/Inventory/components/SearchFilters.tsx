@@ -1,7 +1,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Category } from "@/types";
 
 interface SearchFiltersProps {
@@ -10,6 +10,8 @@ interface SearchFiltersProps {
   categories: Category[];
   activeCategory: string;
   onCategoryChange: (category: string) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
 }
 
 export const SearchFilters = ({
@@ -18,6 +20,8 @@ export const SearchFilters = ({
   categories,
   activeCategory,
   onCategoryChange,
+  activeTab,
+  setActiveTab,
 }: SearchFiltersProps) => {
   return (
     <div className="flex gap-4 flex-wrap items-center">
@@ -31,19 +35,14 @@ export const SearchFilters = ({
           onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
-      <Select value={activeCategory} onValueChange={onCategoryChange}>
-        <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Select category" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Categories</SelectItem>
-          {categories.map((category) => (
-            <SelectItem key={category.id} value={category.id}>
-              {category.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="flex-1 min-w-[250px]">
+        <TabsList className="grid grid-cols-4 w-full">
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="active">Active</TabsTrigger>
+          <TabsTrigger value="inactive">Inactive</TabsTrigger>
+          <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
+        </TabsList>
+      </Tabs>
     </div>
   );
 };

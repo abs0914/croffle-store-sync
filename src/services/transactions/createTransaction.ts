@@ -24,14 +24,13 @@ interface TransactionRow {
   payment_details?: object;
   status: 'completed' | 'voided';
   created_at: string;
-  updated_at: string;
   receipt_number: string;
 }
 
 /**
  * Creates a new transaction in the database
  */
-export const createTransaction = async (transaction: Omit<Transaction, "id" | "created_at" | "receiptNumber" | "updated_at">): Promise<Transaction | null> => {
+export const createTransaction = async (transaction: Omit<Transaction, "id" | "createdAt" | "receiptNumber">): Promise<Transaction | null> => {
   try {
     // Generate a receipt number based on date and time
     const now = new Date();
@@ -52,25 +51,24 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
     const receiptNumber = `${receiptPrefix}-${String(count! + 1).padStart(4, '0')}-${timestamp}`;
     
     const newTransaction = {
-      shift_id: transaction.shift_id || transaction.shiftId,
-      store_id: transaction.store_id || transaction.storeId,
-      user_id: transaction.user_id || transaction.userId,
-      customer_id: transaction.customer_id || transaction.customerId,
+      shift_id: transaction.shiftId,
+      store_id: transaction.storeId,
+      user_id: transaction.userId,
+      customer_id: transaction.customerId,
       items: JSON.stringify(transaction.items),
       subtotal: transaction.subtotal,
-      tax: transaction.tax_amount || transaction.tax,
+      tax: transaction.tax,
       discount: transaction.discount,
-      discount_type: transaction.discount_type || transaction.discountType,
-      discount_id_number: transaction.discount_id_number || transaction.discountIdNumber,
+      discount_type: transaction.discountType,
+      discount_id_number: transaction.discountIdNumber,
       total: transaction.total,
-      amount_tendered: transaction.amount_tendered || transaction.amountTendered,
+      amount_tendered: transaction.amountTendered,
       change: transaction.change,
-      payment_method: transaction.payment_method || transaction.paymentMethod,
-      payment_details: transaction.payment_details ? JSON.stringify(transaction.payment_details) : null,
+      payment_method: transaction.paymentMethod,
+      payment_details: transaction.paymentDetails ? JSON.stringify(transaction.paymentDetails) : null,
       status: transaction.status,
       receipt_number: receiptNumber,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString()
+      created_at: now.toISOString()
     };
     
     // Remove customer object before sending to Supabase
@@ -95,35 +93,23 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
     // Return formatted transaction data
     return {
       id: transactionData.id,
-      shift_id: transactionData.shift_id,
       shiftId: transactionData.shift_id,
-      store_id: transactionData.store_id,
       storeId: transactionData.store_id,
-      user_id: transactionData.user_id,
       userId: transactionData.user_id,
-      customer_id: transactionData.customer_id,
       customerId: transactionData.customer_id,
       items: JSON.parse(transactionData.items),
       subtotal: transactionData.subtotal,
-      tax_amount: transactionData.tax,
       tax: transactionData.tax,
       discount: transactionData.discount,
-      discount_type: transactionData.discount_type as any,
       discountType: transactionData.discount_type as any,
-      discount_id_number: transactionData.discount_id_number,
       discountIdNumber: transactionData.discount_id_number,
       total: transactionData.total,
-      amount_tendered: transactionData.amount_tendered,
       amountTendered: transactionData.amount_tendered,
       change: transactionData.change,
-      payment_method: transactionData.payment_method as 'cash' | 'card' | 'e-wallet',
       paymentMethod: transactionData.payment_method as 'cash' | 'card' | 'e-wallet',
-      payment_details: transactionData.payment_details,
+      paymentDetails: transactionData.payment_details,
       status: transactionData.status,
-      created_at: transactionData.created_at,
       createdAt: transactionData.created_at,
-      updated_at: transactionData.updated_at,
-      receipt_number: transactionData.receipt_number,
       receiptNumber: transactionData.receipt_number
     };
   } catch (error) {

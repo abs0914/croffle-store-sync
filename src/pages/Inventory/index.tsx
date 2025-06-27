@@ -1,157 +1,126 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Package, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Product } from "@/types";
+import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import InventoryHeader from "./components/InventoryHeader";
 import { ProductsTable } from "./components/ProductsTable";
 import { SearchFilters } from "./components/SearchFilters";
-import { useInventoryData } from "./hooks/useInventoryData";
+import { useProductData } from "./hooks/useProductData";
+import { deleteProduct } from "@/services/product";
+import { Product } from "@/types";
 
 export default function Inventory() {
   const navigate = useNavigate();
-  const {
+  const queryClient = useQueryClient();
+  const { 
     currentStore,
-    products,
-    categories,
-    isLoading,
-    activeCategory,
-    setActiveCategory,
+    products, 
+    categories, 
     filteredProducts,
+    isLoading,
     searchTerm,
     setSearchTerm,
+    activeCategory,
+    setActiveCategory,
     activeTab,
-    setActiveTab,
-  } = useInventoryData();
+    setActiveTab
+  } = useProductData();
 
-  const handleEdit = (product: Product) => {
+  // Delete product mutation
+  const deleteProductMutation = useMutation({
+    mutationFn: deleteProduct,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products', currentStore?.id] });
+      toast.success("Product deleted successfully");
+    },
+    onError: (error) => {
+      console.error("Error deleting product:", error);
+      toast.error("Failed to delete product");
+    }
+  });
+
+  const handleEditProduct = (product: Product) => {
     navigate(`/inventory/product/${product.id}`);
   };
 
-  const handleView = (product: Product) => {
+  const handleViewProduct = (product: Product) => {
     navigate(`/inventory/product/${product.id}`);
   };
 
-  const handleDelete = (product: Product) => {
-    // Handle product deletion
-    console.log('Delete product:', product.id);
+  const handleDeleteProduct = (product: Product) => {
+    if (!product.id) {
+      toast.error("Cannot delete product: invalid product ID");
+      return;
+    }
+    deleteProductMutation.mutate(product.id);
   };
 
-  const handleStockAdjust = (product: Product) => {
-    // Handle stock adjustment
-    console.log('Adjust stock for product:', product.id);
-  };
-
-  const handleAddProduct = () => {
-    navigate('/inventory/product/new');
+  const handleStockAdjustment = (product: Product) => {
+    // This would open a stock adjustment modal
+    // For now, navigate to edit page where stock can be adjusted
+    navigate(`/inventory/product/${product.id}`);
   };
 
   if (!currentStore) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <p>Please select a store to manage inventory.</p>
+      <div className="container mx-auto p-4">
+        <h1 className="text-2xl font-bold mb-4">Store Inventory Management</h1>
+        <p>Please select a store first</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <InventoryHeader 
-        onAddProduct={handleAddProduct}
-        storeId={currentStore.id}
-        storeName={currentStore.name}
+      <InventoryHeader
+        title="Store Inventory Management"
+        description="Manage your store's product catalog and stock levels for customer orders and sales."
       />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="products">Products</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
-          <TabsTrigger value="stock">Stock</TabsTrigger>
-        </TabsList>
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h3 className="font-semibold text-blue-800 mb-2">Store-Level Products</h3>
+        <p className="text-sm text-blue-700">
+          Manage menu items and finished products available for sale in your store. This includes items that customers can purchase directly through your POS system.
+        </p>
+      </div>
 
-        <TabsContent value="products" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Products
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <SearchFilters
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  activeCategory={activeCategory}
-                  onCategoryChange={setActiveCategory}
-                  categories={categories}
-                />
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {filteredProducts.length} products
-                    </span>
-                    {activeCategory !== 'all' && (
-                      <Badge variant="secondary">
-                        {categories.find(c => c.id === activeCategory)?.name || 'Unknown'}
-                      </Badge>
-                    )}
-                  </div>
-                  <Button onClick={handleAddProduct}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Product
-                  </Button>
-                </div>
+      <div className="flex justify-between items-center mb-4">
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="all">All Products</TabsTrigger>
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="inactive">Inactive</TabsTrigger>
+            <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-                <ProductsTable
-                  products={filteredProducts}
-                  onEdit={handleEdit}
-                  onView={handleView}
-                  onDelete={handleDelete}
-                  onStockAdjust={handleStockAdjust}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+      <SearchFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        categories={categories}
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
 
-        <TabsContent value="categories" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Categories management coming soon!</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="ingredients" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Ingredients management coming soon!</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="stock" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Stock management coming soon!</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Card>
+        <CardContent className="p-4">
+          <ProductsTable 
+            products={filteredProducts}
+            isLoading={isLoading}
+            onEdit={handleEditProduct}
+            onView={handleViewProduct}
+            onDelete={handleDeleteProduct}
+            onStockAdjust={handleStockAdjustment}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

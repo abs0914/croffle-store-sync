@@ -1,6 +1,6 @@
 
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { STANDARD_UOM_OPTIONS } from "@/types/commissary";
 
@@ -17,54 +17,45 @@ interface ConversionOutputItemProps {
   setOutputItem: (item: any) => void;
 }
 
-export function ConversionOutputItem({
-  outputItem,
-  setOutputItem
-}: ConversionOutputItemProps) {
+// Define business-relevant categories for finished products
+const FINISHED_PRODUCT_CATEGORIES = [
+  { value: 'regular_croissants', label: 'Regular Croissants' },
+  { value: 'flavored_croissants', label: 'Flavored Croissants' },
+  { value: 'sauces', label: 'Sauces' },
+  { value: 'toppings', label: 'Toppings' },
+  { value: 'packaging', label: 'Boxes & Packaging' },
+  { value: 'miscellaneous', label: 'Miscellaneous' }
+];
+
+export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOutputItemProps) {
   return (
-    <div>
-      <Label className="mb-2 block">Output Item (Finished Good)</Label>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-4">
+      <h3 className="font-medium">Output Item (Finished Product)</h3>
+      
+      <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="output-name">Item Name</Label>
+          <Label htmlFor="output-name">Product Name *</Label>
           <Input
             id="output-name"
             value={outputItem.name}
-            onChange={(e) => setOutputItem({ ...outputItem, name: e.target.value })}
-            placeholder="e.g., Croissant"
+            onChange={(e) => setOutputItem(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="e.g., Ready Croissant or Croissant + Whipped Cream"
           />
         </div>
         
         <div>
-          <Label htmlFor="output-category">Category</Label>
-          <Select
-            value={outputItem.category}
-            onValueChange={(value: any) => setOutputItem({ ...outputItem, category: value })}
+          <Label htmlFor="output-category">Product Category *</Label>
+          <Select 
+            value={outputItem.category} 
+            onValueChange={(value) => setOutputItem(prev => ({ ...prev, category: value }))}
           >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="raw_materials">Raw Materials</SelectItem>
-              <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
-              <SelectItem value="supplies">Supplies</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <Label htmlFor="output-uom">Unit of Measure</Label>
-          <Select
-            value={outputItem.uom}
-            onValueChange={(value) => setOutputItem({ ...outputItem, uom: value })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select UOM" />
-            </SelectTrigger>
-            <SelectContent>
-              {STANDARD_UOM_OPTIONS.map((uom) => (
-                <SelectItem key={uom} value={uom}>
-                  {uom}
+              {FINISHED_PRODUCT_CATEGORIES.map((cat) => (
+                <SelectItem key={cat.value} value={cat.value}>
+                  {cat.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -72,50 +63,77 @@ export function ConversionOutputItem({
         </div>
         
         <div>
-          <Label htmlFor="output-quantity">Quantity</Label>
+          <Label htmlFor="output-quantity">Quantity Produced *</Label>
           <Input
             id="output-quantity"
             type="number"
-            min="0.01"
-            step="0.01"
+            min="1"
             value={outputItem.quantity}
-            onChange={(e) => setOutputItem({ ...outputItem, quantity: parseFloat(e.target.value) || 0 })}
+            onChange={(e) => setOutputItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="output-uom">Unit of Measure *</Label>
+          <Select 
+            value={outputItem.uom} 
+            onValueChange={(value) => setOutputItem(prev => ({ ...prev, uom: value }))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select unit" />
+            </SelectTrigger>
+            <SelectContent>
+              {STANDARD_UOM_OPTIONS.map((unit) => (
+                <SelectItem key={unit} value={unit}>
+                  {unit}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div>
+          <Label htmlFor="output-cost">Unit Cost (₱)</Label>
+          <Input
+            id="output-cost"
+            type="number"
+            step="0.01"
+            min="0"
+            value={outputItem.unit_cost}
+            onChange={(e) => setOutputItem(prev => ({ ...prev, unit_cost: parseFloat(e.target.value) || 0 }))}
+            placeholder="Leave blank for auto-calculation"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            Auto-calculated from input costs + minimal processing overhead
+          </p>
+        </div>
+        
+        <div>
+          <Label htmlFor="output-sku">SKU</Label>
+          <Input
+            id="output-sku"
+            value={outputItem.sku}
+            onChange={(e) => setOutputItem(prev => ({ ...prev, sku: e.target.value }))}
+            placeholder="Auto-generated if empty"
           />
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        <div>
-          <Label htmlFor="output-cost">Unit Cost (Optional)</Label>
-          <Input
-            id="output-cost"
-            type="number"
-            min="0"
-            step="0.01"
-            value={outputItem.unit_cost}
-            onChange={(e) => setOutputItem({ ...outputItem, unit_cost: parseFloat(e.target.value) || 0 })}
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="output-sku">SKU (Optional)</Label>
-          <Input
-            id="output-sku"
-            value={outputItem.sku}
-            onChange={(e) => setOutputItem({ ...outputItem, sku: e.target.value })}
-            placeholder="Product SKU"
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="output-location">Storage Location (Optional)</Label>
-          <Input
-            id="output-location"
-            value={outputItem.storage_location}
-            onChange={(e) => setOutputItem({ ...outputItem, storage_location: e.target.value })}
-            placeholder="Storage location"
-          />
-        </div>
+      <div>
+        <Label htmlFor="storage-location">Storage Location</Label>
+        <Input
+          id="storage-location"
+          value={outputItem.storage_location}
+          onChange={(e) => setOutputItem(prev => ({ ...prev, storage_location: e.target.value }))}
+          placeholder="e.g., Finished Goods, Cold Storage"
+        />
+      </div>
+      
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-700">
+          <strong>Tip:</strong> For simple repackaging (like croissants), use the same UOM as input. 
+          Cost will be auto-calculated with minimal processing overhead.
+        </p>
       </div>
     </div>
   );

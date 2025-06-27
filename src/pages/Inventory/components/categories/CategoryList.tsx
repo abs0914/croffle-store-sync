@@ -1,96 +1,121 @@
 
-import React from 'react';
-import { Category } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Image as ImageIcon } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
+import { Category } from "@/types";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface CategoryListProps {
   categories: Category[];
   isLoading: boolean;
   onEdit: (category: Category) => void;
-  onDelete: (category: Category) => Promise<void>;
+  onDelete: (id: string) => void;
 }
 
-export function CategoryList({ categories, isLoading, onEdit, onDelete }: CategoryListProps) {
+export const CategoryList = ({ 
+  categories, 
+  isLoading, 
+  onEdit, 
+  onDelete 
+}: CategoryListProps) => {
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <Spinner className="h-8 w-8" />
+      <div className="flex justify-center items-center py-8">
+        <Spinner className="h-8 w-8 text-croffle-accent" />
+        <span className="ml-2 text-croffle-primary">Loading categories...</span>
       </div>
     );
   }
-
-  if (categories.length === 0) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium text-muted-foreground mb-2">No categories found</h3>
-          <p className="text-sm text-muted-foreground text-center">
-            Create your first category to organize your products
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {categories.map((category) => (
-        <Card key={category.id} className="relative">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <CardTitle className="text-lg">{category.name}</CardTitle>
-                {category.description && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {category.description}
-                  </p>
-                )}
-              </div>
-              <Badge variant={category.is_active ? 'default' : 'secondary'}>
-                {category.is_active ? 'Active' : 'Inactive'}
-              </Badge>
-            </div>
-          </CardHeader>
-          
-          {category.image_url && (
-            <div className="px-6 pb-3">
-              <img 
-                src={category.image_url} 
-                alt={category.name}
-                className="w-full h-32 object-cover rounded-md"
-              />
-            </div>
-          )}
-          
-          <CardContent className="pt-0">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onEdit(category)}
-                className="flex-1"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDelete(category)}
-                className="flex-1 text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <>
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-[100px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {categories.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center">
+                  No categories found
+                </TableCell>
+              </TableRow>
+            ) : (
+              categories.map((category) => (
+                <TableRow key={category.id}>
+                  <TableCell className="font-medium">{category.name}</TableCell>
+                  <TableCell>{category.description || "-"}</TableCell>
+                  <TableCell>
+                    {category.isActive ? (
+                      <span className="text-green-600">Active</span>
+                    ) : (
+                      <span className="text-gray-400">Inactive</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => onEdit(category)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete '{category.name}'? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => onDelete(category.id)}
+                              className="bg-red-500 hover:bg-red-600"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <p className="text-sm text-muted-foreground mt-2">
+        Showing {categories.length} categories
+      </p>
+    </>
   );
-}
+};

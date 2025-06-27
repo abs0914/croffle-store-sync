@@ -1,110 +1,211 @@
 
-import React, { useState } from 'react';
-import { useDropzone } from 'react-dropzone';
-import * as XLSX from 'xlsx';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RawIngredientUpload } from "@/components/uploads/RawIngredientUpload";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
-import { Store } from '@/types';
+import { Download, Upload, Package, Factory, FileText } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Store } from "@/types";
+import { ConversionRecipeUpload } from "@/components/uploads/ConversionRecipeUpload";
 
 interface BulkUploadTabProps {
-  storeId?: string;
+  storeId: string;
 }
 
-export const BulkUploadTab = ({ storeId }: BulkUploadTabProps) => {
-  const [uploadedData, setUploadedData] = useState<any[]>([]);
-  const { toast } = useToast();
+export function BulkUploadTab({
+  storeId
+}: BulkUploadTabProps) {
+  const [activeUploadTab, setActiveUploadTab] = useState("commissary");
+  const [stores, setStores] = useState<Store[]>([]);
 
-  const onDrop = (acceptedFiles: File[]) => {
-    acceptedFiles.forEach((file) => {
-      const reader = new FileReader();
+  useEffect(() => {
+    fetchStores();
+  }, []);
 
-      reader.onload = (e: any) => {
-        try {
-          const binaryStr = e.target.result;
-          const workbook = XLSX.read(binaryStr, { type: 'binary' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+  const fetchStores = async () => {
+    try {
+      const {
+        data,
+        error
+      } = await supabase.from('stores').select('*').eq('is_active', true).order('name');
+      if (error) throw error;
 
-          // Process the data (skip header row)
-          const header = data[0] as string[];
-          const items = data.slice(1).map((row: any) => {
-            const item: any = {};
-            header.forEach((key, index) => {
-              item[key] = row[index];
-            });
-            return item;
-          });
-
-          setUploadedData(items);
-          toast({
-            title: "Data uploaded!",
-            description: "Check the console for the parsed data.",
-          });
-        } catch (error) {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "There was an error parsing the file.",
-          });
-        }
-      };
-
-      reader.onerror = () => {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "There was an error reading the file.",
-        });
-      };
-
-      reader.readAsBinaryString(file);
-    });
+      // Cast the data to proper Store types
+      const typedStores = (data || []).map(store => ({
+        ...store,
+        ownership_type: store.ownership_type as 'company_owned' | 'franchisee' || 'company_owned',
+        franchisee_contact_info: store.franchisee_contact_info ? typeof store.franchisee_contact_info === 'object' ? store.franchisee_contact_info as {
+          name?: string;
+          email?: string;
+          phone?: string;
+          address?: string;
+        } : {
+          name: "",
+          email: "",
+          phone: "",
+          address: ""
+        } : undefined
+      })) as Store[];
+      setStores(typedStores);
+    } catch (error) {
+      console.error('Error fetching stores:', error);
+    }
   };
 
-  const { getRootProps, getInputProps } = useDropzone({
-    onDrop,
-    accept: {
-      'application/vnd.ms-excel': ['.xls'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-    },
-    maxFiles: 1,
-  });
-
-  const { data: stores = [] } = useQuery({
-    queryKey: ['stores'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('is_active', true);
-      
-      if (error) throw error;
-      
-      // Transform the data to match the Store interface
-      return (data || []).map(store => ({
-        ...store,
-        address: store.address || '',
-        location: store.address || `${store.city || ''}, ${store.country || ''}`.trim() || 'Unknown Location'
-      })) as Store[];
+  const handleDownloadTemplate = (type: string) => {
+    let csvContent = '';
+    let filename = '';
+    switch (type) {
+      case 'commissary':
+        // Enhanced template with actual raw materials from the screenshot
+        csvContent = [
+          'name,category,uom,unit_cost,current_stock,minimum_threshold,supplier_name,sku,storage_location',
+          'Regular Croissant,raw_materials,1 Box,150.00,10,2,Supplier Name,RAW-CROIS-REG,Cold Storage',
+          'Biscoff Crushed,raw_materials,1 Kilo,180.00,5,1,Biscoff Supplier,RAW-BISC-CRUSH,Dry Storage',
+          'Biscoff Spread,raw_materials,680 grams,320.00,8,2,Biscoff Supplier,RAW-BISC-SPREAD,Dry Storage',
+          'Chocolate Bar Crushed,raw_materials,500 grams,250.00,6,1,Chocolate Co,RAW-CHOC-CRUSH,Dry Storage',
+          'Chocolate Chips,raw_materials,1 Kilo,380.00,4,1,Chocolate Co,RAW-CHOC-CHIPS,Dry Storage',
+          'Chocolate Syrup,raw_materials,630 grams,200.00,12,3,Chocolate Co,RAW-CHOC-SYR,Dry Storage',
+          'Whipped Cream,raw_materials,1 Liter,120.00,15,3,Dairy Co,RAW-CREAM-WHIP,Cold Storage',
+          'Ice Cream,raw_materials,2500 grams,280.00,8,2,Dairy Co,RAW-ICECREAM,Freezer',
+          'Almonds Crushed,raw_materials,454 grams,420.00,5,1,Nuts Co,RAW-ALMOND-CRUSH,Dry Storage',
+          'Almonds Sliced,raw_materials,454 grams,400.00,6,1,Nuts Co,RAW-ALMOND-SLICE,Dry Storage',
+          'Peanuts,raw_materials,1 Kilo,180.00,4,1,Nuts Co,RAW-PEANUTS,Dry Storage',
+          'Banana,raw_materials,1 Kilo,80.00,20,5,Fresh Fruits,RAW-BANANA,Room Temperature',
+          'Strawberry,raw_materials,500 grams,150.00,10,3,Fresh Fruits,RAW-STRAWBERRY,Cold Storage',
+          'Caramel Sauce,raw_materials,750 grams,180.00,8,2,Sauce Co,RAW-CARAMEL,Dry Storage',
+          'Nutella,raw_materials,900 grams,450.00,6,2,Nutella Co,RAW-NUTELLA,Dry Storage',
+          'Peanut Butter,raw_materials,510 grams,220.00,7,2,PB Co,RAW-PB,Dry Storage',
+          'Milk,raw_materials,1 Liter,65.00,25,5,Dairy Co,RAW-MILK,Cold Storage',
+          'Croissant Box,packaging_materials,Pack of 50,125.00,20,5,Packaging Co,PKG-CROIS-BOX,Storage Room',
+          'Food Container Small,packaging_materials,Pack of 100,180.00,15,3,Packaging Co,PKG-CONT-SM,Storage Room',
+          'Food Container Large,packaging_materials,Pack of 50,220.00,12,3,Packaging Co,PKG-CONT-LG,Storage Room'
+        ].join('\n');
+        filename = 'commissary_raw_materials_template.csv';
+        break;
+      case 'conversion':
+        // Updated template to match your conversion spreadsheet format
+        csvContent = ['Input Item,Input Qty,Input UOM,Output Item,Output Qty,Output UOM,Notes', 'Croissant Box,1,box,Croissant,12,pieces,Split box into individual croissants', 'Whipped Cream Container,1,container,Whipped Cream Serving,20,servings,Portion into individual servings', 'Cookie Dough Batch,2,kg,Chocolate Chip Cookies,48,pieces,Bake dough into finished cookies', 'Bread Mix,5,kg,Bread Loaves,10,loaves,Mix and bake into finished bread loaves', 'Coffee Beans,1,kg,Ground Coffee,1,kg,Grind beans for brewing'].join('\n');
+        filename = 'conversion_recipes_template.csv';
+        break;
+      default:
+        return;
     }
-  });
+    const blob = new Blob([csvContent], {
+      type: 'text/csv'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
-  return (
-    <div>
-      <div {...getRootProps()} className="border-2 border-dashed rounded-md p-4 cursor-pointer bg-gray-50">
-        <input {...getInputProps()} />
-        <p className="text-gray-500">Drag 'n' drop some files here, or click to select files</p>
-      </div>
+  return <div className="space-y-6">
+      <Tabs value={activeUploadTab} onValueChange={setActiveUploadTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="commissary" className="flex items-center gap-2">
+            <Factory className="h-4 w-4" />
+            Commissary
+          </TabsTrigger>
+          <TabsTrigger value="conversion" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Conversion
+          </TabsTrigger>
+        </TabsList>
 
-      {uploadedData.length > 0 && (
-        <div className="mt-4">
-          <h3 className="font-semibold">Parsed Data:</h3>
-          <pre>{JSON.stringify(uploadedData, null, 2)}</pre>
-        </div>
-      )}
-    </div>
-  );
-};
+        <TabsContent value="commissary">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Factory className="h-5 w-5" />
+                Upload Raw Materials & Supplies
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RawIngredientUpload />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="conversion">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Upload Conversion Recipe Templates
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ConversionRecipeUpload />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Enhanced Upload Guidelines */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Upload Guidelines & Templates
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Factory className="h-4 w-4" />
+                Commissary Raw Materials
+              </h4>
+              <div className="space-y-2 mb-4">
+                <Button 
+                  onClick={() => handleDownloadTemplate('commissary')}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Raw Materials Template
+                </Button>
+              </div>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Raw materials, packaging, supplies</li>
+                <li>• Support for custom UOM (1 Box, 1 Kilo, 680 grams, etc.)</li>
+                <li>• Include supplier information</li>
+                <li>• Set proper stock thresholds</li>
+                <li>• Specify storage locations</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Conversion Recipes
+              </h4>
+              <div className="space-y-2 mb-4">
+                <Button 
+                  onClick={() => handleDownloadTemplate('conversion')}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Conversion Template
+                </Button>
+              </div>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Transform commissary items to products</li>
+                <li>• Include input/output quantities</li>
+                <li>• Add conversion instructions</li>
+                <li>• Specify yield information</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>;
+}

@@ -13,18 +13,17 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  console.log('🏗️ MainLayout rendering');
-  const { isLoading, isAuthenticated, user } = useAuth();
+  const { isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { isOnline, offlineQueue } = useMobileExpenseFeatures();
 
-  console.log('🏗️ MainLayout state:', {
-    isLoading,
-    isAuthenticated,
-    hasUser: !!user,
-    userEmail: user?.email
-  });
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isLoading, isAuthenticated, navigate]);
 
   // Verify design compliance in development mode
   useEffect(() => {
@@ -33,9 +32,20 @@ export function MainLayout({ children }: MainLayoutProps) {
     }
   }, []);
 
-  // FIXED: Remove authentication checks since ProtectedRoute already handles them
-  // MainLayout should only focus on layout, not authentication
-  console.log('🏗️ MainLayout: Rendering children (auth handled by ProtectedRoute)');
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-croffle-background">
+        <Spinner className="h-8 w-8 text-croffle-accent" />
+        <span className="ml-2 text-croffle-primary font-semibold">Loading...</span>
+      </div>
+    );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   // Render main layout if authenticated
   return (

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -62,29 +63,7 @@ export const useAdminRecipesData = () => {
         throw error;
       }
 
-      // Transform database data to match Store interface
-      const transformedStores: Store[] = (data || []).map((store: any) => ({
-        id: store.id,
-        name: store.name,
-        location: store.address || store.city || 'N/A',
-        phone: store.phone,
-        email: store.email,
-        address: store.address,
-        tax_id: store.tax_id,
-        logo_url: store.logo_url,
-        is_active: store.is_active,
-        created_at: store.created_at,
-        updated_at: store.updated_at,
-        location_type: store.location_type,
-        region: store.region,
-        logistics_zone: store.logistics_zone,
-        ownership_type: store.ownership_type,
-        franchise_agreement_date: store.franchise_agreement_date,
-        franchise_fee_percentage: store.franchise_fee_percentage,
-        franchisee_contact_info: store.franchisee_contact_info,
-      }));
-
-      setStores(transformedStores);
+      setStores(data as Store[] || []);
     } catch (error: any) {
       console.error('Error fetching stores:', error);
       toast.error('Failed to load stores');

@@ -1,151 +1,142 @@
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  ReactNode,
-} from 'react';
-import { Product, ProductVariation } from '@/types';
+import React, { createContext, useContext, useReducer, useMemo, useCallback } from 'react';
+import { CartItem, Product, ProductVariation } from '@/types';
 
-interface CartItem {
-  id: string;
-  product: Product;
-  productId: string;
-  variation?: ProductVariation;
-  variationId?: string;
-  quantity: number;
-  price: number;
-}
-
-interface CartContextProps {
+interface CartState {
   items: CartItem[];
-  addToCart: (product: Product, variation?: ProductVariation, quantity?: number) => void;
-  removeFromCart: (productId: string, variationId?: string) => void;
-  updateQuantity: (productId: string, variationId: string | undefined, quantity: number) => void;
+}
+
+interface CartActions {
+  addItem: (product: Product, quantity?: number, variation?: ProductVariation) => void;
+  removeItem: (index: number) => void;
+  updateQuantity: (index: number, quantity: number) => void;
   clearCart: () => void;
-  getItemCount: () => number;
-  getSubtotal: () => number;
 }
 
-const CartContext = createContext<CartContextProps | undefined>(undefined);
-
-export function useOptimizedCart() {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error('useOptimizedCart must be used within a OptimizedCartProvider');
-  }
-  return context;
+interface CartCalculations {
+  subtotal: number;
+  tax: number;
+  total: number;
 }
 
-// Export individual hooks for backwards compatibility
-export function useCartState() {
-  const { items } = useOptimizedCart();
-  return { items };
-}
+type CartAction =
+  | { type: 'ADD_ITEM'; payload: { product: Product; quantity: number; variation?: ProductVariation } }
+  | { type: 'REMOVE_ITEM'; payload: { index: number } }
+  | { type: 'UPDATE_QUANTITY'; payload: { index: number; quantity: number } }
+  | { type: 'CLEAR_CART' };
 
-export function useCartActions() {
-  const { addToCart, removeFromCart, updateQuantity, clearCart } = useOptimizedCart();
-  return { 
-    addItem: addToCart,
-    removeItem: (index: number) => {
-      // Convert index-based removal to product-based removal
-      const item = useOptimizedCart().items[index];
-      if (item) {
-        removeFromCart(item.productId, item.variationId);
-      }
-    },
-    updateQuantity: (index: number, quantity: number) => {
-      // Convert index-based update to product-based update
-      const item = useOptimizedCart().items[index];
-      if (item) {
-        updateQuantity(item.productId, item.variationId, quantity);
-      }
-    },
-    clearCart 
-  };
-}
+const CartStateContext = createContext<CartState | undefined>(undefined);
+const CartActionsContext = createContext<CartActions | undefined>(undefined);
+const CartCalculationsContext = createContext<CartCalculations | undefined>(undefined);
 
-export function useCartCalculations() {
-  const { getSubtotal, items } = useOptimizedCart();
-  const subtotal = getSubtotal();
-  const tax = subtotal * 0.12; // 12% VAT
-  const total = subtotal;
-  
-  return { subtotal, tax, total };
-}
-
-export function OptimizedCartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-
-  const getItemCount = useCallback(() => {
-    return items.reduce((total, item) => total + item.quantity, 0);
-  }, [items]);
-
-  const getSubtotal = useCallback(() => {
-    return items.reduce((total, item) => total + (item.price * item.quantity), 0);
-  }, [items]);
-
-  const addToCart = useCallback((product: Product, variation?: ProductVariation, quantity = 1) => {
-    setItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(item => 
-        item.productId === product.id && item.variationId === variation?.id
-      );
-
-      if (existingItemIndex >= 0) {
-        const updatedItems = [...prevItems];
-        updatedItems[existingItemIndex].quantity += quantity;
-        return updatedItems;
-      }
-
+function cartReducer(state: CartState, action: CartAction): CartState {
+  switch (action.type) {
+    case 'ADD_ITEM': {
+      const { product, quantity, variation } = action.payload;
+      const price = variation ? variation.price : product.price;
+      
       const newItem: CartItem = {
-        id: `${product.id}-${variation?.id || 'base'}-${Date.now()}`, // Generate unique ID
         product,
         productId: product.id,
         variation,
         variationId: variation?.id,
         quantity,
-        price: variation?.price || product.price,
+        price,
       };
 
-      return [...prevItems, newItem];
-    });
-  }, []);
+      return { items: [...state.items, newItem] };
+    }
+    case 'REMOVE_ITEM':
+      return {
+        items: state.items.filter((_, index) => index !== action.payload.index)
+      };
+    case 'UPDATE_QUANTITY':
+      return {
+        items: state.items.map((item, index) =>
+          index === action.payload.index
+            ? { ...item, quantity: action.payload.quantity }
+            : item
+        )
+      };
+    case 'CLEAR_CART':
+      return { items: [] };
+    default:
+      return state;
+  }
+}
 
-  const removeFromCart = useCallback((productId: string, variationId?: string) => {
-    setItems(prevItems =>
-      prevItems.filter(item => item.productId !== productId || item.variationId !== variationId)
-    );
-  }, []);
+export function OptimizedCartProvider({ children }: { children: React.ReactNode }) {
+  const [state, dispatch] = useReducer(cartReducer, { items: [] });
 
-  const updateQuantity = useCallback((productId: string, variationId: string | undefined, quantity: number) => {
-    setItems(prevItems => {
-      return prevItems.map(item => {
-        if (item.productId === productId && item.variationId === variationId) {
-          return { ...item, quantity: Math.max(1, quantity) };
-        }
-        return item;
-      });
-    });
-  }, []);
+  // Memoized calculations
+  const calculations = useMemo(() => {
+    const subtotal = state.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const tax = subtotal * 0.12; // 12% VAT
+    const total = subtotal + tax;
+    
+    return { subtotal, tax, total };
+  }, [state.items]);
 
-  const clearCart = useCallback(() => {
-    setItems([]);
-  }, []);
-
-  const value: CartContextProps = {
-    items,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    clearCart,
-    getItemCount,
-    getSubtotal,
-  };
+  // Memoized actions to prevent re-renders
+  const actions = useMemo(() => ({
+    addItem: (product: Product, quantity = 1, variation?: ProductVariation) => {
+      dispatch({ type: 'ADD_ITEM', payload: { product, quantity, variation } });
+    },
+    removeItem: (index: number) => {
+      dispatch({ type: 'REMOVE_ITEM', payload: { index } });
+    },
+    updateQuantity: (index: number, quantity: number) => {
+      dispatch({ type: 'UPDATE_QUANTITY', payload: { index, quantity } });
+    },
+    clearCart: () => {
+      dispatch({ type: 'CLEAR_CART' });
+    }
+  }), []);
 
   return (
-    <CartContext.Provider value={value}>
-      {children}
-    </CartContext.Provider>
+    <CartStateContext.Provider value={state}>
+      <CartActionsContext.Provider value={actions}>
+        <CartCalculationsContext.Provider value={calculations}>
+          {children}
+        </CartCalculationsContext.Provider>
+      </CartActionsContext.Provider>
+    </CartStateContext.Provider>
   );
+}
+
+export function useCartState() {
+  const context = useContext(CartStateContext);
+  if (context === undefined) {
+    throw new Error('useCartState must be used within an OptimizedCartProvider');
+  }
+  return context;
+}
+
+export function useCartActions() {
+  const context = useContext(CartActionsContext);
+  if (context === undefined) {
+    throw new Error('useCartActions must be used within an OptimizedCartProvider');
+  }
+  return context;
+}
+
+export function useCartCalculations() {
+  const context = useContext(CartCalculationsContext);
+  if (context === undefined) {
+    throw new Error('useCartCalculations must be used within an OptimizedCartProvider');
+  }
+  return context;
+}
+
+// Backwards compatibility hook
+export function useOptimizedCart() {
+  const state = useCartState();
+  const actions = useCartActions();
+  const calculations = useCartCalculations();
+  
+  return {
+    ...state,
+    ...actions,
+    ...calculations
+  };
 }

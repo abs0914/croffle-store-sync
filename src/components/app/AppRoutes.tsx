@@ -5,7 +5,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { AdminProtectedRoute } from '@/components/auth/AdminProtectedRoute';
 import { AdminRoutes } from './AdminRoutes';
 
-// Lazy load components for better performance with preloading
+// Lazy load components for better performance
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const POS = React.lazy(() => import('@/pages/POS'));
 const Products = React.lazy(() => import('@/pages/Products'));
@@ -20,26 +20,12 @@ const Stores = React.lazy(() => import('@/pages/Stores'));
 const ProductCatalog = React.lazy(() => import('@/pages/ProductCatalog'));
 const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
 
-// Preload critical components after initial load
-const preloadCriticalComponents = () => {
-  // Preload Dashboard and POS as they are most commonly accessed
-  import('@/pages/Dashboard');
-  import('@/pages/POS');
-  import('@/pages/Products');
-};
-
-// Start preloading after a short delay
-setTimeout(preloadCriticalComponents, 2000);
-
 export const AppRoutes: React.FC = () => {
   return (
-    <React.Suspense
+    <React.Suspense 
       fallback={
         <div className="flex items-center justify-center h-64">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            <p className="text-gray-600 font-medium">Loading page...</p>
-          </div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         </div>
       }
     >

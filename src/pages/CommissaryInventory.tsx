@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Package, AlertTriangle, CheckCircle, Warehouse, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Package, AlertTriangle, CheckCircle, Warehouse, Trash2, ExternalLink } from "lucide-react";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { 
   fetchCommissaryInventory, 
@@ -21,9 +20,11 @@ import { StockAdjustmentDialog } from "./CommissaryInventory/components/StockAdj
 import { DeleteConfirmationDialog } from "./CommissaryInventory/components/DeleteConfirmationDialog";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/format";
+import { useNavigate } from "react-router-dom";
 
 export default function CommissaryInventory() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState<CommissaryInventoryItem[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,10 +120,17 @@ export default function CommissaryInventory() {
 
   const handleRemoveDuplicates = async () => {
     setRemovingDuplicates(true);
-    const deduplicatedItems = removeDuplicateCommissaryItems(items);
-    setItems(deduplicatedItems);
-    toast.success('Duplicates removed successfully');
+    const success = await removeDuplicateCommissaryItems();
+    if (success) {
+      // Reload the data to reflect changes
+      await loadItems();
+    }
     setRemovingDuplicates(false);
+  };
+
+  const handleBulkUploadNavigation = () => {
+    navigate('/admin/production-management');
+    toast.info('Navigate to the Bulk Upload tab to upload raw materials via CSV');
   };
 
   if (!hasAdminAccess) {
@@ -232,6 +240,15 @@ export default function CommissaryInventory() {
           </Button>
           
           <Button
+            onClick={handleBulkUploadNavigation}
+            variant="outline"
+            className="text-blue-600 hover:text-blue-700 border-blue-300 hover:border-blue-400"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Bulk Upload via CSV
+          </Button>
+          
+          <Button
             onClick={handleRemoveDuplicates}
             disabled={removingDuplicates}
             variant="outline"
@@ -260,9 +277,16 @@ export default function CommissaryInventory() {
           ) : items.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mb-4">
                 No commissary inventory items found. Upload raw materials through Production Management → Bulk Upload to see them here.
               </p>
+              <Button 
+                onClick={handleBulkUploadNavigation}
+                className="bg-croffle-accent hover:bg-croffle-accent/90"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Go to Bulk Upload
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">

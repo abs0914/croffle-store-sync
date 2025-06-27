@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
 import { toast } from "sonner";
@@ -149,36 +148,119 @@ export const getCommissaryStockLevelColor = (level: 'good' | 'low' | 'out'): str
   }
 };
 
-export const removeDuplicateCommissaryItems = (items: CommissaryInventoryItem[]): CommissaryInventoryItem[] => {
-  const seen = new Set();
-  return items.filter(item => {
-    const key = `${item.name}-${item.category}`;
-    if (seen.has(key)) {
-      return false;
+export const removeDuplicateCommissaryItems = async (): Promise<boolean> => {
+  try {
+    console.log('Starting duplicate removal process...');
+    
+    // First, get all commissary inventory items
+    const { data: allItems, error: fetchError } = await supabase
+      .from('commissary_inventory')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true }); // Keep oldest items
+
+    if (fetchError) throw fetchError;
+
+    if (!allItems || allItems.length === 0) {
+      toast.info('No items found to check for duplicates');
+      return true;
     }
-    seen.add(key);
+
+    console.log('Found items to check:', allItems.length);
+
+    // Group items by name and category to find duplicates
+    const itemGroups = new Map<string, any[]>();
+    
+    allItems.forEach(item => {
+      const key = `${item.name.toLowerCase().trim()}-${item.category}`;
+      if (!itemGroups.has(key)) {
+        itemGroups.set(key, []);
+      }
+      itemGroups.get(key)!.push(item);
+    });
+
+    // Find duplicates and mark for deletion
+    const itemsToDelete: string[] = [];
+    let duplicatesFound = 0;
+
+    itemGroups.forEach((items, key) => {
+      if (items.length > 1) {
+        console.log(`Found ${items.length} duplicates for: ${key}`, items.map(i => ({ id: i.id, name: i.name, unit: i.unit, stock: i.current_stock })));
+        
+        // Keep the first item (oldest), mark others for deletion
+        const itemsToKeep = items.slice(0, 1);
+        const itemsToRemove = items.slice(1);
+        
+        // Combine stock from duplicates into the item we're keeping
+        const totalStock = items.reduce((sum, item) => sum + (item.current_stock || 0), 0);
+        const keepItem = itemsToKeep[0];
+        
+        // Update the kept item with combined stock
+        if (totalStock !== keepItem.current_stock) {
+          console.log(`Combining stock for ${keepItem.name}: ${keepItem.current_stock} + ${totalStock - keepItem.current_stock} = ${totalStock}`);
+        }
+
+        // Mark duplicates for deletion
+        itemsToRemove.forEach(item => {
+          itemsToDelete.push(item.id);
+          duplicatesFound++;
+        });
+      }
+    });
+
+    if (itemsToDelete.length === 0) {
+      toast.info('No duplicates found');
+      return true;
+    }
+
+    console.log(`Removing ${itemsToDelete.length} duplicate items...`, itemsToDelete);
+
+    // Delete duplicates from database
+    const { error: deleteError } = await supabase
+      .from('commissary_inventory')
+      .update({ is_active: false })
+      .in('id', itemsToDelete);
+
+    if (deleteError) throw deleteError;
+
+    toast.success(`Successfully removed ${duplicatesFound} duplicate items`);
     return true;
-  });
+    
+  } catch (error) {
+    console.error('Error removing duplicates:', error);
+    toast.error('Failed to remove duplicates');
+    return false;
+  }
 };
 
 export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> => {
   try {
+    console.log('Fetching orderable items...');
+    
     const { data, error } = await supabase
       .from('commissary_inventory')
       .select('*')
       .eq('is_active', true)
-      .eq('item_type', 'orderable_item')
-      .gt('current_stock', 0)
+      .eq('item_type', 'orderable_item') // Only fetch converted/finished products
+      .gt('current_stock', 0) // Only items with stock > 0
       .order('name');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching orderable items:', error);
+      throw error;
+    }
     
-    return (data || []).map(item => ({
+    console.log('Raw orderable items from DB:', data);
+    
+    const processedItems = (data || []).map(item => ({
       ...item,
       uom: item.unit || 'units',
       category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
       item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
     }));
+    
+    console.log('Processed orderable items:', processedItems);
+    return processedItems;
   } catch (error) {
     console.error('Error fetching orderable items:', error);
     toast.error('Failed to fetch orderable items');

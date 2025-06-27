@@ -51,3 +51,30 @@ export interface PurchaseHistory {
   batch_number?: string;
   notes?: string;
 }
+
+// Re-export CommissaryInventoryItem from the correct location
+export interface CommissaryInventoryItem {
+  id: string;
+  name: string;
+  category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  item_type: 'raw_material' | 'supply' | 'orderable_item';
+  current_stock: number;
+  minimum_threshold: number;
+  uom: string;
+  unit_cost?: number;
+  supplier_id?: string;
+  sku?: string;
+  barcode?: string;
+  expiry_date?: string;
+  storage_location?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  supplier?: {
+    id: string;
+    name: string;
+    contact_person?: string;
+    phone?: string;
+    email?: string;
+  };
+}

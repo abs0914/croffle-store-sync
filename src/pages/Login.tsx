@@ -1,13 +1,12 @@
 
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/auth/SimplifiedAuthProvider";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { authDebugger } from "@/utils/authDebug";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -15,26 +14,15 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Get the redirect path from location state or default to dashboard
-  const from = location.state?.from?.pathname || "/dashboard";
+  // Redirect if already authenticated
+  if (isAuthenticated && !isLoading) {
+    navigate("/");
+    return null;
+  }
 
-  // Force redirect if already authenticated
-  useEffect(() => {
-    console.log('🔐 Login page: Auth state check', { isAuthenticated, isLoading, from });
-    authDebugger.log('Login page: Auth state check', { isAuthenticated, isLoading, from });
-    
-    if (isAuthenticated && !isLoading) {
-      console.log('🔐 Login page: Already authenticated, redirecting immediately', { from });
-      authDebugger.log('Login page: Already authenticated, redirecting immediately', { from });
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, isLoading, navigate, from]);
-
-  // Show loading spinner while checking authentication with timeout
+  // Show loading spinner while checking authentication
   if (isLoading) {
-    authDebugger.log('Login page: Auth loading', { isLoading });
     return (
       <div className="flex items-center justify-center min-h-screen bg-croffle-background">
         <div className="flex items-center space-x-2">
@@ -43,13 +31,6 @@ export default function Login() {
         </div>
       </div>
     );
-  }
-
-  // If authenticated, don't render the login form (should redirect above)
-  if (isAuthenticated) {
-    console.log('🔐 Login page: Authenticated but still rendering, forcing redirect', { from });
-    navigate(from, { replace: true });
-    return null;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,18 +44,12 @@ export default function Login() {
     setIsSubmitting(true);
     
     try {
-      authDebugger.log('Login form: Attempting login', { email });
       await login(email, password);
-      
-      authDebugger.log('Login form: Login successful, auth state will handle redirect');
       toast.success("Login successful");
-      
-      // The auth state change will handle the redirect automatically
-      // Don't manually navigate here to avoid race conditions
-    } catch (error: any) {
-      authDebugger.log('Login form: Login failed', { error: error.message }, 'error');
+      navigate("/");
+    } catch (error) {
+      // Error is already handled in the login function with toast
       console.error("Login failed:", error);
-      toast.error(error.message || "Login failed");
     } finally {
       setIsSubmitting(false);
     }

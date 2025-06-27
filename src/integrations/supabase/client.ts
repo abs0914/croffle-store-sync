@@ -15,10 +15,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    flowType: 'implicit',
-    // Add debug mode for better error tracking
-    debug: process.env.NODE_ENV === 'development',
-    // Improve token refresh behavior
-    storageKey: 'supabase.auth.token',
+    flowType: 'implicit'
   }
 });

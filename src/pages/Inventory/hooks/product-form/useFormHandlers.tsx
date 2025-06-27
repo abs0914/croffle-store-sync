@@ -3,7 +3,7 @@ import { Product, ProductSize } from "@/types";
 
 export function useFormHandlers({
   formData,
-  handleFieldChange,
+  setFormData,
   setImageFile,
   setImagePreview,
   setHasVariations,
@@ -19,8 +19,11 @@ export function useFormHandlers({
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    const processedValue = type === "number" ? parseFloat(value) || 0 : value;
-    handleFieldChange(name as keyof Product, processedValue);
+    
+    setFormData((prev: any) => ({
+      ...prev,
+      [name]: type === "number" ? parseFloat(value) || 0 : value,
+    }));
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,12 +32,12 @@ export function useFormHandlers({
     if (name === "hasVariations") {
       setHasVariations(checked);
     } else {
-      handleFieldChange(name as keyof Product, checked);
+      setFormData((prev: any) => ({ ...prev, [name]: checked }));
     }
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    handleFieldChange(name as keyof Product, value);
+    setFormData((prev: any) => ({ ...prev, [name]: value }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,8 +54,8 @@ export function useFormHandlers({
 
   const handleRemoveImage = () => {
     setImageFile(null);
-    setImagePreview('');
-    handleFieldChange('image_url', '');
+    setImagePreview(null);
+    setFormData((prev: any) => ({ ...prev, image: null }));
   };
 
   const handleVariationPriceChange = (e: React.ChangeEvent<HTMLInputElement>, size: ProductSize) => {

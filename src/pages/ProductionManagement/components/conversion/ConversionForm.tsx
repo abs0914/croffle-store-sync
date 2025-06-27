@@ -26,7 +26,7 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
   ]);
   const [outputItem, setOutputItem] = useState({
     name: "",
-    category: "raw_materials" as const,
+    category: "supplies" as const, // Default to supplies for finished products
     uom: "",
     quantity: 1,
     unit_cost: 0,
@@ -40,7 +40,7 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
     setInputItems([{ commissary_item_id: "", quantity: 1 }]);
     setOutputItem({
       name: "",
-      category: "raw_materials",
+      category: "supplies",
       uom: "",
       quantity: 1,
       unit_cost: 0,
@@ -56,12 +56,12 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
     }
 
     if (!outputItem.name.trim()) {
-      toast.error("Please enter an output item name");
+      toast.error("Please enter a finished product name");
       return;
     }
 
     if (!outputItem.uom) {
-      toast.error("Please select a unit of measure for the output item");
+      toast.error("Please select a unit of measure for the finished product");
       return;
     }
 
@@ -87,6 +87,7 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
     if (success) {
       onConversionComplete();
       resetForm();
+      toast.success(`Successfully created finished product: ${outputItem.name}`);
     }
     
     setConverting(false);
@@ -97,10 +98,13 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" />
-          Create Conversion
+          Create Finished Product (Conversion)
         </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Convert raw materials into finished products that stores can order
+        </p>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <ConversionBasicInfo 
           conversionName={conversionName}
           setConversionName={setConversionName}
@@ -132,7 +136,7 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
           ) : (
             <>
               <ArrowRight className="h-4 w-4 mr-2" />
-              Execute Conversion
+              Create Finished Product
             </>
           )}
         </Button>

@@ -50,7 +50,8 @@ export function Sidebar() {
   const { user, logout } = useAuth();
   const { currentStore, setCurrentStore, stores } = useStore();
 
-  const isActive = (path: string) => {
+  const isActive = (path?: string) => {
+    if (!path) return false;
     return location.pathname === path;
   };
 
@@ -170,8 +171,9 @@ export function Sidebar() {
           return (
             <button
               key={index}
-              onClick={() => navigate(item.path || "")}
-              className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent ${isActive(item.path || "") ? 'bg-secondary' : ''}`}
+              onClick={() => item.path && navigate(item.path)}
+              className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent ${isActive(item.path) ? 'bg-secondary' : ''}`}
+              disabled={!item.path}
             >
               <item.icon className="h-4 w-4" />
               <span>{item.label}</span>
