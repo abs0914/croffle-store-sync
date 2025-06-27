@@ -7,13 +7,18 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
   try {
     console.log('Starting bulk upload of conversion recipes:', recipes);
     
-    // Get commissary items for validation
+    // Get commissary items for validation - use the correct table name
     const { data: commissaryItems } = await supabase
       .from('commissary_inventory')
       .select('id, name')
       .eq('is_active', true);
 
-    const commissaryMap = new Map(commissaryItems?.map(item => [item.name.toLowerCase(), item]) || []);
+    if (!commissaryItems) {
+      toast.error('Failed to load commissary inventory items');
+      return false;
+    }
+
+    const commissaryMap = new Map(commissaryItems.map(item => [item.name.toLowerCase(), item]));
 
     const validRecipes = [];
     const errors = [];
@@ -42,6 +47,11 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
     const { data: userData } = await supabase.auth.getUser();
     const currentUserId = userData.user?.id;
 
+    if (!currentUserId) {
+      toast.error('Authentication required');
+      return false;
+    }
+
     // Create conversion recipe templates
     const conversionRecipeInserts = validRecipes.map(recipe => ({
       name: recipe.name,
@@ -65,20 +75,27 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       return false;
     }
 
+    if (!insertedRecipes || insertedRecipes.length === 0) {
+      toast.error('No conversion recipes were created');
+      return false;
+    }
+
     console.log('Created conversion recipes:', insertedRecipes);
 
-    // Create conversion recipe ingredients
+    // Create conversion recipe ingredients with proper foreign key reference
     const ingredientInserts = [];
     
     for (let i = 0; i < validRecipes.length; i++) {
       const recipe = validRecipes[i];
       const insertedRecipe = insertedRecipes[i];
       
-      ingredientInserts.push({
-        conversion_recipe_id: insertedRecipe.id,
-        commissary_item_id: recipe.commissary_item_id,
-        quantity: recipe.input_quantity
-      });
+      if (insertedRecipe && recipe.commissary_item_id) {
+        ingredientInserts.push({
+          conversion_recipe_id: insertedRecipe.id,
+          commissary_item_id: recipe.commissary_item_id,
+          quantity: recipe.input_quantity
+        });
+      }
     }
 
     if (ingredientInserts.length > 0) {
@@ -88,7 +105,13 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
 
       if (ingredientError) {
         console.error('Error inserting conversion recipe ingredients:', ingredientError);
-        toast.error('Failed to add ingredients to conversion recipes');
+        
+        // If foreign key constraint error, provide more specific guidance
+        if (ingredientError.code === '23503') {
+          toast.error('Database constraint error: Please ensure all input items exist in commissary inventory with exact name matching.');
+        } else {
+          toast.error('Failed to add ingredients to conversion recipes');  
+        }
         return false;
       }
     }
