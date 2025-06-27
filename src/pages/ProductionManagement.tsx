@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,14 +6,13 @@ import { SuppliersTab } from "./ProductionManagement/components/SuppliersTab";
 import { BulkUploadTab } from "./ProductionManagement/components/BulkUploadTab";
 import { ConversionProcessTab } from "./ProductionManagement/components/ConversionProcessTab";
 import { useStore } from "@/contexts/StoreContext";
-import {  ShoppingCart, Building2, Upload, Package } from "lucide-react";
-
+import { ShoppingCart, Building2, Upload, Package } from "lucide-react";
 export default function ProductionManagement() {
-  const { currentStore } = useStore();
+  const {
+    currentStore
+  } = useStore();
   const [activeTab, setActiveTab] = useState("stocking");
-
-  return (
-    <div className="container mx-auto p-6 space-y-6">
+  return <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Package className="h-8 w-8 text-croffle-accent" />
         <div>
@@ -48,7 +46,7 @@ export default function ProductionManagement() {
         <TabsContent value="stocking">
           <Card>
             <CardHeader>
-              <CardTitle>Inventory Stocking</CardTitle>
+              <CardTitle>Purchasing</CardTitle>
               <CardDescription>
                 Record supplier purchases and manage commissary inventory restocking.
                 Track purchase costs, suppliers, and batch information for complete traceability.
@@ -104,6 +102,5 @@ export default function ProductionManagement() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 }
