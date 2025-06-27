@@ -29,7 +29,7 @@ export default function ProductionManagement() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="stocking" className="flex items-center gap-2">
             <ShoppingCart className="h-4 w-4" />
-            Inventory Stocking
+            Purchasing
           </TabsTrigger>
           <TabsTrigger value="suppliers" className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
