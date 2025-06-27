@@ -59,7 +59,7 @@ Coffee Beans,1,kg,Ground Coffee,1,kg,Grind beans for brewing`;
       <CardContent className="space-y-4">
         
 
-        <div className="space-y-2">
+        <div className="space-y-2 my-[2px] py-[6px]">
           <Label htmlFor="conversion-file">CSV File</Label>
           <Input id="conversion-file" type="file" accept=".csv" onChange={e => setUploadFile(e.target.files?.[0] || null)} />
         </div>
