@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,7 +61,7 @@ export const ConversionRecipeUpload = () => {
           className="w-full"
         >
           <Upload className="h-4 w-4 mr-2" />
-          {isUploading ? "Creating Templates..." : "Create Conversion Templates"}
+          {isUploading ? "Creating Templates..." : "Create Orderable Product (Conversion)"}
         </Button>
 
         <div className="text-sm text-muted-foreground">
