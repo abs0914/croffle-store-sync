@@ -1,3 +1,4 @@
+
 import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
@@ -37,6 +38,11 @@ export class CapacitorMobileInit {
   }
 
   private static async configureStatusBar(): Promise<void> {
+    if (!Capacitor.isPluginAvailable('StatusBar')) {
+      console.log('StatusBar plugin not available');
+      return;
+    }
+
     try {
       await StatusBar.setStyle({ style: Style.Light });
       await StatusBar.setBackgroundColor({ color: '#ffffff' });
@@ -48,6 +54,11 @@ export class CapacitorMobileInit {
   }
 
   private static async configureSplashScreen(): Promise<void> {
+    if (!Capacitor.isPluginAvailable('SplashScreen')) {
+      console.log('SplashScreen plugin not available');
+      return;
+    }
+
     try {
       // Hide splash screen after a short delay to ensure app is ready
       setTimeout(async () => {
@@ -60,6 +71,11 @@ export class CapacitorMobileInit {
   }
 
   private static async configureKeyboard(): Promise<void> {
+    if (!Capacitor.isPluginAvailable('Keyboard')) {
+      console.log('Keyboard plugin not available');
+      return;
+    }
+
     try {
       // Configure keyboard behavior
       Keyboard.addListener('keyboardWillShow', (info) => {
@@ -81,6 +97,11 @@ export class CapacitorMobileInit {
   }
 
   private static async configureAppListeners(): Promise<void> {
+    if (!Capacitor.isPluginAvailable('App')) {
+      console.log('App plugin not available');
+      return;
+    }
+
     try {
       // Handle app state changes
       App.addListener('appStateChange', ({ isActive }) => {
@@ -118,6 +139,11 @@ export class CapacitorMobileInit {
   }
 
   private static async configureNetworkMonitoring(): Promise<void> {
+    if (!Capacitor.isPluginAvailable('Network')) {
+      console.log('Network plugin not available');
+      return;
+    }
+
     try {
       // Monitor network status
       const status = await Network.getStatus();
@@ -151,6 +177,11 @@ export class CapacitorMobileInit {
         isVirtual: false,
         webViewVersion: 'N/A'
       };
+    }
+
+    if (!Capacitor.isPluginAvailable('Device')) {
+      console.log('Device plugin not available');
+      return null;
     }
 
     try {

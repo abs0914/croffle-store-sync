@@ -1,3 +1,4 @@
+
 @echo off
 setlocal enabledelayedexpansion
 
@@ -23,8 +24,9 @@ REM Step 1: Clean previous builds
 echo [INFO] Cleaning previous builds...
 if exist "dist" rmdir /s /q "dist"
 
-REM Step 2: Build the web application (minimal build for kiosk)
-echo [INFO] Building web application...
+REM Step 2: Build the web application for kiosk mode
+echo [INFO] Building web application for kiosk mode...
+set BUILD_TARGET=kiosk
 call npm run build
 if errorlevel 1 (
     echo [ERROR] Web build failed

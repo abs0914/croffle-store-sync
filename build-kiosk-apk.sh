@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # Croffle Store POS Kiosk - APK Build Script
@@ -50,9 +51,9 @@ if [ -d "dist" ]; then
     rm -rf dist
 fi
 
-# Step 2: Build the web application (minimal build for kiosk)
-print_status "Building web application..."
-npm run build
+# Step 2: Build the web application for kiosk mode
+print_status "Building web application for kiosk mode..."
+BUILD_TARGET=kiosk npm run build
 
 # Step 3: Sync Capacitor
 print_status "Syncing Capacitor..."
