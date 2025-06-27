@@ -141,7 +141,7 @@ export function BulkUploadTab({
               </div>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• Raw materials, packaging, supplies</li>
-                <li>• Support for custom UOM (kg, g, pieces, liters, ml, box, container, etc.)</li>
+                <li>• Support standard UOM (kg, g, pieces, liters, ml, box, container, etc.)</li>
                 <li>• Include supplier information</li>
                 <li>• Set proper stock thresholds</li>
                 <li>• Specify storage locations</li>
