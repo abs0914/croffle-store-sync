@@ -1,4 +1,3 @@
-
 export interface RecipeUpload {
   name: string;
   category?: string;
@@ -33,7 +32,7 @@ export interface ConversionRecipeUpload {
   input_quantity: number;
   input_unit: string;
   output_product_name: string;
-  output_product_category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  output_product_category: string;
   output_quantity: number;
   output_unit: string;
   output_unit_cost?: number;
@@ -294,119 +293,83 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
 };
 
 // Updated conversion recipe parser to handle comprehensive spreadsheet format
-export const parseConversionRecipesCSV = (csvText: string): ConversionRecipeUpload[] => {
-  console.log('Starting conversion recipe CSV parsing, input length:', csvText.length);
-  
-  const lines = csvText.trim().split('\n').filter(line => line.trim());
-  console.log('Total lines found:', lines.length);
-  
-  if (lines.length < 2) {
-    console.log('Not enough lines in CSV');
-    return [];
-  }
+export const parseConversionRecipesCSV = (csvContent: string): ConversionRecipeUpload[] => {
+  try {
+    const lines = csvContent.trim().split('\n');
+    if (lines.length < 2) {
+      console.warn('CSV file appears to be empty or has no data rows');
+      return [];
+    }
 
-  const headers = parseCSVLine(lines[0]);
-  console.log('Headers found:', headers);
-  
-  const headerMapping = createConversionRecipeHeaderMapping(headers);
-  console.log('Header mapping:', headerMapping);
-  
-  const recipes: ConversionRecipeUpload[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
-    console.log(`Processing line ${i}:`, values);
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    console.log('CSV Headers found:', headers);
     
-    if (values.length < headers.length) {
-      console.log(`Skipping line ${i}: insufficient columns`);
-      continue;
+    // Required headers for conversion recipes
+    const requiredHeaders = [
+      'name', 'input_item_name', 'input_quantity', 'input_unit',
+      'output_product_name', 'output_quantity', 'output_unit'
+    ];
+    
+    const missingHeaders = requiredHeaders.filter(header => 
+      !headers.some(h => h.includes(header.replace('_', ' ')) || h.includes(header))
+    );
+    
+    if (missingHeaders.length > 0) {
+      console.error('Missing required headers:', missingHeaders);
+      throw new Error(`Missing required columns: ${missingHeaders.join(', ')}`);
     }
 
-    // Extract values using header mapping - Updated to handle comprehensive fields
-    const name = values[headerMapping['name']] || '';
-    const description = values[headerMapping['description']] || '';
-    const input_item_name = values[headerMapping['input_item_name']] || '';
-    const input_quantity = parseFloat(values[headerMapping['input_quantity']] || '0') || 0;
-    const input_unit = values[headerMapping['input_unit']] || '';
-    const output_product_name = values[headerMapping['output_product_name']] || '';
-    const raw_output_category = values[headerMapping['output_product_category']] || '';
-    const output_quantity = parseFloat(values[headerMapping['output_quantity']] || '0') || 0;
-    const output_unit = values[headerMapping['output_unit']] || '';
-    const output_unit_cost = parseFloat(values[headerMapping['output_unit_cost']] || '0') || undefined;
-    const output_sku = values[headerMapping['output_sku']] || '';
-    const output_storage_location = values[headerMapping['output_storage_location']] || '';
-    const instructions = values[headerMapping['instructions']] || '';
-
-    console.log(`Extracted data for line ${i}:`, { 
-      name, 
-      input_item_name, 
-      input_quantity, 
-      input_unit, 
-      output_product_name, 
-      raw_output_category,
-      output_quantity, 
-      output_unit,
-      output_unit_cost,
-      output_sku,
-      output_storage_location
-    });
-
-    // Map category to valid database value
-    const mapCategoryToValidValue = (category: string): 'raw_materials' | 'packaging_materials' | 'supplies' => {
-      const normalizedCategory = category.toLowerCase().trim();
+    const recipes: ConversionRecipeUpload[] = [];
+    
+    // Process each data row (skip header)
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim());
       
-      const categoryMapping: Record<string, 'raw_materials' | 'packaging_materials' | 'supplies'> = {
-        'raw_materials': 'raw_materials',
-        'raw_ingredients': 'raw_materials',
-        'ingredients': 'raw_materials',
-        'raw': 'raw_materials',
-        'packaging_materials': 'packaging_materials',
-        'packaging': 'packaging_materials',
-        'packages': 'packaging_materials',
-        'containers': 'packaging_materials',
-        'supplies': 'supplies',
-        'store_equipment': 'supplies',
-        'equipment': 'supplies',
-        'tools': 'supplies',
-        'store_supplies': 'supplies',
-        'misc': 'supplies',
-        'miscellaneous': 'supplies'
-      };
+      // Skip empty rows
+      if (values.every(v => !v)) continue;
       
-      return categoryMapping[normalizedCategory] || 'raw_materials';
-    };
+      try {
+        const recipe: ConversionRecipeUpload = {
+          name: values[headers.indexOf('name')] || values[headers.findIndex(h => h.includes('name'))] || '',
+          description: values[headers.indexOf('description')] || values[headers.findIndex(h => h.includes('description'))] || '',
+          input_item_name: values[headers.indexOf('input_item_name')] || values[headers.findIndex(h => h.includes('input') && h.includes('item'))] || '',
+          input_quantity: parseFloat(values[headers.indexOf('input_quantity')] || values[headers.findIndex(h => h.includes('input') && h.includes('quantity'))] || '0'),
+          input_unit: values[headers.indexOf('input_unit')] || values[headers.findIndex(h => h.includes('input') && h.includes('unit'))] || '',
+          output_product_name: values[headers.indexOf('output_product_name')] || values[headers.findIndex(h => h.includes('output') && h.includes('product'))] || '',
+          output_product_category: values[headers.indexOf('output_product_category')] || values[headers.findIndex(h => h.includes('output') && h.includes('category'))] || 'raw_materials',
+          output_quantity: parseFloat(values[headers.indexOf('output_quantity')] || values[headers.findIndex(h => h.includes('output') && h.includes('quantity'))] || '0'),
+          output_unit: values[headers.indexOf('output_unit')] || values[headers.findIndex(h => h.includes('output') && h.includes('unit'))] || '',
+          output_unit_cost: parseFloat(values[headers.indexOf('output_unit_cost')] || values[headers.findIndex(h => h.includes('unit') && h.includes('cost'))] || '0') || undefined,
+          output_sku: values[headers.indexOf('output_sku')] || values[headers.findIndex(h => h.includes('sku'))] || undefined,
+          output_storage_location: values[headers.indexOf('output_storage_location')] || values[headers.findIndex(h => h.includes('storage'))] || undefined,
+          instructions: values[headers.indexOf('instructions')] || values[headers.findIndex(h => h.includes('instructions'))] || undefined
+        };
 
-    const output_product_category = mapCategoryToValidValue(raw_output_category);
+        // Validate required fields
+        if (!recipe.name || !recipe.input_item_name || !recipe.output_product_name) {
+          console.warn(`Skipping row ${i + 1}: Missing required fields`);
+          continue;
+        }
 
-    // Auto-generate name if not provided based on input/output items
-    const conversionName = name || `${input_item_name} to ${output_product_name}`;
+        if (recipe.input_quantity <= 0 || recipe.output_quantity <= 0) {
+          console.warn(`Skipping row ${i + 1}: Invalid quantities`);
+          continue;
+        }
 
-    // Validate required fields
-    if (!input_item_name || !input_unit || !output_product_name || !output_unit || input_quantity <= 0 || output_quantity <= 0) {
-      console.log(`Skipping line ${i}: missing required fields or invalid quantities`);
-      continue;
+        console.log(`Adding conversion recipe: ${JSON.stringify(recipe, null, 2)}`);
+        recipes.push(recipe);
+        
+      } catch (error) {
+        console.error(`Error parsing row ${i + 1}:`, error);
+        continue;
+      }
     }
-
-    const recipe: ConversionRecipeUpload = {
-      name: conversionName.trim(),
-      description: description.trim() || `Convert ${input_item_name} to ${output_product_name}`,
-      input_item_name: input_item_name.trim(),
-      input_quantity,
-      input_unit: input_unit.trim(),
-      output_product_name: output_product_name.trim(),
-      output_product_category,
-      output_quantity,
-      output_unit: output_unit.trim(),
-      output_unit_cost: output_unit_cost && output_unit_cost > 0 ? output_unit_cost : undefined,
-      output_sku: output_sku.trim() || undefined,
-      output_storage_location: output_storage_location.trim() || undefined,
-      instructions: instructions.trim() || `Convert ${input_quantity} ${input_unit} of ${input_item_name} to ${output_quantity} ${output_unit} of ${output_product_name}`
-    };
-
-    console.log(`Adding conversion recipe:`, recipe);
-    recipes.push(recipe);
+    
+    console.log(`Parsed ${recipes.length} valid conversion recipes`);
+    return recipes;
+    
+  } catch (error) {
+    console.error('Error parsing conversion recipes CSV:', error);
+    throw error;
   }
-
-  console.log(`Parsed ${recipes.length} valid conversion recipes`);
-  return recipes;
 };

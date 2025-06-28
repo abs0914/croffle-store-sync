@@ -7,67 +7,33 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
   try {
     console.log('Starting bulk upload of conversion recipes:', recipes);
     
-    // Get commissary items for validation - check both possible table names
-    let commissaryItems: any[] = [];
-    let commissaryMap = new Map();
-    
-    // Try commissary_inventory first
+    // Get commissary items for validation
     const { data: commissaryData, error: commissaryError } = await supabase
       .from('commissary_inventory')
       .select('id, name')
       .eq('is_active', true);
 
-    if (!commissaryError && commissaryData) {
-      commissaryItems = commissaryData;
-      commissaryMap = new Map(commissaryItems.map(item => [item.name.toLowerCase().trim(), item]));
-      console.log('Available commissary items:', commissaryItems.map(item => item.name));
-    } else {
-      // Try inventory_items as fallback
-      const { data: inventoryData, error: inventoryError } = await supabase
-        .from('inventory_items')
-        .select('id, name')
-        .eq('is_active', true);
-
-      if (!inventoryError && inventoryData) {
-        commissaryItems = inventoryData;
-        commissaryMap = new Map(commissaryItems.map(item => [item.name.toLowerCase().trim(), item]));
-        console.log('Available inventory items:', commissaryItems.map(item => item.name));
-      } else {
-        toast.error('Failed to load inventory items for validation');
-        return false;
-      }
+    if (commissaryError || !commissaryData) {
+      console.error('Error fetching commissary inventory:', commissaryError);
+      toast.error('Failed to load commissary inventory for validation');
+      return false;
     }
+
+    const commissaryMap = new Map(commissaryData.map(item => [item.name.toLowerCase().trim(), item]));
+    console.log('Available commissary items:', commissaryData.map(item => item.name));
 
     const validRecipes = [];
     const errors = [];
 
-    // Validate each recipe
+    // Validate each recipe with strict matching only
     for (const recipe of recipes) {
       const inputItemKey = recipe.input_item_name.toLowerCase().trim();
-      let inventoryItem = commissaryMap.get(inputItemKey);
-      
-      console.log(`Looking for input item: "${recipe.input_item_name}" (normalized: "${inputItemKey}")`);
+      const inventoryItem = commissaryMap.get(inputItemKey);
       
       if (!inventoryItem) {
-        console.log(`Input item "${recipe.input_item_name}" not found in inventory`);
-        console.log('Available items:', Array.from(commissaryMap.keys()));
-        
-        // Try partial matching as fallback
-        let foundItem = null;
-        for (const [key, item] of commissaryMap.entries()) {
-          if (key.includes(inputItemKey) || inputItemKey.includes(key)) {
-            foundItem = item;
-            console.log(`Found partial match: "${item.name}" for "${recipe.input_item_name}"`);
-            break;
-          }
-        }
-        
-        if (!foundItem) {
-          errors.push(`Input item "${recipe.input_item_name}" not found in inventory. Available items: ${Array.from(commissaryMap.keys()).join(', ')}`);
-          continue;
-        } else {
-          inventoryItem = foundItem;
-        }
+        errors.push(`Input item "${recipe.input_item_name}" not found in commissary inventory. Available items: ${Array.from(commissaryMap.keys()).slice(0, 10).join(', ')}${commissaryMap.size > 10 ? '...' : ''}`);
+        console.warn(`Skipping recipe "${recipe.name}" - input item "${recipe.input_item_name}" not found`);
+        continue;
       }
 
       validRecipes.push({
@@ -78,9 +44,16 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
 
     if (validRecipes.length === 0) {
       console.log('No valid conversion recipes found after validation');
-      console.log('Errors:', errors);
-      toast.error('No valid conversion recipes found. Please check that input items exist in inventory.');
-      errors.forEach(error => console.error(error));
+      console.log('Validation errors:', errors);
+      toast.error(`No valid conversion recipes found. All ${recipes.length} recipes had missing ingredients. Please ensure input items exist in commissary inventory.`);
+      
+      // Show first few errors to help user understand what's missing
+      if (errors.length > 0) {
+        const firstErrors = errors.slice(0, 3);
+        firstErrors.forEach(error => console.error(error));
+        toast.error(`Missing ingredients: ${firstErrors.map(e => e.split('"')[1]).join(', ')}`);
+      }
+      
       return false;
     }
 
@@ -125,7 +98,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
 
     console.log('Created conversion recipes:', insertedRecipes);
 
-    // Create conversion recipe ingredients with proper foreign key reference
+    // Create conversion recipe ingredients with proper validation
     const ingredientInserts = [];
     
     for (let i = 0; i < validRecipes.length; i++) {
@@ -143,22 +116,34 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
     }
 
     if (ingredientInserts.length > 0) {
+      console.log('Inserting conversion recipe ingredients:', ingredientInserts);
+      
       const { error: ingredientError } = await supabase
         .from('conversion_recipe_ingredients')
         .insert(ingredientInserts);
 
       if (ingredientError) {
         console.error('Error inserting conversion recipe ingredients:', ingredientError);
-        toast.error('Failed to add ingredients to conversion recipes');
+        
+        // Provide more specific error information
+        if (ingredientError.code === '23503') {
+          toast.error('Database constraint error: Invalid commissary item reference');
+        } else if (ingredientError.code === '42703') {
+          toast.error('Database error: Column does not exist in conversion_recipe_ingredients table');
+        } else {
+          toast.error(`Failed to add ingredients to conversion recipes: ${ingredientError.message}`);
+        }
         return false;
       }
     }
 
     console.log('Conversion recipes created successfully');
 
+    // Provide detailed success/warning message
     if (errors.length > 0) {
-      toast.warning(`Created ${validRecipes.length} conversion recipes. ${errors.length} items skipped due to missing inventory items.`);
-      console.warn('Conversion recipe upload errors:', errors);
+      const skippedCount = recipes.length - validRecipes.length;
+      toast.warning(`Created ${validRecipes.length} conversion recipes successfully. ${skippedCount} recipes were skipped due to missing commissary items.`);
+      console.warn('Skipped recipes due to missing ingredients:', errors);
     } else {
       toast.success(`Successfully created ${validRecipes.length} conversion recipe templates`);
     }
