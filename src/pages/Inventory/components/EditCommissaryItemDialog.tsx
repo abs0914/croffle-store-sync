@@ -71,7 +71,7 @@ export function EditCommissaryItemDialog({
 
     const updatedItem = await updateCommissaryInventoryItem(item.id, {
       ...formData,
-      supplier_id: formData.supplier_id === 'none' ? undefined : formData.supplier_id,
+      supplier_id: formData.supplier_id === 'none' || formData.supplier_id === '' ? undefined : formData.supplier_id,
       sku: formData.sku || undefined,
       barcode: formData.barcode || undefined,
       expiry_date: formData.expiry_date || undefined,
