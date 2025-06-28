@@ -98,7 +98,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
 
     console.log('Created conversion recipes:', insertedRecipes);
 
-    // Create conversion recipe ingredients with proper validation
+    // Create conversion recipe ingredients - FIXED: removed unit field
     const ingredientInserts = [];
     
     for (let i = 0; i < validRecipes.length; i++) {
@@ -109,8 +109,8 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
         ingredientInserts.push({
           conversion_recipe_id: insertedRecipe.id,
           commissary_item_id: recipe.commissary_item_id,
-          quantity: recipe.input_quantity,
-          unit: recipe.input_unit
+          quantity: recipe.input_quantity
+          // REMOVED: unit field as it doesn't exist in the table
         });
       }
     }
