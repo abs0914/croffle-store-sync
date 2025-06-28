@@ -2,6 +2,63 @@ import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
 import { toast } from "sonner";
 
+// Helper function to map units to valid database units
+const mapToValidUnit = (unit: string): string => {
+  const unitMapping: Record<string, string> = {
+    // Weight units
+    'kg': 'kg',
+    'kilo': 'kg',
+    'kilogram': 'kg',
+    'kilograms': 'kg',
+    'g': 'g',
+    'gram': 'g',
+    'grams': 'g',
+    
+    // Volume units
+    'l': 'liters',
+    'liter': 'liters',
+    'liters': 'liters',
+    'litre': 'liters',
+    'litres': 'liters',
+    'ml': 'ml',
+    'milliliter': 'ml',
+    'milliliters': 'ml',
+    'millilitre': 'ml',
+    'millilitres': 'ml',
+    
+    // Count units
+    'piece': 'pieces',
+    'pieces': 'pieces',
+    'pcs': 'pieces',
+    'pc': 'pieces',
+    'item': 'pieces',
+    'items': 'pieces',
+    'unit': 'pieces',
+    'units': 'pieces',
+    
+    // Package units
+    'box': 'boxes',
+    'boxes': 'boxes',
+    'pack': 'packs',
+    'packs': 'packs',
+    'package': 'packs',
+    'packages': 'packs',
+    
+    // Special units
+    'serving': 'serving',
+    'servings': 'serving',
+    'portion': 'portion',
+    'portions': 'portion',
+    'scoop': 'scoop',
+    'scoops': 'scoop',
+    'pair': 'pair',
+    'pairs': 'pair'
+  };
+  
+  const normalizedUnit = unit.toLowerCase().trim();
+  return unitMapping[normalizedUnit] || 'pieces'; // Default to pieces if not found
+};
+
 export const fetchCommissaryInventory = async (filters?: any): Promise<CommissaryInventoryItem[]> => {
   try {
     let query = supabase
@@ -44,10 +101,10 @@ export const fetchCommissaryInventory = async (filters?: any): Promise<Commissar
 
 export const createCommissaryInventoryItem = async (item: Omit<CommissaryInventoryItem, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
   try {
-    // Map uom to unit for database compatibility during transition
+    // Map uom to valid unit for database compatibility
     const dbItem = {
       ...item,
-      unit: item.uom // Store UOM as unit in database for now
+      unit: mapToValidUnit(item.uom) // Store mapped unit in database
     };
     
     const { error } = await supabase
@@ -73,7 +130,7 @@ export const updateCommissaryInventoryItem = async (
     const { uom, ...otherUpdates } = updates;
     const dbUpdates = {
       ...otherUpdates,
-      ...(uom && { unit: uom }) // Only include unit if uom is provided
+      ...(uom && { unit: mapToValidUnit(uom) }) // Map and include unit if uom is provided
     };
     
     const { error } = await supabase

@@ -249,9 +249,9 @@ export interface ConversionRecipeIngredientForm {
 
 // Filters for commissary inventory
 export interface CommissaryInventoryFilters {
-  category?: 'raw_materials' | 'packaging_materials' | 'supplies' | 'all';
-  stockLevel?: StockLevel | 'all';
+  category?: 'all' | 'raw_materials' | 'packaging_materials' | 'supplies';
+  stockLevel?: 'all' | 'good' | 'low' | 'out';
   supplier?: string;
   search?: string;
-  item_type?: 'raw_material' | 'supply' | 'orderable_item' | 'all';
+  item_type?: 'all' | 'raw_material' | 'supply' | 'orderable_item';
 }
