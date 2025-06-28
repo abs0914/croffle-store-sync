@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Info } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CommissaryInventoryItem } from "@/types/commissary";
 import { fetchConversionHistory, fetchAvailableRawMaterials } from "@/services/conversion";
 import { ConversionForm, ConversionHistory } from "./conversion";
@@ -65,6 +66,22 @@ export function ConversionProcessTab() {
 
   return (
     <div className="space-y-6">
+      {/* Info Card */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div className="text-sm text-blue-800">
+              <p className="font-medium mb-1">Production Management Workflow</p>
+              <p>
+                Create finished products by converting raw materials from your commissary inventory. 
+                All finished products created here will automatically become available for store ordering.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <ConversionForm 
         rawMaterials={rawMaterials}
         onConversionComplete={loadData}

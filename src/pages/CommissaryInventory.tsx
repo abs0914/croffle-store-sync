@@ -2,13 +2,12 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, PlayCircle, Building2, ShoppingCart } from "lucide-react";
+import { Package, Building2, ShoppingCart } from "lucide-react";
 import { CommissaryInventoryItem } from "@/types/inventoryManagement";
 import { useCommissaryInventory } from "./CommissaryInventory/hooks/useCommissaryInventory";
 import { CommissaryInventoryHeader } from "./CommissaryInventory/components/CommissaryInventoryHeader";
 import { CommissaryInventoryFiltersComponent } from "./CommissaryInventory/components/CommissaryInventoryFilters";
 import { RawMaterialsTab } from "./CommissaryInventory/components/RawMaterialsTab";
-import { FinishedProductsTab } from "./CommissaryInventory/components/FinishedProductsTab";
 import { PurchasingTab } from "./CommissaryInventory/components/PurchasingTab";
 import { SuppliersTab } from "./CommissaryInventory/components/SuppliersTab";
 import { AddCommissaryItemDialog } from "./CommissaryInventory/components/AddCommissaryItemDialog";
@@ -76,14 +75,10 @@ export default function CommissaryInventory() {
       <CommissaryInventoryHeader />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="raw-materials" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Raw Materials
-          </TabsTrigger>
-          <TabsTrigger value="finished-products" className="flex items-center gap-2">
-            <PlayCircle className="h-4 w-4" />
-            Finished Products
           </TabsTrigger>
           <TabsTrigger value="purchasing" className="flex items-center gap-2">
             <ShoppingCart className="h-4 w-4" />
@@ -112,15 +107,6 @@ export default function CommissaryInventory() {
               onDeleteItem={handleDeleteItemDialog}
             />
           </div>
-        </TabsContent>
-
-        <TabsContent value="finished-products">
-          <FinishedProductsTab
-            onEditItem={handleEditItem}
-            onStockAdjustment={handleStockAdjustmentItem}
-            onDeleteItem={handleDeleteItemDialog}
-            onRefresh={loadData}
-          />
         </TabsContent>
 
         <TabsContent value="purchasing">

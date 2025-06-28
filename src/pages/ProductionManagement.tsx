@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BulkUploadTab } from "./ProductionManagement/components/BulkUploadTab";
 import { ConversionProcessTab } from "./ProductionManagement/components/ConversionProcessTab";
 import { useStore } from "@/contexts/StoreContext";
-import { Upload, Package } from "lucide-react";
+import { Upload, Package, History } from "lucide-react";
 
 export default function ProductionManagement() {
   const { currentStore } = useStore();
@@ -18,7 +18,7 @@ export default function ProductionManagement() {
         <div>
           <h1 className="text-3xl font-bold">Production Management</h1>
           <p className="text-muted-foreground">
-            Manage inventory conversions and bulk uploads for {currentStore?.name || 'your store'}
+            Convert raw materials into finished products and manage production processes for {currentStore?.name || 'your store'}
           </p>
         </div>
       </div>
@@ -27,21 +27,24 @@ export default function ProductionManagement() {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="conversion" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Conversion Process
+            Conversion Management
           </TabsTrigger>
           <TabsTrigger value="bulk-upload" className="flex items-center gap-2">
             <Upload className="h-4 w-4" />
-            Bulk Upload
+            Recipe & Material Upload
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="conversion">
           <Card>
             <CardHeader>
-              <CardTitle>Conversion Process</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Conversion Management
+              </CardTitle>
               <CardDescription>
-                Convert raw materials into orderable inventory items for store distribution.
-                Track material usage and create finished goods ready for store ordering.
+                Execute conversions from raw materials to finished products. Use uploaded recipes or create custom conversions.
+                All finished products created here will be available for store ordering.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -53,9 +56,13 @@ export default function ProductionManagement() {
         <TabsContent value="bulk-upload">
           <Card>
             <CardHeader>
-              <CardTitle>Bulk Upload</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Recipe & Material Upload
+              </CardTitle>
               <CardDescription>
-                Upload inventory items, recipes, and conversion templates in bulk to streamline data management.
+                Upload conversion recipes and raw materials in bulk to streamline production management.
+                Recipes uploaded here can be used in the conversion process.
               </CardDescription>
             </CardHeader>
             <CardContent>
