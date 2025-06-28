@@ -1,3 +1,4 @@
+
 export interface RecipeUpload {
   name: string;
   category?: string;
@@ -18,8 +19,6 @@ export interface RawIngredientUpload {
   category: 'raw_materials' | 'packaging_materials' | 'supplies';
   uom: string; // Changed from unit to uom
   unit_cost?: number;
-  item_price?: number; // Added support for item price
-  item_quantity?: number; // Added support for item quantity
   current_stock?: number;
   minimum_threshold?: number;
   supplier_name?: string;
@@ -102,7 +101,7 @@ const mapCategoryToValidValue = (category: string): 'raw_materials' | 'packaging
   return categoryMapping[normalizedCategory] || null;
 };
 
-// Create mapping for common header variations
+// Create mapping for common header variations - removed item_price and item_quantity
 const createHeaderMapping = (headers: string[]): Record<string, number> => {
   const mapping: Record<string, number> = {};
   
@@ -115,8 +114,6 @@ const createHeaderMapping = (headers: string[]): Record<string, number> => {
       'category': ['category', 'type', 'item_type'],
       'uom': ['uom', 'unit', 'unit_of_measure', 'measure', 'units'],
       'unit_cost': ['unit_cost', 'cost', 'price', 'cost_per_unit'],
-      'item_price': ['item_price', 'price_per_item', 'individual_price', 'piece_price'],
-      'item_quantity': ['item_quantity', 'quantity_per_unit', 'items_per_unit', 'pieces_per_unit', 'count_per_unit'],
       'current_stock': ['current_stock', 'stock', 'quantity', 'qty'],
       'minimum_threshold': ['minimum_threshold', 'min_threshold', 'reorder_point', 'minimum'],
       'supplier_name': ['supplier_name', 'supplier', 'vendor', 'vendor_name'],
@@ -248,20 +245,18 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
       continue;
     }
 
-    // Extract values using header mapping
+    // Extract values using header mapping - removed item_price and item_quantity
     const name = values[headerMapping['name']] || '';
     const rawCategory = values[headerMapping['category']] || '';
     const uom = values[headerMapping['uom']] || '';
     const unit_cost = parseFloat(values[headerMapping['unit_cost']] || '0') || undefined;
-    const item_price = parseFloat(values[headerMapping['item_price']] || '0') || undefined;
-    const item_quantity = parseFloat(values[headerMapping['item_quantity']] || '0') || undefined;
     const current_stock = parseFloat(values[headerMapping['current_stock']] || '0') || undefined;
     const minimum_threshold = parseFloat(values[headerMapping['minimum_threshold']] || '0') || undefined;
     const supplier_name = values[headerMapping['supplier_name']] || undefined;
     const sku = values[headerMapping['sku']] || undefined;
     const storage_location = values[headerMapping['storage_location']] || undefined;
 
-    console.log(`Extracted data for line ${i}:`, { name, category: rawCategory, uom, item_price, item_quantity });
+    console.log(`Extracted data for line ${i}:`, { name, category: rawCategory, uom, unit_cost });
 
     // Validate required fields
     if (!name || !rawCategory || !uom) {
@@ -283,8 +278,6 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
       category: mappedCategory,
       uom: uom.trim(),
       unit_cost,
-      item_price,
-      item_quantity,
       current_stock,
       minimum_threshold,
       supplier_name: supplier_name?.trim(),
