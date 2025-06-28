@@ -19,7 +19,8 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
 
     if (!commissaryError && commissaryData) {
       commissaryItems = commissaryData;
-      commissaryMap = new Map(commissaryItems.map(item => [item.name.toLowerCase(), item]));
+      commissaryMap = new Map(commissaryItems.map(item => [item.name.toLowerCase().trim(), item]));
+      console.log('Available commissary items:', commissaryItems.map(item => item.name));
     } else {
       // Try inventory_items as fallback
       const { data: inventoryData, error: inventoryError } = await supabase
@@ -29,7 +30,8 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
 
       if (!inventoryError && inventoryData) {
         commissaryItems = inventoryData;
-        commissaryMap = new Map(commissaryItems.map(item => [item.name.toLowerCase(), item]));
+        commissaryMap = new Map(commissaryItems.map(item => [item.name.toLowerCase().trim(), item]));
+        console.log('Available inventory items:', commissaryItems.map(item => item.name));
       } else {
         toast.error('Failed to load inventory items for validation');
         return false;
@@ -41,11 +43,31 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
 
     // Validate each recipe
     for (const recipe of recipes) {
-      const inventoryItem = commissaryMap.get(recipe.input_item_name.toLowerCase());
+      const inputItemKey = recipe.input_item_name.toLowerCase().trim();
+      const inventoryItem = commissaryMap.get(inputItemKey);
+      
+      console.log(`Looking for input item: "${recipe.input_item_name}" (normalized: "${inputItemKey}")`);
       
       if (!inventoryItem) {
-        errors.push(`Input item "${recipe.input_item_name}" not found in inventory`);
-        continue;
+        console.log(`Input item "${recipe.input_item_name}" not found in inventory`);
+        console.log('Available items:', Array.from(commissaryMap.keys()));
+        
+        // Try partial matching as fallback
+        let foundItem = null;
+        for (const [key, item] of commissaryMap.entries()) {
+          if (key.includes(inputItemKey) || inputItemKey.includes(key)) {
+            foundItem = item;
+            console.log(`Found partial match: "${item.name}" for "${recipe.input_item_name}"`);
+            break;
+          }
+        }
+        
+        if (!foundItem) {
+          errors.push(`Input item "${recipe.input_item_name}" not found in inventory. Available items: ${Array.from(commissaryMap.keys()).join(', ')}`);
+          continue;
+        } else {
+          inventoryItem = foundItem;
+        }
       }
 
       validRecipes.push({
@@ -55,9 +77,14 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
     }
 
     if (validRecipes.length === 0) {
+      console.log('No valid conversion recipes found after validation');
+      console.log('Errors:', errors);
       toast.error('No valid conversion recipes found. Please check that input items exist in inventory.');
+      errors.forEach(error => console.error(error));
       return false;
     }
+
+    console.log(`Found ${validRecipes.length} valid recipes out of ${recipes.length} total`);
 
     // Get current user for created_by field
     const { data: userData } = await supabase.auth.getUser();
@@ -133,8 +160,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       }
     }
 
-    // Don't create orderable products automatically - this should be done through proper conversion process
-    console.log('Conversion recipes created successfully without automatic orderable product creation');
+    console.log('Conversion recipes created successfully');
 
     if (errors.length > 0) {
       toast.warning(`Created ${validRecipes.length} conversion recipes. ${errors.length} items skipped due to missing inventory items.`);
