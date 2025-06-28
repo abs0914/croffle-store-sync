@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
 import { toast } from "sonner";
@@ -103,8 +104,19 @@ export const createCommissaryInventoryItem = async (item: Omit<CommissaryInvento
   try {
     // Map uom to valid unit for database compatibility
     const dbItem = {
-      ...item,
-      unit: mapToValidUnit(item.uom) // Store mapped unit in database
+      name: item.name,
+      category: item.category,
+      item_type: item.item_type,
+      current_stock: item.current_stock,
+      minimum_threshold: item.minimum_threshold,
+      unit: mapToValidUnit(item.uom), // Store mapped unit in database
+      unit_cost: item.unit_cost,
+      supplier_id: item.supplier_id,
+      sku: item.sku,
+      barcode: item.barcode,
+      expiry_date: item.expiry_date,
+      storage_location: item.storage_location,
+      is_active: item.is_active
     };
     
     const { error } = await supabase

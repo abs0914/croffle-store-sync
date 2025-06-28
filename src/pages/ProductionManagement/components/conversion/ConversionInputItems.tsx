@@ -7,8 +7,8 @@ import { Plus, Minus } from "lucide-react";
 import { CommissaryInventoryItem } from "@/types/commissary";
 
 interface ConversionInputItemsProps {
-  inputItems: { commissary_item_id: string; quantity: number }[];
-  setInputItems: (items: { commissary_item_id: string; quantity: number }[]) => void;
+  inputItems: { commissary_item_id: string; quantity: number; unit: string }[];
+  setInputItems: (items: { commissary_item_id: string; quantity: number; unit: string }[]) => void;
   rawMaterials: CommissaryInventoryItem[];
 }
 
@@ -18,7 +18,7 @@ export function ConversionInputItems({
   rawMaterials
 }: ConversionInputItemsProps) {
   const addInputItem = () => {
-    setInputItems([...inputItems, { commissary_item_id: "", quantity: 1 }]);
+    setInputItems([...inputItems, { commissary_item_id: "", quantity: 1, unit: "pieces" }]);
   };
 
   const removeInputItem = (index: number) => {
@@ -30,6 +30,15 @@ export function ConversionInputItems({
   const updateInputItem = (index: number, field: string, value: any) => {
     const updated = [...inputItems];
     updated[index] = { ...updated[index], [field]: value };
+    
+    // Auto-update unit when raw material is selected
+    if (field === 'commissary_item_id') {
+      const selectedMaterial = rawMaterials.find(rm => rm.id === value);
+      if (selectedMaterial) {
+        updated[index].unit = selectedMaterial.uom;
+      }
+    }
+    
     setInputItems(updated);
   };
 
@@ -74,6 +83,14 @@ export function ConversionInputItems({
             onChange={(e) => updateInputItem(index, 'quantity', parseFloat(e.target.value) || 0)}
             className="w-24"
             placeholder="Qty"
+          />
+          
+          <Input
+            value={item.unit}
+            onChange={(e) => updateInputItem(index, 'unit', e.target.value)}
+            className="w-20"
+            placeholder="Unit"
+            readOnly
           />
           
           {inputItems.length > 1 && (

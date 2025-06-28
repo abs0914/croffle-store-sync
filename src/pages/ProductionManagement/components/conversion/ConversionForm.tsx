@@ -21,8 +21,8 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
   // Form state
   const [conversionName, setConversionName] = useState("");
   const [description, setDescription] = useState("");
-  const [inputItems, setInputItems] = useState<{ commissary_item_id: string; quantity: number }[]>([
-    { commissary_item_id: "", quantity: 1 }
+  const [inputItems, setInputItems] = useState<{ commissary_item_id: string; quantity: number; unit: string }[]>([
+    { commissary_item_id: "", quantity: 1, unit: "pieces" }
   ]);
   const [outputItem, setOutputItem] = useState({
     name: "",
@@ -37,7 +37,7 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
   const resetForm = () => {
     setConversionName("");
     setDescription("");
-    setInputItems([{ commissary_item_id: "", quantity: 1 }]);
+    setInputItems([{ commissary_item_id: "", quantity: 1, unit: "pieces" }]);
     setOutputItem({
       name: "",
       category: "supplies",
@@ -74,10 +74,19 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
       return;
     }
 
+    // Ensure all input items have the unit property filled
+    const inputItemsWithUnits = validInputItems.map(item => {
+      const rawMaterial = rawMaterials.find(rm => rm.id === item.commissary_item_id);
+      return {
+        ...item,
+        unit: rawMaterial?.uom || item.unit || "pieces"
+      };
+    });
+
     const conversionRequest: ConversionRequest = {
       name: conversionName,
       description,
-      input_items: validInputItems,
+      input_items: inputItemsWithUnits,
       output_item: outputItem
     };
 

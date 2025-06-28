@@ -31,8 +31,19 @@ export const createCommissaryItem = async (item: Omit<CommissaryInventoryItem, '
   try {
     // Map uom to unit for database compatibility during transition
     const dbItem = {
-      ...item,
-      unit: item.uom // Store UOM as unit in database for now
+      name: item.name,
+      category: item.category,
+      item_type: item.item_type,
+      current_stock: item.current_stock,
+      minimum_threshold: item.minimum_threshold,
+      unit: item.uom, // Store UOM as unit in database for now
+      unit_cost: item.unit_cost,
+      supplier_id: item.supplier_id,
+      sku: item.sku,
+      barcode: item.barcode,
+      expiry_date: item.expiry_date,
+      storage_location: item.storage_location,
+      is_active: item.is_active
     };
     
     const { error } = await supabase
