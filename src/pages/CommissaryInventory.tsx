@@ -7,7 +7,7 @@ import { CommissaryInventoryItem } from "@/types/inventoryManagement";
 import { useCommissaryInventory } from "./CommissaryInventory/hooks/useCommissaryInventory";
 import { CommissaryInventoryHeader } from "./CommissaryInventory/components/CommissaryInventoryHeader";
 import { CommissaryInventoryFiltersComponent } from "./CommissaryInventory/components/CommissaryInventoryFilters";
-import { RawMaterialsTab } from "./CommissaryInventory/components/RawMaterialsTab";
+import { InventoryTab } from "./CommissaryInventory/components/InventoryTab";
 import { PurchasingTab } from "./CommissaryInventory/components/PurchasingTab";
 import { SuppliersTab } from "./CommissaryInventory/components/SuppliersTab";
 import { AddCommissaryItemDialog } from "./CommissaryInventory/components/AddCommissaryItemDialog";
@@ -28,7 +28,7 @@ export default function CommissaryInventory() {
     handleStockAdjustment
   } = useCommissaryInventory();
 
-  const [activeTab, setActiveTab] = useState("raw-materials");
+  const [activeTab, setActiveTab] = useState("inventory");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showStockDialog, setShowStockDialog] = useState(false);
@@ -76,9 +76,9 @@ export default function CommissaryInventory() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="raw-materials" className="flex items-center gap-2">
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Raw Materials
+            Inventory
           </TabsTrigger>
           <TabsTrigger value="purchasing" className="flex items-center gap-2">
             <ShoppingCart className="h-4 w-4" />
@@ -90,7 +90,7 @@ export default function CommissaryInventory() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="raw-materials">
+        <TabsContent value="inventory">
           <div className="space-y-6">
             <CommissaryInventoryFiltersComponent
               filters={filters}
@@ -98,9 +98,10 @@ export default function CommissaryInventory() {
               suppliers={suppliers}
             />
 
-            <RawMaterialsTab
+            <InventoryTab
               items={items}
               loading={loading}
+              filters={filters}
               onAddItem={() => setShowAddDialog(true)}
               onEditItem={handleEditItem}
               onStockAdjustment={handleStockAdjustmentItem}
