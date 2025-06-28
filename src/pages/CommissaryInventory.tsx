@@ -1,13 +1,14 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, ShoppingCart, Building2 } from "lucide-react";
+import { Package, PlayCircle, Building2, ShoppingCart } from "lucide-react";
 import { CommissaryInventoryItem } from "@/types/inventoryManagement";
 import { useCommissaryInventory } from "./CommissaryInventory/hooks/useCommissaryInventory";
 import { CommissaryInventoryHeader } from "./CommissaryInventory/components/CommissaryInventoryHeader";
 import { CommissaryInventoryFiltersComponent } from "./CommissaryInventory/components/CommissaryInventoryFilters";
-import { InventoryItemsList } from "./CommissaryInventory/components/InventoryItemsList";
+import { RawMaterialsTab } from "./CommissaryInventory/components/RawMaterialsTab";
+import { FinishedProductsTab } from "./CommissaryInventory/components/FinishedProductsTab";
 import { PurchasingTab } from "./CommissaryInventory/components/PurchasingTab";
 import { SuppliersTab } from "./CommissaryInventory/components/SuppliersTab";
 import { AddCommissaryItemDialog } from "./CommissaryInventory/components/AddCommissaryItemDialog";
@@ -28,7 +29,7 @@ export default function CommissaryInventory() {
     handleStockAdjustment
   } = useCommissaryInventory();
 
-  const [activeTab, setActiveTab] = useState("inventory");
+  const [activeTab, setActiveTab] = useState("raw-materials");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showStockDialog, setShowStockDialog] = useState(false);
@@ -71,10 +72,14 @@ export default function CommissaryInventory() {
       <CommissaryInventoryHeader />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="inventory" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="raw-materials" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Inventory
+            Raw Materials
+          </TabsTrigger>
+          <TabsTrigger value="finished-products" className="flex items-center gap-2">
+            <PlayCircle className="h-4 w-4" />
+            Finished Products
           </TabsTrigger>
           <TabsTrigger value="purchasing" className="flex items-center gap-2">
             <ShoppingCart className="h-4 w-4" />
@@ -86,7 +91,7 @@ export default function CommissaryInventory() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="inventory">
+        <TabsContent value="raw-materials">
           <div className="space-y-6">
             <CommissaryInventoryFiltersComponent
               filters={filters}
@@ -94,7 +99,7 @@ export default function CommissaryInventory() {
               suppliers={suppliers}
             />
 
-            <InventoryItemsList
+            <RawMaterialsTab
               items={items}
               loading={loading}
               onAddItem={() => setShowAddDialog(true)}
@@ -105,16 +110,13 @@ export default function CommissaryInventory() {
           </div>
         </TabsContent>
 
+        <TabsContent value="finished-products">
+          <FinishedProductsTab />
+        </TabsContent>
+
         <TabsContent value="purchasing">
           <Card>
-            <CardHeader>
-              <CardTitle>Purchasing</CardTitle>
-              <CardDescription>
-                Record supplier purchases and manage commissary inventory restocking.
-                Track purchase costs, suppliers, and batch information for complete traceability.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <PurchasingTab />
             </CardContent>
           </Card>
@@ -122,14 +124,7 @@ export default function CommissaryInventory() {
 
         <TabsContent value="suppliers">
           <Card>
-            <CardHeader>
-              <CardTitle>Supplier Management</CardTitle>
-              <CardDescription>
-                Manage external suppliers who provide raw materials and supplies to the commissary.
-                The commissary then serves as the internal supplier to individual stores.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <SuppliersTab />
             </CardContent>
           </Card>

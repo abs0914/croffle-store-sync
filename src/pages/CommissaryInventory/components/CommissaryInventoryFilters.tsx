@@ -22,7 +22,7 @@ export function CommissaryInventoryFiltersComponent({
         <CardTitle>Filters</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -34,21 +34,6 @@ export function CommissaryInventoryFiltersComponent({
           </div>
           
           <Select
-            value={filters.category || 'all'}
-            onValueChange={(value) => setFilters(prev => ({ ...prev, category: value as any }))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="raw_materials">Raw Materials</SelectItem>
-              <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
-              <SelectItem value="supplies">Supplies</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select
             value={filters.item_type || 'all'}
             onValueChange={(value) => setFilters(prev => ({ ...prev, item_type: value as any }))}
           >
@@ -56,10 +41,9 @@ export function CommissaryInventoryFiltersComponent({
               <SelectValue placeholder="Item Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="all">All Items</SelectItem>
               <SelectItem value="raw_material">Raw Materials</SelectItem>
-              <SelectItem value="supply">Supplies</SelectItem>
-              <SelectItem value="orderable_item">Orderable Items</SelectItem>
+              <SelectItem value="orderable_item">Finished Products</SelectItem>
             </SelectContent>
           </Select>
 

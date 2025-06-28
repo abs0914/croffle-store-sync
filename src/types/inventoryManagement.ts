@@ -247,11 +247,10 @@ export interface ConversionRecipeIngredientForm {
   quantity: number;
 }
 
-// Filters for commissary inventory
+// Simplified filters for commissary inventory - removed redundant category filter
 export interface CommissaryInventoryFilters {
-  category?: 'all' | 'raw_materials' | 'packaging_materials' | 'supplies';
-  stockLevel?: 'all' | 'good' | 'low' | 'out';
+  stockLevel?: 'all' | 'good' | 'low' | 'out';  
   supplier?: string;
   search?: string;
-  item_type?: 'all' | 'raw_material' | 'supply' | 'orderable_item';
+  item_type?: 'all' | 'raw_material' | 'orderable_item'; // Simplified to just raw materials and finished products
 }
