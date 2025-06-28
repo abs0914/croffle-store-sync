@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ConversionRecipeUpload } from "@/utils/csvParser";
@@ -135,7 +136,8 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
         ingredientInserts.push({
           conversion_recipe_id: insertedRecipe.id,
           commissary_item_id: recipe.commissary_item_id,
-          quantity: recipe.input_quantity
+          quantity: recipe.input_quantity,
+          unit: recipe.input_unit
         });
       }
     }
@@ -147,14 +149,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
 
       if (ingredientError) {
         console.error('Error inserting conversion recipe ingredients:', ingredientError);
-        
-        // If foreign key constraint error, provide more specific guidance
-        if (ingredientError.code === '23503') {
-          console.error('Foreign key constraint error details:', ingredientError);
-          toast.error('Database constraint error: The conversion recipe ingredients table may be referencing the wrong inventory table. Please contact system administrator.');
-        } else {
-          toast.error('Failed to add ingredients to conversion recipes');  
-        }
+        toast.error('Failed to add ingredients to conversion recipes');
         return false;
       }
     }

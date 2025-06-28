@@ -498,7 +498,7 @@ export type Database = {
             foreignKeyName: "conversion_recipe_ingredients_commissary_item_id_fkey"
             columns: ["commissary_item_id"]
             isOneToOne: false
-            referencedRelation: "inventory_items"
+            referencedRelation: "commissary_inventory"
             referencedColumns: ["id"]
           },
           {
