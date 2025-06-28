@@ -2,12 +2,11 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Package, Plus, PlayCircle, History } from "lucide-react";
+import { Package, PlayCircle } from "lucide-react";
 import { CommissaryInventoryItem } from "@/types/inventoryManagement";
 import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
 import { InventoryItemCard } from "./InventoryItemCard";
-import { ConversionExecutionDialog } from "./ConversionExecutionDialog";
+import { RunConversionDialog } from "./RunConversionDialog";
 import { toast } from "sonner";
 
 interface FinishedProductsTabProps {
@@ -25,8 +24,7 @@ export function FinishedProductsTab({
 }: FinishedProductsTabProps) {
   const [finishedProducts, setFinishedProducts] = useState<CommissaryInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showConversionDialog, setShowConversionDialog] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<CommissaryInventoryItem | null>(null);
+  const [showRunConversionDialog, setShowRunConversionDialog] = useState(false);
 
   useEffect(() => {
     loadFinishedProducts();
@@ -46,11 +44,6 @@ export function FinishedProductsTab({
     }
   };
 
-  const handleExecuteConversion = (product: CommissaryInventoryItem) => {
-    setSelectedProduct(product);
-    setShowConversionDialog(true);
-  };
-
   const handleConversionSuccess = () => {
     loadFinishedProducts();
     onRefresh();
@@ -66,11 +59,11 @@ export function FinishedProductsTab({
           </p>
         </div>
         <Button 
-          onClick={() => setShowConversionDialog(true)}
+          onClick={() => setShowRunConversionDialog(true)}
           className="bg-croffle-accent hover:bg-croffle-accent/90"
         >
           <PlayCircle className="h-4 w-4 mr-2" />
-          Execute Conversion
+          Run Conversion
         </Button>
       </div>
 
@@ -97,11 +90,11 @@ export function FinishedProductsTab({
                 No finished products found. Upload conversion recipes to create finished products from raw materials.
               </p>
               <Button 
-                onClick={() => setShowConversionDialog(true)}
+                onClick={() => setShowRunConversionDialog(true)}
                 className="bg-croffle-accent hover:bg-croffle-accent/90"
               >
                 <PlayCircle className="h-4 w-4 mr-2" />
-                Execute First Conversion
+                Run First Conversion
               </Button>
             </div>
           ) : (
@@ -120,10 +113,9 @@ export function FinishedProductsTab({
         </CardContent>
       </Card>
 
-      <ConversionExecutionDialog
-        open={showConversionDialog}
-        onOpenChange={setShowConversionDialog}
-        selectedProduct={selectedProduct}
+      <RunConversionDialog
+        open={showRunConversionDialog}
+        onOpenChange={setShowRunConversionDialog}
         onSuccess={handleConversionSuccess}
       />
     </div>
