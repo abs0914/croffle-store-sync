@@ -130,24 +130,48 @@ const createHeaderMapping = (headers: string[]): Record<string, number> => {
   return mapping;
 };
 
-// Create mapping for conversion recipe headers - Updated to match comprehensive spreadsheet format
+// Updated conversion recipe header mapping to match the exact headers from your CSV
 const createConversionRecipeHeaderMapping = (headers: string[]): Record<string, number> => {
   const mapping: Record<string, number> = {};
   
+  console.log('Raw CSV headers:', headers);
+  
   headers.forEach((header, index) => {
     const normalized = normalizeHeader(header);
+    console.log(`Header ${index}: "${header}" -> normalized: "${normalized}"`);
     
-    // Map comprehensive variations to match the updated spreadsheet columns
+    // Updated variations to match your exact CSV format
     const variations: Record<string, string[]> = {
       'name': ['conversion_name', 'recipe_name', 'name', 'conversion'],
       'description': ['description', 'desc', 'notes', 'remarks'],
-      'input_item_name': ['input_item', 'input_item_name', 'source_item', 'from_item', 'raw_material', 'ingredient'],
-      'input_quantity': ['input_qty', 'input_quantity', 'source_quantity', 'from_quantity', 'qty_in', 'quantity_in'],
-      'input_unit': ['input_uom', 'input_unit', 'source_unit', 'from_unit', 'unit_in', 'input_measure'],
-      'output_product_name': ['output_item', 'output_product_name', 'target_item', 'to_item', 'finished_product', 'output_product'],
-      'output_product_category': ['output_category', 'output_product_category', 'target_category', 'product_category'],
-      'output_quantity': ['output_qty', 'output_quantity', 'target_quantity', 'to_quantity', 'qty_out', 'quantity_out'],
-      'output_unit': ['output_uom', 'output_unit', 'target_unit', 'to_unit', 'unit_out', 'output_measure'],
+      'input_item_name': [
+        'input_item', 'input_item_name', 'source_item', 'from_item', 
+        'raw_material', 'ingredient'
+      ],
+      'input_quantity': [
+        'input_qty', 'input_quantity', 'source_quantity', 'from_quantity', 
+        'qty_in', 'quantity_in'
+      ],
+      'input_unit': [
+        'input_uom', 'input_unit', 'source_unit', 'from_unit', 
+        'unit_in', 'input_measure'
+      ],
+      'output_product_name': [
+        'output_item', 'output_product_name', 'target_item', 'to_item', 
+        'finished_product', 'output_product'
+      ],
+      'output_product_category': [
+        'output_category', 'output_product_category', 'target_category', 
+        'product_category'
+      ],
+      'output_quantity': [
+        'output_qty', 'output_quantity', 'target_quantity', 'to_quantity', 
+        'qty_out', 'quantity_out'
+      ],
+      'output_unit': [
+        'output_uom', 'output_unit', 'target_unit', 'to_unit', 
+        'unit_out', 'output_measure'
+      ],
       'output_unit_cost': ['output_unit_cost', 'unit_cost', 'cost_per_unit', 'output_cost'],
       'output_sku': ['output_sku', 'sku', 'product_sku', 'item_code'],
       'output_storage_location': ['output_storage_location', 'storage_location', 'location', 'storage'],
@@ -157,10 +181,12 @@ const createConversionRecipeHeaderMapping = (headers: string[]): Record<string, 
     Object.entries(variations).forEach(([key, aliases]) => {
       if (aliases.includes(normalized)) {
         mapping[key] = index;
+        console.log(`Mapped "${header}" (${normalized}) to field: ${key} at index ${index}`);
       }
     });
   });
   
+  console.log('Final header mapping:', mapping);
   return mapping;
 };
 
@@ -292,9 +318,11 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
   return ingredients;
 };
 
-// Updated conversion recipe parser to handle comprehensive spreadsheet format
+// Fixed conversion recipe parser with better header mapping and debugging
 export const parseConversionRecipesCSV = (csvContent: string): ConversionRecipeUpload[] => {
   try {
+    console.log('Starting conversion recipe CSV parsing...');
+    
     const lines = csvContent.trim().split('\n');
     if (lines.length < 2) {
       console.warn('CSV file appears to be empty or has no data rows');
@@ -304,9 +332,9 @@ export const parseConversionRecipesCSV = (csvContent: string): ConversionRecipeU
     const headers = parseCSVLine(lines[0]);
     console.log('CSV Headers found:', headers);
     
-    // Use the header mapping function to map headers to expected fields
+    // Use the updated header mapping function
     const headerMapping = createConversionRecipeHeaderMapping(headers);
-    console.log('Header mapping:', headerMapping);
+    console.log('Header mapping result:', headerMapping);
     
     // Check if we have all required fields mapped
     const requiredFields = ['name', 'input_item_name', 'input_quantity', 'input_unit', 'output_product_name', 'output_quantity', 'output_unit'];
@@ -315,7 +343,8 @@ export const parseConversionRecipesCSV = (csvContent: string): ConversionRecipeU
     if (missingFields.length > 0) {
       console.error('Missing required headers after mapping:', missingFields);
       console.log('Available header mappings:', Object.keys(headerMapping));
-      throw new Error(`Missing required columns: ${missingFields.join(', ')}`);
+      console.log('Available normalized headers:', headers.map(h => normalizeHeader(h)));
+      throw new Error(`Missing required columns. Expected fields not found: ${missingFields.join(', ')}. Please check your CSV headers match the template format.`);
     }
 
     const recipes: ConversionRecipeUpload[] = [];
@@ -323,39 +352,45 @@ export const parseConversionRecipesCSV = (csvContent: string): ConversionRecipeU
     // Process each data row (skip header)
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i]);
+      console.log(`Processing row ${i + 1}:`, values);
       
       // Skip empty rows
-      if (values.every(v => !v)) continue;
+      if (values.every(v => !v.trim())) {
+        console.log(`Skipping empty row ${i + 1}`);
+        continue;
+      }
       
       try {
         const recipe: ConversionRecipeUpload = {
-          name: values[headerMapping['name']] || '',
-          description: values[headerMapping['description']] || '',
-          input_item_name: values[headerMapping['input_item_name']] || '',
+          name: values[headerMapping['name']]?.trim() || '',
+          description: values[headerMapping['description']]?.trim() || '',
+          input_item_name: values[headerMapping['input_item_name']]?.trim() || '',
           input_quantity: parseFloat(values[headerMapping['input_quantity']] || '0'),
-          input_unit: values[headerMapping['input_unit']] || '',
-          output_product_name: values[headerMapping['output_product_name']] || '',
-          output_product_category: values[headerMapping['output_product_category']] || 'raw_materials',
+          input_unit: values[headerMapping['input_unit']]?.trim() || '',
+          output_product_name: values[headerMapping['output_product_name']]?.trim() || '',
+          output_product_category: values[headerMapping['output_product_category']]?.trim() || 'raw_materials',
           output_quantity: parseFloat(values[headerMapping['output_quantity']] || '0'),
-          output_unit: values[headerMapping['output_unit']] || '',
+          output_unit: values[headerMapping['output_unit']]?.trim() || '',
           output_unit_cost: parseFloat(values[headerMapping['output_unit_cost']] || '0') || undefined,
-          output_sku: values[headerMapping['output_sku']] || undefined,
-          output_storage_location: values[headerMapping['output_storage_location']] || undefined,
-          instructions: values[headerMapping['instructions']] || undefined
+          output_sku: values[headerMapping['output_sku']]?.trim() || undefined,
+          output_storage_location: values[headerMapping['output_storage_location']]?.trim() || undefined,
+          instructions: values[headerMapping['instructions']]?.trim() || undefined
         };
+
+        console.log(`Parsed recipe data for row ${i + 1}:`, recipe);
 
         // Validate required fields
         if (!recipe.name || !recipe.input_item_name || !recipe.output_product_name) {
-          console.warn(`Skipping row ${i + 1}: Missing required fields`);
+          console.warn(`Skipping row ${i + 1}: Missing required fields - name: "${recipe.name}", input_item: "${recipe.input_item_name}", output_product: "${recipe.output_product_name}"`);
           continue;
         }
 
         if (recipe.input_quantity <= 0 || recipe.output_quantity <= 0) {
-          console.warn(`Skipping row ${i + 1}: Invalid quantities`);
+          console.warn(`Skipping row ${i + 1}: Invalid quantities - input: ${recipe.input_quantity}, output: ${recipe.output_quantity}`);
           continue;
         }
 
-        console.log(`Adding conversion recipe: ${recipe.name}`);
+        console.log(`Adding valid conversion recipe: ${recipe.name}`);
         recipes.push(recipe);
         
       } catch (error) {
@@ -364,7 +399,7 @@ export const parseConversionRecipesCSV = (csvContent: string): ConversionRecipeU
       }
     }
     
-    console.log(`Parsed ${recipes.length} valid conversion recipes`);
+    console.log(`Successfully parsed ${recipes.length} valid conversion recipes`);
     return recipes;
     
   } catch (error) {
