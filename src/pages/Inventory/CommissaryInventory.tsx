@@ -32,10 +32,10 @@ export default function CommissaryInventory() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedItem, setSelectedItem] = useState<CommissaryInventoryItem | null>(null);
   const [filters, setFilters] = useState<CommissaryInventoryFilters>({
-    category: 'all',
     stockLevel: 'all',
     supplier: '',
-    search: ''
+    search: '',
+    item_type: 'all'
   });
 
   // Check if user has admin access
@@ -161,17 +161,16 @@ export default function CommissaryInventory() {
             </div>
             
             <Select
-              value={filters.category || 'all'}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, category: value as any }))}
+              value={filters.item_type || 'all'}
+              onValueChange={(value) => setFilters(prev => ({ ...prev, item_type: value as any }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Category" />
+                <SelectValue placeholder="Item Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="raw_materials">Raw Materials</SelectItem>
-                <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
-                <SelectItem value="supplies">Supplies</SelectItem>
+                <SelectItem value="all">All Items</SelectItem>
+                <SelectItem value="raw_material">Raw Materials</SelectItem>
+                <SelectItem value="orderable_item">Finished Products</SelectItem>
               </SelectContent>
             </Select>
 
@@ -313,14 +312,13 @@ export default function CommissaryInventory() {
         </CardContent>
       </Card>
 
-      {/* Add Commissary Item Dialog */}
+      {/* Dialogs */}
       <AddCommissaryItemDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onSuccess={loadData}
       />
 
-      {/* Edit Commissary Item Dialog */}
       <EditCommissaryItemDialog
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
@@ -328,7 +326,6 @@ export default function CommissaryInventory() {
         onSuccess={loadData}
       />
 
-      {/* Stock Adjustment Dialog */}
       <StockAdjustmentDialog
         open={showStockDialog}
         onOpenChange={setShowStockDialog}
@@ -336,7 +333,6 @@ export default function CommissaryInventory() {
         onSuccess={loadData}
       />
 
-      {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}

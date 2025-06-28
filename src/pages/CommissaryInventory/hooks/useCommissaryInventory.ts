@@ -16,10 +16,10 @@ export function useCommissaryInventory() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<CommissaryInventoryFilters>({
-    category: 'all',
     stockLevel: 'all',
     supplier: '',
-    search: ''
+    search: '',
+    item_type: 'all'
   });
 
   // Check if user has admin access
