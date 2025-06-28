@@ -7,16 +7,10 @@ export const fetchConversionHistory = async (): Promise<any[]> => {
   try {
     console.log('Fetching conversion history...');
     
+    // First, try to get basic conversion data without nested relationships
     const { data, error } = await supabase
       .from('inventory_conversions')
-      .select(`
-        *,
-        commissary_item:commissary_inventory(name, unit),
-        conversion_ingredients(
-          quantity_used,
-          commissary_item:commissary_inventory(name, unit)
-        )
-      `)
+      .select('*')
       .order('conversion_date', { ascending: false })
       .limit(50);
 
