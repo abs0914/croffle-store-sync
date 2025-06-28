@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ConversionRecipeUpload } from "@/utils/csvParser";
@@ -44,7 +43,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
     // Validate each recipe
     for (const recipe of recipes) {
       const inputItemKey = recipe.input_item_name.toLowerCase().trim();
-      const inventoryItem = commissaryMap.get(inputItemKey);
+      let inventoryItem = commissaryMap.get(inputItemKey);
       
       console.log(`Looking for input item: "${recipe.input_item_name}" (normalized: "${inputItemKey}")`);
       
