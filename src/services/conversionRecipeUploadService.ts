@@ -98,7 +98,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
 
     console.log('Created conversion recipes:', insertedRecipes);
 
-    // Create conversion recipe ingredients - FIXED: removed unit field
+    // Create conversion recipe ingredients
     const ingredientInserts = [];
     
     for (let i = 0; i < validRecipes.length; i++) {
@@ -110,7 +110,6 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
           conversion_recipe_id: insertedRecipe.id,
           commissary_item_id: recipe.commissary_item_id,
           quantity: recipe.input_quantity
-          // REMOVED: unit field as it doesn't exist in the table
         });
       }
     }
@@ -125,7 +124,6 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       if (ingredientError) {
         console.error('Error inserting conversion recipe ingredients:', ingredientError);
         
-        // Provide more specific error information
         if (ingredientError.code === '23503') {
           toast.error('Database constraint error: Invalid commissary item reference');
         } else if (ingredientError.code === '42703') {
@@ -137,15 +135,59 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       }
     }
 
-    console.log('Conversion recipes created successfully');
+    // NEW: Automatically create orderable items in commissary inventory
+    console.log('Creating orderable items from conversion recipes...');
+    const orderableItemInserts = [];
+    
+    for (const recipe of validRecipes) {
+      // Map output category to database category
+      const categoryMapping = {
+        'raw_materials': 'raw_materials',
+        'packaging_materials': 'packaging_materials', 
+        'supplies': 'supplies'
+      };
+      
+      const dbCategory = categoryMapping[recipe.output_product_category as keyof typeof categoryMapping] || 'supplies';
+      
+      orderableItemInserts.push({
+        name: recipe.output_product_name,
+        category: dbCategory,
+        item_type: 'orderable_item',
+        current_stock: 0, // Start with 0 stock
+        minimum_threshold: Math.max(1, Math.floor(recipe.output_quantity * 0.1)), // 10% of output quantity
+        unit: recipe.output_unit,
+        unit_cost: recipe.output_unit_cost || 0,
+        sku: recipe.output_sku || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        storage_location: recipe.output_storage_location || 'Finished Goods',
+        is_active: true
+      });
+    }
+
+    if (orderableItemInserts.length > 0) {
+      const { data: createdOrderableItems, error: orderableError } = await supabase
+        .from('commissary_inventory')
+        .insert(orderableItemInserts)
+        .select('id, name');
+
+      if (orderableError) {
+        console.error('Error creating orderable items:', orderableError);
+        toast.error(`Failed to create orderable items: ${orderableError.message}`);
+        return false;
+      }
+
+      console.log('Created orderable items:', createdOrderableItems);
+      toast.success(`Successfully created ${validRecipes.length} conversion recipes and ${createdOrderableItems?.length || 0} orderable items`);
+    }
+
+    console.log('Conversion recipes and orderable items created successfully');
 
     // Provide detailed success/warning message
     if (errors.length > 0) {
       const skippedCount = recipes.length - validRecipes.length;
-      toast.warning(`Created ${validRecipes.length} conversion recipes successfully. ${skippedCount} recipes were skipped due to missing commissary items.`);
+      toast.warning(`Created ${validRecipes.length} conversion recipes and orderable items successfully. ${skippedCount} recipes were skipped due to missing commissary items.`);
       console.warn('Skipped recipes due to missing ingredients:', errors);
     } else {
-      toast.success(`Successfully created ${validRecipes.length} conversion recipe templates`);
+      toast.success(`Successfully created ${validRecipes.length} conversion recipe templates and orderable items`);
     }
 
     return true;
