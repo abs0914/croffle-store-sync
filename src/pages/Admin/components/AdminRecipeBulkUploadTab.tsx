@@ -116,21 +116,14 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
   };
 
   const downloadTemplate = () => {
+    // Generic template without hardcoded items
     const csvContent = `Product,Category,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit
-Tiramisu Croffle,Classic,Croissant,piece,1,30
-Tiramisu Croffle,Classic,Whipped Cream,serving,1,8
-Tiramisu Croffle,Classic,Tiramisu Sauce,portion,1,3.5
-Tiramisu Croffle,Classic,Choco Flakes,portion,1,2.5
-Tiramisu Croffle,Classic,Take out Box,piece,1,6
-Tiramisu Croffle,Classic,Chopstick,pair,1,0.6
-Tiramisu Croffle,Classic,Waxpaper,piece,1,0.7
-Choco Nut Croffle,Classic,Croissant,piece,1,30
-Choco Nut Croffle,Classic,Whipped Cream,serving,1,8
-Choco Nut Croffle,Classic,Chocolate Sauce,portion,1,2.5
-Choco Nut Croffle,Classic,Peanut,portion,1,2.5
-Choco Nut Croffle,Classic,Take out Box,piece,1,6
-Choco Nut Croffle,Classic,Chopstick,pair,1,0.6
-Choco Nut Croffle,Classic,Waxpaper,piece,1,0.7`;
+Sample Product A,Classic,Sample Ingredient 1,piece,1,10
+Sample Product A,Classic,Sample Ingredient 2,serving,1,5
+Sample Product A,Classic,Sample Ingredient 3,portion,1,3
+Sample Product B,Special,Sample Ingredient 1,piece,2,10
+Sample Product B,Special,Sample Ingredient 4,ml,50,0.5
+Sample Product B,Special,Sample Ingredient 5,piece,1,8`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
