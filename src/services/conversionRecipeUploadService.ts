@@ -3,6 +3,63 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ConversionRecipeUpload } from "@/utils/csvParser";
 
+// Helper function to map CSV units to valid database units
+const mapToValidUnit = (csvUnit: string): string => {
+  const unitMapping: Record<string, string> = {
+    // Weight units
+    'kg': 'kg',
+    'kilo': 'kg',
+    'kilogram': 'kg',
+    'kilograms': 'kg',
+    'g': 'g',
+    'gram': 'g',
+    'grams': 'g',
+    
+    // Volume units
+    'l': 'liters',
+    'liter': 'liters',
+    'liters': 'liters',
+    'litre': 'liters',
+    'litres': 'liters',
+    'ml': 'ml',
+    'milliliter': 'ml',
+    'milliliters': 'ml',
+    'millilitre': 'ml',
+    'millilitres': 'ml',
+    
+    // Count units
+    'piece': 'pieces',
+    'pieces': 'pieces',
+    'pcs': 'pieces',
+    'pc': 'pieces',
+    'item': 'pieces',
+    'items': 'pieces',
+    'unit': 'pieces',
+    'units': 'pieces',
+    
+    // Package units
+    'box': 'boxes',
+    'boxes': 'boxes',
+    'pack': 'packs',
+    'packs': 'packs',
+    'package': 'packs',
+    'packages': 'packs',
+    
+    // Special units
+    'serving': 'serving',
+    'servings': 'serving',
+    'portion': 'portion',
+    'portions': 'portion',
+    'scoop': 'scoop',
+    'scoops': 'scoop',
+    'pair': 'pair',
+    'pairs': 'pair'
+  };
+  
+  const normalizedUnit = csvUnit.toLowerCase().trim();
+  return unitMapping[normalizedUnit] || 'pieces'; // Default to pieces if not found
+};
+
 export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUpload[]): Promise<boolean> => {
   try {
     console.log('Starting bulk upload of conversion recipes:', recipes);
@@ -73,7 +130,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       name: recipe.name,
       description: recipe.description,
       finished_item_name: recipe.output_product_name,
-      finished_item_unit: recipe.output_unit,
+      finished_item_unit: mapToValidUnit(recipe.output_unit), // Map to valid unit
       yield_quantity: recipe.output_quantity,
       instructions: recipe.instructions,
       is_active: true,
@@ -135,7 +192,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       }
     }
 
-    // NEW: Automatically create orderable items in commissary inventory
+    // Create orderable items in commissary inventory with mapped units
     console.log('Creating orderable items from conversion recipes...');
     const orderableItemInserts = [];
     
@@ -148,6 +205,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       };
       
       const dbCategory = categoryMapping[recipe.output_product_category as keyof typeof categoryMapping] || 'supplies';
+      const mappedUnit = mapToValidUnit(recipe.output_unit); // Map the output unit
       
       orderableItemInserts.push({
         name: recipe.output_product_name,
@@ -155,7 +213,7 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
         item_type: 'orderable_item',
         current_stock: 0, // Start with 0 stock
         minimum_threshold: Math.max(1, Math.floor(recipe.output_quantity * 0.1)), // 10% of output quantity
-        unit: recipe.output_unit,
+        unit: mappedUnit, // Use mapped unit
         unit_cost: recipe.output_unit_cost || 0,
         sku: recipe.output_sku || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         storage_location: recipe.output_storage_location || 'Finished Goods',
