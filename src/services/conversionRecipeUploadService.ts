@@ -7,39 +7,55 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
   try {
     console.log('Starting bulk upload of conversion recipes:', recipes);
     
-    // Get commissary items for validation - use the correct table name
-    const { data: commissaryItems } = await supabase
+    // Get commissary items for validation - check both possible table names
+    let commissaryItems: any[] = [];
+    let commissaryMap = new Map();
+    
+    // Try commissary_inventory first
+    const { data: commissaryData, error: commissaryError } = await supabase
       .from('commissary_inventory')
       .select('id, name')
       .eq('is_active', true);
 
-    if (!commissaryItems) {
-      toast.error('Failed to load commissary inventory items');
-      return false;
-    }
+    if (!commissaryError && commissaryData) {
+      commissaryItems = commissaryData;
+      commissaryMap = new Map(commissaryItems.map(item => [item.name.toLowerCase(), item]));
+    } else {
+      // Try inventory_items as fallback
+      const { data: inventoryData, error: inventoryError } = await supabase
+        .from('inventory_items')
+        .select('id, name')
+        .eq('is_active', true);
 
-    const commissaryMap = new Map(commissaryItems.map(item => [item.name.toLowerCase(), item]));
+      if (!inventoryError && inventoryData) {
+        commissaryItems = inventoryData;
+        commissaryMap = new Map(commissaryItems.map(item => [item.name.toLowerCase(), item]));
+      } else {
+        toast.error('Failed to load inventory items for validation');
+        return false;
+      }
+    }
 
     const validRecipes = [];
     const errors = [];
 
     // Validate each recipe
     for (const recipe of recipes) {
-      const commissaryItem = commissaryMap.get(recipe.input_item_name.toLowerCase());
+      const inventoryItem = commissaryMap.get(recipe.input_item_name.toLowerCase());
       
-      if (!commissaryItem) {
-        errors.push(`Input item "${recipe.input_item_name}" not found in commissary inventory`);
+      if (!inventoryItem) {
+        errors.push(`Input item "${recipe.input_item_name}" not found in inventory`);
         continue;
       }
 
       validRecipes.push({
         ...recipe,
-        commissary_item_id: commissaryItem.id
+        commissary_item_id: inventoryItem.id
       });
     }
 
     if (validRecipes.length === 0) {
-      toast.error('No valid conversion recipes found. Please check that input items exist in commissary inventory.');
+      toast.error('No valid conversion recipes found. Please check that input items exist in inventory.');
       return false;
     }
 
@@ -108,7 +124,8 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
         
         // If foreign key constraint error, provide more specific guidance
         if (ingredientError.code === '23503') {
-          toast.error('Database constraint error: Please ensure all input items exist in commissary inventory with exact name matching.');
+          console.error('Foreign key constraint error details:', ingredientError);
+          toast.error('Database constraint error: The conversion recipe ingredients table may be referencing the wrong inventory table. Please contact system administrator.');
         } else {
           toast.error('Failed to add ingredients to conversion recipes');  
         }
@@ -116,44 +133,14 @@ export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUploa
       }
     }
 
-    // Create orderable products in inventory_stock for each conversion recipe
-    const inventoryStockInserts = [];
-
-    for (let i = 0; i < validRecipes.length; i++) {
-      const recipe = validRecipes[i];
-      
-      // Create inventory stock entries for stores to order
-      inventoryStockInserts.push({
-        item: recipe.output_product_name,
-        unit: recipe.output_unit,
-        stock_quantity: 0, // Start with 0 stock - will be added through conversion process
-        cost: recipe.output_unit_cost || 0,
-        sku: recipe.output_sku,
-        is_active: true,
-        // Note: store_id will need to be handled differently - this creates a template
-        // that can be used across stores
-        store_id: '00000000-0000-0000-0000-000000000000' // Placeholder for system-wide templates
-      });
-    }
-
-    // Create the orderable products
-    if (inventoryStockInserts.length > 0) {
-      const { error: inventoryError } = await supabase
-        .from('inventory_stock')
-        .insert(inventoryStockInserts);
-
-      if (inventoryError) {
-        console.error('Error creating orderable products:', inventoryError);
-        // Don't fail the entire process if inventory creation fails
-        console.warn('Conversion recipes created but orderable products failed to create');
-      }
-    }
+    // Don't create orderable products automatically - this should be done through proper conversion process
+    console.log('Conversion recipes created successfully without automatic orderable product creation');
 
     if (errors.length > 0) {
-      toast.warning(`Created ${validRecipes.length} conversion recipes. ${errors.length} items skipped due to missing commissary items.`);
+      toast.warning(`Created ${validRecipes.length} conversion recipes. ${errors.length} items skipped due to missing inventory items.`);
       console.warn('Conversion recipe upload errors:', errors);
     } else {
-      toast.success(`Successfully created ${validRecipes.length} conversion recipe templates and orderable products`);
+      toast.success(`Successfully created ${validRecipes.length} conversion recipe templates`);
     }
 
     return true;
