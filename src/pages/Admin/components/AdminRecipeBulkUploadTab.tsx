@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Download, FileText, AlertCircle, CheckCircle, ChefHat } from 'lucide-react';
+import { Upload, Download, FileText, AlertCircle, CheckCircle, ChefHat, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseRecipesCSV } from '@/utils/csvParser';
 import { bulkUploadRecipes, RecipeUploadData } from '@/services/recipeUploadService';
+import { fetchCommissaryInventory } from '@/services/inventoryManagement/commissaryInventoryService';
+import { CommissaryInventoryItem } from '@/types/commissary';
 
 interface UploadResult {
   success: number;
@@ -21,6 +24,25 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+  const [commissaryItems, setCommissaryItems] = useState<CommissaryInventoryItem[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+
+  useEffect(() => {
+    fetchCommissaryItems();
+  }, []);
+
+  const fetchCommissaryItems = async () => {
+    setIsLoadingItems(true);
+    try {
+      const items = await fetchCommissaryInventory();
+      setCommissaryItems(items);
+    } catch (error) {
+      console.error('Error fetching commissary items:', error);
+      toast.error('Failed to load commissary inventory items');
+    } finally {
+      setIsLoadingItems(false);
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -116,14 +138,34 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
   };
 
   const downloadTemplate = () => {
-    // Generic template without hardcoded items
-    const csvContent = `Product,Category,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit
-Sample Product A,Classic,Sample Ingredient 1,piece,1,10
-Sample Product A,Classic,Sample Ingredient 2,serving,1,5
-Sample Product A,Classic,Sample Ingredient 3,portion,1,3
-Sample Product B,Special,Sample Ingredient 1,piece,2,10
-Sample Product B,Special,Sample Ingredient 4,ml,50,0.5
-Sample Product B,Special,Sample Ingredient 5,piece,1,8`;
+    // Create template using actual commissary inventory items
+    let csvContent = `Product,Category,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit\n`;
+    
+    if (commissaryItems.length > 0) {
+      // Use first few items as examples for different products
+      const sampleItems = commissaryItems.slice(0, 6);
+      
+      // Create sample products using actual inventory items
+      if (sampleItems.length >= 3) {
+        csvContent += `Sample Product A,Classic,${sampleItems[0].name},${sampleItems[0].uom},1,${sampleItems[0].unit_cost || 10}\n`;
+        csvContent += `Sample Product A,Classic,${sampleItems[1].name},${sampleItems[1].uom},0.5,${sampleItems[1].unit_cost || 5}\n`;
+        csvContent += `Sample Product A,Classic,${sampleItems[2].name},${sampleItems[2].uom},1,${sampleItems[2].unit_cost || 3}\n`;
+      }
+      
+      if (sampleItems.length >= 6) {
+        csvContent += `Sample Product B,Special,${sampleItems[3].name},${sampleItems[3].uom},2,${sampleItems[3].unit_cost || 10}\n`;
+        csvContent += `Sample Product B,Special,${sampleItems[4].name},${sampleItems[4].uom},1,${sampleItems[4].unit_cost || 8}\n`;
+        csvContent += `Sample Product B,Special,${sampleItems[5].name},${sampleItems[5].uom},0.25,${sampleItems[5].unit_cost || 6}\n`;
+      }
+    } else {
+      // Fallback if no items loaded
+      csvContent += `Sample Product A,Classic,Sample Ingredient 1,piece,1,10\n`;
+      csvContent += `Sample Product A,Classic,Sample Ingredient 2,serving,1,5\n`;
+      csvContent += `Sample Product A,Classic,Sample Ingredient 3,portion,1,3\n`;
+      csvContent += `Sample Product B,Special,Sample Ingredient 1,piece,2,10\n`;
+      csvContent += `Sample Product B,Special,Sample Ingredient 4,ml,50,0.5\n`;
+      csvContent += `Sample Product B,Special,Sample Ingredient 5,piece,1,8`;
+    }
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -145,6 +187,49 @@ Sample Product B,Special,Sample Ingredient 5,piece,1,8`;
         </AlertDescription>
       </Alert>
 
+      {/* Available Items Display */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Available Commissary Items ({commissaryItems.length})</CardTitle>
+            <Button
+              onClick={fetchCommissaryItems}
+              variant="outline"
+              size="sm"
+              disabled={isLoadingItems}
+            >
+              {isLoadingItems ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Refresh
+            </Button>
+          </div>
+          <CardDescription>
+            These are the exact ingredient names you must use in your CSV file
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="max-h-40 overflow-y-auto border rounded-md p-3 bg-muted/20">
+            {isLoadingItems ? (
+              <p className="text-sm text-muted-foreground">Loading items...</p>
+            ) : commissaryItems.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                {commissaryItems.map((item) => (
+                  <div key={item.id} className="truncate p-1 bg-background rounded border">
+                    <div className="font-medium">{item.name}</div>
+                    <div className="text-muted-foreground">({item.uom})</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No items found in commissary inventory</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Template Download */}
       <Card>
         <CardHeader>
@@ -153,13 +238,13 @@ Sample Product B,Special,Sample Ingredient 5,piece,1,8`;
             Download Template
           </CardTitle>
           <CardDescription>
-            Download a CSV template with the correct format for bulk recipe template upload
+            Download a CSV template with examples using your actual commissary inventory items
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={downloadTemplate} variant="outline">
+          <Button onClick={downloadTemplate} variant="outline" disabled={isLoadingItems}>
             <Download className="h-4 w-4 mr-2" />
-            Download CSV Template
+            Download CSV Template (Using Your Inventory)
           </Button>
         </CardContent>
       </Card>
@@ -290,7 +375,7 @@ Sample Product B,Special,Sample Ingredient 5,piece,1,8`;
             <div>
               <strong>Important Notes:</strong>
               <ul className="list-disc list-inside ml-4 mt-1">
-                <li>All ingredient names must exactly match items in commissary inventory</li>
+                <li>Copy ingredient names exactly from the "Available Commissary Items" list above</li>
                 <li>Multiple ingredients for the same product should be on separate rows</li>
                 <li>Recipe templates can be deployed to multiple stores</li>
                 <li>Quantities must be numeric values</li>
