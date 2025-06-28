@@ -20,7 +20,7 @@ export const UOMSelect: React.FC<UOMSelectProps> = ({
   className
 }) => {
   const [isCustom, setIsCustom] = React.useState(
-    value && !STANDARD_UOM_OPTIONS.includes(value)
+    value && !STANDARD_UOM_OPTIONS.includes(value as typeof STANDARD_UOM_OPTIONS[number])
   );
 
   const handleSelectChange = (selectedValue: string) => {

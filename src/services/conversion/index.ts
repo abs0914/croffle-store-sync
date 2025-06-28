@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ConversionRequest } from "@/types/commissary";
+import { ConversionRequest, CommissaryInventoryItem } from "@/types/commissary";
 import { toast } from "sonner";
 
 export const executeConversion = async (request: ConversionRequest): Promise<boolean> => {
@@ -29,15 +29,26 @@ export const executeConversion = async (request: ConversionRequest): Promise<boo
 
     // Step 2: Deduct raw materials
     for (const inputItem of request.input_items) {
-      const { error: deductError } = await supabase.rpc('deduct_commissary_stock', {
-        item_id: inputItem.commissary_item_id,
-        quantity_to_deduct: inputItem.quantity
-      });
+      const { data: currentItem } = await supabase
+        .from('commissary_inventory')
+        .select('current_stock')
+        .eq('id', inputItem.commissary_item_id)
+        .single();
 
-      if (deductError) {
-        console.error('Error deducting raw material stock:', deductError);
-        toast.error('Failed to deduct raw material stock');
-        return false;
+      if (currentItem) {
+        const { error: deductError } = await supabase
+          .from('commissary_inventory')
+          .update({
+            current_stock: currentItem.current_stock - inputItem.quantity,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', inputItem.commissary_item_id);
+
+        if (deductError) {
+          console.error('Error deducting raw material stock:', deductError);
+          toast.error('Failed to deduct raw material stock');
+          return false;
+        }
       }
     }
 
@@ -101,5 +112,51 @@ export const executeConversion = async (request: ConversionRequest): Promise<boo
     console.error('Error executing conversion:', error);
     toast.error('Failed to execute conversion');
     return false;
+  }
+};
+
+export const fetchConversionHistory = async (): Promise<any[]> => {
+  try {
+    console.log('Fetching conversion history...');
+    
+    // For now, return empty array as we don't have a conversion history table yet
+    // This can be implemented later when we create proper conversion tracking
+    return [];
+  } catch (error) {
+    console.error('Error fetching conversion history:', error);
+    toast.error('Failed to fetch conversion history');
+    return [];
+  }
+};
+
+export const fetchAvailableRawMaterials = async (): Promise<CommissaryInventoryItem[]> => {
+  try {
+    console.log('Fetching available raw materials...');
+    
+    const { data, error } = await supabase
+      .from('commissary_inventory')
+      .select('*')
+      .in('item_type', ['raw_material', 'supply'])
+      .eq('is_active', true)
+      .gt('current_stock', 0)
+      .order('name');
+
+    if (error) {
+      console.error('Supabase error fetching raw materials:', error);
+      throw error;
+    }
+    
+    console.log('Raw materials fetched successfully:', data);
+    
+    return (data || []).map(item => ({
+      ...item,
+      uom: item.unit || 'units',
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
+    }));
+  } catch (error) {
+    console.error('Error fetching raw materials:', error);
+    toast.error('Failed to fetch raw materials');
+    return [];
   }
 };
