@@ -9,7 +9,7 @@ export function CommissaryInventoryHeader() {
         Commissary Inventory
       </h1>
       <p className="text-muted-foreground">
-        Manage raw materials and supplies for conversion to store inventory. Use Production Management for bulk uploads.
+        Manage raw materials and finished products for conversion to store inventory
       </p>
     </div>
   );

@@ -51,6 +51,10 @@ export default function CommissaryInventory() {
     setShowDeleteDialog(true);
   };
 
+  const handleItemDialogSuccess = async () => {
+    await loadData();
+  };
+
   if (!hasAdminAccess) {
     return (
       <div className="container mx-auto p-6">
@@ -111,7 +115,12 @@ export default function CommissaryInventory() {
         </TabsContent>
 
         <TabsContent value="finished-products">
-          <FinishedProductsTab />
+          <FinishedProductsTab
+            onEditItem={handleEditItem}
+            onStockAdjustment={handleStockAdjustmentItem}
+            onDeleteItem={handleDeleteItemDialog}
+            onRefresh={loadData}
+          />
         </TabsContent>
 
         <TabsContent value="purchasing">
@@ -135,28 +144,28 @@ export default function CommissaryInventory() {
       <AddCommissaryItemDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
-        onSuccess={loadData}
+        onSuccess={handleItemDialogSuccess}
       />
 
       <EditCommissaryItemDialog
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         item={selectedItem}
-        onSuccess={loadData}
+        onSuccess={handleItemDialogSuccess}
       />
 
       <StockAdjustmentDialog
         open={showStockDialog}
         onOpenChange={setShowStockDialog}
         item={selectedItem}
-        onSuccess={loadData}
+        onSuccess={handleItemDialogSuccess}
       />
 
       <DeleteConfirmationDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         item={selectedItem}
-        onSuccess={loadData}
+        onSuccess={handleItemDialogSuccess}
       />
     </div>
   );

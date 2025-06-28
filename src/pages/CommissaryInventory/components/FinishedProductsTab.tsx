@@ -10,7 +10,19 @@ import { InventoryItemCard } from "./InventoryItemCard";
 import { ConversionExecutionDialog } from "./ConversionExecutionDialog";
 import { toast } from "sonner";
 
-export function FinishedProductsTab() {
+interface FinishedProductsTabProps {
+  onEditItem: (item: CommissaryInventoryItem) => void;
+  onStockAdjustment: (item: CommissaryInventoryItem) => void;
+  onDeleteItem: (item: CommissaryInventoryItem) => void;
+  onRefresh: () => void;
+}
+
+export function FinishedProductsTab({
+  onEditItem,
+  onStockAdjustment,
+  onDeleteItem,
+  onRefresh
+}: FinishedProductsTabProps) {
   const [finishedProducts, setFinishedProducts] = useState<CommissaryInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showConversionDialog, setShowConversionDialog] = useState(false);
@@ -24,6 +36,7 @@ export function FinishedProductsTab() {
     setLoading(true);
     try {
       const items = await fetchOrderableItems();
+      console.log('Loaded finished products:', items);
       setFinishedProducts(items);
     } catch (error) {
       console.error('Error loading finished products:', error);
@@ -38,19 +51,9 @@ export function FinishedProductsTab() {
     setShowConversionDialog(true);
   };
 
-  const handleEditItem = (item: CommissaryInventoryItem) => {
-    // Handle edit - this would open an edit dialog
-    console.log('Edit item:', item);
-  };
-
-  const handleStockAdjustment = (item: CommissaryInventoryItem) => {
-    // Handle stock adjustment - this would open a stock adjustment dialog
-    console.log('Adjust stock:', item);
-  };
-
-  const handleDeleteItem = (item: CommissaryInventoryItem) => {
-    // Handle delete - this would open a confirmation dialog
-    console.log('Delete item:', item);
+  const handleConversionSuccess = () => {
+    loadFinishedProducts();
+    onRefresh();
   };
 
   return (
@@ -75,7 +78,7 @@ export function FinishedProductsTab() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Finished Products Inventory
+            Finished Products Inventory ({finishedProducts.length} items)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -91,7 +94,7 @@ export function FinishedProductsTab() {
             <div className="text-center py-8">
               <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground mb-4">
-                No finished products found. Execute conversion processes to create finished products from raw materials.
+                No finished products found. Upload conversion recipes to create finished products from raw materials.
               </p>
               <Button 
                 onClick={() => setShowConversionDialog(true)}
@@ -104,81 +107,25 @@ export function FinishedProductsTab() {
           ) : (
             <div className="space-y-4">
               {finishedProducts.map((product) => (
-                <div key={product.id} className="border rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-semibold">{product.name}</h3>
-                        <Badge variant="secondary">Finished Product</Badge>
-                        {product.current_stock <= 0 && (
-                          <Badge variant="destructive">Out of Stock</Badge>
-                        )}
-                        {product.current_stock > 0 && product.current_stock <= product.minimum_threshold && (
-                          <Badge variant="secondary" className="text-yellow-600">Low Stock</Badge>
-                        )}
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-muted-foreground">
-                        <div>
-                          <span className="font-medium">Current Stock:</span> {product.current_stock} {product.uom}
-                        </div>
-                        <div>
-                          <span className="font-medium">Min Threshold:</span> {product.minimum_threshold} {product.uom}
-                        </div>
-                        <div>
-                          <span className="font-medium">Unit Cost:</span> ₱{product.unit_cost?.toFixed(2) || '0.00'}
-                        </div>
-                        <div>
-                          <span className="font-medium">SKU:</span> {product.sku || 'N/A'}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleExecuteConversion(product)}
-                        disabled={product.current_stock > 0}
-                        title={product.current_stock > 0 ? "Stock available - conversion not needed" : "Execute conversion to restock"}
-                      >
-                        <PlayCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                <InventoryItemCard
+                  key={product.id}
+                  item={product}
+                  onEdit={onEditItem}
+                  onStockAdjustment={onStockAdjustment}
+                  onDelete={onDeleteItem}
+                />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Conversion Execution Dialog would be implemented here */}
-      {showConversionDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-2xl">
-            <CardHeader>
-              <CardTitle>Execute Conversion Process</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                This feature would show available conversion recipes and allow execution of conversions to create finished products.
-              </p>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowConversionDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => {
-                  setShowConversionDialog(false);
-                  toast.info('Conversion execution feature coming soon');
-                }}>
-                  Execute Conversion
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <ConversionExecutionDialog
+        open={showConversionDialog}
+        onOpenChange={setShowConversionDialog}
+        selectedProduct={selectedProduct}
+        onSuccess={handleConversionSuccess}
+      />
     </div>
   );
 }
