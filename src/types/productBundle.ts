@@ -39,6 +39,13 @@ export interface ProductBundleInput {
   }[];
 }
 
+// Create a separate type for the limited bundle data in conversion mappings
+export interface BundleReference {
+  id: string;
+  name: string;
+  unit_description?: string;
+}
+
 export interface EnhancedConversionMapping {
   id: string;
   inventory_stock_id: string;
@@ -60,5 +67,5 @@ export interface EnhancedConversionMapping {
     fractional_stock: number;
     store_id: string;
   };
-  bundle?: ProductBundle;
+  bundle?: BundleReference; // Use the limited bundle reference instead of full ProductBundle
 }
