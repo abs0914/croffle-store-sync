@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -59,23 +60,28 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       fetchCategories();
       
       if (template) {
+        console.log('Editing template:', template);
         setFormData({
-          name: template.name,
+          name: template.name || '',
           description: template.description || '',
           category_name: template.category_name || '',
           instructions: template.instructions || '',
-          yield_quantity: template.yield_quantity,
+          yield_quantity: template.yield_quantity || 1,
           serving_size: template.serving_size || 1,
           image_url: (template as any).image_url || ''
         });
         
-        setIngredients(template.ingredients.map(ing => ({
-          commissary_item_id: ing.commissary_item_id,
-          commissary_item_name: ing.commissary_item_name,
-          quantity: ing.quantity,
-          unit: ing.unit,
-          cost_per_unit: ing.cost_per_unit
-        })));
+        // Map template ingredients to form format
+        const mappedIngredients = template.ingredients?.map(ing => ({
+          commissary_item_id: ing.commissary_item_id || '',
+          commissary_item_name: ing.commissary_item_name || '',
+          quantity: ing.quantity || 1,
+          unit: ing.unit || 'g',
+          cost_per_unit: ing.cost_per_unit || 0
+        })) || [];
+        
+        console.log('Setting ingredients:', mappedIngredients);
+        setIngredients(mappedIngredients);
       } else {
         resetForm();
       }
@@ -253,8 +259,13 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
     }
   };
 
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -481,7 +492,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
           </div>
 
           <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
