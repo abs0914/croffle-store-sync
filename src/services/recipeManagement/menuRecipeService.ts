@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -128,6 +129,20 @@ export const COMBO_RECIPES: Partial<MenuRecipeTemplate>[] = [
 
 export const createBulkRecipeTemplates = async (templates: Partial<MenuRecipeTemplate>[]) => {
   try {
+    // Get the current authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      console.error('Error getting authenticated user:', authError);
+      toast.error('Authentication error. Please log in again.');
+      return [];
+    }
+
+    if (!user) {
+      toast.error('You must be logged in to create recipe templates');
+      return [];
+    }
+
     const results = [];
     
     for (const template of templates) {
@@ -142,7 +157,7 @@ export const createBulkRecipeTemplates = async (templates: Partial<MenuRecipeTem
           serving_size: template.serving_size || 1,
           version: 1,
           is_active: true,
-          created_by: 'system'
+          created_by: user.id // Use the authenticated user's UUID instead of 'system'
         })
         .select()
         .single();
