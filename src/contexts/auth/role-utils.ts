@@ -41,6 +41,7 @@ export const ROUTE_PATHS = {
   INVENTORY: '/inventory',
   ORDER_MANAGEMENT: '/order-management',
   CUSTOMERS: '/customers',
+  EXPENSES: '/expenses',
   REPORTS: '/reports',
   SETTINGS: '/settings',
   // Admin Routes
@@ -87,6 +88,7 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
       ROUTE_PATHS.INVENTORY,
       ROUTE_PATHS.ORDER_MANAGEMENT,
       ROUTE_PATHS.CUSTOMERS,
+      ROUTE_PATHS.EXPENSES,
       ROUTE_PATHS.REPORTS,
       ROUTE_PATHS.SETTINGS
     ],

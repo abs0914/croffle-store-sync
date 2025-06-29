@@ -36,11 +36,6 @@ const menuItems = [
     href: "/inventory",
   },
   {
-    title: "Orders",
-    icon: FileText,
-    href: "/orders",
-  },
-  {
     title: "Order Management",
     icon: ClipboardList,
     href: "/order-management",

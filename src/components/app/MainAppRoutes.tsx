@@ -7,11 +7,12 @@ import Dashboard from '@/pages/Dashboard';
 import POS from '@/pages/POS';
 import Products from '@/pages/Products';
 import Inventory from '@/pages/Inventory';
-import Orders from '@/pages/Orders';
 import OrderManagement from '@/pages/OrderManagement';
 import Reports from '@/pages/Reports';
 import Settings from '@/pages/Settings';
 import ExpensesDashboard from '@/pages/Expenses/ExpensesDashboard';
+import CustomerManagement from '@/pages/Customers/CustomerManagement';
+import ProductCatalog from '@/pages/ProductCatalog';
 
 export const MainAppRoutes = () => [
   // Main application routes
@@ -31,6 +32,14 @@ export const MainAppRoutes = () => [
     </ProtectedRoute>
   } />,
   
+  <Route key="product-catalog" path="/product-catalog" element={
+    <ProtectedRoute>
+      <MainLayout>
+        <ProductCatalog />
+      </MainLayout>
+    </ProtectedRoute>
+  } />,
+  
   <Route key="products" path="/products" element={
     <ProtectedRoute>
       <MainLayout>
@@ -46,16 +55,8 @@ export const MainAppRoutes = () => [
       </MainLayout>
     </ProtectedRoute>
   } />,
-  
-  <Route key="orders" path="/orders" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <Orders />
-      </MainLayout>
-    </ProtectedRoute>
-  } />,
 
-  // New Order Management route for managers and above
+  // Order Management route for managers and above
   <Route key="order-management" path="/order-management" element={
     <ProtectedRoute>
       <MainLayout>
@@ -64,7 +65,15 @@ export const MainAppRoutes = () => [
     </ProtectedRoute>
   } />,
 
-  // New expense route for stores
+  <Route key="customers" path="/customers" element={
+    <ProtectedRoute>
+      <MainLayout>
+        <CustomerManagement />
+      </MainLayout>
+    </ProtectedRoute>
+  } />,
+
+  // Expense route for managers and above
   <Route key="expenses" path="/expenses" element={
     <ProtectedRoute>
       <MainLayout>
