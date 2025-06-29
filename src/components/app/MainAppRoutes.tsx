@@ -22,6 +22,13 @@ const StoreSettings = React.lazy(() => import('@/pages/Stores/StoreSettings'));
 const ProductCatalog = React.lazy(() => import('@/pages/ProductCatalog'));
 const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
 
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+  </div>
+);
+
 export const MainAppRoutes = () => {
   return (
     <>
@@ -31,7 +38,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Dashboard />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Dashboard />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -43,7 +52,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <POS />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <POS />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -55,7 +66,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Products />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Products />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -67,7 +80,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <ProductCatalog />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <ProductCatalog />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -79,7 +94,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Inventory />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Inventory />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -91,7 +108,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <StockOrders />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <StockOrders />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -103,7 +122,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <ProductionManagement />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <ProductionManagement />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -115,7 +136,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <CommissaryInventory />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <CommissaryInventory />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -127,7 +150,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <InventoryConversion />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <InventoryConversion />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -139,7 +164,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <OrderManagement />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <OrderManagement />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -151,7 +178,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Reports />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Reports />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -163,7 +192,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Settings />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Settings />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -175,7 +206,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Stores />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Stores />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -186,7 +219,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <StoreForm />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <StoreForm />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -197,7 +232,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <StoreForm />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <StoreForm />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -208,7 +245,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <StoreQR />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <StoreQR />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -219,7 +258,9 @@ export const MainAppRoutes = () => {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <StoreSettings />
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <StoreSettings />
+              </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
         }
