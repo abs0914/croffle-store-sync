@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Minus, X, ExternalLink } from "lucide-react";
+import { Plus, Minus, X } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { useStore } from "@/contexts/StoreContext";
 import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
@@ -313,29 +313,14 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
                 <div className="text-center py-8">
                   <p className="text-muted-foreground mb-2">No finished products available for ordering</p>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Make sure there are active orderable items in commissary inventory with stock ≥ 0
+                    Contact your administrator to add orderable items to the commissary inventory.
                   </p>
-                  <div className="text-xs text-muted-foreground space-y-1 mb-4">
-                    <p>Debug info:</p>
-                    <p>• Store location: {storeLocationType}</p>
-                    <p>• Current store: {currentStore?.name}</p>
-                    <p>• Looking for items with: is_active = true, item_type = 'orderable_item'</p>
-                  </div>
-                  <div className="flex items-center justify-center gap-2">
-                    <Button 
-                      onClick={loadOrderableItems}
-                      variant="outline"
-                    >
-                      Retry Loading Products
-                    </Button>
-                    <Button 
-                      onClick={() => window.open('/commissary-inventory', '_blank')}
-                      variant="outline"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Manage Commissary Inventory
-                    </Button>
-                  </div>
+                  <Button 
+                    onClick={loadOrderableItems}
+                    variant="outline"
+                  >
+                    Retry Loading Products
+                  </Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
