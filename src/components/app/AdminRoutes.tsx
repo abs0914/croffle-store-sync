@@ -8,7 +8,7 @@ import AdminRecipes from "@/pages/Admin/AdminRecipes";
 import AdminCustomers from "@/pages/Admin/AdminCustomers";
 import AdminReports from "@/pages/Admin/AdminReports";
 import AdminExpenses from "@/pages/Admin/AdminExpenses";
-import OrderManagement from "@/pages/OrderManagement";
+import AdminOrders from "@/pages/Admin/AdminOrders";
 import CommissaryManagement from "@/pages/Commissary/CommissaryManagement";
 
 // Import modular route components
@@ -69,11 +69,11 @@ export function AdminRoutes() {
         </AdminProtectedRoute>
       } />
       
-      {/* Consolidated Order Management */}
+      {/* Admin Order Management - Updated to use AdminOrders */}
       <Route path="/admin/order-management" element={
         <AdminProtectedRoute>
           <AdminLayout>
-            <OrderManagement />
+            <AdminOrders />
           </AdminLayout>
         </AdminProtectedRoute>
       } />

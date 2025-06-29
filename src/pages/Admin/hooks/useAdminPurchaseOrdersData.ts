@@ -52,6 +52,7 @@ export const useAdminPurchaseOrdersData = () => {
         throw ordersError;
       }
 
+      console.log('Admin fetched orders:', ordersData);
       setOrders(ordersData || []);
     } catch (error: any) {
       console.error('Error fetching purchase orders:', error);

@@ -6,16 +6,20 @@ import { AdminPurchaseOrdersList } from './components/AdminPurchaseOrdersList';
 import { AdminPurchaseOrderBulkActions } from './components/AdminPurchaseOrderBulkActions';
 import { useAdminPurchaseOrdersData } from './hooks/useAdminPurchaseOrdersData';
 import { ViewPurchaseOrderDialog } from '@/pages/OrderManagement/components/ViewPurchaseOrderDialog';
+import { CreatePurchaseOrderDialog } from '@/pages/OrderManagement/components/CreatePurchaseOrderDialog';
 import { PurchaseOrder } from '@/types/orderManagement';
 import { updatePurchaseOrder } from '@/services/orderManagement/purchaseOrderService';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
 export default function AdminOrders() {
   const { user } = useAuth();
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   
   const {
     orders,
@@ -73,24 +77,43 @@ export default function AdminOrders() {
   };
 
   const handleApproveOrder = async (orderId: string) => {
-    await updatePurchaseOrder(orderId, {
+    const success = await updatePurchaseOrder(orderId, {
       status: 'approved',
       approved_by: user?.id,
       approved_at: new Date().toISOString()
     });
-    await refreshOrders();
+    
+    if (success) {
+      await refreshOrders();
+    }
   };
 
   const handleRejectOrder = async (orderId: string) => {
-    await updatePurchaseOrder(orderId, {
+    const success = await updatePurchaseOrder(orderId, {
       status: 'cancelled',
       approved_by: user?.id
     });
-    await refreshOrders();
+    
+    if (success) {
+      await refreshOrders();
+    }
   };
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Purchase Orders Management</h1>
+          <p className="text-muted-foreground">
+            Review, approve, and manage purchase orders from all stores
+          </p>
+        </div>
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Purchase Order
+        </Button>
+      </div>
+
       <AdminPurchaseOrdersHeader 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -137,6 +160,12 @@ export default function AdminOrders() {
           onSuccess={refreshOrders}
         />
       )}
+
+      <CreatePurchaseOrderDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSuccess={refreshOrders}
+      />
     </div>
   );
 }
