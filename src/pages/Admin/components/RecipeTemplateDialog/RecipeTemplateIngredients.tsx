@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2 } from 'lucide-react';
 import { RecipeTemplateIngredientInput, INGREDIENT_CATEGORIES, INGREDIENT_TYPES } from '@/services/recipeManagement/types';
+import { fetchOrderableItems } from '@/services/inventoryManagement/commissaryInventoryService';
+import { CommissaryInventoryItem } from '@/types/commissary';
 
 interface RecipeTemplateIngredientsProps {
   ingredients: RecipeTemplateIngredientInput[];
@@ -17,6 +19,25 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
   ingredients,
   setIngredients
 }) => {
+  const [orderableItems, setOrderableItems] = useState<CommissaryInventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadOrderableItems = async () => {
+      try {
+        const items = await fetchOrderableItems();
+        console.log('Loaded orderable items:', items);
+        setOrderableItems(items);
+      } catch (error) {
+        console.error('Error loading orderable items:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadOrderableItems();
+  }, []);
+
   const addIngredient = () => {
     setIngredients(prev => [...prev, {
       ingredient_name: '',
@@ -51,11 +72,30 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
           <div key={index} className="grid grid-cols-6 gap-2 items-end">
             <div>
               <Label>Ingredient Name</Label>
-              <Input
-                value={ingredient.ingredient_name}
-                onChange={(e) => updateIngredient(index, 'ingredient_name', e.target.value)}
-                placeholder="e.g., All Purpose Flour"
-              />
+              {isLoading ? (
+                <Input
+                  value={ingredient.ingredient_name}
+                  onChange={(e) => updateIngredient(index, 'ingredient_name', e.target.value)}
+                  placeholder="Loading ingredients..."
+                  disabled
+                />
+              ) : (
+                <Select
+                  value={ingredient.ingredient_name}
+                  onValueChange={(value) => updateIngredient(index, 'ingredient_name', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select ingredient" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {orderableItems.map(item => (
+                      <SelectItem key={item.id} value={item.name}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             
             <div>
