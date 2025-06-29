@@ -21,7 +21,7 @@ import {
 interface RecipeTemplateDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  template?: RecipeTemplate | null;
+  template?: any | null; // Using any to match the actual data structure
   onSuccess: () => void;
 }
 
@@ -61,6 +61,8 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       
       if (template) {
         console.log('Editing template:', template);
+        
+        // Set form data from template
         setFormData({
           name: template.name || '',
           description: template.description || '',
@@ -68,20 +70,25 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
           instructions: template.instructions || '',
           yield_quantity: template.yield_quantity || 1,
           serving_size: template.serving_size || 1,
-          image_url: (template as any).image_url || ''
+          image_url: template.image_url || ''
         });
         
-        // Map template ingredients to form format
-        const mappedIngredients = template.ingredients?.map(ing => ({
-          commissary_item_id: ing.commissary_item_id || '',
-          commissary_item_name: ing.commissary_item_name || '',
-          quantity: ing.quantity || 1,
-          unit: ing.unit || 'g',
-          cost_per_unit: ing.cost_per_unit || 0
-        })) || [];
-        
-        console.log('Setting ingredients:', mappedIngredients);
-        setIngredients(mappedIngredients);
+        // Handle ingredients - check if template has ingredients array
+        if (template.ingredients && Array.isArray(template.ingredients)) {
+          const mappedIngredients = template.ingredients.map((ing: any) => ({
+            commissary_item_id: ing.commissary_item_id || '',
+            commissary_item_name: ing.commissary_item_name || '',
+            quantity: ing.quantity || 1,
+            unit: ing.unit || 'g',
+            cost_per_unit: ing.cost_per_unit || 0
+          }));
+          
+          console.log('Setting ingredients:', mappedIngredients);
+          setIngredients(mappedIngredients);
+        } else {
+          // If no ingredients, start with empty array
+          setIngredients([]);
+        }
       } else {
         resetForm();
       }
@@ -219,18 +226,6 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       return;
     }
 
-    if (ingredients.length === 0) {
-      toast.error('At least one ingredient is required');
-      return;
-    }
-
-    // Validate ingredients have commissary items selected
-    const invalidIngredients = ingredients.filter(ing => !ing.commissary_item_id || !ing.commissary_item_name);
-    if (invalidIngredients.length > 0) {
-      toast.error('Please select commissary items for all ingredients');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
@@ -249,11 +244,13 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       }
 
       if (result) {
+        toast.success(template ? 'Recipe template updated successfully' : 'Recipe template created successfully');
         onSuccess();
         onClose();
       }
     } catch (error) {
       console.error('Error saving recipe template:', error);
+      toast.error('Failed to save recipe template');
     } finally {
       setIsLoading(false);
     }
@@ -371,7 +368,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
                 min="1"
                 step="0.1"
                 value={formData.yield_quantity}
-                onChange={(e) => setFormData({ ...formData, yield_quantity: parseFloat(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, yield_quantity: parseFloat(e.target.value) || 1 })}
               />
             </div>
             
@@ -383,7 +380,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
                 min="1"
                 step="0.1"
                 value={formData.serving_size}
-                onChange={(e) => setFormData({ ...formData, serving_size: parseFloat(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, serving_size: parseFloat(e.target.value) || 1 })}
               />
             </div>
           </div>
@@ -425,7 +422,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
                       min="0"
                       step="0.1"
                       value={ingredient.quantity}
-                      onChange={(e) => updateIngredient(index, 'quantity', parseFloat(e.target.value))}
+                      onChange={(e) => updateIngredient(index, 'quantity', parseFloat(e.target.value) || 0)}
                     />
                   </div>
                   
@@ -457,7 +454,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
                       min="0"
                       step="0.01"
                       value={ingredient.cost_per_unit || 0}
-                      onChange={(e) => updateIngredient(index, 'cost_per_unit', parseFloat(e.target.value))}
+                      onChange={(e) => updateIngredient(index, 'cost_per_unit', parseFloat(e.target.value) || 0)}
                     />
                   </div>
                   
