@@ -10,7 +10,8 @@ import {
   DollarSign,
   Users,
   ShoppingBag,
-  ClipboardList
+  ClipboardList,
+  Warehouse
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,11 @@ const menuItems = [
     title: "Inventory",
     icon: Package,
     href: "/inventory",
+  },
+  {
+    title: "Commissary Inventory",
+    icon: Warehouse,
+    href: "/commissary-inventory",
   },
   {
     title: "Orders",
