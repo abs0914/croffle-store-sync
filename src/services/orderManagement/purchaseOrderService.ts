@@ -3,6 +3,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { PurchaseOrder, PurchaseOrderItem } from "@/types/orderManagement";
 import { toast } from "sonner";
 
+interface CreatePurchaseOrderData {
+  store_id: string;
+  supplier_id?: string;
+  created_by: string;
+  status: 'draft' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
+  total_amount: number;
+  requested_delivery_date?: string;
+  notes?: string;
+  location_type?: string;
+  items: {
+    inventory_stock_id: string;
+    quantity: number;
+    unit_price: number;
+    specifications?: string;
+  }[];
+}
+
 export const fetchPurchaseOrders = async (storeId: string): Promise<PurchaseOrder[]> => {
   try {
     const { data, error } = await supabase
@@ -12,7 +29,8 @@ export const fetchPurchaseOrders = async (storeId: string): Promise<PurchaseOrde
         supplier:suppliers(*),
         items:purchase_order_items(
           *,
-          inventory_stock:inventory_stock(*)
+          inventory_stock:inventory_stock(*),
+          commissary_item:commissary_inventory(*)
         )
       `)
       .eq('store_id', storeId)
@@ -27,36 +45,49 @@ export const fetchPurchaseOrders = async (storeId: string): Promise<PurchaseOrde
   }
 };
 
-export const createPurchaseOrder = async (
-  purchaseOrder: Omit<PurchaseOrder, 'id' | 'created_at' | 'updated_at' | 'supplier' | 'items'>
-): Promise<PurchaseOrder | null> => {
+export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): Promise<PurchaseOrder | null> => {
   try {
-    const { data, error } = await supabase
+    // Generate order number
+    const orderNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create purchase order
+    const { data: purchaseOrder, error: orderError } = await supabase
       .from('purchase_orders')
       .insert({
-        order_number: purchaseOrder.order_number,
-        store_id: purchaseOrder.store_id,
-        supplier_id: purchaseOrder.supplier_id,
-        created_by: purchaseOrder.created_by,
-        approved_by: purchaseOrder.approved_by,
-        status: purchaseOrder.status,
-        total_amount: purchaseOrder.total_amount,
-        requested_delivery_date: purchaseOrder.requested_delivery_date,
-        notes: purchaseOrder.notes
+        order_number: orderNumber,
+        store_id: orderData.store_id,
+        supplier_id: orderData.supplier_id,
+        created_by: orderData.created_by,
+        status: orderData.status,
+        total_amount: orderData.total_amount,
+        requested_delivery_date: orderData.requested_delivery_date,
+        notes: orderData.notes,
+        location_type: orderData.location_type
       })
-      .select(`
-        *,
-        supplier:suppliers(*),
-        items:purchase_order_items(
-          *,
-          inventory_stock:inventory_stock(*)
-        )
-      `)
+      .select()
       .single();
 
-    if (error) throw error;
+    if (orderError) throw orderError;
+
+    // Create purchase order items
+    if (orderData.items.length > 0) {
+      const { error: itemsError } = await supabase
+        .from('purchase_order_items')
+        .insert(
+          orderData.items.map(item => ({
+            purchase_order_id: purchaseOrder.id,
+            inventory_stock_id: item.inventory_stock_id,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            specifications: item.specifications
+          }))
+        );
+
+      if (itemsError) throw itemsError;
+    }
+
     toast.success('Purchase order created successfully');
-    return data;
+    return purchaseOrder;
   } catch (error) {
     console.error('Error creating purchase order:', error);
     toast.error('Failed to create purchase order');
@@ -67,78 +98,38 @@ export const createPurchaseOrder = async (
 export const updatePurchaseOrder = async (
   id: string,
   updates: Partial<PurchaseOrder>
-): Promise<PurchaseOrder | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('purchase_orders')
-      .update(updates)
-      .eq('id', id)
-      .select(`
-        *,
-        supplier:suppliers(*),
-        items:purchase_order_items(
-          *,
-          inventory_stock:inventory_stock(*)
-        )
-      `)
-      .single();
-
-    if (error) throw error;
-    toast.success('Purchase order updated successfully');
-    return data;
-  } catch (error) {
-    console.error('Error updating purchase order:', error);
-    toast.error('Failed to update purchase order');
-    return null;
-  }
-};
-
-export const addPurchaseOrderItem = async (
-  item: Omit<PurchaseOrderItem, 'id' | 'created_at'>
-): Promise<PurchaseOrderItem | null> => {
-  try {
-    const { data, error } = await supabase
-      .from('purchase_order_items')
-      .insert(item)
-      .select(`
-        *,
-        inventory_stock:inventory_stock(*)
-      `)
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error adding purchase order item:', error);
-    toast.error('Failed to add item to purchase order');
-    return null;
-  }
-};
-
-export const removePurchaseOrderItem = async (id: string): Promise<boolean> => {
+): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('purchase_order_items')
-      .delete()
+      .from('purchase_orders')
+      .update(updates)
       .eq('id', id);
 
     if (error) throw error;
+
+    toast.success('Purchase order updated successfully');
     return true;
   } catch (error) {
-    console.error('Error removing purchase order item:', error);
-    toast.error('Failed to remove item from purchase order');
+    console.error('Error updating purchase order:', error);
+    toast.error('Failed to update purchase order');
     return false;
   }
 };
 
-export const generatePurchaseOrderNumber = async (): Promise<string> => {
+export const deletePurchaseOrder = async (id: string): Promise<boolean> => {
   try {
-    // Generate a standard purchase order number with timestamp
-    const timestamp = Date.now();
-    const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `PO${timestamp}${randomSuffix}`;
+    const { error } = await supabase
+      .from('purchase_orders')
+      .update({ status: 'cancelled' })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    toast.success('Purchase order cancelled successfully');
+    return true;
   } catch (error) {
-    console.error('Error generating purchase order number:', error);
-    return `PO${Date.now()}`;
+    console.error('Error cancelling purchase order:', error);
+    toast.error('Failed to cancel purchase order');
+    return false;
   }
 };
