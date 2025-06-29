@@ -75,7 +75,7 @@ export const ConversionRecipeUpload = () => {
       sampleItems.forEach((item, index) => {
         const conversionName = `${item.name} Processing ${index + 1}`;
         const outputName = `Processed ${item.name}`;
-        csvContent += `${conversionName},${item.name},1,${item.uom},${outputName},5,pieces,Convert ${item.name} into processed units\n`;
+        csvContent += `${conversionName},${item.name},1,${item.unit},${outputName},5,pieces,Convert ${item.name} into processed units\n`;
       });
     } else {
       // Fallback if no items loaded
@@ -98,8 +98,8 @@ export const ConversionRecipeUpload = () => {
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            <strong>Important:</strong> Input items must exactly match items in your commissary inventory. 
-            The template below uses your actual inventory items.
+            <strong>Important:</strong> Input items must match items in your commissary inventory. 
+            Items not found will be skipped with a warning. Use the template below with your actual inventory items.
           </AlertDescription>
         </Alert>
 
@@ -129,7 +129,7 @@ export const ConversionRecipeUpload = () => {
               <div className="grid grid-cols-2 gap-1 text-xs">
                 {commissaryItems.map((item) => (
                   <div key={item.id} className="truncate">
-                    {item.name} ({item.uom})
+                    {item.name} ({item.unit})
                   </div>
                 ))}
               </div>
@@ -175,7 +175,8 @@ export const ConversionRecipeUpload = () => {
           <ul className="list-disc list-inside space-y-1">
             <li><strong>Required columns:</strong> Conversion Name, Input Item, Input Qty, Input UOM, Output Item, Output Qty, Output UOM</li>
             <li><strong>Optional columns:</strong> Notes (for conversion instructions)</li>
-            <li><strong>Critical:</strong> Input Item must match commissary inventory items exactly (case-sensitive)</li>
+            <li><strong>Important:</strong> Input items must match commissary inventory items exactly (case-sensitive)</li>
+            <li><strong>Missing ingredients:</strong> Will be skipped with a warning - conversion recipes can still be created</li>
             <li>Copy item names from the "Available Commissary Items" list above</li>
             <li>Use standard units (kg, g, pieces, liters, ml, box, container, etc.)</li>
             <li>Each row represents one conversion recipe</li>
