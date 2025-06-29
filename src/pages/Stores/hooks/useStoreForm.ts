@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -17,7 +18,6 @@ interface StoreFormData {
   location_type?: string;
   region?: string;
   logistics_zone?: string;
-  shipping_cost_multiplier?: number;
   ownership_type?: 'company_owned' | 'franchisee';
   franchise_agreement_date?: string;
   franchise_fee_percentage?: number;
@@ -56,7 +56,6 @@ export const useStoreForm = (id?: string) => {
     location_type: "inside_cebu",
     region: "",
     logistics_zone: "",
-    shipping_cost_multiplier: 1.0,
     ownership_type: "company_owned",
     franchise_agreement_date: "",
     franchise_fee_percentage: 0,
@@ -114,7 +113,6 @@ export const useStoreForm = (id?: string) => {
 
         setFormData({
           ...data,
-          shipping_cost_multiplier: data.shipping_cost_multiplier || 1.0,
           ownership_type: ownershipType,
           franchise_fee_percentage: data.franchise_fee_percentage || 0,
           franchisee_contact_info: franchiseeContactInfo
@@ -133,9 +131,7 @@ export const useStoreForm = (id?: string) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ 
       ...prev, 
-      [name]: name === 'shipping_cost_multiplier' ? parseFloat(value) || 1.0 :
-              name === 'franchise_fee_percentage' ? parseFloat(value) || 0 :
-              value 
+      [name]: name === 'franchise_fee_percentage' ? parseFloat(value) || 0 : value 
     }));
   };
 

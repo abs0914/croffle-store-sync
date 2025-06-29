@@ -73,10 +73,10 @@ export function OrderMetricsDashboard() {
       const averageOrderValue = totalOrders > 0 ? totalValue / totalOrders : 0;
       const commissaryProducts = commissaryItems?.length || 0;
 
-      // Location breakdown
+      // Location breakdown - removed as purchase_orders table doesn't have location_type
       const locationBreakdown = {
-        inside_cebu: orders?.filter(o => o.location_type === 'inside_cebu').length || 0,
-        outside_cebu: orders?.filter(o => o.location_type === 'outside_cebu').length || 0
+        inside_cebu: 0,
+        outside_cebu: 0
       };
 
       setMetrics({
@@ -182,23 +182,28 @@ export function OrderMetricsDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inside Cebu Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Store Location</CardTitle>
             <Truck className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{metrics.locationBreakdown.inside_cebu}</div>
-            <p className="text-xs text-muted-foreground">No shipping cost</p>
+            <div className="text-lg font-bold text-blue-600">
+              {currentStore?.location_type === 'inside_cebu' ? 'Inside Cebu' : 
+               currentStore?.location_type === 'outside_cebu' ? 'Outside Cebu' : 'Not Set'}
+            </div>
+            <p className="text-xs text-muted-foreground">Current store location</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Outside Cebu Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Region</CardTitle>
             <Truck className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{metrics.locationBreakdown.outside_cebu}</div>
-            <p className="text-xs text-muted-foreground">With shipping charges</p>
+            <div className="text-lg font-bold text-orange-600">
+              {currentStore?.region || 'Not Set'}
+            </div>
+            <p className="text-xs text-muted-foreground">Store region</p>
           </CardContent>
         </Card>
       </div>
@@ -218,9 +223,6 @@ export function OrderMetricsDashboard() {
             </Badge>
             <Badge variant="outline" className="cursor-pointer hover:bg-muted">
               Review GRNs
-            </Badge>
-            <Badge variant="outline" className="cursor-pointer hover:bg-muted">
-              Location Pricing
             </Badge>
           </div>
         </CardContent>

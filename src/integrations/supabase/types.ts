@@ -2940,10 +2940,13 @@ export type Database = {
           franchisee_contact_info: Json | null
           id: string
           is_active: boolean | null
+          location_type: string | null
+          logistics_zone: string | null
           logo_url: string | null
           name: string
           ownership_type: string | null
           phone: string | null
+          region: string | null
           state: string | null
           tax_id: string | null
           updated_at: string | null
@@ -2960,10 +2963,13 @@ export type Database = {
           franchisee_contact_info?: Json | null
           id?: string
           is_active?: boolean | null
+          location_type?: string | null
+          logistics_zone?: string | null
           logo_url?: string | null
           name: string
           ownership_type?: string | null
           phone?: string | null
+          region?: string | null
           state?: string | null
           tax_id?: string | null
           updated_at?: string | null
@@ -2980,10 +2986,13 @@ export type Database = {
           franchisee_contact_info?: Json | null
           id?: string
           is_active?: boolean | null
+          location_type?: string | null
+          logistics_zone?: string | null
           logo_url?: string | null
           name?: string
           ownership_type?: string | null
           phone?: string | null
+          region?: string | null
           state?: string | null
           tax_id?: string | null
           updated_at?: string | null
