@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -53,20 +52,23 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize commissary items and categories only once when dialog opens
+  // Initialize data when dialog opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isInitialized) {
+      console.log('Dialog opened, initializing data...');
       const initializeData = async () => {
         await Promise.all([fetchCommissaryItems(), fetchCategories()]);
+        setIsInitialized(true);
       };
       initializeData();
     }
-  }, [isOpen]);
+  }, [isOpen, isInitialized]);
 
-  // Handle template data population - separate effect with stable dependencies
+  // Handle template population - ONLY when template changes and dialog is open
   useEffect(() => {
-    if (isOpen && template) {
+    if (isOpen && template && isInitialized) {
       console.log('Populating form with template:', template);
       
       const templateFormData = {
@@ -97,8 +99,8 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       } else {
         setIngredients([]);
       }
-    } else if (isOpen && !template) {
-      // Only reset if opening for new template
+    } else if (isOpen && !template && isInitialized) {
+      // Reset for new template creation
       console.log('Resetting form for new template');
       setFormData({
         name: '',
@@ -111,13 +113,15 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       });
       setIngredients([]);
     }
-  }, [isOpen, template?.id]); // Only depend on isOpen and template.id to prevent unnecessary resets
+  }, [isOpen, template?.id, isInitialized]);
 
-  // Clean up when dialog closes
+  // Reset initialization state when dialog closes
   useEffect(() => {
     if (!isOpen) {
-      // Small delay to prevent flashing
-      const timeoutId = setTimeout(() => {
+      console.log('Dialog closed, resetting initialization state');
+      setIsInitialized(false);
+      // Add a small delay to prevent visual flashing
+      setTimeout(() => {
         setFormData({
           name: '',
           description: '',
@@ -128,9 +132,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
           image_url: ''
         });
         setIngredients([]);
-      }, 100);
-      
-      return () => clearTimeout(timeoutId);
+      }, 200);
     }
   }, [isOpen]);
 
