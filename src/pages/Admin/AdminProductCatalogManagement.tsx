@@ -31,7 +31,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface Store {
   id: string;
   name: string;
-  location: string;
+  address: string;
 }
 
 interface ProductCatalogItem {
@@ -72,7 +72,7 @@ export default function AdminProductCatalogManagement() {
     try {
       const { data, error } = await supabase
         .from('stores')
-        .select('id, name, location')
+        .select('id, name, address')
         .eq('is_active', true)
         .order('name');
 
@@ -175,7 +175,7 @@ export default function AdminProductCatalogManagement() {
               <option value="">Select a store</option>
               {stores.map(store => (
                 <option key={store.id} value={store.id}>
-                  {store.name} - {store.location}
+                  {store.name} - {store.address}
                 </option>
               ))}
             </select>
