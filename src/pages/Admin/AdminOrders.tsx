@@ -12,7 +12,7 @@ import { updatePurchaseOrder } from '@/services/orderManagement/purchaseOrderSer
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Globe } from 'lucide-react';
 
 export default function AdminOrders() {
   const { user } = useAuth();
@@ -103,9 +103,12 @@ export default function AdminOrders() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Purchase Orders Management</h1>
+          <div className="flex items-center gap-2 mb-2">
+            <Globe className="h-6 w-6 text-blue-600" />
+            <h1 className="text-3xl font-bold">Global Purchase Orders Management</h1>
+          </div>
           <p className="text-muted-foreground">
-            Review, approve, and manage purchase orders from all stores
+            Review, approve, and manage purchase orders from all stores across your network
           </p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)}>
