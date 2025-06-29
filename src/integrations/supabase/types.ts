@@ -1079,6 +1079,50 @@ export type Database = {
           },
         ]
       }
+      inventory_conversion_mappings: {
+        Row: {
+          conversion_factor: number
+          created_at: string | null
+          id: string
+          inventory_stock_id: string
+          is_active: boolean
+          notes: string | null
+          recipe_ingredient_name: string
+          recipe_ingredient_unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversion_factor: number
+          created_at?: string | null
+          id?: string
+          inventory_stock_id: string
+          is_active?: boolean
+          notes?: string | null
+          recipe_ingredient_name: string
+          recipe_ingredient_unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversion_factor?: number
+          created_at?: string | null
+          id?: string
+          inventory_stock_id?: string
+          is_active?: boolean
+          notes?: string | null
+          recipe_ingredient_name?: string
+          recipe_ingredient_unit?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_conversion_mappings_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_conversions: {
         Row: {
           commissary_item_id: string | null
@@ -1266,6 +1310,7 @@ export type Database = {
         Row: {
           cost: number | null
           created_at: string | null
+          fractional_stock: number | null
           id: string
           is_active: boolean | null
           item: string
@@ -1281,6 +1326,7 @@ export type Database = {
         Insert: {
           cost?: number | null
           created_at?: string | null
+          fractional_stock?: number | null
           id?: string
           is_active?: boolean | null
           item: string
@@ -1296,6 +1342,7 @@ export type Database = {
         Update: {
           cost?: number | null
           created_at?: string | null
+          fractional_stock?: number | null
           id?: string
           is_active?: boolean | null
           item?: string
