@@ -1448,56 +1448,6 @@ export type Database = {
           },
         ]
       }
-      location_pricing: {
-        Row: {
-          base_price: number
-          commissary_item_id: string
-          created_at: string
-          id: string
-          is_active: boolean | null
-          lead_time_days: number | null
-          location_type: string
-          markup_percentage: number | null
-          minimum_order_quantity: number | null
-          shipping_cost: number | null
-          updated_at: string
-        }
-        Insert: {
-          base_price?: number
-          commissary_item_id: string
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          lead_time_days?: number | null
-          location_type: string
-          markup_percentage?: number | null
-          minimum_order_quantity?: number | null
-          shipping_cost?: number | null
-          updated_at?: string
-        }
-        Update: {
-          base_price?: number
-          commissary_item_id?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          lead_time_days?: number | null
-          location_type?: string
-          markup_percentage?: number | null
-          minimum_order_quantity?: number | null
-          shipping_cost?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "location_pricing_commissary_item_id_fkey"
-            columns: ["commissary_item_id"]
-            isOneToOne: false
-            referencedRelation: "commissary_inventory"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       managers: {
         Row: {
           contact_number: string | null
@@ -2194,12 +2144,9 @@ export type Database = {
           created_at: string | null
           created_by: string
           id: string
-          location_type: string | null
-          logistics_notes: string | null
           notes: string | null
           order_number: string
           requested_delivery_date: string | null
-          shipping_cost: number | null
           status: Database["public"]["Enums"]["purchase_order_status"] | null
           store_id: string
           supplier_id: string | null
@@ -2212,12 +2159,9 @@ export type Database = {
           created_at?: string | null
           created_by: string
           id?: string
-          location_type?: string | null
-          logistics_notes?: string | null
           notes?: string | null
           order_number: string
           requested_delivery_date?: string | null
-          shipping_cost?: number | null
           status?: Database["public"]["Enums"]["purchase_order_status"] | null
           store_id: string
           supplier_id?: string | null
@@ -2230,12 +2174,9 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           id?: string
-          location_type?: string | null
-          logistics_notes?: string | null
           notes?: string | null
           order_number?: string
           requested_delivery_date?: string | null
-          shipping_cost?: number | null
           status?: Database["public"]["Enums"]["purchase_order_status"] | null
           store_id?: string
           supplier_id?: string | null
@@ -2568,47 +2509,6 @@ export type Database = {
             columns: ["variation_id"]
             isOneToOne: false
             referencedRelation: "product_variations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      regional_suppliers: {
-        Row: {
-          created_at: string
-          id: string
-          is_preferred: boolean | null
-          lead_time_days: number | null
-          location_type: string
-          priority: number | null
-          shipping_cost: number | null
-          supplier_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_preferred?: boolean | null
-          lead_time_days?: number | null
-          location_type: string
-          priority?: number | null
-          shipping_cost?: number | null
-          supplier_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_preferred?: boolean | null
-          lead_time_days?: number | null
-          location_type?: string
-          priority?: number | null
-          shipping_cost?: number | null
-          supplier_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regional_suppliers_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -3040,14 +2940,10 @@ export type Database = {
           franchisee_contact_info: Json | null
           id: string
           is_active: boolean | null
-          location_type: string | null
-          logistics_zone: string | null
           logo_url: string | null
           name: string
           ownership_type: string | null
           phone: string | null
-          region: string | null
-          shipping_cost_multiplier: number | null
           state: string | null
           tax_id: string | null
           updated_at: string | null
@@ -3064,14 +2960,10 @@ export type Database = {
           franchisee_contact_info?: Json | null
           id?: string
           is_active?: boolean | null
-          location_type?: string | null
-          logistics_zone?: string | null
           logo_url?: string | null
           name: string
           ownership_type?: string | null
           phone?: string | null
-          region?: string | null
-          shipping_cost_multiplier?: number | null
           state?: string | null
           tax_id?: string | null
           updated_at?: string | null
@@ -3088,14 +2980,10 @@ export type Database = {
           franchisee_contact_info?: Json | null
           id?: string
           is_active?: boolean | null
-          location_type?: string | null
-          logistics_zone?: string | null
           logo_url?: string | null
           name?: string
           ownership_type?: string | null
           phone?: string | null
-          region?: string | null
-          shipping_cost_multiplier?: number | null
           state?: string | null
           tax_id?: string | null
           updated_at?: string | null
@@ -3364,19 +3252,8 @@ export type Database = {
           is_active: boolean
         }[]
       }
-      get_location_pricing: {
-        Args: { item_id: string; store_location: string }
-        Returns: {
-          base_price: number
-          markup_percentage: number
-          final_price: number
-          minimum_order_quantity: number
-          shipping_cost: number
-          lead_time_days: number
-        }[]
-      }
       get_location_suppliers: {
-        Args: Record<PropertyKey, never> | { store_location: string }
+        Args: Record<PropertyKey, never>
         Returns: {
           supplier_id: number
           supplier_name: string
