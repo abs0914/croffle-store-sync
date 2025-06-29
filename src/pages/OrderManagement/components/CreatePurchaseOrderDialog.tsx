@@ -48,10 +48,17 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
   const getLocationTypeFromStore = (storeName: string | undefined): LocationType => {
     if (!storeName) return 'inside_cebu';
     const lowerName = storeName.toLowerCase();
-    if (lowerName.includes('cebu') || lowerName.includes('city')) {
-      return 'inside_cebu';
+    // Check for outside Cebu locations
+    if (lowerName.includes('robinsons') || 
+        lowerName.includes('manila') || 
+        lowerName.includes('davao') || 
+        lowerName.includes('iloilo') ||
+        lowerName.includes('north') ||
+        lowerName.includes('south') ||
+        !lowerName.includes('cebu')) {
+      return 'outside_cebu';
     }
-    return 'outside_cebu';
+    return 'inside_cebu';
   };
 
   const storeLocationType = getLocationTypeFromStore(currentStore?.name);
@@ -67,6 +74,8 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
     try {
       const items = await fetchOrderableItems();
       console.log('Loaded orderable items:', items);
+      console.log('Store location type:', storeLocationType);
+      console.log('Current store:', currentStore?.name);
       setOrderableItems(items);
     } catch (error) {
       console.error('Error loading orderable items:', error);
@@ -78,6 +87,8 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
 
   const getLocationPricing = async (commissaryItemId: string) => {
     try {
+      console.log('Getting pricing for item:', commissaryItemId, 'location:', storeLocationType);
+      
       const { data, error } = await supabase
         .rpc('get_location_pricing', {
           item_id: commissaryItemId,
@@ -86,9 +97,27 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
 
       if (error) {
         console.error('Error fetching location pricing:', error);
-        return null;
+        // If no pricing found, use default pricing
+        const { data: itemData } = await supabase
+          .from('commissary_inventory')
+          .select('unit_cost')
+          .eq('id', commissaryItemId)
+          .single();
+        
+        const basePrice = itemData?.unit_cost || 50;
+        const isOutsideCebu = storeLocationType === 'outside_cebu';
+        
+        return {
+          base_price: basePrice,
+          markup_percentage: isOutsideCebu ? 15 : 0,
+          final_price: basePrice * (1 + (isOutsideCebu ? 0.15 : 0)),
+          minimum_order_quantity: isOutsideCebu ? 5 : 1,
+          shipping_cost: isOutsideCebu ? 50 : 0,
+          lead_time_days: isOutsideCebu ? 3 : 1
+        };
       }
 
+      console.log('Pricing data received:', data);
       return data?.[0] || null;
     } catch (error) {
       console.error('Error fetching location pricing:', error);
@@ -150,9 +179,9 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
       .eq('store_id', user.storeIds[0])
       .eq('item', item.item_name)
       .eq('unit', item.item_unit)
-      .single();
+      .maybeSingle();
 
-    if (stockError && stockError.code !== 'PGRST116') {
+    if (stockError) {
       console.error('Error checking inventory stock:', stockError);
       return null;
     }
@@ -258,7 +287,12 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
               {loading ? (
                 <p className="text-muted-foreground">Loading products...</p>
               ) : orderableItems.length === 0 ? (
-                <p className="text-muted-foreground">No products available for ordering</p>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-2">No finished products available for ordering</p>
+                  <p className="text-sm text-muted-foreground">
+                    Make sure there are active orderable items in commissary inventory with stock > 0
+                  </p>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {orderableItems.map((item) => (
@@ -276,6 +310,8 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
                       <div className="text-sm text-muted-foreground">
                         <p>Stock: {item.current_stock} {item.uom}</p>
                         <p>Unit Cost: ₱{item.unit_cost?.toFixed(2) || 'N/A'}</p>
+                        <p>Category: {item.category}</p>
+                        <p>Type: {item.item_type}</p>
                       </div>
                     </div>
                   ))}

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
 import { toast } from "sonner";
@@ -329,6 +328,8 @@ export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> 
     }));
     
     console.log('Processed orderable items:', processedItems);
+    console.log('Total orderable items found:', processedItems.length);
+    
     return processedItems;
   } catch (error) {
     console.error('Error fetching orderable items:', error);
