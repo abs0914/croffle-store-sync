@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Upload, Download, Package, Info, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { parseConversionRecipesCSV } from "@/utils/csvParser";
+import { parseConversionRecipesCSV } from "@/utils/conversionRecipeParser";
 import { bulkUploadConversionRecipes } from "@/services/conversionRecipeUploadService";
 import { fetchCommissaryInventory } from "@/services/inventoryManagement/commissaryInventoryService";
 import { CommissaryInventoryItem } from "@/types/commissary";
@@ -75,7 +75,7 @@ export const ConversionRecipeUpload = () => {
       sampleItems.forEach((item, index) => {
         const conversionName = `${item.name} Processing ${index + 1}`;
         const outputName = `Processed ${item.name}`;
-        csvContent += `${conversionName},${item.name},1,${item.unit},${outputName},5,pieces,Convert ${item.name} into processed units\n`;
+        csvContent += `${conversionName},${item.name},1,${item.uom},${outputName},5,pieces,Convert ${item.name} into processed units\n`;
       });
     } else {
       // Fallback if no items loaded
@@ -129,7 +129,7 @@ export const ConversionRecipeUpload = () => {
               <div className="grid grid-cols-2 gap-1 text-xs">
                 {commissaryItems.map((item) => (
                   <div key={item.id} className="truncate">
-                    {item.name} ({item.unit})
+                    {item.name} ({item.uom})
                   </div>
                 ))}
               </div>

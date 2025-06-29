@@ -49,7 +49,8 @@ export const parseConversionRecipesCSV = (csvText: string): ParsedConversionReci
       row[header] = values[index] || '';
     });
 
-    const typedRow = row as ConversionRecipeRow;
+    // Type assertion with proper validation
+    const typedRow = row as unknown as ConversionRecipeRow;
 
     if (!typedRow['Conversion Name'] || !typedRow['Input Item'] || !typedRow['Output Item']) {
       console.warn(`Skipping row ${i + 1}: Missing required fields`);
