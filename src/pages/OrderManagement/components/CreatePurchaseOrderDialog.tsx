@@ -1,19 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Minus, X } from "lucide-react";
-import { useAuth } from "@/contexts/auth";
-import { useStore } from "@/contexts/StoreContext";
+import { Plus, Minus, AlertCircle, RefreshCw } from "lucide-react";
+import { CommissaryInventoryItem } from "@/types/inventoryManagement";
 import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
 import { createPurchaseOrder } from "@/services/orderManagement/purchaseOrderService";
-import { CommissaryInventoryItem } from "@/types/commissary";
-import { LocationType } from "@/types/location";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 
 interface CreatePurchaseOrderDialogProps {
@@ -24,257 +23,129 @@ interface CreatePurchaseOrderDialogProps {
 
 interface OrderItem {
   commissary_item_id: string;
+  item_name: string;
   quantity: number;
   unit_price: number;
-  final_price: number;
-  shipping_cost: number;
-  minimum_order_quantity: number;
-  lead_time_days: number;
-  item_name: string;
-  item_unit: string;
+  specifications?: string;
 }
 
-export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: CreatePurchaseOrderDialogProps) {
+export function CreatePurchaseOrderDialog({
+  open,
+  onOpenChange,
+  onSuccess
+}: CreatePurchaseOrderDialogProps) {
   const { user } = useAuth();
-  const { currentStore } = useStore();
   const [loading, setLoading] = useState(false);
   const [orderableItems, setOrderableItems] = useState<CommissaryInventoryItem[]>([]);
-  const [selectedItems, setSelectedItems] = useState<OrderItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [notes, setNotes] = useState('');
   const [requestedDeliveryDate, setRequestedDeliveryDate] = useState('');
-  
-  // Determine location type based on store name/location
-  const getLocationTypeFromStore = (storeName: string | undefined): LocationType => {
-    if (!storeName) return 'inside_cebu';
-    const lowerName = storeName.toLowerCase();
-    // Check for outside Cebu locations
-    if (lowerName.includes('robinsons') || 
-        lowerName.includes('manila') || 
-        lowerName.includes('davao') || 
-        lowerName.includes('iloilo') ||
-        lowerName.includes('north') ||
-        lowerName.includes('south') ||
-        !lowerName.includes('cebu')) {
-      return 'outside_cebu';
-    }
-    return 'inside_cebu';
-  };
-
-  const storeLocationType = getLocationTypeFromStore(currentStore?.name);
-
-  useEffect(() => {
-    if (open) {
-      console.log('Dialog opened, loading orderable items...');
-      loadOrderableItems();
-    }
-  }, [open]);
 
   const loadOrderableItems = async () => {
-    setLoading(true);
+    console.log('Loading orderable items for user:', user?.email, 'role:', user?.role);
+    setLoadingItems(true);
     try {
-      console.log('Loading orderable items...');
       const items = await fetchOrderableItems();
-      console.log('Loaded orderable items:', items);
-      console.log('Store location type:', storeLocationType);
-      console.log('Current store:', currentStore?.name);
-      
-      if (items.length === 0) {
-        console.warn('No orderable items returned from fetchOrderableItems');
-        
-        // Additional debugging - check what tables exist
-        try {
-          const { data: tableCheck } = await supabase
-            .from('commissary_inventory')
-            .select('count')
-            .limit(1);
-          console.log('Table access test result:', tableCheck);
-        } catch (error) {
-          console.error('Table access error:', error);
-        }
-      }
-      
+      console.log('Loaded orderable items:', items.length, items);
       setOrderableItems(items);
     } catch (error) {
       console.error('Error loading orderable items:', error);
       toast.error('Failed to load available products');
     } finally {
-      setLoading(false);
+      setLoadingItems(false);
     }
   };
 
-  const getLocationPricing = async (commissaryItemId: string) => {
-    try {
-      console.log('Getting pricing for item:', commissaryItemId, 'location:', storeLocationType);
-      
-      const { data, error } = await supabase
-        .rpc('get_location_pricing', {
-          item_id: commissaryItemId,
-          store_location: storeLocationType
-        });
-
-      if (error) {
-        console.error('Error fetching location pricing:', error);
-        // If no pricing found, use default pricing
-        const { data: itemData } = await supabase
-          .from('commissary_inventory')
-          .select('unit_cost')
-          .eq('id', commissaryItemId)
-          .single();
-        
-        const basePrice = itemData?.unit_cost || 50;
-        const isOutsideCebu = storeLocationType === 'outside_cebu';
-        
-        return {
-          base_price: basePrice,
-          markup_percentage: isOutsideCebu ? 15 : 0,
-          final_price: basePrice * (1 + (isOutsideCebu ? 0.15 : 0)),
-          minimum_order_quantity: isOutsideCebu ? 5 : 1,
-          shipping_cost: isOutsideCebu ? 50 : 0,
-          lead_time_days: isOutsideCebu ? 3 : 1
-        };
-      }
-
-      console.log('Pricing data received:', data);
-      return data?.[0] || null;
-    } catch (error) {
-      console.error('Error fetching location pricing:', error);
-      return null;
+  useEffect(() => {
+    if (open) {
+      loadOrderableItems();
     }
-  };
+  }, [open]);
 
-  const addItem = async (item: CommissaryInventoryItem) => {
-    const pricing = await getLocationPricing(item.id);
+  const addOrderItem = (item: CommissaryInventoryItem) => {
+    const existingIndex = orderItems.findIndex(oi => oi.commissary_item_id === item.id);
     
-    if (!pricing) {
-      toast.error('Pricing not available for this location');
+    if (existingIndex >= 0) {
+      const updated = [...orderItems];
+      updated[existingIndex].quantity += 1;
+      setOrderItems(updated);
+    } else {
+      setOrderItems([...orderItems, {
+        commissary_item_id: item.id,
+        item_name: item.name,
+        quantity: 1,
+        unit_price: item.unit_cost || 0,
+        specifications: ''
+      }]);
+    }
+  };
+
+  const updateOrderItemQuantity = (index: number, quantity: number) => {
+    if (quantity <= 0) {
+      setOrderItems(orderItems.filter((_, i) => i !== index));
+    } else {
+      const updated = [...orderItems];
+      updated[index].quantity = quantity;
+      setOrderItems(updated);
+    }
+  };
+
+  const updateOrderItemPrice = (index: number, price: number) => {
+    const updated = [...orderItems];
+    updated[index].unit_price = price;
+    setOrderItems(updated);
+  };
+
+  const updateOrderItemSpecs = (index: number, specs: string) => {
+    const updated = [...orderItems];
+    updated[index].specifications = specs;
+    setOrderItems(updated);
+  };
+
+  const totalAmount = orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+
+  const handleSubmit = async () => {
+    if (!user?.storeIds?.[0]) {
+      toast.error('No store assigned to user');
       return;
     }
 
-    const newItem: OrderItem = {
-      commissary_item_id: item.id,
-      quantity: pricing.minimum_order_quantity || 1,
-      unit_price: pricing.base_price,
-      final_price: pricing.final_price,
-      shipping_cost: pricing.shipping_cost,
-      minimum_order_quantity: pricing.minimum_order_quantity,
-      lead_time_days: pricing.lead_time_days,
-      item_name: item.name,
-      item_unit: item.uom
-    };
-
-    setSelectedItems(prev => [...prev, newItem]);
-  };
-
-  const removeItem = (index: number) => {
-    setSelectedItems(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updateItemQuantity = (index: number, quantity: number) => {
-    setSelectedItems(prev => 
-      prev.map((item, i) => 
-        i === index 
-          ? { ...item, quantity: Math.max(quantity, item.minimum_order_quantity) }
-          : item
-      )
-    );
-  };
-
-  const calculateTotal = () => {
-    return selectedItems.reduce((total, item) => {
-      const itemTotal = item.final_price * item.quantity + item.shipping_cost;
-      return total + itemTotal;
-    }, 0);
-  };
-
-  const createOrFindInventoryStock = async (item: OrderItem) => {
-    if (!user?.storeIds?.[0]) return null;
-
-    // Check if inventory stock item exists
-    const { data: existingStock, error: stockError } = await supabase
-      .from('inventory_stock')
-      .select('id')
-      .eq('store_id', user.storeIds[0])
-      .eq('item', item.item_name)
-      .eq('unit', item.item_unit)
-      .maybeSingle();
-
-    if (stockError) {
-      console.error('Error checking inventory stock:', stockError);
-      return null;
-    }
-
-    if (existingStock) {
-      return existingStock.id;
-    }
-
-    // Create new inventory stock item
-    const { data: newStock, error: createError } = await supabase
-      .from('inventory_stock')
-      .insert({
-        store_id: user.storeIds[0],
-        item: item.item_name,
-        unit: item.item_unit,
-        stock_quantity: 0,
-        cost: item.final_price,
-        is_active: true
-      })
-      .select('id')
-      .single();
-
-    if (createError) {
-      console.error('Error creating inventory stock:', createError);
-      return null;
-    }
-
-    return newStock.id;
-  };
-
-  const handleSubmit = async () => {
-    if (!user?.storeIds?.[0] || selectedItems.length === 0) {
-      toast.error('Please add items to the order');
+    if (orderItems.length === 0) {
+      toast.error('Please add at least one item to the order');
       return;
     }
 
     setLoading(true);
     try {
-      // Create or find inventory stock items for each selected item
-      const orderItems = [];
-      
-      for (const item of selectedItems) {
-        const inventoryStockId = await createOrFindInventoryStock(item);
-        if (!inventoryStockId) {
-          toast.error(`Failed to create inventory item for ${item.item_name}`);
-          return;
-        }
-        
-        orderItems.push({
-          inventory_stock_id: inventoryStockId,
-          quantity: item.quantity,
-          unit_price: item.final_price,
-          specifications: `Location: ${storeLocationType}, Lead time: ${item.lead_time_days} days, Commissary Item: ${item.commissary_item_id}`
-        });
-      }
-
+      // For now, we'll create inventory_stock entries for the commissary items
+      // This is a temporary solution until proper inventory_stock management is implemented
       const orderData = {
         store_id: user.storeIds[0],
         created_by: user.id,
         status: 'pending' as const,
-        total_amount: calculateTotal(),
+        total_amount: totalAmount,
         requested_delivery_date: requestedDeliveryDate || undefined,
-        notes,
-        location_type: storeLocationType,
-        items: orderItems
+        notes: notes || undefined,
+        location_type: 'commissary',
+        items: orderItems.map(item => ({
+          inventory_stock_id: item.commissary_item_id, // Using commissary item ID temporarily
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          specifications: item.specifications
+        }))
       };
 
-      await createPurchaseOrder(orderData);
-      toast.success('Purchase order created successfully');
-      onSuccess();
-      onOpenChange(false);
-      
-      // Reset form
-      setSelectedItems([]);
-      setNotes('');
-      setRequestedDeliveryDate('');
+      const result = await createPurchaseOrder(orderData);
+      if (result) {
+        toast.success('Purchase order created successfully');
+        onSuccess();
+        onOpenChange(false);
+        // Reset form
+        setOrderItems([]);
+        setNotes('');
+        setRequestedDeliveryDate('');
+      }
     } catch (error) {
       console.error('Error creating purchase order:', error);
       toast.error('Failed to create purchase order');
@@ -287,150 +158,10 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Purchase Order - {currentStore?.name}</DialogTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary">Location: {storeLocationType.replace('_', ' ').toUpperCase()}</Badge>
-            <Badge variant="outline">Available Products: {orderableItems.length}</Badge>
-          </div>
+          <DialogTitle>Create Purchase Order</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Available Products */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Products</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-gray-200 rounded"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : orderableItems.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-2">No finished products available for ordering</p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Contact your administrator to add orderable items to the commissary inventory.
-                  </p>
-                  <Button 
-                    onClick={loadOrderableItems}
-                    variant="outline"
-                  >
-                    Retry Loading Products
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {orderableItems.map((item) => (
-                    <div key={item.id} className="border rounded-lg p-4 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">{item.name}</h4>
-                        <Button
-                          size="sm"
-                          onClick={() => addItem(item)}
-                          disabled={selectedItems.some(si => si.commissary_item_id === item.id)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        <p>Stock: {item.current_stock} {item.uom}</p>
-                        <p>Unit Cost: ₱{item.unit_cost?.toFixed(2) || 'N/A'}</p>
-                        <p>Category: {item.category}</p>
-                        <p>Type: {item.item_type}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Selected Items */}
-          {selectedItems.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Items ({selectedItems.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {selectedItems.map((item, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">{item.item_name}</h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeItem(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <Label>Quantity</Label>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateItemQuantity(index, item.quantity - 1)}
-                              disabled={item.quantity <= item.minimum_order_quantity}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <Input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => updateItemQuantity(index, parseInt(e.target.value) || item.minimum_order_quantity)}
-                              className="w-20 text-center"
-                              min={item.minimum_order_quantity}
-                            />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateItemQuantity(index, item.quantity + 1)}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Min: {item.minimum_order_quantity}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <Label>Unit Price</Label>
-                          <p className="mt-1">₱{item.final_price.toFixed(2)}</p>
-                        </div>
-                        
-                        <div>
-                          <Label>Shipping</Label>
-                          <p className="mt-1">₱{item.shipping_cost.toFixed(2)}</p>
-                        </div>
-                        
-                        <div>
-                          <Label>Subtotal</Label>
-                          <p className="mt-1 font-medium">
-                            ₱{(item.final_price * item.quantity + item.shipping_cost).toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                        <span>Lead time: {item.lead_time_days} days</span>
-                        <span>Unit: {item.item_unit}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Order Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -442,38 +173,153 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
                 onChange={(e) => setRequestedDeliveryDate(e.target.value)}
               />
             </div>
-            
             <div>
-              <Label>Total Amount</Label>
-              <div className="text-2xl font-bold text-primary mt-1">
-                ₱{calculateTotal().toFixed(2)}
-              </div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Order notes or special instructions..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              placeholder="Additional notes or special instructions..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={3}
-            />
-          </div>
+          {/* Available Products */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Available Products</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadOrderableItems}
+                  disabled={loadingItems}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingItems ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingItems ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-croffle-accent mx-auto"></div>
+                  <p className="text-muted-foreground mt-2">Loading available products...</p>
+                </div>
+              ) : orderableItems.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No finished products available for ordering</h3>
+                  <p className="text-muted-foreground mb-4">
+                    There are no products currently marked as orderable in the commissary inventory.
+                  </p>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>Debug info:</p>
+                    <p>User: {user?.email}</p>
+                    <p>Role: {user?.role}</p>
+                    <p>Store IDs: {user?.storeIds?.join(', ')}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-60 overflow-y-auto">
+                  {orderableItems.map((item) => (
+                    <div key={item.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm">{item.name}</h4>
+                        <Badge variant="secondary" className="text-xs">
+                          {item.current_stock} {item.uom}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Cost: ₱{item.unit_cost?.toFixed(2) || '0.00'} per {item.uom}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addOrderItem(item)}
+                        className="w-full"
+                        disabled={item.current_stock <= 0}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add to Order
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Order Items */}
+          {orderItems.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Items ({orderItems.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {orderItems.map((item, index) => (
+                    <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.item_name}</h4>
+                        <Input
+                          placeholder="Specifications (optional)"
+                          value={item.specifications || ''}
+                          onChange={(e) => updateOrderItemSpecs(index, e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateOrderItemQuantity(index, item.quantity - 1)}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-12 text-center">{item.quantity}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateOrderItemQuantity(index, item.quantity + 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="w-32">
+                        <Label className="text-xs">Unit Price</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updateOrderItemPrice(index, parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="w-24 text-right">
+                        <div className="text-sm font-medium">
+                          ₱{(item.quantity * item.unit_price).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center pt-4 border-t">
+                    <span className="text-lg font-semibold">Total Amount:</span>
+                    <span className="text-lg font-semibold">₱{totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-4">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={loading || selectedItems.length === 0}
+              disabled={loading || orderItems.length === 0}
             >
               {loading ? 'Creating...' : 'Create Purchase Order'}
             </Button>
