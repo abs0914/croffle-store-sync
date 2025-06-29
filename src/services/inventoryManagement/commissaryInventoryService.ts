@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
 import { toast } from "sonner";
@@ -324,14 +325,23 @@ export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> 
     if (!data || data.length === 0) {
       console.log('No orderable items found. Checking all commissary items...');
       
-      // Debug query to see all items
+      // Enhanced debug query to see ALL items regardless of is_active status
       const { data: allItems } = await supabase
         .from('commissary_inventory')
-        .select('id, name, item_type, is_active, current_stock')
-        .eq('is_active', true);
+        .select('id, name, item_type, is_active, current_stock, category')
+        .order('name');
       
-      console.log('All active commissary items:', allItems);
+      console.log('ALL commissary items (including inactive):', allItems);
+      console.log('Active items:', allItems?.filter(item => item.is_active));
       console.log('Items with orderable_item type:', allItems?.filter(item => item.item_type === 'orderable_item'));
+      console.log('Active orderable items:', allItems?.filter(item => item.item_type === 'orderable_item' && item.is_active));
+      
+      // Show breakdown by item_type
+      const itemTypeBreakdown = allItems?.reduce((acc, item) => {
+        acc[item.item_type] = (acc[item.item_type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      console.log('Item type breakdown:', itemTypeBreakdown);
     }
     
     const processedItems = (data || []).map(item => ({
