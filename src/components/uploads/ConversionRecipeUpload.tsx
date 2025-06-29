@@ -76,7 +76,7 @@ export const ConversionRecipeUpload = () => {
         const outputName = `Processed ${item.name}`;
         const outputUnitCost = item.unit_cost ? (item.unit_cost * 1.2).toFixed(2) : '50.00'; // 20% markup or default
         const outputSKU = `FP-${outputName.toUpperCase().replace(/\s+/g, '-').substring(0, 15)}`;
-        csvContent += `${conversionName},${item.name},1,${item.unit},${outputName},5,pieces,${outputUnitCost},${outputSKU},Convert ${item.name} into processed units\n`;
+        csvContent += `${conversionName},${item.name},1,${item.uom},${outputName},5,pieces,${outputUnitCost},${outputSKU},Convert ${item.name} into processed units\n`;
       });
     } else {
       csvContent += `Sample Conversion,Raw Material Name,1,kg,Finished Product Name,10,pieces,100.00,FP-FINISHED-PRODUCT,Sample conversion process\n`;
@@ -92,7 +92,7 @@ export const ConversionRecipeUpload = () => {
       const items = commissaryItems.slice(0, 2);
       const inputItems = items.map(item => item.name).join('|');
       const inputQtys = items.map(() => '1').join('|');
-      const inputUOMs = items.map(item => item.unit).join('|');
+      const inputUOMs = items.map(item => item.uom).join('|');
       const totalInputCost = items.reduce((sum, item) => sum + (item.unit_cost || 0), 0);
       const outputUnitCost = (totalInputCost * 1.3).toFixed(2); // 30% markup
       const outputSKU = `FP-COMBO-${items[0].name.substring(0, 8).toUpperCase()}`;
@@ -118,7 +118,7 @@ export const ConversionRecipeUpload = () => {
       const outputSKU = `FP-COMBO-${items[0].name.substring(0, 8).toUpperCase()}`;
       
       items.forEach((item, index) => {
-        csvContent += `Multi-Row Combo,${item.name},${index === 0 ? '1' : '7'},${item.unit},${outputName},1,combo,${outputUnitCost},${outputSKU},Multi-ingredient via multiple rows\n`;
+        csvContent += `Multi-Row Combo,${item.name},${index === 0 ? '1' : '7'},${item.uom},${outputName},1,combo,${outputUnitCost},${outputSKU},Multi-ingredient via multiple rows\n`;
       });
     } else {
       csvContent += `Croissant + Cream Combo,Croissant Box,1,box,Regular Croissant + Whipped Cream,1,combo,2660.00,FP-CROIS-CREAM,Multi-ingredient combo\n`;
@@ -175,7 +175,7 @@ export const ConversionRecipeUpload = () => {
               <div className="grid grid-cols-2 gap-1 text-xs">
                 {commissaryItems.map((item) => (
                   <div key={item.id} className="truncate">
-                    {item.name} ({item.unit})
+                    {item.name} ({item.uom})
                   </div>
                 ))}
               </div>
