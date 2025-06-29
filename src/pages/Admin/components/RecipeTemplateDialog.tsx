@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -60,16 +59,27 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       fetchCategories();
       
       if (template) {
-        console.log('Editing template:', template);
+        console.log('Template received:', template);
+        console.log('Template keys:', Object.keys(template));
         
-        // Set form data from template
+        // Populate form with template data
         setFormData({
           name: template.name || '',
           description: template.description || '',
           category_name: template.category_name || '',
           instructions: template.instructions || '',
-          yield_quantity: template.yield_quantity || 1,
-          serving_size: template.serving_size || 1,
+          yield_quantity: Number(template.yield_quantity) || 1,
+          serving_size: Number(template.serving_size) || 1,
+          image_url: template.image_url || ''
+        });
+        
+        console.log('Form data set to:', {
+          name: template.name || '',
+          description: template.description || '',
+          category_name: template.category_name || '',
+          instructions: template.instructions || '',
+          yield_quantity: Number(template.yield_quantity) || 1,
+          serving_size: Number(template.serving_size) || 1,
           image_url: template.image_url || ''
         });
         
@@ -78,18 +88,19 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
           const mappedIngredients = template.ingredients.map((ing: any) => ({
             commissary_item_id: ing.commissary_item_id || '',
             commissary_item_name: ing.commissary_item_name || '',
-            quantity: ing.quantity || 1,
+            quantity: Number(ing.quantity) || 1,
             unit: ing.unit || 'g',
-            cost_per_unit: ing.cost_per_unit || 0
+            cost_per_unit: Number(ing.cost_per_unit) || 0
           }));
           
           console.log('Setting ingredients:', mappedIngredients);
           setIngredients(mappedIngredients);
         } else {
-          // If no ingredients, start with empty array
+          console.log('No ingredients found, setting empty array');
           setIngredients([]);
         }
       } else {
+        console.log('No template provided, resetting form');
         resetForm();
       }
     }
@@ -260,6 +271,8 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
     resetForm();
     onClose();
   };
+
+  console.log('Current form data state:', formData);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
