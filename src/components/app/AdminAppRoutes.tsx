@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Route } from 'react-router-dom';
 import { AdminProtectedRoute } from '@/components/auth/AdminProtectedRoute';
@@ -10,6 +11,7 @@ import AdminRecipes from '@/pages/Admin/AdminRecipes';
 import AdminReports from '@/pages/Admin/AdminReports';
 import AdminExpenses from '@/pages/Admin/AdminExpenses';
 import InventoryConversion from '@/pages/InventoryConversion';
+import ProductionManagement from '@/pages/ProductionManagement';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
@@ -36,6 +38,18 @@ export const AdminAppRoutes = () => {
           <AdminProtectedRoute>
             <AdminLayout>
               <InventoryConversion />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Admin Production Management */}
+      <Route
+        path="/admin/production-management"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout>
+              <ProductionManagement />
             </AdminLayout>
           </AdminProtectedRoute>
         }
