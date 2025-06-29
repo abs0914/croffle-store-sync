@@ -84,28 +84,36 @@ export function AdminSidebar() {
   };
 
   return (
-    <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-      <div className="flex flex-col flex-grow pt-5 bg-white overflow-y-auto border-r">
-        <div className="flex items-center flex-shrink-0 px-4">
+    <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-50">
+      <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
+        {/* Header */}
+        <div className="flex items-center flex-shrink-0 px-6 py-4 border-b border-gray-200">
           <h1 className="text-xl font-bold text-croffle-primary">
             Croffle Admin
           </h1>
         </div>
-        <div className="mt-5 flex-grow flex flex-col">
-          <nav className="flex-1 px-2 pb-4 space-y-1">
+        
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto">
+          <nav className="px-3 py-4 space-y-1">
             {adminMenuItems.map((item) => (
               <Link
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors",
+                  "group flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200",
                   isActiveLink(item.href)
-                    ? "bg-croffle-accent text-white"
+                    ? "bg-croffle-accent text-white shadow-sm"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 )}
               >
                 <item.icon
-                  className="mr-3 flex-shrink-0 h-5 w-5"
+                  className={cn(
+                    "mr-3 flex-shrink-0 h-5 w-5 transition-colors",
+                    isActiveLink(item.href)
+                      ? "text-white"
+                      : "text-gray-400 group-hover:text-gray-500"
+                  )}
                   aria-hidden="true"
                 />
                 {item.title}
