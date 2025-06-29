@@ -12,7 +12,7 @@ import { updatePurchaseOrder } from '@/services/orderManagement/purchaseOrderSer
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Plus, Globe } from 'lucide-react';
+import { Plus, Globe, RefreshCw } from 'lucide-react';
 
 export default function AdminOrders() {
   const { user } = useAuth();
@@ -99,6 +99,13 @@ export default function AdminOrders() {
     }
   };
 
+  console.log('AdminOrders render:', {
+    totalOrders: orders.length,
+    filteredOrders: filteredOrders.length,
+    stores: stores.length,
+    isLoading
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -111,10 +118,20 @@ export default function AdminOrders() {
             Review, approve, and manage purchase orders from all stores across your network
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Purchase Order
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={refreshOrders}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Purchase Order
+          </Button>
+        </div>
       </div>
 
       <AdminPurchaseOrdersHeader 

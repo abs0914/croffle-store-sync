@@ -30,16 +30,19 @@ export const useAdminPurchaseOrdersData = () => {
   const fetchPurchaseOrders = async () => {
     setIsLoading(true);
     try {
+      console.log('Admin fetching purchase orders...');
+      
       const daysAgo = parseInt(dateRange);
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - daysAgo);
 
+      // Fetch ALL purchase orders from ALL stores without any filtering
       const { data: ordersData, error: ordersError } = await supabase
         .from('purchase_orders')
         .select(`
           *,
           supplier:suppliers(*),
-          store:stores(name),
+          store:stores(id, name, address),
           items:purchase_order_items(
             *,
             inventory_stock:inventory_stock(*)
@@ -49,10 +52,18 @@ export const useAdminPurchaseOrdersData = () => {
         .order('created_at', { ascending: false });
 
       if (ordersError) {
+        console.error('Error fetching purchase orders:', ordersError);
         throw ordersError;
       }
 
       console.log('Admin fetched orders:', ordersData);
+      console.log('Number of orders fetched:', ordersData?.length || 0);
+      
+      // Log each order for debugging
+      ordersData?.forEach(order => {
+        console.log(`Order ${order.order_number}: Status=${order.status}, Store=${order.store?.name || 'Unknown'}`);
+      });
+
       setOrders(ordersData || []);
     } catch (error: any) {
       console.error('Error fetching purchase orders:', error);
@@ -74,6 +85,7 @@ export const useAdminPurchaseOrdersData = () => {
         throw error;
       }
 
+      console.log('Fetched stores for admin:', data);
       setStores(data as Store[] || []);
     } catch (error: any) {
       console.error('Error fetching stores:', error);
@@ -84,26 +96,32 @@ export const useAdminPurchaseOrdersData = () => {
   const filteredOrders = useMemo(() => {
     let filtered = orders;
 
+    console.log('Filtering orders. Total orders:', orders.length);
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(order => 
         order.order_number.toLowerCase().includes(query) ||
         (order.supplier?.name && order.supplier.name.toLowerCase().includes(query)) ||
-        (order.notes && order.notes.toLowerCase().includes(query))
+        (order.notes && order.notes.toLowerCase().includes(query)) ||
+        (order.store && order.store.name && order.store.name.toLowerCase().includes(query))
       );
     }
 
     // Apply store filter
     if (storeFilter !== 'all') {
+      console.log('Applying store filter:', storeFilter);
       filtered = filtered.filter(order => order.store_id === storeFilter);
     }
 
     // Apply status filter
     if (statusFilter !== 'all') {
+      console.log('Applying status filter:', statusFilter);
       filtered = filtered.filter(order => order.status === statusFilter);
     }
 
+    console.log('Filtered orders count:', filtered.length);
     return filtered;
   }, [orders, searchQuery, storeFilter, statusFilter]);
 

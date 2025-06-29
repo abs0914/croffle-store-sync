@@ -51,13 +51,22 @@ export function AdminPurchaseOrdersList({
         <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">No purchase orders found</h3>
         <p className="text-gray-500">No purchase orders match your current search criteria.</p>
+        <Button onClick={onRefresh} className="mt-4">
+          Refresh Orders
+        </Button>
       </div>
     );
   }
 
-  const getStoreName = (storeId: string) => {
-    const store = stores.find(s => s.id === storeId);
-    return store?.name || 'Unknown Store';
+  const getStoreName = (order: PurchaseOrder) => {
+    // First try to get from the populated store relation
+    if (order.store && order.store.name) {
+      return order.store.name;
+    }
+    
+    // Fallback to finding store by ID
+    const store = stores.find(s => s.id === order.store_id);
+    return store?.name || `Store ${order.store_id?.substring(0, 8)}` || 'Unknown Store';
   };
 
   const getStatusColor = (status: string) => {
@@ -67,6 +76,7 @@ export function AdminPurchaseOrdersList({
       case 'completed': return 'bg-blue-100 text-blue-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       case 'draft': return 'bg-gray-100 text-gray-800';
+      case 'in_progress': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -103,9 +113,9 @@ export function AdminPurchaseOrdersList({
                   </Badge>
                 </div>
                 
-                <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+                <div className="flex items-center gap-2 text-sm text-blue-600 mt-2 font-semibold">
                   <Building2 className="h-4 w-4" />
-                  <span className="font-medium">{getStoreName(order.store_id)}</span>
+                  <span>{getStoreName(order)}</span>
                 </div>
               </CardHeader>
               
@@ -179,7 +189,7 @@ export function AdminPurchaseOrdersList({
                 />
               </TableHead>
               <TableHead>Order Number</TableHead>
-              <TableHead>Store</TableHead>
+              <TableHead>Store Location</TableHead>
               <TableHead>Supplier</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Total Amount</TableHead>
@@ -199,8 +209,8 @@ export function AdminPurchaseOrdersList({
                 <TableCell className="font-medium">{order.order_number}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-gray-500" />
-                    <span className="font-medium">{getStoreName(order.store_id)}</span>
+                    <Building2 className="h-4 w-4 text-blue-600" />
+                    <span className="font-semibold text-blue-600">{getStoreName(order)}</span>
                   </div>
                 </TableCell>
                 <TableCell>{order.supplier?.name || 'No Supplier'}</TableCell>
