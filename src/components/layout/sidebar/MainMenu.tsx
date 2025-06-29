@@ -10,7 +10,8 @@ import {
   DollarSign,
   Users,
   ShoppingBag,
-  ClipboardList
+  ClipboardList,
+  ToggleLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +27,8 @@ const menuItems = [
     href: "/pos",
   },
   {
-    title: "Product Catalog",
-    icon: ShoppingBag,
+    title: "Product Availability",
+    icon: ToggleLeft,
     href: "/product-catalog",
   },
   {

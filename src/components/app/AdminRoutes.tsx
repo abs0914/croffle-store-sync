@@ -8,6 +8,7 @@ import AdminRecipes from "@/pages/Admin/AdminRecipes";
 import AdminCustomers from "@/pages/Admin/AdminCustomers";
 import AdminReports from "@/pages/Admin/AdminReports";
 import AdminExpenses from "@/pages/Admin/AdminExpenses";
+import AdminProductCatalogManagement from "@/pages/Admin/AdminProductCatalogManagement";
 import OrderManagement from "@/pages/OrderManagement";
 import CommissaryManagement from "@/pages/Commissary/CommissaryManagement";
 
@@ -43,6 +44,14 @@ export function AdminRoutes() {
           </AdminLayout>
         </AdminProtectedRoute>
       } />
+
+      <Route path="/admin/product-catalog" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AdminProductCatalogManagement />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
       
       <Route path="/admin/customers" element={
         <AdminProtectedRoute>
@@ -60,7 +69,7 @@ export function AdminRoutes() {
         </AdminProtectedRoute>
       } />
 
-      {/* New Expense Management Route */}
+      {/* Expense Management Route */}
       <Route path="/admin/expenses" element={
         <AdminProtectedRoute>
           <AdminLayout>
@@ -69,7 +78,7 @@ export function AdminRoutes() {
         </AdminProtectedRoute>
       } />
       
-      {/* Consolidated Order Management - replaces both /admin/orders and /admin/order-management */}
+      {/* Consolidated Order Management */}
       <Route path="/admin/order-management" element={
         <AdminProtectedRoute>
           <AdminLayout>
