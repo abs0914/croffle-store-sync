@@ -198,12 +198,13 @@ export const bulkUploadConversionRecipes = async (
           }
         }
 
-        // Create the finished product in commissary inventory
+        // Create the finished product in commissary inventory with proper SKU and stock
         const finishedProductSku = recipe.output_item.sku || 
           `FP-${recipe.output_item.name.toUpperCase().replace(/\s+/g, '-').substring(0, 20)}`;
 
         const normalizedUnit = normalizeUnitValue(recipe.output_item.uom);
         console.log(`Creating finished product with normalized unit: ${recipe.output_item.uom} -> ${normalizedUnit}`);
+        console.log(`Using SKU: ${finishedProductSku}, Unit Cost: ${recipe.output_item.unit_cost || 0}`);
 
         const { error: productError } = await supabase
           .from('commissary_inventory')
@@ -211,7 +212,7 @@ export const bulkUploadConversionRecipes = async (
             name: recipe.output_item.name,
             category: recipe.output_item.category,
             item_type: 'orderable_item',
-            current_stock: 0,
+            current_stock: 0, // Start with 0 stock - will be updated when conversion is executed
             minimum_threshold: 10,
             unit: normalizedUnit, // Use normalized unit
             unit_cost: recipe.output_item.unit_cost || 0,
@@ -222,9 +223,10 @@ export const bulkUploadConversionRecipes = async (
 
         if (productError) {
           console.error(`Error creating finished product "${recipe.output_item.name}":`, productError);
+          console.error('Product error details:', productError);
           // Continue processing other recipes even if this one fails
         } else {
-          console.log(`Created finished product: ${recipe.output_item.name}`);
+          console.log(`Created finished product: ${recipe.output_item.name} with SKU: ${finishedProductSku}`);
         }
 
         successCount++;

@@ -10,6 +10,8 @@ interface ConversionRecipeRow {
   'Output Item': string;
   'Output Qty': string;
   'Output UOM': string;
+  'Output Unit Cost'?: string; // Add unit cost field
+  'Output SKU'?: string; // Add SKU field
   'Notes'?: string;
 }
 
@@ -70,6 +72,12 @@ export const parseConversionRecipesCSV = (csvText: string): ParsedConversionReci
     
     // Initialize recipe if it doesn't exist
     if (!recipeMap.has(recipeName)) {
+      // Parse unit cost and SKU from CSV
+      const unitCost = typedRow['Output Unit Cost'] ? parseFloat(typedRow['Output Unit Cost']) : 0;
+      const outputSku = typedRow['Output SKU'] || `CONV-${recipeName.toUpperCase().replace(/\s+/g, '-').substring(0, 15)}`;
+      
+      console.log(`Parsing recipe "${recipeName}" - Unit Cost: ${unitCost}, SKU: ${outputSku}`);
+      
       recipeMap.set(recipeName, {
         name: recipeName,
         description: typedRow['Notes'] || `Convert ingredients to ${typedRow['Output Item']}`,
@@ -79,9 +87,9 @@ export const parseConversionRecipesCSV = (csvText: string): ParsedConversionReci
           quantity: parseFloat(typedRow['Output Qty']) || 1,
           uom: typedRow['Output UOM'] || 'pieces',
           category: 'supplies',
-          unit_cost: 0,
-          sku: '',
-          storage_location: ''
+          unit_cost: unitCost,
+          sku: outputSku,
+          storage_location: 'Finished Goods'
         }
       });
     }
