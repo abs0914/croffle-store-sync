@@ -48,58 +48,55 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  // Initialize basic data (commissary items and categories) only once
   useEffect(() => {
     const initializeData = async () => {
       await Promise.all([fetchCommissaryItems(), fetchCategories()]);
-      
-      if (template) {
-        console.log('Populating form with template:', template);
-        
-        const templateFormData = {
-          name: template.name || '',
-          description: template.description || '',
-          category_name: template.category_name || '',
-          instructions: template.instructions || '',
-          yield_quantity: Number(template.yield_quantity) || 1,
-          serving_size: Number(template.serving_size) || 1,
-          image_url: template.image_url || ''
-        };
-        
-        console.log('Setting form data:', templateFormData);
-        setFormData(templateFormData);
-        
-        if (template.ingredients && Array.isArray(template.ingredients)) {
-          const mappedIngredients = template.ingredients.map((ing: any) => ({
-            commissary_item_id: ing.commissary_item_id || '',
-            commissary_item_name: ing.commissary_item_name || '',
-            quantity: Number(ing.quantity) || 1,
-            unit: ing.unit || 'g',
-            cost_per_unit: Number(ing.cost_per_unit) || 0
-          }));
-          
-          console.log('Setting ingredients:', mappedIngredients);
-          setIngredients(mappedIngredients);
-        } else {
-          setIngredients([]);
-        }
-      } else {
-        console.log('Resetting form for new template');
-        setFormData({
-          name: '',
-          description: '',
-          category_name: '',
-          instructions: '',
-          yield_quantity: 1,
-          serving_size: 1,
-          image_url: ''
-        });
-        setIngredients([]);
-      }
     };
     
     initializeData();
-  }, [template?.id]);
+  }, []);
+
+  // Handle template data population - separate from basic data initialization
+  useEffect(() => {
+    if (template && !isInitialized) {
+      console.log('Populating form with template:', template);
+      
+      const templateFormData = {
+        name: template.name || '',
+        description: template.description || '',
+        category_name: template.category_name || '',
+        instructions: template.instructions || '',
+        yield_quantity: Number(template.yield_quantity) || 1,
+        serving_size: Number(template.serving_size) || 1,
+        image_url: template.image_url || ''
+      };
+      
+      console.log('Setting form data:', templateFormData);
+      setFormData(templateFormData);
+      
+      if (template.ingredients && Array.isArray(template.ingredients)) {
+        const mappedIngredients = template.ingredients.map((ing: any) => ({
+          commissary_item_id: ing.commissary_item_id || '',
+          commissary_item_name: ing.commissary_item_name || '',
+          quantity: Number(ing.quantity) || 1,
+          unit: ing.unit || 'g',
+          cost_per_unit: Number(ing.cost_per_unit) || 0
+        }));
+        
+        console.log('Setting ingredients:', mappedIngredients);
+        setIngredients(mappedIngredients);
+      }
+      
+      setIsInitialized(true);
+    } else if (!template && !isInitialized) {
+      // For new templates, just mark as initialized
+      console.log('Initializing for new template');
+      setIsInitialized(true);
+    }
+  }, [template, isInitialized]);
 
   const fetchCommissaryItems = async () => {
     try {
@@ -169,6 +166,15 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
       setIsLoading(false);
     }
   };
+
+  // Don't render the form until it's properly initialized
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
