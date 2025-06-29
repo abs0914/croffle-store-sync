@@ -48,11 +48,6 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
     image_url: ''
   });
 
-  // Debug form data changes
-  useEffect(() => {
-    console.log('Current form data state:', formData);
-  }, [formData]);
-
   const [ingredients, setIngredients] = useState<RecipeTemplateIngredientInput[]>([]);
   const [commissaryItems, setCommissaryItems] = useState<CommissaryItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -63,10 +58,12 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
   const [isInitialized, setIsInitialized] = useState(false);
   const lastProcessedTemplateId = useRef<string | null>(null);
 
-  // Initialize data when dialog opens
+  // Single useEffect to handle all dialog state management
   useEffect(() => {
-    if (isOpen && !isInitialized) {
-      console.log('Dialog opened, initializing data...');
+    if (isOpen) {
+      console.log('Dialog opened, initializing...');
+      
+      // Initialize data
       const initializeData = async () => {
         await Promise.all([fetchCommissaryItems(), fetchCategories()]);
         setIsInitialized(true);
@@ -77,10 +74,9 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
 
   // Handle template population - ONLY when template changes and dialog is open
   useEffect(() => {
-    if (isOpen && template && template.id !== lastProcessedTemplateId.current) {
+    if (isOpen && template) {
       console.log('Populating form with template:', template);
-      lastProcessedTemplateId.current = template.id;
-
+      
       const templateFormData = {
         name: template.name || '',
         description: template.description || '',
@@ -90,10 +86,10 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
         serving_size: Number(template.serving_size) || 1,
         image_url: template.image_url || ''
       };
-
+      
       console.log('Setting form data:', templateFormData);
       setFormData(templateFormData);
-
+      
       // Handle ingredients
       if (template.ingredients && Array.isArray(template.ingredients)) {
         const mappedIngredients = template.ingredients.map((ing: any) => ({
@@ -103,14 +99,14 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
           unit: ing.unit || 'g',
           cost_per_unit: Number(ing.cost_per_unit) || 0
         }));
-
+        
         console.log('Setting ingredients:', mappedIngredients);
         setIngredients(mappedIngredients);
       } else {
         setIngredients([]);
       }
-    } else if (isOpen && !template && isInitialized && lastProcessedTemplateId.current !== null) {
-      // Reset for new template creation only if we were previously editing a template
+    } else if (isOpen && !template && isInitialized) {
+      // Reset for new template creation
       console.log('Resetting form for new template');
       lastProcessedTemplateId.current = null;
       setFormData({
@@ -124,15 +120,13 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       });
       setIngredients([]);
     }
-  }, [isOpen, template?.id, isInitialized]);
+  }, [isOpen, template?.id]); // Only depend on isOpen and template.id to prevent unnecessary resets
 
-  // Reset state when dialog closes
+  // Reset initialization state when dialog closes
   useEffect(() => {
     if (!isOpen) {
-      // Reset initialization state and clear form after dialog closes
+      // Small delay to prevent flashing
       const timeoutId = setTimeout(() => {
-        setIsInitialized(false);
-        lastProcessedTemplateId.current = null;
         setFormData({
           name: '',
           description: '',
@@ -144,7 +138,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
         });
         setIngredients([]);
       }, 100);
-
+      
       return () => clearTimeout(timeoutId);
     }
   }, [isOpen]);
