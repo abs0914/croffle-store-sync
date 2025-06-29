@@ -69,14 +69,29 @@ export const useAuthState = () => {
       clearTimeout(refreshTimeoutRef.current);
     }
     
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Logout error:", error);
-      toast.error("Error logging out");
-    } else {
+    try {
+      // Clear local state immediately to prevent UI issues
       setUser(null);
       setSession(null);
-      toast.success("Logged out successfully");
+      
+      // Attempt to sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      // Don't treat "session not found" as an error since we're logging out anyway
+      if (error && !error.message.includes('session not found') && !error.message.includes('Session not found')) {
+        console.error("Logout error:", error);
+        toast.error("Error logging out");
+      } else {
+        toast.success("Logged out successfully");
+      }
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      // Don't show error toast for session not found errors during logout
+      if (!error.message?.includes('session not found') && !error.message?.includes('Session not found')) {
+        toast.error("Error logging out");
+      } else {
+        toast.success("Logged out successfully");
+      }
     }
   };
 
