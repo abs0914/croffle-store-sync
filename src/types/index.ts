@@ -1,5 +1,3 @@
-
-
 // Core types
 export type { UserRole, User } from './user';
 export type { Store, StoreSettings } from './store';
@@ -17,11 +15,10 @@ export type { InventoryStock, Ingredient } from './inventory';
 // Commissary types
 export type { CommissaryInventoryItem, RecipeUpload, RecipeIngredientUpload, RawIngredientUpload } from './commissary';
 export type { CommissaryPurchase, CommissaryPurchaseForm, PurchaseHistory } from './commissaryPurchases';
-export type { LocationType, LocationPricing, RegionalSupplier, LocationPricingInfo } from './location';
+export type { LocationType, LocationInfo } from './location';
 
 // Order management types
 export type { PurchaseOrder, PurchaseOrderItem, Supplier } from './orderManagement';
 
 // Report types
 export * from './reports';
-
