@@ -12,7 +12,7 @@ export const bulkUploadConversionRecipes = async (
     // Get all commissary inventory items for matching
     const { data: commissaryItems, error: commissaryError } = await supabase
       .from('commissary_inventory')
-      .select('id, name, uom, current_stock')
+      .select('id, name, unit, current_stock')
       .eq('is_active', true);
 
     if (commissaryError) {
@@ -148,7 +148,7 @@ export const bulkUploadConversionRecipes = async (
             item_type: 'orderable_item',
             current_stock: 0,
             minimum_threshold: 10,
-            uom: recipe.output_item.uom,
+            unit: recipe.output_item.uom,
             unit_cost: recipe.output_item.unit_cost || 0,
             sku: finishedProductSku,
             storage_location: recipe.output_item.storage_location || 'Finished Goods',
