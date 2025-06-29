@@ -10,7 +10,6 @@ interface CreatePurchaseOrderData {
   total_amount: number;
   requested_delivery_date?: string;
   notes?: string;
-  location_type?: string;
   items: {
     inventory_stock_id: string;
     quantity: number;
@@ -48,7 +47,7 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
     // Generate order number
     const orderNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Create purchase order
+    // Create purchase order without location_type field
     const { data: purchaseOrder, error: orderError } = await supabase
       .from('purchase_orders')
       .insert({
@@ -59,8 +58,7 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
         status: orderData.status,
         total_amount: orderData.total_amount,
         requested_delivery_date: orderData.requested_delivery_date,
-        notes: orderData.notes,
-        location_type: orderData.location_type
+        notes: orderData.notes
       })
       .select()
       .single();

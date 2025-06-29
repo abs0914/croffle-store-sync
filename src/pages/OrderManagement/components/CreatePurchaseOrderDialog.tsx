@@ -118,8 +118,7 @@ export function CreatePurchaseOrderDialog({
 
     setLoading(true);
     try {
-      // For now, we'll create inventory_stock entries for the commissary items
-      // This is a temporary solution until proper inventory_stock management is implemented
+      // Remove location_type from orderData
       const orderData = {
         store_id: user.storeIds[0],
         created_by: user.id,
@@ -127,7 +126,6 @@ export function CreatePurchaseOrderDialog({
         total_amount: totalAmount,
         requested_delivery_date: requestedDeliveryDate || undefined,
         notes: notes || undefined,
-        location_type: 'commissary',
         items: orderItems.map(item => ({
           inventory_stock_id: item.commissary_item_id, // Using commissary item ID temporarily
           quantity: item.quantity,
