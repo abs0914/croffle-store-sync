@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminRecipesHeader } from './components/AdminRecipesHeader';
@@ -10,7 +9,6 @@ import { AdminRecipeBulkUploadTab } from './components/AdminRecipeBulkUploadTab'
 import { AdminCommissaryIntegrationTab } from './components/AdminCommissaryIntegrationTab';
 import { MenuStructureTab } from '@/components/Admin/components/MenuStructureTab';
 import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/EnhancedRecipeTemplateForm';
-import { RecipeTemplateManager } from '@/components/Admin/components/RecipeTemplateManager';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -20,7 +18,7 @@ import { Package } from 'lucide-react';
 export default function AdminRecipes() {
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeTab, setActiveTab] = useState('template-manager');
+  const [activeTab, setActiveTab] = useState('recipe-templates');
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
   const [formCategory, setFormCategory] = useState<string>('');
   const [formSubcategory, setFormSubcategory] = useState<string>('');
@@ -167,18 +165,13 @@ export default function AdminRecipes() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="template-manager">Template Manager</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="menu-structure">Menu Structure</TabsTrigger>
           <TabsTrigger value="recipe-templates">Recipe Templates</TabsTrigger>
           <TabsTrigger value="deployed-recipes">Deployed Recipes</TabsTrigger>
           <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
           <TabsTrigger value="commissary-integration">Commissary Integration</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="template-manager">
-          <RecipeTemplateManager />
-        </TabsContent>
 
         <TabsContent value="menu-structure" className="space-y-4">
           <div className="flex justify-between items-center">
