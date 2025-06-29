@@ -119,7 +119,12 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
                 <SelectContent>
                   <SelectItem value="kg">kg</SelectItem>
                   <SelectItem value="g">g</SelectItem>
+                  <SelectItem value="piece">piece</SelectItem>
                   <SelectItem value="pieces">pieces</SelectItem>
+                  <SelectItem value="serving">serving</SelectItem>
+                  <SelectItem value="portion">portion</SelectItem>
+                  <SelectItem value="pair">pair</SelectItem>
+                  <SelectItem value="scoop">scoop</SelectItem>
                   <SelectItem value="liters">liters</SelectItem>
                   <SelectItem value="ml">ml</SelectItem>
                   <SelectItem value="cups">cups</SelectItem>
