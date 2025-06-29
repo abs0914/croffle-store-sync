@@ -3,6 +3,68 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ParsedConversionRecipe } from "@/utils/conversionRecipeParser";
 
+// Helper function to normalize unit values to valid database units
+const normalizeUnitValue = (unit: string): string => {
+  const unitMapping: Record<string, string> = {
+    // Weight units
+    'kg': 'kg',
+    'kilo': 'kg',
+    'kilogram': 'kg',
+    'kilograms': 'kg',
+    'g': 'g',
+    'gram': 'g',
+    'grams': 'g',
+    
+    // Volume units
+    'l': 'liters',
+    'liter': 'liters',
+    'liters': 'liters',
+    'litre': 'liters',
+    'litres': 'liters',
+    'ml': 'ml',
+    'milliliter': 'ml',
+    'milliliters': 'ml',
+    'millilitre': 'ml',
+    'millilitres': 'ml',
+    
+    // Count units
+    'piece': 'pieces',
+    'pieces': 'pieces',
+    'pcs': 'pieces',
+    'pc': 'pieces',
+    'item': 'pieces',
+    'items': 'pieces',
+    'unit': 'pieces',
+    'units': 'pieces',
+    
+    // Package units
+    'box': 'boxes',
+    'boxes': 'boxes',
+    'pack': 'packs',
+    'packs': 'packs',
+    'package': 'packs',
+    'packages': 'packs',
+    'pack of 10': 'packs',
+    'pack of 20': 'packs',
+    'pack of 25': 'packs',
+    'pack of 50': 'packs',
+    'pack of 100': 'packs',
+    
+    // Special units
+    'serving': 'serving',
+    'servings': 'serving',
+    'portion': 'portion',
+    'portions': 'portion',
+    'scoop': 'scoop',
+    'scoops': 'scoop',
+    'pair': 'pair',
+    'pairs': 'pair'
+  };
+  
+  const normalizedUnit = unit.toLowerCase().trim();
+  return unitMapping[normalizedUnit] || 'pieces'; // Default to pieces if not found
+};
+
 export const bulkUploadConversionRecipes = async (
   conversionRecipes: ParsedConversionRecipe[]
 ): Promise<boolean> => {
@@ -95,7 +157,7 @@ export const bulkUploadConversionRecipes = async (
             name: recipe.name,
             description: recipe.description,
             finished_item_name: recipe.output_item.name,
-            finished_item_unit: recipe.output_item.uom,
+            finished_item_unit: normalizeUnitValue(recipe.output_item.uom), // Normalize unit
             yield_quantity: recipe.output_item.quantity,
             instructions: instructions,
             created_by: (await supabase.auth.getUser()).data.user?.id,
@@ -140,6 +202,9 @@ export const bulkUploadConversionRecipes = async (
         const finishedProductSku = recipe.output_item.sku || 
           `FP-${recipe.output_item.name.toUpperCase().replace(/\s+/g, '-').substring(0, 20)}`;
 
+        const normalizedUnit = normalizeUnitValue(recipe.output_item.uom);
+        console.log(`Creating finished product with normalized unit: ${recipe.output_item.uom} -> ${normalizedUnit}`);
+
         const { error: productError } = await supabase
           .from('commissary_inventory')
           .insert({
@@ -148,7 +213,7 @@ export const bulkUploadConversionRecipes = async (
             item_type: 'orderable_item',
             current_stock: 0,
             minimum_threshold: 10,
-            unit: recipe.output_item.uom,
+            unit: normalizedUnit, // Use normalized unit
             unit_cost: recipe.output_item.unit_cost || 0,
             sku: finishedProductSku,
             storage_location: recipe.output_item.storage_location || 'Finished Goods',
