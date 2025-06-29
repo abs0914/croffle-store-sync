@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
 import { toast } from "sonner";
@@ -306,12 +305,26 @@ export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> 
   try {
     console.log('Fetching orderable items...');
     
+    // First, let's check what data exists in the table with minimal filtering
+    const { data: allData, error: allError } = await supabase
+      .from('commissary_inventory')
+      .select('*')
+      .order('name');
+
+    if (allError) {
+      console.error('Error fetching all commissary items:', allError);
+    } else {
+      console.log('ALL commissary items (no filters):', allData);
+      console.log('Sample item structure:', allData?.[0]);
+    }
+
+    // Now try the specific query for orderable items
     const { data, error } = await supabase
       .from('commissary_inventory')
       .select('*')
       .eq('is_active', true)
-      .eq('item_type', 'orderable_item') // Only fetch converted/finished products
-      .gte('current_stock', 0) // Changed from gt to gte to include items with 0 stock
+      .eq('item_type', 'orderable_item')
+      .gte('current_stock', 0)
       .order('name');
 
     if (error) {
@@ -325,23 +338,28 @@ export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> 
     if (!data || data.length === 0) {
       console.log('No orderable items found. Checking all commissary items...');
       
-      // Enhanced debug query to see ALL items regardless of is_active status
-      const { data: allItems } = await supabase
+      // Enhanced debug query to see ALL items regardless of filters
+      const { data: debugItems } = await supabase
         .from('commissary_inventory')
         .select('id, name, item_type, is_active, current_stock, category')
         .order('name');
       
-      console.log('ALL commissary items (including inactive):', allItems);
-      console.log('Active items:', allItems?.filter(item => item.is_active));
-      console.log('Items with orderable_item type:', allItems?.filter(item => item.item_type === 'orderable_item'));
-      console.log('Active orderable items:', allItems?.filter(item => item.item_type === 'orderable_item' && item.is_active));
+      console.log('DEBUG - All items in commissary_inventory:', debugItems);
       
-      // Show breakdown by item_type
-      const itemTypeBreakdown = allItems?.reduce((acc, item) => {
-        acc[item.item_type] = (acc[item.item_type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      console.log('Item type breakdown:', itemTypeBreakdown);
+      if (debugItems && debugItems.length > 0) {
+        console.log('Items by is_active status:');
+        console.log('- Active items:', debugItems.filter(item => item.is_active === true));
+        console.log('- Inactive items:', debugItems.filter(item => item.is_active === false));
+        
+        console.log('Items by item_type:');
+        const itemTypes = [...new Set(debugItems.map(item => item.item_type))];
+        itemTypes.forEach(type => {
+          console.log(`- ${type}:`, debugItems.filter(item => item.item_type === type));
+        });
+        
+        console.log('Items with stock >= 0:', debugItems.filter(item => item.current_stock >= 0));
+        console.log('Items with stock < 0:', debugItems.filter(item => item.current_stock < 0));
+      }
     }
     
     const processedItems = (data || []).map(item => ({
