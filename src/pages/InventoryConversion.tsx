@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConversionMappingManager } from '@/components/inventory/ConversionMappingManager';
+import { EnhancedConversionMappingManager } from '@/components/inventory/EnhancedConversionMappingManager';
+import { ProductBundleManager } from '@/components/productBundle/ProductBundleManager';
 import { useAuth } from '@/contexts/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -90,17 +92,54 @@ const InventoryConversion: React.FC = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Inventory Conversion Management</h1>
         <p className="text-muted-foreground mt-2">
-          Manage conversion mappings between bulk inventory items and recipe ingredients
+          Manage conversion mappings between bulk inventory items and recipe ingredients, including bundled products
         </p>
       </div>
 
-      <Tabs defaultValue="mappings" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="mappings">Conversion Mappings</TabsTrigger>
+      <Tabs defaultValue="bundles" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="bundles">Product Bundles</TabsTrigger>
+          <TabsTrigger value="enhanced-mappings">Enhanced Mappings</TabsTrigger>
+          <TabsTrigger value="basic-mappings">Basic Mappings</TabsTrigger>
           <TabsTrigger value="preview">Preview & Test</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="mappings" className="space-y-6">
+        <TabsContent value="bundles" className="space-y-6">
+          <ProductBundleManager />
+        </TabsContent>
+
+        <TabsContent value="enhanced-mappings" className="space-y-6">
+          {stores.length > 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Store Selection</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {stores.map(store => (
+                    <button
+                      key={store.id}
+                      onClick={() => setSelectedStoreId(store.id)}
+                      className={`p-4 rounded-lg border text-left transition-colors ${
+                        selectedStoreId === store.id
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <h3 className="font-medium">{store.name}</h3>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedStoreId && (
+            <EnhancedConversionMappingManager storeId={selectedStoreId} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="basic-mappings" className="space-y-6">
           {stores.length > 1 && (
             <Card>
               <CardHeader>
@@ -139,7 +178,8 @@ const InventoryConversion: React.FC = () => {
             <CardContent>
               <p className="text-muted-foreground">
                 This feature will allow you to preview how recipe ingredients will be converted 
-                and test inventory deductions before applying them in the POS system.
+                and test inventory deductions before applying them in the POS system, including 
+                complex bundle handling and fractional deductions.
               </p>
               <p className="text-sm text-muted-foreground mt-2">
                 Coming soon in the next phase of implementation.

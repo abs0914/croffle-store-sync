@@ -1081,39 +1081,55 @@ export type Database = {
       }
       inventory_conversion_mappings: {
         Row: {
+          bundle_id: string | null
+          component_ratio: number | null
           conversion_factor: number
           created_at: string | null
           id: string
           inventory_stock_id: string
           is_active: boolean
+          is_bundle_component: boolean | null
           notes: string | null
           recipe_ingredient_name: string
           recipe_ingredient_unit: string
           updated_at: string | null
         }
         Insert: {
+          bundle_id?: string | null
+          component_ratio?: number | null
           conversion_factor: number
           created_at?: string | null
           id?: string
           inventory_stock_id: string
           is_active?: boolean
+          is_bundle_component?: boolean | null
           notes?: string | null
           recipe_ingredient_name: string
           recipe_ingredient_unit: string
           updated_at?: string | null
         }
         Update: {
+          bundle_id?: string | null
+          component_ratio?: number | null
           conversion_factor?: number
           created_at?: string | null
           id?: string
           inventory_stock_id?: string
           is_active?: boolean
+          is_bundle_component?: boolean | null
           notes?: string | null
           recipe_ingredient_name?: string
           recipe_ingredient_unit?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_conversion_mappings_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "product_bundles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_conversion_mappings_inventory_stock_id_fkey"
             columns: ["inventory_stock_id"]
@@ -1736,6 +1752,81 @@ export type Database = {
           name?: string
           price?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      product_bundle_components: {
+        Row: {
+          bundle_id: string
+          commissary_item_id: string
+          created_at: string | null
+          id: string
+          quantity: number
+          unit: string
+        }
+        Insert: {
+          bundle_id: string
+          commissary_item_id: string
+          created_at?: string | null
+          id?: string
+          quantity?: number
+          unit: string
+        }
+        Update: {
+          bundle_id?: string
+          commissary_item_id?: string
+          created_at?: string | null
+          id?: string
+          quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_bundle_components_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "product_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_bundle_components_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_bundles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          total_price: number
+          unit_description: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          total_price?: number
+          unit_description?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          total_price?: number
+          unit_description?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
