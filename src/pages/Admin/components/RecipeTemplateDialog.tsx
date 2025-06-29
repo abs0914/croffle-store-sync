@@ -52,63 +52,68 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [dataInitialized, setDataInitialized] = useState(false);
 
-  // Initialize data only when dialog opens
+  // Initialize commissary items and categories when dialog opens
   useEffect(() => {
-    if (isOpen && !isInitialized) {
+    if (isOpen && !dataInitialized) {
       console.log('Initializing dialog data...');
-      fetchCommissaryItems();
-      fetchCategories();
-      setIsInitialized(true);
-    }
-  }, [isOpen, isInitialized]);
-
-  // Handle template data separately and only when template changes
-  useEffect(() => {
-    if (isOpen && template && isInitialized) {
-      console.log('Template received:', template);
-      console.log('Template keys:', Object.keys(template));
-      
-      const newFormData = {
-        name: template.name || '',
-        description: template.description || '',
-        category_name: template.category_name || '',
-        instructions: template.instructions || '',
-        yield_quantity: Number(template.yield_quantity) || 1,
-        serving_size: Number(template.serving_size) || 1,
-        image_url: template.image_url || ''
+      const initializeData = async () => {
+        await Promise.all([fetchCommissaryItems(), fetchCategories()]);
+        setDataInitialized(true);
       };
-      
-      console.log('Setting form data to:', newFormData);
-      setFormData(newFormData);
-      
-      // Handle ingredients - check if template has ingredients array
-      if (template.ingredients && Array.isArray(template.ingredients)) {
-        const mappedIngredients = template.ingredients.map((ing: any) => ({
-          commissary_item_id: ing.commissary_item_id || '',
-          commissary_item_name: ing.commissary_item_name || '',
-          quantity: Number(ing.quantity) || 1,
-          unit: ing.unit || 'g',
-          cost_per_unit: Number(ing.cost_per_unit) || 0
-        }));
-        
-        console.log('Setting ingredients:', mappedIngredients);
-        setIngredients(mappedIngredients);
-      } else {
-        console.log('No ingredients found, setting empty array');
-        setIngredients([]);
-      }
-    } else if (isOpen && !template && isInitialized) {
-      console.log('No template provided, resetting form');
-      resetForm();
+      initializeData();
     }
-  }, [isOpen, template, isInitialized]);
+  }, [isOpen, dataInitialized]);
 
-  // Reset initialization when dialog closes
+  // Handle template data population - only when template changes and data is initialized
+  useEffect(() => {
+    if (isOpen && dataInitialized) {
+      if (template) {
+        console.log('Template received:', template);
+        console.log('Template keys:', Object.keys(template));
+        
+        const templateFormData = {
+          name: String(template.name || ''),
+          description: String(template.description || ''),
+          category_name: String(template.category_name || ''),
+          instructions: String(template.instructions || ''),
+          yield_quantity: Number(template.yield_quantity) || 1,
+          serving_size: Number(template.serving_size) || 1,
+          image_url: String(template.image_url || '')
+        };
+        
+        console.log('Setting form data to:', templateFormData);
+        setFormData(templateFormData);
+        
+        // Handle ingredients
+        if (template.ingredients && Array.isArray(template.ingredients)) {
+          const mappedIngredients = template.ingredients.map((ing: any) => ({
+            commissary_item_id: String(ing.commissary_item_id || ''),
+            commissary_item_name: String(ing.commissary_item_name || ''),
+            quantity: Number(ing.quantity) || 1,
+            unit: String(ing.unit || 'g'),
+            cost_per_unit: Number(ing.cost_per_unit) || 0
+          }));
+          
+          console.log('Setting ingredients:', mappedIngredients);
+          setIngredients(mappedIngredients);
+        } else {
+          console.log('No ingredients found, setting empty array');
+          setIngredients([]);
+        }
+      } else {
+        console.log('No template provided, resetting form');
+        resetForm();
+      }
+    }
+  }, [template, dataInitialized, isOpen]);
+
+  // Reset everything when dialog closes
   useEffect(() => {
     if (!isOpen) {
-      setIsInitialized(false);
+      setDataInitialized(false);
+      resetForm();
     }
   }, [isOpen]);
 
@@ -274,8 +279,6 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
   };
 
   const handleClose = () => {
-    resetForm();
-    setIsInitialized(false);
     onClose();
   };
 
@@ -417,7 +420,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
               {ingredients.map((ingredient, index) => (
                 <div key={index} className="grid grid-cols-5 gap-2 items-end">
                   <div>
-                    <Label>Commissary Item</Label>
+                    <Label>Commissary item</Label>
                     <Select
                       value={ingredient.commissary_item_name}
                       onValueChange={(value) => updateIngredient(index, 'commissary_item_name', value)}
