@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConversionMappingManager } from '@/components/inventory/ConversionMappingManager';
-import { useAuthContext } from '@/contexts/auth/AuthProvider';
+import { useAuth } from '@/contexts/auth/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Store {
@@ -12,7 +11,7 @@ interface Store {
 }
 
 const InventoryConversion: React.FC = () => {
-  const { user } = useAuthContext();
+  const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
