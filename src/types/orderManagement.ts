@@ -1,4 +1,3 @@
-
 export interface PurchaseOrder {
   id: string;
   order_number: string;
@@ -14,6 +13,11 @@ export interface PurchaseOrder {
   updated_at: string;
   approved_at?: string;
   supplier?: Supplier;
+  store?: {
+    id: string;
+    name: string;
+    address: string;
+  };
   items?: PurchaseOrderItem[];
 }
 
