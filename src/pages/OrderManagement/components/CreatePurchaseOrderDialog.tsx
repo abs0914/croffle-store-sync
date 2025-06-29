@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -141,6 +140,49 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
     }, 0);
   };
 
+  const createOrFindInventoryStock = async (item: OrderItem) => {
+    if (!user?.storeIds?.[0]) return null;
+
+    // Check if inventory stock item exists
+    const { data: existingStock, error: stockError } = await supabase
+      .from('inventory_stock')
+      .select('id')
+      .eq('store_id', user.storeIds[0])
+      .eq('item', item.item_name)
+      .eq('unit', item.item_unit)
+      .single();
+
+    if (stockError && stockError.code !== 'PGRST116') {
+      console.error('Error checking inventory stock:', stockError);
+      return null;
+    }
+
+    if (existingStock) {
+      return existingStock.id;
+    }
+
+    // Create new inventory stock item
+    const { data: newStock, error: createError } = await supabase
+      .from('inventory_stock')
+      .insert({
+        store_id: user.storeIds[0],
+        item: item.item_name,
+        unit: item.item_unit,
+        stock_quantity: 0,
+        cost: item.final_price,
+        is_active: true
+      })
+      .select('id')
+      .single();
+
+    if (createError) {
+      console.error('Error creating inventory stock:', createError);
+      return null;
+    }
+
+    return newStock.id;
+  };
+
   const handleSubmit = async () => {
     if (!user?.storeIds?.[0] || selectedItems.length === 0) {
       toast.error('Please add items to the order');
@@ -149,6 +191,24 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
 
     setLoading(true);
     try {
+      // Create or find inventory stock items for each selected item
+      const orderItems = [];
+      
+      for (const item of selectedItems) {
+        const inventoryStockId = await createOrFindInventoryStock(item);
+        if (!inventoryStockId) {
+          toast.error(`Failed to create inventory item for ${item.item_name}`);
+          return;
+        }
+        
+        orderItems.push({
+          inventory_stock_id: inventoryStockId,
+          quantity: item.quantity,
+          unit_price: item.final_price,
+          specifications: `Location: ${storeLocationType}, Lead time: ${item.lead_time_days} days, Commissary Item: ${item.commissary_item_id}`
+        });
+      }
+
       const orderData = {
         store_id: user.storeIds[0],
         created_by: user.id,
@@ -157,12 +217,7 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
         requested_delivery_date: requestedDeliveryDate || undefined,
         notes,
         location_type: storeLocationType,
-        items: selectedItems.map(item => ({
-          inventory_stock_id: item.commissary_item_id,
-          quantity: item.quantity,
-          unit_price: item.final_price,
-          specifications: `Location: ${storeLocationType}, Lead time: ${item.lead_time_days} days`
-        }))
+        items: orderItems
       };
 
       await createPurchaseOrder(orderData);

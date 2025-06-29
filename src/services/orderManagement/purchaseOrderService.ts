@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { PurchaseOrder, PurchaseOrderItem } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -29,8 +28,7 @@ export const fetchPurchaseOrders = async (storeId: string): Promise<PurchaseOrde
         supplier:suppliers(*),
         items:purchase_order_items(
           *,
-          inventory_stock:inventory_stock(*),
-          commissary_item:commissary_inventory(*)
+          inventory_stock:inventory_stock(*)
         )
       `)
       .eq('store_id', storeId)
