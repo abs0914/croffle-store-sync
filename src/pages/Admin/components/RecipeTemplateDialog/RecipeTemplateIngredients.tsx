@@ -27,7 +27,19 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       try {
         const items = await fetchOrderableItems();
         console.log('Loaded orderable items:', items);
-        setOrderableItems(items);
+        
+        // Filter to only show orderable_items (finished products) and remove duplicates
+        const finishedProducts = items.filter(item => 
+          item.item_type === 'orderable_item'
+        );
+        
+        // Remove duplicates based on name (case-insensitive)
+        const uniqueItems = finishedProducts.filter((item, index, self) =>
+          index === self.findIndex(i => i.name.toLowerCase() === item.name.toLowerCase())
+        );
+        
+        console.log('Filtered finished products:', uniqueItems);
+        setOrderableItems(uniqueItems);
       } catch (error) {
         console.error('Error loading orderable items:', error);
       } finally {
