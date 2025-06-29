@@ -64,6 +64,7 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
 
   useEffect(() => {
     if (open) {
+      console.log('Dialog opened, loading orderable items...');
       loadOrderableItems();
     }
   }, [open]);
@@ -71,10 +72,16 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
   const loadOrderableItems = async () => {
     setLoading(true);
     try {
+      console.log('Loading orderable items...');
       const items = await fetchOrderableItems();
       console.log('Loaded orderable items:', items);
       console.log('Store location type:', storeLocationType);
       console.log('Current store:', currentStore?.name);
+      
+      if (items.length === 0) {
+        console.warn('No orderable items returned from fetchOrderableItems');
+      }
+      
       setOrderableItems(items);
     } catch (error) {
       console.error('Error loading orderable items:', error);
@@ -284,13 +291,32 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
             </CardHeader>
             <CardContent>
               {loading ? (
-                <p className="text-muted-foreground">Loading products...</p>
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-16 bg-gray-200 rounded"></div>
+                    </div>
+                  ))}
+                </div>
               ) : orderableItems.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground mb-2">No finished products available for ordering</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mb-4">
                     Make sure there are active orderable items in commissary inventory with stock &gt; 0
                   </p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>Debug info:</p>
+                    <p>• Store location: {storeLocationType}</p>
+                    <p>• Current store: {currentStore?.name}</p>
+                    <p>• Looking for items with: is_active = true, item_type = 'orderable_item'</p>
+                  </div>
+                  <Button 
+                    onClick={loadOrderableItems}
+                    variant="outline"
+                    className="mt-4"
+                  >
+                    Retry Loading Products
+                  </Button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

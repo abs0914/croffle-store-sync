@@ -310,7 +310,7 @@ export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> 
       .select('*')
       .eq('is_active', true)
       .eq('item_type', 'orderable_item') // Only fetch converted/finished products
-      .gt('current_stock', 0) // Only items with stock > 0
+      .gte('current_stock', 0) // Changed from gt to gte to include items with 0 stock
       .order('name');
 
     if (error) {
@@ -319,6 +319,20 @@ export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> 
     }
     
     console.log('Raw orderable items from DB:', data);
+    console.log('Query used: is_active = true, item_type = orderable_item, current_stock >= 0');
+    
+    if (!data || data.length === 0) {
+      console.log('No orderable items found. Checking all commissary items...');
+      
+      // Debug query to see all items
+      const { data: allItems } = await supabase
+        .from('commissary_inventory')
+        .select('id, name, item_type, is_active, current_stock')
+        .eq('is_active', true);
+      
+      console.log('All active commissary items:', allItems);
+      console.log('Items with orderable_item type:', allItems?.filter(item => item.item_type === 'orderable_item'));
+    }
     
     const processedItems = (data || []).map(item => ({
       ...item,
