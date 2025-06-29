@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,8 @@ import {
   Users, 
   AlertTriangle,
   BarChart3,
-  Settings
+  Settings,
+  Edit
 } from 'lucide-react';
 import { 
   getRecipeTemplatesWithMetrics,
@@ -30,6 +30,7 @@ import {
   RecipeCostBreakdown,
   IngredientCostAlert
 } from '@/services/recipeManagement/recipeCostAnalytics';
+import { RecipeTemplateDialog } from '@/pages/Admin/components/RecipeTemplateDialog';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
@@ -42,6 +43,8 @@ export const RecipeTemplateManager: React.FC = () => {
   const [costBreakdown, setCostBreakdown] = useState<RecipeCostBreakdown | null>(null);
   const [costAlerts, setCostAlerts] = useState<IngredientCostAlert[]>([]);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<RecipeTemplateWithMetrics | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
@@ -85,6 +88,12 @@ export const RecipeTemplateManager: React.FC = () => {
     }
   };
 
+  const handleEditTemplate = (template: RecipeTemplateWithMetrics) => {
+    console.log('Opening edit dialog for template:', template);
+    setEditingTemplate(template);
+    setShowEditDialog(true);
+  };
+
   const handleCloneTemplate = async (template: RecipeTemplateWithMetrics) => {
     const newName = prompt(`Enter name for cloned template:`, `${template.name} (Copy)`);
     if (!newName) return;
@@ -93,6 +102,12 @@ export const RecipeTemplateManager: React.FC = () => {
     if (cloned) {
       await loadData();
     }
+  };
+
+  const handleEditSuccess = async () => {
+    setShowEditDialog(false);
+    setEditingTemplate(null);
+    await loadData();
   };
 
   const filteredTemplates = templates.filter(template =>
@@ -225,6 +240,13 @@ export const RecipeTemplateManager: React.FC = () => {
                 >
                   <BarChart3 className="h-4 w-4 mr-1" />
                   Details
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleEditTemplate(template)}
+                >
+                  <Edit className="h-4 w-4" />
                 </Button>
                 <Button 
                   variant="outline" 
@@ -440,7 +462,14 @@ export const RecipeTemplateManager: React.FC = () => {
 
                 <TabsContent value="settings" className="space-y-4">
                   <div className="space-y-4">
-                    <Button variant="outline" className="w-full">
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => {
+                        setShowDetailsDialog(false);
+                        handleEditTemplate(selectedTemplate);
+                      }}
+                    >
                       <Settings className="h-4 w-4 mr-2" />
                       Edit Template
                     </Button>
@@ -460,6 +489,17 @@ export const RecipeTemplateManager: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Template Dialog */}
+      <RecipeTemplateDialog
+        isOpen={showEditDialog}
+        onClose={() => {
+          setShowEditDialog(false);
+          setEditingTemplate(null);
+        }}
+        template={editingTemplate}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 };
