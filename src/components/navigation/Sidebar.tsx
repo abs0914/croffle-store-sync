@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Sheet,
@@ -30,10 +29,12 @@ import {
   Settings,
   Truck,
   ShoppingBag,
-  ClipboardList
+  ClipboardList,
+  Shield
 } from "lucide-react";
 import { 
-  checkRouteAccess
+  checkRouteAccess,
+  canAccessAdminPanel
 } from "@/contexts/auth/role-utils";
 
 interface MenuItem {
@@ -93,6 +94,11 @@ export function Sidebar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/')}>
+                <Home className="mr-2 h-4 w-4" />
+                Back to Store
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => logout()}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
@@ -196,6 +202,15 @@ export function Sidebar() {
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            {canAccessAdminPanel(user?.role) && (
+              <>
+                <DropdownMenuItem onClick={() => navigate('/admin')}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Admin Panel
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onClick={() => logout()}>Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
