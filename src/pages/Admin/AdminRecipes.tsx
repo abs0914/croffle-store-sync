@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminRecipesHeader } from './components/AdminRecipesHeader';
@@ -9,6 +10,7 @@ import { AdminRecipeBulkUploadTab } from './components/AdminRecipeBulkUploadTab'
 import { AdminCommissaryIntegrationTab } from './components/AdminCommissaryIntegrationTab';
 import { MenuStructureTab } from '@/components/Admin/components/MenuStructureTab';
 import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/EnhancedRecipeTemplateForm';
+import { StoreSelector } from '@/components/admin/StoreSelector';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -22,6 +24,7 @@ export default function AdminRecipes() {
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
   const [formCategory, setFormCategory] = useState<string>('');
   const [formSubcategory, setFormSubcategory] = useState<string>('');
+  const [selectedStoreForDeployment, setSelectedStoreForDeployment] = useState<string>('');
   
   const {
     recipes,
@@ -195,6 +198,14 @@ export default function AdminRecipes() {
         </TabsContent>
 
         <TabsContent value="deployed-recipes" className="space-y-6">
+          <StoreSelector
+            stores={stores}
+            selectedStore={selectedStoreForDeployment}
+            onStoreChange={setSelectedStoreForDeployment}
+            title="Store Management"
+            description="Select a store to view and manage its deployed recipes"
+          />
+          
           <AdminRecipesHeader 
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}

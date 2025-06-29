@@ -1,16 +1,12 @@
-
 import React from "react";
 import { useLocation, Link } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Store, 
   Users, 
-  FileText, 
-  Settings,
+  FileText,
   DollarSign,
-  ShoppingBag,
   ClipboardList,
-  Package2,
   ChefHat,
   Warehouse,
   Factory,
@@ -36,11 +32,6 @@ const adminMenuItems = [
     title: "Recipe Management",
     icon: ChefHat,
     href: "/admin/recipes",
-  },
-  {
-    title: "Product Catalog",
-    icon: ShoppingBag,
-    href: "/admin/product-catalog",
   },
   {
     title: "Commissary Inventory",
