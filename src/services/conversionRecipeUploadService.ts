@@ -12,7 +12,7 @@ export const bulkUploadConversionRecipes = async (
     // Get all commissary inventory items for matching
     const { data: commissaryItems, error: commissaryError } = await supabase
       .from('commissary_inventory')
-      .select('id, name, unit, current_stock')
+      .select('id, name, uom, current_stock')
       .eq('is_active', true);
 
     if (commissaryError) {
@@ -32,6 +32,8 @@ export const bulkUploadConversionRecipes = async (
 
     // First pass: identify missing ingredients and mark them
     for (const recipe of conversionRecipes) {
+      console.log(`Processing recipe: ${recipe.name} with ${recipe.input_items.length} ingredients`);
+      
       const updatedInputItems = recipe.input_items.map(inputItem => {
         const commissaryItem = commissaryMap.get(inputItem.commissary_item_name.toLowerCase());
         if (!commissaryItem) {
@@ -43,11 +45,17 @@ export const bulkUploadConversionRecipes = async (
 
       // Only process recipes that have at least one valid ingredient
       const validIngredients = updatedInputItems.filter(item => !item.is_missing);
+      
       if (validIngredients.length > 0) {
         processedRecipes.push({
           ...recipe,
           input_items: validIngredients // Only include valid ingredients
         });
+        
+        // Log multi-ingredient recipes
+        if (validIngredients.length > 1) {
+          console.log(`Multi-ingredient recipe "${recipe.name}" has ${validIngredients.length} valid ingredients`);
+        }
       } else {
         console.warn(`Skipping recipe "${recipe.name}" - no valid ingredients found`);
         skipCount++;
@@ -69,6 +77,17 @@ export const bulkUploadConversionRecipes = async (
     // Process each recipe
     for (const recipe of processedRecipes) {
       try {
+        console.log(`Creating conversion recipe: ${recipe.name}`);
+        
+        // Generate comprehensive instructions for multi-ingredient recipes
+        const ingredientList = recipe.input_items.map(i => 
+          `${i.quantity} ${i.unit} ${i.commissary_item_name}`
+        ).join(', ');
+        
+        const instructions = recipe.input_items.length > 1 
+          ? `Multi-ingredient conversion: Combine ${ingredientList} to produce ${recipe.output_item.quantity} ${recipe.output_item.uom} ${recipe.output_item.name}`
+          : `Convert ${ingredientList} into ${recipe.output_item.quantity} ${recipe.output_item.uom} ${recipe.output_item.name}`;
+
         // Create the conversion recipe
         const { data: conversionRecipe, error: recipeError } = await supabase
           .from('conversion_recipes')
@@ -78,7 +97,7 @@ export const bulkUploadConversionRecipes = async (
             finished_item_name: recipe.output_item.name,
             finished_item_unit: recipe.output_item.uom,
             yield_quantity: recipe.output_item.quantity,
-            instructions: `Convert ${recipe.input_items.map(i => `${i.quantity} ${i.unit} ${i.commissary_item_name}`).join(', ')} into ${recipe.output_item.quantity} ${recipe.output_item.uom} ${recipe.output_item.name}`,
+            instructions: instructions,
             created_by: (await supabase.auth.getUser()).data.user?.id,
             is_active: true
           })
@@ -90,7 +109,9 @@ export const bulkUploadConversionRecipes = async (
           continue;
         }
 
-        // Create recipe ingredients (only for valid ingredients)
+        console.log(`Created conversion recipe with ID: ${conversionRecipe.id}`);
+
+        // Create recipe ingredients (support multiple ingredients)
         const ingredientInserts = recipe.input_items
           .filter(inputItem => !inputItem.is_missing)
           .map(inputItem => {
@@ -103,6 +124,8 @@ export const bulkUploadConversionRecipes = async (
           });
 
         if (ingredientInserts.length > 0) {
+          console.log(`Inserting ${ingredientInserts.length} ingredients for recipe "${recipe.name}"`);
+          
           const { error: ingredientsError } = await supabase
             .from('conversion_recipe_ingredients')
             .insert(ingredientInserts);
@@ -114,6 +137,9 @@ export const bulkUploadConversionRecipes = async (
         }
 
         // Create the finished product in commissary inventory
+        const finishedProductSku = recipe.output_item.sku || 
+          `FP-${recipe.output_item.name.toUpperCase().replace(/\s+/g, '-').substring(0, 20)}`;
+
         const { error: productError } = await supabase
           .from('commissary_inventory')
           .insert({
@@ -122,9 +148,9 @@ export const bulkUploadConversionRecipes = async (
             item_type: 'orderable_item',
             current_stock: 0,
             minimum_threshold: 10,
-            unit: recipe.output_item.uom,
+            uom: recipe.output_item.uom,
             unit_cost: recipe.output_item.unit_cost || 0,
-            sku: recipe.output_item.sku || `FP-${recipe.output_item.name.toUpperCase().replace(/\s+/g, '-')}`,
+            sku: finishedProductSku,
             storage_location: recipe.output_item.storage_location || 'Finished Goods',
             is_active: true
           });
@@ -132,6 +158,8 @@ export const bulkUploadConversionRecipes = async (
         if (productError) {
           console.error(`Error creating finished product "${recipe.output_item.name}":`, productError);
           // Continue processing other recipes even if this one fails
+        } else {
+          console.log(`Created finished product: ${recipe.output_item.name}`);
         }
 
         successCount++;
@@ -143,10 +171,15 @@ export const bulkUploadConversionRecipes = async (
       }
     }
 
-    const totalProcessed = successCount + skipCount;
+    const totalAttempted = successCount + skipCount;
+    const multiIngredientCount = processedRecipes.filter(r => r.input_items.length > 1).length;
     
     if (successCount > 0) {
-      toast.success(`Successfully created ${successCount} conversion recipe(s)${skipCount > 0 ? ` (${skipCount} skipped due to missing ingredients)` : ''}`);
+      const message = `Successfully created ${successCount} conversion recipe(s)` + 
+        (multiIngredientCount > 0 ? ` (${multiIngredientCount} multi-ingredient)` : '') +
+        (skipCount > 0 ? ` (${skipCount} skipped due to missing ingredients)` : '');
+      
+      toast.success(message);
     } else {
       toast.error('No conversion recipes could be created');
     }
