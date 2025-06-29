@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,63 +59,53 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  // Ref to track the last processed template ID to prevent unnecessary re-processing
-  const lastProcessedTemplateId = useRef<string | null>(null);
-
-  // Initialize commissary items and categories only once when dialog opens
+  // Initialize data when dialog opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isInitialized) {
+      console.log('Dialog opened, initializing data...');
       const initializeData = async () => {
         await Promise.all([fetchCommissaryItems(), fetchCategories()]);
+        setIsInitialized(true);
       };
       initializeData();
     }
-  }, [isOpen]);
+  }, [isOpen, isInitialized]);
 
-  // Handle template data population - separate effect with stable dependencies
+  // Handle template population - ONLY when template changes and dialog is open
   useEffect(() => {
-    console.log('Template effect triggered - isOpen:', isOpen, 'template:', template?.id, 'lastProcessed:', lastProcessedTemplateId.current);
-
     if (isOpen && template) {
-      // Only process if this is a different template than the last one processed
-      if (lastProcessedTemplateId.current !== template.id) {
-        console.log('Populating form with template:', template);
-        lastProcessedTemplateId.current = template.id;
-
-        const templateFormData = {
-          name: template.name || '',
-          description: template.description || '',
-          category_name: template.category_name || '',
-          instructions: template.instructions || '',
-          yield_quantity: Number(template.yield_quantity) || 1,
-          serving_size: Number(template.serving_size) || 1,
-          image_url: template.image_url || ''
-        };
-
-        console.log('Setting form data:', templateFormData);
-        setFormData(templateFormData);
-
-        // Handle ingredients
-        if (template.ingredients && Array.isArray(template.ingredients)) {
-          const mappedIngredients = template.ingredients.map((ing: any) => ({
-            commissary_item_id: ing.commissary_item_id || '',
-            commissary_item_name: ing.commissary_item_name || '',
-            quantity: Number(ing.quantity) || 1,
-            unit: ing.unit || 'g',
-            cost_per_unit: Number(ing.cost_per_unit) || 0
-          }));
-
-          console.log('Setting ingredients:', mappedIngredients);
-          setIngredients(mappedIngredients);
-        } else {
-          console.log('No ingredients found, setting empty array');
-          setIngredients([]);
-        }
+      console.log('Populating form with template:', template);
+      
+      const templateFormData = {
+        name: template.name || '',
+        description: template.description || '',
+        category_name: template.category_name || '',
+        instructions: template.instructions || '',
+        yield_quantity: Number(template.yield_quantity) || 1,
+        serving_size: Number(template.serving_size) || 1,
+        image_url: template.image_url || ''
+      };
+      
+      console.log('Setting form data:', templateFormData);
+      setFormData(templateFormData);
+      
+      // Handle ingredients
+      if (template.ingredients && Array.isArray(template.ingredients)) {
+        const mappedIngredients = template.ingredients.map((ing: any) => ({
+          commissary_item_id: ing.commissary_item_id || '',
+          commissary_item_name: ing.commissary_item_name || '',
+          quantity: Number(ing.quantity) || 1,
+          unit: ing.unit || 'g',
+          cost_per_unit: Number(ing.cost_per_unit) || 0
+        }));
+        
+        console.log('Setting ingredients:', mappedIngredients);
+        setIngredients(mappedIngredients);
       } else {
-        console.log('Template already processed, skipping');
+        setIngredients([]);
       }
-    } else if (isOpen && !template) {
-      // Only reset if opening for new template
+    } else if (isOpen && !template && isInitialized) {
+      // Reset for new template creation
       console.log('Resetting form for new template');
       lastProcessedTemplateId.current = null;
       setFormData({
@@ -129,15 +119,13 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
       });
       setIngredients([]);
     }
-  }, [isOpen, template]); // Use the full template object but add a ref to prevent unnecessary re-renders
+  }, [isOpen, template?.id]); // Only depend on isOpen and template.id to prevent unnecessary resets
 
-  // Clean up when dialog closes
+  // Reset initialization state when dialog closes
   useEffect(() => {
     if (!isOpen) {
       // Small delay to prevent flashing
       const timeoutId = setTimeout(() => {
-        console.log('Cleaning up form data on dialog close');
-        lastProcessedTemplateId.current = null;
         setFormData({
           name: '',
           description: '',
@@ -149,7 +137,7 @@ export const RecipeTemplateDialog: React.FC<RecipeTemplateDialogProps> = ({
         });
         setIngredients([]);
       }, 100);
-
+      
       return () => clearTimeout(timeoutId);
     }
   }, [isOpen]);
