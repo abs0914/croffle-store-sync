@@ -34,11 +34,11 @@ export interface RecipeTemplateData {
 }
 
 export interface RecipeTemplateIngredientInput {
-  commissary_item_id: string;
-  commissary_item_name: string;
+  ingredient_name: string;
+  ingredient_category: string;
+  ingredient_type: string;
   quantity: number;
   unit: string;
-  cost_per_unit?: number;
 }
 
 export const getRecipeTemplates = async (): Promise<RecipeTemplate[]> => {
@@ -89,18 +89,18 @@ export const createRecipeTemplate = async (
 
     if (templateError) throw templateError;
 
-    // Insert ingredients
+    // Insert ingredients with new generic structure
     if (ingredients.length > 0) {
       const { error: ingredientsError } = await supabase
         .from('recipe_template_ingredients')
         .insert(
           ingredients.map(ing => ({
             recipe_template_id: template.id,
-            commissary_item_id: ing.commissary_item_id,
-            commissary_item_name: ing.commissary_item_name,
+            ingredient_name: ing.ingredient_name,
+            ingredient_category: ing.ingredient_category,
+            ingredient_type: ing.ingredient_type,
             quantity: ing.quantity,
-            unit: ing.unit,
-            cost_per_unit: ing.cost_per_unit
+            unit: ing.unit
           }))
         );
 
@@ -150,18 +150,18 @@ export const updateRecipeTemplate = async (
       .delete()
       .eq('recipe_template_id', templateId);
 
-    // Insert new ingredients
+    // Insert new ingredients with generic structure
     if (ingredients.length > 0) {
       const { error: ingredientsError } = await supabase
         .from('recipe_template_ingredients')
         .insert(
           ingredients.map(ing => ({
             recipe_template_id: templateId,
-            commissary_item_id: ing.commissary_item_id,
-            commissary_item_name: ing.commissary_item_name,
+            ingredient_name: ing.ingredient_name,
+            ingredient_category: ing.ingredient_category,
+            ingredient_type: ing.ingredient_type,
             quantity: ing.quantity,
-            unit: ing.unit,
-            cost_per_unit: ing.cost_per_unit
+            unit: ing.unit
           }))
         );
 
@@ -246,11 +246,11 @@ export const duplicateRecipeTemplate = async (templateId: string): Promise<boole
         .insert(
           original.ingredients.map((ing: any) => ({
             recipe_template_id: newTemplate.id,
-            commissary_item_id: ing.commissary_item_id,
-            commissary_item_name: ing.commissary_item_name,
+            ingredient_name: ing.ingredient_name,
+            ingredient_category: ing.ingredient_category,
+            ingredient_type: ing.ingredient_type,
             quantity: ing.quantity,
-            unit: ing.unit,
-            cost_per_unit: ing.cost_per_unit
+            unit: ing.unit
           }))
         );
 
@@ -399,11 +399,11 @@ export const cloneRecipeTemplate = async (
         .insert(
           original.ingredients.map((ing: any) => ({
             recipe_template_id: newTemplate.id,
-            commissary_item_id: ing.commissary_item_id,
-            commissary_item_name: ing.commissary_item_name,
+            ingredient_name: ing.ingredient_name,
+            ingredient_category: ing.ingredient_category,
+            ingredient_type: ing.ingredient_type,
             quantity: ing.quantity,
-            unit: ing.unit,
-            cost_per_unit: ing.cost_per_unit
+            unit: ing.unit
           }))
         );
 
@@ -507,11 +507,11 @@ export const createRecipeTemplateVersion = async (
         .insert(
           original.ingredients.map((ing: any) => ({
             recipe_template_id: newVersion.id,
-            commissary_item_id: ing.commissary_item_id,
-            commissary_item_name: ing.commissary_item_name,
+            ingredient_name: ing.ingredient_name,
+            ingredient_category: ing.ingredient_category,
+            ingredient_type: ing.ingredient_type,
             quantity: ing.quantity,
-            unit: ing.unit,
-            cost_per_unit: ing.cost_per_unit
+            unit: ing.unit
           }))
         );
 

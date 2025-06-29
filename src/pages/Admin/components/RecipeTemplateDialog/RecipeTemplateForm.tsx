@@ -21,13 +21,6 @@ interface RecipeTemplateFormProps {
   onSuccess: () => void;
 }
 
-interface CommissaryItem {
-  id: string;
-  name: string;
-  unit: string;
-  unit_cost?: number;
-}
-
 export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
   template,
   onClose,
@@ -44,16 +37,15 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
   });
 
   const [ingredients, setIngredients] = useState<RecipeTemplateIngredientInput[]>([]);
-  const [commissaryItems, setCommissaryItems] = useState<CommissaryItem[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize basic data (commissary items and categories) only once
+  // Initialize categories only once
   useEffect(() => {
     const initializeData = async () => {
-      await Promise.all([fetchCommissaryItems(), fetchCategories()]);
+      await fetchCategories();
     };
     
     initializeData();
@@ -79,11 +71,11 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
       
       if (template.ingredients && Array.isArray(template.ingredients)) {
         const mappedIngredients = template.ingredients.map((ing: any) => ({
-          commissary_item_id: ing.commissary_item_id || '',
-          commissary_item_name: ing.commissary_item_name || '',
+          ingredient_name: ing.ingredient_name || ing.commissary_item_name || '',
+          ingredient_category: ing.ingredient_category || 'ingredient',
+          ingredient_type: ing.ingredient_type || 'raw_material',
           quantity: Number(ing.quantity) || 1,
-          unit: ing.unit || 'g',
-          cost_per_unit: Number(ing.cost_per_unit) || 0
+          unit: ing.unit || 'g'
         }));
         
         console.log('Setting ingredients:', mappedIngredients);
@@ -97,21 +89,6 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
       setIsInitialized(true);
     }
   }, [template, isInitialized]);
-
-  const fetchCommissaryItems = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('commissary_inventory')
-        .select('id, name, unit, unit_cost')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setCommissaryItems(data || []);
-    } catch (error) {
-      console.error('Error fetching commissary items:', error);
-    }
-  };
 
   const fetchCategories = async () => {
     try {
@@ -134,6 +111,18 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
     
     if (!formData.name.trim()) {
       toast.error('Recipe name is required');
+      return;
+    }
+
+    if (ingredients.length === 0) {
+      toast.error('At least one ingredient is required');
+      return;
+    }
+
+    // Validate ingredients
+    const invalidIngredients = ingredients.filter(ing => !ing.ingredient_name.trim());
+    if (invalidIngredients.length > 0) {
+      toast.error('All ingredients must have a name');
       return;
     }
 
@@ -199,7 +188,6 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
       <RecipeTemplateIngredients
         ingredients={ingredients}
         setIngredients={setIngredients}
-        commissaryItems={commissaryItems}
       />
 
       <RecipeTemplateInstructions

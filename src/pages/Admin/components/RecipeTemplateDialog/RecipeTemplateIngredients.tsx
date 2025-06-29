@@ -6,49 +6,30 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2 } from 'lucide-react';
-import { RecipeTemplateIngredientInput } from '@/services/recipeManagement/recipeTemplateService';
-
-interface CommissaryItem {
-  id: string;
-  name: string;
-  unit: string;
-  unit_cost?: number;
-}
+import { RecipeTemplateIngredientInput, INGREDIENT_CATEGORIES, INGREDIENT_TYPES } from '@/services/recipeManagement/types';
 
 interface RecipeTemplateIngredientsProps {
   ingredients: RecipeTemplateIngredientInput[];
   setIngredients: React.Dispatch<React.SetStateAction<RecipeTemplateIngredientInput[]>>;
-  commissaryItems: CommissaryItem[];
 }
 
 export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps> = ({
   ingredients,
-  setIngredients,
-  commissaryItems
+  setIngredients
 }) => {
   const addIngredient = () => {
     setIngredients(prev => [...prev, {
-      commissary_item_id: '',
-      commissary_item_name: '',
+      ingredient_name: '',
+      ingredient_category: 'ingredient',
+      ingredient_type: 'raw_material',
       quantity: 1,
-      unit: 'g',
-      cost_per_unit: 0
+      unit: 'g'
     }]);
   };
 
   const updateIngredient = (index: number, field: keyof RecipeTemplateIngredientInput, value: any) => {
     const updated = [...ingredients];
     updated[index] = { ...updated[index], [field]: value };
-    
-    if (field === 'commissary_item_name' && value) {
-      const item = commissaryItems.find(ci => ci.name === value);
-      if (item) {
-        updated[index].commissary_item_id = item.id;
-        updated[index].unit = item.unit;
-        updated[index].cost_per_unit = item.unit_cost || 0;
-      }
-    }
-    
     setIngredients(updated);
   };
 
@@ -67,20 +48,48 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       </CardHeader>
       <CardContent className="space-y-4">
         {ingredients.map((ingredient, index) => (
-          <div key={index} className="grid grid-cols-5 gap-2 items-end">
+          <div key={index} className="grid grid-cols-6 gap-2 items-end">
             <div>
-              <Label>Commissary item</Label>
+              <Label>Ingredient Name</Label>
+              <Input
+                value={ingredient.ingredient_name}
+                onChange={(e) => updateIngredient(index, 'ingredient_name', e.target.value)}
+                placeholder="e.g., All Purpose Flour"
+              />
+            </div>
+            
+            <div>
+              <Label>Category</Label>
               <Select
-                value={ingredient.commissary_item_name}
-                onValueChange={(value) => updateIngredient(index, 'commissary_item_name', value)}
+                value={ingredient.ingredient_category}
+                onValueChange={(value) => updateIngredient(index, 'ingredient_category', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select item" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {commissaryItems.map(item => (
-                    <SelectItem key={item.id} value={item.name}>
-                      {item.name}
+                  {INGREDIENT_CATEGORIES.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Type</Label>
+              <Select
+                value={ingredient.ingredient_type}
+                onValueChange={(value) => updateIngredient(index, 'ingredient_type', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INGREDIENT_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>
+                      {type.replace('_', ' ').charAt(0).toUpperCase() + type.replace('_', ' ').slice(1)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -113,21 +122,13 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
                   <SelectItem value="pieces">pieces</SelectItem>
                   <SelectItem value="liters">liters</SelectItem>
                   <SelectItem value="ml">ml</SelectItem>
+                  <SelectItem value="cups">cups</SelectItem>
+                  <SelectItem value="tbsp">tbsp</SelectItem>
+                  <SelectItem value="tsp">tsp</SelectItem>
                   <SelectItem value="boxes">boxes</SelectItem>
                   <SelectItem value="packs">packs</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            
-            <div>
-              <Label>Cost per Unit</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={ingredient.cost_per_unit || 0}
-                onChange={(e) => updateIngredient(index, 'cost_per_unit', parseFloat(e.target.value) || 0)}
-              />
             </div>
             
             <Button

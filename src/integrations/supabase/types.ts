@@ -2185,31 +2185,40 @@ export type Database = {
       }
       recipe_template_ingredients: {
         Row: {
-          commissary_item_id: string
-          commissary_item_name: string
+          commissary_item_id: string | null
+          commissary_item_name: string | null
           cost_per_unit: number | null
           created_at: string | null
           id: string
+          ingredient_category: string | null
+          ingredient_name: string
+          ingredient_type: string | null
           quantity: number
           recipe_template_id: string
           unit: string
         }
         Insert: {
-          commissary_item_id: string
-          commissary_item_name: string
+          commissary_item_id?: string | null
+          commissary_item_name?: string | null
           cost_per_unit?: number | null
           created_at?: string | null
           id?: string
+          ingredient_category?: string | null
+          ingredient_name: string
+          ingredient_type?: string | null
           quantity: number
           recipe_template_id: string
           unit: string
         }
         Update: {
-          commissary_item_id?: string
-          commissary_item_name?: string
+          commissary_item_id?: string | null
+          commissary_item_name?: string | null
           cost_per_unit?: number | null
           created_at?: string | null
           id?: string
+          ingredient_category?: string | null
+          ingredient_name?: string
+          ingredient_type?: string | null
           quantity?: number
           recipe_template_id?: string
           unit?: string
