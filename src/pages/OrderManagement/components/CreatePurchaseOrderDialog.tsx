@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -290,7 +289,7 @@ export function CreatePurchaseOrderDialog({ open, onOpenChange, onSuccess }: Cre
                 <div className="text-center py-8">
                   <p className="text-muted-foreground mb-2">No finished products available for ordering</p>
                   <p className="text-sm text-muted-foreground">
-                    Make sure there are active orderable items in commissary inventory with stock > 0
+                    Make sure there are active orderable items in commissary inventory with stock &gt; 0
                   </p>
                 </div>
               ) : (
