@@ -195,8 +195,12 @@ export const getInventoryDeductionRequirements = async (
         mappingData = mappingData[0];
       }
       
-      // Ensure we have a valid mapping object
-      if (mappingData && typeof mappingData === 'object' && 'conversion_factor' in mappingData && 'inventory_stock_id' in mappingData) {
+      // Ensure we have a valid mapping object and it's not null
+      if (mappingData && 
+          typeof mappingData === 'object' && 
+          mappingData !== null &&
+          'conversion_factor' in mappingData && 
+          'inventory_stock_id' in mappingData) {
         // Calculate how much to deduct from bulk inventory
         const recipeQuantityNeeded = ingredient.quantity * quantity;
         const bulkDeductionQuantity = recipeQuantityNeeded / mappingData.conversion_factor;
