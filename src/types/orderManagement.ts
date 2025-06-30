@@ -53,7 +53,7 @@ export interface DeliveryOrder {
 export interface GoodsReceivedNote {
   id: string;
   grn_number: string;
-  delivery_order_id: string;
+  purchase_order_id: string;
   received_by: string;
   status: 'pending' | 'verified' | 'discrepancy_noted';
   quality_check_passed?: boolean;
@@ -61,7 +61,7 @@ export interface GoodsReceivedNote {
   digital_signature?: string;
   received_at: string;
   created_at: string;
-  delivery_order?: DeliveryOrder;
+  purchase_order?: PurchaseOrder;
   items?: GRNItem[];
 }
 

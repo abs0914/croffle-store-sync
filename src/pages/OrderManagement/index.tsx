@@ -4,12 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth";
 import { PurchaseOrdersTab } from "./components/PurchaseOrdersTab";
-import { DeliveryOrdersTab } from "./components/DeliveryOrdersTab";
 import { GRNTab } from "./components/GRNTab";
 import { AuditTrailTab } from "./components/AuditTrailTab";
-import { OrderStatusManagement } from "./components/OrderStatusManagement";
 import { OrderMetricsDashboard } from "./components/OrderMetricsDashboard";
-import { ShoppingCart, Truck, ClipboardCheck, History, Clock, BarChart3 } from "lucide-react";
+import { ShoppingCart, ClipboardCheck, History, BarChart3 } from "lucide-react";
 
 export default function OrderManagement() {
   const { user, hasPermission } = useAuth();
@@ -44,7 +42,7 @@ export default function OrderManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="purchase-orders" className="flex items-center gap-2">
             <ShoppingCart className="h-4 w-4" />
             Purchase Orders
@@ -53,17 +51,9 @@ export default function OrderManagement() {
             <BarChart3 className="h-4 w-4" />
             Dashboard
           </TabsTrigger>
-          <TabsTrigger value="delivery-orders" className="flex items-center gap-2">
-            <Truck className="h-4 w-4" />
-            Delivery Orders
-          </TabsTrigger>
           <TabsTrigger value="grn" className="flex items-center gap-2">
             <ClipboardCheck className="h-4 w-4" />
             Goods Received
-          </TabsTrigger>
-          <TabsTrigger value="order-status" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Order Status
           </TabsTrigger>
           <TabsTrigger value="audit-trail" className="flex items-center gap-2">
             <History className="h-4 w-4" />
@@ -79,16 +69,8 @@ export default function OrderManagement() {
           <OrderMetricsDashboard />
         </TabsContent>
 
-        <TabsContent value="delivery-orders">
-          <DeliveryOrdersTab />
-        </TabsContent>
-
         <TabsContent value="grn">
           <GRNTab />
-        </TabsContent>
-
-        <TabsContent value="order-status">
-          <OrderStatusManagement />
         </TabsContent>
 
         <TabsContent value="audit-trail">

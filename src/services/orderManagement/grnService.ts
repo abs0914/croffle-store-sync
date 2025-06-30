@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { GoodsReceivedNote, GRNItem } from "@/types/orderManagement";
+import { GoodsReceivedNote, GRNItem, PurchaseOrder } from "@/types/orderManagement";
 import { toast } from "sonner";
 
 export const fetchGRNs = async (storeId?: string): Promise<GoodsReceivedNote[]> => {
@@ -8,11 +9,12 @@ export const fetchGRNs = async (storeId?: string): Promise<GoodsReceivedNote[]> 
       .from('goods_received_notes')
       .select(`
         *,
-        delivery_order:delivery_orders(
+        purchase_order:purchase_orders(
           *,
-          purchase_order:purchase_orders(
+          supplier:suppliers(*),
+          items:purchase_order_items(
             *,
-            supplier:suppliers(*)
+            inventory_stock:inventory_stock(*)
           )
         ),
         items:grn_items(
@@ -26,7 +28,7 @@ export const fetchGRNs = async (storeId?: string): Promise<GoodsReceivedNote[]> 
       .order('created_at', { ascending: false });
 
     if (storeId) {
-      query = query.eq('delivery_order.purchase_order.store_id', storeId);
+      query = query.eq('purchase_order.store_id', storeId);
     }
 
     const { data, error } = await query;
@@ -40,8 +42,39 @@ export const fetchGRNs = async (storeId?: string): Promise<GoodsReceivedNote[]> 
   }
 };
 
+export const fetchDeliveredPurchaseOrders = async (storeId?: string): Promise<PurchaseOrder[]> => {
+  try {
+    let query = supabase
+      .from('purchase_orders')
+      .select(`
+        *,
+        supplier:suppliers(*),
+        store:stores(id, name, address),
+        items:purchase_order_items(
+          *,
+          inventory_stock:inventory_stock(*)
+        )
+      `)
+      .eq('status', 'delivered')
+      .order('created_at', { ascending: false });
+
+    if (storeId) {
+      query = query.eq('store_id', storeId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching delivered purchase orders:', error);
+    toast.error('Failed to fetch delivered purchase orders');
+    return [];
+  }
+};
+
 export const createGRN = async (
-  deliveryOrderId: string,
+  purchaseOrderId: string,
   receivedBy: string
 ): Promise<GoodsReceivedNote | null> => {
   try {
@@ -51,17 +84,18 @@ export const createGRN = async (
       .from('goods_received_notes')
       .insert({
         grn_number: grnNumber,
-        delivery_order_id: deliveryOrderId,
+        purchase_order_id: purchaseOrderId,
         received_by: receivedBy,
         status: 'pending'
       })
       .select(`
         *,
-        delivery_order:delivery_orders(
+        purchase_order:purchase_orders(
           *,
-          purchase_order:purchase_orders(
+          supplier:suppliers(*),
+          items:purchase_order_items(
             *,
-            supplier:suppliers(*)
+            inventory_stock:inventory_stock(*)
           )
         )
       `)
@@ -88,11 +122,12 @@ export const updateGRN = async (
       .eq('id', id)
       .select(`
         *,
-        delivery_order:delivery_orders(
+        purchase_order:purchase_orders(
           *,
-          purchase_order:purchase_orders(
+          supplier:suppliers(*),
+          items:purchase_order_items(
             *,
-            supplier:suppliers(*)
+            inventory_stock:inventory_stock(*)
           )
         )
       `)
