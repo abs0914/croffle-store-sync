@@ -202,8 +202,11 @@ export const getInventoryDeductionRequirements = async (
           'conversion_factor' in mappingData && 
           'inventory_stock_id' in mappingData) {
         
-        // Type assertion after validation to help TypeScript understand the type
-        const validMapping = mappingData as { conversion_factor: number; inventory_stock_id: string };
+        // Create a properly typed variable from the validated mapping
+        const validMapping: { conversion_factor: number; inventory_stock_id: string } = {
+          conversion_factor: mappingData.conversion_factor,
+          inventory_stock_id: mappingData.inventory_stock_id
+        };
         
         // Calculate how much to deduct from bulk inventory
         const recipeQuantityNeeded = ingredient.quantity * quantity;
