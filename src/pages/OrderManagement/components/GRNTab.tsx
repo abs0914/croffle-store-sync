@@ -4,19 +4,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye } from 'lucide-react';
+import { Plus, Search, Eye, AlertTriangle } from 'lucide-react';
 import { GoodsReceivedNote, PurchaseOrder } from '@/types/orderManagement';
-import { fetchGRNs, fetchDeliveredPurchaseOrders, createGRN } from '@/services/orderManagement/grnService';
+import { fetchGRNs, fetchAvailableOrdersForGRN } from '@/services/orderManagement/grnService';
 import { useAuth } from '@/contexts/auth';
 import { CreateGRNDialog } from './CreateGRNDialog';
+import { ViewGRNDialog } from './ViewGRNDialog';
 
 export function GRNTab() {
   const { user } = useAuth();
   const [grns, setGrns] = useState<GoodsReceivedNote[]>([]);
-  const [deliveredOrders, setDeliveredOrders] = useState<PurchaseOrder[]>([]);
+  const [availableOrders, setAvailableOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [viewingGRN, setViewingGRN] = useState<GoodsReceivedNote | null>(null);
 
   const loadData = async () => {
     if (!user?.storeIds?.[0]) return;
@@ -24,11 +26,11 @@ export function GRNTab() {
     setLoading(true);
     const [grnData, ordersData] = await Promise.all([
       fetchGRNs(user.storeIds[0]),
-      fetchDeliveredPurchaseOrders(user.storeIds[0])
+      fetchAvailableOrdersForGRN(user.storeIds[0])
     ]);
     
     setGrns(grnData);
-    setDeliveredOrders(ordersData);
+    setAvailableOrders(ordersData);
     setLoading(false);
   };
 
@@ -36,20 +38,16 @@ export function GRNTab() {
     loadData();
   }, [user]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'secondary';
-      case 'verified': return 'default';
-      case 'discrepancy_noted': return 'destructive';
-      default: return 'secondary';
-    }
-  };
-
   const filteredGRNs = grns.filter(grn =>
     grn.grn_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     grn.purchase_order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     grn.remarks?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleCreateSuccess = () => {
+    loadData();
+    setShowCreateDialog(false);
+  };
 
   return (
     <Card>
@@ -96,12 +94,13 @@ export function GRNTab() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold">{grn.grn_number}</h3>
-                      <Badge variant={getStatusColor(grn.status)}>
-                        {grn.status.replace('_', ' ')}
-                      </Badge>
+                      <Badge variant="default">Completed</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Purchase Order: {grn.purchase_order?.order_number || 'N/A'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Items: {grn.purchase_order?.items?.length || 0}
                     </p>
                     {grn.quality_check_passed !== null && (
                       <p className="text-sm">
@@ -111,9 +110,18 @@ export function GRNTab() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setViewingGRN(grn)}
+                    >
                       <Eye className="h-4 w-4" />
                     </Button>
+                    {grn.quality_check_passed === false && (
+                      <Button variant="outline" size="sm" className="text-yellow-600">
+                        <AlertTriangle className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 
@@ -136,9 +144,17 @@ export function GRNTab() {
       <CreateGRNDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
-        deliveredOrders={deliveredOrders}
-        onSuccess={loadData}
+        availableOrders={availableOrders}
+        onSuccess={handleCreateSuccess}
       />
+
+      {viewingGRN && (
+        <ViewGRNDialog
+          grn={viewingGRN}
+          open={!!viewingGRN}
+          onOpenChange={(open) => !open && setViewingGRN(null)}
+        />
+      )}
     </Card>
   );
 }

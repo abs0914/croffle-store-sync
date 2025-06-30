@@ -71,11 +71,56 @@ export const fetchDeliveredPurchaseOrders = async (storeId?: string): Promise<Pu
   }
 };
 
+export const fetchAvailableOrdersForGRN = async (storeId?: string): Promise<PurchaseOrder[]> => {
+  try {
+    let query = supabase
+      .from('purchase_orders')
+      .select(`
+        *,
+        store:stores(id, name, address),
+        items:purchase_order_items(
+          *,
+          inventory_stock:inventory_stock(*)
+        )
+      `)
+      .eq('status', 'delivered')
+      .is('goods_received_notes.id', null)
+      .order('created_at', { ascending: false });
+
+    if (storeId) {
+      query = query.eq('store_id', storeId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching available orders for GRN:', error);
+    toast.error('Failed to fetch available orders');
+    return [];
+  }
+};
+
 export const createGRN = async (
   purchaseOrderId: string,
   receivedBy: string
 ): Promise<GoodsReceivedNote | null> => {
   try {
+    // Check if GRN already exists for this purchase order
+    const { data: existingGRN, error: checkError } = await supabase
+      .from('goods_received_notes')
+      .select('id')
+      .eq('purchase_order_id', purchaseOrderId)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+    
+    if (existingGRN) {
+      toast.error('A GRN already exists for this purchase order');
+      return null;
+    }
+
     const grnNumber = await generateGRNNumber();
     
     const { data, error } = await supabase
@@ -83,8 +128,7 @@ export const createGRN = async (
       .insert({
         grn_number: grnNumber,
         purchase_order_id: purchaseOrderId,
-        received_by: receivedBy,
-        status: 'pending'
+        received_by: receivedBy
       })
       .select(`
         *,
@@ -99,7 +143,7 @@ export const createGRN = async (
       .single();
 
     if (error) throw error;
-    toast.success('GRN created successfully');
+    toast.success('GRN created successfully - Purchase order automatically completed');
     return data;
   } catch (error) {
     console.error('Error creating GRN:', error);

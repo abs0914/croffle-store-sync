@@ -995,7 +995,6 @@ export type Database = {
           received_at: string | null
           received_by: string
           remarks: string | null
-          status: Database["public"]["Enums"]["grn_status"] | null
         }
         Insert: {
           created_at?: string | null
@@ -1007,7 +1006,6 @@ export type Database = {
           received_at?: string | null
           received_by: string
           remarks?: string | null
-          status?: Database["public"]["Enums"]["grn_status"] | null
         }
         Update: {
           created_at?: string | null
@@ -1019,13 +1017,12 @@ export type Database = {
           received_at?: string | null
           received_by?: string
           remarks?: string | null
-          status?: Database["public"]["Enums"]["grn_status"] | null
         }
         Relationships: [
           {
             foreignKeyName: "goods_received_notes_purchase_order_id_fkey"
             columns: ["purchase_order_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },

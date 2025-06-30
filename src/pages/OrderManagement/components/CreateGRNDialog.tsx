@@ -7,22 +7,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle, Package2 } from 'lucide-react';
 import { PurchaseOrder } from '@/types/orderManagement';
-import { createGRN } from '@/services/orderManagement/grnService';
+import { createGRN, updateGRN } from '@/services/orderManagement/grnService';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 
 interface CreateGRNDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  deliveredOrders: PurchaseOrder[];
+  availableOrders: PurchaseOrder[];
   onSuccess: () => void;
 }
 
-export function CreateGRNDialog({ open, onOpenChange, deliveredOrders, onSuccess }: CreateGRNDialogProps) {
+export function CreateGRNDialog({ open, onOpenChange, availableOrders, onSuccess }: CreateGRNDialogProps) {
   const { user } = useAuth();
   const [selectedOrderId, setSelectedOrderId] = useState('');
   const [qualityCheckPassed, setQualityCheckPassed] = useState(true);
+  const [hasDiscrepancies, setHasDiscrepancies] = useState(false);
   const [remarks, setRemarks] = useState('');
   const [digitalSignature, setDigitalSignature] = useState('');
   const [loading, setLoading] = useState(false);
@@ -44,10 +47,11 @@ export function CreateGRNDialog({ open, onOpenChange, deliveredOrders, onSuccess
         if (digitalSignature) updates.digital_signature = digitalSignature;
         if (qualityCheckPassed !== null) updates.quality_check_passed = qualityCheckPassed;
         
-        // You could add an updateGRN call here if needed
+        if (Object.keys(updates).length > 0) {
+          await updateGRN(grn.id, updates);
+        }
         
         onSuccess();
-        onOpenChange(false);
         resetForm();
       }
     } catch (error) {
@@ -60,17 +64,21 @@ export function CreateGRNDialog({ open, onOpenChange, deliveredOrders, onSuccess
   const resetForm = () => {
     setSelectedOrderId('');
     setQualityCheckPassed(true);
+    setHasDiscrepancies(false);
     setRemarks('');
     setDigitalSignature('');
   };
 
-  const selectedOrder = deliveredOrders.find(order => order.id === selectedOrderId);
+  const selectedOrder = availableOrders.find(order => order.id === selectedOrderId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Goods Received Note</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Package2 className="h-5 w-5" />
+            Create Goods Received Note
+          </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -81,14 +89,14 @@ export function CreateGRNDialog({ open, onOpenChange, deliveredOrders, onSuccess
                 <SelectValue placeholder="Select purchase order" />
               </SelectTrigger>
               <SelectContent>
-                {deliveredOrders.map((order) => (
+                {availableOrders.map((order) => (
                   <SelectItem key={order.id} value={order.id}>
                     {order.order_number} - ₱{order.total_amount} ({order.items?.length || 0} items)
                   </SelectItem>
                 ))}
-                {deliveredOrders.length === 0 && (
+                {availableOrders.length === 0 && (
                   <SelectItem value="none" disabled>
-                    No delivered orders available
+                    No delivered orders available for GRN
                   </SelectItem>
                 )}
               </SelectContent>
@@ -101,6 +109,7 @@ export function CreateGRNDialog({ open, onOpenChange, deliveredOrders, onSuccess
               <p className="text-sm">Order: {selectedOrder.order_number}</p>
               <p className="text-sm">Total: ₱{selectedOrder.total_amount}</p>
               <p className="text-sm">Items: {selectedOrder.items?.length || 0}</p>
+              <p className="text-sm">Store: {selectedOrder.store?.name || 'N/A'}</p>
             </div>
           )}
 
@@ -113,8 +122,26 @@ export function CreateGRNDialog({ open, onOpenChange, deliveredOrders, onSuccess
             <Label htmlFor="qualityCheck">Quality check passed</Label>
           </div>
 
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="hasDiscrepancies" 
+              checked={hasDiscrepancies}
+              onCheckedChange={(checked) => setHasDiscrepancies(checked as boolean)}
+            />
+            <Label htmlFor="hasDiscrepancies">Report discrepancies (missing/damaged items)</Label>
+          </div>
+
+          {hasDiscrepancies && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Discrepancies will be recorded and can be managed through the damaged goods system.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div>
-            <Label htmlFor="remarks">Remarks</Label>
+            <Label htmlFor="remarks">Remarks & Notes</Label>
             <Textarea
               id="remarks"
               placeholder="Any discrepancies, notes, or observations..."

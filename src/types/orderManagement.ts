@@ -53,7 +53,6 @@ export interface GoodsReceivedNote {
   grn_number: string;
   purchase_order_id: string;
   received_by: string;
-  status: 'pending' | 'verified' | 'discrepancy_noted';
   quality_check_passed?: boolean;
   remarks?: string;
   digital_signature?: string;
