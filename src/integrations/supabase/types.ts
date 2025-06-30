@@ -1139,6 +1139,39 @@ export type Database = {
           },
         ]
       }
+      ingredient_unit_conversions: {
+        Row: {
+          conversion_factor: number
+          created_at: string | null
+          from_unit: string
+          id: string
+          ingredient_name: string
+          notes: string | null
+          to_unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversion_factor: number
+          created_at?: string | null
+          from_unit: string
+          id?: string
+          ingredient_name: string
+          notes?: string | null
+          to_unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversion_factor?: number
+          created_at?: string | null
+          from_unit?: string
+          id?: string
+          ingredient_name?: string
+          notes?: string | null
+          to_unit?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       inventory_conversion_mappings: {
         Row: {
           bundle_id: string | null
@@ -2265,32 +2298,47 @@ export type Database = {
       recipe_ingredients: {
         Row: {
           commissary_item_id: string | null
+          conversion_factor: number | null
+          cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string
           id: string
+          ingredient_name: string | null
           inventory_stock_id: string
+          purchase_unit: string | null
           quantity: number
           recipe_id: string
+          recipe_unit: string | null
           unit: Database["public"]["Enums"]["inventory_unit"]
         }
         Insert: {
           commissary_item_id?: string | null
+          conversion_factor?: number | null
+          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string
           id?: string
+          ingredient_name?: string | null
           inventory_stock_id: string
+          purchase_unit?: string | null
           quantity: number
           recipe_id: string
+          recipe_unit?: string | null
           unit: Database["public"]["Enums"]["inventory_unit"]
         }
         Update: {
           commissary_item_id?: string | null
+          conversion_factor?: number | null
+          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string
           id?: string
+          ingredient_name?: string | null
           inventory_stock_id?: string
+          purchase_unit?: string | null
           quantity?: number
           recipe_id?: string
+          recipe_unit?: string | null
           unit?: Database["public"]["Enums"]["inventory_unit"]
         }
         Relationships: [
@@ -2328,40 +2376,52 @@ export type Database = {
         Row: {
           commissary_item_id: string | null
           commissary_item_name: string | null
+          conversion_factor: number | null
+          cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string | null
           id: string
           ingredient_category: string | null
           ingredient_name: string
           ingredient_type: string | null
+          purchase_unit: string | null
           quantity: number
           recipe_template_id: string
+          recipe_unit: string | null
           unit: string
         }
         Insert: {
           commissary_item_id?: string | null
           commissary_item_name?: string | null
+          conversion_factor?: number | null
+          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
           id?: string
           ingredient_category?: string | null
           ingredient_name: string
           ingredient_type?: string | null
+          purchase_unit?: string | null
           quantity: number
           recipe_template_id: string
+          recipe_unit?: string | null
           unit: string
         }
         Update: {
           commissary_item_id?: string | null
           commissary_item_name?: string | null
+          conversion_factor?: number | null
+          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
           id?: string
           ingredient_category?: string | null
           ingredient_name?: string
           ingredient_type?: string | null
+          purchase_unit?: string | null
           quantity?: number
           recipe_template_id?: string
+          recipe_unit?: string | null
           unit?: string
         }
         Relationships: [
@@ -3257,6 +3317,10 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_cost_per_recipe_unit: {
+        Args: { purchase_cost: number; conversion_factor: number }
+        Returns: number
+      }
       calculate_recipe_cost: {
         Args: { recipe_id: number }
         Returns: number

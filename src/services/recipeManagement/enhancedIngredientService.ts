@@ -39,14 +39,19 @@ export const saveEnhancedRecipeIngredients = async (
       .delete()
       .eq('recipe_id', recipeId);
 
-    // Insert new ingredients - using existing schema fields
+    // Insert new ingredients - using existing schema fields with proper typing
     const ingredientData = ingredients.map(ingredient => ({
       recipe_id: recipeId,
       inventory_stock_id: ingredient.commissary_item_id || '', // Required field
       quantity: ingredient.quantity,
-      unit: ingredient.recipe_unit,
+      unit: ingredient.recipe_unit as any, // Cast to match enum type
       cost_per_unit: ingredient.cost_per_unit || 0,
-      commissary_item_id: ingredient.commissary_item_id
+      commissary_item_id: ingredient.commissary_item_id,
+      ingredient_name: ingredient.ingredient_name,
+      recipe_unit: ingredient.recipe_unit,
+      purchase_unit: ingredient.purchase_unit,
+      conversion_factor: ingredient.conversion_factor || 1,
+      cost_per_recipe_unit: ingredient.cost_per_recipe_unit || 0
     }));
 
     const { error: ingredientError } = await supabase
@@ -111,7 +116,11 @@ export const saveEnhancedTemplateIngredients = async (
       cost_per_unit: ingredient.cost_per_unit || 0,
       ingredient_category: 'ingredient',
       ingredient_type: 'raw_material',
-      commissary_item_id: ingredient.commissary_item_id
+      commissary_item_id: ingredient.commissary_item_id,
+      recipe_unit: ingredient.recipe_unit,
+      purchase_unit: ingredient.purchase_unit,
+      conversion_factor: ingredient.conversion_factor || 1,
+      cost_per_recipe_unit: ingredient.cost_per_recipe_unit || 0
     }));
 
     const { error: ingredientError } = await supabase
@@ -164,8 +173,12 @@ export const getInventoryDeductionRequirements = async (
     const deductionRequirements = [];
 
     for (const ingredient of ingredients) {
-      const mapping = ingredient.inventory_conversion_mappings?.[0];
-      if (mapping) {
+      const mappings = Array.isArray(ingredient.inventory_conversion_mappings) 
+        ? ingredient.inventory_conversion_mappings 
+        : [ingredient.inventory_conversion_mappings];
+      
+      const mapping = mappings[0];
+      if (mapping && typeof mapping === 'object') {
         // Calculate how much to deduct from bulk inventory
         const recipeQuantityNeeded = ingredient.quantity * quantity;
         const bulkDeductionQuantity = recipeQuantityNeeded / mapping.conversion_factor;
