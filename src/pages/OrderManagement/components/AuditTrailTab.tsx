@@ -4,16 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, RefreshCw, Filter } from "lucide-react";
+import { Search, RefreshCw, Filter, AlertCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrderAuditTrail } from "@/types/orderManagement";
 import { fetchAuditTrail, getAuditTrailSummary } from "@/services/orderManagement/auditTrailService";
 import { useAuth } from "@/contexts/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function AuditTrailTab() {
   const { user } = useAuth();
   const [auditTrail, setAuditTrail] = useState<OrderAuditTrail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [orderTypeFilter, setOrderTypeFilter] = useState<string>('all');
   const [summary, setSummary] = useState<any>(null);
@@ -21,6 +23,10 @@ export function AuditTrailTab() {
   const loadAuditTrail = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      console.log('Loading audit trail for user:', user?.email);
+      
       const storeId = user?.storeIds?.[0];
       const orderType = orderTypeFilter === 'all' ? undefined : orderTypeFilter;
       
@@ -29,10 +35,14 @@ export function AuditTrailTab() {
         getAuditTrailSummary(storeId)
       ]);
       
+      console.log('Loaded audit data:', auditData);
+      console.log('Loaded summary data:', summaryData);
+      
       setAuditTrail(auditData);
       setSummary(summaryData);
     } catch (error) {
       console.error('Error loading audit trail:', error);
+      setError('Failed to load audit trail data');
     } finally {
       setLoading(false);
     }
@@ -68,6 +78,33 @@ export function AuditTrailTab() {
     trail.change_reason?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     trail.new_status?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Order Audit Trail</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error}. Please try refreshing the page or contact support if the issue persists.
+            </AlertDescription>
+          </Alert>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={loadAuditTrail}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
