@@ -201,20 +201,24 @@ export const getInventoryDeductionRequirements = async (
           mappingData !== null &&
           'conversion_factor' in mappingData && 
           'inventory_stock_id' in mappingData) {
+        
+        // Type assertion after validation to help TypeScript understand the type
+        const validMapping = mappingData as { conversion_factor: number; inventory_stock_id: string };
+        
         // Calculate how much to deduct from bulk inventory
         const recipeQuantityNeeded = ingredient.quantity * quantity;
-        const bulkDeductionQuantity = recipeQuantityNeeded / mappingData.conversion_factor;
+        const bulkDeductionQuantity = recipeQuantityNeeded / validMapping.conversion_factor;
 
         // Get inventory item details
         const { data: inventoryItem } = await supabase
           .from('inventory_stock')
           .select('item, unit')
-          .eq('id', mappingData.inventory_stock_id)
+          .eq('id', validMapping.inventory_stock_id)
           .single();
 
         if (inventoryItem) {
           deductionRequirements.push({
-            inventory_stock_id: mappingData.inventory_stock_id,
+            inventory_stock_id: validMapping.inventory_stock_id,
             item_name: inventoryItem.item,
             deduction_quantity: bulkDeductionQuantity,
             unit: inventoryItem.unit
