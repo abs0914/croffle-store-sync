@@ -21,7 +21,12 @@ export const fetchDiscrepancyResolutions = async (): Promise<GRNDiscrepancyResol
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    // Type cast the resolution_type to ensure it matches our interface
+    return (data || []).map(resolution => ({
+      ...resolution,
+      resolution_type: resolution.resolution_type as 'replace' | 'refund'
+    }));
   } catch (error) {
     console.error('Error fetching discrepancy resolutions:', error);
     toast.error('Failed to fetch discrepancy resolutions');
@@ -57,7 +62,12 @@ export const createDiscrepancyResolution = async (
     if (error) throw error;
     
     toast.success(`${resolutionType === 'replace' ? 'Replacement' : 'Refund'} request created successfully`);
-    return data;
+    
+    // Type cast the resolution_type to ensure it matches our interface
+    return {
+      ...data,
+      resolution_type: data.resolution_type as 'replace' | 'refund'
+    };
   } catch (error) {
     console.error('Error creating discrepancy resolution:', error);
     toast.error('Failed to create discrepancy resolution');
