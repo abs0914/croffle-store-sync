@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { PurchaseOrder, PurchaseOrderItem } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -48,6 +47,9 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
     // Generate order number
     const orderNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
+    console.log('Creating purchase order with order number:', orderNumber);
+    console.log('Order data:', orderData);
+    
     // Create purchase order
     const { data: purchaseOrder, error: orderError } = await supabase
       .from('purchase_orders')
@@ -65,23 +67,88 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
       .select()
       .single();
 
-    if (orderError) throw orderError;
+    if (orderError) {
+      console.error('Error creating purchase order:', orderError);
+      throw orderError;
+    }
 
-    // Create purchase order items
+    console.log('Purchase order created:', purchaseOrder);
+
+    // Process items - properly handle commissary to inventory stock mapping
     if (orderData.items.length > 0) {
-      const { error: itemsError } = await supabase
-        .from('purchase_order_items')
-        .insert(
-          orderData.items.map(item => ({
-            purchase_order_id: purchaseOrder.id,
-            inventory_stock_id: item.inventory_stock_id,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            specifications: item.specifications
-          }))
-        );
+      const purchaseOrderItems = [];
+      
+      for (const item of orderData.items) {
+        // The inventory_stock_id is actually a commissary_item_id, so we need to map it
+        const { data: commissaryItem, error: commissaryError } = await supabase
+          .from('commissary_inventory')
+          .select('*')
+          .eq('id', item.inventory_stock_id)
+          .single();
 
-      if (itemsError) throw itemsError;
+        if (commissaryError) {
+          console.error('Error fetching commissary item:', commissaryError);
+          continue;
+        }
+
+        // Check if inventory stock exists for this item in the store
+        let { data: inventoryStock, error: inventoryError } = await supabase
+          .from('inventory_stock')
+          .select('*')
+          .eq('store_id', orderData.store_id)
+          .eq('item', commissaryItem.name)
+          .eq('unit', commissaryItem.unit)
+          .maybeSingle();
+
+        if (inventoryError && inventoryError.code !== 'PGRST116') {
+          console.error('Error checking inventory stock:', inventoryError);
+          continue;
+        }
+
+        // If inventory stock doesn't exist, create it
+        if (!inventoryStock) {
+          const { data: newInventoryStock, error: createError } = await supabase
+            .from('inventory_stock')
+            .insert({
+              store_id: orderData.store_id,
+              item: commissaryItem.name,
+              unit: commissaryItem.unit,
+              stock_quantity: 0,
+              cost: commissaryItem.unit_cost || 0,
+              is_active: true
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error('Error creating inventory stock:', createError);
+            continue;
+          }
+          
+          inventoryStock = newInventoryStock;
+        }
+
+        purchaseOrderItems.push({
+          purchase_order_id: purchaseOrder.id,
+          inventory_stock_id: inventoryStock.id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          specifications: item.specifications
+        });
+      }
+
+      console.log('Creating purchase order items:', purchaseOrderItems);
+
+      if (purchaseOrderItems.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('purchase_order_items')
+          .insert(purchaseOrderItems);
+
+        if (itemsError) {
+          console.error('Error creating purchase order items:', itemsError);
+          throw itemsError;
+        }
+      }
     }
 
     toast.success('Purchase order created successfully');
