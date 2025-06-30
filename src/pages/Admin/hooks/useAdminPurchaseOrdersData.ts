@@ -184,7 +184,7 @@ export const useAdminPurchaseOrdersData = () => {
   const orderMetrics: PurchaseOrderMetrics = useMemo(() => {
     const pendingOrders = orders.filter(order => order.status === 'pending').length;
     const approvedOrders = orders.filter(order => order.status === 'approved').length;
-    const completedOrders = orders.filter(order => order.status === 'completed').length;
+    const completedOrders = orders.filter(order => order.status === 'delivered' || order.status === 'completed').length;
     const totalValue = orders.reduce((sum, order) => sum + order.total_amount, 0);
 
     return {

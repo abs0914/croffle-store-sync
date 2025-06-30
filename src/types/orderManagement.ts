@@ -7,7 +7,7 @@ export interface PurchaseOrder {
   created_by: string;
   approved_by?: string;
   fulfilled_by?: string;
-  status: 'pending' | 'approved' | 'fulfilled' | 'delivered' | 'cancelled';
+  status: 'pending' | 'approved' | 'fulfilled' | 'delivered' | 'cancelled' | 'draft' | 'in_progress' | 'completed';
   total_amount: number;
   requested_delivery_date?: string;
   delivery_scheduled_date?: string;
