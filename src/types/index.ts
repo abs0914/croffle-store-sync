@@ -1,3 +1,4 @@
+
 // Core types
 export type { UserRole, User } from './user';
 export type { Store, StoreSettings } from './store';
@@ -18,7 +19,7 @@ export type { CommissaryPurchase, CommissaryPurchaseForm, PurchaseHistory } from
 export type { LocationType, LocationInfo } from './location';
 
 // Order management types
-export type { PurchaseOrder, PurchaseOrderItem, Supplier } from './orderManagement';
+export type { PurchaseOrder, PurchaseOrderItem } from './orderManagement';
 
 // Report types
 export * from './reports';
