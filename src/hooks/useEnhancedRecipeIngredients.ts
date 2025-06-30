@@ -41,29 +41,38 @@ export const useEnhancedRecipeIngredients = (recipeId?: string, templateId?: str
         if (data) {
           const mappedIngredients: EnhancedRecipeIngredient[] = data.map(ing => ({
             id: ing.id,
-            ingredient_name: ing.ingredient_name || 'Unknown',
-            recipe_unit: ing.recipe_unit || ing.unit,
-            purchase_unit: ing.purchase_unit,
+            ingredient_name: ing.commissary_inventory?.name || 'Unknown',
+            recipe_unit: ing.unit,
+            purchase_unit: ing.unit,
             quantity: ing.quantity,
-            conversion_factor: ing.conversion_factor || 1,
+            conversion_factor: 1,
             cost_per_unit: ing.cost_per_unit || 0,
-            cost_per_recipe_unit: ing.cost_per_recipe_unit || 0,
+            cost_per_recipe_unit: ing.cost_per_unit || 0,
             commissary_item_id: ing.commissary_item_id
           }));
           setIngredients(mappedIngredients);
         }
 
-        // Load bulk mappings
+        // Load bulk mappings from inventory conversion mappings
         const { data: mappingsData } = await supabase
           .from('inventory_conversion_mappings')
           .select(`
             *,
             inventory_stock(item, unit)
           `)
-          .eq('recipe_ingredient_name', ingredients.map(i => i.ingredient_name));
+          .in('recipe_ingredient_name', ingredients.map(i => i.ingredient_name));
 
-        // Transform mappings data
-        // This would need to be implemented based on the actual data structure
+        if (mappingsData) {
+          const mappings: BulkInventoryMapping[] = mappingsData.map(mapping => ({
+            recipe_ingredient_name: mapping.recipe_ingredient_name,
+            bulk_item_name: mapping.inventory_stock?.item || '',
+            bulk_item_id: mapping.inventory_stock_id,
+            conversion_factor: mapping.conversion_factor,
+            recipe_unit: mapping.recipe_ingredient_unit,
+            bulk_unit: mapping.inventory_stock?.unit || ''
+          }));
+          setBulkMappings(mappings);
+        }
         
       } else if (templateId) {
         // Load template ingredients
@@ -75,12 +84,12 @@ export const useEnhancedRecipeIngredients = (recipeId?: string, templateId?: str
         if (data) {
           const mappedIngredients: EnhancedRecipeIngredient[] = data.map(ing => ({
             ingredient_name: ing.ingredient_name,
-            recipe_unit: ing.recipe_unit || ing.unit,
-            purchase_unit: ing.purchase_unit,
+            recipe_unit: ing.unit,
+            purchase_unit: ing.unit,
             quantity: ing.quantity,
-            conversion_factor: ing.conversion_factor || 1,
+            conversion_factor: 1,
             cost_per_unit: ing.cost_per_unit || 0,
-            cost_per_recipe_unit: ing.cost_per_recipe_unit || 0,
+            cost_per_recipe_unit: ing.cost_per_unit || 0,
             commissary_item_id: ing.commissary_item_id
           }));
           setIngredients(mappedIngredients);

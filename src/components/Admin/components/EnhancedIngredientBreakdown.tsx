@@ -48,7 +48,6 @@ export function EnhancedIngredientBreakdown({
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [bulkMappings, setBulkMappings] = useState<BulkInventoryMapping[]>([]);
   const [commissaryItems, setCommissaryItems] = useState<any[]>([]);
-  const [unitConversions, setUnitConversions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -67,30 +66,25 @@ export function EnhancedIngredientBreakdown({
 
       setCommissaryItems(commissaryData || []);
 
-      // Load unit conversions
-      const { data: conversionsData } = await supabase
-        .from('ingredient_unit_conversions')
-        .select('*')
-        .order('ingredient_name');
-
-      setUnitConversions(conversionsData || []);
-
       // Load existing ingredients if editing
       if (recipeId) {
         const { data: ingredientsData } = await supabase
           .from('recipe_ingredients')
-          .select('*')
+          .select(`
+            *,
+            commissary_inventory(name, unit)
+          `)
           .eq('recipe_id', recipeId);
 
         if (ingredientsData) {
           const mappedIngredients = ingredientsData.map(ing => ({
             id: ing.id,
-            ingredient_name: ing.ingredient_name || 'Unknown',
-            recipe_unit: ing.recipe_unit || ing.unit,
+            ingredient_name: ing.commissary_inventory?.name || 'Unknown',
+            recipe_unit: ing.unit,
             quantity: ing.quantity,
-            cost_per_recipe_unit: ing.cost_per_recipe_unit || ing.cost_per_unit || 0,
-            purchase_unit: ing.purchase_unit,
-            conversion_factor: ing.conversion_factor || 1,
+            cost_per_recipe_unit: ing.cost_per_unit || 0,
+            purchase_unit: ing.unit,
+            conversion_factor: 1,
             bulk_inventory_item: ing.commissary_item_id
           }));
           setIngredients(mappedIngredients);
@@ -104,11 +98,11 @@ export function EnhancedIngredientBreakdown({
         if (templateIngredientsData) {
           const mappedIngredients = templateIngredientsData.map(ing => ({
             ingredient_name: ing.ingredient_name,
-            recipe_unit: ing.recipe_unit || ing.unit,
+            recipe_unit: ing.unit,
             quantity: ing.quantity,
-            cost_per_recipe_unit: ing.cost_per_recipe_unit || ing.cost_per_unit || 0,
-            purchase_unit: ing.purchase_unit,
-            conversion_factor: ing.conversion_factor || 1,
+            cost_per_recipe_unit: ing.cost_per_unit || 0,
+            purchase_unit: ing.unit,
+            conversion_factor: 1,
             bulk_inventory_item: ing.commissary_item_id
           }));
           setIngredients(mappedIngredients);
@@ -136,20 +130,6 @@ export function EnhancedIngredientBreakdown({
     setIngredients(prev => prev.map((ingredient, i) => {
       if (i === index) {
         const updated = { ...ingredient, [field]: value };
-        
-        // Auto-calculate conversion if both units are provided
-        if (field === 'ingredient_name' || field === 'recipe_unit' || field === 'purchase_unit') {
-          const conversion = unitConversions.find(c => 
-            c.ingredient_name.toLowerCase() === updated.ingredient_name.toLowerCase() &&
-            c.from_unit === updated.purchase_unit &&
-            c.to_unit === updated.recipe_unit
-          );
-          
-          if (conversion) {
-            updated.conversion_factor = conversion.conversion_factor;
-          }
-        }
-        
         return updated;
       }
       return ingredient;
@@ -194,13 +174,6 @@ export function EnhancedIngredientBreakdown({
     }
   };
 
-  const getConversionSuggestion = (ingredientName: string, recipeUnit: string) => {
-    return unitConversions.find(c => 
-      c.ingredient_name.toLowerCase().includes(ingredientName.toLowerCase()) &&
-      c.to_unit === recipeUnit
-    );
-  };
-
   if (loading) {
     return (
       <Card>
@@ -240,128 +213,110 @@ export function EnhancedIngredientBreakdown({
               </div>
 
               <div className="space-y-3">
-                {ingredients.map((ingredient, index) => {
-                  const conversionSuggestion = getConversionSuggestion(
-                    ingredient.ingredient_name, 
-                    ingredient.recipe_unit
-                  );
-
-                  return (
-                    <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
-                      <div className="col-span-3">
-                        <Label>Ingredient Name</Label>
-                        <Input
-                          value={ingredient.ingredient_name}
-                          onChange={(e) => updateIngredient(index, 'ingredient_name', e.target.value)}
-                          placeholder="e.g., Croissant"
-                          disabled={readOnly}
-                        />
-                      </div>
-                      
-                      <div className="col-span-2">
-                        <Label>Recipe Unit</Label>
-                        <Select
-                          value={ingredient.recipe_unit}
-                          onValueChange={(value) => updateIngredient(index, 'recipe_unit', value)}
-                          disabled={readOnly}
+                {ingredients.map((ingredient, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-lg">
+                    <div className="col-span-3">
+                      <Label>Ingredient Name</Label>
+                      <Input
+                        value={ingredient.ingredient_name}
+                        onChange={(e) => updateIngredient(index, 'ingredient_name', e.target.value)}
+                        placeholder="e.g., Croissant"
+                        disabled={readOnly}
+                      />
+                    </div>
+                    
+                    <div className="col-span-2">
+                      <Label>Recipe Unit</Label>
+                      <Select
+                        value={ingredient.recipe_unit}
+                        onValueChange={(value) => updateIngredient(index, 'recipe_unit', value)}
+                        disabled={readOnly}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="piece">piece</SelectItem>
+                          <SelectItem value="serving">serving</SelectItem>
+                          <SelectItem value="portion">portion</SelectItem>
+                          <SelectItem value="pair">pair</SelectItem>
+                          <SelectItem value="scoop">scoop</SelectItem>
+                          <SelectItem value="cup">cup</SelectItem>
+                          <SelectItem value="tbsp">tbsp</SelectItem>
+                          <SelectItem value="tsp">tsp</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="col-span-1">
+                      <Label>Quantity</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={ingredient.quantity}
+                        onChange={(e) => updateIngredient(index, 'quantity', parseFloat(e.target.value) || 0)}
+                        disabled={readOnly}
+                      />
+                    </div>
+                    
+                    <div className="col-span-2">
+                      <Label>Cost per Unit (₱)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={ingredient.cost_per_recipe_unit}
+                        onChange={(e) => updateIngredient(index, 'cost_per_recipe_unit', parseFloat(e.target.value) || 0)}
+                        disabled={readOnly}
+                      />
+                    </div>
+                    
+                    <div className="col-span-2">
+                      <Label>Purchase Unit</Label>
+                      <Select
+                        value={ingredient.purchase_unit || ''}
+                        onValueChange={(value) => updateIngredient(index, 'purchase_unit', value)}
+                        disabled={readOnly}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="box">box</SelectItem>
+                          <SelectItem value="package">package</SelectItem>
+                          <SelectItem value="kg">kg</SelectItem>
+                          <SelectItem value="liters">liters</SelectItem>
+                          <SelectItem value="pieces">pieces</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="col-span-1">
+                      <Label>Conversion</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={ingredient.conversion_factor || 1}
+                        onChange={(e) => updateIngredient(index, 'conversion_factor', parseFloat(e.target.value) || 1)}
+                        disabled={readOnly}
+                      />
+                    </div>
+                    
+                    <div className="col-span-1">
+                      {!readOnly && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeIngredient(index)}
                         >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="piece">piece</SelectItem>
-                            <SelectItem value="serving">serving</SelectItem>
-                            <SelectItem value="portion">portion</SelectItem>
-                            <SelectItem value="pair">pair</SelectItem>
-                            <SelectItem value="scoop">scoop</SelectItem>
-                            <SelectItem value="cup">cup</SelectItem>
-                            <SelectItem value="tbsp">tbsp</SelectItem>
-                            <SelectItem value="tsp">tsp</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="col-span-1">
-                        <Label>Quantity</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          value={ingredient.quantity}
-                          onChange={(e) => updateIngredient(index, 'quantity', parseFloat(e.target.value) || 0)}
-                          disabled={readOnly}
-                        />
-                      </div>
-                      
-                      <div className="col-span-2">
-                        <Label>Cost per Unit (₱)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={ingredient.cost_per_recipe_unit}
-                          onChange={(e) => updateIngredient(index, 'cost_per_recipe_unit', parseFloat(e.target.value) || 0)}
-                          disabled={readOnly}
-                        />
-                      </div>
-                      
-                      <div className="col-span-2">
-                        <Label>Purchase Unit</Label>
-                        <Select
-                          value={ingredient.purchase_unit || ''}
-                          onValueChange={(value) => updateIngredient(index, 'purchase_unit', value)}
-                          disabled={readOnly}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select unit" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="box">box</SelectItem>
-                            <SelectItem value="package">package</SelectItem>
-                            <SelectItem value="kg">kg</SelectItem>
-                            <SelectItem value="liters">liters</SelectItem>
-                            <SelectItem value="pieces">pieces</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="col-span-1">
-                        <Label>Conversion</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          value={ingredient.conversion_factor || 1}
-                          onChange={(e) => updateIngredient(index, 'conversion_factor', parseFloat(e.target.value) || 1)}
-                          disabled={readOnly}
-                        />
-                      </div>
-                      
-                      <div className="col-span-1">
-                        {!readOnly && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeIngredient(index)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      {conversionSuggestion && (
-                        <div className="col-span-12">
-                          <Alert>
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertDescription>
-                              Suggested conversion: 1 {conversionSuggestion.from_unit} = {conversionSuggestion.conversion_factor} {conversionSuggestion.to_unit}
-                            </AlertDescription>
-                          </Alert>
-                        </div>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       )}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </TabsContent>
 
