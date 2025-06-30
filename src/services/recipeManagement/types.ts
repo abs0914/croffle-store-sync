@@ -31,13 +31,16 @@ export interface RecipeTemplateIngredient {
   cost_per_unit?: number;
 }
 
-// New interface for ingredient input in templates
+// Enhanced interface for ingredient input in templates with cost fields
 export interface RecipeTemplateIngredientInput {
   ingredient_name: string;
   ingredient_category: string;
   ingredient_type: string;
   quantity: number;
   unit: string;
+  cost_per_unit?: number;
+  purchase_unit?: string;
+  conversion_factor?: number;
 }
 
 // Available ingredient categories and types

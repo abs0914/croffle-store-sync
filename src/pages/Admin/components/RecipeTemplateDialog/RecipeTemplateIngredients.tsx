@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Calculator } from 'lucide-react';
 import { RecipeTemplateIngredientInput, INGREDIENT_CATEGORIES, INGREDIENT_TYPES } from '@/services/recipeManagement/types';
 import { fetchOrderableItems } from '@/services/inventoryManagement/commissaryInventoryService';
 import { CommissaryInventoryItem } from '@/types/commissary';
@@ -56,7 +56,10 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       ingredient_category: 'ingredient',
       ingredient_type: 'raw_material',
       quantity: 1,
-      unit: 'g'
+      unit: 'g',
+      cost_per_unit: 0,
+      purchase_unit: 'g',
+      conversion_factor: 1
     }]);
   };
 
@@ -70,18 +73,31 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
     setIngredients(prev => prev.filter((_, i) => i !== index));
   };
 
+  const calculateTotalCost = () => {
+    return ingredients.reduce((total, ingredient) => {
+      const cost = (ingredient.cost_per_unit || 0) * ingredient.quantity;
+      return total + cost;
+    }, 0);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Ingredients</CardTitle>
-        <Button type="button" onClick={addIngredient} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Ingredient
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calculator className="h-4 w-4" />
+            <span>Total Cost: ₱{calculateTotalCost().toFixed(2)}</span>
+          </div>
+          <Button type="button" onClick={addIngredient} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Ingredient
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {ingredients.map((ingredient, index) => (
-          <div key={index} className="grid grid-cols-6 gap-2 items-end">
+          <div key={index} className="grid grid-cols-9 gap-2 items-end p-3 border rounded-lg">
             <div>
               <Label>Ingredient Name</Label>
               {isLoading ? (
@@ -187,6 +203,40 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <Label>Cost per Unit (₱)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={ingredient.cost_per_unit || 0}
+                onChange={(e) => updateIngredient(index, 'cost_per_unit', parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <Label>Purchase Unit</Label>
+              <Input
+                type="text"
+                value={ingredient.purchase_unit || ''}
+                onChange={(e) => updateIngredient(index, 'purchase_unit', e.target.value)}
+                placeholder="e.g., pack, kg"
+              />
+            </div>
+
+            <div>
+              <Label>Conversion Factor</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.1"
+                value={ingredient.conversion_factor || 1}
+                onChange={(e) => updateIngredient(index, 'conversion_factor', parseFloat(e.target.value) || 1)}
+                placeholder="1.0"
+              />
+            </div>
             
             <Button
               type="button"
@@ -203,6 +253,18 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
           <p className="text-muted-foreground text-center py-4">
             No ingredients added yet. Click "Add Ingredient" to get started.
           </p>
+        )}
+
+        {ingredients.length > 0 && (
+          <div className="mt-4 p-4 bg-muted rounded-lg">
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Recipe Cost Summary</span>
+              <span className="text-lg font-bold">₱{calculateTotalCost().toFixed(2)}</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Total ingredient cost for this recipe template
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>
