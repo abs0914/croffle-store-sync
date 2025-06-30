@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { GRNDiscrepancyResolution } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -22,10 +21,11 @@ export const fetchDiscrepancyResolutions = async (): Promise<GRNDiscrepancyResol
 
     if (error) throw error;
     
-    // Type cast the resolution_type to ensure it matches our interface
+    // Type cast both resolution_type and resolution_status to ensure they match our interface
     return (data || []).map(resolution => ({
       ...resolution,
-      resolution_type: resolution.resolution_type as 'replace' | 'refund'
+      resolution_type: resolution.resolution_type as 'replace' | 'refund',
+      resolution_status: resolution.resolution_status as 'pending' | 'approved' | 'rejected' | 'completed'
     }));
   } catch (error) {
     console.error('Error fetching discrepancy resolutions:', error);
@@ -63,10 +63,11 @@ export const createDiscrepancyResolution = async (
     
     toast.success(`${resolutionType === 'replace' ? 'Replacement' : 'Refund'} request created successfully`);
     
-    // Type cast the resolution_type to ensure it matches our interface
+    // Type cast both resolution_type and resolution_status to ensure they match our interface
     return {
       ...data,
-      resolution_type: data.resolution_type as 'replace' | 'refund'
+      resolution_type: data.resolution_type as 'replace' | 'refund',
+      resolution_status: data.resolution_status as 'pending' | 'approved' | 'rejected' | 'completed'
     };
   } catch (error) {
     console.error('Error creating discrepancy resolution:', error);
