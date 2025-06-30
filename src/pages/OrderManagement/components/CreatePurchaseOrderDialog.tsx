@@ -227,11 +227,11 @@ export function CreatePurchaseOrderDialog({
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-sm">{item.name}</h4>
                         <Badge variant="secondary" className="text-xs">
-                          {item.current_stock} {item.unit}
+                          {item.current_stock} {item.uom}
                         </Badge>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Cost: ₱{item.unit_cost?.toFixed(2) || '0.00'} per {item.unit}
+                        Cost: ₱{item.unit_cost?.toFixed(2) || '0.00'} per {item.uom}
                       </div>
                       <Button
                         variant="outline"
