@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { GoodsReceivedNote, GRNItem, PurchaseOrder } from "@/types/orderManagement";
 import { toast } from "sonner";
+import { logAuditTrailEntry } from "./auditTrailService";
 
 export const fetchGRNs = async (storeId?: string): Promise<GoodsReceivedNote[]> => {
   try {
@@ -220,6 +221,20 @@ export const createGRNWithItems = async (
     // Create discrepancy resolutions for items with issues
     await createItemDiscrepancyResolutions(fullGRN, grnItems);
 
+    // Log audit trail entry
+    const itemsWithIssues = grnItems.filter(item => 
+      item.quality_status !== 'good' || item.received_quantity === 0
+    ).length;
+
+    await logAuditTrailEntry(
+      grn.id,
+      'grn',
+      'created',
+      undefined,
+      'completed',
+      `Enhanced GRN created with ${grnItems.length} items (${itemsWithIssues} with issues)`
+    );
+
     toast.success('GRN created successfully with item-level tracking');
     return fullGRN;
   } catch (error) {
@@ -324,6 +339,16 @@ export const createGRN = async (
     if (data && shouldCreateDiscrepancyResolution(data)) {
       await createAutomaticDiscrepancyResolution(data);
     }
+
+    // Log audit trail entry
+    await logAuditTrailEntry(
+      data.id,
+      'grn',
+      'created',
+      undefined,
+      'completed',
+      'Basic GRN created'
+    );
 
     toast.success('GRN created successfully - Purchase order automatically completed');
     return data;

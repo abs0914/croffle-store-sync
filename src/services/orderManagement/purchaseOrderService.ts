@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { PurchaseOrder, PurchaseOrderItem } from "@/types/orderManagement";
 import { toast } from "sonner";
+import { logAuditTrailEntry } from "./auditTrailService";
 
 interface CreatePurchaseOrderData {
   store_id: string;
@@ -165,6 +166,16 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
       }
     }
 
+    // Log audit trail entry
+    await logAuditTrailEntry(
+      purchaseOrder.id,
+      'purchase',
+      'created',
+      undefined,
+      orderData.status,
+      `Purchase order created with ${orderData.items.length} items`
+    );
+
     toast.success('Purchase order created successfully');
     return purchaseOrder;
   } catch (error) {
@@ -179,12 +190,31 @@ export const updatePurchaseOrder = async (
   updates: Partial<PurchaseOrder>
 ): Promise<boolean> => {
   try {
+    // Get current order to track status changes
+    const { data: currentOrder } = await supabase
+      .from('purchase_orders')
+      .select('status')
+      .eq('id', id)
+      .single();
+
     const { error } = await supabase
       .from('purchase_orders')
       .update(updates)
       .eq('id', id);
 
     if (error) throw error;
+
+    // Log audit trail if status changed
+    if (updates.status && currentOrder?.status !== updates.status) {
+      await logAuditTrailEntry(
+        id,
+        'purchase',
+        'status_change',
+        currentOrder?.status,
+        updates.status,
+        'Purchase order status updated'
+      );
+    }
 
     toast.success('Purchase order updated successfully');
     return true;
@@ -215,6 +245,16 @@ export const fulfillPurchaseOrder = async (
 
     if (error) throw error;
 
+    // Log audit trail entry
+    await logAuditTrailEntry(
+      id,
+      'purchase',
+      'fulfilled',
+      undefined,
+      'fulfilled',
+      delivery_notes || 'Purchase order fulfilled'
+    );
+
     toast.success('Purchase order fulfilled successfully');
     return true;
   } catch (error) {
@@ -239,6 +279,16 @@ export const deliverPurchaseOrder = async (
 
     if (error) throw error;
 
+    // Log audit trail entry
+    await logAuditTrailEntry(
+      id,
+      'purchase',
+      'delivered',
+      'fulfilled',
+      'delivered',
+      delivery_notes || 'Purchase order delivered'
+    );
+
     toast.success('Purchase order marked as delivered');
     return true;
   } catch (error) {
@@ -256,6 +306,16 @@ export const deletePurchaseOrder = async (id: string): Promise<boolean> => {
       .eq('id', id);
 
     if (error) throw error;
+
+    // Log audit trail entry
+    await logAuditTrailEntry(
+      id,
+      'purchase',
+      'cancelled',
+      undefined,
+      'cancelled',
+      'Purchase order cancelled'
+    );
 
     toast.success('Purchase order cancelled successfully');
     return true;
