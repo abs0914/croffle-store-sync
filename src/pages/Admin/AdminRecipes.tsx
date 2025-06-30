@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminRecipesHeader } from './components/AdminRecipesHeader';
@@ -16,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Package } from 'lucide-react';
+import { RecipeDeploymentDialog } from './components/RecipeDeploymentDialog';
 
 export default function AdminRecipes() {
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
@@ -25,6 +25,9 @@ export default function AdminRecipes() {
   const [formCategory, setFormCategory] = useState<string>('');
   const [formSubcategory, setFormSubcategory] = useState<string>('');
   const [selectedStoreForDeployment, setSelectedStoreForDeployment] = useState<string>('');
+  const [isDeploymentDialogOpen, setIsDeploymentDialogOpen] = useState(false);
+  const [selectedTemplateForDeployment, setSelectedTemplateForDeployment] = useState<any>(null);
+  const [selectedStoresForDeployment, setSelectedStoresForDeployment] = useState<Array<{ id: string; name: string }>>([]);
   
   const {
     recipes,
@@ -158,6 +161,27 @@ export default function AdminRecipes() {
     }
   };
 
+  const handleEnhancedDeployment = (template: any, selectedStores: Array<{ id: string; name: string }>) => {
+    setSelectedTemplateForDeployment(template);
+    setSelectedStoresForDeployment(selectedStores);
+    setIsDeploymentDialogOpen(true);
+  };
+
+  const handleDeploymentComplete = (results: any[]) => {
+    // Refresh recipes data after deployment
+    refreshRecipes();
+    
+    // Show detailed results
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+    
+    if (successCount > 0 && failCount === 0) {
+      toast.success(`Successfully deployed to all ${successCount} store(s)`);
+    } else if (successCount > 0 && failCount > 0) {
+      toast.warning(`Deployed to ${successCount} store(s), failed on ${failCount} store(s)`);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -237,6 +261,7 @@ export default function AdminRecipes() {
             onSelectAll={handleSelectAll}
             onRefresh={refreshRecipes}
             stores={stores}
+            onEnhancedDeployment={handleEnhancedDeployment}
           />
         </TabsContent>
 
@@ -254,6 +279,15 @@ export default function AdminRecipes() {
         onClose={() => setIsRecipeFormOpen(false)}
         category={formCategory}
         subcategory={formSubcategory}
+      />
+
+      <RecipeDeploymentDialog
+        isOpen={isDeploymentDialogOpen}
+        onClose={() => setIsDeploymentDialogOpen(false)}
+        templateId={selectedTemplateForDeployment?.id || ''}
+        templateName={selectedTemplateForDeployment?.name || ''}
+        selectedStores={selectedStoresForDeployment}
+        onDeploymentComplete={handleDeploymentComplete}
       />
     </div>
   );
