@@ -14,6 +14,8 @@ interface PurchaseOrderMetrics {
 }
 
 export const useAdminPurchaseOrdersData = () => {
+  console.log('🟡 useAdminPurchaseOrdersData hook initializing');
+  
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,11 +25,13 @@ export const useAdminPurchaseOrdersData = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🟡 useAdminPurchaseOrdersData useEffect triggered, dateRange:', dateRange);
     fetchPurchaseOrders();
     fetchStores();
   }, [dateRange]);
 
   const fetchPurchaseOrders = async () => {
+    console.log('🟡 fetchPurchaseOrders starting...');
     setIsLoading(true);
     try {
       console.log('Admin fetching purchase orders...');
@@ -35,10 +39,11 @@ export const useAdminPurchaseOrdersData = () => {
       const daysAgo = parseInt(dateRange);
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - daysAgo);
+      console.log('🟡 Date range:', daysAgo, 'days, starting from:', startDate.toISOString());
 
       // Check current user role first
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('Current user:', user?.id);
+      console.log('🟡 Current user:', user?.id, user?.email);
 
       const { data: userRole } = await supabase
         .from('app_users')
@@ -46,7 +51,7 @@ export const useAdminPurchaseOrdersData = () => {
         .eq('user_id', user?.id)
         .single();
       
-      console.log('User role data:', userRole);
+      console.log('🟡 User role data:', userRole);
 
       // Fetch ALL purchase orders from ALL stores without any store filtering for admins
       let query = supabase
@@ -63,30 +68,32 @@ export const useAdminPurchaseOrdersData = () => {
         .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: false });
 
+      console.log('🟡 Executing query...');
       const { data: ordersData, error: ordersError } = await query;
 
       if (ordersError) {
-        console.error('Error fetching purchase orders:', ordersError);
+        console.error('🔴 Error fetching purchase orders:', ordersError);
         throw ordersError;
       }
 
-      console.log('Admin fetched orders:', ordersData);
-      console.log('Number of orders fetched:', ordersData?.length || 0);
+      console.log('🟡 Admin fetched orders:', ordersData);
+      console.log('🟡 Number of orders fetched:', ordersData?.length || 0);
       
       // Log each order for debugging
       ordersData?.forEach(order => {
-        console.log(`Order ${order.order_number}: Status=${order.status}, Store=${order.store?.name || 'Unknown'}`);
+        console.log(`🟡 Order ${order.order_number}: Status=${order.status}, Store=${order.store?.name || 'Unknown'}`);
       });
 
       // Search specifically for the order mentioned by the user
       if (ordersData) {
         const specificOrder = ordersData.find(order => order.order_number === 'PO-1751204671373-8ver2imfi');
         if (specificOrder) {
-          console.log('Found specific order PO-1751204671373-8ver2imfi:', specificOrder);
+          console.log('🟢 Found specific order PO-1751204671373-8ver2imfi:', specificOrder);
         } else {
-          console.log('Order PO-1751204671373-8ver2imfi not found in results');
+          console.log('🔴 Order PO-1751204671373-8ver2imfi not found in results');
           
           // Try to fetch this specific order directly
+          console.log('🟡 Trying direct fetch of specific order...');
           const { data: directOrder, error: directError } = await supabase
             .from('purchase_orders')
             .select(`
@@ -102,23 +109,26 @@ export const useAdminPurchaseOrdersData = () => {
             .single();
           
           if (directError) {
-            console.error('Error fetching specific order:', directError);
+            console.error('🔴 Error fetching specific order:', directError);
           } else {
-            console.log('Direct fetch of specific order:', directOrder);
+            console.log('🟢 Direct fetch of specific order:', directOrder);
           }
         }
       }
 
+      console.log('🟡 Setting orders state with', ordersData?.length || 0, 'orders');
       setOrders(ordersData || []);
     } catch (error: any) {
-      console.error('Error fetching purchase orders:', error);
+      console.error('🔴 Error fetching purchase orders:', error);
       toast.error('Failed to load purchase orders');
     } finally {
+      console.log('🟡 fetchPurchaseOrders completed, setting isLoading to false');
       setIsLoading(false);
     }
   };
 
   const fetchStores = async () => {
+    console.log('🟡 fetchStores starting...');
     try {
       const { data, error } = await supabase
         .from('stores')
@@ -127,13 +137,14 @@ export const useAdminPurchaseOrdersData = () => {
         .order('name');
 
       if (error) {
+        console.error('🔴 Error fetching stores:', error);
         throw error;
       }
 
-      console.log('Fetched stores for admin:', data);
+      console.log('🟡 Fetched stores for admin:', data?.length || 0, 'stores');
       setStores(data as Store[] || []);
     } catch (error: any) {
-      console.error('Error fetching stores:', error);
+      console.error('🔴 Error fetching stores:', error);
       toast.error('Failed to load stores');
     }
   };

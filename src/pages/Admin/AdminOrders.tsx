@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AdminPurchaseOrdersHeader } from './components/AdminPurchaseOrdersHeader';
 import { AdminPurchaseOrdersMetrics } from './components/AdminPurchaseOrdersMetrics';
@@ -15,7 +14,11 @@ import { Button } from '@/components/ui/button';
 import { Plus, Globe, RefreshCw } from 'lucide-react';
 
 export default function AdminOrders() {
+  console.log('🔵 AdminOrders component mounting/rendering');
+  
   const { user } = useAuth();
+  console.log('🔵 AdminOrders user:', user?.email, 'role:', user?.role);
+  
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
@@ -38,6 +41,16 @@ export default function AdminOrders() {
     stores,
     bulkApproveOrders
   } = useAdminPurchaseOrdersData();
+
+  console.log('🔵 AdminOrders hook data:', {
+    ordersCount: orders.length,
+    filteredOrdersCount: filteredOrders.length,
+    storesCount: stores.length,
+    isLoading,
+    dateRange,
+    storeFilter,
+    statusFilter
+  });
 
   const handleSelectOrder = (orderId: string) => {
     setSelectedOrders(prev => 
