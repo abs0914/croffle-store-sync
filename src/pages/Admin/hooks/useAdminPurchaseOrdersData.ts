@@ -36,8 +36,20 @@ export const useAdminPurchaseOrdersData = () => {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - daysAgo);
 
-      // Fetch ALL purchase orders from ALL stores without any filtering
-      const { data: ordersData, error: ordersError } = await supabase
+      // Check current user role first
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Current user:', user?.id);
+
+      const { data: userRole } = await supabase
+        .from('app_users')
+        .select('role, store_ids')
+        .eq('user_id', user?.id)
+        .single();
+      
+      console.log('User role data:', userRole);
+
+      // Fetch ALL purchase orders from ALL stores without any store filtering for admins
+      let query = supabase
         .from('purchase_orders')
         .select(`
           *,
@@ -51,6 +63,8 @@ export const useAdminPurchaseOrdersData = () => {
         .gte('created_at', startDate.toISOString())
         .order('created_at', { ascending: false });
 
+      const { data: ordersData, error: ordersError } = await query;
+
       if (ordersError) {
         console.error('Error fetching purchase orders:', ordersError);
         throw ordersError;
@@ -63,6 +77,37 @@ export const useAdminPurchaseOrdersData = () => {
       ordersData?.forEach(order => {
         console.log(`Order ${order.order_number}: Status=${order.status}, Store=${order.store?.name || 'Unknown'}`);
       });
+
+      // Search specifically for the order mentioned by the user
+      if (ordersData) {
+        const specificOrder = ordersData.find(order => order.order_number === 'PO-1751204671373-8ver2imfi');
+        if (specificOrder) {
+          console.log('Found specific order PO-1751204671373-8ver2imfi:', specificOrder);
+        } else {
+          console.log('Order PO-1751204671373-8ver2imfi not found in results');
+          
+          // Try to fetch this specific order directly
+          const { data: directOrder, error: directError } = await supabase
+            .from('purchase_orders')
+            .select(`
+              *,
+              supplier:suppliers(*),
+              store:stores(id, name, address),
+              items:purchase_order_items(
+                *,
+                inventory_stock:inventory_stock(*)
+              )
+            `)
+            .eq('order_number', 'PO-1751204671373-8ver2imfi')
+            .single();
+          
+          if (directError) {
+            console.error('Error fetching specific order:', directError);
+          } else {
+            console.log('Direct fetch of specific order:', directOrder);
+          }
+        }
+      }
 
       setOrders(ordersData || []);
     } catch (error: any) {
