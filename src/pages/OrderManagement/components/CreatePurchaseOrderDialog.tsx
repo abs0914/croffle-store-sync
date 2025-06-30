@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Minus, AlertCircle, RefreshCw } from "lucide-react";
@@ -118,7 +117,6 @@ export function CreatePurchaseOrderDialog({
 
     setLoading(true);
     try {
-      // Remove location_type from orderData
       const orderData = {
         store_id: user.storeIds[0],
         created_by: user.id,
@@ -127,13 +125,16 @@ export function CreatePurchaseOrderDialog({
         requested_delivery_date: requestedDeliveryDate || undefined,
         notes: notes || undefined,
         items: orderItems.map(item => ({
-          inventory_stock_id: item.commissary_item_id, // Using commissary item ID temporarily
+          // Use the commissary item ID directly as inventory_stock_id for now
+          // This assumes the commissary items are linked to inventory stock
+          inventory_stock_id: item.commissary_item_id,
           quantity: item.quantity,
           unit_price: item.unit_price,
           specifications: item.specifications
         }))
       };
 
+      console.log('Creating purchase order with data:', orderData);
       const result = await createPurchaseOrder(orderData);
       if (result) {
         toast.success('Purchase order created successfully');
@@ -226,11 +227,11 @@ export function CreatePurchaseOrderDialog({
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-sm">{item.name}</h4>
                         <Badge variant="secondary" className="text-xs">
-                          {item.current_stock} {item.uom}
+                          {item.current_stock} {item.unit}
                         </Badge>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        Cost: ₱{item.unit_cost?.toFixed(2) || '0.00'} per {item.uom}
+                        Cost: ₱{item.unit_cost?.toFixed(2) || '0.00'} per {item.unit}
                       </div>
                       <Button
                         variant="outline"
