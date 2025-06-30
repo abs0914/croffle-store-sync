@@ -1,4 +1,3 @@
-
 export interface PurchaseOrder {
   id: string;
   order_number: string;
@@ -6,7 +5,7 @@ export interface PurchaseOrder {
   created_by: string;
   approved_by?: string;
   fulfilled_by?: string;
-  status: 'pending' | 'approved' | 'fulfilled' | 'delivered' | 'cancelled' | 'draft' | 'in_progress' | 'completed';
+  status: 'pending' | 'approved' | 'fulfilled' | 'delivered' | 'cancelled' | 'draft' | 'in_progress' | 'completed' | 'replaced' | 'refunded';
   total_amount: number;
   requested_delivery_date?: string;
   delivery_scheduled_date?: string;
@@ -97,4 +96,22 @@ export interface InventoryStock {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface GRNDiscrepancyResolution {
+  id: string;
+  grn_id: string;
+  purchase_order_id: string;
+  resolution_type: 'replace' | 'refund';
+  resolution_status: 'pending' | 'approved' | 'rejected' | 'completed';
+  resolution_notes?: string;
+  financial_adjustment?: number;
+  processed_by?: string;
+  approved_by?: string;
+  created_at: string;
+  updated_at: string;
+  approved_at?: string;
+  completed_at?: string;
+  grn?: GoodsReceivedNote;
+  purchase_order?: PurchaseOrder;
 }

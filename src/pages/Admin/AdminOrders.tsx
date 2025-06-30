@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { AdminPurchaseOrdersHeader } from './components/AdminPurchaseOrdersHeader';
 import { AdminPurchaseOrdersMetrics } from './components/AdminPurchaseOrdersMetrics';
 import { AdminPurchaseOrdersList } from './components/AdminPurchaseOrdersList';
 import { AdminPurchaseOrderBulkActions } from './components/AdminPurchaseOrderBulkActions';
+import { AdminDiscrepancyResolutions } from './components/AdminDiscrepancyResolutions';
 import { useAdminPurchaseOrdersData } from './hooks/useAdminPurchaseOrdersData';
 import { ViewPurchaseOrderDialog } from '@/pages/OrderManagement/components/ViewPurchaseOrderDialog';
 import { CreatePurchaseOrderDialog } from '@/pages/OrderManagement/components/CreatePurchaseOrderDialog';
@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AdminOrders() {
   console.log('🔵 AdminOrders component mounting/rendering');
@@ -31,6 +32,7 @@ export default function AdminOrders() {
   const [fulfillDialog, setFulfillDialog] = useState<{ orderId: string; isOpen: boolean }>({ orderId: '', isOpen: false });
   const [deliveryDate, setDeliveryDate] = useState('');
   const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [activeTab, setActiveTab] = useState('orders');
   
   const {
     orders,
@@ -185,45 +187,58 @@ export default function AdminOrders() {
         </div>
       </div>
 
-      <AdminPurchaseOrdersHeader 
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        storeFilter={storeFilter}
-        setStoreFilter={setStoreFilter}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        dateRange={dateRange}
-        setDateRange={setDateRange}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        stores={stores}
-      />
-      
-      <AdminPurchaseOrdersMetrics metrics={orderMetrics} />
-      
-      {selectedOrders.length > 0 && (
-        <AdminPurchaseOrderBulkActions 
-          selectedCount={selectedOrders.length}
-          onBulkAction={handleBulkAction}
-          onClearSelection={() => setSelectedOrders([])}
-        />
-      )}
-      
-      <AdminPurchaseOrdersList
-        orders={filteredOrders}
-        selectedOrders={selectedOrders}
-        viewMode={viewMode}
-        isLoading={isLoading}
-        onSelectOrder={handleSelectOrder}
-        onSelectAll={handleSelectAll}
-        onRefresh={refreshOrders}
-        onViewOrder={setViewingOrder}
-        onApproveOrder={handleApproveOrder}
-        onRejectOrder={handleRejectOrder}
-        onFulfillOrder={handleFulfillOrder}
-        onDeliverOrder={handleDeliverOrder}
-        stores={stores}
-      />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="orders">Purchase Orders</TabsTrigger>
+          <TabsTrigger value="discrepancies">Discrepancy Resolutions</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="orders" className="space-y-4">
+          <AdminPurchaseOrdersHeader 
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            storeFilter={storeFilter}
+            setStoreFilter={setStoreFilter}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            stores={stores}
+          />
+          
+          <AdminPurchaseOrdersMetrics metrics={orderMetrics} />
+          
+          {selectedOrders.length > 0 && (
+            <AdminPurchaseOrderBulkActions 
+              selectedCount={selectedOrders.length}
+              onBulkAction={handleBulkAction}
+              onClearSelection={() => setSelectedOrders([])}
+            />
+          )}
+          
+          <AdminPurchaseOrdersList
+            orders={filteredOrders}
+            selectedOrders={selectedOrders}
+            viewMode={viewMode}
+            isLoading={isLoading}
+            onSelectOrder={handleSelectOrder}
+            onSelectAll={handleSelectAll}
+            onRefresh={refreshOrders}
+            onViewOrder={setViewingOrder}
+            onApproveOrder={handleApproveOrder}
+            onRejectOrder={handleRejectOrder}
+            onFulfillOrder={handleFulfillOrder}
+            onDeliverOrder={handleDeliverOrder}
+            stores={stores}
+          />
+        </TabsContent>
+
+        <TabsContent value="discrepancies">
+          <AdminDiscrepancyResolutions />
+        </TabsContent>
+      </Tabs>
 
       {viewingOrder && (
         <ViewPurchaseOrderDialog

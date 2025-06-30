@@ -1028,6 +1028,69 @@ export type Database = {
           },
         ]
       }
+      grn_discrepancy_resolutions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          created_at: string | null
+          financial_adjustment: number | null
+          grn_id: string
+          id: string
+          processed_by: string | null
+          purchase_order_id: string
+          resolution_notes: string | null
+          resolution_status: string
+          resolution_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          financial_adjustment?: number | null
+          grn_id: string
+          id?: string
+          processed_by?: string | null
+          purchase_order_id: string
+          resolution_notes?: string | null
+          resolution_status?: string
+          resolution_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          financial_adjustment?: number | null
+          grn_id?: string
+          id?: string
+          processed_by?: string | null
+          purchase_order_id?: string
+          resolution_notes?: string | null
+          resolution_status?: string
+          resolution_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grn_discrepancy_resolutions_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_received_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_discrepancy_resolutions_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grn_items: {
         Row: {
           created_at: string | null
@@ -3366,6 +3429,8 @@ export type Database = {
         | "cancelled"
         | "fulfilled"
         | "delivered"
+        | "replaced"
+        | "refunded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3508,6 +3573,8 @@ export const Constants = {
         "cancelled",
         "fulfilled",
         "delivered",
+        "replaced",
+        "refunded",
       ],
     },
   },
