@@ -115,6 +115,169 @@ export const fetchAvailableOrdersForGRN = async (storeId?: string): Promise<Purc
   }
 };
 
+export const createGRNWithItems = async (
+  purchaseOrderId: string,
+  receivedBy: string,
+  grnItems: {
+    purchase_order_item_id: string;
+    received_quantity: number;
+    quality_status: 'good' | 'damaged' | 'missing' | 'partial';
+    item_remarks?: string;
+  }[],
+  overallRemarks?: string,
+  digitalSignature?: string
+): Promise<GoodsReceivedNote | null> => {
+  try {
+    // Check if GRN already exists for this purchase order
+    const { data: existingGRN, error: checkError } = await supabase
+      .from('goods_received_notes')
+      .select('id')
+      .eq('purchase_order_id', purchaseOrderId)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+    
+    if (existingGRN) {
+      toast.error('A GRN already exists for this purchase order');
+      return null;
+    }
+
+    const grnNumber = await generateGRNNumber();
+    
+    // Determine overall quality check status
+    const hasAnyIssues = grnItems.some(item => 
+      item.quality_status !== 'good' || item.received_quantity === 0
+    );
+    
+    // Create GRN
+    const { data: grn, error: grnError } = await supabase
+      .from('goods_received_notes')
+      .insert({
+        grn_number: grnNumber,
+        purchase_order_id: purchaseOrderId,
+        received_by: receivedBy,
+        quality_check_passed: !hasAnyIssues,
+        remarks: overallRemarks,
+        digital_signature: digitalSignature
+      })
+      .select()
+      .single();
+
+    if (grnError) throw grnError;
+
+    // Get purchase order items to get ordered quantities
+    const { data: purchaseOrderItems, error: poItemsError } = await supabase
+      .from('purchase_order_items')
+      .select('id, quantity')
+      .eq('purchase_order_id', purchaseOrderId);
+
+    if (poItemsError) throw poItemsError;
+
+    // Create GRN items with ordered quantities
+    const grnItemsToInsert = grnItems.map(item => {
+      const poItem = purchaseOrderItems?.find(poi => poi.id === item.purchase_order_item_id);
+      return {
+        grn_id: grn.id,
+        purchase_order_item_id: item.purchase_order_item_id,
+        ordered_quantity: poItem?.quantity || 0,
+        received_quantity: item.received_quantity,
+        quality_status: item.quality_status,
+        item_remarks: item.item_remarks
+      };
+    });
+
+    const { error: itemsError } = await supabase
+      .from('grn_items')
+      .insert(grnItemsToInsert);
+
+    if (itemsError) throw itemsError;
+
+    // Get the full GRN with relationships for return
+    const { data: fullGRN, error: fetchError } = await supabase
+      .from('goods_received_notes')
+      .select(`
+        *,
+        purchase_order:purchase_orders(
+          *,
+          items:purchase_order_items(
+            *,
+            inventory_stock:inventory_stock(*)
+          )
+        ),
+        items:grn_items(
+          *,
+          purchase_order_item:purchase_order_items(
+            *,
+            inventory_stock:inventory_stock(*)
+          )
+        )
+      `)
+      .eq('id', grn.id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Create discrepancy resolutions for items with issues
+    await createItemDiscrepancyResolutions(fullGRN, grnItems);
+
+    toast.success('GRN created successfully with item-level tracking');
+    return fullGRN;
+  } catch (error) {
+    console.error('Error creating GRN with items:', error);
+    toast.error('Failed to create goods received note');
+    return null;
+  }
+};
+
+const createItemDiscrepancyResolutions = async (
+  grn: GoodsReceivedNote, 
+  grnItems: { purchase_order_item_id: string; received_quantity: number; quality_status: string; item_remarks?: string }[]
+) => {
+  try {
+    const itemsWithIssues = grnItems.filter(item => 
+      item.quality_status !== 'good' || item.received_quantity === 0
+    );
+
+    if (itemsWithIssues.length === 0) return;
+
+    for (const item of itemsWithIssues) {
+      let resolutionType: 'replace' | 'refund' = 'replace';
+      let resolutionNotes = `Item-level discrepancy: ${item.quality_status}`;
+      
+      if (item.item_remarks) {
+        resolutionNotes += ` - ${item.item_remarks}`;
+      }
+
+      // Determine resolution type based on issue
+      if (item.quality_status === 'missing' || item.received_quantity === 0) {
+        resolutionType = 'refund';
+      } else if (item.quality_status === 'damaged') {
+        const damageKeywords = ['completely damaged', 'totally damaged', 'unusable'];
+        if (damageKeywords.some(keyword => 
+          item.item_remarks?.toLowerCase().includes(keyword)
+        )) {
+          resolutionType = 'refund';
+        }
+      }
+
+      await supabase
+        .from('grn_discrepancy_resolutions')
+        .insert({
+          grn_id: grn.id,
+          purchase_order_id: grn.purchase_order_id,
+          resolution_type: resolutionType,
+          resolution_notes: resolutionNotes,
+          financial_adjustment: 0,
+          processed_by: (await supabase.auth.getUser()).data.user?.id
+        });
+    }
+
+    console.log(`Created discrepancy resolutions for ${itemsWithIssues.length} items`);
+  } catch (error) {
+    console.error('Error creating item discrepancy resolutions:', error);
+  }
+};
+
 export const createGRN = async (
   purchaseOrderId: string,
   receivedBy: string

@@ -4,12 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Eye, AlertTriangle, Layers } from 'lucide-react';
 import { GoodsReceivedNote, PurchaseOrder } from '@/types/orderManagement';
 import { fetchGRNs, fetchAvailableOrdersForGRN } from '@/services/orderManagement/grnService';
 import { useAuth } from '@/contexts/auth';
 import { CreateGRNDialog } from './CreateGRNDialog';
+import { EnhancedCreateGRNDialog } from './EnhancedCreateGRNDialog';
 import { ViewGRNDialog } from './ViewGRNDialog';
+import { EnhancedViewGRNDialog } from './EnhancedViewGRNDialog';
 
 export function GRNTab() {
   const { user } = useAuth();
@@ -18,7 +20,9 @@ export function GRNTab() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEnhancedDialog, setShowEnhancedDialog] = useState(false);
   const [viewingGRN, setViewingGRN] = useState<GoodsReceivedNote | null>(null);
+  const [useEnhancedView, setUseEnhancedView] = useState(false);
 
   const loadData = async () => {
     if (!user?.storeIds?.[0]) return;
@@ -47,6 +51,11 @@ export function GRNTab() {
   const handleCreateSuccess = () => {
     loadData();
     setShowCreateDialog(false);
+    setShowEnhancedDialog(false);
+  };
+
+  const hasItemLevelData = (grn: GoodsReceivedNote) => {
+    return grn.items && grn.items.length > 0;
   };
 
   return (
@@ -54,10 +63,16 @@ export function GRNTab() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Goods Received Notes</CardTitle>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create GRN
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Basic GRN
+            </Button>
+            <Button onClick={() => setShowEnhancedDialog(true)}>
+              <Layers className="h-4 w-4 mr-2" />
+              Enhanced GRN
+            </Button>
+          </div>
         </div>
         
         <div className="relative">
@@ -88,55 +103,74 @@ export function GRNTab() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredGRNs.map((grn) => (
-              <div key={grn.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{grn.grn_number}</h3>
-                      <Badge variant="default">Completed</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Purchase Order: {grn.purchase_order?.order_number || 'N/A'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Items: {grn.purchase_order?.items?.length || 0}
-                    </p>
-                    {grn.quality_check_passed !== null && (
-                      <p className="text-sm">
-                        Quality Check: {grn.quality_check_passed ? '✅ Passed' : '❌ Failed'}
+            {filteredGRNs.map((grn) => {
+              const hasItemDetails = hasItemLevelData(grn);
+              const goodItemsCount = grn.items?.filter(item => item.quality_status === 'good').length || 0;
+              const totalItems = grn.items?.length || grn.purchase_order?.items?.length || 0;
+              
+              return (
+                <div key={grn.id} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{grn.grn_number}</h3>
+                        <Badge variant="default">Completed</Badge>
+                        {hasItemDetails && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Layers className="h-3 w-3 mr-1" />
+                            Enhanced
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Purchase Order: {grn.purchase_order?.order_number || 'N/A'}
                       </p>
-                    )}
+                      <p className="text-sm text-muted-foreground">
+                        {hasItemDetails ? (
+                          `Items: ${goodItemsCount}/${totalItems} in good condition`
+                        ) : (
+                          `Items: ${totalItems}`
+                        )}
+                      </p>
+                      {grn.quality_check_passed !== null && (
+                        <p className="text-sm">
+                          Quality Check: {grn.quality_check_passed ? '✅ Passed' : '❌ Failed'}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setViewingGRN(grn);
+                          setUseEnhancedView(hasItemDetails);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      {(grn.quality_check_passed === false || hasItemDetails) && (
+                        <Button variant="outline" size="sm" className="text-yellow-600">
+                          <AlertTriangle className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setViewingGRN(grn)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    {grn.quality_check_passed === false && (
-                      <Button variant="outline" size="sm" className="text-yellow-600">
-                        <AlertTriangle className="h-4 w-4" />
-                      </Button>
+                  {grn.remarks && (
+                    <p className="text-sm">{grn.remarks}</p>
+                  )}
+                  
+                  <div className="text-xs text-muted-foreground">
+                    Received: {new Date(grn.received_at).toLocaleDateString()}
+                    {grn.digital_signature && (
+                      <span className="ml-4">Signed by: {grn.digital_signature}</span>
                     )}
                   </div>
                 </div>
-                
-                {grn.remarks && (
-                  <p className="text-sm">{grn.remarks}</p>
-                )}
-                
-                <div className="text-xs text-muted-foreground">
-                  Received: {new Date(grn.received_at).toLocaleDateString()}
-                  {grn.digital_signature && (
-                    <span className="ml-4">Signed by: {grn.digital_signature}</span>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>
@@ -148,12 +182,29 @@ export function GRNTab() {
         onSuccess={handleCreateSuccess}
       />
 
+      <EnhancedCreateGRNDialog
+        open={showEnhancedDialog}
+        onOpenChange={setShowEnhancedDialog}
+        availableOrders={availableOrders}
+        onSuccess={handleCreateSuccess}
+      />
+
       {viewingGRN && (
-        <ViewGRNDialog
-          grn={viewingGRN}
-          open={!!viewingGRN}
-          onOpenChange={(open) => !open && setViewingGRN(null)}
-        />
+        <>
+          {useEnhancedView ? (
+            <EnhancedViewGRNDialog
+              grn={viewingGRN}
+              open={!!viewingGRN}
+              onOpenChange={(open) => !open && setViewingGRN(null)}
+            />
+          ) : (
+            <ViewGRNDialog
+              grn={viewingGRN}
+              open={!!viewingGRN}
+              onOpenChange={(open) => !open && setViewingGRN(null)}
+            />
+          )}
+        </>
       )}
     </Card>
   );
