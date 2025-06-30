@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { PurchaseOrder, PurchaseOrderItem } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -6,9 +7,11 @@ interface CreatePurchaseOrderData {
   store_id: string;
   supplier_id?: string;
   created_by: string;
-  status: 'draft' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'approved' | 'fulfilled' | 'delivered' | 'cancelled';
   total_amount: number;
   requested_delivery_date?: string;
+  delivery_scheduled_date?: string;
+  delivery_notes?: string;
   notes?: string;
   items: {
     inventory_stock_id: string;
@@ -47,7 +50,7 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
     // Generate order number
     const orderNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    // Create purchase order without location_type field
+    // Create purchase order
     const { data: purchaseOrder, error: orderError } = await supabase
       .from('purchase_orders')
       .insert({
@@ -58,6 +61,8 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
         status: orderData.status,
         total_amount: orderData.total_amount,
         requested_delivery_date: orderData.requested_delivery_date,
+        delivery_scheduled_date: orderData.delivery_scheduled_date,
+        delivery_notes: orderData.delivery_notes,
         notes: orderData.notes
       })
       .select()
@@ -108,6 +113,59 @@ export const updatePurchaseOrder = async (
   } catch (error) {
     console.error('Error updating purchase order:', error);
     toast.error('Failed to update purchase order');
+    return false;
+  }
+};
+
+export const fulfillPurchaseOrder = async (
+  id: string,
+  fulfilled_by: string,
+  delivery_scheduled_date?: string,
+  delivery_notes?: string
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('purchase_orders')
+      .update({
+        status: 'fulfilled',
+        fulfilled_by,
+        fulfilled_at: new Date().toISOString(),
+        delivery_scheduled_date,
+        delivery_notes
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    toast.success('Purchase order fulfilled successfully');
+    return true;
+  } catch (error) {
+    console.error('Error fulfilling purchase order:', error);
+    toast.error('Failed to fulfill purchase order');
+    return false;
+  }
+};
+
+export const deliverPurchaseOrder = async (
+  id: string,
+  delivery_notes?: string
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('purchase_orders')
+      .update({
+        status: 'delivered',
+        delivery_notes
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    toast.success('Purchase order marked as delivered');
+    return true;
+  } catch (error) {
+    console.error('Error delivering purchase order:', error);
+    toast.error('Failed to mark as delivered');
     return false;
   }
 };

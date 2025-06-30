@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Eye, CheckCircle, XCircle, Building2, User, Calendar, Package, DollarSign } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Building2, User, Calendar, Package, DollarSign, Truck, ClipboardCheck } from 'lucide-react';
 import { PurchaseOrder } from '@/types/orderManagement';
 import { Store } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,6 +20,8 @@ interface AdminPurchaseOrdersListProps {
   onViewOrder: (order: PurchaseOrder) => void;
   onApproveOrder: (orderId: string) => void;
   onRejectOrder: (orderId: string) => void;
+  onFulfillOrder?: (orderId: string) => void;
+  onDeliverOrder?: (orderId: string) => void;
   stores: Store[];
 }
 
@@ -34,6 +36,8 @@ export function AdminPurchaseOrdersList({
   onViewOrder,
   onApproveOrder,
   onRejectOrder,
+  onFulfillOrder,
+  onDeliverOrder,
   stores
 }: AdminPurchaseOrdersListProps) {
   if (isLoading) {
@@ -73,12 +77,74 @@ export function AdminPurchaseOrdersList({
     switch (status) {
       case 'approved': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
+      case 'fulfilled': return 'bg-blue-100 text-blue-800';
+      case 'delivered': return 'bg-purple-100 text-purple-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
-      case 'draft': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getStatusActions = (order: PurchaseOrder) => {
+    const actions = [];
+    
+    if (order.status === 'pending') {
+      actions.push(
+        <Button
+          key="approve"
+          variant="outline"
+          size="sm"
+          onClick={() => onApproveOrder(order.id)}
+          className="text-green-600 hover:bg-green-50"
+        >
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Approve
+        </Button>
+      );
+      actions.push(
+        <Button
+          key="reject"
+          variant="outline"
+          size="sm"
+          onClick={() => onRejectOrder(order.id)}
+          className="text-red-600 hover:bg-red-50"
+        >
+          <XCircle className="h-3 w-3 mr-1" />
+          Reject
+        </Button>
+      );
+    }
+    
+    if (order.status === 'approved' && onFulfillOrder) {
+      actions.push(
+        <Button
+          key="fulfill"
+          variant="outline"
+          size="sm"
+          onClick={() => onFulfillOrder(order.id)}
+          className="text-blue-600 hover:bg-blue-50"
+        >
+          <Truck className="h-3 w-3 mr-1" />
+          Fulfill
+        </Button>
+      );
+    }
+    
+    if (order.status === 'fulfilled' && onDeliverOrder) {
+      actions.push(
+        <Button
+          key="deliver"
+          variant="outline"
+          size="sm"
+          onClick={() => onDeliverOrder(order.id)}
+          className="text-purple-600 hover:bg-purple-50"
+        >
+          <ClipboardCheck className="h-3 w-3 mr-1" />
+          Deliver
+        </Button>
+      );
+    }
+    
+    return actions;
   };
 
   const allSelected = selectedOrders.length === orders.length && orders.length > 0;
@@ -137,36 +203,17 @@ export function AdminPurchaseOrdersList({
                   </div>
                 </div>
                 
-                <div className="flex gap-2 pt-3 border-t">
+                <div className="flex gap-2 pt-3 border-t flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => onViewOrder(order)}
-                    className="flex-1"
+                    className="flex-shrink-0"
                   >
                     <Eye className="h-3 w-3 mr-1" />
                     View
                   </Button>
-                  {order.status === 'pending' && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onApproveOrder(order.id)}
-                        className="text-green-600 hover:bg-green-50"
-                      >
-                        <CheckCircle className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onRejectOrder(order.id)}
-                        className="text-red-600 hover:bg-red-50"
-                      >
-                        <XCircle className="h-3 w-3" />
-                      </Button>
-                    </>
-                  )}
+                  {getStatusActions(order)}
                 </div>
               </CardContent>
             </Card>
@@ -222,7 +269,7 @@ export function AdminPurchaseOrdersList({
                 <TableCell>₱{order.total_amount.toLocaleString()}</TableCell>
                 <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                 <TableCell>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -230,26 +277,7 @@ export function AdminPurchaseOrdersList({
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    {order.status === 'pending' && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onApproveOrder(order.id)}
-                          className="text-green-600 hover:bg-green-50"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onRejectOrder(order.id)}
-                          className="text-red-600 hover:bg-red-50"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
+                    {getStatusActions(order)}
                   </div>
                 </TableCell>
               </TableRow>

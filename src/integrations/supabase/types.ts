@@ -2143,6 +2143,10 @@ export type Database = {
           approved_by: string | null
           created_at: string | null
           created_by: string
+          delivery_notes: string | null
+          delivery_scheduled_date: string | null
+          fulfilled_at: string | null
+          fulfilled_by: string | null
           id: string
           notes: string | null
           order_number: string
@@ -2158,6 +2162,10 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           created_by: string
+          delivery_notes?: string | null
+          delivery_scheduled_date?: string | null
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
           id?: string
           notes?: string | null
           order_number: string
@@ -2173,6 +2181,10 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           created_by?: string
+          delivery_notes?: string | null
+          delivery_scheduled_date?: string | null
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
           id?: string
           notes?: string | null
           order_number?: string
@@ -3365,6 +3377,8 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+        | "fulfilled"
+        | "delivered"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3505,6 +3519,8 @@ export const Constants = {
         "in_progress",
         "completed",
         "cancelled",
+        "fulfilled",
+        "delivered",
       ],
     },
   },

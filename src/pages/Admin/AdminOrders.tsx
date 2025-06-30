@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AdminPurchaseOrdersHeader } from './components/AdminPurchaseOrdersHeader';
 import { AdminPurchaseOrdersMetrics } from './components/AdminPurchaseOrdersMetrics';
@@ -7,11 +8,15 @@ import { useAdminPurchaseOrdersData } from './hooks/useAdminPurchaseOrdersData';
 import { ViewPurchaseOrderDialog } from '@/pages/OrderManagement/components/ViewPurchaseOrderDialog';
 import { CreatePurchaseOrderDialog } from '@/pages/OrderManagement/components/CreatePurchaseOrderDialog';
 import { PurchaseOrder } from '@/types/orderManagement';
-import { updatePurchaseOrder } from '@/services/orderManagement/purchaseOrderService';
+import { updatePurchaseOrder, fulfillPurchaseOrder, deliverPurchaseOrder } from '@/services/orderManagement/purchaseOrderService';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Plus, Globe, RefreshCw } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AdminOrders() {
   console.log('🔵 AdminOrders component mounting/rendering');
@@ -23,6 +28,9 @@ export default function AdminOrders() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [fulfillDialog, setFulfillDialog] = useState<{ orderId: string; isOpen: boolean }>({ orderId: '', isOpen: false });
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
   
   const {
     orders,
@@ -112,6 +120,36 @@ export default function AdminOrders() {
     }
   };
 
+  const handleFulfillOrder = (orderId: string) => {
+    setFulfillDialog({ orderId, isOpen: true });
+    setDeliveryDate('');
+    setDeliveryNotes('');
+  };
+
+  const handleFulfillSubmit = async () => {
+    if (!fulfillDialog.orderId || !user?.id) return;
+    
+    const success = await fulfillPurchaseOrder(
+      fulfillDialog.orderId,
+      user.id,
+      deliveryDate || undefined,
+      deliveryNotes || undefined
+    );
+    
+    if (success) {
+      setFulfillDialog({ orderId: '', isOpen: false });
+      await refreshOrders();
+    }
+  };
+
+  const handleDeliverOrder = async (orderId: string) => {
+    const success = await deliverPurchaseOrder(orderId, 'Order delivered successfully');
+    
+    if (success) {
+      await refreshOrders();
+    }
+  };
+
   console.log('AdminOrders render:', {
     totalOrders: orders.length,
     filteredOrders: filteredOrders.length,
@@ -128,7 +166,7 @@ export default function AdminOrders() {
             <h1 className="text-3xl font-bold">Global Purchase Orders Management</h1>
           </div>
           <p className="text-muted-foreground">
-            Review, approve, and manage purchase orders from all stores across your network
+            Review, approve, fulfill, and manage purchase orders from all stores across your network
           </p>
         </div>
         <div className="flex gap-2">
@@ -182,6 +220,8 @@ export default function AdminOrders() {
         onViewOrder={setViewingOrder}
         onApproveOrder={handleApproveOrder}
         onRejectOrder={handleRejectOrder}
+        onFulfillOrder={handleFulfillOrder}
+        onDeliverOrder={handleDeliverOrder}
         stores={stores}
       />
 
@@ -199,6 +239,42 @@ export default function AdminOrders() {
         onOpenChange={setShowCreateDialog}
         onSuccess={refreshOrders}
       />
+
+      <Dialog open={fulfillDialog.isOpen} onOpenChange={(open) => setFulfillDialog(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Fulfill Purchase Order</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="deliveryDate">Scheduled Delivery Date (Optional)</Label>
+              <Input
+                id="deliveryDate"
+                type="date"
+                value={deliveryDate}
+                onChange={(e) => setDeliveryDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="deliveryNotes">Delivery Notes (Optional)</Label>
+              <Textarea
+                id="deliveryNotes"
+                placeholder="Enter any delivery instructions or notes..."
+                value={deliveryNotes}
+                onChange={(e) => setDeliveryNotes(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFulfillDialog({ orderId: '', isOpen: false })}>
+              Cancel
+            </Button>
+            <Button onClick={handleFulfillSubmit}>
+              Fulfill Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

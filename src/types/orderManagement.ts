@@ -1,3 +1,4 @@
+
 export interface PurchaseOrder {
   id: string;
   order_number: string;
@@ -5,13 +6,17 @@ export interface PurchaseOrder {
   supplier_id?: string;
   created_by: string;
   approved_by?: string;
-  status: 'draft' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
+  fulfilled_by?: string;
+  status: 'pending' | 'approved' | 'fulfilled' | 'delivered' | 'cancelled';
   total_amount: number;
   requested_delivery_date?: string;
+  delivery_scheduled_date?: string;
+  delivery_notes?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
   approved_at?: string;
+  fulfilled_at?: string;
   supplier?: Supplier;
   store?: {
     id: string;
