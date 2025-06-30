@@ -24,6 +24,20 @@ export interface BulkInventoryMapping {
   bulk_unit: string;
 }
 
+// Define valid unit types based on the database enum
+type ValidUnit = 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
+
+// Function to validate and convert unit to valid enum value
+const validateUnit = (unit: string): ValidUnit => {
+  const validUnits: ValidUnit[] = ['kg', 'g', 'pieces', 'liters', 'ml', 'boxes', 'packs'];
+  if (validUnits.includes(unit as ValidUnit)) {
+    return unit as ValidUnit;
+  }
+  // Default to 'pieces' if unit is not recognized
+  console.warn(`Invalid unit "${unit}", defaulting to "pieces"`);
+  return 'pieces';
+};
+
 /**
  * Save enhanced recipe ingredients with conversion factors
  */
@@ -44,7 +58,7 @@ export const saveEnhancedRecipeIngredients = async (
       recipe_id: recipeId,
       inventory_stock_id: ingredient.commissary_item_id || '', // Required field
       quantity: ingredient.quantity,
-      unit: ingredient.recipe_unit as any, // Cast to match enum type
+      unit: validateUnit(ingredient.recipe_unit), // Ensure valid enum value
       cost_per_unit: ingredient.cost_per_unit || 0,
       commissary_item_id: ingredient.commissary_item_id,
       ingredient_name: ingredient.ingredient_name,
@@ -173,26 +187,30 @@ export const getInventoryDeductionRequirements = async (
     const deductionRequirements = [];
 
     for (const ingredient of ingredients) {
-      const mappings = Array.isArray(ingredient.inventory_conversion_mappings) 
-        ? ingredient.inventory_conversion_mappings 
-        : [ingredient.inventory_conversion_mappings];
+      // Handle the mapping data properly
+      let mappingData = ingredient.inventory_conversion_mappings;
       
-      const mapping = mappings[0];
-      if (mapping && typeof mapping === 'object') {
+      // If it's an array, take the first element
+      if (Array.isArray(mappingData)) {
+        mappingData = mappingData[0];
+      }
+      
+      // Ensure we have a valid mapping object
+      if (mappingData && typeof mappingData === 'object' && 'conversion_factor' in mappingData && 'inventory_stock_id' in mappingData) {
         // Calculate how much to deduct from bulk inventory
         const recipeQuantityNeeded = ingredient.quantity * quantity;
-        const bulkDeductionQuantity = recipeQuantityNeeded / mapping.conversion_factor;
+        const bulkDeductionQuantity = recipeQuantityNeeded / mappingData.conversion_factor;
 
         // Get inventory item details
         const { data: inventoryItem } = await supabase
           .from('inventory_stock')
           .select('item, unit')
-          .eq('id', mapping.inventory_stock_id)
+          .eq('id', mappingData.inventory_stock_id)
           .single();
 
         if (inventoryItem) {
           deductionRequirements.push({
-            inventory_stock_id: mapping.inventory_stock_id,
+            inventory_stock_id: mappingData.inventory_stock_id,
             item_name: inventoryItem.item,
             deduction_quantity: bulkDeductionQuantity,
             unit: inventoryItem.unit
