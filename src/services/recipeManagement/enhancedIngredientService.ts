@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -195,33 +194,29 @@ export const getInventoryDeductionRequirements = async (
         mappingData = mappingData[0];
       }
       
-      // Ensure we have a valid mapping object and it's not null
+      // Ensure we have a valid mapping object with required properties
       if (mappingData && 
           typeof mappingData === 'object' && 
           mappingData !== null &&
           'conversion_factor' in mappingData && 
-          'inventory_stock_id' in mappingData) {
-        
-        // Create a properly typed variable from the validated mapping
-        const validMapping: { conversion_factor: number; inventory_stock_id: string } = {
-          conversion_factor: mappingData.conversion_factor,
-          inventory_stock_id: mappingData.inventory_stock_id
-        };
+          'inventory_stock_id' in mappingData &&
+          typeof mappingData.conversion_factor === 'number' &&
+          typeof mappingData.inventory_stock_id === 'string') {
         
         // Calculate how much to deduct from bulk inventory
         const recipeQuantityNeeded = ingredient.quantity * quantity;
-        const bulkDeductionQuantity = recipeQuantityNeeded / validMapping.conversion_factor;
+        const bulkDeductionQuantity = recipeQuantityNeeded / mappingData.conversion_factor;
 
         // Get inventory item details
         const { data: inventoryItem } = await supabase
           .from('inventory_stock')
           .select('item, unit')
-          .eq('id', validMapping.inventory_stock_id)
+          .eq('id', mappingData.inventory_stock_id)
           .single();
 
         if (inventoryItem) {
           deductionRequirements.push({
-            inventory_stock_id: validMapping.inventory_stock_id,
+            inventory_stock_id: mappingData.inventory_stock_id,
             item_name: inventoryItem.item,
             deduction_quantity: bulkDeductionQuantity,
             unit: inventoryItem.unit
