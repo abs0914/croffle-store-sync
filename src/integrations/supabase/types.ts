@@ -987,10 +987,10 @@ export type Database = {
       goods_received_notes: {
         Row: {
           created_at: string | null
-          delivery_order_id: string
           digital_signature: string | null
           grn_number: string
           id: string
+          purchase_order_id: string
           quality_check_passed: boolean | null
           received_at: string | null
           received_by: string
@@ -999,10 +999,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          delivery_order_id: string
           digital_signature?: string | null
           grn_number: string
           id?: string
+          purchase_order_id: string
           quality_check_passed?: boolean | null
           received_at?: string | null
           received_by: string
@@ -1011,10 +1011,10 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          delivery_order_id?: string
           digital_signature?: string | null
           grn_number?: string
           id?: string
+          purchase_order_id?: string
           quality_check_passed?: boolean | null
           received_at?: string | null
           received_by?: string
@@ -1023,10 +1023,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "goods_received_notes_delivery_order_id_fkey"
-            columns: ["delivery_order_id"]
+            foreignKeyName: "goods_received_notes_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
             isOneToOne: false
-            referencedRelation: "delivery_orders"
+            referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
         ]
