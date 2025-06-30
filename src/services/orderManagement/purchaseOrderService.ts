@@ -5,7 +5,6 @@ import { toast } from "sonner";
 
 interface CreatePurchaseOrderData {
   store_id: string;
-  supplier_id?: string;
   created_by: string;
   status: 'pending' | 'approved' | 'fulfilled' | 'delivered' | 'cancelled';
   total_amount: number;
@@ -27,7 +26,6 @@ export const fetchPurchaseOrders = async (storeId: string): Promise<PurchaseOrde
       .from('purchase_orders')
       .select(`
         *,
-        supplier:suppliers(*),
         items:purchase_order_items(
           *,
           inventory_stock:inventory_stock(*)
@@ -56,7 +54,6 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
       .insert({
         order_number: orderNumber,
         store_id: orderData.store_id,
-        supplier_id: orderData.supplier_id,
         created_by: orderData.created_by,
         status: orderData.status,
         total_amount: orderData.total_amount,

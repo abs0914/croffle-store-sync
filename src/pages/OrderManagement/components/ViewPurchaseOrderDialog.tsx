@@ -83,10 +83,6 @@ export function ViewPurchaseOrderDialog({
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Supplier</p>
-                  <p>{order.supplier?.name || 'No supplier assigned'}</p>
-                </div>
-                <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
                   <p className="text-lg font-semibold">₱{order.total_amount.toFixed(2)}</p>
                 </div>

@@ -55,7 +55,6 @@ export function PurchaseOrdersTab() {
 
   const filteredOrders = purchaseOrders.filter(order =>
     order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.supplier?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.notes?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -109,10 +108,10 @@ export function PurchaseOrdersTab() {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Supplier: {order.supplier?.name || 'No supplier'}
+                      Total: ₱{order.total_amount.toFixed(2)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Total: ₱{order.total_amount.toFixed(2)}
+                      Items: {order.items?.length || 0}
                     </p>
                   </div>
                   

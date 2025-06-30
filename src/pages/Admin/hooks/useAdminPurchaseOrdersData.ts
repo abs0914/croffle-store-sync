@@ -58,7 +58,6 @@ export const useAdminPurchaseOrdersData = () => {
         .from('purchase_orders')
         .select(`
           *,
-          supplier:suppliers(*),
           store:stores(id, name, address),
           items:purchase_order_items(
             *,
@@ -83,38 +82,6 @@ export const useAdminPurchaseOrdersData = () => {
       ordersData?.forEach(order => {
         console.log(`🟡 Order ${order.order_number}: Status=${order.status}, Store=${order.store?.name || 'Unknown'}`);
       });
-
-      // Search specifically for the order mentioned by the user
-      if (ordersData) {
-        const specificOrder = ordersData.find(order => order.order_number === 'PO-1751204671373-8ver2imfi');
-        if (specificOrder) {
-          console.log('🟢 Found specific order PO-1751204671373-8ver2imfi:', specificOrder);
-        } else {
-          console.log('🔴 Order PO-1751204671373-8ver2imfi not found in results');
-          
-          // Try to fetch this specific order directly
-          console.log('🟡 Trying direct fetch of specific order...');
-          const { data: directOrder, error: directError } = await supabase
-            .from('purchase_orders')
-            .select(`
-              *,
-              supplier:suppliers(*),
-              store:stores(id, name, address),
-              items:purchase_order_items(
-                *,
-                inventory_stock:inventory_stock(*)
-              )
-            `)
-            .eq('order_number', 'PO-1751204671373-8ver2imfi')
-            .single();
-          
-          if (directError) {
-            console.error('🔴 Error fetching specific order:', directError);
-          } else {
-            console.log('🟢 Direct fetch of specific order:', directOrder);
-          }
-        }
-      }
 
       console.log('🟡 Setting orders state with', ordersData?.length || 0, 'orders');
       setOrders(ordersData || []);
@@ -159,8 +126,7 @@ export const useAdminPurchaseOrdersData = () => {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(order => 
         order.order_number.toLowerCase().includes(query) ||
-        (order.supplier?.name && order.supplier.name.toLowerCase().includes(query)) ||
-        (order.notes && order.notes.toLowerCase().includes(query)) ||
+        order.notes?.toLowerCase().includes(query) ||
         (order.store && order.store.name && order.store.name.toLowerCase().includes(query))
       );
     }

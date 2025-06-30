@@ -2153,7 +2153,6 @@ export type Database = {
           requested_delivery_date: string | null
           status: Database["public"]["Enums"]["purchase_order_status"] | null
           store_id: string
-          supplier_id: string | null
           total_amount: number | null
           updated_at: string | null
         }
@@ -2172,7 +2171,6 @@ export type Database = {
           requested_delivery_date?: string | null
           status?: Database["public"]["Enums"]["purchase_order_status"] | null
           store_id: string
-          supplier_id?: string | null
           total_amount?: number | null
           updated_at?: string | null
         }
@@ -2191,7 +2189,6 @@ export type Database = {
           requested_delivery_date?: string | null
           status?: Database["public"]["Enums"]["purchase_order_status"] | null
           store_id?: string
-          supplier_id?: string | null
           total_amount?: number | null
           updated_at?: string | null
         }
@@ -2201,13 +2198,6 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_orders_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]

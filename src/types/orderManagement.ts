@@ -3,7 +3,6 @@ export interface PurchaseOrder {
   id: string;
   order_number: string;
   store_id: string;
-  supplier_id?: string;
   created_by: string;
   approved_by?: string;
   fulfilled_by?: string;
@@ -17,7 +16,6 @@ export interface PurchaseOrder {
   updated_at: string;
   approved_at?: string;
   fulfilled_at?: string;
-  supplier?: Supplier;
   store?: {
     id: string;
     name: string;
@@ -87,19 +85,6 @@ export interface OrderAuditTrail {
   changed_by: string;
   change_reason?: string;
   created_at: string;
-}
-
-export interface Supplier {
-  id: string;
-  name: string;
-  contact_person?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  lead_time_days: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface InventoryStock {

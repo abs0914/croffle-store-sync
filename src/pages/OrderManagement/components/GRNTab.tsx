@@ -103,9 +103,6 @@ export function GRNTab() {
                     <p className="text-sm text-muted-foreground">
                       Purchase Order: {grn.purchase_order?.order_number || 'N/A'}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      Supplier: {grn.purchase_order?.supplier?.name || 'No supplier'}
-                    </p>
                     {grn.quality_check_passed !== null && (
                       <p className="text-sm">
                         Quality Check: {grn.quality_check_passed ? '✅ Passed' : '❌ Failed'}

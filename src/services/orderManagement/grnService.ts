@@ -11,7 +11,6 @@ export const fetchGRNs = async (storeId?: string): Promise<GoodsReceivedNote[]> 
         *,
         purchase_order:purchase_orders(
           *,
-          supplier:suppliers(*),
           items:purchase_order_items(
             *,
             inventory_stock:inventory_stock(*)
@@ -48,7 +47,6 @@ export const fetchDeliveredPurchaseOrders = async (storeId?: string): Promise<Pu
       .from('purchase_orders')
       .select(`
         *,
-        supplier:suppliers(*),
         store:stores(id, name, address),
         items:purchase_order_items(
           *,
@@ -92,7 +90,6 @@ export const createGRN = async (
         *,
         purchase_order:purchase_orders(
           *,
-          supplier:suppliers(*),
           items:purchase_order_items(
             *,
             inventory_stock:inventory_stock(*)
@@ -124,7 +121,6 @@ export const updateGRN = async (
         *,
         purchase_order:purchase_orders(
           *,
-          supplier:suppliers(*),
           items:purchase_order_items(
             *,
             inventory_stock:inventory_stock(*)

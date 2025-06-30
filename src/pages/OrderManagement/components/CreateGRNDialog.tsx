@@ -75,15 +75,15 @@ export function CreateGRNDialog({ open, onOpenChange, deliveredOrders, onSuccess
         
         <div className="space-y-4">
           <div>
-            <Label htmlFor="purchaseOrder">Delivery Order *</Label>
+            <Label htmlFor="purchaseOrder">Purchase Order *</Label>
             <Select value={selectedOrderId} onValueChange={setSelectedOrderId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select delivery order" />
+                <SelectValue placeholder="Select purchase order" />
               </SelectTrigger>
               <SelectContent>
                 {deliveredOrders.map((order) => (
                   <SelectItem key={order.id} value={order.id}>
-                    {order.order_number} - {order.supplier?.name || 'No supplier'} (₱{order.total_amount})
+                    {order.order_number} - ₱{order.total_amount} ({order.items?.length || 0} items)
                   </SelectItem>
                 ))}
                 {deliveredOrders.length === 0 && (
@@ -99,7 +99,6 @@ export function CreateGRNDialog({ open, onOpenChange, deliveredOrders, onSuccess
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-sm font-medium">Order Details:</p>
               <p className="text-sm">Order: {selectedOrder.order_number}</p>
-              <p className="text-sm">Supplier: {selectedOrder.supplier?.name || 'No supplier'}</p>
               <p className="text-sm">Total: ₱{selectedOrder.total_amount}</p>
               <p className="text-sm">Items: {selectedOrder.items?.length || 0}</p>
             </div>

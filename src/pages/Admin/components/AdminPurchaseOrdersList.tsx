@@ -187,12 +187,6 @@ export function AdminPurchaseOrdersList({
               
               <CardContent className="space-y-3">
                 <div className="space-y-2">
-                  {order.supplier && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <User className="h-3 w-3" />
-                      <span>{order.supplier.name}</span>
-                    </div>
-                  )}
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <DollarSign className="h-3 w-3" />
                     <span>₱{order.total_amount.toLocaleString()}</span>
@@ -237,7 +231,6 @@ export function AdminPurchaseOrdersList({
               </TableHead>
               <TableHead>Order Number</TableHead>
               <TableHead>Store Location</TableHead>
-              <TableHead>Supplier</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Total Amount</TableHead>
               <TableHead>Created Date</TableHead>
@@ -260,7 +253,6 @@ export function AdminPurchaseOrdersList({
                     <span className="font-semibold text-blue-600">{getStoreName(order)}</span>
                   </div>
                 </TableCell>
-                <TableCell>{order.supplier?.name || 'No Supplier'}</TableCell>
                 <TableCell>
                   <Badge className={getStatusColor(order.status)}>
                     {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
