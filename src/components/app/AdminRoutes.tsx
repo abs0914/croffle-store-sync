@@ -17,6 +17,8 @@ import { AdminUserRoutes } from "./routes/AdminUserRoutes";
 import { AdminStoreRoutes } from "./routes/AdminStoreRoutes";
 
 export function AdminRoutes() {
+  console.log('🔵 AdminRoutes component loading...');
+  
   return (
     <>
       {/* Core Admin Routes */}
@@ -69,7 +71,7 @@ export function AdminRoutes() {
         </AdminProtectedRoute>
       } />
       
-      {/* Admin Order Management - Updated to use AdminOrders */}
+      {/* Admin Order Management - Ensure this uses AdminOrders */}
       <Route path="/admin/order-management" element={
         <AdminProtectedRoute>
           <AdminLayout>

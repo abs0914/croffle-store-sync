@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Route } from 'react-router-dom';
 import { AdminProtectedRoute } from '@/components/auth/AdminProtectedRoute';
@@ -17,6 +18,8 @@ import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
 
 export const AdminAppRoutes = () => {
+  console.log('🔵 AdminAppRoutes component loading...');
+  
   return (
     <>
       {/* Admin Dashboard */}
@@ -31,13 +34,13 @@ export const AdminAppRoutes = () => {
         }
       />
 
-      {/* Admin Order Management */}
+      {/* Admin Order Management - Use AdminOrders instead of OrderManagement */}
       <Route
         path="/admin/order-management"
         element={
           <AdminProtectedRoute>
             <AdminLayout>
-              <OrderManagement />
+              <AdminOrders />
             </AdminLayout>
           </AdminProtectedRoute>
         }
