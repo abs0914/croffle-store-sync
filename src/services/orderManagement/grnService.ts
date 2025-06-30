@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { GoodsReceivedNote, GRNItem, PurchaseOrder } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -187,12 +188,84 @@ export const updateGRN = async (
       .single();
 
     if (error) throw error;
+
+    // Check if this update indicates a discrepancy that needs resolution
+    if (data && shouldCreateDiscrepancyResolution(data)) {
+      await createAutomaticDiscrepancyResolution(data);
+    }
+
     toast.success('GRN updated successfully');
     return data;
   } catch (error) {
     console.error('Error updating GRN:', error);
     toast.error('Failed to update goods received note');
     return null;
+  }
+};
+
+// Helper function to determine if a discrepancy resolution should be created
+const shouldCreateDiscrepancyResolution = (grn: GoodsReceivedNote): boolean => {
+  // Create resolution if quality check failed
+  if (grn.quality_check_passed === false) {
+    return true;
+  }
+  
+  // Create resolution if remarks contain discrepancy indicators
+  if (grn.remarks) {
+    const discrepancyKeywords = ['damage', 'damaged', 'broken', 'defective', 'missing', 'shortage', 'discrepancy'];
+    const remarksLower = grn.remarks.toLowerCase();
+    return discrepancyKeywords.some(keyword => remarksLower.includes(keyword));
+  }
+  
+  return false;
+};
+
+// Helper function to automatically create discrepancy resolution
+const createAutomaticDiscrepancyResolution = async (grn: GoodsReceivedNote): Promise<void> => {
+  try {
+    // Check if resolution already exists for this GRN
+    const { data: existingResolution } = await supabase
+      .from('grn_discrepancy_resolutions')
+      .select('id')
+      .eq('grn_id', grn.id)
+      .maybeSingle();
+
+    if (existingResolution) {
+      return; // Resolution already exists
+    }
+
+    // Determine resolution type based on the issue
+    let resolutionType: 'replace' | 'refund' = 'replace';
+    let resolutionNotes = 'Automatic discrepancy resolution created due to quality check failure';
+
+    if (grn.remarks) {
+      resolutionNotes = `Automatic resolution: ${grn.remarks}`;
+      
+      // If damage is severe or item is completely unusable, suggest refund
+      const refundKeywords = ['completely damaged', 'totally damaged', 'unusable', 'destroyed'];
+      if (refundKeywords.some(keyword => grn.remarks!.toLowerCase().includes(keyword))) {
+        resolutionType = 'refund';
+      }
+    }
+
+    const { error } = await supabase
+      .from('grn_discrepancy_resolutions')
+      .insert({
+        grn_id: grn.id,
+        purchase_order_id: grn.purchase_order_id,
+        resolution_type: resolutionType,
+        resolution_notes: resolutionNotes,
+        financial_adjustment: 0,
+        processed_by: (await supabase.auth.getUser()).data.user?.id
+      });
+
+    if (error) {
+      console.error('Error creating automatic discrepancy resolution:', error);
+    } else {
+      console.log('Automatic discrepancy resolution created for GRN:', grn.grn_number);
+    }
+  } catch (error) {
+    console.error('Error in createAutomaticDiscrepancyResolution:', error);
   }
 };
 
