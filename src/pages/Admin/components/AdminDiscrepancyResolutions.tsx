@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, Search, CheckCircle, XCircle, Eye, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Search, CheckCircle, XCircle, Eye, RefreshCw, Database } from 'lucide-react';
 import { GRNDiscrepancyResolution } from '@/types/orderManagement';
 import { 
   fetchDiscrepancyResolutions, 
@@ -13,9 +13,11 @@ import {
   completeDiscrepancyResolution, 
   rejectDiscrepancyResolution 
 } from '@/services/orderManagement/discrepancyResolutionService';
+import { createDiscrepancyResolutionsForExistingGRNs } from '@/services/orderManagement/grnService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 export function AdminDiscrepancyResolutions() {
   const [resolutions, setResolutions] = useState<GRNDiscrepancyResolution[]>([]);
@@ -23,6 +25,7 @@ export function AdminDiscrepancyResolutions() {
   const [searchTerm, setSearchTerm] = useState('');
   const [rejectDialog, setRejectDialog] = useState<{ isOpen: boolean; resolutionId: string }>({ isOpen: false, resolutionId: '' });
   const [rejectionReason, setRejectionReason] = useState('');
+  const [processingScan, setProcessingScan] = useState(false);
 
   const loadResolutions = async () => {
     setLoading(true);
@@ -74,6 +77,19 @@ export function AdminDiscrepancyResolutions() {
     }
   };
 
+  const handleScanExistingGRNs = async () => {
+    setProcessingScan(true);
+    try {
+      await createDiscrepancyResolutionsForExistingGRNs();
+      toast.success('Scan completed! Discrepancy resolutions created for existing GRNs with issues.');
+      await loadResolutions();
+    } catch (error) {
+      toast.error('Failed to scan existing GRNs');
+    } finally {
+      setProcessingScan(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -86,10 +102,21 @@ export function AdminDiscrepancyResolutions() {
             Manage replacement and refund requests for GRN discrepancies
           </p>
         </div>
-        <Button onClick={loadResolutions} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleScanExistingGRNs} 
+            disabled={processingScan}
+            className="text-blue-600 hover:bg-blue-50"
+          >
+            <Database className={`h-4 w-4 mr-2 ${processingScan ? 'animate-spin' : ''}`} />
+            {processingScan ? 'Scanning...' : 'Scan Existing GRNs'}
+          </Button>
+          <Button onClick={loadResolutions} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -118,7 +145,10 @@ export function AdminDiscrepancyResolutions() {
             <div className="text-center py-12">
               <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No discrepancy resolutions found</h3>
-              <p className="text-gray-500">No resolution requests match your search criteria.</p>
+              <p className="text-gray-500 mb-4">No resolution requests match your search criteria.</p>
+              <p className="text-sm text-gray-400">
+                Try clicking "Scan Existing GRNs" to check for GRNs with quality issues that need resolution.
+              </p>
             </div>
           ) : (
             <Table>

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { GoodsReceivedNote, GRNItem, PurchaseOrder } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -157,6 +156,12 @@ export const createGRN = async (
       .single();
 
     if (error) throw error;
+
+    // Check if this new GRN indicates a discrepancy that needs resolution
+    if (data && shouldCreateDiscrepancyResolution(data)) {
+      await createAutomaticDiscrepancyResolution(data);
+    }
+
     toast.success('GRN created successfully - Purchase order automatically completed');
     return data;
   } catch (error) {
@@ -266,6 +271,42 @@ const createAutomaticDiscrepancyResolution = async (grn: GoodsReceivedNote): Pro
     }
   } catch (error) {
     console.error('Error in createAutomaticDiscrepancyResolution:', error);
+  }
+};
+
+// New function to retroactively create discrepancy resolutions for existing GRNs
+export const createDiscrepancyResolutionsForExistingGRNs = async (): Promise<void> => {
+  try {
+    console.log('Scanning existing GRNs for discrepancies...');
+    
+    // Fetch all GRNs that have quality issues or discrepancy keywords in remarks
+    const { data: grns, error } = await supabase
+      .from('goods_received_notes')
+      .select(`
+        *,
+        purchase_order:purchase_orders(*)
+      `)
+      .or('quality_check_passed.eq.false,remarks.ilike.%damage%,remarks.ilike.%broken%,remarks.ilike.%defective%,remarks.ilike.%missing%,remarks.ilike.%shortage%,remarks.ilike.%discrepancy%');
+
+    if (error) throw error;
+
+    if (!grns || grns.length === 0) {
+      console.log('No GRNs with discrepancies found');
+      return;
+    }
+
+    console.log(`Found ${grns.length} GRNs with potential discrepancies`);
+
+    // Process each GRN
+    for (const grn of grns) {
+      if (shouldCreateDiscrepancyResolution(grn)) {
+        await createAutomaticDiscrepancyResolution(grn);
+      }
+    }
+
+    console.log('Finished creating discrepancy resolutions for existing GRNs');
+  } catch (error) {
+    console.error('Error creating discrepancy resolutions for existing GRNs:', error);
   }
 };
 
