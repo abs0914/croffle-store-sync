@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { PurchaseOrder, PurchaseOrderItem } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -12,7 +13,7 @@ interface CreatePurchaseOrderData {
   delivery_notes?: string;
   notes?: string;
   items: {
-    inventory_stock_id: string;
+    inventory_stock_id: string; // This is actually commissary_item_id from the dialog
     quantity: number;
     unit_price: number;
     specifications?: string;
@@ -79,6 +80,8 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
       const purchaseOrderItems = [];
       
       for (const item of orderData.items) {
+        console.log('Processing item:', item);
+        
         // The inventory_stock_id is actually a commissary_item_id, so we need to map it
         const { data: commissaryItem, error: commissaryError } = await supabase
           .from('commissary_inventory')
@@ -90,6 +93,8 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
           console.error('Error fetching commissary item:', commissaryError);
           continue;
         }
+
+        console.log('Found commissary item:', commissaryItem);
 
         // Check if inventory stock exists for this item in the store
         let { data: inventoryStock, error: inventoryError } = await supabase
@@ -105,8 +110,12 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
           continue;
         }
 
+        console.log('Found existing inventory stock:', inventoryStock);
+
         // If inventory stock doesn't exist, create it
         if (!inventoryStock) {
+          console.log('Creating new inventory stock for:', commissaryItem.name);
+          
           const { data: newInventoryStock, error: createError } = await supabase
             .from('inventory_stock')
             .insert({
@@ -126,6 +135,7 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
           }
           
           inventoryStock = newInventoryStock;
+          console.log('Created new inventory stock:', inventoryStock);
         }
 
         purchaseOrderItems.push({
@@ -148,6 +158,10 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
           console.error('Error creating purchase order items:', itemsError);
           throw itemsError;
         }
+        
+        console.log('Successfully created purchase order items');
+      } else {
+        console.warn('No purchase order items to create');
       }
     }
 

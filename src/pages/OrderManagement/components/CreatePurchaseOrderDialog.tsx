@@ -125,8 +125,7 @@ export function CreatePurchaseOrderDialog({
         requested_delivery_date: requestedDeliveryDate || undefined,
         notes: notes || undefined,
         items: orderItems.map(item => ({
-          // Use the commissary item ID directly as inventory_stock_id for now
-          // This assumes the commissary items are linked to inventory stock
+          // Pass the commissary item ID as inventory_stock_id (the service will handle the mapping)
           inventory_stock_id: item.commissary_item_id,
           quantity: item.quantity,
           unit_price: item.unit_price,
