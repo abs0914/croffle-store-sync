@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { GoodsReceivedNote, GRNItem, PurchaseOrder } from "@/types/orderManagement";
 import { toast } from "sonner";
@@ -73,6 +72,16 @@ export const fetchDeliveredPurchaseOrders = async (storeId?: string): Promise<Pu
 
 export const fetchAvailableOrdersForGRN = async (storeId?: string): Promise<PurchaseOrder[]> => {
   try {
+    // First, get all purchase order IDs that already have GRNs
+    const { data: existingGRNs, error: grnError } = await supabase
+      .from('goods_received_notes')
+      .select('purchase_order_id');
+
+    if (grnError) throw grnError;
+
+    const existingOrderIds = existingGRNs?.map(grn => grn.purchase_order_id) || [];
+
+    // Then fetch delivered orders that don't have GRNs yet
     let query = supabase
       .from('purchase_orders')
       .select(`
@@ -84,8 +93,12 @@ export const fetchAvailableOrdersForGRN = async (storeId?: string): Promise<Purc
         )
       `)
       .eq('status', 'delivered')
-      .is('goods_received_notes.id', null)
       .order('created_at', { ascending: false });
+
+    // Filter out orders that already have GRNs
+    if (existingOrderIds.length > 0) {
+      query = query.not('id', 'in', `(${existingOrderIds.join(',')})`);
+    }
 
     if (storeId) {
       query = query.eq('store_id', storeId);
