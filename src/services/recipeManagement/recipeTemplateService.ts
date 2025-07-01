@@ -16,6 +16,43 @@ export interface RecipeTemplateData {
   version: number;
 }
 
+// Enhanced interfaces for metrics and analytics
+export interface RecipeTemplateWithMetrics {
+  id: string;
+  name: string;
+  description?: string;
+  category_name?: string;
+  instructions?: string;
+  yield_quantity: number;
+  serving_size?: number;
+  version: number;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  image_url?: string;
+  ingredients: any[];
+  // Metrics
+  deploymentCount: number;
+  averageCost: number;
+  profitMargin: number;
+  popularityScore: number;
+  totalRevenue: number;
+}
+
+export interface TemplateDeploymentSummary {
+  templateId: string;
+  storesDeployed: number;
+  successfulDeployments: number;
+  failedDeployments: number;
+  averageRating: number;
+  totalRevenue: number;
+  lastDeployment: string;
+}
+
+// Re-export the ingredient input type
+export { RecipeTemplateIngredientInput } from './types';
+
 export const createRecipeTemplate = async (
   templateData: RecipeTemplateData,
   ingredients: RecipeTemplateIngredientInput[]
@@ -129,6 +166,9 @@ export const fetchRecipeTemplates = async (): Promise<any[]> => {
   }
 };
 
+// Alias for backward compatibility
+export const getRecipeTemplates = fetchRecipeTemplates;
+
 export const deleteRecipeTemplate = async (templateId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
@@ -143,3 +183,93 @@ export const deleteRecipeTemplate = async (templateId: string): Promise<boolean>
     return false;
   }
 };
+
+// Enhanced functions for metrics and analytics
+export const getRecipeTemplatesWithMetrics = async (): Promise<RecipeTemplateWithMetrics[]> => {
+  try {
+    const templates = await fetchRecipeTemplates();
+    
+    // For now, return templates with mock metrics - this would be enhanced with real analytics
+    return templates.map(template => ({
+      ...template,
+      deploymentCount: Math.floor(Math.random() * 10),
+      averageCost: Math.random() * 100,
+      profitMargin: Math.random() * 50 + 25,
+      popularityScore: Math.floor(Math.random() * 100),
+      totalRevenue: Math.random() * 1000
+    }));
+  } catch (error) {
+    console.error('Error fetching templates with metrics:', error);
+    return [];
+  }
+};
+
+export const getTemplateDeploymentSummary = async (templateId: string): Promise<TemplateDeploymentSummary> => {
+  try {
+    // Mock implementation - this would query actual deployment data
+    return {
+      templateId,
+      storesDeployed: Math.floor(Math.random() * 5) + 1,
+      successfulDeployments: Math.floor(Math.random() * 8) + 2,
+      failedDeployments: Math.floor(Math.random() * 2),
+      averageRating: Math.random() * 2 + 3, // 3-5 star rating
+      totalRevenue: Math.random() * 5000,
+      lastDeployment: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error fetching deployment summary:', error);
+    throw error;
+  }
+};
+
+export const cloneRecipeTemplate = async (templateId: string, newName: string): Promise<any> => {
+  try {
+    // Get the original template
+    const { data: originalTemplate, error: fetchError } = await supabase
+      .from('recipe_templates')
+      .select('*, ingredients:recipe_template_ingredients(*)')
+      .eq('id', templateId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Create new template data
+    const newTemplateData: RecipeTemplateData = {
+      name: newName,
+      description: originalTemplate.description,
+      category_name: originalTemplate.category_name,
+      instructions: originalTemplate.instructions,
+      yield_quantity: originalTemplate.yield_quantity,
+      serving_size: originalTemplate.serving_size,
+      image_url: originalTemplate.image_url,
+      created_by: originalTemplate.created_by,
+      is_active: true,
+      version: 1
+    };
+
+    // Map ingredients
+    const ingredients: RecipeTemplateIngredientInput[] = originalTemplate.ingredients.map((ing: any) => ({
+      ingredient_name: ing.ingredient_name,
+      ingredient_category: ing.ingredient_category,
+      ingredient_type: ing.ingredient_type,
+      quantity: ing.quantity,
+      unit: ing.unit,
+      cost_per_unit: ing.cost_per_unit,
+      purchase_unit: ing.purchase_unit,
+      conversion_factor: ing.conversion_factor
+    }));
+
+    // Create the cloned template
+    const clonedTemplate = await createRecipeTemplate(newTemplateData, ingredients);
+    
+    toast.success(`Template "${newName}" cloned successfully`);
+    return clonedTemplate;
+  } catch (error) {
+    console.error('Error cloning recipe template:', error);
+    toast.error('Failed to clone template');
+    throw error;
+  }
+};
+
+// Alias for backward compatibility
+export const duplicateRecipeTemplate = cloneRecipeTemplate;
