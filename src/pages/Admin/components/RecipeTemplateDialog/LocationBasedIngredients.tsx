@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,7 +42,6 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
     const newIngredient: RecipeTemplateIngredientInput = {
       ingredient_name: '',
       ingredient_category: 'ingredient',
-      ingredient_type: 'raw_material',
       quantity: 1,
       unit: 'g',
       cost_per_unit: 0,

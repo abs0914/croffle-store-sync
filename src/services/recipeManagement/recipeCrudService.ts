@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { RecipeTemplate, RecipeTemplateIngredient } from "./types";
 import { toast } from "sonner";
@@ -27,7 +26,7 @@ export const createRecipeTemplate = async (
 
     if (templateError) throw templateError;
 
-    // Insert ingredients with new generic structure
+    // Insert ingredients without the ingredient_type field
     if (ingredients.length > 0) {
       const { error: ingredientsError } = await supabase
         .from('recipe_template_ingredients')
@@ -36,12 +35,12 @@ export const createRecipeTemplate = async (
             recipe_template_id: template.id,
             ingredient_name: ing.ingredient_name,
             ingredient_category: ing.ingredient_category || 'ingredient',
-            ingredient_type: ing.ingredient_type || 'raw_material',
             quantity: ing.quantity,
             unit: ing.unit,
             commissary_item_id: ing.commissary_item_id,
             commissary_item_name: ing.commissary_item_name,
-            cost_per_unit: ing.cost_per_unit
+            cost_per_unit: ing.cost_per_unit,
+            location_type: ing.location_type || 'all'
           }))
         );
 
@@ -146,7 +145,7 @@ export const duplicateRecipeTemplate = async (templateId: string): Promise<boole
 
     if (templateError) throw templateError;
 
-    // Duplicate ingredients with new structure
+    // Duplicate ingredients without ingredient_type field
     if (original.recipe_template_ingredients?.length > 0) {
       const { error: ingredientsError } = await supabase
         .from('recipe_template_ingredients')
@@ -155,12 +154,12 @@ export const duplicateRecipeTemplate = async (templateId: string): Promise<boole
             recipe_template_id: newTemplate.id,
             ingredient_name: ing.ingredient_name || ing.commissary_item_name,
             ingredient_category: ing.ingredient_category || 'ingredient',
-            ingredient_type: ing.ingredient_type || 'raw_material',
             quantity: ing.quantity,
             unit: ing.unit,
             commissary_item_id: ing.commissary_item_id,
             commissary_item_name: ing.commissary_item_name,
-            cost_per_unit: ing.cost_per_unit
+            cost_per_unit: ing.cost_per_unit,
+            location_type: ing.location_type || 'all'
           }))
         );
 
