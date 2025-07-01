@@ -2381,7 +2381,6 @@ export type Database = {
           cost_per_unit: number | null
           created_at: string | null
           id: string
-          ingredient_category: string | null
           ingredient_name: string
           ingredient_type: string | null
           location_type: string | null
@@ -2399,7 +2398,6 @@ export type Database = {
           cost_per_unit?: number | null
           created_at?: string | null
           id?: string
-          ingredient_category?: string | null
           ingredient_name: string
           ingredient_type?: string | null
           location_type?: string | null
@@ -2417,7 +2415,6 @@ export type Database = {
           cost_per_unit?: number | null
           created_at?: string | null
           id?: string
-          ingredient_category?: string | null
           ingredient_name?: string
           ingredient_type?: string | null
           location_type?: string | null

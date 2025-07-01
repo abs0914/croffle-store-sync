@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { RecipeTemplateIngredientInput } from '@/services/recipeManagement/types';
 import { fetchOrderableItems } from '@/services/inventoryManagement/commissaryInventoryService';
-import { fetchIngredientCategories, getFormattedCategoryName } from '@/services/recipeManagement/categoryService';
 import { CommissaryInventoryItem } from '@/types/commissary';
 
 interface IngredientFormProps {
@@ -29,16 +28,13 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
   locationColor = 'bg-gray-500'
 }) => {
   const [orderableItems, setOrderableItems] = useState<CommissaryInventoryItem[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedItemCategory, setSelectedItemCategory] = useState<string>('');
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [items, ingredientCategories] = await Promise.all([
-          fetchOrderableItems(),
-          fetchIngredientCategories()
-        ]);
+        const items = await fetchOrderableItems();
         
         const finishedProducts = items.filter(item => 
           item.item_type === 'orderable_item'
@@ -48,7 +44,16 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
         );
         
         setOrderableItems(uniqueItems);
-        setCategories(ingredientCategories);
+        
+        // Set category for current ingredient if it exists
+        if (ingredient.ingredient_name) {
+          const currentItem = uniqueItems.find(item => 
+            item.name === ingredient.ingredient_name
+          );
+          if (currentItem) {
+            setSelectedItemCategory(currentItem.category);
+          }
+        }
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -58,6 +63,18 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
 
     loadData();
   }, []);
+
+  const handleIngredientChange = (value: string) => {
+    onUpdate(index, 'ingredient_name', value);
+    
+    // Update the displayed category based on selected item
+    const selectedItem = orderableItems.find(item => item.name === value);
+    if (selectedItem) {
+      setSelectedItemCategory(selectedItem.category);
+    } else {
+      setSelectedItemCategory('');
+    }
+  };
 
   return (
     <div className="grid grid-cols-5 gap-2 items-end p-3 border rounded-lg relative">
@@ -79,7 +96,7 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
         ) : (
           <Select
             value={ingredient.ingredient_name}
-            onValueChange={(value) => onUpdate(index, 'ingredient_name', value)}
+            onValueChange={handleIngredientChange}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select ingredient" />
@@ -87,31 +104,22 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
             <SelectContent>
               {orderableItems.map(item => (
                 <SelectItem key={item.id} value={item.name}>
-                  {item.name}
+                  <div className="flex flex-col">
+                    <span>{item.name}</span>
+                    <span className="text-xs text-muted-foreground">{item.category}</span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         )}
-      </div>
-      
-      <div>
-        <Label>Category</Label>
-        <Select
-          value={ingredient.ingredient_category}
-          onValueChange={(value) => onUpdate(index, 'ingredient_category', value)}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map(category => (
-              <SelectItem key={category} value={category}>
-                {getFormattedCategoryName(category)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {selectedItemCategory && (
+          <div className="mt-1">
+            <Badge variant="outline" className="text-xs">
+              {selectedItemCategory}
+            </Badge>
+          </div>
+        )}
       </div>
       
       <div>
@@ -178,4 +186,3 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
     </div>
   );
 };
-

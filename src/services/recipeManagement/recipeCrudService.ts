@@ -26,7 +26,7 @@ export const createRecipeTemplate = async (
 
     if (templateError) throw templateError;
 
-    // Insert ingredients without the ingredient_type field
+    // Insert ingredients without the ingredient_category field
     if (ingredients.length > 0) {
       const { error: ingredientsError } = await supabase
         .from('recipe_template_ingredients')
@@ -34,7 +34,6 @@ export const createRecipeTemplate = async (
           ingredients.map(ing => ({
             recipe_template_id: template.id,
             ingredient_name: ing.ingredient_name,
-            ingredient_category: ing.ingredient_category || 'ingredient',
             quantity: ing.quantity,
             unit: ing.unit,
             commissary_item_id: ing.commissary_item_id,
@@ -145,7 +144,7 @@ export const duplicateRecipeTemplate = async (templateId: string): Promise<boole
 
     if (templateError) throw templateError;
 
-    // Duplicate ingredients without ingredient_type field
+    // Duplicate ingredients without ingredient_category field
     if (original.recipe_template_ingredients?.length > 0) {
       const { error: ingredientsError } = await supabase
         .from('recipe_template_ingredients')
@@ -153,7 +152,6 @@ export const duplicateRecipeTemplate = async (templateId: string): Promise<boole
           original.recipe_template_ingredients.map((ing: any) => ({
             recipe_template_id: newTemplate.id,
             ingredient_name: ing.ingredient_name || ing.commissary_item_name,
-            ingredient_category: ing.ingredient_category || 'ingredient',
             quantity: ing.quantity,
             unit: ing.unit,
             commissary_item_id: ing.commissary_item_id,

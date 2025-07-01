@@ -71,7 +71,6 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
       if (template.ingredients && Array.isArray(template.ingredients)) {
         const mappedIngredients = template.ingredients.map((ing: any) => ({
           ingredient_name: ing.ingredient_name || ing.commissary_item_name || '',
-          ingredient_category: ing.ingredient_category || 'ingredient',
           quantity: Number(ing.quantity) || 1,
           unit: ing.unit || 'g',
           cost_per_unit: Number(ing.cost_per_unit) || 0,
