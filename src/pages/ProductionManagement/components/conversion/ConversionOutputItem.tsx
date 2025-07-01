@@ -28,13 +28,14 @@ const STANDARD_UOM_OPTIONS = [
   'servings',
   'portions',
   'units',
-  'containers'
+  'containers',
+  'Piping Bag'
 ];
 
 // Define business-relevant categories for finished products
 const FINISHED_PRODUCT_CATEGORIES = [
   { value: 'supplies', label: 'Finished Products' },
-  { value: 'raw_materials', label: 'Processed Materials' },
+  { value: 'raw_materials', label: 'Processed Materials' },  
   { value: 'packaging_materials', label: 'Packaged Items' }
 ];
 
