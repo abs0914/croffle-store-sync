@@ -1,128 +1,120 @@
 
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Filter } from 'lucide-react';
-import { toast } from 'sonner';
-import { RecipeTemplateDialog } from './RecipeTemplateDialog';
-import { DeployRecipeDialog } from './DeployRecipeDialog';
-import { RecipeTemplateCard } from './RecipeTemplateCard';
-import { RecipeTemplate } from '@/services/recipeManagement/types';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
-  getRecipeTemplates, 
-  duplicateRecipeTemplate, 
-  deleteRecipeTemplate 
+  Search, 
+  Plus, 
+  Copy, 
+  Edit, 
+  Trash2, 
+  Eye,
+  Package,
+  TrendingUp,
+  DollarSign,
+  Users
+} from 'lucide-react';
+import { 
+  fetchRecipeTemplates,
+  cloneRecipeTemplate,
+  deleteRecipeTemplate,
+  RecipeTemplateWithMetrics
 } from '@/services/recipeManagement/recipeTemplateService';
+import { RecipeTemplateDialog } from './RecipeTemplateDialog';
+import { formatCurrency } from '@/utils/format';
+import { toast } from 'sonner';
 
 export const RecipeManagementTab: React.FC = () => {
-  const [templates, setTemplates] = useState<RecipeTemplate[]>([]);
-  const [filteredTemplates, setFilteredTemplates] = useState<RecipeTemplate[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeployDialogOpen, setIsDeployDialogOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<RecipeTemplate | null>(null);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
-    fetchTemplates();
+    loadTemplates();
   }, []);
 
-  useEffect(() => {
-    filterTemplates();
-  }, [templates, searchQuery, categoryFilter, statusFilter]);
-
-  const fetchTemplates = async () => {
-    setIsLoading(true);
+  const loadTemplates = async () => {
+    setLoading(true);
     try {
-      const data = await getRecipeTemplates();
-      setTemplates(data);
+      const data = await fetchRecipeTemplates();
+      console.log('Loaded templates:', data);
+      setTemplates(data || []);
     } catch (error) {
-      console.error('Error fetching templates:', error);
-      toast.error('Failed to fetch recipe templates');
+      console.error('Error loading templates:', error);
+      toast.error('Failed to load recipe templates');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const filterTemplates = () => {
-    let filtered = templates;
-
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(template =>
-        template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        template.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  const handleDuplicate = async (template: any) => {
+    console.log('Duplicate template called with:', template);
+    
+    if (!template || !template.id) {
+      console.error('Invalid template provided to duplicate:', template);
+      toast.error('Invalid template selected for duplication');
+      return;
     }
 
-    // Filter by category
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(template => 
-        template.category_name?.toLowerCase() === categoryFilter.toLowerCase()
-      );
+    const newName = prompt(`Enter name for duplicated template:`, `${template.name} (Copy)`);
+    if (!newName || newName.trim() === '') {
+      console.log('Duplicate cancelled - no name provided');
+      return;
     }
 
-    // Filter by status
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'active') {
-        filtered = filtered.filter(template => template.is_active);
-      } else if (statusFilter === 'inactive') {
-        filtered = filtered.filter(template => !template.is_active);
+    console.log('Duplicating template with ID:', template.id, 'New name:', newName);
+    
+    try {
+      const cloned = await cloneRecipeTemplate(template.id, newName);
+      if (cloned) {
+        console.log('Duplicate successful, refreshing templates...');
+        await loadTemplates();
       }
+    } catch (error) {
+      console.error('Duplicate failed:', error);
+      // Error handling is already done in cloneRecipeTemplate
     }
-
-    setFilteredTemplates(filtered);
   };
 
-  const handleEdit = (template: RecipeTemplate) => {
+  const handleEdit = (template: any) => {
+    console.log('Edit template:', template);
     setSelectedTemplate(template);
-    setIsEditDialogOpen(true);
+    setShowEditDialog(true);
   };
 
-  const handleDuplicate = async (template: RecipeTemplate) => {
-    const success = await duplicateRecipeTemplate(template.id);
-    if (success) {
-      fetchTemplates();
+  const handleDelete = async (templateId: string) => {
+    if (!templateId) {
+      toast.error('Invalid template ID');
+      return;
     }
-  };
 
-  const handleDelete = async (template: RecipeTemplate) => {
-    if (window.confirm(`Are you sure you want to delete "${template.name}"?`)) {
-      const success = await deleteRecipeTemplate(template.id);
+    if (window.confirm('Are you sure you want to delete this template?')) {
+      const success = await deleteRecipeTemplate(templateId);
       if (success) {
-        fetchTemplates();
+        toast.success('Template deleted successfully');
+        await loadTemplates();
+      } else {
+        toast.error('Failed to delete template');
       }
     }
   };
 
-  const handleDeploy = (template: RecipeTemplate) => {
-    setSelectedTemplate(template);
-    setIsDeployDialogOpen(true);
-  };
+  const filteredTemplates = templates.filter(template =>
+    template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (template.description && template.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
-  const handleDialogSuccess = () => {
-    fetchTemplates();
-  };
-
-  const categories = [...new Set(templates.map(t => t.category_name).filter(Boolean))];
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Recipe Templates</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="bg-gray-200 h-64 rounded-lg"></div>
-            </div>
-          ))}
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
@@ -132,110 +124,141 @@ export const RecipeManagementTab: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Recipe Templates</h2>
-          <p className="text-muted-foreground">
+          <h3 className="text-lg font-semibold">Recipe Templates</h3>
+          <p className="text-sm text-muted-foreground">
             Create and manage recipe templates for deployment to stores
           </p>
         </div>
-        <Button 
-          onClick={() => setIsCreateDialogOpen(true)}
-          className="bg-croffle-accent hover:bg-croffle-accent/90"
-        >
+        <Button onClick={() => setShowCreateDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Create Template
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search templates..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[180px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map(category => (
-              <SelectItem key={category} value={category!}>
-                {category}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search templates..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
       {/* Templates Grid */}
-      {filteredTemplates.length === 0 ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredTemplates.map((template) => (
+          <Card key={template.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-start">
+                <CardTitle className="text-lg">{template.name}</CardTitle>
+                <Badge variant="secondary">
+                  v{template.version || 1}
+                </Badge>
+              </div>
+              {template.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {template.description}
+                </p>
+              )}
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-blue-600">
+                    {template.yield_quantity || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Yield</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-green-600">
+                    {template.ingredients?.length || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Ingredients</div>
+                </div>
+              </div>
+
+              {/* Category */}
+              {template.category_name && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Category</span>
+                  <Badge variant="outline">
+                    {template.category_name}
+                  </Badge>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleEdit(template)}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleDuplicate(template)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleDelete(template.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredTemplates.length === 0 && (
         <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-muted-foreground">No recipe templates found</h3>
-          <p className="text-muted-foreground mt-2">
-            {templates.length === 0 
-              ? "Create your first recipe template to get started" 
-              : "Try adjusting your search or filter criteria"
-            }
+          <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No templates found</h3>
+          <p className="text-muted-foreground mb-4">
+            {searchTerm ? 'No templates match your search.' : 'Get started by creating your first recipe template.'}
           </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTemplates.map(template => (
-            <RecipeTemplateCard
-              key={template.id}
-              template={template}
-              onEdit={handleEdit}
-              onDuplicate={handleDuplicate}
-              onDelete={handleDelete}
-              onDeploy={handleDeploy}
-            />
-          ))}
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Template
+          </Button>
         </div>
       )}
 
-      {/* Dialogs */}
+      {/* Create Template Dialog */}
       <RecipeTemplateDialog
-        isOpen={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
-        onSuccess={handleDialogSuccess}
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+        onSuccess={() => {
+          setShowCreateDialog(false);
+          loadTemplates();
+        }}
       />
 
+      {/* Edit Template Dialog */}
       <RecipeTemplateDialog
-        isOpen={isEditDialogOpen}
+        isOpen={showEditDialog}
         onClose={() => {
-          setIsEditDialogOpen(false);
+          setShowEditDialog(false);
           setSelectedTemplate(null);
         }}
         template={selectedTemplate}
-        onSuccess={handleDialogSuccess}
-      />
-
-      <DeployRecipeDialog
-        isOpen={isDeployDialogOpen}
-        onClose={() => {
-          setIsDeployDialogOpen(false);
+        onSuccess={() => {
+          setShowEditDialog(false);
           setSelectedTemplate(null);
+          loadTemplates();
         }}
-        template={selectedTemplate}
-        onSuccess={handleDialogSuccess}
       />
     </div>
   );

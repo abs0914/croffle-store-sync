@@ -95,12 +95,31 @@ export const RecipeTemplateManager: React.FC = () => {
   };
 
   const handleCloneTemplate = async (template: RecipeTemplateWithMetrics) => {
-    const newName = prompt(`Enter name for cloned template:`, `${template.name} (Copy)`);
-    if (!newName) return;
+    console.log('Clone template called with:', template);
+    
+    if (!template || !template.id) {
+      console.error('Invalid template provided to clone:', template);
+      toast.error('Invalid template selected for cloning');
+      return;
+    }
 
-    const cloned = await cloneRecipeTemplate(template.id, newName);
-    if (cloned) {
-      await loadData();
+    const newName = prompt(`Enter name for cloned template:`, `${template.name} (Copy)`);
+    if (!newName || newName.trim() === '') {
+      console.log('Clone cancelled - no name provided');
+      return;
+    }
+
+    console.log('Cloning template with ID:', template.id, 'New name:', newName);
+    
+    try {
+      const cloned = await cloneRecipeTemplate(template.id, newName);
+      if (cloned) {
+        console.log('Clone successful, refreshing data...');
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Clone failed:', error);
+      // Error handling is already done in cloneRecipeTemplate
     }
   };
 
