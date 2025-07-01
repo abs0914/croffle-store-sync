@@ -225,6 +225,13 @@ export const getTemplateDeploymentSummary = async (templateId: string): Promise<
 
 export const cloneRecipeTemplate = async (templateId: string, newName: string): Promise<any> => {
   try {
+    // Get the current user ID first
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      throw new Error('User not authenticated');
+    }
+
     // Get the original template
     const { data: originalTemplate, error: fetchError } = await supabase
       .from('recipe_templates')
@@ -234,7 +241,7 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
 
     if (fetchError) throw fetchError;
 
-    // Create new template data
+    // Create new template data with proper created_by field
     const newTemplateData: RecipeTemplateData = {
       name: newName,
       description: originalTemplate.description,
@@ -243,7 +250,7 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
       yield_quantity: originalTemplate.yield_quantity,
       serving_size: originalTemplate.serving_size,
       image_url: originalTemplate.image_url,
-      created_by: originalTemplate.created_by,
+      created_by: user.id, // Use current user's ID instead of original template's created_by
       is_active: true,
       version: 1
     };
