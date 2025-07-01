@@ -73,7 +73,6 @@ export const createRecipeTemplate = async (
         recipe_template_id: template.id,
         ingredient_name: ingredient.ingredient_name,
         ingredient_category: ingredient.ingredient_category,
-        ingredient_type: ingredient.ingredient_type,
         quantity: ingredient.quantity,
         unit: ingredient.unit,
         cost_per_unit: ingredient.cost_per_unit || 0,
@@ -125,7 +124,6 @@ export const updateRecipeTemplate = async (
         recipe_template_id: templateId,
         ingredient_name: ingredient.ingredient_name,
         ingredient_category: ingredient.ingredient_category,
-        ingredient_type: ingredient.ingredient_type,
         quantity: ingredient.quantity,
         unit: ingredient.unit,
         cost_per_unit: ingredient.cost_per_unit || 0,
@@ -278,7 +276,6 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
     const ingredients: any[] = originalTemplate.ingredients.map((ing: any) => ({
       ingredient_name: ing.ingredient_name,
       ingredient_category: ing.ingredient_category,
-      ingredient_type: ing.ingredient_type,
       quantity: ing.quantity,
       unit: ing.unit,
       cost_per_unit: ing.cost_per_unit,

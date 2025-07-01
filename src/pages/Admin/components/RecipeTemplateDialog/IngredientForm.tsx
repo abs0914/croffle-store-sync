@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
-import { RecipeTemplateIngredientInput, INGREDIENT_TYPES } from '@/services/recipeManagement/types';
+import { RecipeTemplateIngredientInput } from '@/services/recipeManagement/types';
 import { fetchOrderableItems } from '@/services/inventoryManagement/commissaryInventoryService';
 import { fetchIngredientCategories, getFormattedCategoryName } from '@/services/recipeManagement/categoryService';
 import { CommissaryInventoryItem } from '@/types/commissary';
@@ -60,7 +60,7 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
   }, []);
 
   return (
-    <div className="grid grid-cols-6 gap-2 items-end p-3 border rounded-lg relative">
+    <div className="grid grid-cols-5 gap-2 items-end p-3 border rounded-lg relative">
       {showLocationBadge && (
         <div className="absolute -top-2 -right-2">
           <div className={`w-4 h-4 rounded-full ${locationColor}`} />
@@ -108,25 +108,6 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
             {categories.map(category => (
               <SelectItem key={category} value={category}>
                 {getFormattedCategoryName(category)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div>
-        <Label>Type</Label>
-        <Select
-          value={ingredient.ingredient_type}
-          onValueChange={(value) => onUpdate(index, 'ingredient_type', value)}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {INGREDIENT_TYPES.filter(type => type.trim() !== '').map(type => (
-              <SelectItem key={type} value={type}>
-                {type.replace('_', ' ').charAt(0).toUpperCase() + type.replace('_', ' ').slice(1)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -197,3 +178,4 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
     </div>
   );
 };
+

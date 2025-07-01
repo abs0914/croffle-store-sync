@@ -1,4 +1,5 @@
 
+
 export type LocationType = 'all' | 'inside_cebu' | 'outside_cebu';
 
 export interface RecipeTemplate {
@@ -25,7 +26,6 @@ export interface RecipeTemplateIngredient {
   commissary_item_name?: string;
   commissary_item_id?: string;
   ingredient_category: string;
-  ingredient_type: string;
   quantity: number;
   unit: string;
   cost_per_unit?: number;
@@ -40,7 +40,6 @@ export interface RecipeTemplateIngredient {
 export interface RecipeTemplateIngredientInput {
   ingredient_name: string;
   ingredient_category: string;
-  ingredient_type: string;
   quantity: number;
   unit: string;
   cost_per_unit?: number;
@@ -57,15 +56,9 @@ export interface LocationBasedIngredientSet {
 // Remove hardcoded categories - they will be fetched dynamically from commissary inventory
 export const INGREDIENT_CATEGORIES: string[] = [];
 
-export const INGREDIENT_TYPES = [
-  'raw_material',
-  'processed',
-  'finished_product',
-  'semi_finished'
-];
-
 export const LOCATION_TYPES: { value: LocationType; label: string }[] = [
   { value: 'all', label: 'All Locations' },
   { value: 'inside_cebu', label: 'Inside Cebu' },
   { value: 'outside_cebu', label: 'Outside Cebu' }
 ];
+

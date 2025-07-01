@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -73,7 +72,6 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
         const mappedIngredients = template.ingredients.map((ing: any) => ({
           ingredient_name: ing.ingredient_name || ing.commissary_item_name || '',
           ingredient_category: ing.ingredient_category || 'ingredient',
-          ingredient_type: ing.ingredient_type || 'raw_material',
           quantity: Number(ing.quantity) || 1,
           unit: ing.unit || 'g',
           cost_per_unit: Number(ing.cost_per_unit) || 0,
