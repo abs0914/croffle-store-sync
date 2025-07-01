@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -65,7 +66,7 @@ export const createRecipeTemplate = async (
 
     if (templateError) throw templateError;
 
-    // Insert ingredients with cost data
+    // Insert ingredients with simplified data structure (no purchase_unit or conversion_factor required)
     if (ingredients.length > 0) {
       const ingredientData = ingredients.map(ingredient => ({
         recipe_template_id: template.id,
@@ -76,7 +77,8 @@ export const createRecipeTemplate = async (
         unit: ingredient.unit,
         cost_per_unit: ingredient.cost_per_unit || 0,
         recipe_unit: ingredient.unit,
-        purchase_unit: ingredient.purchase_unit,
+        // Set default values for backward compatibility but don't require them
+        purchase_unit: ingredient.purchase_unit || ingredient.unit,
         conversion_factor: ingredient.conversion_factor || 1
       }));
 
@@ -116,7 +118,7 @@ export const updateRecipeTemplate = async (
       .delete()
       .eq('recipe_template_id', templateId);
 
-    // Insert updated ingredients with cost data
+    // Insert updated ingredients with simplified data structure
     if (ingredients.length > 0) {
       const ingredientData = ingredients.map(ingredient => ({
         recipe_template_id: templateId,
@@ -127,7 +129,8 @@ export const updateRecipeTemplate = async (
         unit: ingredient.unit,
         cost_per_unit: ingredient.cost_per_unit || 0,
         recipe_unit: ingredient.unit,
-        purchase_unit: ingredient.purchase_unit,
+        // Set default values for backward compatibility but don't require them
+        purchase_unit: ingredient.purchase_unit || ingredient.unit,
         conversion_factor: ingredient.conversion_factor || 1
       }));
 

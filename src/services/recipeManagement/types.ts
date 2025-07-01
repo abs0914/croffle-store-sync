@@ -31,7 +31,7 @@ export interface RecipeTemplateIngredient {
   cost_per_unit?: number;
 }
 
-// Enhanced interface for ingredient input in templates with cost fields
+// Simplified interface for ingredient input in templates - removed purchase_unit and conversion_factor
 export interface RecipeTemplateIngredientInput {
   ingredient_name: string;
   ingredient_category: string;
@@ -39,6 +39,7 @@ export interface RecipeTemplateIngredientInput {
   quantity: number;
   unit: string;
   cost_per_unit?: number;
+  // These fields are kept for database compatibility but not used in UI
   purchase_unit?: string;
   conversion_factor?: number;
 }

@@ -57,9 +57,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       ingredient_type: 'raw_material',
       quantity: 1,
       unit: 'g',
-      cost_per_unit: 0,
-      purchase_unit: 'g',
-      conversion_factor: 1
+      cost_per_unit: 0
     }]);
   };
 
@@ -97,7 +95,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       </CardHeader>
       <CardContent className="space-y-4">
         {ingredients.map((ingredient, index) => (
-          <div key={index} className="grid grid-cols-9 gap-2 items-end p-3 border rounded-lg">
+          <div key={index} className="grid grid-cols-6 gap-2 items-end p-3 border rounded-lg">
             <div>
               <Label>Ingredient Name</Label>
               {isLoading ? (
@@ -171,7 +169,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
                 min="0"
                 step="0.1"
                 value={ingredient.quantity}
-                onChange={(e) => updateIngredient(index, 'quantity', parseFloat(e.target.value) || 0)}
+                onChange={(e) => updateIngiredient(index, 'quantity', parseFloat(e.target.value) || 0)}
               />
             </div>
             
@@ -200,6 +198,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
                   <SelectItem value="tsp">tsp</SelectItem>
                   <SelectItem value="boxes">boxes</SelectItem>
                   <SelectItem value="packs">packs</SelectItem>
+                  <SelectItem value="Piping Bag">Piping Bag</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -213,28 +212,6 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
                 value={ingredient.cost_per_unit || 0}
                 onChange={(e) => updateIngredient(index, 'cost_per_unit', parseFloat(e.target.value) || 0)}
                 placeholder="0.00"
-              />
-            </div>
-
-            <div>
-              <Label>Purchase Unit</Label>
-              <Input
-                type="text"
-                value={ingredient.purchase_unit || ''}
-                onChange={(e) => updateIngredient(index, 'purchase_unit', e.target.value)}
-                placeholder="e.g., pack, kg"
-              />
-            </div>
-
-            <div>
-              <Label>Conversion Factor</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.1"
-                value={ingredient.conversion_factor || 1}
-                onChange={(e) => updateIngredient(index, 'conversion_factor', parseFloat(e.target.value) || 1)}
-                placeholder="1.0"
               />
             </div>
             
