@@ -9,6 +9,8 @@ export interface DeploymentResult {
   success: boolean;
   error?: string;
   recipeId?: string;
+  warnings?: string[];
+  missingIngredients?: string[];
 }
 
 export const deployRecipeToProductCatalog = async (
@@ -136,22 +138,31 @@ export const deployRecipeToProductCatalog = async (
       throw updateCatalogError;
     }
 
-    // Create recipe ingredients with product_catalog ingredients
+    // Process ingredients - allow deployment even if some ingredients are missing
+    const warnings: string[] = [];
+    const missingIngredients: string[] = [];
+    
     if (template.ingredients && template.ingredients.length > 0) {
       const ingredientInserts = [];
       const productIngredientInserts = [];
 
       for (const ingredient of template.ingredients) {
-        // Find the corresponding inventory stock item in the target store
+        // Try to find the corresponding inventory stock item in the target store
         const { data: inventoryStock, error: stockError } = await supabase
           .from('inventory_stock')
           .select('id')
           .eq('store_id', storeId)
           .eq('item', ingredient.commissary_item_name)
-          .single();
+          .maybeSingle();
 
-        if (stockError || !inventoryStock) {
-          console.warn(`Inventory item "${ingredient.commissary_item_name}" not found in store ${storeId}`);
+        if (stockError) {
+          console.warn(`Error checking inventory for "${ingredient.commissary_item_name}":`, stockError);
+          continue;
+        }
+
+        if (!inventoryStock) {
+          console.warn(`Inventory item "${ingredient.commissary_item_name}" not found in store ${storeId} - skipping ingredient mapping`);
+          missingIngredients.push(ingredient.commissary_item_name);
           continue;
         }
 
@@ -175,7 +186,7 @@ export const deployRecipeToProductCatalog = async (
         });
       }
 
-      // Insert recipe ingredients
+      // Insert recipe ingredients (only for found inventory items)
       if (ingredientInserts.length > 0) {
         const { error: ingredientsError } = await supabase
           .from('recipe_ingredients')
@@ -183,11 +194,11 @@ export const deployRecipeToProductCatalog = async (
 
         if (ingredientsError) {
           console.error('Error creating recipe ingredients:', ingredientsError);
-          throw ingredientsError;
+          warnings.push(`Some recipe ingredients could not be linked: ${ingredientsError.message}`);
         }
       }
 
-      // Insert product catalog ingredients
+      // Insert product catalog ingredients (only for found inventory items)
       if (productIngredientInserts.length > 0) {
         const { error: productIngredientsError } = await supabase
           .from('product_ingredients')
@@ -195,17 +206,30 @@ export const deployRecipeToProductCatalog = async (
 
         if (productIngredientsError) {
           console.error('Error creating product ingredients:', productIngredientsError);
-          throw productIngredientsError;
+          warnings.push(`Some product ingredients could not be linked: ${productIngredientsError.message}`);
         }
+      }
+
+      // Add warnings about missing ingredients
+      if (missingIngredients.length > 0) {
+        warnings.push(`Missing inventory items: ${missingIngredients.join(', ')}`);
+        warnings.push('These ingredients will need to be added to store inventory for accurate availability tracking');
       }
     }
 
-    console.log(`Successfully deployed recipe template to store ${storeId}`);
+    const successMessage = `Successfully deployed recipe template to store ${storeId}`;
+    if (warnings.length > 0) {
+      console.warn(`${successMessage} with warnings:`, warnings);
+    } else {
+      console.log(successMessage);
+    }
     
     return {
       storeId,
       success: true,
-      recipeId: recipe.id
+      recipeId: recipe.id,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      missingIngredients: missingIngredients.length > 0 ? missingIngredients : undefined
     };
 
   } catch (error: any) {
@@ -241,11 +265,29 @@ export const deployRecipeToMultipleStores = async (
     results.push(result);
   }
 
-  // Log summary
+  // Log summary with warnings
   const successCount = results.filter(r => r.success).length;
   const failCount = results.filter(r => !r.success).length;
+  const warningCount = results.filter(r => r.success && r.warnings && r.warnings.length > 0).length;
   
-  console.log(`Deployment complete: ${successCount} successful, ${failCount} failed`);
+  console.log(`Deployment complete: ${successCount} successful, ${failCount} failed, ${warningCount} with warnings`);
+  
+  // Show toast notifications for deployment results
+  if (successCount > 0) {
+    if (warningCount > 0) {
+      toast.success(`Deployed to ${successCount} stores with ${warningCount} warnings`, {
+        description: "Check deployment results for missing ingredient details"
+      });
+    } else {
+      toast.success(`Successfully deployed to ${successCount} stores`);
+    }
+  }
+  
+  if (failCount > 0) {
+    toast.error(`Failed to deploy to ${failCount} stores`, {
+      description: "Check deployment results for error details"
+    });
+  }
   
   return results;
 };
