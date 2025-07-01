@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { LocationType } from './types';
 
 // Re-export the ingredient input type using export type for isolated modules
 export type { RecipeTemplateIngredientInput } from './types';
@@ -41,16 +42,6 @@ export interface RecipeTemplateWithMetrics {
   totalRevenue: number;
 }
 
-export interface TemplateDeploymentSummary {
-  templateId: string;
-  storesDeployed: number;
-  successfulDeployments: number;
-  failedDeployments: number;
-  averageRating: number;
-  totalRevenue: number;
-  lastDeployment: string;
-}
-
 export const createRecipeTemplate = async (
   templateData: RecipeTemplateData,
   ingredients: any[]
@@ -65,7 +56,7 @@ export const createRecipeTemplate = async (
 
     if (templateError) throw templateError;
 
-    // Insert ingredients with simplified data structure (no purchase_unit or conversion_factor required)
+    // Insert ingredients with location support
     if (ingredients.length > 0) {
       const ingredientData = ingredients.map(ingredient => ({
         recipe_template_id: template.id,
@@ -76,9 +67,9 @@ export const createRecipeTemplate = async (
         unit: ingredient.unit,
         cost_per_unit: ingredient.cost_per_unit || 0,
         recipe_unit: ingredient.unit,
-        // Set default values for backward compatibility but don't require them
         purchase_unit: ingredient.purchase_unit || ingredient.unit,
-        conversion_factor: ingredient.conversion_factor || 1
+        conversion_factor: ingredient.conversion_factor || 1,
+        location_type: ingredient.location_type || 'all'
       }));
 
       const { error: ingredientError } = await supabase
@@ -117,7 +108,7 @@ export const updateRecipeTemplate = async (
       .delete()
       .eq('recipe_template_id', templateId);
 
-    // Insert updated ingredients with simplified data structure
+    // Insert updated ingredients with location support
     if (ingredients.length > 0) {
       const ingredientData = ingredients.map(ingredient => ({
         recipe_template_id: templateId,
@@ -128,9 +119,9 @@ export const updateRecipeTemplate = async (
         unit: ingredient.unit,
         cost_per_unit: ingredient.cost_per_unit || 0,
         recipe_unit: ingredient.unit,
-        // Set default values for backward compatibility but don't require them
         purchase_unit: ingredient.purchase_unit || ingredient.unit,
-        conversion_factor: ingredient.conversion_factor || 1
+        conversion_factor: ingredient.conversion_factor || 1,
+        location_type: ingredient.location_type || 'all'
       }));
 
       const { error: ingredientError } = await supabase
@@ -166,6 +157,26 @@ export const fetchRecipeTemplates = async (): Promise<any[]> => {
   }
 };
 
+// Get ingredients for a specific location type
+export const getIngredientsForLocation = (ingredients: any[], locationType: LocationType): any[] => {
+  return ingredients.filter(ingredient => 
+    ingredient.location_type === locationType || ingredient.location_type === 'all'
+  );
+};
+
+// Check if template has location-specific ingredients
+export const hasLocationSpecificIngredients = (ingredients: any[]): boolean => {
+  return ingredients.some(ingredient => 
+    ingredient.location_type !== 'all'
+  );
+};
+
+// Get all location types used in a template
+export const getUsedLocationTypes = (ingredients: any[]): LocationType[] => {
+  const types = new Set(ingredients.map(ing => ing.location_type));
+  return Array.from(types);
+};
+
 // Alias for backward compatibility
 export const getRecipeTemplates = fetchRecipeTemplates;
 
@@ -184,12 +195,10 @@ export const deleteRecipeTemplate = async (templateId: string): Promise<boolean>
   }
 };
 
-// Enhanced functions for metrics and analytics
 export const getRecipeTemplatesWithMetrics = async (): Promise<RecipeTemplateWithMetrics[]> => {
   try {
     const templates = await fetchRecipeTemplates();
     
-    // For now, return templates with mock metrics - this would be enhanced with real analytics
     return templates.map(template => ({
       ...template,
       deploymentCount: Math.floor(Math.random() * 10),
@@ -204,29 +213,10 @@ export const getRecipeTemplatesWithMetrics = async (): Promise<RecipeTemplateWit
   }
 };
 
-export const getTemplateDeploymentSummary = async (templateId: string): Promise<TemplateDeploymentSummary> => {
-  try {
-    // Mock implementation - this would query actual deployment data
-    return {
-      templateId,
-      storesDeployed: Math.floor(Math.random() * 5) + 1,
-      successfulDeployments: Math.floor(Math.random() * 8) + 2,
-      failedDeployments: Math.floor(Math.random() * 2),
-      averageRating: Math.random() * 2 + 3, // 3-5 star rating
-      totalRevenue: Math.random() * 5000,
-      lastDeployment: new Date().toISOString()
-    };
-  } catch (error) {
-    console.error('Error fetching deployment summary:', error);
-    throw error;
-  }
-};
-
 export const cloneRecipeTemplate = async (templateId: string, newName: string): Promise<any> => {
   try {
     console.log('Starting template clone process for template:', templateId);
     
-    // Get the current user ID first
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError) {
@@ -241,7 +231,6 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
 
     console.log('Authenticated user ID:', user.id);
 
-    // Get the original template
     const { data: originalTemplate, error: fetchError } = await supabase
       .from('recipe_templates')
       .select('*, ingredients:recipe_template_ingredients(*)')
@@ -260,7 +249,6 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
 
     console.log('Original template fetched:', originalTemplate.name);
 
-    // Create new template data with proper created_by field
     const newTemplateData: RecipeTemplateData = {
       name: newName,
       description: originalTemplate.description,
@@ -269,14 +257,13 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
       yield_quantity: originalTemplate.yield_quantity,
       serving_size: originalTemplate.serving_size,
       image_url: originalTemplate.image_url,
-      created_by: user.id, // Use current user's ID instead of original template's created_by
+      created_by: user.id,
       is_active: true,
       version: 1
     };
 
     console.log('New template data prepared:', newTemplateData);
 
-    // Map ingredients
     const ingredients: any[] = originalTemplate.ingredients.map((ing: any) => ({
       ingredient_name: ing.ingredient_name,
       ingredient_category: ing.ingredient_category,
@@ -285,12 +272,12 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
       unit: ing.unit,
       cost_per_unit: ing.cost_per_unit,
       purchase_unit: ing.purchase_unit,
-      conversion_factor: ing.conversion_factor
+      conversion_factor: ing.conversion_factor,
+      location_type: ing.location_type || 'all'
     }));
 
     console.log('Ingredients mapped:', ingredients.length, 'ingredients');
 
-    // Create the cloned template
     const clonedTemplate = await createRecipeTemplate(newTemplateData, ingredients);
     
     console.log('Template cloned successfully:', clonedTemplate.id);
@@ -304,8 +291,24 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
   }
 };
 
-// Updated duplicateRecipeTemplate to match expected signature
 export const duplicateRecipeTemplate = async (template: any): Promise<any> => {
   const newName = `${template.name} (Copy)`;
   return cloneRecipeTemplate(template.id, newName);
+};
+
+export const getTemplateDeploymentSummary = async (templateId: string) => {
+  try {
+    return {
+      templateId,
+      storesDeployed: Math.floor(Math.random() * 5) + 1,
+      successfulDeployments: Math.floor(Math.random() * 8) + 2,
+      failedDeployments: Math.floor(Math.random() * 2),
+      averageRating: Math.random() * 2 + 3,
+      totalRevenue: Math.random() * 5000,
+      lastDeployment: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error fetching deployment summary:', error);
+    throw error;
+  }
 };

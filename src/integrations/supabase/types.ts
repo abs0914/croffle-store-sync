@@ -2384,6 +2384,7 @@ export type Database = {
           ingredient_category: string | null
           ingredient_name: string
           ingredient_type: string | null
+          location_type: string | null
           purchase_unit: string | null
           quantity: number
           recipe_template_id: string
@@ -2401,6 +2402,7 @@ export type Database = {
           ingredient_category?: string | null
           ingredient_name: string
           ingredient_type?: string | null
+          location_type?: string | null
           purchase_unit?: string | null
           quantity: number
           recipe_template_id: string
@@ -2418,6 +2420,7 @@ export type Database = {
           ingredient_category?: string | null
           ingredient_name?: string
           ingredient_type?: string | null
+          location_type?: string | null
           purchase_unit?: string | null
           quantity?: number
           recipe_template_id?: string

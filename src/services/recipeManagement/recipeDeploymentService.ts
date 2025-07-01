@@ -1,7 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { RecipeTemplate } from "./types";
 import { toast } from "sonner";
+import type { LocationType } from "./types";
 
 export interface DeploymentResult {
   storeId: string;
@@ -12,6 +12,36 @@ export interface DeploymentResult {
   warnings?: string[];
   missingIngredients?: string[];
 }
+
+// Get ingredients for specific store location
+const getIngredientsForStore = async (template: RecipeTemplate, storeId: string) => {
+  // Get store's location type
+  const { data: store, error: storeError } = await supabase
+    .from('stores')
+    .select('location_type')
+    .eq('id', storeId)
+    .single();
+
+  if (storeError) {
+    console.error('Error fetching store location:', storeError);
+    // Default to all ingredients if we can't determine location
+    return template.ingredients.filter(ing => !ing.location_type || ing.location_type === 'all');
+  }
+
+  const storeLocationType = store?.location_type as LocationType || 'all';
+  
+  console.log(`Store ${storeId} location type: ${storeLocationType}`);
+
+  // Filter ingredients based on store location
+  const applicableIngredients = template.ingredients.filter(ingredient => {
+    const ingLocation = ingredient.location_type || 'all';
+    return ingLocation === 'all' || ingLocation === storeLocationType;
+  });
+
+  console.log(`Filtered ${applicableIngredients.length} ingredients for location ${storeLocationType}`);
+  
+  return applicableIngredients;
+};
 
 export const deployRecipeToProductCatalog = async (
   template: RecipeTemplate,
@@ -42,8 +72,11 @@ export const deployRecipeToProductCatalog = async (
       };
     }
 
-    // Calculate recipe cost for product pricing
-    const totalCost = template.ingredients.reduce((sum, ingredient) => 
+    // Get location-specific ingredients
+    const storeIngredients = await getIngredientsForStore(template, storeId);
+    
+    // Calculate recipe cost based on location-specific ingredients
+    const totalCost = storeIngredients.reduce((sum, ingredient) => 
       sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
     );
 
@@ -53,7 +86,7 @@ export const deployRecipeToProductCatalog = async (
       throw new Error('User authentication required');
     }
 
-    // Create the product in products table first (required for recipe foreign key)
+    // Create the product in products table first
     const { data: product, error: productError } = await supabase
       .from('products')
       .insert({
@@ -65,7 +98,7 @@ export const deployRecipeToProductCatalog = async (
         stock_quantity: 0,
         store_id: storeId,
         is_active: true,
-        image_url: template.image_url // Include image from template
+        image_url: template.image_url
       })
       .select()
       .single();
@@ -83,11 +116,11 @@ export const deployRecipeToProductCatalog = async (
       .insert({
         product_name: template.name,
         description: template.description,
-        price: totalCost * 1.5, // 50% markup as default
+        price: totalCost * 1.5,
         store_id: storeId,
-        is_available: true, // Immediately available since deployed by admin
+        is_available: true,
         display_order: 0,
-        image_url: template.image_url // Include image from template
+        image_url: template.image_url
       })
       .select()
       .single();
@@ -99,7 +132,7 @@ export const deployRecipeToProductCatalog = async (
 
     console.log(`Created product catalog entry with ID: ${catalogProduct.id}`);
 
-    // Create the recipe with APPROVED status since it's deployed by admin
+    // Create the recipe with location-appropriate ingredients
     const { data: recipe, error: recipeError } = await supabase
       .from('recipes')
       .insert({
@@ -109,11 +142,11 @@ export const deployRecipeToProductCatalog = async (
         yield_quantity: template.yield_quantity,
         serving_size: template.serving_size || 1,
         store_id: storeId,
-        product_id: product.id, // Reference the products table entry
+        product_id: product.id,
         category_name: template.category_name,
-        approval_status: 'approved', // Auto-approve admin deployed recipes
-        approved_by: user.id, // Set the admin as approver
-        approved_at: new Date().toISOString(), // Set approval timestamp
+        approval_status: 'approved',
+        approved_by: user.id,
+        approved_at: new Date().toISOString(),
         is_active: true,
         version: template.version || 1
       })
@@ -138,31 +171,31 @@ export const deployRecipeToProductCatalog = async (
       throw updateCatalogError;
     }
 
-    // Process ingredients - allow deployment even if some ingredients are missing
+    // Process location-specific ingredients
     const warnings: string[] = [];
     const missingIngredients: string[] = [];
     
-    if (template.ingredients && template.ingredients.length > 0) {
+    if (storeIngredients && storeIngredients.length > 0) {
       const ingredientInserts = [];
       const productIngredientInserts = [];
 
-      for (const ingredient of template.ingredients) {
+      for (const ingredient of storeIngredients) {
         // Try to find the corresponding inventory stock item in the target store
         const { data: inventoryStock, error: stockError } = await supabase
           .from('inventory_stock')
           .select('id')
           .eq('store_id', storeId)
-          .eq('item', ingredient.commissary_item_name)
+          .eq('item', ingredient.ingredient_name)
           .maybeSingle();
 
         if (stockError) {
-          console.warn(`Error checking inventory for "${ingredient.commissary_item_name}":`, stockError);
+          console.warn(`Error checking inventory for "${ingredient.ingredient_name}":`, stockError);
           continue;
         }
 
         if (!inventoryStock) {
-          console.warn(`Inventory item "${ingredient.commissary_item_name}" not found in store ${storeId} - skipping ingredient mapping`);
-          missingIngredients.push(ingredient.commissary_item_name);
+          console.warn(`Inventory item "${ingredient.ingredient_name}" not found in store ${storeId}`);
+          missingIngredients.push(ingredient.ingredient_name);
           continue;
         }
 
@@ -186,7 +219,7 @@ export const deployRecipeToProductCatalog = async (
         });
       }
 
-      // Insert recipe ingredients (only for found inventory items)
+      // Insert recipe ingredients
       if (ingredientInserts.length > 0) {
         const { error: ingredientsError } = await supabase
           .from('recipe_ingredients')
@@ -198,7 +231,7 @@ export const deployRecipeToProductCatalog = async (
         }
       }
 
-      // Insert product catalog ingredients (only for found inventory items)
+      // Insert product catalog ingredients
       if (productIngredientInserts.length > 0) {
         const { error: productIngredientsError } = await supabase
           .from('product_ingredients')
@@ -210,10 +243,20 @@ export const deployRecipeToProductCatalog = async (
         }
       }
 
-      // Add warnings about missing ingredients
+      // Add location-specific warnings
       if (missingIngredients.length > 0) {
         warnings.push(`Missing inventory items: ${missingIngredients.join(', ')}`);
-        warnings.push('These ingredients will need to be added to store inventory for accurate availability tracking');
+      }
+
+      // Add location-specific deployment info
+      const { data: store } = await supabase
+        .from('stores')
+        .select('location_type')
+        .eq('id', storeId)
+        .single();
+        
+      if (store?.location_type) {
+        warnings.push(`Deployed with ${store.location_type.replace('_', ' ')} specific ingredients`);
       }
     }
 
@@ -276,7 +319,7 @@ export const deployRecipeToMultipleStores = async (
   if (successCount > 0) {
     if (warningCount > 0) {
       toast.success(`Deployed to ${successCount} stores with ${warningCount} warnings`, {
-        description: "Check deployment results for missing ingredient details"
+        description: "Check deployment results for location-specific ingredient details"
       });
     } else {
       toast.success(`Successfully deployed to ${successCount} stores`);

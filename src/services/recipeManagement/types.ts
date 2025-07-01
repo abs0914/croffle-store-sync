@@ -1,4 +1,6 @@
 
+export type LocationType = 'all' | 'inside_cebu' | 'outside_cebu';
+
 export interface RecipeTemplate {
   id: string;
   name: string;
@@ -7,31 +9,34 @@ export interface RecipeTemplate {
   instructions?: string;
   yield_quantity: number;
   serving_size?: number;
-  version: number;
-  is_active: boolean;
+  image_url?: string;
   created_by: string;
+  is_active: boolean;
+  version: number;
   created_at: string;
   updated_at: string;
-  image_url?: string;
   ingredients: RecipeTemplateIngredient[];
 }
 
 export interface RecipeTemplateIngredient {
-  id: string;
-  recipe_template_id: string;
+  id?: string;
+  recipe_template_id?: string;
   ingredient_name: string;
+  commissary_item_name?: string;
+  commissary_item_id?: string;
   ingredient_category: string;
   ingredient_type: string;
   quantity: number;
   unit: string;
-  created_at: string;
-  // Optional commissary references for backward compatibility
-  commissary_item_id?: string;
-  commissary_item_name?: string;
   cost_per_unit?: number;
+  purchase_unit?: string;
+  recipe_unit?: string;
+  conversion_factor?: number;
+  cost_per_recipe_unit?: number;
+  location_type: LocationType;
+  created_at?: string;
 }
 
-// Simplified interface for ingredient input in templates - removed purchase_unit and conversion_factor
 export interface RecipeTemplateIngredientInput {
   ingredient_name: string;
   ingredient_category: string;
@@ -39,27 +44,38 @@ export interface RecipeTemplateIngredientInput {
   quantity: number;
   unit: string;
   cost_per_unit?: number;
-  // These fields are kept for database compatibility but not used in UI
   purchase_unit?: string;
   conversion_factor?: number;
+  location_type: LocationType;
 }
 
-// Available ingredient categories and types
+export interface LocationBasedIngredientSet {
+  location_type: LocationType;
+  ingredients: RecipeTemplateIngredientInput[];
+}
+
 export const INGREDIENT_CATEGORIES = [
   'ingredient',
-  'spice', 
+  'spice',
+  'dairy',
+  'meat',
+  'vegetable',
+  'fruit',
+  'grain',
+  'liquid',
   'sauce',
-  'topping',
-  'base',
-  'packaging'
-] as const;
+  'seasoning'
+];
 
 export const INGREDIENT_TYPES = [
   'raw_material',
-  'finished_good', 
-  'packaging',
-  'consumable'
-] as const;
+  'processed',
+  'finished_product',
+  'semi_finished'
+];
 
-export type IngredientCategory = typeof INGREDIENT_CATEGORIES[number];
-export type IngredientType = typeof INGREDIENT_TYPES[number];
+export const LOCATION_TYPES: { value: LocationType; label: string }[] = [
+  { value: 'all', label: 'All Locations' },
+  { value: 'inside_cebu', label: 'Inside Cebu' },
+  { value: 'outside_cebu', label: 'Outside Cebu' }
+];
