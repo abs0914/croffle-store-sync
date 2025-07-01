@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
-import { RecipeTemplateIngredientInput, INGREDIENT_CATEGORIES, INGREDIENT_TYPES } from '@/services/recipeManagement/types';
+import { RecipeTemplateIngredientInput, INGREDIENT_TYPES } from '@/services/recipeManagement/types';
 import { fetchOrderableItems } from '@/services/inventoryManagement/commissaryInventoryService';
+import { fetchIngredientCategories, getFormattedCategoryName } from '@/services/recipeManagement/categoryService';
 import { CommissaryInventoryItem } from '@/types/commissary';
 
 interface IngredientFormProps {
@@ -28,27 +29,34 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
   locationColor = 'bg-gray-500'
 }) => {
   const [orderableItems, setOrderableItems] = useState<CommissaryInventoryItem[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadOrderableItems = async () => {
+    const loadData = async () => {
       try {
-        const items = await fetchOrderableItems();
+        const [items, ingredientCategories] = await Promise.all([
+          fetchOrderableItems(),
+          fetchIngredientCategories()
+        ]);
+        
         const finishedProducts = items.filter(item => 
           item.item_type === 'orderable_item'
         );
         const uniqueItems = finishedProducts.filter((item, idx, self) =>
           idx === self.findIndex(i => i.name.toLowerCase() === item.name.toLowerCase())
         );
+        
         setOrderableItems(uniqueItems);
+        setCategories(ingredientCategories);
       } catch (error) {
-        console.error('Error loading orderable items:', error);
+        console.error('Error loading data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadOrderableItems();
+    loadData();
   }, []);
 
   return (
@@ -97,9 +105,9 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {INGREDIENT_CATEGORIES.filter(category => category.trim() !== '').map(category => (
+            {categories.map(category => (
               <SelectItem key={category} value={category}>
-                {category.charAt(0).toUpperCase() + category.slice(1)}
+                {getFormattedCategoryName(category)}
               </SelectItem>
             ))}
           </SelectContent>

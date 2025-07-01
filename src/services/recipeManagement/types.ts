@@ -54,18 +54,8 @@ export interface LocationBasedIngredientSet {
   ingredients: RecipeTemplateIngredientInput[];
 }
 
-export const INGREDIENT_CATEGORIES = [
-  'ingredient',
-  'spice',
-  'dairy',
-  'meat',
-  'vegetable',
-  'fruit',
-  'grain',
-  'liquid',
-  'sauce',
-  'seasoning'
-];
+// Remove hardcoded categories - they will be fetched dynamically from commissary inventory
+export const INGREDIENT_CATEGORIES: string[] = [];
 
 export const INGREDIENT_TYPES = [
   'raw_material',
