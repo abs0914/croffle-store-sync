@@ -79,7 +79,7 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
       const rawMaterial = rawMaterials.find(rm => rm.id === item.commissary_item_id);
       return {
         ...item,
-        unit: rawMaterial?.unit || item.unit || "pieces"
+        unit: rawMaterial?.uom || item.unit || "pieces"
       };
     });
 
