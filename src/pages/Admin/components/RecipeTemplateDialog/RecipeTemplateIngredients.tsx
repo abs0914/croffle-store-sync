@@ -169,7 +169,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
                 min="0"
                 step="0.1"
                 value={ingredient.quantity}
-                onChange={(e) => updateIngiredient(index, 'quantity', parseFloat(e.target.value) || 0)}
+                onChange={(e) => updateIngredient(index, 'quantity', parseFloat(e.target.value) || 0)}
               />
             </div>
             
