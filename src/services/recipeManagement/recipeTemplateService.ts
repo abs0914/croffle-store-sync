@@ -42,6 +42,17 @@ export interface RecipeTemplateWithMetrics {
   totalRevenue: number;
 }
 
+// Add the missing TemplateDeploymentSummary interface
+export interface TemplateDeploymentSummary {
+  templateId: string;
+  storesDeployed: number;
+  successfulDeployments: number;
+  failedDeployments: number;
+  averageRating: number;
+  totalRevenue: number;
+  lastDeployment: string;
+}
+
 export const createRecipeTemplate = async (
   templateData: RecipeTemplateData,
   ingredients: any[]
@@ -296,7 +307,7 @@ export const duplicateRecipeTemplate = async (template: any): Promise<any> => {
   return cloneRecipeTemplate(template.id, newName);
 };
 
-export const getTemplateDeploymentSummary = async (templateId: string) => {
+export const getTemplateDeploymentSummary = async (templateId: string): Promise<TemplateDeploymentSummary> => {
   try {
     return {
       templateId,
