@@ -1,21 +1,18 @@
 
 import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Store } from 'lucide-react';
 
 interface Store {
   id: string;
   name: string;
-  address: string;
 }
 
 interface StoreSelectorProps {
   stores: Store[];
   selectedStore: string;
   onStoreChange: (storeId: string) => void;
-  loading?: boolean;
   title?: string;
   description?: string;
 }
@@ -24,35 +21,43 @@ export const StoreSelector: React.FC<StoreSelectorProps> = ({
   stores,
   selectedStore,
   onStoreChange,
-  loading = false,
   title = "Store Selection",
-  description = "Select a store to manage its recipes and products"
+  description = "Select a store to manage"
 }) => {
+  // Filter out stores with empty IDs or names to prevent Select.Item errors
+  const validStores = stores.filter(store => 
+    store && 
+    store.id && 
+    store.id.trim() !== '' && 
+    store.name && 
+    store.name.trim() !== ''
+  );
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Store className="h-5 w-5" />
-          {title}
-        </CardTitle>
-        {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        )}
+        <CardTitle>{title}</CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
-        <div className="flex gap-4 items-center">
-          <Label htmlFor="store-select">Select Store:</Label>
-          <Select value={selectedStore} onValueChange={onStoreChange} disabled={loading}>
-            <SelectTrigger id="store-select" className="flex-1">
+        <div className="space-y-2">
+          <Label htmlFor="store-select">Store</Label>
+          <Select value={selectedStore} onValueChange={onStoreChange}>
+            <SelectTrigger id="store-select">
               <SelectValue placeholder="Select a store" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Stores</SelectItem>
-              {stores.map(store => (
-                <SelectItem key={store.id} value={store.id}>
-                  {store.name} - {store.address}
+              {validStores.length > 0 ? (
+                validStores.map(store => (
+                  <SelectItem key={store.id} value={store.id}>
+                    {store.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-stores" disabled>
+                  No stores available
                 </SelectItem>
-              ))}
+              )}
             </SelectContent>
           </Select>
         </div>
