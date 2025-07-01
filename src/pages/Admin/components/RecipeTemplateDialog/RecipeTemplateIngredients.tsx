@@ -134,7 +134,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {INGREDIENT_CATEGORIES.map(category => (
+                  {INGREDIENT_CATEGORIES.filter(category => category.trim() !== '').map(category => (
                     <SelectItem key={category} value={category}>
                       {category.charAt(0).toUpperCase() + category.slice(1)}
                     </SelectItem>
@@ -153,7 +153,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {INGREDIENT_TYPES.map(type => (
+                  {INGREDIENT_TYPES.filter(type => type.trim() !== '').map(type => (
                     <SelectItem key={type} value={type}>
                       {type.replace('_', ' ').charAt(0).toUpperCase() + type.replace('_', ' ').slice(1)}
                     </SelectItem>
