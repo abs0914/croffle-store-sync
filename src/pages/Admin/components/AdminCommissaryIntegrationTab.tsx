@@ -1,363 +1,614 @@
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
-  Link2, 
-  Warehouse, 
+  Search, 
+  Plus, 
   AlertTriangle, 
-  CheckCircle, 
-  Search,
-  Package,
-  TrendingUp,
-  Clock,
+  TrendingUp, 
+  Package, 
+  Zap,
+  BarChart3,
   Download,
-  ChefHat
+  Upload,
+  RefreshCw,
+  MapPin,
+  Users,
+  DollarSign,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Info,
+  Settings,
+  Target
 } from 'lucide-react';
-import { fetchCommissaryInventory } from '@/services/inventoryManagement/commissaryInventoryService';
 import { supabase } from '@/integrations/supabase/client';
-import { CommissaryInventoryItem } from '@/types/inventoryManagement';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/utils/format';
+
+interface CommissaryItem {
+  id: string;
+  name: string;
+  category: string;
+  current_stock: number;
+  minimum_threshold: number;
+  unit: string;
+  unit_cost: number;
+  item_type: string;
+  supplier_id?: string;
+  last_purchase_date?: string;
+  last_purchase_cost?: number;
+  average_cost?: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface RecipeTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category_name?: string;
+  is_active: boolean;
+  ingredients: RecipeIngredient[];
+}
 
 interface RecipeIngredient {
-  commissary_item_id: string;
-  commissary_item_name: string;
-  recipe_count: number;
+  id: string;
+  ingredient_name: string;
+  ingredient_category: string;
+  quantity: number;
+  unit: string;
+  cost_per_unit?: number;
+}
+
+interface StockAlert {
+  id: string;
+  item_name: string;
+  current_stock: number;
+  minimum_threshold: number;
+  severity: 'critical' | 'warning' | 'info';
+  category: string;
+}
+
+interface ItemUsage {
+  itemName: string;
+  totalUsage: number;
+  recipeCount: number;
+  averageUsage: number;
+  recipes: string[];
 }
 
 export const AdminCommissaryIntegrationTab: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [commissaryItems, setCommissaryItems] = useState<CommissaryInventoryItem[]>([]);
-  const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
+  const [commissaryItems, setCommissaryItems] = useState<CommissaryItem[]>([]);
+  const [recipeTemplates, setRecipeTemplates] = useState<RecipeTemplate[]>([]);
+  const [stockAlerts, setStockAlerts] = useState<StockAlert[]>([]);
+  const [itemUsage, setItemUsage] = useState<ItemUsage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    loadCommissaryData();
+    loadData();
   }, []);
 
-  const loadCommissaryData = async () => {
+  const loadData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Fetch commissary inventory
-      const inventory = await fetchCommissaryInventory();
-      setCommissaryItems(inventory);
-
-      // Fetch recipe ingredients usage data
-      const { data: recipeIngredientsData } = await supabase
-        .from('recipe_template_ingredients')
-        .select(`
-          commissary_item_id,
-          commissary_item_name,
-          recipe_template_id
-        `);
-
-      if (recipeIngredientsData) {
-        // Group by commissary item and count unique recipes
-        const ingredientUsage = recipeIngredientsData.reduce((acc, item) => {
-          const key = item.commissary_item_id || item.commissary_item_name;
-          if (!acc[key]) {
-            acc[key] = {
-              commissary_item_id: item.commissary_item_id,
-              commissary_item_name: item.commissary_item_name,
-              recipes: new Set()
-            };
-          }
-          acc[key].recipes.add(item.recipe_template_id);
-          return acc;
-        }, {} as any);
-
-        const usageArray = Object.values(ingredientUsage).map((item: any) => ({
-          commissary_item_id: item.commissary_item_id,
-          commissary_item_name: item.commissary_item_name,
-          recipe_count: item.recipes.size
-        }));
-
-        setRecipeIngredients(usageArray);
-      }
+      await Promise.all([
+        loadCommissaryItems(),
+        loadRecipeTemplates(),
+        generateStockAlerts(),
+        analyzeItemUsage()
+      ]);
     } catch (error) {
-      console.error('Error loading commissary data:', error);
+      console.error('Error loading data:', error);
+      toast.error('Failed to load commissary integration data');
     } finally {
       setLoading(false);
     }
   };
 
-  const downloadReference = () => {
-    const csvContent = [
-      'Item Name,Category,Unit,Current Stock,Unit Cost',
-      ...commissaryItems.map(item => 
-        `"${item.name}","${item.category}","${item.uom}",${item.current_stock},${item.unit_cost || 0}`
-      )
-    ].join('\n');
+  const loadCommissaryItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('commissary_inventory')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'commissary_items_reference.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-    toast.success('Reference file downloaded');
-  };
-
-  const getItemUsage = (itemId: string, itemName: string) => {
-    const usage = recipeIngredients.find(
-      ri => ri.commissary_item_id === itemId || ri.commissary_item_name.toLowerCase() === itemName.toLowerCase()
-    );
-    return usage?.recipe_count || 0;
-  };
-
-  const getStatusBadge = (item: CommissaryInventoryItem) => {
-    if (item.current_stock === 0) {
-      return <Badge variant="destructive">Out of Stock</Badge>;
-    } else if (item.current_stock <= item.minimum_threshold) {
-      return <Badge variant="destructive" className="bg-amber-100 text-amber-800">Low Stock</Badge>;
-    } else {
-      return <Badge variant="default" className="bg-green-100 text-green-800">In Stock</Badge>;
+      if (error) throw error;
+      setCommissaryItems(data || []);
+    } catch (error) {
+      console.error('Error loading commissary items:', error);
     }
   };
 
-  // Calculate integration metrics
-  const totalCommissaryItems = commissaryItems.length;
-  const itemsUsedInRecipes = recipeIngredients.length;
-  const unusedItems = totalCommissaryItems - itemsUsedInRecipes;
-  const lowStockItems = commissaryItems.filter(item => 
-    item.current_stock <= item.minimum_threshold && item.current_stock > 0
-  ).length;
-  const outOfStockItems = commissaryItems.filter(item => item.current_stock === 0).length;
-  const averageCostPerUnit = commissaryItems.length > 0 
-    ? commissaryItems.reduce((sum, item) => sum + (item.unit_cost || 0), 0) / commissaryItems.length 
-    : 0;
+  const loadRecipeTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('recipe_templates')
+        .select(`
+          *,
+          ingredients:recipe_template_ingredients(*)
+        `)
+        .eq('is_active', true);
 
-  const filteredItems = commissaryItems.filter(item =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchQuery.toLowerCase())
+      if (error) throw error;
+      setRecipeTemplates(data || []);
+    } catch (error) {
+      console.error('Error loading recipe templates:', error);
+    }
+  };
+
+  const generateStockAlerts = async () => {
+    const alerts: StockAlert[] = commissaryItems
+      .filter(item => item.current_stock <= item.minimum_threshold)
+      .map(item => ({
+        id: item.id,
+        item_name: item.name,
+        current_stock: item.current_stock,
+        minimum_threshold: item.minimum_threshold,
+        severity: item.current_stock === 0 ? 'critical' : 
+                 item.current_stock <= item.minimum_threshold * 0.5 ? 'warning' : 'info',
+        category: item.category
+      }));
+
+    setStockAlerts(alerts);
+  };
+
+  const analyzeItemUsage = async () => {
+    const usage: ItemUsage[] = [];
+    const usageMap = new Map<string, ItemUsage>();
+
+    recipeTemplates.forEach(template => {
+      template.ingredients?.forEach(ingredient => {
+        // Add null check for ingredient_name
+        if (!ingredient.ingredient_name) return;
+        
+        const key = ingredient.ingredient_name.toLowerCase();
+        if (usageMap.has(key)) {
+          const existing = usageMap.get(key)!;
+          existing.totalUsage += ingredient.quantity;
+          existing.recipeCount += 1;
+          existing.recipes.push(template.name);
+        } else {
+          usageMap.set(key, {
+            itemName: ingredient.ingredient_name,
+            totalUsage: ingredient.quantity,
+            recipeCount: 1,
+            averageUsage: ingredient.quantity,
+            recipes: [template.name]
+          });
+        }
+      });
+    });
+
+    // Calculate average usage
+    usageMap.forEach(item => {
+      item.averageUsage = item.totalUsage / item.recipeCount;
+    });
+
+    setItemUsage(Array.from(usageMap.values()));
+  };
+
+  const getItemUsage = (itemName: string): ItemUsage | undefined => {
+    // Add null check for itemName
+    if (!itemName) return undefined;
+    
+    return itemUsage.find(usage => 
+      usage.itemName && usage.itemName.toLowerCase() === itemName.toLowerCase()
+    );
+  };
+
+  const getUnusedItems = (): CommissaryItem[] => {
+    return commissaryItems.filter(item => {
+      const usage = getItemUsage(item.name);
+      return !usage || usage.recipeCount === 0;
+    });
+  };
+
+  const getMostUsedItems = (): ItemUsage[] => {
+    return itemUsage
+      .sort((a, b) => b.recipeCount - a.recipeCount)
+      .slice(0, 10);
+  };
+
+  const getCriticalAlerts = (): StockAlert[] => {
+    return stockAlerts.filter(alert => alert.severity === 'critical');
+  };
+
+  const getCategories = (): string[] => {
+    const categories = new Set(commissaryItems.map(item => item.category));
+    return Array.from(categories).sort();
+  };
+
+  const filteredItems = commissaryItems.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const totalValue = commissaryItems.reduce((sum, item) => 
+    sum + (item.current_stock * item.unit_cost), 0
   );
+
+  const lowStockItems = commissaryItems.filter(item => 
+    item.current_stock <= item.minimum_threshold
+  ).length;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading commissary integration data...</p>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Integration Overview */}
-      <Alert>
-        <Link2 className="h-4 w-4" />
-        <AlertDescription>
-          Monitor commissary inventory integration with recipe templates. 
-          Ensure all recipe ingredients are available and properly costed.
-        </AlertDescription>
-      </Alert>
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold">Commissary Integration</h3>
+          <p className="text-sm text-muted-foreground">
+            Monitor stock levels, usage patterns, and integration with recipe templates
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={loadData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Data
+          </Button>
+          <Button>
+            <Settings className="h-4 w-4 mr-2" />
+            Configure Integration
+          </Button>
+        </div>
+      </div>
 
-      {/* Quick Reference Section for Recipe CSV Uploads */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <ChefHat className="h-5 w-5" />
-                Recipe CSV Reference ({commissaryItems.length} items)
-              </CardTitle>
-              <CardDescription>
-                Download reference for recipe CSV uploads - use these exact names in your recipe files
-              </CardDescription>
+      {/* Critical Alerts */}
+      {getCriticalAlerts().length > 0 && (
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-red-800 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Critical Stock Alerts ({getCriticalAlerts().length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {getCriticalAlerts().slice(0, 3).map(alert => (
+                <div key={alert.id} className="flex justify-between items-center">
+                  <div>
+                    <span className="font-medium">{alert.item_name}</span>
+                    <span className="text-sm text-muted-foreground ml-2">
+                      ({alert.category})
+                    </span>
+                  </div>
+                  <Badge variant="destructive">
+                    {alert.current_stock} / {alert.minimum_threshold}
+                  </Badge>
+                </div>
+              ))}
+              {getCriticalAlerts().length > 3 && (
+                <p className="text-sm text-muted-foreground">
+                  ...and {getCriticalAlerts().length - 3} more items
+                </p>
+              )}
             </div>
-            <Button onClick={downloadReference} variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Download CSV Reference
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">Recipe Upload Tips:</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Use the exact item names shown below in your CSV</li>
-              <li>• Names are case-sensitive and must match exactly</li>
-              <li>• Download the reference file to see all available items</li>
-              <li>• Check that items have sufficient stock if needed</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Integration Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-blue-600" />
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold">{totalCommissaryItems}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Items</p>
+                <p className="text-2xl font-bold">{commissaryItems.length}</p>
               </div>
+              <Package className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Used in Recipes</p>
-                <p className="text-2xl font-bold">{itemsUsedInRecipes}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Value</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalValue)}</p>
               </div>
+              <DollarSign className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-gray-600" />
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Unused Items</p>
-                <p className="text-2xl font-bold">{unusedItems}</p>
+                <p className="text-sm font-medium text-muted-foreground">Low Stock</p>
+                <p className="text-2xl font-bold">{lowStockItems}</p>
               </div>
+              <AlertTriangle className="h-8 w-8 text-orange-600" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Low/Out Stock</p>
-                <p className="text-2xl font-bold">{lowStockItems + outOfStockItems}</p>
+                <p className="text-sm font-medium text-muted-foreground">Recipe Templates</p>
+                <p className="text-2xl font-bold">{recipeTemplates.length}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-purple-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Avg Cost/Unit</p>
-                <p className="text-2xl font-bold">₱{averageCostPerUnit.toFixed(2)}</p>
-              </div>
+              <Target className="h-8 w-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Commissary Items List */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Warehouse className="h-5 w-5" />
-                Commissary Inventory Integration
-              </CardTitle>
-              <CardDescription>
-                Monitor commissary items used in recipe templates and their availability
-              </CardDescription>
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="usage-analysis">Usage Analysis</TabsTrigger>
+          <TabsTrigger value="stock-alerts">Stock Alerts</TabsTrigger>
+          <TabsTrigger value="integration-settings">Integration Settings</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          {/* Search and Filters */}
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search items..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 w-64"
-                />
-              </div>
-              <Button onClick={loadCommissaryData} variant="outline" size="sm">
-                Refresh
-              </Button>
-            </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="all">All Categories</option>
+              {getCategories().map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {filteredItems.map((item) => {
-              const usageCount = getItemUsage(item.id, item.name);
+
+          {/* Items Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredItems.map(item => {
+              const usage = getItemUsage(item.name);
+              const isLowStock = item.current_stock <= item.minimum_threshold;
+              
               return (
-                <div 
-                  key={item.id} 
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
+                <Card key={item.id} className={isLowStock ? 'border-orange-200' : ''}>
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="font-medium">{item.name}</h4>
+                        <CardTitle className="text-lg">{item.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground">{item.category}</p>
+                      </div>
+                      {isLowStock && (
+                        <Badge variant="destructive">Low Stock</Badge>
+                      )}
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium">Current Stock</p>
+                        <p className="text-lg font-bold">{item.current_stock} {item.unit}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Unit Cost</p>
+                        <p className="text-lg font-bold">{formatCurrency(item.unit_cost)}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-medium">Min. Threshold</p>
+                        <p className="text-sm">{item.minimum_threshold} {item.unit}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Used in Recipes</p>
+                        <p className="text-sm">{usage?.recipeCount || 0} recipes</p>
+                      </div>
+                    </div>
+                    
+                    {usage && usage.recipeCount > 0 && (
+                      <div>
+                        <p className="text-sm font-medium mb-1">Recipe Usage</p>
+                        <div className="text-xs text-muted-foreground">
+                          Avg: {usage.averageUsage.toFixed(1)} {item.unit} per recipe
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="usage-analysis" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Most Used Items */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Most Used Items</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Items frequently used across recipe templates
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {getMostUsedItems().map((item, index) => (
+                    <div key={item.itemName} className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium">{item.itemName}</p>
                         <p className="text-sm text-muted-foreground">
-                          {item.category.replace('_', ' ')} • Used in {usageCount} recipe{usageCount !== 1 ? 's' : ''}
+                          {item.recipeCount} recipes
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{item.totalUsage.toFixed(1)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          avg: {item.averageUsage.toFixed(1)}
                         </p>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4">
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Unused Items */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Unused Items</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Commissary items not used in any recipe template
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {getUnusedItems().slice(0, 10).map(item => (
+                    <div key={item.id} className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-sm text-muted-foreground">{item.category}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm">{item.current_stock} {item.unit}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(item.unit_cost)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {getUnusedItems().length > 10 && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      ...and {getUnusedItems().length - 10} more items
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="stock-alerts" className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            {stockAlerts.map(alert => (
+              <Card key={alert.id} className={
+                alert.severity === 'critical' ? 'border-red-200 bg-red-50' :
+                alert.severity === 'warning' ? 'border-orange-200 bg-orange-50' :
+                'border-blue-200 bg-blue-50'
+              }>
+                <CardContent className="pt-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium">{alert.item_name}</h4>
+                      <p className="text-sm text-muted-foreground">{alert.category}</p>
+                    </div>
                     <div className="text-right">
-                      <p className="font-medium">
-                        {item.current_stock} {item.uom}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        ₱{(item.unit_cost || 0).toFixed(2)}/{item.uom}
+                      <Badge variant={
+                        alert.severity === 'critical' ? 'destructive' :
+                        alert.severity === 'warning' ? 'secondary' : 'default'
+                      }>
+                        {alert.current_stock} / {alert.minimum_threshold}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {alert.severity === 'critical' ? 'Out of Stock' :
+                         alert.severity === 'warning' ? 'Low Stock' : 'Below Threshold'}
                       </p>
                     </div>
-                    
-                    {getStatusBadge(item)}
-                    
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
                   </div>
-                </div>
-              );
-            })}
-            
-            {filteredItems.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                {searchQuery ? 'No items found matching your search.' : 'No commissary items found.'}
-              </div>
-            )}
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      {/* Integration Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Integration Actions</CardTitle>
-          <CardDescription>
-            Manage commissary inventory integration and synchronization
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="h-20 flex-col gap-2" onClick={loadCommissaryData}>
-              <CheckCircle className="h-5 w-5" />
-              <span className="text-sm">Sync Inventory</span>
-            </Button>
-            
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <AlertTriangle className="h-5 w-5" />
-              <span className="text-sm">Check Missing Items</span>
-            </Button>
-            
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <TrendingUp className="h-5 w-5" />
-              <span className="text-sm">Update Costs</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="integration-settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Integration Configuration</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Configure how commissary inventory integrates with recipe templates
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium mb-2">Automatic Stock Deduction</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Automatically deduct commissary stock when recipes are used
+                  </p>
+                  <Button variant="outline">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configure Rules
+                  </Button>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Cost Synchronization</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Keep recipe costs updated with commissary item prices
+                  </p>
+                  <Button variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Sync Costs
+                  </Button>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Stock Alerts</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Configure thresholds and notification preferences
+                  </p>
+                  <Button variant="outline">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Alert Settings
+                  </Button>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Usage Analytics</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Generate reports on ingredient usage patterns
+                  </p>
+                  <Button variant="outline">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    View Reports
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
