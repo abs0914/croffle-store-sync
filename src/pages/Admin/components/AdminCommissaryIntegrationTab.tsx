@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,7 +61,6 @@ interface RecipeTemplate {
 interface RecipeIngredient {
   id: string;
   ingredient_name: string;
-  ingredient_category: string;
   quantity: number;
   unit: string;
   cost_per_unit?: number;
