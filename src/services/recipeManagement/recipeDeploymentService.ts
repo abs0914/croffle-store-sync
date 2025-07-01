@@ -45,6 +45,12 @@ export const deployRecipeToProductCatalog = async (
       sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
     );
 
+    // Get current user for approval tracking
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('User authentication required');
+    }
+
     // Create the product in products table first (required for recipe foreign key)
     const { data: product, error: productError } = await supabase
       .from('products')
@@ -77,7 +83,7 @@ export const deployRecipeToProductCatalog = async (
         description: template.description,
         price: totalCost * 1.5, // 50% markup as default
         store_id: storeId,
-        is_available: true,
+        is_available: true, // Immediately available since deployed by admin
         display_order: 0,
         image_url: template.image_url // Include image from template
       })
@@ -91,7 +97,7 @@ export const deployRecipeToProductCatalog = async (
 
     console.log(`Created product catalog entry with ID: ${catalogProduct.id}`);
 
-    // Create the recipe with reference to the products table
+    // Create the recipe with APPROVED status since it's deployed by admin
     const { data: recipe, error: recipeError } = await supabase
       .from('recipes')
       .insert({
@@ -103,7 +109,9 @@ export const deployRecipeToProductCatalog = async (
         store_id: storeId,
         product_id: product.id, // Reference the products table entry
         category_name: template.category_name,
-        approval_status: 'pending_approval',
+        approval_status: 'approved', // Auto-approve admin deployed recipes
+        approved_by: user.id, // Set the admin as approver
+        approved_at: new Date().toISOString(), // Set approval timestamp
         is_active: true,
         version: template.version || 1
       })
