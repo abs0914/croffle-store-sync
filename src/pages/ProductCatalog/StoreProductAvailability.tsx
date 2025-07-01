@@ -10,7 +10,10 @@ import {
   Eye, 
   EyeOff,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  Edit3,
+  Check,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { fetchProductCatalog, toggleProductAvailability } from '@/services/productCatalog/productCatalogService';
@@ -24,6 +27,8 @@ export default function StoreProductAvailability() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
+  const [editingPrice, setEditingPrice] = useState<string | null>(null);
+  const [tempPrice, setTempPrice] = useState<string>('');
 
   const storeId = user?.storeIds?.[0] || '';
 
@@ -59,6 +64,57 @@ export default function StoreProductAvailability() {
     } catch (error) {
       console.error('Error toggling product availability:', error);
     }
+  };
+
+  const handleEditPrice = (productId: string, currentPrice: number) => {
+    setEditingPrice(productId);
+    setTempPrice(currentPrice.toString());
+  };
+
+  const handleSavePrice = async (productId: string) => {
+    const newPrice = parseFloat(tempPrice);
+    if (isNaN(newPrice) || newPrice < 0) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://bwmkqscqkfoezcuzgpwq.supabase.co/rest/v1/product_catalog?id=eq.${productId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3bWtxc2Nxa2ZvZXpjdXpncHdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY1Mzg1NzEsImV4cCI6MjA2MjExNDU3MX0.Iv2rmTZIMIXQPdk8slgyhQMxiz1YXRvZGe3hoBPVImc',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3bWtxc2Nxa2ZvZXpjdXpncHdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY1Mzg1NzEsImV4cCI6MjA2MjExNDU3MX0.Iv2rmTZIMIXQPdk8slgyhQMxiz1YXRvZGe3hoBPVImc`
+        },
+        body: JSON.stringify({
+          price: newPrice,
+          updated_at: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update price');
+      }
+
+      // Update local state
+      setProducts(prev => prev.map(product => 
+        product.id === productId 
+          ? { ...product, price: newPrice }
+          : product
+      ));
+
+      setEditingPrice(null);
+      setTempPrice('');
+      toast.success('Price updated successfully');
+    } catch (error) {
+      console.error('Error updating price:', error);
+      toast.error('Failed to update price');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPrice(null);
+    setTempPrice('');
   };
 
   const filteredProducts = products.filter(product => {
@@ -106,7 +162,7 @@ export default function StoreProductAvailability() {
         <div>
           <h1 className="text-3xl font-bold">Product Availability</h1>
           <p className="text-muted-foreground">
-            Manage product availability for your store's POS system
+            Manage product availability and pricing for your store's POS system
           </p>
         </div>
       </div>
@@ -120,7 +176,7 @@ export default function StoreProductAvailability() {
               <h3 className="font-semibold text-blue-900">Product Management Notice</h3>
               <p className="text-sm text-blue-700 mt-1">
                 Products are managed centrally by administrators through the recipe system. 
-                You can only toggle availability to control what appears in your POS system.
+                You can toggle availability and adjust prices for your store's POS system.
               </p>
             </div>
           </div>
@@ -257,9 +313,48 @@ export default function StoreProductAvailability() {
                 {/* Product Details */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold text-green-600">
-                      {formatCurrency(product.price)}
-                    </span>
+                    {editingPrice === product.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <Input
+                          type="number"
+                          value={tempPrice}
+                          onChange={(e) => setTempPrice(e.target.value)}
+                          className="h-8 text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleSavePrice(product.id)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Check className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleCancelEdit}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-semibold text-green-600">
+                          {formatCurrency(product.price)}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditPrice(product.id, product.price)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                     <Badge 
                       variant={product.is_available ? "default" : "secondary"}
                     >
