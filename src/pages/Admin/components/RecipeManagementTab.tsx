@@ -16,7 +16,8 @@ import {
   Package,
   TrendingUp,
   DollarSign,
-  Users
+  Users,
+  Rocket
 } from 'lucide-react';
 import { 
   fetchRecipeTemplates,
@@ -25,6 +26,7 @@ import {
   RecipeTemplateWithMetrics
 } from '@/services/recipeManagement/recipeTemplateService';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
+import { DeployRecipeDialog } from './DeployRecipeDialog';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
@@ -35,6 +37,7 @@ export const RecipeManagementTab: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeployDialog, setShowDeployDialog] = useState(false);
 
   useEffect(() => {
     loadTemplates();
@@ -87,6 +90,12 @@ export const RecipeManagementTab: React.FC = () => {
     console.log('Edit template:', template);
     setSelectedTemplate(template);
     setShowEditDialog(true);
+  };
+
+  const handleDeploy = (template: any) => {
+    console.log('Deploy template:', template);
+    setSelectedTemplate(template);
+    setShowDeployDialog(true);
   };
 
   const handleDelete = async (templateId: string) => {
@@ -195,12 +204,18 @@ export const RecipeManagementTab: React.FC = () => {
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
-                  size="sm" 
-                  className="flex-1"
+                  size="sm"
+                  onClick={() => handleDeploy(template)}
+                >
+                  <Rocket className="h-4 w-4 mr-1" />
+                  Deploy
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
                   onClick={() => handleEdit(template)}
                 >
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
+                  <Edit className="h-4 w-4" />
                 </Button>
                 <Button 
                   variant="outline" 
@@ -256,6 +271,21 @@ export const RecipeManagementTab: React.FC = () => {
         template={selectedTemplate}
         onSuccess={() => {
           setShowEditDialog(false);
+          setSelectedTemplate(null);
+          loadTemplates();
+        }}
+      />
+
+      {/* Deploy Template Dialog */}
+      <DeployRecipeDialog
+        isOpen={showDeployDialog}
+        onClose={() => {
+          setShowDeployDialog(false);
+          setSelectedTemplate(null);
+        }}
+        template={selectedTemplate}
+        onSuccess={() => {
+          setShowDeployDialog(false);
           setSelectedTemplate(null);
           loadTemplates();
         }}
