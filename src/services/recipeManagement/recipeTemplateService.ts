@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -225,12 +224,22 @@ export const getTemplateDeploymentSummary = async (templateId: string): Promise<
 
 export const cloneRecipeTemplate = async (templateId: string, newName: string): Promise<any> => {
   try {
+    console.log('Starting template clone process for template:', templateId);
+    
     // Get the current user ID first
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (userError || !user) {
+    if (userError) {
+      console.error('Authentication error:', userError);
+      throw new Error(`Authentication failed: ${userError.message}`);
+    }
+    
+    if (!user) {
+      console.error('No authenticated user found');
       throw new Error('User not authenticated');
     }
+
+    console.log('Authenticated user ID:', user.id);
 
     // Get the original template
     const { data: originalTemplate, error: fetchError } = await supabase
@@ -239,7 +248,17 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
       .eq('id', templateId)
       .single();
 
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error('Error fetching original template:', fetchError);
+      throw new Error(`Failed to fetch template: ${fetchError.message}`);
+    }
+
+    if (!originalTemplate) {
+      console.error('Template not found:', templateId);
+      throw new Error('Template not found');
+    }
+
+    console.log('Original template fetched:', originalTemplate.name);
 
     // Create new template data with proper created_by field
     const newTemplateData: RecipeTemplateData = {
@@ -255,6 +274,8 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
       version: 1
     };
 
+    console.log('New template data prepared:', newTemplateData);
+
     // Map ingredients
     const ingredients: any[] = originalTemplate.ingredients.map((ing: any) => ({
       ingredient_name: ing.ingredient_name,
@@ -267,14 +288,18 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
       conversion_factor: ing.conversion_factor
     }));
 
+    console.log('Ingredients mapped:', ingredients.length, 'ingredients');
+
     // Create the cloned template
     const clonedTemplate = await createRecipeTemplate(newTemplateData, ingredients);
     
+    console.log('Template cloned successfully:', clonedTemplate.id);
     toast.success(`Template "${newName}" cloned successfully`);
     return clonedTemplate;
   } catch (error) {
     console.error('Error cloning recipe template:', error);
-    toast.error('Failed to clone template');
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    toast.error(`Failed to clone template: ${errorMessage}`);
     throw error;
   }
 };
