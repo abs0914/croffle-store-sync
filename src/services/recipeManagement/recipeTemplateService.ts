@@ -1,7 +1,8 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RecipeTemplateIngredientInput } from './types';
+
+// Re-export the ingredient input type using export type for isolated modules
+export type { RecipeTemplateIngredientInput } from './types';
 
 export interface RecipeTemplateData {
   name: string;
@@ -50,12 +51,9 @@ export interface TemplateDeploymentSummary {
   lastDeployment: string;
 }
 
-// Re-export the ingredient input type
-export { RecipeTemplateIngredientInput } from './types';
-
 export const createRecipeTemplate = async (
   templateData: RecipeTemplateData,
-  ingredients: RecipeTemplateIngredientInput[]
+  ingredients: any[]
 ): Promise<any> => {
   try {
     // Create the recipe template
@@ -99,7 +97,7 @@ export const createRecipeTemplate = async (
 export const updateRecipeTemplate = async (
   templateId: string,
   templateData: RecipeTemplateData,
-  ingredients: RecipeTemplateIngredientInput[]
+  ingredients: any[]
 ): Promise<any> => {
   try {
     // Update the recipe template
@@ -248,7 +246,7 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
     };
 
     // Map ingredients
-    const ingredients: RecipeTemplateIngredientInput[] = originalTemplate.ingredients.map((ing: any) => ({
+    const ingredients: any[] = originalTemplate.ingredients.map((ing: any) => ({
       ingredient_name: ing.ingredient_name,
       ingredient_category: ing.ingredient_category,
       ingredient_type: ing.ingredient_type,
@@ -271,5 +269,8 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
   }
 };
 
-// Alias for backward compatibility
-export const duplicateRecipeTemplate = cloneRecipeTemplate;
+// Updated duplicateRecipeTemplate to match expected signature
+export const duplicateRecipeTemplate = async (template: any): Promise<any> => {
+  const newName = `${template.name} (Copy)`;
+  return cloneRecipeTemplate(template.id, newName);
+};
