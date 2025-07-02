@@ -86,6 +86,15 @@ export function BIRComplianceSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [complianceStatus, setComplianceStatus] = useState<'compliant' | 'warning' | 'error'>('warning');
+  const [storeData, setStoreData] = useState({
+    tin: '',
+    business_name: '',
+    machine_accreditation_number: '',
+    machine_serial_number: '',
+    permit_number: '',
+    date_issued: '',
+    valid_until: ''
+  });
 
   useEffect(() => {
     loadBIRConfig();
@@ -107,6 +116,17 @@ export function BIRComplianceSettings() {
         const configData = data.bir_compliance_config as unknown as BIRComplianceConfig;
         setConfig({ ...defaultConfig, ...configData });
       }
+      
+      // Load current store data for editing
+      setStoreData({
+        tin: currentStore.tin || '',
+        business_name: currentStore.business_name || '',
+        machine_accreditation_number: currentStore.machine_accreditation_number || '',
+        machine_serial_number: currentStore.machine_serial_number || '',
+        permit_number: currentStore.permit_number || '',
+        date_issued: currentStore.date_issued || '',
+        valid_until: currentStore.valid_until || ''
+      });
       
       checkComplianceStatus();
     } catch (error) {
@@ -140,12 +160,18 @@ export function BIRComplianceSettings() {
     setConfig(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleStoreDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setStoreData(prev => ({ ...prev, [name]: value }));
+  };
+
   const saveBIRConfig = async () => {
     if (!currentStore) return;
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      // Save BIR configuration
+      const { error: configError } = await supabase
         .from('store_settings')
         .upsert({
           store_id: currentStore.id,
@@ -154,7 +180,23 @@ export function BIRComplianceSettings() {
           onConflict: 'store_id'
         });
 
-      if (error) throw error;
+      if (configError) throw configError;
+
+      // Save store BIR data
+      const { error: storeError } = await supabase
+        .from('stores')
+        .update({
+          tin: storeData.tin,
+          business_name: storeData.business_name,
+          machine_accreditation_number: storeData.machine_accreditation_number,
+          machine_serial_number: storeData.machine_serial_number,
+          permit_number: storeData.permit_number,
+          date_issued: storeData.date_issued || null,
+          valid_until: storeData.valid_until || null
+        })
+        .eq('id', currentStore.id);
+
+      if (storeError) throw storeError;
 
       toast.success('BIR compliance configuration saved successfully');
       checkComplianceStatus();
@@ -217,6 +259,110 @@ export function BIRComplianceSettings() {
           <p className="text-sm text-muted-foreground">
             Configure all BIR compliance requirements for receipts, invoices, and reporting.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Store BIR Data Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Store BIR Information
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Configure your store's BIR accreditation details required for POS compliance.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="tin">TIN (Taxpayer Identification Number) *</Label>
+              <Input
+                id="tin"
+                name="tin"
+                type="text"
+                maxLength={12}
+                placeholder="123456789000"
+                value={storeData.tin}
+                onChange={handleStoreDataChange}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="business_name">Business Name *</Label>
+              <Input
+                id="business_name"
+                name="business_name"
+                type="text"
+                placeholder="Company Name Corp."
+                value={storeData.business_name}
+                onChange={handleStoreDataChange}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="machine_accreditation_number">Machine Accreditation Number *</Label>
+              <Input
+                id="machine_accreditation_number"
+                name="machine_accreditation_number"
+                type="text"
+                placeholder="FP012024000001"
+                value={storeData.machine_accreditation_number}
+                onChange={handleStoreDataChange}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="machine_serial_number">Machine Serial Number *</Label>
+              <Input
+                id="machine_serial_number"
+                name="machine_serial_number"
+                type="text"
+                placeholder="SN123456789"
+                value={storeData.machine_serial_number}
+                onChange={handleStoreDataChange}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="permit_number">Permit Number *</Label>
+              <Input
+                id="permit_number"
+                name="permit_number"
+                type="text"
+                placeholder="ATP123456789"
+                value={storeData.permit_number}
+                onChange={handleStoreDataChange}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="date_issued">Date Issued</Label>
+              <Input
+                id="date_issued"
+                name="date_issued"
+                type="date"
+                value={storeData.date_issued}
+                onChange={handleStoreDataChange}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="valid_until">Valid Until</Label>
+              <Input
+                id="valid_until"
+                name="valid_until"
+                type="date"
+                value={storeData.valid_until}
+                onChange={handleStoreDataChange}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
