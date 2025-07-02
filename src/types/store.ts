@@ -10,7 +10,7 @@ export interface Store {
   phone?: string;
   email?: string;
   tax_id?: string;
-  location_type?: string;
+  location_type?: 'inside_cebu' | 'outside_cebu';
   region?: string;
   logistics_zone?: string;
   shipping_cost_multiplier?: number;
@@ -23,6 +23,7 @@ export interface Store {
     phone?: string;
     address?: string;
   };
+  opening_date?: string;
   is_active: boolean;
   logo_url?: string;
   created_at?: string;

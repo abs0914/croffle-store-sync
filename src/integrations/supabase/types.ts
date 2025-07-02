@@ -3251,6 +3251,7 @@ export type Database = {
           machine_accreditation_number: string | null
           machine_serial_number: string | null
           name: string
+          opening_date: string | null
           ownership_type: string | null
           permit_number: string | null
           phone: string | null
@@ -3283,6 +3284,7 @@ export type Database = {
           machine_accreditation_number?: string | null
           machine_serial_number?: string | null
           name: string
+          opening_date?: string | null
           ownership_type?: string | null
           permit_number?: string | null
           phone?: string | null
@@ -3315,6 +3317,7 @@ export type Database = {
           machine_accreditation_number?: string | null
           machine_serial_number?: string | null
           name?: string
+          opening_date?: string | null
           ownership_type?: string | null
           permit_number?: string | null
           phone?: string | null

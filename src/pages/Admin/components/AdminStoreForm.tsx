@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -209,6 +210,109 @@ export default function AdminStoreForm() {
                   value={store.zip_code || ''}
                   onChange={(e) => handleInputChange('zip_code', e.target.value)}
                 />
+              </div>
+            </div>
+
+            {/* Ownership Information */}
+            <div className="space-y-4 border-t pt-6">
+              <h3 className="text-lg font-medium">Ownership Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ownership_type">Ownership Type</Label>
+                  <Select 
+                    value={store.ownership_type || 'company_owned'} 
+                    onValueChange={(value) => handleInputChange('ownership_type', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select ownership type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="company_owned">Company Owned</SelectItem>
+                      <SelectItem value="franchisee">Franchise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="opening_date">Opening Date</Label>
+                  <Input
+                    id="opening_date"
+                    type="date"
+                    value={store.opening_date || ''}
+                    onChange={(e) => handleInputChange('opening_date', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {store.ownership_type === 'franchisee' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+                  <div>
+                    <Label htmlFor="franchise_agreement_date">Franchise Agreement Date</Label>
+                    <Input
+                      id="franchise_agreement_date"
+                      type="date"
+                      value={store.franchise_agreement_date || ''}
+                      onChange={(e) => handleInputChange('franchise_agreement_date', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="franchise_fee_percentage">Franchise Fee (%)</Label>
+                    <Input
+                      id="franchise_fee_percentage"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={store.franchise_fee_percentage || ''}
+                      onChange={(e) => handleInputChange('franchise_fee_percentage', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Location Information */}
+            <div className="space-y-4 border-t pt-6">
+              <h3 className="text-lg font-medium">Location Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="location_type">Location Type</Label>
+                  <Select 
+                    value={store.location_type || ''} 
+                    onValueChange={(value) => handleInputChange('location_type', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select location type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inside_cebu">Inside Cebu</SelectItem>
+                      <SelectItem value="outside_cebu">Outside Cebu</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="region">Region</Label>
+                  <Input
+                    id="region"
+                    value={store.region || ''}
+                    onChange={(e) => handleInputChange('region', e.target.value)}
+                    placeholder="e.g., Visayas, Mindanao"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="logistics_zone">Logistics Zone</Label>
+                  <Input
+                    id="logistics_zone"
+                    value={store.logistics_zone || ''}
+                    onChange={(e) => handleInputChange('logistics_zone', e.target.value)}
+                    placeholder="e.g., Zone A, Zone B"
+                  />
+                </div>
               </div>
             </div>
             
