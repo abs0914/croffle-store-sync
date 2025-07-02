@@ -27,6 +27,16 @@ export interface Store {
   logo_url?: string;
   created_at?: string;
   updated_at?: string;
+  // BIR Compliance Fields
+  tin?: string;
+  business_name?: string;
+  machine_accreditation_number?: string;
+  machine_serial_number?: string;
+  pos_version?: string;
+  permit_number?: string;
+  date_issued?: string;
+  valid_until?: string;
+  is_bir_accredited?: boolean;
 }
 
 export interface StoreSettings {

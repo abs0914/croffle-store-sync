@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useStoreSettings } from './hooks/useStoreSettings';
 import { StoreSettingsHeader } from './components/StoreSettingsHeader';
 import { ReceiptSettings } from './components/settings/ReceiptSettings';
-import { TaxSettings } from './components/settings/TaxSettings';
+import { TaxSettings, BIRSettings } from './components/settings/TaxSettings';
 import { RegionalSettings } from './components/settings/RegionalSettings';
 import { SettingsActions } from './components/settings/SettingsActions';
 
@@ -47,6 +47,19 @@ export default function StoreSettings() {
             isTaxInclusive={settings.is_tax_inclusive}
             handleNumberChange={handleNumberChange}
             handleSwitchChange={handleSwitchChange}
+          />
+          
+          <BIRSettings 
+            birData={{
+              tin: store?.tin || '',
+              business_name: store?.business_name || '',
+              machine_accreditation_number: store?.machine_accreditation_number || '',
+              machine_serial_number: store?.machine_serial_number || '',
+              permit_number: store?.permit_number || '',
+              date_issued: store?.date_issued || '',
+              valid_until: store?.valid_until || ''
+            }}
+            handleBIRChange={handleChange}
           />
           
           <RegionalSettings 

@@ -61,6 +61,14 @@ export interface Transaction {
   status: 'completed' | 'voided';
   createdAt: string;
   receiptNumber: string;
+  // BIR Compliance Fields
+  vat_sales?: number;
+  vat_exempt_sales?: number;
+  zero_rated_sales?: number;
+  senior_citizen_discount?: number;
+  pwd_discount?: number;
+  sequence_number?: number;
+  terminal_id?: string;
 }
 
 export interface TransactionItem {

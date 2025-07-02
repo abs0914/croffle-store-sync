@@ -51,6 +51,183 @@ export type Database = {
         }
         Relationships: []
       }
+      bir_audit_logs: {
+        Row: {
+          cashier_name: string | null
+          created_at: string
+          event_data: Json
+          event_name: string
+          hash_value: string
+          id: string
+          ip_address: unknown | null
+          log_type: string
+          previous_hash: string | null
+          receipt_number: string | null
+          sequence_number: number
+          store_id: string
+          terminal_id: string | null
+          transaction_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          cashier_name?: string | null
+          created_at?: string
+          event_data: Json
+          event_name: string
+          hash_value: string
+          id?: string
+          ip_address?: unknown | null
+          log_type: string
+          previous_hash?: string | null
+          receipt_number?: string | null
+          sequence_number: number
+          store_id: string
+          terminal_id?: string | null
+          transaction_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          cashier_name?: string | null
+          created_at?: string
+          event_data?: Json
+          event_name?: string
+          hash_value?: string
+          id?: string
+          ip_address?: unknown | null
+          log_type?: string
+          previous_hash?: string | null
+          receipt_number?: string | null
+          sequence_number?: number
+          store_id?: string
+          terminal_id?: string | null
+          transaction_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_audit_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bir_cumulative_sales: {
+        Row: {
+          created_at: string
+          grand_total_sales: number
+          grand_total_transactions: number
+          id: string
+          last_receipt_number: string | null
+          last_transaction_date: string | null
+          store_id: string
+          terminal_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grand_total_sales?: number
+          grand_total_transactions?: number
+          id?: string
+          last_receipt_number?: string | null
+          last_transaction_date?: string | null
+          store_id: string
+          terminal_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grand_total_sales?: number
+          grand_total_transactions?: number
+          id?: string
+          last_receipt_number?: string | null
+          last_transaction_date?: string | null
+          store_id?: string
+          terminal_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_cumulative_sales_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bir_ejournal: {
+        Row: {
+          backup_date: string | null
+          beginning_receipt: string | null
+          created_at: string
+          ending_receipt: string | null
+          gross_sales: number
+          id: string
+          is_backed_up: boolean | null
+          journal_data: Json
+          journal_date: string
+          net_sales: number
+          store_id: string
+          terminal_id: string
+          transaction_count: number
+          vat_amount: number
+          vat_exempt_sales: number
+          vat_sales: number
+          zero_rated_sales: number
+        }
+        Insert: {
+          backup_date?: string | null
+          beginning_receipt?: string | null
+          created_at?: string
+          ending_receipt?: string | null
+          gross_sales?: number
+          id?: string
+          is_backed_up?: boolean | null
+          journal_data: Json
+          journal_date: string
+          net_sales?: number
+          store_id: string
+          terminal_id: string
+          transaction_count?: number
+          vat_amount?: number
+          vat_exempt_sales?: number
+          vat_sales?: number
+          zero_rated_sales?: number
+        }
+        Update: {
+          backup_date?: string | null
+          beginning_receipt?: string | null
+          created_at?: string
+          ending_receipt?: string | null
+          gross_sales?: number
+          id?: string
+          is_backed_up?: boolean | null
+          journal_data?: Json
+          journal_date?: string
+          net_sales?: number
+          store_id?: string
+          terminal_id?: string
+          transaction_count?: number
+          vat_amount?: number
+          vat_exempt_sales?: number
+          vat_sales?: number
+          zero_rated_sales?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_ejournal_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cashiers: {
         Row: {
           contact_number: string | null
@@ -3053,71 +3230,98 @@ export type Database = {
       stores: {
         Row: {
           address: string
+          business_name: string | null
           city: string | null
           country: string | null
           created_at: string | null
+          date_issued: string | null
           email: string | null
           franchise_agreement_date: string | null
           franchise_fee_percentage: number | null
           franchisee_contact_info: Json | null
           id: string
           is_active: boolean | null
+          is_bir_accredited: boolean | null
           location_type: string | null
           logistics_zone: string | null
           logo_url: string | null
+          machine_accreditation_number: string | null
+          machine_serial_number: string | null
           name: string
           ownership_type: string | null
+          permit_number: string | null
           phone: string | null
+          pos_version: string | null
           region: string | null
           state: string | null
           tax_id: string | null
+          tin: string | null
           updated_at: string | null
+          valid_until: string | null
           zip_code: string | null
         }
         Insert: {
           address: string
+          business_name?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
+          date_issued?: string | null
           email?: string | null
           franchise_agreement_date?: string | null
           franchise_fee_percentage?: number | null
           franchisee_contact_info?: Json | null
           id?: string
           is_active?: boolean | null
+          is_bir_accredited?: boolean | null
           location_type?: string | null
           logistics_zone?: string | null
           logo_url?: string | null
+          machine_accreditation_number?: string | null
+          machine_serial_number?: string | null
           name: string
           ownership_type?: string | null
+          permit_number?: string | null
           phone?: string | null
+          pos_version?: string | null
           region?: string | null
           state?: string | null
           tax_id?: string | null
+          tin?: string | null
           updated_at?: string | null
+          valid_until?: string | null
           zip_code?: string | null
         }
         Update: {
           address?: string
+          business_name?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
+          date_issued?: string | null
           email?: string | null
           franchise_agreement_date?: string | null
           franchise_fee_percentage?: number | null
           franchisee_contact_info?: Json | null
           id?: string
           is_active?: boolean | null
+          is_bir_accredited?: boolean | null
           location_type?: string | null
           logistics_zone?: string | null
           logo_url?: string | null
+          machine_accreditation_number?: string | null
+          machine_serial_number?: string | null
           name?: string
           ownership_type?: string | null
+          permit_number?: string | null
           phone?: string | null
+          pos_version?: string | null
           region?: string | null
           state?: string | null
           tax_id?: string | null
+          tin?: string | null
           updated_at?: string | null
+          valid_until?: string | null
           zip_code?: string | null
         }
         Relationships: []
@@ -3178,14 +3382,21 @@ export type Database = {
           order_status: string | null
           payment_details: Json | null
           payment_method: string
+          pwd_discount: number | null
           receipt_number: string
+          senior_citizen_discount: number | null
+          sequence_number: number | null
           shift_id: string
           status: string
           store_id: string
           subtotal: number
           tax: number
+          terminal_id: string | null
           total: number
           user_id: string
+          vat_exempt_sales: number | null
+          vat_sales: number | null
+          zero_rated_sales: number | null
         }
         Insert: {
           amount_tendered?: number | null
@@ -3203,14 +3414,21 @@ export type Database = {
           order_status?: string | null
           payment_details?: Json | null
           payment_method: string
+          pwd_discount?: number | null
           receipt_number: string
+          senior_citizen_discount?: number | null
+          sequence_number?: number | null
           shift_id: string
           status?: string
           store_id: string
           subtotal?: number
           tax?: number
+          terminal_id?: string | null
           total?: number
           user_id: string
+          vat_exempt_sales?: number | null
+          vat_sales?: number | null
+          zero_rated_sales?: number | null
         }
         Update: {
           amount_tendered?: number | null
@@ -3228,14 +3446,21 @@ export type Database = {
           order_status?: string | null
           payment_details?: Json | null
           payment_method?: string
+          pwd_discount?: number | null
           receipt_number?: string
+          senior_citizen_discount?: number | null
+          sequence_number?: number | null
           shift_id?: string
           status?: string
           store_id?: string
           subtotal?: number
           tax?: number
+          terminal_id?: string | null
           total?: number
           user_id?: string
+          vat_exempt_sales?: number | null
+          vat_sales?: number | null
+          zero_rated_sales?: number | null
         }
         Relationships: [
           {
@@ -3429,6 +3654,20 @@ export type Database = {
       is_user_admin_or_owner: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      log_bir_audit: {
+        Args: {
+          p_store_id: string
+          p_log_type: string
+          p_event_name: string
+          p_event_data: Json
+          p_user_id?: string
+          p_cashier_name?: string
+          p_terminal_id?: string
+          p_transaction_id?: string
+          p_receipt_number?: string
+        }
+        Returns: string
       }
       transfer_commissary_to_store: {
         Args: {

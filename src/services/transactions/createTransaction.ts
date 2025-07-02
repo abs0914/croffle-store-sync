@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types";
+import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -50,6 +51,14 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
     
     const receiptNumber = `${receiptPrefix}-${String(count! + 1).padStart(4, '0')}-${timestamp}`;
     
+    // Get next sequence number (simplified approach)
+    const sequenceNumber = count! + 1;
+    
+    // Calculate BIR-compliant VAT breakdown
+    const vatableSales = transaction.subtotal - (transaction.discount || 0);
+    const seniorDiscount = transaction.discountType === 'senior' ? (transaction.discount || 0) : 0;
+    const pwdDiscount = transaction.discountType === 'pwd' ? (transaction.discount || 0) : 0;
+    
     const newTransaction = {
       shift_id: transaction.shiftId,
       store_id: transaction.storeId,
@@ -68,7 +77,15 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
       payment_details: transaction.paymentDetails ? JSON.stringify(transaction.paymentDetails) : null,
       status: transaction.status,
       receipt_number: receiptNumber,
-      created_at: now.toISOString()
+      created_at: now.toISOString(),
+      // BIR Compliance fields
+      vat_sales: vatableSales,
+      vat_exempt_sales: 0, // Can be enhanced based on product settings
+      zero_rated_sales: 0,
+      senior_citizen_discount: seniorDiscount,
+      pwd_discount: pwdDiscount,
+      sequence_number: Number(sequenceNumber),
+      terminal_id: 'TERMINAL-01'
     };
     
     // Remove customer object before sending to Supabase
@@ -83,6 +100,24 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
     }
     
     toast.success("Transaction completed successfully");
+    
+    // Log BIR audit event
+    await BIRComplianceService.logAuditEvent(
+      transaction.storeId,
+      'transaction',
+      'Transaction Completed',
+      {
+        receiptNumber,
+        total: transaction.total,
+        paymentMethod: transaction.paymentMethod,
+        items: transaction.items.length
+      },
+      transaction.userId,
+      undefined, // cashierName - can be enhanced
+      'TERMINAL-01',
+      data.id,
+      receiptNumber
+    );
     
     // Update inventory for each product
     await updateInventoryStockForTransaction(transaction.items);
