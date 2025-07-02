@@ -3376,6 +3376,7 @@ export type Database = {
           created_at: string | null
           customer_id: string | null
           discount: number
+          discount_details: Json | null
           discount_id_number: string | null
           discount_type: string | null
           estimated_completion_time: string | null
@@ -3388,6 +3389,7 @@ export type Database = {
           pwd_discount: number | null
           receipt_number: string
           senior_citizen_discount: number | null
+          senior_discounts: Json | null
           sequence_number: number | null
           shift_id: string
           status: string
@@ -3408,6 +3410,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string | null
           discount?: number
+          discount_details?: Json | null
           discount_id_number?: string | null
           discount_type?: string | null
           estimated_completion_time?: string | null
@@ -3420,6 +3423,7 @@ export type Database = {
           pwd_discount?: number | null
           receipt_number: string
           senior_citizen_discount?: number | null
+          senior_discounts?: Json | null
           sequence_number?: number | null
           shift_id: string
           status?: string
@@ -3440,6 +3444,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string | null
           discount?: number
+          discount_details?: Json | null
           discount_id_number?: string | null
           discount_type?: string | null
           estimated_completion_time?: string | null
@@ -3452,6 +3457,7 @@ export type Database = {
           pwd_discount?: number | null
           receipt_number?: string
           senior_citizen_discount?: number | null
+          senior_discounts?: Json | null
           sequence_number?: number | null
           shift_id?: string
           status?: string

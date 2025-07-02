@@ -9,10 +9,12 @@ import { CartItem, Customer } from '@/types';
 import { PaymentDialog } from './PaymentDialog';
 import { CustomerSelector } from './CustomerSelector';
 import { DiscountDialog } from './DiscountDialog';
+import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
 import { Trash2, Plus, Minus, AlertTriangle } from 'lucide-react';
 import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
 import { useStore } from '@/contexts/StoreContext';
 import { toast } from 'sonner';
+import { SeniorDiscount } from '@/hooks/useTransactionHandler';
 
 interface CartViewProps {
   items: CartItem[];
@@ -22,12 +24,15 @@ interface CartViewProps {
   discount: number;
   discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
   discountIdNumber?: string;
+  seniorDiscounts: SeniorDiscount[];
+  otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | null;
   removeItem: (index: number) => void;
   updateQuantity: (index: number, quantity: number) => void;
   clearCart: () => void;
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
+  handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }) => void;
   handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any) => void;
   isShiftActive: boolean;
 }
@@ -40,12 +45,15 @@ export default function CartView({
   discount,
   discountType,
   discountIdNumber,
+  seniorDiscounts,
+  otherDiscount,
   removeItem,
   updateQuantity,
   clearCart,
   selectedCustomer,
   setSelectedCustomer,
   handleApplyDiscount,
+  handleApplyMultipleDiscounts,
   handlePaymentComplete,
   isShiftActive
 }: CartViewProps) {
@@ -249,16 +257,16 @@ export default function CartView({
             </div>
           </div>
 
+          {/* Multiple Discount Selector */}
+          <MultipleSeniorDiscountSelector
+            subtotal={subtotal}
+            onApplyDiscounts={handleApplyMultipleDiscounts}
+            currentSeniorDiscounts={seniorDiscounts}
+            currentOtherDiscount={otherDiscount}
+          />
+
           {/* Action Buttons */}
           <div className="space-y-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsDiscountDialogOpen(true)}
-              className="w-full"
-              disabled={!isShiftActive}
-            >
-              Apply Discount
-            </Button>
             
             <Button
               onClick={() => setIsPaymentDialogOpen(true)}
@@ -283,12 +291,6 @@ export default function CartView({
         onPaymentComplete={handlePaymentCompleteWithDeduction}
       />
 
-      <DiscountDialog
-        isOpen={isDiscountDialogOpen}
-        onClose={() => setIsDiscountDialogOpen(false)}
-        onApplyDiscount={handleApplyDiscount}
-        currentTotal={subtotal}
-      />
     </div>
   );
 }

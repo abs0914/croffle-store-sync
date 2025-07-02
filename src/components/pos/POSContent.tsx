@@ -13,6 +13,7 @@ import { useStoreDisplay } from "@/contexts/StoreDisplayContext";
 import { PrinterStatusIndicator } from "@/components/printer/PrinterStatusIndicator";
 import { ThermalPrinterSettings } from "@/components/printer/ThermalPrinterSettings";
 import { Settings } from "lucide-react";
+import { SeniorDiscount } from "@/hooks/useTransactionHandler";
 
 interface POSContentProps {
   activeCategory: string;
@@ -27,7 +28,10 @@ interface POSContentProps {
   discount: number;
   discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
   discountIdNumber?: string;
+  seniorDiscounts: SeniorDiscount[];
+  otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | null;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
+  handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }) => void;
   handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: {
     cardType?: string;
     cardNumber?: string;
@@ -50,7 +54,10 @@ export default function POSContent({
   discount,
   discountType,
   discountIdNumber,
+  seniorDiscounts,
+  otherDiscount,
   handleApplyDiscount,
+  handleApplyMultipleDiscounts,
   handlePaymentComplete,
   addItemToCart
 }: POSContentProps) {
@@ -127,12 +134,15 @@ export default function POSContent({
                 discount={discount} 
                 discountType={discountType} 
                 discountIdNumber={discountIdNumber} 
+                seniorDiscounts={seniorDiscounts}
+                otherDiscount={otherDiscount}
                 removeItem={removeItem} 
                 updateQuantity={updateQuantity} 
                 clearCart={clearCart} 
                 selectedCustomer={selectedCustomer} 
                 setSelectedCustomer={setSelectedCustomer} 
                 handleApplyDiscount={handleApplyDiscount} 
+                handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
                 handlePaymentComplete={handlePaymentComplete} 
                 isShiftActive={!!currentShift} 
               />

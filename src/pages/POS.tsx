@@ -24,7 +24,10 @@ export default function POS() {
     discount,
     discountType,
     discountIdNumber,
+    seniorDiscounts,
+    otherDiscount,
     handleApplyDiscount,
+    handleApplyMultipleDiscounts,
     handlePaymentComplete: processPayment,
     startNewSale
   } = useTransactionHandler(currentStore?.id || '');
@@ -187,7 +190,10 @@ export default function POS() {
           discount={discount}
           discountType={discountType as 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | undefined}
           discountIdNumber={discountIdNumber}
+          seniorDiscounts={seniorDiscounts}
+          otherDiscount={otherDiscount}
           handleApplyDiscount={handleApplyDiscount}
+          handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
           handlePaymentComplete={handlePaymentComplete}
           addItemToCart={handleAddItemToCart}
         />
