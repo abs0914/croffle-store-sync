@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThermalPrinterPage } from './Settings/ThermalPrinter';
 import { PrinterStatusIndicator } from '@/components/printer/PrinterStatusIndicator';
-import { BIRSettings } from '@/pages/Stores/components/settings/TaxSettings';
+import { BIRComplianceSettings } from './Settings/components/BIRComplianceSettings';
 import { useStore } from '@/contexts/StoreContext';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings as SettingsIcon, User, Printer, MoreVertical, Shield, LogOut, FileText } from "lucide-react";
@@ -25,11 +25,6 @@ export default function Settings() {
   const navigate = useNavigate();
 
   const canAccessAdmin = user?.role === 'admin' || user?.role === 'owner';
-
-  const handleBIRChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // For settings page, this would be read-only or redirect to store settings
-    console.log('BIR change:', e.target.name, e.target.value);
-  };
 
   return (
     <div className="space-y-6">
@@ -147,34 +142,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="bir-compliance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                BIR Compliance Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {currentStore ? (
-                <BIRSettings 
-                  birData={{
-                    tin: currentStore.tin || '',
-                    business_name: currentStore.business_name || currentStore.name || '',
-                    machine_accreditation_number: currentStore.machine_accreditation_number || '',
-                    machine_serial_number: currentStore.machine_serial_number || '',
-                    permit_number: currentStore.permit_number || '',
-                    date_issued: currentStore.date_issued || '',
-                    valid_until: currentStore.valid_until || ''
-                  }}
-                  handleBIRChange={handleBIRChange}
-                />
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No store selected. Please select a store to view BIR compliance information.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <BIRComplianceSettings />
         </TabsContent>
       </Tabs>
     </div>
