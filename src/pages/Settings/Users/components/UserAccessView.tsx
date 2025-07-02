@@ -89,7 +89,7 @@ export default function UserAccessView({
         <CardContent className="pt-6 flex flex-col items-center">
           <p className="text-center mb-4">Please select a store first</p>
           <Button asChild variant="outline" size="sm">
-            <Link to="/stores">Select Store</Link>
+            <Link to="/admin/stores">Select Store</Link>
           </Button>
         </CardContent>
       </Card>

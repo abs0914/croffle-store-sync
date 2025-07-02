@@ -386,7 +386,7 @@ export default function BIRCompliance() {
               <p className="text-sm text-muted-foreground">
                 BIR settings are managed in Store Settings. 
                 <Button variant="link" className="p-0 ml-1" asChild>
-                  <a href={`/stores/${currentStore?.id}/settings`}>
+                  <a href={`/admin/stores/${currentStore?.id}/settings`}>
                     Go to Store Settings
                   </a>
                 </Button>

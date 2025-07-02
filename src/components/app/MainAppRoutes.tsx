@@ -15,10 +15,6 @@ const InventoryConversion = React.lazy(() => import('@/pages/InventoryConversion
 const OrderManagement = React.lazy(() => import('@/pages/OrderManagement'));
 const Reports = React.lazy(() => import('@/pages/Reports'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
-const Stores = React.lazy(() => import('@/pages/Stores'));
-const StoreForm = React.lazy(() => import('@/pages/Stores/StoreForm'));
-const StoreQR = React.lazy(() => import('@/pages/Stores/StoreQR'));
-const StoreSettings = React.lazy(() => import('@/pages/Stores/StoreSettings'));
 const ProductCatalog = React.lazy(() => import('@/pages/ProductCatalog'));
 const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
 
@@ -200,71 +196,6 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Stores Routes */}
-      <Route
-        path="/stores"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <React.Suspense fallback={<LoadingSpinner />}>
-                <Stores />
-              </React.Suspense>
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/stores/new"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <React.Suspense fallback={<LoadingSpinner />}>
-                <StoreForm />
-              </React.Suspense>
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/stores/edit/:id"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <React.Suspense fallback={<LoadingSpinner />}>
-                <StoreForm />
-              </React.Suspense>
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/stores/:id/qr"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <React.Suspense fallback={<LoadingSpinner />}>
-                <StoreQR />
-              </React.Suspense>
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/stores/:id/settings"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <React.Suspense fallback={<LoadingSpinner />}>
-                <StoreSettings />
-              </React.Suspense>
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
     </>
   );
 };

@@ -2,10 +2,10 @@
 import { Route } from "react-router-dom";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import StoresPage from "@/pages/Stores";
-import StoreForm from "@/pages/Stores/StoreForm";
-import StoreQR from "@/pages/Stores/StoreQR";
-import StoreSettings from "@/pages/Stores/StoreSettings";
+import AdminStores from "@/pages/Admin/AdminStores";
+import AdminStoreForm from "@/pages/Admin/components/AdminStoreForm";
+import AdminStoreQR from "@/pages/Admin/components/AdminStoreQR";
+import AdminStoreSettings from "@/pages/Admin/components/AdminStoreSettings";
 
 export function AdminStoreRoutes() {
   return (
@@ -14,35 +14,35 @@ export function AdminStoreRoutes() {
       <Route path="/admin/stores/list" element={
         <AdminProtectedRoute>
           <AdminLayout>
-            <StoresPage />
+            <AdminStores />
           </AdminLayout>
         </AdminProtectedRoute>
       } />
       <Route path="/admin/stores/new" element={
         <AdminProtectedRoute>
           <AdminLayout>
-            <StoreForm />
+            <AdminStoreForm />
           </AdminLayout>
         </AdminProtectedRoute>
       } />
       <Route path="/admin/stores/edit/:id" element={
         <AdminProtectedRoute>
           <AdminLayout>
-            <StoreForm />
+            <AdminStoreForm />
           </AdminLayout>
         </AdminProtectedRoute>
       } />
       <Route path="/admin/stores/:id/qr" element={
         <AdminProtectedRoute>
           <AdminLayout>
-            <StoreQR />
+            <AdminStoreQR />
           </AdminLayout>
         </AdminProtectedRoute>
       } />
       <Route path="/admin/stores/:id/settings" element={
         <AdminProtectedRoute>
           <AdminLayout>
-            <StoreSettings />
+            <AdminStoreSettings />
           </AdminLayout>
         </AdminProtectedRoute>
       } />
