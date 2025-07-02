@@ -1,6 +1,8 @@
 
 import { useParams } from 'react-router-dom';
+import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStoreSettings } from './hooks/useStoreSettings';
 import { StoreSettingsHeader } from './components/StoreSettingsHeader';
 import { ReceiptSettings } from './components/settings/ReceiptSettings';
@@ -10,6 +12,7 @@ import { SettingsActions } from './components/settings/SettingsActions';
 
 export default function StoreSettings() {
   const { id } = useParams();
+  const [activeTab, setActiveTab] = useState("general");
   
   const {
     store,
@@ -32,44 +35,58 @@ export default function StoreSettings() {
   
   return (
     <div className="container mx-auto py-6">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <StoreSettingsHeader store={store} />
         
-        <form onSubmit={handleSubmit}>
-          <ReceiptSettings 
-            receiptHeader={settings.receipt_header}
-            receiptFooter={settings.receipt_footer}
-            handleChange={handleChange}
-          />
-          
-          <TaxSettings 
-            taxPercentage={settings.tax_percentage}
-            isTaxInclusive={settings.is_tax_inclusive}
-            handleNumberChange={handleNumberChange}
-            handleSwitchChange={handleSwitchChange}
-          />
-          
-          <BIRSettings 
-            birData={{
-              tin: store?.tin || '',
-              business_name: store?.business_name || '',
-              machine_accreditation_number: store?.machine_accreditation_number || '',
-              machine_serial_number: store?.machine_serial_number || '',
-              permit_number: store?.permit_number || '',
-              date_issued: store?.date_issued || '',
-              valid_until: store?.valid_until || ''
-            }}
-            handleBIRChange={handleChange}
-          />
-          
-          <RegionalSettings 
-            currency={settings.currency}
-            timezone={settings.timezone}
-            handleChange={handleChange}
-          />
-          
-          <SettingsActions isSaving={isSaving} />
-        </form>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="general">General Settings</TabsTrigger>
+            <TabsTrigger value="bir-compliance">BIR Compliance</TabsTrigger>
+            <TabsTrigger value="regional">Regional Settings</TabsTrigger>
+          </TabsList>
+
+          <form onSubmit={handleSubmit}>
+            <TabsContent value="general" className="space-y-6">
+              <ReceiptSettings 
+                receiptHeader={settings.receipt_header}
+                receiptFooter={settings.receipt_footer}
+                handleChange={handleChange}
+              />
+              
+              <TaxSettings 
+                taxPercentage={settings.tax_percentage}
+                isTaxInclusive={settings.is_tax_inclusive}
+                handleNumberChange={handleNumberChange}
+                handleSwitchChange={handleSwitchChange}
+              />
+            </TabsContent>
+
+            <TabsContent value="bir-compliance" className="space-y-6">
+              <BIRSettings 
+                birData={{
+                  tin: store?.tin || '',
+                  business_name: store?.business_name || '',
+                  machine_accreditation_number: store?.machine_accreditation_number || '',
+                  machine_serial_number: store?.machine_serial_number || '',
+                  permit_number: store?.permit_number || '',
+                  date_issued: store?.date_issued || '',
+                  valid_until: store?.valid_until || ''
+                }}
+                handleBIRChange={handleChange}
+              />
+            </TabsContent>
+
+            <TabsContent value="regional" className="space-y-6">
+              <RegionalSettings 
+                currency={settings.currency}
+                timezone={settings.timezone}
+                handleChange={handleChange}
+              />
+            </TabsContent>
+
+            <SettingsActions isSaving={isSaving} />
+          </form>
+        </Tabs>
       </div>
     </div>
   );
