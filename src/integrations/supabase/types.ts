@@ -3182,6 +3182,7 @@ export type Database = {
       }
       store_settings: {
         Row: {
+          bir_compliance_config: Json | null
           created_at: string | null
           currency: string | null
           id: string
@@ -3194,6 +3195,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bir_compliance_config?: Json | null
           created_at?: string | null
           currency?: string | null
           id?: string
@@ -3206,6 +3208,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bir_compliance_config?: Json | null
           created_at?: string | null
           currency?: string | null
           id?: string

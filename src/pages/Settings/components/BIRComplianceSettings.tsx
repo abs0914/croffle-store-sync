@@ -103,8 +103,9 @@ export function BIRComplianceSettings() {
 
       if (error) throw error;
 
-      if (data?.bir_compliance_config) {
-        setConfig({ ...defaultConfig, ...data.bir_compliance_config });
+      if (data && data.bir_compliance_config) {
+        const configData = data.bir_compliance_config as unknown as BIRComplianceConfig;
+        setConfig({ ...defaultConfig, ...configData });
       }
       
       checkComplianceStatus();
@@ -148,7 +149,7 @@ export function BIRComplianceSettings() {
         .from('store_settings')
         .upsert({
           store_id: currentStore.id,
-          bir_compliance_config: config
+          bir_compliance_config: config as any
         }, {
           onConflict: 'store_id'
         });
