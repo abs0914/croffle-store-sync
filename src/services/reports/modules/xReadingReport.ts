@@ -80,7 +80,7 @@ export async function fetchXReading(
     
     if (txError) throw txError;
     
-    // Calculate totals
+    // Calculate totals using BIR-compliant fields
     let grossSales = 0;
     let vatableSales = 0;
     let vatExemptSales = 0;
@@ -98,16 +98,19 @@ export async function fetchXReading(
 
     transactions?.forEach(tx => {
       grossSales += tx.subtotal;
-      vatableSales += tx.subtotal - (tx.discount || 0);
-      vatAmount += tx.tax;
+      // Use BIR-specific fields if available
+      vatableSales += tx.vat_sales || (tx.subtotal - (tx.discount || 0));
+      vatExemptSales += tx.vat_exempt_sales || 0;
+      vatZeroRatedSales += tx.zero_rated_sales || 0;
+      vatAmount += tx.tax || 0;
       totalDiscounts += tx.discount || 0;
       netSales += tx.total;
       
-      // Count different discount types
+      // Count different discount types using BIR fields
       if (tx.discount_type === 'senior') {
-        seniorDiscount += tx.discount || 0;
+        seniorDiscount += tx.senior_citizen_discount || tx.discount || 0;
       } else if (tx.discount_type === 'pwd') {
-        pwdDiscount += tx.discount || 0;
+        pwdDiscount += tx.pwd_discount || tx.discount || 0;
       } else if (tx.discount_type === 'employee') {
         employeeDiscount += tx.discount || 0;
       } else if (tx.discount && tx.discount > 0) {
@@ -130,12 +133,12 @@ export async function fetchXReading(
     const endingReceiptNumber = receiptNumbers[receiptNumbers.length - 1] || '-';
 
     return {
-      storeName: storeData.name,
+      storeName: storeData.business_name || storeData.name,
       storeAddress: storeData.address,
       contactInfo: storeData.phone || storeData.email,
-      taxId: storeData.tax_id,
+      taxId: storeData.tin || storeData.tax_id,
       cashierName,
-      terminal: 'Terminal 1',
+      terminal: 'TERMINAL-01',
       beginningReceiptNumber,
       endingReceiptNumber,
       transactionCount: transactions?.length || 0,
