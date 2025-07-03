@@ -223,17 +223,14 @@ export const triggerInventoryUpdateFromGRN = async (grn: GoodsReceivedNote): Pro
   try {
     console.log('Triggering automatic inventory update for GRN:', grn.grn_number);
     
-    // Add a small delay to ensure the GRN data is fully committed
-    setTimeout(async () => {
-      const result = await updateInventoryFromGRN(grn);
-      
-      if (!result.success) {
-        console.error('Automatic inventory update failed:', result.errors);
-        toast.error('Inventory update failed. Please update manually.');
-      } else {
-        console.log('Automatic inventory update completed successfully');
-      }
-    }, 1000);
+    const result = await updateInventoryFromGRN(grn);
+    
+    if (!result.success) {
+      console.error('Automatic inventory update failed:', result.errors);
+      toast.error('Inventory update failed. Please update manually.');
+    } else {
+      console.log('Automatic inventory update completed successfully');
+    }
     
   } catch (error) {
     console.error('Error triggering inventory update:', error);
