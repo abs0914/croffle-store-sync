@@ -94,7 +94,7 @@ export const fetchAvailableOrdersForGRN = async (storeId?: string): Promise<Purc
           inventory_stock:inventory_stock(*)
         )
       `)
-      .eq('status', 'delivered')
+      .in('status', ['delivered', 'fulfilled'])
       .order('created_at', { ascending: false });
 
     // Filter out orders that already have GRNs
