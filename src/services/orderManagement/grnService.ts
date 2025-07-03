@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { GoodsReceivedNote, GRNItem, PurchaseOrder } from "@/types/orderManagement";
 import { toast } from "sonner";
 import { logAuditTrailEntry } from "./auditTrailService";
+import { triggerInventoryUpdateFromGRN } from "./inventoryUpdateService";
 
 export const fetchGRNs = async (storeId?: string): Promise<GoodsReceivedNote[]> => {
   try {
@@ -235,6 +236,9 @@ export const createGRNWithItems = async (
       `Enhanced GRN created with ${grnItems.length} items (${itemsWithIssues} with issues)`
     );
 
+    // Trigger automatic inventory update
+    await triggerInventoryUpdateFromGRN(fullGRN);
+
     toast.success('GRN created successfully with item-level tracking');
     return fullGRN;
   } catch (error) {
@@ -349,6 +353,9 @@ export const createGRN = async (
       'completed',
       'Basic GRN created'
     );
+
+    // Trigger automatic inventory update
+    await triggerInventoryUpdateFromGRN(data);
 
     toast.success('GRN created successfully - Purchase order automatically completed');
     return data;

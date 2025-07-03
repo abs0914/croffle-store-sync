@@ -5,9 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Package2, CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { GoodsReceivedNote } from '@/types/orderManagement';
 import { CreateDiscrepancyResolutionDialog } from './CreateDiscrepancyResolutionDialog';
+import { updateInventoryFromGRN } from '@/services/orderManagement/inventoryUpdateService';
+import { toast } from 'sonner';
 
 interface EnhancedViewGRNDialogProps {
   grn: GoodsReceivedNote;
@@ -17,6 +19,23 @@ interface EnhancedViewGRNDialogProps {
 
 export function EnhancedViewGRNDialog({ grn, open, onOpenChange }: EnhancedViewGRNDialogProps) {
   const [showDiscrepancyDialog, setShowDiscrepancyDialog] = useState(false);
+  const [isUpdatingInventory, setIsUpdatingInventory] = useState(false);
+
+  const handleUpdateInventory = async () => {
+    setIsUpdatingInventory(true);
+    try {
+      const result = await updateInventoryFromGRN(grn);
+      if (result.success) {
+        toast.success(`Inventory updated for ${result.updatedItems.length} items`);
+      } else {
+        toast.error(`Inventory update failed: ${result.errors.join(', ')}`);
+      }
+    } catch (error) {
+      toast.error('Failed to update inventory');
+    } finally {
+      setIsUpdatingInventory(false);
+    }
+  };
 
   const getQualityIcon = (status?: string) => {
     switch (status) {
@@ -78,6 +97,16 @@ export function EnhancedViewGRNDialog({ grn, open, onOpenChange }: EnhancedViewG
                   <span>{grn.grn_number}</span>
                   <div className="flex items-center gap-2">
                     <Badge variant="default">Completed</Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleUpdateInventory}
+                      disabled={isUpdatingInventory}
+                      className="text-blue-600 hover:bg-blue-50"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-1 ${isUpdatingInventory ? 'animate-spin' : ''}`} />
+                      Update Inventory
+                    </Button>
                     {hasItemDiscrepancies && (
                       <Button
                         variant="outline"
