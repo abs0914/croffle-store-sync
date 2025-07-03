@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { ProactiveReorderingDashboard } from '@/components/Inventory/components/ProactiveReorderingDashboard';
+import { OptimizedInventoryList } from '@/components/inventory/OptimizedInventoryList';
 import { getInventoryMetrics } from '@/services/storeInventory/storeMetricsService';
 import { useStore } from '@/contexts/StoreContext';
 
@@ -80,6 +81,10 @@ export default function Inventory() {
               <p className="text-sm text-muted-foreground">Items unavailable</p>
             </div>
           </div>
+          
+          {currentStore && (
+            <OptimizedInventoryList storeId={currentStore.id} />
+          )}
         </TabsContent>
 
         <TabsContent value="proactive">
