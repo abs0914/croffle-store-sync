@@ -45,24 +45,30 @@ export const deductIngredientsForProduct = async (
 
       if (updateError) throw updateError;
 
-      // Create movement record
-      const { error: movementError } = await supabase
-        .from('inventory_movements')
-        .insert({
-          inventory_stock_id: ingredient.inventory_stock_id,
-          movement_type: 'sale_deduction',
-          quantity_change: -deductionAmount,
-          previous_quantity: currentStock,
-          new_quantity: newStock,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
-          reference_type: 'transaction',
-          reference_id: transactionId,
-          notes: `Product sale: ${ingredient.inventory_item?.item} (${deductionAmount} ${ingredient.unit})`
-        });
+      // Create movement record only if transactionId is a valid UUID
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId);
+      
+      if (isValidUUID) {
+        const { error: movementError } = await supabase
+          .from('inventory_movements')
+          .insert({
+            inventory_stock_id: ingredient.inventory_stock_id,
+            movement_type: 'sale_deduction',
+            quantity_change: -deductionAmount,
+            previous_quantity: currentStock,
+            new_quantity: newStock,
+            created_by: (await supabase.auth.getUser()).data.user?.id,
+            reference_type: 'transaction',
+            reference_id: transactionId,
+            notes: `Product sale: ${ingredient.inventory_item?.item} (${deductionAmount} ${ingredient.unit})`
+          });
 
-      if (movementError) {
-        console.error('Failed to create movement record:', movementError);
-        // Don't fail the entire transaction for logging issues
+        if (movementError) {
+          console.error('Failed to create movement record:', movementError);
+          // Don't fail the entire transaction for logging issues
+        }
+      } else {
+        console.log('Skipping movement record creation - temporary transaction ID:', transactionId);
       }
     }
 
