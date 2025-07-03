@@ -20,7 +20,9 @@ export const updateInventoryFromGRN = async (grn: GoodsReceivedNote): Promise<In
   };
 
   try {
+    console.log('=== DEBUG: Starting inventory update ===');
     console.log('Updating inventory from GRN:', grn.grn_number);
+    console.log('GRN object:', JSON.stringify(grn, null, 2));
 
     // Get the store ID from the purchase order
     const { data: purchaseOrder, error: poError } = await supabase
