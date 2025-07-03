@@ -1,3 +1,3 @@
-import ExpensesDashboard from './ExpensesDashboard';
+import StoreExpensesDashboard from './StoreExpensesDashboard';
 
-export default ExpensesDashboard;
+export default StoreExpensesDashboard;

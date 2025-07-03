@@ -14,6 +14,7 @@ const CommissaryInventory = React.lazy(() => import('@/pages/CommissaryInventory
 const InventoryConversion = React.lazy(() => import('@/pages/InventoryConversion'));
 const OrderManagement = React.lazy(() => import('@/pages/OrderManagement'));
 const Reports = React.lazy(() => import('@/pages/Reports'));
+const Expenses = React.lazy(() => import('@/pages/Expenses'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
 const ProductCatalog = React.lazy(() => import('@/pages/ProductCatalog'));
 const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
@@ -176,6 +177,20 @@ export const MainAppRoutes = () => {
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <Reports />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Expenses */}
+      <Route
+        path="/expenses"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Expenses />
               </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
