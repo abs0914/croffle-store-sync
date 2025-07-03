@@ -18,13 +18,13 @@ import { formatCurrency } from "@/utils/format";
 // Import the refactored components
 import ShiftPhotoSection from "./shift/ShiftPhotoSection";
 import EndingCashSection from "./shift/EndingCashSection";
-import EndShiftInventorySection from "./shift/EndShiftInventorySection";
+
 
 interface EndShiftDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   currentShift: Shift | null;
-  onEndShift: (endingCash: number, endInventoryCount: Record<string, number>, photo?: string) => Promise<void>;
+  onEndShift: (endingCash: number, photo?: string) => Promise<void>;
 }
 
 export default function EndShiftDialog({
@@ -35,45 +35,27 @@ export default function EndShiftDialog({
 }: EndShiftDialogProps) {
   const [endingCash, setEndingCash] = useState<number>(0);
   const [photo, setPhoto] = useState<string | null>(null);
-  const [inventoryCount, setInventoryCount] = useState<Record<string, number>>({});
+  
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
   const [cashError, setCashError] = useState<string | null>(null);
 
-  // Fetch inventory items for this store
-  const { data: inventoryItems = [], isLoading: isLoadingInventory } = useQuery({
-    queryKey: ["inventory-stock", currentShift?.storeId],
-    queryFn: () => currentShift?.storeId ? fetchInventoryStock(currentShift.storeId) : Promise.resolve([]),
-    enabled: isOpen && !!currentShift?.storeId,
-  });
 
   // Reset state when dialog closes
   useEffect(() => {
     if (!isOpen) {
       setEndingCash(0);
       setPhoto(null);
-      setInventoryCount({});
       setShowCameraView(false);
       setCashError(null);
     }
   }, [isOpen]);
 
-  // Initialize inventory count and ending cash when dialog opens and inventory loads
+  // Initialize ending cash when dialog opens
   useEffect(() => {
-    if (isOpen && inventoryItems.length > 0) {
-      // Initialize inventory count with current stock quantities
-      const initialCount = inventoryItems.reduce((acc, item) => {
-        acc[item.id] = item.stock_quantity || 0;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      setInventoryCount(initialCount);
-      
-      // Set ending cash to at least the starting cash amount
-      if (currentShift?.startingCash) {
-        setEndingCash(currentShift.startingCash);
-      }
+    if (isOpen && currentShift?.startingCash) {
+      setEndingCash(currentShift.startingCash);
     }
-  }, [isOpen, inventoryItems.length, currentShift?.startingCash]);
+  }, [isOpen, currentShift?.startingCash]);
 
   // Validate ending cash amount whenever it changes
   useEffect(() => {
@@ -84,12 +66,6 @@ export default function EndShiftDialog({
     }
   }, [endingCash, currentShift?.startingCash]);
 
-  const handleInventoryCountChange = useCallback((itemId: string, value: number) => {
-    setInventoryCount(prev => ({
-      ...prev,
-      [itemId]: value
-    }));
-  }, []);
 
   const handleSubmit = async () => {
     if (!currentShift) return;
@@ -100,7 +76,7 @@ export default function EndShiftDialog({
       return;
     }
     
-    await onEndShift(endingCash, inventoryCount, photo || undefined);
+    await onEndShift(endingCash, photo || undefined);
     setShowCameraView(false);
   };
 
@@ -115,7 +91,7 @@ export default function EndShiftDialog({
         <DialogHeader>
           <DialogTitle>End Current Shift</DialogTitle>
           <DialogDescription>
-            Please count your cash drawer and inventory levels before ending your shift.
+            Please count your cash drawer before ending your shift.
           </DialogDescription>
         </DialogHeader>
         
@@ -136,14 +112,6 @@ export default function EndShiftDialog({
             setShowCameraView={setShowCameraView}
           />
           
-          {/* Inventory Section */}
-          <EndShiftInventorySection 
-            inventoryItems={inventoryItems}
-            inventoryCount={inventoryCount}
-            handleInventoryCountChange={handleInventoryCountChange}
-            isLoadingInventory={isLoadingInventory}
-            currentShift={currentShift}
-          />
         </div>
         
         <DialogFooter>

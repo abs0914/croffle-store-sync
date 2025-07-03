@@ -53,7 +53,6 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
 
   const startShift = async (
     startingCash: number,
-    startInventoryCount: Record<string, number>,
     startPhoto?: string,
     cashierId?: string
   ): Promise<boolean> => {
@@ -77,7 +76,6 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         user.id,
         currentStore.id,
         startingCash,
-        startInventoryCount,
         startPhoto,
         cashierId
       );
@@ -112,7 +110,6 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
 
   const endShift = async (
     endingCash: number,
-    endInventoryCount: Record<string, number>,
     endPhoto?: string
   ): Promise<boolean> => {
     if (!currentShift) {
@@ -132,7 +129,6 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       const success = await closeShift(
         currentShift.id,
         endingCash,
-        endInventoryCount,
         endPhoto,
         queryClient
       );

@@ -22,14 +22,13 @@ export const StartShiftButton: React.FC = () => {
 
   const handleEndShift = async (
     endingCash: number,
-    endInventoryCount: Record<string, number>,
     photo?: string
   ) => {
     if (!currentShift) return;
 
     try {
       setIsEndingShift(true);
-      const success = await endShift(endingCash, endInventoryCount, photo);
+      const success = await endShift(endingCash, photo);
 
       if (success) {
         setIsEndShiftOpen(false);

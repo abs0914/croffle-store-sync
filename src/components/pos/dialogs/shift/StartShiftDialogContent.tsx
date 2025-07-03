@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/auth";
 
 import StartingCashSection from "./StartingCashSection";
 import ShiftPhotoSection from "./ShiftPhotoSection";
-import InventoryCountSection from "./InventoryCountSection";
+
 import StoreInfoSection from "./StoreInfoSection";
 import EnhancedCashierSelector from "./EnhancedCashierSelector";
 
@@ -18,7 +18,6 @@ interface StartShiftDialogContentProps {
   onStateChange: (state: {
     startingCash: number;
     photo: string | null;
-    inventoryCount: Record<string, number>;
     selectedCashierId: string | null;
     showCameraView: boolean;
     isLoading: boolean;
@@ -34,17 +33,11 @@ export default function StartShiftDialogContent({
   const [startingCash, setStartingCash] = useState<number>(0);
   const [previousEndingCash, setPreviousEndingCash] = useState<number | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
-  const [inventoryCount, setInventoryCount] = useState<Record<string, number>>({});
+  
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedCashierId, setSelectedCashierId] = useState<string | null>(null);
 
-  // Fetch inventory items for this store
-  const { data: inventoryItems = [], isLoading: isLoadingInventory, error: inventoryError } = useQuery({
-    queryKey: ["inventory-stock", storeId],
-    queryFn: () => storeId ? fetchInventoryStock(storeId) : Promise.resolve([]),
-    enabled: isOpen && !!storeId,
-  });
 
   // Fetch cashiers for this store
   const { data: cashiers = [], isLoading: isLoadingCashiers } = useQuery({
@@ -70,7 +63,6 @@ export default function StartShiftDialogContent({
   useEffect(() => {
     if (!isOpen) {
       setPhoto(null);
-      setInventoryCount({});
       setShowCameraView(false);
       setSelectedCashierId(null);
     } else {
@@ -92,36 +84,16 @@ export default function StartShiftDialogContent({
     }
   }, [isOpen, cashiers, selectedCashierId, user]);
 
-  // Initialize inventory count with current stock quantities
-  useEffect(() => {
-    if (isOpen && inventoryItems.length > 0) {
-      const initialCount = inventoryItems.reduce((acc, item) => {
-        acc[item.id] = item.stock_quantity || 0;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      setInventoryCount(initialCount);
-    }
-  }, [isOpen, inventoryItems]);
-
   // Update parent component when state changes
   useEffect(() => {
     onStateChange({
       startingCash,
       photo,
-      inventoryCount,
       selectedCashierId,
       showCameraView,
       isLoading
     });
-  }, [startingCash, photo, inventoryCount, selectedCashierId, showCameraView, isLoading, onStateChange]);
-
-  const handleInventoryCountChange = (itemId: string, value: number) => {
-    setInventoryCount(prev => ({
-      ...prev,
-      [itemId]: value
-    }));
-  };
+  }, [startingCash, photo, selectedCashierId, showCameraView, isLoading, onStateChange]);
 
   return (
     <div className="space-y-4 py-4 flex-1 overflow-auto">
@@ -153,20 +125,6 @@ export default function StartShiftDialogContent({
         setShowCameraView={setShowCameraView}
       />
       
-      {/* Inventory Section */}
-      <InventoryCountSection 
-        inventoryItems={inventoryItems}
-        inventoryCount={inventoryCount}
-        handleInventoryCountChange={handleInventoryCountChange}
-        isLoadingInventory={isLoadingInventory}
-      />
-      
-      {/* Debug info when no inventory items */}
-      {isOpen && !isLoadingInventory && inventoryItems.length === 0 && (
-        <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border">
-          No inventory items found for this store. You may need to add inventory items first.
-        </div>
-      )}
     </div>
   );
 }
