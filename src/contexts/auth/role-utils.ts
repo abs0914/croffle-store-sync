@@ -98,7 +98,8 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
       ROUTE_PATHS.PRODUCT_CATALOG,
-      ROUTE_PATHS.CUSTOMERS
+      ROUTE_PATHS.CUSTOMERS,
+      ROUTE_PATHS.REPORTS
     ]
   };
   
@@ -173,7 +174,7 @@ export const getRouteAccessDescription = (route: string): string => {
     [ROUTE_PATHS.ORDER_MANAGEMENT]: 'Managers and above with store access',
     [ROUTE_PATHS.CUSTOMERS]: 'All authenticated users with store access',
     [ROUTE_PATHS.EXPENSES]: 'Managers and above with store access',
-    [ROUTE_PATHS.REPORTS]: 'Managers and above with store access',
+    [ROUTE_PATHS.REPORTS]: 'All authenticated users with store access',
     [ROUTE_PATHS.SETTINGS]: 'Managers and above',
     [ROUTE_PATHS.ADMIN_DASHBOARD]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_STORES]: 'Admin and owner only',
