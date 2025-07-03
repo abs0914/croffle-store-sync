@@ -14,6 +14,7 @@ const ProductionManagement = React.lazy(() => import('@/pages/ProductionManageme
 const CommissaryInventory = React.lazy(() => import('@/pages/CommissaryInventory'));
 const InventoryConversion = React.lazy(() => import('@/pages/InventoryConversion'));
 const OrderManagement = React.lazy(() => import('@/pages/OrderManagement'));
+const Expenses = React.lazy(() => import('@/pages/Expenses'));
 const Reports = React.lazy(() => import('@/pages/Reports'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
 
@@ -43,6 +44,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/commissary-inventory" element={<ProtectedRoute><CommissaryInventory /></ProtectedRoute>} />
         <Route path="/inventory-conversion" element={<ProtectedRoute><InventoryConversion /></ProtectedRoute>} />
         <Route path="/order-management/*" element={<ProtectedRoute><OrderManagement /></ProtectedRoute>} />
+        <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
         <Route path="/reports/*" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
         <Route path="/settings/*" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         
