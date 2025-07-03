@@ -28,32 +28,41 @@ export const expenseService = {
 
   // Expenses
   async getExpenses(storeId?: string): Promise<Expense[]> {
-    let query = supabase
-      .from('expenses')
-      .select(`
-        *,
-        category:expense_categories(*),
-        store:stores(name)
-      `)
-      .order('created_at', { ascending: false });
+    try {
+      let query = supabase
+        .from('expenses')
+        .select(`
+          *,
+          category:expense_categories(*),
+          store:stores(name)
+        `)
+        .order('created_at', { ascending: false });
 
-    if (storeId) {
-      query = query.eq('store_id', storeId);
+      if (storeId) {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('Error fetching expenses:', error);
+        throw new Error(`Failed to fetch expenses: ${error.message}`);
+      }
+      
+      return (data || []).map(expense => ({
+        ...expense,
+        status: expense.status as 'pending' | 'approved' | 'rejected',
+        category: expense.category,
+        store_name: expense.store?.name,
+        created_by_name: 'Unknown', // We'll need to fetch this separately due to RLS
+        approved_by_name: undefined
+      }));
+    } catch (error) {
+      console.error('Error in getExpenses:', error);
+      throw error instanceof Error ? error : new Error('Unknown error occurred while fetching expenses');
     }
-
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return (data || []).map(expense => ({
-      ...expense,
-      status: expense.status as 'pending' | 'approved' | 'rejected',
-      category: expense.category,
-      store_name: expense.store?.name,
-      created_by_name: 'Unknown', // We'll need to fetch this separately due to RLS
-      approved_by_name: undefined
-    }));
   },
+
 
   async createExpense(expense: CreateExpenseRequest): Promise<Expense> {
     const { data, error } = await supabase

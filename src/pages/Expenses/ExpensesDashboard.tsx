@@ -10,6 +10,8 @@ import { expenseService } from '@/services/expense/expenseService';
 import { useAuth } from '@/contexts/auth';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ExpenseErrorBoundary } from '@/components/shared/ExpenseErrorBoundary';
+import { ExpensesFallback } from '@/components/shared/ExpensesFallback';
 import ExpenseEntryForm from './components/ExpenseEntryForm';
 import ExpenseReports from './components/ExpenseReports';
 import MobileExpenseEntry from './components/MobileExpenseEntry';
@@ -23,20 +25,47 @@ export default function ExpensesDashboard() {
   const storeId = user?.role === 'admin' || user?.role === 'owner' ? undefined : user?.storeIds?.[0];
   const [activeTab, setActiveTab] = useState('overview');
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  // Check store access
+  const hasStoreAccess = user?.role === 'admin' || user?.role === 'owner' || (user?.storeIds && user.storeIds.length > 0);
+
+  const { data: stats, isLoading: statsLoading, error: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['expense-stats', storeId],
-    queryFn: () => expenseService.getExpenseStats(storeId)
+    queryFn: () => expenseService.getExpenseStats(storeId),
+    enabled: hasStoreAccess
   });
 
-  const { data: recentExpenses, isLoading: expensesLoading } = useQuery({
+  const { data: recentExpenses, isLoading: expensesLoading, error: expensesError, refetch: refetchExpenses } = useQuery({
     queryKey: ['recent-expenses', storeId],
-    queryFn: () => expenseService.getExpenses(storeId)
+    queryFn: () => expenseService.getExpenses(storeId),
+    enabled: hasStoreAccess
   });
 
-  const { data: budgets, isLoading: budgetsLoading } = useQuery({
+  const { data: budgets, isLoading: budgetsLoading, error: budgetsError, refetch: refetchBudgets } = useQuery({
     queryKey: ['expense-budgets', storeId],
-    queryFn: () => expenseService.getBudgets(storeId)
+    queryFn: () => expenseService.getBudgets(storeId),
+    enabled: hasStoreAccess
   });
+
+  const isLoading = statsLoading || expensesLoading || budgetsLoading;
+  const hasError = statsError || expensesError || budgetsError;
+
+  const handleRetry = () => {
+    refetchStats();
+    refetchExpenses();
+    refetchBudgets();
+  };
+
+  // Return fallback states
+  if (!hasStoreAccess || hasError || isLoading) {
+    return (
+      <ExpensesFallback
+        error={hasError}
+        onRetry={handleRetry}
+        isLoading={isLoading}
+        hasStoreAccess={hasStoreAccess}
+      />
+    );
+  }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', {
@@ -45,30 +74,6 @@ export default function ExpensesDashboard() {
     }).format(amount);
   };
 
-  if (statsLoading || expensesLoading || budgetsLoading) {
-    return (
-      <div className="p-4 md:p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold">Expenses Dashboard</h1>
-            <p className="text-muted-foreground text-sm md:text-base">Track and manage your business expenses</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-4 md:p-6">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>

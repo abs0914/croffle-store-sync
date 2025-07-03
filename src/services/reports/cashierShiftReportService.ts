@@ -85,20 +85,17 @@ export async function fetchCashierShiftReport(
     const shiftStart = new Date(shiftData.start_time);
     const shiftEnd = shiftData.end_time ? new Date(shiftData.end_time) : new Date();
 
-    const { data: salesData, error: salesError } = await supabase
-      .from('transactions')
-      .select(`
-        id,
-        total,
-        payment_method,
-        created_at,
-        status
-      `)
+    // Get sales data - using any to avoid complex type inference
+    const salesResult = await (supabase
+      .from('transactions') as any)
+      .select('id, total, payment_method, created_at, status')
       .eq('store_id', storeId)
       .eq('cashier_id', userId)
       .gte('created_at', shiftStart.toISOString())
       .lte('created_at', shiftEnd.toISOString())
       .eq('status', 'completed');
+    
+    const { data: salesData, error: salesError } = salesResult;
 
     if (salesError) throw salesError;
 
