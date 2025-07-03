@@ -65,6 +65,23 @@ export const expenseService = {
 
 
   async createExpense(expense: CreateExpenseRequest): Promise<Expense> {
+    // Validate required fields
+    if (!expense.store_id || expense.store_id.trim() === '') {
+      throw new Error('Store ID is required');
+    }
+    
+    if (!expense.category_id || expense.category_id.trim() === '') {
+      throw new Error('Category ID is required');
+    }
+    
+    if (!expense.description || expense.description.trim() === '') {
+      throw new Error('Description is required');
+    }
+    
+    if (expense.amount <= 0) {
+      throw new Error('Amount must be greater than 0');
+    }
+
     const { data, error } = await supabase
       .from('expenses')
       .insert({
