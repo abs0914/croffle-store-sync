@@ -11,6 +11,8 @@ import { DailySummaryView } from "./reports/DailySummaryView";
 import { VATReportView } from "./reports/VATReportView";
 import { CashierReportView } from "./reports/CashierReportView";
 import { StockReportView } from "./reports/StockReportView";
+import CashierShiftReportView from "./reports/CashierShiftReportView";
+import CashierInventoryReportView from "./reports/CashierInventoryReportView";
 
 interface ReportViewProps {
   reportType: ReportType;
@@ -54,6 +56,10 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
         isAllStores={isAllStores} 
         dateRange={dateRange} 
       />;
+    case 'daily_shift':
+      return <CashierShiftReportView />;
+    case 'inventory_status':
+      return <CashierInventoryReportView />;
     default:
       return null;
   }

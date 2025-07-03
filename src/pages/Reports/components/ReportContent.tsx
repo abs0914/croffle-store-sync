@@ -38,6 +38,24 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
     });
   }, [reportType, storeId, selectedStoreId, from, to]);
 
+  // Handle special cashier reports that don't use the standard data fetching
+  if (reportType === 'daily_shift' || reportType === 'inventory_status') {
+    return (
+      <div className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring space-y-4" tabIndex={0}>
+        <CashierReportGuard reportType={reportType}>
+          <ReportView
+            reportType={reportType}
+            data={null}
+            storeId={storeId}
+            selectedStoreId={selectedStoreId}
+            isAllStores={selectedStoreId === 'all'}
+            dateRange={dateRange}
+          />
+        </CashierReportGuard>
+      </div>
+    );
+  }
+
   // Fetch data based on report type
   const { data, dataSource, generatedAt, debugInfo, isLoading, error, refetch } = useReportData({
     reportType,
