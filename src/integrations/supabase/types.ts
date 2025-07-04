@@ -3687,6 +3687,22 @@ export type Database = {
           supplier_name: string
         }[]
       }
+      get_low_stock_items: {
+        Args: { store_id_param: string }
+        Returns: {
+          id: string
+          store_id: string
+          item: string
+          unit: string
+          stock_quantity: number
+          minimum_threshold: number
+          maximum_capacity: number
+          cost: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }[]
+      }
       get_store_users: {
         Args: { store_id_param: string }
         Returns: {

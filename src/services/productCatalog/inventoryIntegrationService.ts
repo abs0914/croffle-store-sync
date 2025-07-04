@@ -104,10 +104,12 @@ export const checkAndTriggerAutoReorder = async (storeId: string): Promise<AutoR
     console.log('Checking auto-reorder triggers for store:', storeId);
 
     // Get items below minimum threshold using proper SQL query
-    const { data: lowStockItems, error } = await supabase
+    const { data: lowStockItemsData, error } = await supabase
       .rpc('get_low_stock_items', { 
         store_id_param: storeId 
       });
+    
+    const lowStockItems = lowStockItemsData as any[];
 
     if (error) throw error;
 
