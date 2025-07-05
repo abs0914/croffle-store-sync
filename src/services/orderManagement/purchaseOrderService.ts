@@ -300,9 +300,18 @@ export const deliverPurchaseOrder = async (
 
 export const deletePurchaseOrder = async (id: string): Promise<boolean> => {
   try {
+    // First delete related items
+    const { error: itemsError } = await supabase
+      .from('purchase_order_items')
+      .delete()
+      .eq('purchase_order_id', id);
+
+    if (itemsError) throw itemsError;
+
+    // Then delete the purchase order
     const { error } = await supabase
       .from('purchase_orders')
-      .update({ status: 'cancelled' })
+      .delete()
       .eq('id', id);
 
     if (error) throw error;
@@ -311,17 +320,17 @@ export const deletePurchaseOrder = async (id: string): Promise<boolean> => {
     await logAuditTrailEntry(
       id,
       'purchase',
-      'cancelled',
+      'deleted',
       undefined,
-      'cancelled',
-      'Purchase order cancelled'
+      'deleted',
+      'Purchase order deleted permanently'
     );
 
-    toast.success('Purchase order cancelled successfully');
+    toast.success('Purchase order deleted successfully');
     return true;
   } catch (error) {
-    console.error('Error cancelling purchase order:', error);
-    toast.error('Failed to cancel purchase order');
+    console.error('Error deleting purchase order:', error);
+    toast.error('Failed to delete purchase order');
     return false;
   }
 };
