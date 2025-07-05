@@ -300,7 +300,33 @@ export const deliverPurchaseOrder = async (
 
 export const deletePurchaseOrder = async (id: string): Promise<boolean> => {
   try {
-    // First delete related items
+    // First get all related GRN IDs
+    const { data: grnData } = await supabase
+      .from('goods_received_notes')
+      .select('id')
+      .eq('purchase_order_id', id);
+
+    const grnIds = grnData?.map(grn => grn.id) || [];
+
+    // Delete related GRN items if any GRNs exist
+    if (grnIds.length > 0) {
+      const { error: grnItemsError } = await supabase
+        .from('grn_items')
+        .delete()
+        .in('grn_id', grnIds);
+
+      if (grnItemsError) throw grnItemsError;
+
+      // Delete related goods received notes
+      const { error: grnError } = await supabase
+        .from('goods_received_notes')
+        .delete()
+        .eq('purchase_order_id', id);
+
+      if (grnError) throw grnError;
+    }
+
+    // Delete related purchase order items
     const { error: itemsError } = await supabase
       .from('purchase_order_items')
       .delete()
@@ -308,7 +334,7 @@ export const deletePurchaseOrder = async (id: string): Promise<boolean> => {
 
     if (itemsError) throw itemsError;
 
-    // Then delete the purchase order
+    // Finally delete the purchase order
     const { error } = await supabase
       .from('purchase_orders')
       .delete()
