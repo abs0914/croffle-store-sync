@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, Package, AlertTriangle } from "lucide-react";
+import { Info, Package, AlertTriangle, RefreshCw, ExternalLink } from "lucide-react";
 import { InventoryStock } from "@/types/inventory";
 
 interface DirectInventorySelectorProps {
@@ -29,8 +29,8 @@ export const DirectInventorySelector = ({
   const { currentStore } = useStore();
   const [selectedStock, setSelectedStock] = useState<InventoryStock | null>(null);
 
-  // Fetch inventory stock for the current store
-  const { data: inventoryStock = [], isLoading } = useQuery({
+  // Fetch inventory stock for the current store with real-time updates
+  const { data: inventoryStock = [], isLoading, refetch } = useQuery({
     queryKey: ['inventory-stock', currentStore?.id],
     queryFn: async () => {
       if (!currentStore?.id) return [];
@@ -45,7 +45,8 @@ export const DirectInventorySelector = ({
       if (error) throw error;
       return data as InventoryStock[];
     },
-    enabled: !!currentStore?.id
+    enabled: !!currentStore?.id,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds for real-time stock updates
   });
 
   // Update selected stock when selection changes
@@ -66,11 +67,11 @@ export const DirectInventorySelector = ({
 
   const getStockStatus = (stock: InventoryStock) => {
     if (stock.stock_quantity <= 0) {
-      return { status: 'out-of-stock', color: 'destructive', text: 'Out of Stock' };
+      return { status: 'out-of-stock', color: 'destructive', text: 'Out of Stock', bgColor: 'bg-red-100 text-red-800' };
     } else if (stock.stock_quantity <= (stock.minimum_threshold || 10)) {
-      return { status: 'low-stock', color: 'warning', text: 'Low Stock' };
+      return { status: 'low-stock', color: 'outline', text: 'Low Stock', bgColor: 'bg-yellow-100 text-yellow-800 border-yellow-500' };
     }
-    return { status: 'in-stock', color: 'success', text: 'In Stock' };
+    return { status: 'in-stock', color: 'default', text: 'In Stock', bgColor: 'bg-green-100 text-green-800' };
   };
 
   const calculateSellingUnitStock = () => {
@@ -92,9 +93,20 @@ export const DirectInventorySelector = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Inventory Item Selection
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Inventory Item Selection
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                Live Stock Data
+              </Badge>
+              <RefreshCw 
+                className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-primary transition-colors" 
+                onClick={() => refetch()}
+              />
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -125,7 +137,7 @@ export const DirectInventorySelector = ({
                           </span>
                           <Badge 
                             variant={stockStatus.color as any}
-                            className="text-xs"
+                            className={`text-xs ${stockStatus.bgColor}`}
                           >
                             {stockStatus.text}
                           </Badge>
@@ -205,13 +217,50 @@ export const DirectInventorySelector = ({
               </div>
             </div>
 
+            {/* Stock Status Alerts */}
             {calculateSellingUnitStock() === 0 && selectedStock.stock_quantity > 0 && (
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  The selling quantity ({sellingQuantity} {selectedStock.unit}) is greater than 
-                  available stock ({selectedStock.stock_quantity} {selectedStock.unit}). 
-                  No products can be sold until inventory is restocked.
+              <Alert className="border-amber-200 bg-amber-50">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800">
+                  <div className="space-y-2">
+                    <p>The selling quantity ({sellingQuantity} {selectedStock.unit}) is greater than 
+                    available stock ({selectedStock.stock_quantity} {selectedStock.unit}).</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">Quick action:</span>
+                      <Badge variant="outline" className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors">
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View in Inventory
+                      </Badge>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {calculateSellingUnitStock() > 0 && calculateSellingUnitStock() <= 5 && (
+              <Alert className="border-orange-200 bg-orange-50">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-orange-800">
+                  <div className="space-y-2">
+                    <p><strong>Low Stock Warning:</strong> Only {calculateSellingUnitStock()} products can be sold with current inventory.</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">Recommended action:</span>
+                      <Badge variant="outline" className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors">
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Restock Soon
+                      </Badge>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {calculateSellingUnitStock() > 50 && (
+              <Alert className="border-green-200 bg-green-50">
+                <Info className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  <strong>Good Stock Level:</strong> {calculateSellingUnitStock()} products available for sale. 
+                  Inventory is well-stocked for this product.
                 </AlertDescription>
               </Alert>
             )}
