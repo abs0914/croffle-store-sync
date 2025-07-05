@@ -39,6 +39,7 @@ interface POSContentProps {
     eWalletReferenceNumber?: string;
   }) => void;
   addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
+  storeId?: string;
 }
 
 export default function POSContent({
@@ -59,7 +60,8 @@ export default function POSContent({
   handleApplyDiscount,
   handleApplyMultipleDiscounts,
   handlePaymentComplete,
-  addItemToCart
+  addItemToCart,
+  storeId
 }: POSContentProps) {
   const {
     items,
@@ -116,7 +118,8 @@ export default function POSContent({
                 setActiveCategory={setActiveCategory} 
                 addItemToCart={addItemToCart} 
                 isShiftActive={!!currentShift} 
-                isLoading={isLoading} 
+                isLoading={isLoading}
+                storeId={storeId}
               />
             </CardContent>
           </Card>

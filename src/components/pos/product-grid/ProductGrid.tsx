@@ -25,6 +25,7 @@ interface ProductGridProps {
   addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   isShiftActive: boolean;
   isLoading: boolean;
+  storeId?: string;
 }
 
 export default function ProductGrid({
@@ -34,7 +35,8 @@ export default function ProductGrid({
   setActiveCategory,
   addItemToCart,
   isShiftActive,
-  isLoading
+  isLoading,
+  storeId
 }: ProductGridProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
