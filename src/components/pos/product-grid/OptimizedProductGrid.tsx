@@ -1,7 +1,8 @@
 
-import React, { useState, useMemo, memo } from "react";
+import React, { useState, useMemo, memo, useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 import { Product, Category, ProductVariation } from "@/types";
+import { fetchPOSInventoryStatus, POSInventoryStatus } from "@/services/pos/posInventoryIntegrationService";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -25,6 +26,7 @@ interface OptimizedProductGridProps {
   addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   isShiftActive: boolean;
   isLoading: boolean;
+  storeId?: string;
 }
 
 const OptimizedProductGrid = memo(function OptimizedProductGrid({
@@ -34,13 +36,22 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
   setActiveCategory,
   addItemToCart,
   isShiftActive,
-  isLoading
+  isLoading,
+  storeId
 }: OptimizedProductGridProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productVariations, setProductVariations] = useState<ProductVariation[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoadingVariations, setIsLoadingVariations] = useState(false);
+  const [inventoryStatusMap, setInventoryStatusMap] = useState<Map<string, POSInventoryStatus>>(new Map());
+  
+  // Fetch inventory status for POS integration
+  useEffect(() => {
+    if (products.length > 0 && storeId) {
+      fetchPOSInventoryStatus(products, storeId).then(setInventoryStatusMap);
+    }
+  }, [products, storeId]);
   
   // Debounce search term to reduce filtering operations
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -145,6 +156,7 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
                   isShiftActive={isShiftActive}
                   getCategoryName={getCategoryName}
                   onClick={handleProductClick}
+                  inventoryStatus={inventoryStatusMap.get(product.id)}
                 />
               ))}
             </div>

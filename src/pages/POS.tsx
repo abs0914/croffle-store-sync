@@ -196,6 +196,7 @@ export default function POS() {
           handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
           handlePaymentComplete={handlePaymentComplete}
           addItemToCart={handleAddItemToCart}
+          storeId={currentStore?.id}
         />
       </div>
     </div>
