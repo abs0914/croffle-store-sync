@@ -29,7 +29,7 @@ const menuItems = [
   {
     title: "Product Availability",
     icon: ToggleLeft,
-    href: "/product-catalog",
+    href: "/products",
   },
   {
     title: "Inventory",

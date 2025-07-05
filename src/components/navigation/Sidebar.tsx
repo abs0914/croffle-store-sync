@@ -113,7 +113,7 @@ export function Sidebar() {
     const baseMenuItems: MenuItem[] = [
       { path: "/dashboard", label: "Dashboard", icon: Home },
       { path: "/pos", label: "Point of Sale", icon: ShoppingCart },
-      { path: "/product-catalog", label: "Product Catalog", icon: ShoppingBag },
+      { path: "/products", label: "Products", icon: ShoppingBag },
       { 
         path: "/stock-orders", 
         label: "Stock Orders", 

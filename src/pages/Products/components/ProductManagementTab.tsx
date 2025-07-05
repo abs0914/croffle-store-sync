@@ -1,0 +1,300 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Search, 
+  Filter, 
+  Edit,
+  Eye,
+  EyeOff,
+  Package,
+  Image as ImageIcon,
+  Plus,
+  ChefHat
+} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useStore } from '@/contexts/StoreContext';
+import { formatCurrency } from '@/utils/format';
+import { Product } from '@/types/product';
+
+interface ProductManagementTabProps {
+  onAddProduct: () => void;
+}
+
+export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({ 
+  onAddProduct 
+}) => {
+  const navigate = useNavigate();
+  const { currentStore } = useStore();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'recipe' | 'direct'>('all');
+
+  // Fetch products from the products table
+  const { data: products = [], isLoading, refetch } = useQuery({
+    queryKey: ['products', currentStore?.id],
+    queryFn: async () => {
+      if (!currentStore?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          category:categories(name),
+          product_variations(*)
+        `)
+        .eq('store_id', currentStore.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as Product[];
+    },
+    enabled: !!currentStore?.id,
+  });
+
+  const handleEditProduct = (productId: string) => {
+    navigate(`/products/edit/${productId}`);
+  };
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = filterType === 'all' || 
+                       (filterType === 'recipe' && product.product_type === 'recipe') ||
+                       (filterType === 'direct' && product.product_type === 'direct');
+    
+    return matchesSearch && matchesType;
+  });
+
+  const getProductTypeIcon = (productType: string | null) => {
+    if (productType === 'recipe') {
+      return <ChefHat className="h-4 w-4 text-orange-600" />;
+    }
+    return <Package className="h-4 w-4 text-blue-600" />;
+  };
+
+  const getProductTypeBadge = (productType: string | null) => {
+    if (productType === 'recipe') {
+      return <Badge variant="default" className="bg-orange-100 text-orange-800">Recipe</Badge>;
+    }
+    return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Direct</Badge>;
+  };
+
+  if (isLoading) {
+    return <div>Loading products...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-blue-600" />
+              <div className="text-sm text-muted-foreground">Total Products</div>
+            </div>
+            <div className="text-2xl font-bold">{products.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <ChefHat className="h-4 w-4 text-orange-600" />
+              <div className="text-sm text-muted-foreground">Recipe Products</div>
+            </div>
+            <div className="text-2xl font-bold">
+              {products.filter(p => p.product_type === 'recipe').length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-blue-600" />
+              <div className="text-sm text-muted-foreground">Direct Products</div>
+            </div>
+            <div className="text-2xl font-bold">
+              {products.filter(p => p.product_type === 'direct').length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 text-green-600" />
+              <div className="text-sm text-muted-foreground">Active</div>
+            </div>
+            <div className="text-2xl font-bold">
+              {products.filter(p => p.is_active).length}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex gap-4 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant={filterType === 'all' ? 'default' : 'outline'}
+                onClick={() => setFilterType('all')}
+                size="sm"
+              >
+                All
+              </Button>
+              <Button
+                variant={filterType === 'recipe' ? 'default' : 'outline'}
+                onClick={() => setFilterType('recipe')}
+                size="sm"
+                className="flex items-center gap-1"
+              >
+                <ChefHat className="h-3 w-3" />
+                Recipe
+              </Button>
+              <Button
+                variant={filterType === 'direct' ? 'default' : 'outline'}
+                onClick={() => setFilterType('direct')}
+                size="sm"
+                className="flex items-center gap-1"
+              >
+                <Package className="h-3 w-3" />
+                Direct
+              </Button>
+            </div>
+            
+            <Button onClick={() => refetch()} variant="outline">
+              Refresh
+            </Button>
+            <Button onClick={onAddProduct} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Product
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Products Grid */}
+      {filteredProducts.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">
+              {products.length === 0 ? 'No products created' : 'No products found'}
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {products.length === 0 
+                ? 'Start by creating your first product.'
+                : 'Try adjusting your search terms or filters.'
+              }
+            </p>
+            {products.length === 0 && (
+              <Button onClick={onAddProduct} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Create First Product
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredProducts.map((product) => (
+            <Card key={product.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {getProductTypeIcon(product.product_type)}
+                      <CardTitle className="text-base line-clamp-2">
+                        {product.name}
+                      </CardTitle>
+                    </div>
+                    {getProductTypeBadge(product.product_type)}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {product.is_active ? (
+                      <Eye className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {/* Product Image */}
+                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
+                  {product.image_url ? (
+                    <img 
+                      src={product.image_url} 
+                      alt={product.name}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  ) : (
+                    <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                  )}
+                </div>
+
+                {/* Product Details */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-semibold text-success">
+                      {formatCurrency(product.price)}
+                    </span>
+                    <Badge variant={product.is_active ? "default" : "secondary"}>
+                      {product.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+
+                  {product.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {product.description}
+                    </p>
+                  )}
+
+                  <div className="text-xs text-muted-foreground">
+                    SKU: {product.sku}
+                  </div>
+
+                  {product.product_variations && product.product_variations.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      {product.product_variations.length} variation{product.product_variations.length !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="pt-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditProduct(product.id)}
+                    className="w-full flex items-center gap-2"
+                  >
+                    <Edit className="h-3 w-3" />
+                    Edit Product
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};

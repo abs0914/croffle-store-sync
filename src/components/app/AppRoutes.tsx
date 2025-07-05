@@ -9,6 +9,7 @@ import { AdminRoutes } from './AdminRoutes';
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const POS = React.lazy(() => import('@/pages/POS'));
 const Products = React.lazy(() => import('@/pages/Products'));
+const ProductForm = React.lazy(() => import('@/pages/Inventory/ProductForm'));
 const Inventory = React.lazy(() => import('@/pages/Inventory'));
 const ProductionManagement = React.lazy(() => import('@/pages/ProductionManagement'));
 const CommissaryInventory = React.lazy(() => import('@/pages/CommissaryInventory'));
@@ -37,7 +38,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
         <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
-        <Route path="/product-catalog" element={<ProtectedRoute><ProductCatalog /></ProtectedRoute>} />
+        <Route path="/products/new" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
+        <Route path="/products/edit/:id" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
         <Route path="/inventory/*" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/stock-orders" element={<ProtectedRoute><StockOrders /></ProtectedRoute>} />
         <Route path="/production-management" element={<ProtectedRoute><ProductionManagement /></ProtectedRoute>} />

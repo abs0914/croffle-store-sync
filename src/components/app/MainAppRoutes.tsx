@@ -8,6 +8,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const POS = React.lazy(() => import('@/pages/POS'));
 const Products = React.lazy(() => import('@/pages/Products'));
+const ProductForm = React.lazy(() => import('@/pages/Inventory/ProductForm'));
 const Inventory = React.lazy(() => import('@/pages/Inventory'));
 const ProductionManagement = React.lazy(() => import('@/pages/ProductionManagement'));
 const CommissaryInventory = React.lazy(() => import('@/pages/CommissaryInventory'));
@@ -71,14 +72,27 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Product Catalog */}
+      {/* Product Form Routes */}
       <Route
-        path="/product-catalog"
+        path="/products/new"
         element={
           <ProtectedRoute>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
-                <ProductCatalog />
+                <ProductForm />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/products/edit/:id"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <ProductForm />
               </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
