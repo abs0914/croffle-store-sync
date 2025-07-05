@@ -46,15 +46,15 @@ export function ViewGRNDialog({ grn, open, onOpenChange }: ViewGRNDialogProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Package2 className="h-5 w-5" />
               Goods Received Note Details
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto space-y-4 pr-2">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center justify-between">
