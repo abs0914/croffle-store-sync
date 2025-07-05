@@ -15,6 +15,11 @@ export interface Product {
   stock_quantity: number;
   category?: Category | string; // Support both Category object and string
   image?: string;
+  // Direct inventory product fields
+  recipe_id?: string | null; // null for direct inventory products
+  inventory_stock_id?: string | null; // for direct inventory products
+  selling_quantity?: number; // how many inventory units per product sale
+  product_type?: 'recipe' | 'direct'; // product type indicator
   // Legacy/compatibility properties
   barcode?: string;
   cost?: number;

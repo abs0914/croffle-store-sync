@@ -110,19 +110,22 @@ export default function ProductForm() {
                 handleAdjustStock={handleAdjustStock}
               />
               
-              <SizeVariations
-                hasVariations={hasVariations}
-                handleCheckboxChange={handleCheckboxChange}
-                formData={formData}
-                regularPrice={regularPrice}
-                miniPrice={miniPrice}
-                overloadPrice={overloadPrice}
-                regularStock={regularStock}
-                miniStock={miniStock}
-                overloadStock={overloadStock}
-                handleVariationPriceChange={handleVariationPriceChange}
-                handleVariationStockChange={handleVariationStockChange}
-              />
+              {/* Size Variations - Only for recipe products */}
+              {formData.product_type === 'recipe' && (
+                <SizeVariations
+                  hasVariations={hasVariations}
+                  handleCheckboxChange={handleCheckboxChange}
+                  formData={formData}
+                  regularPrice={regularPrice}
+                  miniPrice={miniPrice}
+                  overloadPrice={overloadPrice}
+                  regularStock={regularStock}
+                  miniStock={miniStock}
+                  overloadStock={overloadStock}
+                  handleVariationPriceChange={handleVariationPriceChange}
+                  handleVariationStockChange={handleVariationStockChange}
+                />
+              )}
               
               <ProductImageUpload
                 imagePreview={imagePreview}
