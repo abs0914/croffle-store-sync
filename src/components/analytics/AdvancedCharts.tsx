@@ -240,6 +240,38 @@ export function InventoryHeatmap({ data, height = 300 }: InventoryHeatmapProps) 
     return '#22c55e'; // green
   };
 
+  const CustomTreemapContent = (props: any) => {
+    const { x, y, width, height, payload } = props;
+    return (
+      <g>
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          style={{
+            fill: getColor(payload?.stockLevel || 0),
+            stroke: '#fff',
+            strokeWidth: 2,
+            strokeOpacity: 1,
+          }}
+        />
+        {width > 60 && height > 30 && payload?.name && (
+          <text
+            x={x + width / 2}
+            y={y + height / 2}
+            textAnchor="middle"
+            fill="#fff"
+            fontSize="12"
+            fontWeight="bold"
+          >
+            {payload.name}
+          </text>
+        )}
+      </g>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -252,37 +284,7 @@ export function InventoryHeatmap({ data, height = 300 }: InventoryHeatmapProps) 
             dataKey="stockLevel"
             aspectRatio={4 / 3}
             stroke="hsl(var(--background))"
-            content={(props: any) => {
-              const { x, y, width, height, payload } = props;
-              return (
-                <g>
-                  <rect
-                    x={x}
-                    y={y}
-                    width={width}
-                    height={height}
-                    style={{
-                      fill: getColor(payload.stockLevel),
-                      stroke: '#fff',
-                      strokeWidth: 2,
-                      strokeOpacity: 1,
-                    }}
-                  />
-                  {width > 60 && height > 30 && (
-                    <text
-                      x={x + width / 2}
-                      y={y + height / 2}
-                      textAnchor="middle"
-                      fill="#fff"
-                      fontSize="12"
-                      fontWeight="bold"
-                    >
-                      {payload.name}
-                    </text>
-                  )}
-                </g>
-              );
-            }}
+            content={<CustomTreemapContent />}
           />
         </ResponsiveContainer>
       </CardContent>

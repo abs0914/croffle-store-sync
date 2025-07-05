@@ -16,7 +16,8 @@ import {
   Target,
   Zap,
   Brain,
-  Filter
+  Filter,
+  Package
 } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { toast } from 'sonner';
