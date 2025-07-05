@@ -8,7 +8,7 @@ import { useAdminPurchaseOrdersData } from './hooks/useAdminPurchaseOrdersData';
 import { ViewPurchaseOrderDialog } from '@/pages/OrderManagement/components/ViewPurchaseOrderDialog';
 import { CreatePurchaseOrderDialog } from '@/pages/OrderManagement/components/CreatePurchaseOrderDialog';
 import { PurchaseOrder } from '@/types/orderManagement';
-import { updatePurchaseOrder, fulfillPurchaseOrder, deliverPurchaseOrder } from '@/services/orderManagement/purchaseOrderService';
+import { updatePurchaseOrder, fulfillPurchaseOrder, deliverPurchaseOrder, deletePurchaseOrder } from '@/services/orderManagement/purchaseOrderService';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -94,6 +94,15 @@ export default function AdminOrders() {
         await refreshOrders();
       } catch (error) {
         toast.error('Failed to reject orders');
+      }
+    } else if (action === 'delete') {
+      try {
+        const promises = selectedOrders.map(orderId => deletePurchaseOrder(orderId));
+        await Promise.all(promises);
+        toast.success(`Deleted ${selectedOrders.length} orders`);
+        await refreshOrders();
+      } catch (error) {
+        toast.error('Failed to delete orders');
       }
     }
     setSelectedOrders([]);
