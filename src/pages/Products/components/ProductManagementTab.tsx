@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Search, 
   Filter, 
@@ -12,8 +13,16 @@ import {
   Package,
   Image as ImageIcon,
   Plus,
-  ChefHat
+  ChefHat,
+  Trash2,
+  MoreHorizontal
 } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,6 +41,7 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
   const { currentStore } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'recipe' | 'direct'>('all');
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
   // Fetch products from the products table
   const { data: products = [], isLoading, refetch } = useQuery({
@@ -57,6 +67,34 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
 
   const handleEditProduct = (productId: string) => {
     navigate(`/products/edit/${productId}`);
+  };
+
+  const handleSelectProduct = (productId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(prev => [...prev, productId]);
+    } else {
+      setSelectedProducts(prev => prev.filter(id => id !== productId));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(filteredProducts.map(p => p.id));
+    } else {
+      setSelectedProducts([]);
+    }
+  };
+
+  const handleBulkToggleStatus = async () => {
+    // Implementation for bulk status toggle would go here
+    console.log('Bulk toggle status for:', selectedProducts);
+    setSelectedProducts([]);
+  };
+
+  const handleBulkDelete = async () => {
+    // Implementation for bulk delete would go here
+    console.log('Bulk delete:', selectedProducts);
+    setSelectedProducts([]);
   };
 
   const filteredProducts = products.filter(product => {
@@ -139,16 +177,17 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
       {/* Search and Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex gap-4 items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+          <div className="space-y-4">
+            <div className="flex gap-4 items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             
             <div className="flex gap-2">
               <Button
@@ -186,6 +225,45 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
               Add Product
             </Button>
           </div>
+          
+          {/* Bulk Actions Bar */}
+          {selectedProducts.length > 0 && (
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkToggleStatus}
+                  className="flex items-center gap-1"
+                >
+                  <Eye className="h-3 w-3" />
+                  Toggle Status
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Delete
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedProducts([])}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+          </div>
         </CardContent>
       </Card>
 
@@ -212,29 +290,69 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      {getProductTypeIcon(product.product_type)}
-                      <CardTitle className="text-base line-clamp-2">
-                        {product.name}
-                      </CardTitle>
+        <div className="space-y-4">
+          {/* Select All Checkbox */}
+          <div className="flex items-center gap-2 px-2">
+            <Checkbox
+              id="select-all"
+              checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
+              onCheckedChange={handleSelectAll}
+            />
+            <label htmlFor="select-all" className="text-sm font-medium">
+              Select all ({filteredProducts.length})
+            </label>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredProducts.map((product) => (
+              <Card key={product.id} className={`hover:shadow-md transition-shadow ${selectedProducts.includes(product.id) ? 'ring-2 ring-primary' : ''}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedProducts.includes(product.id)}
+                        onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          {getProductTypeIcon(product.product_type)}
+                          <CardTitle className="text-base line-clamp-2">
+                            {product.name}
+                          </CardTitle>
+                        </div>
+                        {getProductTypeBadge(product.product_type)}
+                      </div>
                     </div>
-                    {getProductTypeBadge(product.product_type)}
+                    <div className="flex items-center gap-1">
+                      {product.is_active ? (
+                        <Eye className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditProduct(product.id)}>
+                            <Edit className="h-3 w-3 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Eye className="h-3 w-3 mr-2" />
+                            {product.is_active ? 'Deactivate' : 'Activate'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive">
+                            <Trash2 className="h-3 w-3 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    {product.is_active ? (
-                      <Eye className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
+                </CardHeader>
 
               <CardContent className="space-y-4">
                 {/* Product Image */}
@@ -278,21 +396,22 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
                   )}
                 </div>
 
-                {/* Actions */}
-                <div className="pt-2 border-t">
+                {/* Quick Actions */}
+                <div className="pt-2 border-t flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleEditProduct(product.id)}
-                    className="w-full flex items-center gap-2"
+                    className="flex-1 flex items-center gap-2"
                   >
                     <Edit className="h-3 w-3" />
-                    Edit Product
+                    Edit
                   </Button>
                 </div>
               </CardContent>
             </Card>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
