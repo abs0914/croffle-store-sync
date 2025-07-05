@@ -3,10 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package2, CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Package2, CheckCircle, XCircle, AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
 import { GoodsReceivedNote } from '@/types/orderManagement';
 import { CreateDiscrepancyResolutionDialog } from './CreateDiscrepancyResolutionDialog';
 import { updateInventoryFromGRN } from '@/services/orderManagement/inventoryUpdateService';
+import { deleteGRNItem } from '@/services/orderManagement/grnService';
+import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 
 interface ViewGRNDialogProps {
@@ -16,7 +18,9 @@ interface ViewGRNDialogProps {
 }
 
 export function ViewGRNDialog({ grn, open, onOpenChange }: ViewGRNDialogProps) {
+  const { hasPermission } = useAuth();
   const [isUpdatingInventory, setIsUpdatingInventory] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<string | null>(null);
 
   const handleUpdateInventory = async () => {
     setIsUpdatingInventory(true);
@@ -31,6 +35,20 @@ export function ViewGRNDialog({ grn, open, onOpenChange }: ViewGRNDialogProps) {
       toast.error('Failed to update inventory');
     } finally {
       setIsUpdatingInventory(false);
+    }
+  };
+
+  const handleDeleteGRNItem = async (itemId: string) => {
+    setDeletingItem(itemId);
+    try {
+      const success = await deleteGRNItem(itemId);
+      if (success) {
+        // Refresh data by closing and reopening dialog
+        onOpenChange(false);
+        setTimeout(() => onOpenChange(true), 100);
+      }
+    } finally {
+      setDeletingItem(null);
     }
   };
   const [showDiscrepancyDialog, setShowDiscrepancyDialog] = useState(false);
@@ -155,18 +173,31 @@ export function ViewGRNDialog({ grn, open, onOpenChange }: ViewGRNDialogProps) {
                   <div className="space-y-2">
                     {grn.purchase_order.items.map((item, index) => (
                       <div key={item.id} className="flex justify-between items-center p-2 border rounded">
-                        <div>
+                        <div className="flex-1">
                           <p className="font-medium">{item.inventory_stock?.item || `Item ${index + 1}`}</p>
                           <p className="text-sm text-muted-foreground">
                             Unit: {item.inventory_stock?.unit || 'N/A'}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">Qty: {item.quantity}</p>
-                          {item.unit_price && (
-                            <p className="text-sm text-muted-foreground">
-                              ₱{item.unit_price.toFixed(2)}
-                            </p>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-medium">Qty: {item.quantity}</p>
+                            {item.unit_price && (
+                              <p className="text-sm text-muted-foreground">
+                                ₱{item.unit_price.toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+                          {hasPermission('admin') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteGRNItem(item.id)}
+                              disabled={deletingItem === item.id}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
                       </div>

@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PurchaseOrder } from "@/types/orderManagement";
-import { updatePurchaseOrder } from "@/services/orderManagement/purchaseOrderService";
+import { updatePurchaseOrder, deletePurchaseOrderItem } from "@/services/orderManagement/purchaseOrderService";
 import { useAuth } from "@/contexts/auth";
-import { CheckCircle, XCircle, Package } from "lucide-react";
+import { CheckCircle, XCircle, Package, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 interface ViewPurchaseOrderDialogProps {
   order: PurchaseOrder;
@@ -22,6 +23,7 @@ export function ViewPurchaseOrderDialog({
   onSuccess
 }: ViewPurchaseOrderDialogProps) {
   const { user, hasPermission } = useAuth();
+  const [deletingItem, setDeletingItem] = useState<string | null>(null);
 
   const handleApprove = async () => {
     const success = await updatePurchaseOrder(order.id, {
@@ -44,6 +46,18 @@ export function ViewPurchaseOrderDialog({
     if (success) {
       onSuccess();
       onOpenChange(false);
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    setDeletingItem(itemId);
+    try {
+      const success = await deletePurchaseOrderItem(itemId);
+      if (success) {
+        onSuccess(); // Refresh the order data
+      }
+    } finally {
+      setDeletingItem(null);
     }
   };
 
@@ -124,13 +138,26 @@ export function ViewPurchaseOrderDialog({
                           <p className="text-sm text-muted-foreground">{item.specifications}</p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">
-                          {item.quantity} × ₱{item.unit_price?.toFixed(2) || '0.00'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          = ₱{((item.quantity * (item.unit_price || 0))).toFixed(2)}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className="font-medium">
+                            {item.quantity} × ₱{item.unit_price?.toFixed(2) || '0.00'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            = ₱{((item.quantity * (item.unit_price || 0))).toFixed(2)}
+                          </p>
+                        </div>
+                        {hasPermission('admin') && order.status === 'pending' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteItem(item.id)}
+                            disabled={deletingItem === item.id}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}

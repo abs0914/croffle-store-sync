@@ -541,3 +541,21 @@ const generateGRNNumber = async (): Promise<string> => {
     return `GRN${Date.now()}`;
   }
 };
+
+export const deleteGRNItem = async (itemId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('grn_items')
+      .delete()
+      .eq('id', itemId);
+
+    if (error) throw error;
+
+    toast.success('GRN item deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error deleting GRN item:', error);
+    toast.error('Failed to delete GRN item');
+    return false;
+  }
+};

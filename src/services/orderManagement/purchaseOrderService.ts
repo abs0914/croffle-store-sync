@@ -325,3 +325,21 @@ export const deletePurchaseOrder = async (id: string): Promise<boolean> => {
     return false;
   }
 };
+
+export const deletePurchaseOrderItem = async (itemId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('purchase_order_items')
+      .delete()
+      .eq('id', itemId);
+
+    if (error) throw error;
+
+    toast.success('Purchase order item deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error deleting purchase order item:', error);
+    toast.error('Failed to delete purchase order item');
+    return false;
+  }
+};
