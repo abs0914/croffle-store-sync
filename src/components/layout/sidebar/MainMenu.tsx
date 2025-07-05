@@ -27,7 +27,7 @@ const menuItems = [
     href: "/pos",
   },
   {
-    title: "Product Availability",
+    title: "Product Management",
     icon: ToggleLeft,
     href: "/products",
   },
