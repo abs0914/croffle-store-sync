@@ -2361,9 +2361,13 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          inventory_stock_id: string | null
           is_active: boolean | null
           name: string
           price: number
+          product_type: string | null
+          recipe_id: string | null
+          selling_quantity: number | null
           sku: string
           stock_quantity: number
           store_id: string
@@ -2377,9 +2381,13 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          inventory_stock_id?: string | null
           is_active?: boolean | null
           name: string
           price?: number
+          product_type?: string | null
+          recipe_id?: string | null
+          selling_quantity?: number | null
           sku: string
           stock_quantity?: number
           store_id: string
@@ -2393,9 +2401,13 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          inventory_stock_id?: string | null
           is_active?: boolean | null
           name?: string
           price?: number
+          product_type?: string | null
+          recipe_id?: string | null
+          selling_quantity?: number | null
           sku?: string
           stock_quantity?: number
           store_id?: string
@@ -2407,6 +2419,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
           {

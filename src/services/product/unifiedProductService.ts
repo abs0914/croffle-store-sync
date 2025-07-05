@@ -21,7 +21,8 @@ export const fetchUnifiedProducts = async (storeId: string): Promise<UnifiedProd
       .select(`
         *,
         category:categories(name),
-        product_variations(*)
+        product_variations(*),
+        inventory_item:inventory_stock(*)
       `)
       .eq('store_id', storeId)
       .order('created_at', { ascending: false });
@@ -29,18 +30,21 @@ export const fetchUnifiedProducts = async (storeId: string): Promise<UnifiedProd
     if (error) throw error;
 
     // Process products to add inventory status
-    const processedProducts = (data || []).map(product => {
-      const inventoryStatus = calculateInventoryStatus(product);
+    const processedProducts = await Promise.all((data || []).map(async (product) => {
+      const inventoryStatus = await calculateInventoryStatus(product, storeId);
+      const recipeIngredients = await fetchRecipeIngredients(product);
+      
       return {
         ...product,
+        category: product.category?.name || product.category || '', // Handle category properly
         inventory_status: inventoryStatus,
-        recipe_ingredients: [], // TODO: Implement recipe ingredient fetching
+        recipe_ingredients: recipeIngredients,
         product_variations: product.product_variations?.map((v: any) => ({
           ...v,
           size: v.size as any // Type assertion to handle database string vs enum
         })) || []
       };
-    });
+    }));
 
     return processedProducts as UnifiedProduct[];
   } catch (error) {
@@ -51,17 +55,120 @@ export const fetchUnifiedProducts = async (storeId: string): Promise<UnifiedProd
 };
 
 // Calculate inventory status based on product type and stock
-function calculateInventoryStatus(product: any): 'in_stock' | 'low_stock' | 'out_of_stock' {
+async function calculateInventoryStatus(product: any, storeId: string): Promise<'in_stock' | 'low_stock' | 'out_of_stock'> {
   if (product.product_type === 'direct') {
-    // For direct products, check the stock_quantity
+    // For direct products, check the linked inventory stock
+    if (product.inventory_stock_id && product.inventory_item) {
+      const currentStock = product.inventory_item.stock_quantity || 0;
+      const threshold = product.inventory_item.minimum_threshold || 10;
+      
+      if (currentStock <= 0) return 'out_of_stock';
+      if (currentStock <= threshold) return 'low_stock';
+      return 'in_stock';
+    }
+    
+    // Fallback to product's own stock_quantity if no inventory link
     if (product.stock_quantity <= 0) return 'out_of_stock';
     if (product.stock_quantity <= 5) return 'low_stock';
     return 'in_stock';
   }
 
-  // For recipe products, we'll implement ingredient checking later
-  // For now, assume they're in stock if the product is active
+  // For recipe products, check ingredient availability
+  if (product.product_type === 'recipe') {
+    try {
+      // Get recipe ingredients from recipe_ingredients table
+      const { data: ingredients, error } = await supabase
+        .from('recipe_ingredients')
+        .select(`
+          quantity,
+          commissary_item:commissary_inventory(
+            current_stock,
+            minimum_threshold,
+            name,
+            unit
+          )
+        `)
+        .eq('recipe_id', product.recipe_id || product.id);
+
+      if (error) {
+        console.warn('Error fetching recipe ingredients:', error);
+        return product.is_active ? 'in_stock' : 'out_of_stock';
+      }
+
+      if (!ingredients || ingredients.length === 0) {
+        // No ingredients defined, assume available if product is active
+        return product.is_active ? 'in_stock' : 'out_of_stock';
+      }
+
+      let hasOutOfStock = false;
+      let hasLowStock = false;
+
+      for (const ingredient of ingredients) {
+        if (!ingredient.commissary_item) continue;
+        
+        const requiredQuantity = ingredient.quantity || 1;
+        const availableStock = ingredient.commissary_item.current_stock || 0;
+        const threshold = ingredient.commissary_item.minimum_threshold || 10;
+
+        if (availableStock < requiredQuantity) {
+          hasOutOfStock = true;
+          break;
+        } else if (availableStock <= threshold) {
+          hasLowStock = true;
+        }
+      }
+
+      if (hasOutOfStock) return 'out_of_stock';
+      if (hasLowStock) return 'low_stock';
+      return 'in_stock';
+    } catch (error) {
+      console.error('Error calculating recipe inventory status:', error);
+      return product.is_active ? 'in_stock' : 'out_of_stock';
+    }
+  }
+
+  // Default fallback
   return product.is_active ? 'in_stock' : 'out_of_stock';
+}
+
+// Fetch recipe ingredients for display
+async function fetchRecipeIngredients(product: any): Promise<Array<{
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  current_stock: number;
+}>> {
+  if (product.product_type !== 'recipe') return [];
+
+  try {
+    const { data: ingredients, error } = await supabase
+      .from('recipe_ingredients')
+      .select(`
+        id,
+        quantity,
+        commissary_item:commissary_inventory(
+          id,
+          name,
+          unit,
+          current_stock
+        )
+      `)
+      .eq('recipe_id', product.recipe_id || product.id);
+
+    if (error) throw error;
+
+    return (ingredients || []).map(ingredient => ({
+      id: ingredient.id,
+      name: ingredient.commissary_item?.name || 'Unknown ingredient',
+      quantity: ingredient.quantity || 0,
+      unit: ingredient.commissary_item?.unit || 'units',
+      current_stock: ingredient.commissary_item?.current_stock || 0
+    }));
+  } catch (error) {
+    console.error('Error fetching recipe ingredients:', error);
+    return [];
+  }
 }
 
 // Bulk operations
