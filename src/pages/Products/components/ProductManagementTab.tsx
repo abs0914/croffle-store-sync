@@ -25,10 +25,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/contexts/StoreContext';
 import { formatCurrency } from '@/utils/format';
-import { Product } from '@/types/product';
+import { 
+  fetchUnifiedProducts, 
+  bulkUpdateProductStatus, 
+  bulkDeleteProducts,
+  toggleProductAvailability,
+  deleteProduct,
+  UnifiedProduct 
+} from '@/services/product/unifiedProductService';
+import { toast } from 'sonner';
 
 interface ProductManagementTabProps {
   onAddProduct: () => void;
@@ -43,26 +50,12 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
   const [filterType, setFilterType] = useState<'all' | 'recipe' | 'direct'>('all');
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
-  // Fetch products from the products table
+  // Fetch products with inventory status
   const { data: products = [], isLoading, refetch } = useQuery({
-    queryKey: ['products', currentStore?.id],
-    queryFn: async () => {
-      if (!currentStore?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          category:categories(name),
-          product_variations(*)
-        `)
-        .eq('store_id', currentStore.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as Product[];
-    },
+    queryKey: ['unified-products', currentStore?.id],
+    queryFn: () => currentStore?.id ? fetchUnifiedProducts(currentStore.id) : Promise.resolve([]),
     enabled: !!currentStore?.id,
+    refetchInterval: 30000, // Refresh every 30 seconds for inventory status
   });
 
   const handleEditProduct = (productId: string) => {
@@ -86,15 +79,49 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
   };
 
   const handleBulkToggleStatus = async () => {
-    // Implementation for bulk status toggle would go here
-    console.log('Bulk toggle status for:', selectedProducts);
-    setSelectedProducts([]);
+    if (selectedProducts.length === 0) return;
+    
+    const selectedProductObjects = products.filter(p => selectedProducts.includes(p.id));
+    const allActive = selectedProductObjects.every(p => p.is_active);
+    const newStatus = !allActive;
+    
+    const success = await bulkUpdateProductStatus(selectedProducts, newStatus);
+    if (success) {
+      setSelectedProducts([]);
+      refetch();
+    }
   };
 
   const handleBulkDelete = async () => {
-    // Implementation for bulk delete would go here
-    console.log('Bulk delete:', selectedProducts);
-    setSelectedProducts([]);
+    if (selectedProducts.length === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedProducts.length} product${selectedProducts.length !== 1 ? 's' : ''}? This action cannot be undone.`)) {
+      return;
+    }
+    
+    const success = await bulkDeleteProducts(selectedProducts);
+    if (success) {
+      setSelectedProducts([]);
+      refetch();
+    }
+  };
+
+  const handleToggleProductStatus = async (productId: string, currentStatus: boolean) => {
+    const success = await toggleProductAvailability(productId, !currentStatus);
+    if (success) {
+      refetch();
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return;
+    }
+    
+    const success = await deleteProduct(productId);
+    if (success) {
+      refetch();
+    }
   };
 
   const filteredProducts = products.filter(product => {
@@ -120,6 +147,19 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
       return <Badge variant="default" className="bg-orange-100 text-orange-800">Recipe</Badge>;
     }
     return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Direct</Badge>;
+  };
+
+  const getInventoryStatusBadge = (status: string | undefined) => {
+    switch (status) {
+      case 'out_of_stock':
+        return <Badge variant="destructive" className="text-xs">Out of Stock</Badge>;
+      case 'low_stock':
+        return <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-700">Low Stock</Badge>;
+      case 'in_stock':
+        return <Badge variant="default" className="text-xs bg-green-100 text-green-800">In Stock</Badge>;
+      default:
+        return <Badge variant="secondary" className="text-xs">Unknown</Badge>;
+    }
   };
 
   if (isLoading) {
@@ -320,7 +360,10 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
                             {product.name}
                           </CardTitle>
                         </div>
-                        {getProductTypeBadge(product.product_type)}
+                        <div className="flex items-center gap-2">
+                          {getProductTypeBadge(product.product_type)}
+                          {getInventoryStatusBadge(product.inventory_status)}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -340,11 +383,14 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
                             <Edit className="h-3 w-3 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Eye className="h-3 w-3 mr-2" />
+                          <DropdownMenuItem onClick={() => handleToggleProductStatus(product.id, product.is_active)}>
+                            {product.is_active ? <EyeOff className="h-3 w-3 mr-2" /> : <Eye className="h-3 w-3 mr-2" />}
                             {product.is_active ? 'Deactivate' : 'Activate'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => handleDeleteProduct(product.id)}
+                          >
                             <Trash2 className="h-3 w-3 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -392,6 +438,15 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
                   {product.product_variations && product.product_variations.length > 0 && (
                     <div className="text-xs text-muted-foreground">
                       {product.product_variations.length} variation{product.product_variations.length !== 1 ? 's' : ''}
+                    </div>
+                  )}
+
+                  {product.recipe_ingredients && product.recipe_ingredients.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <ChefHat className="h-3 w-3" />
+                        {product.recipe_ingredients.length} ingredient{product.recipe_ingredients.length !== 1 ? 's' : ''}
+                      </div>
                     </div>
                   )}
                 </div>

@@ -10,11 +10,17 @@ import {
   Package,
   Image as ImageIcon,
   DollarSign,
-  RefreshCw
+  RefreshCw,
+  ChefHat,
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchProductCatalog, toggleProductAvailability } from '@/services/productCatalog/productCatalogService';
-import { ProductCatalog } from '@/services/productCatalog/types';
+import { 
+  fetchUnifiedProducts, 
+  toggleProductAvailability,
+  UnifiedProduct 
+} from '@/services/product/unifiedProductService';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
@@ -27,16 +33,16 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
   const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
 
   const { data: products = [], isLoading, refetch } = useQuery({
-    queryKey: ['product-catalog', storeId],
-    queryFn: () => fetchProductCatalog(storeId),
+    queryKey: ['store-catalog', storeId],
+    queryFn: () => fetchUnifiedProducts(storeId),
     enabled: !!storeId,
+    refetchInterval: 30000, // Refresh every 30 seconds for inventory status
   });
 
   const handleToggleAvailability = async (productId: string, currentAvailability: boolean) => {
     try {
       const success = await toggleProductAvailability(productId, !currentAvailability);
       if (success) {
-        toast.success(`Product ${!currentAvailability ? 'enabled' : 'disabled'} successfully`);
         refetch();
       }
     } catch (error) {
@@ -46,14 +52,17 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
   };
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAvailability = !showUnavailableOnly || !product.is_available;
+    const matchesAvailability = !showUnavailableOnly || !product.is_active;
     return matchesSearch && matchesAvailability;
   });
 
-  const availableCount = products.filter(p => p.is_available).length;
-  const unavailableCount = products.filter(p => !p.is_available).length;
+  const availableCount = products.filter(p => p.is_active).length;
+  const unavailableCount = products.filter(p => !p.is_active).length;
+  const inStockCount = products.filter(p => p.inventory_status === 'in_stock').length;
+  const lowStockCount = products.filter(p => p.inventory_status === 'low_stock').length;
+  const outOfStockCount = products.filter(p => p.inventory_status === 'out_of_stock').length;
 
   if (isLoading) {
     return (
@@ -76,7 +85,7 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -98,24 +107,28 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <EyeOff className="h-4 w-4 text-orange-600" />
-              <div className="text-sm text-muted-foreground">Unavailable</div>
+              <Zap className="h-4 w-4 text-green-500" />
+              <div className="text-sm text-muted-foreground">In Stock</div>
             </div>
-            <div className="text-2xl font-bold">{unavailableCount}</div>
+            <div className="text-2xl font-bold">{inStockCount}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-purple-600" />
-              <div className="text-sm text-muted-foreground">Avg Price</div>
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <div className="text-sm text-muted-foreground">Low Stock</div>
             </div>
-            <div className="text-2xl font-bold">
-              {products.length > 0 
-                ? formatCurrency(products.reduce((sum, p) => sum + p.price, 0) / products.length)
-                : formatCurrency(0)
-              }
+            <div className="text-2xl font-bold">{lowStockCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <EyeOff className="h-4 w-4 text-red-600" />
+              <div className="text-sm text-muted-foreground">Out of Stock</div>
             </div>
+            <div className="text-2xl font-bold">{outOfStockCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -172,17 +185,40 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-base line-clamp-2">
-                      {product.product_name}
-                    </CardTitle>
+                    <div className="flex items-center gap-2 mb-1">
+                      {product.product_type === 'recipe' ? 
+                        <ChefHat className="h-4 w-4 text-orange-600" /> : 
+                        <Package className="h-4 w-4 text-blue-600" />
+                      }
+                      <CardTitle className="text-base line-clamp-2">
+                        {product.name}
+                      </CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={product.product_type === 'recipe' ? "default" : "secondary"} className="text-xs">
+                        {product.product_type === 'recipe' ? 'Recipe' : 'Direct'}
+                      </Badge>
+                      {(() => {
+                        switch (product.inventory_status) {
+                          case 'out_of_stock':
+                            return <Badge variant="destructive" className="text-xs">Out of Stock</Badge>;
+                          case 'low_stock':
+                            return <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-700">Low Stock</Badge>;
+                          case 'in_stock':
+                            return <Badge variant="default" className="text-xs bg-green-100 text-green-800">In Stock</Badge>;
+                          default:
+                            return <Badge variant="secondary" className="text-xs">Unknown</Badge>;
+                        }
+                      })()}
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleToggleAvailability(product.id, product.is_available)}
+                    onClick={() => handleToggleAvailability(product.id, product.is_active)}
                     className="ml-2"
                   >
-                    {product.is_available ? (
+                    {product.is_active ? (
                       <Eye className="h-4 w-4 text-green-600" />
                     ) : (
                       <EyeOff className="h-4 w-4 text-gray-400" />
@@ -197,7 +233,7 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
                   {product.image_url ? (
                     <img 
                       src={product.image_url} 
-                      alt={product.product_name}
+                      alt={product.name}
                       className="w-full h-full object-cover rounded-lg"
                     />
                   ) : (
@@ -212,9 +248,9 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
                       {formatCurrency(product.price)}
                     </span>
                     <Badge 
-                      variant={product.is_available ? "default" : "secondary"}
+                      variant={product.is_active ? "default" : "secondary"}
                     >
-                      {product.is_available ? 'Available' : 'Unavailable'}
+                      {product.is_active ? 'Available' : 'Unavailable'}
                     </Badge>
                   </div>
 
@@ -224,18 +260,16 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
                     </p>
                   )}
 
-                  {product.ingredients && product.ingredients.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {product.ingredients.length} ingredient{product.ingredients.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  )}
+                  <div className="text-xs text-muted-foreground">
+                    SKU: {product.sku}
+                  </div>
 
-                  {product.recipe_id && (
-                    <div className="text-xs text-muted-foreground">
-                      Recipe ID: {product.recipe_id.slice(0, 8)}...
+                  {product.recipe_ingredients && product.recipe_ingredients.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <ChefHat className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        {product.recipe_ingredients.length} ingredient{product.recipe_ingredients.length !== 1 ? 's' : ''}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -245,10 +279,10 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleToggleAvailability(product.id, product.is_available)}
+                    onClick={() => handleToggleAvailability(product.id, product.is_active)}
                     className="w-full"
                   >
-                    {product.is_available ? 'Make Unavailable' : 'Make Available'}
+                    {product.is_active ? 'Make Unavailable' : 'Make Available'}
                   </Button>
                 </div>
               </CardContent>
