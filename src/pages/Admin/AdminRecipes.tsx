@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminRecipesHeader } from './components/AdminRecipesHeader';
@@ -15,7 +16,7 @@ import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Package } from 'lucide-react';
+import { Package, AlertTriangle } from 'lucide-react';
 import { RecipeDeploymentDialog } from '@/components/Admin/components/RecipeDeploymentDialog';
 
 export default function AdminRecipes() {
@@ -278,7 +279,7 @@ export default function AdminRecipes() {
             onEnhancedDeployment={handleEnhancedDeployment}
           />
 
-          {/* Temporary Debug Panel */}
+          {/* Debug Panel - Always show for investigation */}
           <RecipeDebugPanel />
         </TabsContent>
 
