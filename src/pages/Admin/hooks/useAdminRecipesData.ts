@@ -259,7 +259,8 @@ export const useAdminRecipesData = () => {
       recipesWithoutProducts,
       recipesWithIngredients,
       storeBreakdown: recipes.reduce((acc: any, recipe) => {
-        const storeName = recipe.store_name || 'Unknown';
+        // Fix: Access store_name from the recipe object directly since we set it during transformation
+        const storeName = (recipe as any).store_name || 'Unknown';
         acc[storeName] = (acc[storeName] || 0) + 1;
         return acc;
       }, {})
