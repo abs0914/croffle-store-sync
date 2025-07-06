@@ -41,7 +41,7 @@ export const usePOSInventoryValidation = (storeId: string) => {
         productId: item.productId,
         variationId: item.variationId,
         quantity: item.quantity,
-        recipeId: item.product?.recipe_id // Assuming recipe_id is available on product
+        recipeId: item.product?.recipe_id || undefined
       }));
 
       const availability = await checkProductAvailability(productSaleItems);
@@ -99,7 +99,7 @@ export const usePOSInventoryValidation = (storeId: string) => {
         productId: item.productId,
         variationId: item.variationId,
         quantity: item.quantity,
-        recipeId: item.product?.recipe_id // Assuming recipe_id is available on product
+        recipeId: item.product?.recipe_id || undefined
       }));
 
       const result = await processProductSales(productSaleItems, transactionId);

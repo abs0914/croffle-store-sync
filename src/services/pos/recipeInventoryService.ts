@@ -1,9 +1,10 @@
 
 import { 
   processRecipeInventoryDeduction,
-  checkRecipeAvailability,
+  checkRecipeAvailability as unifiedCheckRecipeAvailability,
   InventoryDeductionResult
 } from "@/services/inventory/unifiedInventoryDeductionService";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface RecipeUsageData {
   recipe_id: string;
@@ -37,7 +38,7 @@ export const deductInventoryForRecipe = async (
  * Check if recipe can be made with current inventory
  * @deprecated Use checkRecipeAvailability from unifiedInventoryDeductionService instead
  */
-export const checkRecipeAvailability = async (
+export const checkRecipeAvailabilityLegacy = async (
   recipeId: string,
   quantityNeeded: number,
   storeId: string
@@ -46,9 +47,9 @@ export const checkRecipeAvailability = async (
   maxQuantity: number;
   missingIngredients: string[];
 }> => {
-  console.warn('checkRecipeAvailability is deprecated, use checkRecipeAvailability from unifiedInventoryDeductionService instead');
+  console.warn('checkRecipeAvailabilityLegacy is deprecated, use checkRecipeAvailability from unifiedInventoryDeductionService instead');
   
-  const result = await checkRecipeAvailability(recipeId, quantityNeeded, storeId);
+  const result = await unifiedCheckRecipeAvailability(recipeId, quantityNeeded, storeId);
   
   return {
     canMake: result.canMake,

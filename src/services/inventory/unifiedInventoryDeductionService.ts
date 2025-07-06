@@ -302,7 +302,7 @@ export const getRecipeInventoryRequirements = async (
       .from('recipe_ingredients')
       .select(`
         *,
-        inventory_conversion_mappings!inner(
+        inventory_conversion_mappings(
           inventory_stock_id,
           conversion_factor
         )
@@ -317,11 +317,9 @@ export const getRecipeInventoryRequirements = async (
     const requirements: InventoryDeductionItem[] = [];
 
     for (const ingredient of ingredients || []) {
-      // Handle mapping data
-      let mappingData = ingredient.inventory_conversion_mappings;
-      if (Array.isArray(mappingData)) {
-        mappingData = mappingData[0];
-      }
+      // Handle mapping data - it could be an array or object
+      const mappings = ingredient.inventory_conversion_mappings;
+      let mappingData = Array.isArray(mappings) ? mappings[0] : mappings;
 
       if (mappingData && mappingData.inventory_stock_id && mappingData.conversion_factor) {
         // Calculate required quantity from bulk inventory

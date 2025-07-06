@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useUnifiedInventoryDeduction, ProductSaleItem } from "@/hooks/inventory/useUnifiedInventoryDeduction";
@@ -18,7 +19,7 @@ export function useRecipeInventoryDeduction(storeId: string) {
   const { user } = useAuth();
   const {
     processProductSales,
-    checkProductAvailability,
+    checkProductAvailability: unifiedCheckProductAvailability,
     isProcessing,
     lastResult
   } = useUnifiedInventoryDeduction(storeId);
@@ -55,7 +56,7 @@ export function useRecipeInventoryDeduction(storeId: string) {
   /**
    * Check if products with recipes can be made with current inventory
    */
-  const checkProductAvailability = useCallback(async (
+  const checkRecipeProductAvailability = useCallback(async (
     products: ProductWithRecipe[]
   ): Promise<{
     available: boolean;
@@ -72,7 +73,7 @@ export function useRecipeInventoryDeduction(storeId: string) {
       recipeId: product.recipe_id
     }));
 
-    const result = await checkProductAvailability(productSaleItems);
+    const result = await unifiedCheckProductAvailability(productSaleItems);
     
     // Convert back to ProductWithRecipe format
     return {
@@ -88,7 +89,7 @@ export function useRecipeInventoryDeduction(storeId: string) {
         maxQuantity: item.maxQuantity
       }))
     };
-  }, [checkProductAvailability]);
+  }, [unifiedCheckProductAvailability]);
 
   /**
    * Get a preview of what inventory will be deducted
@@ -118,7 +119,7 @@ export function useRecipeInventoryDeduction(storeId: string) {
 
   return {
     processRecipeDeductions,
-    checkProductAvailability,
+    checkProductAvailability: checkRecipeProductAvailability,
     getDeductionPreview,
     isProcessing,
     lastDeductionResult: lastResult
