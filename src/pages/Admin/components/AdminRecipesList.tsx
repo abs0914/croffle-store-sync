@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { toast } from "sonner";
 import { Package, AlertTriangle, Info, CheckCircle, XCircle, Edit } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { cleanupDuplicateRecipes } from '@/services/recipeManagement/recipeDeploymentService';
+import { RecipeEditDialog } from '@/components/Admin/components/RecipeEditDialog';
 
 interface AdminRecipesListProps {
   recipes: any[];
@@ -36,6 +36,8 @@ export function AdminRecipesList({
 }: AdminRecipesListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const handleEnhancedDeploy = async (recipe: any) => {
     if (!onEnhancedDeployment) return;
@@ -135,6 +137,17 @@ export function AdminRecipesList({
         : 'Ready for deployment';
     }
     return 'Cannot deploy';
+  };
+
+  const handleEditRecipe = (recipe: any) => {
+    setEditingRecipe(recipe);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    onRefresh();
+    setEditingRecipe(null);
+    setIsEditDialogOpen(false);
   };
 
   return (
@@ -285,15 +298,11 @@ export function AdminRecipesList({
                       {isDuplicate ? 'Duplicate' : !deploymentStatus.ready ? 'Cannot Deploy' : 'Deploy'}
                     </Button>
                     
-                    {/* Add edit button for deployed recipes */}
                     <Button
                       size="sm"
                       variant="outline"
                       className="flex items-center gap-1"
-                      onClick={() => {
-                        // This would open an edit dialog - placeholder for now
-                        toast.info('Recipe editing will be available soon');
-                      }}
+                      onClick={() => handleEditRecipe(recipe)}
                     >
                       <Edit className="h-3 w-3" />
                       Edit
@@ -318,6 +327,13 @@ export function AdminRecipesList({
           </p>
         </div>
       )}
+
+      <RecipeEditDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        recipe={editingRecipe}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
 }
