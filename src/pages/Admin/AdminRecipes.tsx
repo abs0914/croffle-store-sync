@@ -11,13 +11,12 @@ import { AdminCommissaryIntegrationTab } from './components/AdminCommissaryInteg
 import { MenuStructureTab } from '@/components/Admin/components/MenuStructureTab';
 import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/EnhancedRecipeTemplateForm';
 import { StoreSelector } from '@/components/admin/StoreSelector';
-import { RecipeDebugPanel } from '@/components/Admin/components/RecipeDebugPanel';
 import { EnhancedRecipeDeploymentDialog } from '@/components/Admin/components/EnhancedRecipeDeploymentDialog';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Package, AlertTriangle } from 'lucide-react';
+import { Package } from 'lucide-react';
 
 export default function AdminRecipes() {
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
@@ -283,9 +282,6 @@ export default function AdminRecipes() {
             stores={stores}
             onEnhancedDeployment={handleEnhancedDeployment}
           />
-
-          {/* Debug Panel - Always show for investigation */}
-          <RecipeDebugPanel />
         </TabsContent>
 
         <TabsContent value="bulk-upload">
