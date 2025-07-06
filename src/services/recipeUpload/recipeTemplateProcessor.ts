@@ -53,13 +53,14 @@ export const processRecipeUploadAsTemplate = async (
       const ingredientInserts = [];
 
       for (const ingredient of recipe.ingredients) {
+        const ingredientName = ingredient.commissary_item_name;
+        
         // Handle choice-based ingredients (like "Choose 1: Chocolate Sauce OR Caramel Sauce")
-        if (ingredient.commissary_item_name.toLowerCase().includes('choose') || ingredient.commissary_item_name.toLowerCase().includes('or')) {
-          console.log(`Processing choice-based ingredient: ${ingredient.commissary_item_name}`);
+        if (ingredientName.toLowerCase().includes('choose') || ingredientName.toLowerCase().includes('or')) {
+          console.log(`Processing choice-based ingredient: ${ingredientName}`);
           
-          // For now, create all options as separate ingredients
-          // Future enhancement: implement ingredient groups
-          const options = ingredient.commissary_item_name.split(/\s+or\s+|\s+OR\s+/i);
+          // Parse choice-based ingredients: "Choose 1: Option A OR Option B"
+          const options = ingredientName.split(/\s+or\s+|\s+OR\s+/i);
           
           for (const option of options) {
             const cleanOption = option.replace(/choose\s+\d+:\s*/i, '').trim();
@@ -67,6 +68,7 @@ export const processRecipeUploadAsTemplate = async (
               ingredientInserts.push({
                 recipe_template_id: template.id,
                 ingredient_name: cleanOption,
+                commissary_item_name: cleanOption,
                 quantity: ingredient.quantity,
                 unit: ingredient.uom,
                 cost_per_unit: ingredient.cost_per_unit || 0,
@@ -81,7 +83,8 @@ export const processRecipeUploadAsTemplate = async (
           // Regular ingredient processing
           ingredientInserts.push({
             recipe_template_id: template.id,
-            ingredient_name: ingredient.commissary_item_name,
+            ingredient_name: ingredientName,
+            commissary_item_name: ingredientName,
             quantity: ingredient.quantity,
             unit: ingredient.uom,
             cost_per_unit: ingredient.cost_per_unit || 0,
@@ -94,23 +97,27 @@ export const processRecipeUploadAsTemplate = async (
       }
 
       if (ingredientInserts.length > 0) {
-        console.log(`Inserting ${ingredientInserts.length} ingredients for template ${recipe.name}`);
+        console.log(`Attempting to insert ${ingredientInserts.length} ingredients for template ${recipe.name}`);
+        console.log('Ingredient data:', ingredientInserts);
         
-        const { error: ingredientsError } = await supabase
+        const { data: insertedIngredients, error: ingredientsError } = await supabase
           .from('recipe_template_ingredients')
-          .insert(ingredientInserts);
+          .insert(ingredientInserts)
+          .select();
 
         if (ingredientsError) {
           console.error(`Error adding ingredients for template ${recipe.name}:`, ingredientsError);
-          console.error('Ingredient data that failed:', ingredientInserts);
+          console.error('Failed ingredient data:', ingredientInserts);
           
           // Don't fail the entire template creation if only ingredients fail
-          // The template is created successfully, ingredients can be added manually
           console.warn(`Template created but ingredients failed to insert`);
         } else {
-          console.log(`Successfully added ${ingredientInserts.length} ingredients to template ${recipe.name}`);
+          console.log(`Successfully added ${insertedIngredients?.length || ingredientInserts.length} ingredients to template ${recipe.name}`);
+          console.log('Inserted ingredients:', insertedIngredients);
         }
       }
+    } else {
+      console.log(`No ingredients found for recipe ${recipe.name}`);
     }
 
     return true;

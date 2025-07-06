@@ -13,10 +13,10 @@ export interface RecipeUploadData {
   name: string;
   category: string;
   ingredients: {
-    name: string;
+    commissary_item_name: string;
     uom: string;
     quantity: number;
-    cost?: number;
+    cost_per_unit?: number;
   }[];
 }
 
@@ -38,6 +38,7 @@ export const bulkUploadRecipes = async (recipes: RecipeUploadData[]): Promise<bo
     for (const recipeData of recipes) {
       try {
         console.log(`Processing recipe: ${recipeData.name}`);
+        console.log(`Recipe ingredients:`, recipeData.ingredients);
         
         // Convert RecipeUploadData to RecipeUpload format
         const recipeUpload = {
@@ -48,12 +49,14 @@ export const bulkUploadRecipes = async (recipes: RecipeUploadData[]): Promise<bo
           serving_size: 1,
           instructions: 'Instructions to be added',
           ingredients: recipeData.ingredients.map(ing => ({
-            commissary_item_name: ing.name,
+            commissary_item_name: ing.commissary_item_name,
             quantity: ing.quantity,
             uom: ing.uom,
-            cost_per_unit: ing.cost || 0
+            cost_per_unit: ing.cost_per_unit || 0
           }))
         };
+
+        console.log(`Converted recipe upload:`, recipeUpload);
 
         const success = await processRecipeUploadAsTemplate(recipeUpload, uploadData);
         

@@ -6,10 +6,10 @@ export interface RecipeUpload {
   serving_size: number;
   instructions?: string;
   ingredients: {
-    name: string;
+    commissary_item_name: string;
     uom: string;
     quantity: number;
-    cost?: number;
+    cost_per_unit?: number;
   }[];
 }
 
@@ -197,10 +197,15 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
   const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
   const recipes: Map<string, RecipeUpload> = new Map();
 
+  console.log('CSV headers:', headers);
+
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
     
-    if (values.length < headers.length) continue;
+    if (values.length < headers.length) {
+      console.log(`Skipping line ${i + 1}: insufficient columns`);
+      continue;
+    }
 
     const row: Record<string, string> = {};
     headers.forEach((header, index) => {
@@ -214,7 +219,12 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     const quantity = parseFloat(row['quantity used'] || row['quantity']) || 0;
     const cost = parseFloat(row['cost per unit']) || 0;
 
-    if (!recipeName || !ingredientName || !uom || quantity <= 0) continue;
+    console.log(`Processing line ${i + 1}:`, { recipeName, category, ingredientName, uom, quantity, cost });
+
+    if (!recipeName || !ingredientName || !uom || quantity <= 0) {
+      console.log(`Skipping line ${i + 1}: missing required fields`);
+      continue;
+    }
 
     if (!recipes.has(recipeName)) {
       recipes.set(recipeName, {
@@ -230,16 +240,20 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
 
     const recipe = recipes.get(recipeName)!;
     recipe.ingredients.push({
-      name: ingredientName,
+      commissary_item_name: ingredientName,
       uom: uom,
       quantity: quantity,
-      cost: cost
+      cost_per_unit: cost
     });
   }
 
-  return Array.from(recipes.values()).filter(recipe => 
+  const parsedRecipes = Array.from(recipes.values()).filter(recipe => 
     recipe.ingredients.length > 0 && recipe.category
   );
+
+  console.log(`Parsed ${parsedRecipes.length} recipes with ingredients:`, parsedRecipes);
+  
+  return parsedRecipes;
 };
 
 export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] => {
