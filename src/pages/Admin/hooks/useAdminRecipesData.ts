@@ -39,7 +39,7 @@ export const useAdminRecipesData = () => {
       console.log('Fetched deployed recipes:', data?.length || 0);
       console.log('Recipe data:', data);
       
-      // Set recipes directly without delays or timeouts
+      // Set recipes directly
       setRecipes(data as Recipe[] || []);
       
     } catch (error: any) {
