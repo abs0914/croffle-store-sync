@@ -174,10 +174,10 @@ export default function AdminOrders() {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Globe className="h-6 w-6 text-blue-600" />
-            <h1 className="text-3xl font-bold">Global Purchase Orders Management</h1>
+            <h1 className="text-3xl font-bold">Order Management Hub</h1>
           </div>
           <p className="text-muted-foreground">
-            Review, approve, fulfill, and manage purchase orders from all stores across your network
+            Review, approve, and fulfill purchase orders from all stores
           </p>
         </div>
         <div className="flex gap-2">
@@ -198,8 +198,8 @@ export default function AdminOrders() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="orders">Purchase Orders</TabsTrigger>
-          <TabsTrigger value="discrepancies">Discrepancy Resolutions</TabsTrigger>
+          <TabsTrigger value="orders">All Orders</TabsTrigger>
+          <TabsTrigger value="discrepancies">Order Issues</TabsTrigger>
         </TabsList>
 
         <TabsContent value="orders" className="space-y-4">
