@@ -65,7 +65,7 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
         .eq('recipe_id', recipe.id);
 
       if (recipeIngredients && recipeIngredients.length > 0) {
-        ingredientsData = recipeIngredients.map(ing => ({
+        ingredientsData = recipeIngredients.map((ing: any) => ({
           id: ing.id,
           ingredient_name: ing.inventory_stock?.item || 'Unknown Item',
           quantity: ing.quantity || 0,
@@ -83,7 +83,7 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
           .eq('recipe_template_id', recipe.template_id);
 
         if (templateIngredients) {
-          ingredientsData = templateIngredients.map(ing => ({
+          ingredientsData = templateIngredients.map((ing: any) => ({
             id: `template-${ing.id}`,
             ingredient_name: ing.ingredient_name || ing.commissary_item_name || '',
             quantity: ing.quantity || 0,
