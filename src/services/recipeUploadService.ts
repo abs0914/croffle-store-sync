@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { processRecipeUploadAsTemplate } from "./recipeUpload/recipeTemplateProcessor";
-import { UploadData, getUnitMapping, getValidUnits } from "./recipeUpload/recipeUploadHelpers";
+import { UploadData } from "./recipeUpload/recipeUploadHelpers";
 
 export interface RecipeUploadData {
   name: string;
@@ -19,12 +19,10 @@ export const bulkUploadRecipes = async (recipes: RecipeUploadData[]): Promise<bo
   try {
     console.log('Starting bulk recipe template upload...', recipes.length, 'recipes');
 
-    // Initialize upload data
+    // Initialize upload data with minimal required properties
     const uploadData: UploadData = {
       categoryMap: new Map(),
-      commissaryMap: new Map(),
-      unitMapping: getUnitMapping(),
-      validUnits: getValidUnits()
+      commissaryMap: new Map()
     };
 
     let successCount = 0;
@@ -45,12 +43,10 @@ export const bulkUploadRecipes = async (recipes: RecipeUploadData[]): Promise<bo
           serving_size: 1,
           instructions: 'Instructions to be added',
           ingredients: recipeData.ingredients.map(ing => ({
-            name: ing.name,
-            commissary_item_name: ing.name, // Keep for backward compatibility
+            commissary_item_name: ing.name,
             quantity: ing.quantity,
             uom: ing.uom,
-            cost_per_unit: ing.cost || 0,
-            cost: ing.cost || 0
+            cost_per_unit: ing.cost || 0
           }))
         };
 

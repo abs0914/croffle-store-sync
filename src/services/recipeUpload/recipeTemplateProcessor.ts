@@ -49,12 +49,12 @@ export const processRecipeUploadAsTemplate = async (
 
       for (const ingredient of recipe.ingredients) {
         // Handle choice-based ingredients (like "Choose 1: Chocolate Sauce OR Caramel Sauce")
-        if (ingredient.name.toLowerCase().includes('choose') || ingredient.name.toLowerCase().includes('or')) {
-          console.log(`Processing choice-based ingredient: ${ingredient.name}`);
+        if (ingredient.commissary_item_name.toLowerCase().includes('choose') || ingredient.commissary_item_name.toLowerCase().includes('or')) {
+          console.log(`Processing choice-based ingredient: ${ingredient.commissary_item_name}`);
           
           // For now, create all options as separate ingredients
           // Future enhancement: implement ingredient groups
-          const options = ingredient.name.split(/\s+or\s+|\s+OR\s+/i);
+          const options = ingredient.commissary_item_name.split(/\s+or\s+|\s+OR\s+/i);
           
           for (const option of options) {
             const cleanOption = option.replace(/choose\s+\d+:\s*/i, '').trim();
@@ -64,7 +64,7 @@ export const processRecipeUploadAsTemplate = async (
                 ingredient_name: cleanOption,
                 quantity: ingredient.quantity,
                 unit: ingredient.uom,
-                cost_per_unit: ingredient.cost || 0,
+                cost_per_unit: ingredient.cost_per_unit || 0,
                 recipe_unit: ingredient.uom,
                 purchase_unit: ingredient.uom,
                 conversion_factor: 1,
@@ -76,10 +76,10 @@ export const processRecipeUploadAsTemplate = async (
           // Regular ingredient processing
           ingredientInserts.push({
             recipe_template_id: template.id,
-            ingredient_name: ingredient.name, // Fixed: Use ingredient_name instead of commissary_item_name
+            ingredient_name: ingredient.commissary_item_name,
             quantity: ingredient.quantity,
             unit: ingredient.uom,
-            cost_per_unit: ingredient.cost || 0,
+            cost_per_unit: ingredient.cost_per_unit || 0,
             recipe_unit: ingredient.uom,
             purchase_unit: ingredient.uom,
             conversion_factor: 1,

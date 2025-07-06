@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -140,15 +139,15 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
       const sampleItems = commissaryItems.slice(0, 6);
       
       if (sampleItems.length >= 3) {
-        csvContent += `Sample Product A,Classic,${sampleItems[0].name},${sampleItems[0].unit},1,${sampleItems[0].unit_cost || 10}\n`;
-        csvContent += `Sample Product A,Classic,${sampleItems[1].name},${sampleItems[1].unit},0.5,${sampleItems[1].unit_cost || 5}\n`;
-        csvContent += `Sample Product A,Classic,${sampleItems[2].name},${sampleItems[2].unit},1,${sampleItems[2].unit_cost || 3}\n`;
+        csvContent += `Sample Product A,Classic,${sampleItems[0].name},${sampleItems[0].uom || sampleItems[0].unit || 'piece'},1,${sampleItems[0].unit_cost || 10}\n`;
+        csvContent += `Sample Product A,Classic,${sampleItems[1].name},${sampleItems[1].uom || sampleItems[1].unit || 'piece'},0.5,${sampleItems[1].unit_cost || 5}\n`;
+        csvContent += `Sample Product A,Classic,${sampleItems[2].name},${sampleItems[2].uom || sampleItems[2].unit || 'piece'},1,${sampleItems[2].unit_cost || 3}\n`;
       }
       
       if (sampleItems.length >= 6) {
-        csvContent += `Sample Product B,Special,${sampleItems[3].name},${sampleItems[3].unit},2,${sampleItems[3].unit_cost || 10}\n`;
-        csvContent += `Sample Product B,Special,${sampleItems[4].name},${sampleItems[4].unit},1,${sampleItems[4].unit_cost || 8}\n`;
-        csvContent += `Sample Product B,Special,${sampleItems[5].name},${sampleItems[5].unit},0.25,${sampleItems[5].unit_cost || 6}\n`;
+        csvContent += `Sample Product B,Special,${sampleItems[3].name},${sampleItems[3].uom || sampleItems[3].unit || 'piece'},2,${sampleItems[3].unit_cost || 10}\n`;
+        csvContent += `Sample Product B,Special,${sampleItems[4].name},${sampleItems[4].uom || sampleItems[4].unit || 'piece'},1,${sampleItems[4].unit_cost || 8}\n`;
+        csvContent += `Sample Product B,Special,${sampleItems[5].name},${sampleItems[5].uom || sampleItems[5].unit || 'piece'},0.25,${sampleItems[5].unit_cost || 6}\n`;
       }
       
       // Add example for choice-based ingredients
@@ -217,7 +216,7 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
                 {commissaryItems.map((item) => (
                   <div key={item.id} className="truncate p-1 bg-background rounded border">
                     <div className="font-medium">{item.name}</div>
-                    <div className="text-muted-foreground">({item.unit})</div>
+                    <div className="text-muted-foreground">({item.uom || item.unit || 'piece'})</div>
                   </div>
                 ))}
               </div>
