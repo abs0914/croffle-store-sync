@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Sheet,
@@ -30,18 +31,19 @@ import {
   Truck,
   ShoppingBag,
   ClipboardList,
-  Shield
+  Shield,
+  DollarSign
 } from "lucide-react";
 import { 
   checkRouteAccess,
-  canAccessAdminPanel
+  canAccessAdminPanel,
+  ROUTE_PATHS
 } from "@/contexts/auth/role-utils";
 
 interface MenuItem {
   path?: string;
   label: string;
   icon: React.ComponentType<any>;
-  submenu?: MenuItem[];
   hidden?: boolean;
 }
 
@@ -95,7 +97,7 @@ export function Sidebar() {
             <DropdownMenuContent className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/')}>
+              <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                 <Home className="mr-2 h-4 w-4" />
                 Back to Store
               </DropdownMenuItem>
@@ -108,49 +110,55 @@ export function Sidebar() {
     );
   }
 
-  // Store-level navigation with updated structure
+  // Store-level navigation - OPTIMIZED STRUCTURE
   const getFilteredMenuItems = (): MenuItem[] => {
     const baseMenuItems: MenuItem[] = [
-      { path: "/dashboard", label: "Dashboard", icon: Home },
-      { path: "/pos", label: "Point of Sale", icon: ShoppingCart },
-      { path: "/products", label: "Products", icon: ShoppingBag },
+      { path: ROUTE_PATHS.DASHBOARD, label: "Dashboard", icon: Home },
+      { path: ROUTE_PATHS.POS, label: "Point of Sale", icon: ShoppingCart },
       { 
-        path: "/stock-orders", 
+        path: ROUTE_PATHS.PRODUCTS, 
+        label: "Products", 
+        icon: ShoppingBag,
+        hidden: !checkRouteAccess(user?.role, ROUTE_PATHS.PRODUCTS)
+      },
+      { 
+        path: ROUTE_PATHS.STOCK_ORDERS, 
         label: "Stock Orders", 
         icon: ClipboardList,
-        hidden: !checkRouteAccess(user?.role, "/stock-orders") // Managers and above only
+        hidden: !checkRouteAccess(user?.role, ROUTE_PATHS.STOCK_ORDERS)
       },
       { 
-        path: "/inventory", 
+        path: ROUTE_PATHS.INVENTORY, 
         label: "Store Inventory", 
         icon: Package,
-        hidden: !checkRouteAccess(user?.role, "/inventory") // Managers and above only
+        hidden: !checkRouteAccess(user?.role, ROUTE_PATHS.INVENTORY)
       },
-      { path: "/customers", label: "Customers", icon: Users },
+      { path: ROUTE_PATHS.CUSTOMERS, label: "Customers", icon: Users },
       {
-        path: "/order-management", 
+        path: ROUTE_PATHS.ORDER_MANAGEMENT, 
         label: "Order Management", 
         icon: Truck,
-        hidden: !checkRouteAccess(user?.role, "/order-management") // Managers and above only
+        hidden: !checkRouteAccess(user?.role, ROUTE_PATHS.ORDER_MANAGEMENT)
       },
       { 
-        path: "/reports", 
+        path: ROUTE_PATHS.EXPENSES, 
+        label: "Expenses", 
+        icon: DollarSign
+      },
+      { 
+        path: ROUTE_PATHS.REPORTS, 
         label: "Reports", 
-        icon: BarChart3,
-        hidden: !checkRouteAccess(user?.role, "/reports") // Managers and above only
+        icon: BarChart3
       },
       { 
-        path: "/settings", 
+        path: ROUTE_PATHS.SETTINGS, 
         label: "Settings", 
         icon: Settings,
-        hidden: !checkRouteAccess(user?.role, "/settings") // Managers and above only
+        hidden: !checkRouteAccess(user?.role, ROUTE_PATHS.SETTINGS)
       },
     ];
 
-    return baseMenuItems.filter(item => {
-      if (item.hidden) return false;
-      return item.path ? checkRouteAccess(user?.role, item.path) : true;
-    });
+    return baseMenuItems.filter(item => !item.hidden);
   };
 
   const menuItems = getFilteredMenuItems();
@@ -164,28 +172,24 @@ export function Sidebar() {
       </SheetTrigger>
       <SheetContent className="w-full sm:w-[280px]">
         <SheetHeader>
-          <SheetTitle>Menu</SheetTitle>
+          <SheetTitle>Store Menu</SheetTitle>
           <SheetDescription>
-            Navigate your store
+            Navigate your store operations
           </SheetDescription>
         </SheetHeader>
         <Separator className="my-4" />
 
-        {menuItems.map((item, index) => {
-          if (item.hidden) return null;
-
-          return (
-            <button
-              key={index}
-              onClick={() => item.path && navigate(item.path)}
-              className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent ${isActive(item.path) ? 'bg-secondary' : ''}`}
-              disabled={!item.path}
-            >
-              <item.icon className="h-4 w-4" />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
+        {menuItems.map((item, index) => (
+          <button
+            key={index}
+            onClick={() => item.path && navigate(item.path)}
+            className={`flex items-center space-x-2 py-2 px-4 rounded-md hover:bg-accent w-full text-left ${isActive(item.path) ? 'bg-secondary' : ''}`}
+            disabled={!item.path}
+          >
+            <item.icon className="h-4 w-4" />
+            <span>{item.label}</span>
+          </button>
+        ))}
 
         <Separator className="my-4" />
 

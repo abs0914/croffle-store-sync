@@ -10,11 +10,9 @@ import AdminOrders from '@/pages/Admin/AdminOrders';
 import AdminRecipes from '@/pages/Admin/AdminRecipes';
 import AdminReports from '@/pages/Admin/AdminReports';
 import AdminExpenses from '@/pages/Admin/AdminExpenses';
-import InventoryConversion from '@/pages/InventoryConversion';
+import CommissaryManagement from '@/pages/Commissary/CommissaryManagement';
 import ProductionManagement from '@/pages/ProductionManagement';
-import OrderManagement from '@/pages/OrderManagement';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
-import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
 
 export const AdminAppRoutes = () => {
@@ -34,31 +32,43 @@ export const AdminAppRoutes = () => {
         }
       />
 
-      {/* Admin Order Management - Use AdminOrders instead of OrderManagement */}
+      {/* Admin Stores Management */}
       <Route
-        path="/admin/order-management"
+        path="/admin/stores"
         element={
           <AdminProtectedRoute>
             <AdminLayout>
-              <AdminOrders />
+              <AdminStores />
             </AdminLayout>
           </AdminProtectedRoute>
         }
       />
 
-      {/* Admin Inventory Conversion */}
+      {/* Admin Recipe Management - Admin Only */}
       <Route
-        path="/admin/inventory-conversion"
+        path="/admin/recipes"
         element={
           <AdminProtectedRoute>
             <AdminLayout>
-              <InventoryConversion />
+              <AdminRecipes />
             </AdminLayout>
           </AdminProtectedRoute>
         }
       />
 
-      {/* Admin Production Management */}
+      {/* Admin Commissary Inventory - Admin Only */}
+      <Route
+        path="/admin/commissary-inventory"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout>
+              <CommissaryManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Admin Production Management - Admin Only */}
       <Route
         path="/admin/production-management"
         element={
@@ -70,13 +80,13 @@ export const AdminAppRoutes = () => {
         }
       />
 
-      {/* Admin Stores */}
+      {/* Admin Order Management */}
       <Route
-        path="/admin/stores"
+        path="/admin/order-management"
         element={
           <AdminProtectedRoute>
             <AdminLayout>
-              <AdminStores />
+              <AdminOrders />
             </AdminLayout>
           </AdminProtectedRoute>
         }
@@ -89,30 +99,6 @@ export const AdminAppRoutes = () => {
           <AdminProtectedRoute>
             <AdminLayout>
               <AdminCustomers />
-            </AdminLayout>
-          </AdminProtectedRoute>
-        }
-      />
-
-      {/* Admin Orders */}
-      <Route
-        path="/admin/orders"
-        element={
-          <AdminProtectedRoute>
-            <AdminLayout>
-              <AdminOrders />
-            </AdminLayout>
-          </AdminProtectedRoute>
-        }
-      />
-
-      {/* Admin Recipes */}
-      <Route
-        path="/admin/recipes"
-        element={
-          <AdminProtectedRoute>
-            <AdminLayout>
-              <AdminRecipes />
             </AdminLayout>
           </AdminProtectedRoute>
         }
@@ -142,9 +128,8 @@ export const AdminAppRoutes = () => {
         }
       />
 
-      {/* Other Admin Routes */}
+      {/* Modular Admin Routes */}
       {AdminInventoryRoutes()}
-      {AdminStoreRoutes()}
       {AdminUserRoutes()}
     </>
   );

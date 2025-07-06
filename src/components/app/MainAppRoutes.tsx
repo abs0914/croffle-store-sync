@@ -10,14 +10,10 @@ const POS = React.lazy(() => import('@/pages/POS'));
 const Products = React.lazy(() => import('@/pages/Products'));
 const ProductForm = React.lazy(() => import('@/pages/Inventory/ProductForm'));
 const Inventory = React.lazy(() => import('@/pages/Inventory'));
-const ProductionManagement = React.lazy(() => import('@/pages/ProductionManagement'));
-const CommissaryInventory = React.lazy(() => import('@/pages/CommissaryInventory'));
-const InventoryConversion = React.lazy(() => import('@/pages/InventoryConversion'));
 const OrderManagement = React.lazy(() => import('@/pages/OrderManagement/index'));
 const Reports = React.lazy(() => import('@/pages/Reports'));
 const Expenses = React.lazy(() => import('@/pages/Expenses'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
-const ProductCatalog = React.lazy(() => import('@/pages/ProductCatalog'));
 const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
 
 // Loading component
@@ -30,7 +26,9 @@ const LoadingSpinner = () => (
 export const MainAppRoutes = () => {
   return (
     <>
-      {/* Dashboard */}
+      {/* Core Store Routes - Optimized Structure */}
+      
+      {/* Dashboard - Accessible to all authenticated users */}
       <Route
         path="/dashboard"
         element={
@@ -44,11 +42,11 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* POS */}
+      {/* POS - Accessible to all with store access */}
       <Route
         path="/pos"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <POS />
@@ -58,11 +56,11 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Products */}
+      {/* Products - Unified product management for stores */}
       <Route
         path="/products"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <Products />
@@ -76,7 +74,7 @@ export const MainAppRoutes = () => {
       <Route
         path="/products/new"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <ProductForm />
@@ -89,7 +87,7 @@ export const MainAppRoutes = () => {
       <Route
         path="/products/edit/:id"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <ProductForm />
@@ -99,11 +97,11 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Inventory */}
+      {/* Inventory - Store inventory management (Managers+) */}
       <Route
         path="/inventory/*"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <Inventory />
@@ -113,11 +111,11 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Stock Orders */}
+      {/* Stock Orders - Store stock management (Managers+) */}
       <Route
         path="/stock-orders"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <StockOrders />
@@ -127,53 +125,11 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Production Management */}
-      <Route
-        path="/production-management"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <React.Suspense fallback={<LoadingSpinner />}>
-                <ProductionManagement />
-              </React.Suspense>
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Commissary Inventory */}
-      <Route
-        path="/commissary-inventory"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <React.Suspense fallback={<LoadingSpinner />}>
-                <CommissaryInventory />
-              </React.Suspense>
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Inventory Conversion */}
-      <Route
-        path="/inventory-conversion"
-        element={
-          <ProtectedRoute>
-            <MainLayout>
-              <React.Suspense fallback={<LoadingSpinner />}>
-                <InventoryConversion />
-              </React.Suspense>
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Order Management */}
+      {/* Order Management - Store order management (Managers+) */}
       <Route
         path="/order-management/*"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <OrderManagement />
@@ -183,11 +139,11 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Reports */}
+      {/* Reports - All with store access */}
       <Route
         path="/reports/*"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <Reports />
@@ -197,11 +153,11 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Expenses */}
+      {/* Expenses - All with store access */}
       <Route
         path="/expenses"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <Expenses />
@@ -211,11 +167,11 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Settings */}
+      {/* Settings - Managers+ */}
       <Route
         path="/settings/*"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="manager">
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <Settings />
@@ -225,6 +181,22 @@ export const MainAppRoutes = () => {
         }
       />
 
+      {/* Customers - All with store access */}
+      <Route
+        path="/customers"
+        element={
+          <ProtectedRoute requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <div className="p-4">
+                  <h1 className="text-2xl font-bold">Customer Management</h1>
+                  <p className="text-gray-600 mt-2">Manage customer information and relationships.</p>
+                </div>
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
     </>
   );
 };
