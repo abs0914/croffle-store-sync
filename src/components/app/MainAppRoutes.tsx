@@ -13,7 +13,7 @@ const Inventory = React.lazy(() => import('@/pages/Inventory'));
 const ProductionManagement = React.lazy(() => import('@/pages/ProductionManagement'));
 const CommissaryInventory = React.lazy(() => import('@/pages/CommissaryInventory'));
 const InventoryConversion = React.lazy(() => import('@/pages/InventoryConversion'));
-const OrderManagement = React.lazy(() => import('@/pages/OrderManagement'));
+const OrderManagement = React.lazy(() => import('@/pages/OrderManagement/index'));
 const Reports = React.lazy(() => import('@/pages/Reports'));
 const Expenses = React.lazy(() => import('@/pages/Expenses'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
