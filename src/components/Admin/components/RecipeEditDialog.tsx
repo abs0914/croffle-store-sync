@@ -22,15 +22,16 @@ interface RecipeIngredient {
   id?: string;
   inventory_stock_id: string | null;
   quantity: number;
-  unit: string;
+  unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
   cost_per_unit: number;
-  notes?: string;
   inventory_stock?: {
     item: string;
     unit: string;
     cost: number;
   };
 }
+
+const VALID_UNITS = ['kg', 'g', 'pieces', 'liters', 'ml', 'boxes', 'packs'] as const;
 
 export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeEditDialogProps) {
   const [formData, setFormData] = useState({
@@ -82,9 +83,8 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
         id: ing.id,
         inventory_stock_id: ing.inventory_stock_id,
         quantity: ing.quantity || 0,
-        unit: ing.unit || 'g',
+        unit: (VALID_UNITS.includes(ing.unit as any) ? ing.unit : 'g') as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
         cost_per_unit: ing.cost_per_unit || 0,
-        notes: ing.notes || '',
         inventory_stock: ing.inventory_stock
       })) || [];
 
@@ -118,8 +118,7 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
     inventory_stock_id: null,
     quantity: 0,
     unit: 'g',
-    cost_per_unit: 0,
-    notes: ''
+    cost_per_unit: 0
   });
 
   const handleAddIngredient = () => {
@@ -136,12 +135,14 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
     const updated = [...ingredients];
     updated[index] = { ...updated[index], [field]: value };
 
-    // If inventory stock is selected, update cost
+    // If inventory stock is selected, update cost and unit
     if (field === 'inventory_stock_id' && value) {
       const selectedStock = inventoryStock.find(stock => stock.id === value);
       if (selectedStock) {
         updated[index].cost_per_unit = selectedStock.cost || 0;
-        updated[index].unit = selectedStock.unit || 'g';
+        // Ensure the unit is valid
+        const stockUnit = selectedStock.unit;
+        updated[index].unit = (VALID_UNITS.includes(stockUnit as any) ? stockUnit : 'g') as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
       }
     }
 
@@ -183,18 +184,17 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
       );
 
       if (validIngredients.length > 0) {
+        const ingredientsToInsert = validIngredients.map(ing => ({
+          recipe_id: recipe.id,
+          inventory_stock_id: ing.inventory_stock_id!,
+          quantity: ing.quantity,
+          unit: ing.unit,
+          cost_per_unit: ing.cost_per_unit
+        }));
+
         const { error: ingredientsError } = await supabase
           .from('recipe_ingredients')
-          .insert(
-            validIngredients.map(ing => ({
-              recipe_id: recipe.id,
-              inventory_stock_id: ing.inventory_stock_id,
-              quantity: ing.quantity,
-              unit: ing.unit,
-              cost_per_unit: ing.cost_per_unit,
-              notes: ing.notes || null
-            }))
-          );
+          .insert(ingredientsToInsert);
 
         if (ingredientsError) throw ingredientsError;
       }
@@ -343,10 +343,21 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
 
                     <div className="col-span-2">
                       <Label>Unit</Label>
-                      <Input
+                      <Select
                         value={ingredient.unit}
-                        onChange={(e) => handleIngredientChange(index, 'unit', e.target.value)}
-                      />
+                        onValueChange={(value) => handleIngredientChange(index, 'unit', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {VALID_UNITS.map(unit => (
+                            <SelectItem key={unit} value={unit}>
+                              {unit}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="col-span-2">
