@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminRecipesHeader } from './components/AdminRecipesHeader';
@@ -104,12 +105,33 @@ export default function AdminRecipes() {
         const recipeIds = [...selectedRecipes];
         console.log('Recipe IDs to delete:', recipeIds);
 
+        // First, check if recipes exist
+        const { data: existingRecipes, error: checkError } = await supabase
+          .from('recipes')
+          .select('id, name')
+          .in('id', recipeIds);
+
+        if (checkError) {
+          console.error('Error checking existing recipes:', checkError);
+          throw checkError;
+        }
+
+        console.log('Found existing recipes:', existingRecipes?.length || 0, existingRecipes);
+
+        if (!existingRecipes || existingRecipes.length === 0) {
+          toast.error('No matching recipes found in database');
+          return;
+        }
+
+        const foundRecipeIds = existingRecipes.map(r => r.id);
+        console.log('Actual recipe IDs found in DB:', foundRecipeIds);
+
         // Delete recipe ingredients first
         console.log('Deleting recipe ingredients...');
         const { error: ingredientsError } = await supabase
           .from('recipe_ingredients')
           .delete()
-          .in('recipe_id', recipeIds);
+          .in('recipe_id', foundRecipeIds);
 
         if (ingredientsError) {
           console.error('Error deleting ingredients:', ingredientsError);
@@ -123,7 +145,7 @@ export default function AdminRecipes() {
         const { error: recipesError, count: recipesCount } = await supabase
           .from('recipes')
           .delete({ count: 'exact' })
-          .in('id', recipeIds);
+          .in('id', foundRecipeIds);
 
         if (recipesError) {
           console.error('Error deleting recipes:', recipesError);
@@ -135,7 +157,7 @@ export default function AdminRecipes() {
         // Clear selection
         setSelectedRecipes([]);
         
-        toast.success(`Successfully deleted ${recipeIds.length} recipe${recipeIds.length !== 1 ? 's' : ''} and their ingredients`);
+        toast.success(`Successfully deleted ${foundRecipeIds.length} recipe${foundRecipeIds.length !== 1 ? 's' : ''} and their ingredients`);
         
         console.log('Refreshing recipes data...');
         await refreshRecipes();
