@@ -6,7 +6,7 @@ import { AdminRecipesList } from './components/AdminRecipesList';
 import { AdminRecipeBulkActions } from './components/AdminRecipeBulkActions';
 import { RecipeManagementTab } from './components/RecipeManagementTab';
 import { AdminRecipeBulkUploadTab } from './components/AdminRecipeBulkUploadTab';
-import { MenuStructureTab } from '@/components/Admin/components/MenuStructureTab';
+import { EnhancedMenuStructureTab } from '@/components/Admin/components/EnhancedMenuStructureTab';
 import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/EnhancedRecipeTemplateForm';
 import { StoreSelector } from '@/components/admin/StoreSelector';
 import { EnhancedRecipeDeploymentDialog } from '@/components/Admin/components/EnhancedRecipeDeploymentDialog';
@@ -217,20 +217,7 @@ export default function AdminRecipes() {
         </TabsList>
 
         <TabsContent value="menu-structure" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold">Complete Menu Structure</h3>
-              <p className="text-sm text-muted-foreground">
-                Create templates for all menu items with exact pricing
-              </p>
-            </div>
-            <Button onClick={handleBulkCreateMenuTemplates} className="bg-green-600 hover:bg-green-700">
-              <Package className="h-4 w-4 mr-2" />
-              Create All Menu Templates
-            </Button>
-          </div>
-          
-          <MenuStructureTab onCreateRecipeTemplate={handleCreateRecipeTemplate} />
+          <EnhancedMenuStructureTab onCreateRecipeTemplate={handleCreateRecipeTemplate} />
         </TabsContent>
 
         <TabsContent value="recipe-templates">
