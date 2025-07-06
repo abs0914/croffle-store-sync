@@ -29,9 +29,9 @@ export default function OrderManagement() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Store Order Management</h1>
+          <h1 className="text-3xl font-bold">Order Management</h1>
           <p className="text-muted-foreground">
-            Create purchase orders from commissary inventory and track deliveries
+            Create purchase orders and track deliveries from commissary
           </p>
         </div>
       </div>
