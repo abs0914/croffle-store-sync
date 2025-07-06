@@ -26,7 +26,7 @@ const menuItems = [
     href: "/pos",
   },
   {
-    title: "Products",
+    title: "Product Catalog",
     icon: Package,
     href: "/products",
   },
