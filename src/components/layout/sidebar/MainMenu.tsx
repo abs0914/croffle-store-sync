@@ -9,9 +9,8 @@ import {
   Settings,
   DollarSign,
   Users,
-  ShoppingBag,
   ClipboardList,
-  ToggleLeft
+  Archive
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,13 +26,13 @@ const menuItems = [
     href: "/pos",
   },
   {
-    title: "Product Management",
-    icon: ToggleLeft,
+    title: "Products",
+    icon: Package,
     href: "/products",
   },
   {
     title: "Inventory",
-    icon: Package,
+    icon: Archive,
     href: "/inventory",
   },
   {
