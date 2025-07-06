@@ -8,19 +8,20 @@ export const useRecipeFilters = (
   statusFilter: string
 ) => {
   return useMemo(() => {
-    let filtered = recipes;
+    // Always start with the full recipes array
+    let filtered = recipes || [];
 
     // Apply search filter
-    if (searchQuery.trim()) {
+    if (searchQuery && searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(recipe => 
-        recipe.name.toLowerCase().includes(query) ||
+        recipe.name?.toLowerCase().includes(query) ||
         (recipe.description && recipe.description.toLowerCase().includes(query))
       );
     }
 
     // Apply status filter
-    if (statusFilter !== 'all') {
+    if (statusFilter && statusFilter !== 'all') {
       filtered = filtered.filter(recipe => {
         switch (statusFilter) {
           case 'active':
@@ -40,7 +41,7 @@ export const useRecipeFilters = (
     }
 
     console.log('Filtered recipes:', {
-      total: recipes.length,
+      total: recipes?.length || 0,
       filtered: filtered.length,
       searchQuery,
       statusFilter

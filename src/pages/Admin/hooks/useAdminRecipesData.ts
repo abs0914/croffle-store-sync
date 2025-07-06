@@ -16,6 +16,7 @@ export const useAdminRecipesData = () => {
   const [selectedStoreForDeployment, setSelectedStoreForDeployment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load stores on mount
   useEffect(() => {
     loadStores();
   }, []);
@@ -24,6 +25,12 @@ export const useAdminRecipesData = () => {
   useEffect(() => {
     loadRecipes();
   }, [storeFilter]);
+
+  // Use the filtered recipes hook - this must be called unconditionally
+  const filteredRecipes = useRecipeFilters(recipes, searchQuery, statusFilter);
+
+  // Calculate metrics using the utility function - this must be called unconditionally
+  const recipeMetrics = calculateRecipeMetrics(recipes);
 
   const loadRecipes = async () => {
     setIsLoading(true);
@@ -48,12 +55,6 @@ export const useAdminRecipesData = () => {
       toast.error('Failed to load stores');
     }
   };
-
-  // Use the filtered recipes hook
-  const filteredRecipes = useRecipeFilters(recipes, searchQuery, statusFilter);
-
-  // Calculate metrics using the utility function
-  const recipeMetrics = calculateRecipeMetrics(recipes);
 
   // Custom setter for store filter that also updates selected store for deployment
   const handleStoreFilterChange = (newStoreFilter: string) => {
