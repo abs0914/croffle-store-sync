@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,24 +39,6 @@ export function AdminRecipesList({
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
-  const handleEnhancedDeploy = async (recipe: any) => {
-    if (!onEnhancedDeployment) return;
-    
-    console.log('Enhanced deploy requested for recipe:', recipe);
-    
-    // Get available stores
-    const { data: availableStores } = await supabase
-      .from('stores')
-      .select('id, name')
-      .eq('is_active', true);
-    
-    if (availableStores && availableStores.length > 0) {
-      onEnhancedDeployment(recipe, availableStores);
-    } else {
-      toast.error('No active stores found');
-    }
-  };
 
   const handleCleanupDuplicates = async () => {
     setIsCleaningUp(true);
@@ -288,16 +271,7 @@ export function AdminRecipesList({
                   )}
                   
                   <div className="flex gap-2 mt-4">
-                    <Button
-                      size="sm"
-                      onClick={() => handleEnhancedDeploy(recipe)}
-                      className="flex items-center gap-1"
-                      disabled={isDuplicate || !deploymentStatus.ready}
-                    >
-                      <Package className="h-3 w-3" />
-                      {isDuplicate ? 'Duplicate' : !deploymentStatus.ready ? 'Cannot Deploy' : 'Deploy'}
-                    </Button>
-                    
+                    {/* Only show Edit button for deployed recipes */}
                     <Button
                       size="sm"
                       variant="outline"

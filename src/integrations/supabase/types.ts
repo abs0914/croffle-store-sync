@@ -2813,6 +2813,7 @@ export type Database = {
           rejection_reason: string | null
           serving_size: number | null
           store_id: string
+          template_id: string | null
           total_cost: number | null
           updated_at: string
           variation_id: string | null
@@ -2835,6 +2836,7 @@ export type Database = {
           rejection_reason?: string | null
           serving_size?: number | null
           store_id: string
+          template_id?: string | null
           total_cost?: number | null
           updated_at?: string
           variation_id?: string | null
@@ -2857,6 +2859,7 @@ export type Database = {
           rejection_reason?: string | null
           serving_size?: number | null
           store_id?: string
+          template_id?: string | null
           total_cost?: number | null
           updated_at?: string
           variation_id?: string | null
@@ -2876,6 +2879,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
             referencedColumns: ["id"]
           },
           {

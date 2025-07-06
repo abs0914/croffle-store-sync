@@ -58,7 +58,7 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
         is_active: recipe.is_active ?? true
       });
 
-      // Load existing ingredients
+      // Load existing ingredients or template ingredients
       loadRecipeIngredients();
       // Load available inventory stock for the store
       loadInventoryStock();
@@ -69,7 +69,8 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
     if (!recipe?.id) return;
 
     try {
-      const { data, error } = await supabase
+      // First try to load existing recipe ingredients
+      const { data: recipeIngredients, error: recipeError } = await supabase
         .from('recipe_ingredients')
         .select(`
           *,
@@ -77,18 +78,57 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
         `)
         .eq('recipe_id', recipe.id);
 
-      if (error) throw error;
+      if (recipeError) {
+        console.error('Error loading recipe ingredients:', recipeError);
+      }
 
-      const mappedIngredients = data?.map(ing => ({
-        id: ing.id,
-        inventory_stock_id: ing.inventory_stock_id,
-        quantity: ing.quantity || 0,
-        unit: (VALID_UNITS.includes(ing.unit as any) ? ing.unit : 'g') as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
-        cost_per_unit: ing.cost_per_unit || 0,
-        inventory_stock: ing.inventory_stock
-      })) || [];
+      // If recipe has ingredients, use them
+      if (recipeIngredients && recipeIngredients.length > 0) {
+        const mappedIngredients = recipeIngredients.map(ing => ({
+          id: ing.id,
+          inventory_stock_id: ing.inventory_stock_id,
+          quantity: ing.quantity || 0,
+          unit: (VALID_UNITS.includes(ing.unit as any) ? ing.unit : 'g') as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+          cost_per_unit: ing.cost_per_unit || 0,
+          inventory_stock: ing.inventory_stock
+        }));
 
-      setIngredients(mappedIngredients.length > 0 ? mappedIngredients : [createEmptyIngredient()]);
+        setIngredients(mappedIngredients);
+        return;
+      }
+
+      // If no recipe ingredients but has template_id, load from template
+      if (recipe.template_id) {
+        console.log('Loading ingredients from template:', recipe.template_id);
+        
+        const { data: templateIngredients, error: templateError } = await supabase
+          .from('recipe_template_ingredients')
+          .select('*')
+          .eq('recipe_template_id', recipe.template_id);
+
+        if (templateError) {
+          console.error('Error loading template ingredients:', templateError);
+          setIngredients([createEmptyIngredient()]);
+          return;
+        }
+
+        if (templateIngredients && templateIngredients.length > 0) {
+          // Convert template ingredients to recipe ingredients format
+          const convertedIngredients = templateIngredients.map(templateIng => ({
+            inventory_stock_id: null, // Will need to be mapped to store inventory
+            quantity: templateIng.quantity || 0,
+            unit: (VALID_UNITS.includes(templateIng.unit as any) ? templateIng.unit : 'g') as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
+            cost_per_unit: templateIng.cost_per_unit || 0
+          }));
+
+          setIngredients(convertedIngredients);
+          toast.info('Loaded ingredients from template. Please map them to store inventory.');
+          return;
+        }
+      }
+
+      // If no ingredients found, create empty one
+      setIngredients([createEmptyIngredient()]);
     } catch (error) {
       console.error('Error loading recipe ingredients:', error);
       setIngredients([createEmptyIngredient()]);

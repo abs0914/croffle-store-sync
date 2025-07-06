@@ -261,7 +261,7 @@ export class EnhancedRecipeDeploymentService {
       try {
         console.log(`Deploying template "${template.name}" to store "${store.name}"`);
         
-        const result = await this.deployToSingleStore(template, store);
+        const result = await this.deployToSingleStore(template, store, templateId);
         results.push(result);
         
         // Small delay between deployments
@@ -313,7 +313,8 @@ export class EnhancedRecipeDeploymentService {
    */
   private static async deployToSingleStore(
     template: any,
-    store: { id: string; name: string }
+    store: { id: string; name: string },
+    templateId: string
   ): Promise<DeploymentResult> {
     try {
       // Check for existing recipe to prevent duplicates
@@ -334,7 +335,7 @@ export class EnhancedRecipeDeploymentService {
         };
       }
 
-      // Create the recipe with correct field names
+      // Create the recipe with correct field names and template_id link
       const { data: recipe, error: recipeError } = await supabase
         .from('recipes')
         .insert({
@@ -344,6 +345,7 @@ export class EnhancedRecipeDeploymentService {
           yield_quantity: template.yield_quantity || 1,
           serving_size: template.serving_size || 1,
           store_id: store.id,
+          template_id: templateId, // Link back to the original template
           approval_status: 'approved',
           is_active: true,
           total_cost: 0,
@@ -357,7 +359,7 @@ export class EnhancedRecipeDeploymentService {
         throw new Error(`Recipe creation failed: ${recipeError.message}`);
       }
 
-      console.log(`Created recipe ${recipe.id} for store ${store.name}`);
+      console.log(`Created recipe ${recipe.id} for store ${store.name} with template link ${templateId}`);
 
       // Process ingredients if they exist
       let ingredientResults: any[] = [];
@@ -385,7 +387,7 @@ export class EnhancedRecipeDeploymentService {
       const ingredientCount = ingredientResults.length;
       const hasIngredients = ingredientCount > 0;
 
-      console.log(`Successfully deployed "${template.name}" to "${store.name}"`);
+      console.log(`Successfully deployed "${template.name}" to "${store.name}" with template link`);
 
       return {
         success: true,
