@@ -1,11 +1,16 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { RecipeUpload } from "@/types/commissary";
-import { UploadData } from "./recipeUploadHelpers";
+
+// Simplified interface for template creation
+interface TemplateUploadData {
+  categoryMap: Map<string, any>;
+  commissaryMap: Map<string, any>;
+}
 
 export const processRecipeUploadAsTemplate = async (
   recipe: RecipeUpload,
-  uploadData: UploadData
+  uploadData: TemplateUploadData
 ): Promise<boolean> => {
   try {
     console.log(`Processing recipe template: ${recipe.name}`);

@@ -2,7 +2,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { processRecipeUploadAsTemplate } from "./recipeUpload/recipeTemplateProcessor";
-import { UploadData } from "./recipeUpload/recipeUploadHelpers";
+
+// Simplified UploadData interface for template creation (no store needed)
+interface TemplateUploadData {
+  categoryMap: Map<string, any>;
+  commissaryMap: Map<string, any>;
+}
 
 export interface RecipeUploadData {
   name: string;
@@ -19,8 +24,8 @@ export const bulkUploadRecipes = async (recipes: RecipeUploadData[]): Promise<bo
   try {
     console.log('Starting bulk recipe template upload...', recipes.length, 'recipes');
 
-    // Initialize upload data with minimal required properties
-    const uploadData: UploadData = {
+    // Initialize upload data with minimal required properties for templates
+    const uploadData: TemplateUploadData = {
       categoryMap: new Map(),
       commissaryMap: new Map()
     };
