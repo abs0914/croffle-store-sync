@@ -36,12 +36,12 @@ export const checkProductInventoryAvailability = async (
   try {
     console.log('Checking product inventory availability:', { productId, quantity, storeId, variationId });
 
-    // Get product details and recipe
+    // Get product details - using correct table name
     const { data: product, error: productError } = await supabase
-      .from('product_catalog')
+      .from('products')
       .select(`
         name,
-        recipes(id)
+        recipe_id
       `)
       .eq('id', productId)
       .single();
@@ -57,9 +57,8 @@ export const checkProductInventoryAvailability = async (
     }
 
     // If product has a recipe, check recipe availability
-    if (product.recipes && product.recipes.length > 0) {
-      const recipeId = product.recipes[0].id;
-      const availability = await unifiedCheckRecipeAvailability(recipeId, quantity, storeId);
+    if (product.recipe_id) {
+      const availability = await unifiedCheckRecipeAvailability(product.recipe_id, quantity, storeId);
       
       return {
         isAvailable: availability.canMake,
@@ -105,12 +104,12 @@ export const processInventoryDeductionForPOS = async (
 
     for (const update of updates) {
       try {
-        // Get product recipe
+        // Get product details - using correct table name
         const { data: product, error: productError } = await supabase
-          .from('product_catalog')
+          .from('products')
           .select(`
             name,
-            recipes(id)
+            recipe_id
           `)
           .eq('id', update.productId)
           .single();
@@ -121,10 +120,9 @@ export const processInventoryDeductionForPOS = async (
         }
 
         // Process recipe-based deduction
-        if (product.recipes && product.recipes.length > 0) {
-          const recipeId = product.recipes[0].id;
+        if (product.recipe_id) {
           const result = await processRecipeInventoryDeduction(
-            recipeId,
+            product.recipe_id,
             update.quantitySold,
             update.storeId,
             (await supabase.auth.getUser()).data.user?.id || '',
