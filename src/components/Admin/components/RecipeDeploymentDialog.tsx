@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, XCircle, AlertTriangle, Package, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  getMultiStoreDeploymentPreview,
-  deployRecipeToMultipleStoresEnhanced,
+  EnhancedRecipeDeploymentService,
+  type DeploymentPreview,
   type EnhancedDeploymentResult
 } from '@/services/recipeManagement/enhancedRecipeDeploymentService';
 
@@ -30,7 +31,7 @@ export function RecipeDeploymentDialog({
   selectedStores,
   onDeploymentComplete
 }: RecipeDeploymentDialogProps) {
-  const [previews, setPreviews] = useState<any[]>([]);
+  const [previews, setPreviews] = useState<DeploymentPreview[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
 
@@ -44,7 +45,7 @@ export function RecipeDeploymentDialog({
     setIsLoading(true);
     try {
       const storeIds = selectedStores.map(s => s.id);
-      const previewData = await getMultiStoreDeploymentPreview(templateId, storeIds);
+      const previewData = await EnhancedRecipeDeploymentService.getMultiStoreDeploymentPreview(templateId, storeIds);
       setPreviews(previewData);
     } catch (error) {
       console.error('Error loading deployment previews:', error);
@@ -58,7 +59,7 @@ export function RecipeDeploymentDialog({
     setIsDeploying(true);
     try {
       const storeIds = selectedStores.map(s => s.id);
-      const results = await deployRecipeToMultipleStoresEnhanced(templateId, storeIds);
+      const results = await EnhancedRecipeDeploymentService.deployRecipeToMultipleStoresEnhanced(templateId, storeIds);
       
       onDeploymentComplete?.(results);
       onClose();
@@ -144,13 +145,13 @@ export function RecipeDeploymentDialog({
                         <CardTitle className="text-base">{preview.storeName}</CardTitle>
                         <div className="flex items-center gap-2">
                           {getValidationIcon(
-                            preview.validation?.canDeploy,
-                            preview.validation?.lowStockIngredients?.length > 0
+                            preview.validation?.canDeploy || false,
+                            (preview.validation?.lowStockIngredients?.length || 0) > 0
                           )}
                           <Badge variant={preview.validation?.canDeploy ? 'default' : 'destructive'}>
                             {getValidationStatus(
-                              preview.validation?.canDeploy,
-                              preview.validation?.lowStockIngredients?.length > 0
+                              preview.validation?.canDeploy || false,
+                              (preview.validation?.lowStockIngredients?.length || 0) > 0
                             )}
                           </Badge>
                         </div>
@@ -167,11 +168,11 @@ export function RecipeDeploymentDialog({
                           ₱{preview.estimatedPrice?.toFixed(2) || '0.00'}
                         </div>
                       </div>
-                      {preview.validation?.mappingIssues?.length > 0 && (
+                      {(preview.validation?.mappingIssues?.length || 0) > 0 && (
                         <Alert className="mt-3">
                           <AlertTriangle className="h-4 w-4" />
                           <AlertDescription>
-                            {preview.validation.mappingIssues.join('; ')}
+                            {preview.validation?.mappingIssues?.join('; ')}
                           </AlertDescription>
                         </Alert>
                       )}
@@ -191,27 +192,27 @@ export function RecipeDeploymentDialog({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {preview.validation?.missingIngredients?.length > 0 && (
+                    {(preview.validation?.missingIngredients?.length || 0) > 0 && (
                       <Alert variant="destructive">
                         <XCircle className="h-4 w-4" />
                         <AlertDescription>
-                          <strong>Missing Ingredients:</strong> {preview.validation.missingIngredients.join(', ')}
+                          <strong>Missing Ingredients:</strong> {preview.validation?.missingIngredients?.join(', ')}
                         </AlertDescription>
                       </Alert>
                     )}
                     
-                    {preview.validation?.lowStockIngredients?.length > 0 && (
+                    {(preview.validation?.lowStockIngredients?.length || 0) > 0 && (
                       <Alert>
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
-                          <strong>Low Stock Ingredients:</strong> {preview.validation.lowStockIngredients.join(', ')}
+                          <strong>Low Stock Ingredients:</strong> {preview.validation?.lowStockIngredients?.join(', ')}
                         </AlertDescription>
                       </Alert>
                     )}
                     
                     {preview.validation?.canDeploy && 
-                     preview.validation?.missingIngredients?.length === 0 && 
-                     preview.validation?.lowStockIngredients?.length === 0 && (
+                     (preview.validation?.missingIngredients?.length || 0) === 0 && 
+                     (preview.validation?.lowStockIngredients?.length || 0) === 0 && (
                       <Alert>
                         <CheckCircle className="h-4 w-4" />
                         <AlertDescription>
@@ -234,9 +235,9 @@ export function RecipeDeploymentDialog({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {preview.mapping?.ingredient_mappings?.length > 0 ? (
+                    {(preview.mapping?.ingredient_mappings?.length || 0) > 0 ? (
                       <div className="space-y-2">
-                        {preview.mapping.ingredient_mappings.map((mapping: any, index: number) => (
+                        {preview.mapping?.ingredient_mappings?.map((mapping: any, index: number) => (
                           <div key={index} className="flex items-center justify-between p-2 border rounded">
                             <div>
                               <span className="font-medium">{mapping.template_ingredient_name}</span>
@@ -254,7 +255,7 @@ export function RecipeDeploymentDialog({
                                   mapping.availability_status === 'low_stock' ? 'secondary' : 'destructive'
                                 }
                               >
-                                {mapping.availability_status.replace('_', ' ')}
+                                {mapping.availability_status?.replace('_', ' ')}
                               </Badge>
                             </div>
                           </div>

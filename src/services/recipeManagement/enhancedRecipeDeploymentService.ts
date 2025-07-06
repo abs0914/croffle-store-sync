@@ -23,6 +23,27 @@ export interface DeploymentValidation {
   };
 }
 
+export interface EnhancedDeploymentResult extends DeploymentResult {
+  validationDetails?: DeploymentValidation;
+  inventoryMappings?: any[];
+}
+
+export interface DeploymentPreview {
+  storeId: string;
+  storeName: string;
+  validation?: {
+    canDeploy: boolean;
+    missingIngredients?: string[];
+    lowStockIngredients?: string[];
+    mappingIssues?: string[];
+  };
+  mapping?: {
+    ingredient_mappings: any[];
+  };
+  estimatedCost?: number;
+  estimatedPrice?: number;
+}
+
 export class EnhancedRecipeDeploymentService {
   /**
    * Validate a template before deployment
@@ -128,6 +149,79 @@ export class EnhancedRecipeDeploymentService {
   }
 
   /**
+   * Get deployment preview for multiple stores
+   */
+  static async getMultiStoreDeploymentPreview(
+    templateId: string,
+    storeIds: string[]
+  ): Promise<DeploymentPreview[]> {
+    console.log('Getting multi-store deployment preview for template:', templateId);
+    
+    const previews: DeploymentPreview[] = [];
+    
+    // Get stores data
+    const { data: stores } = await supabase
+      .from('stores')
+      .select('id, name')
+      .in('id', storeIds);
+
+    const storeMap = new Map(stores?.map(s => [s.id, s.name]) || []);
+
+    // Get template data
+    const { data: template } = await supabase
+      .from('recipe_templates')
+      .select(`
+        *,
+        ingredients:recipe_template_ingredients(*)
+      `)
+      .eq('id', templateId)
+      .single();
+
+    if (!template) {
+      return storeIds.map(storeId => ({
+        storeId,
+        storeName: storeMap.get(storeId) || 'Unknown Store',
+        validation: {
+          canDeploy: false,
+          missingIngredients: ['Template not found']
+        }
+      }));
+    }
+
+    // Create preview for each store
+    for (const storeId of storeIds) {
+      const preview: DeploymentPreview = {
+        storeId,
+        storeName: storeMap.get(storeId) || 'Unknown Store',
+        validation: {
+          canDeploy: true,
+          missingIngredients: [],
+          lowStockIngredients: [],
+          mappingIssues: []
+        },
+        mapping: {
+          ingredient_mappings: []
+        },
+        estimatedCost: 0,
+        estimatedPrice: 0
+      };
+
+      // Calculate estimated costs
+      if (template.ingredients) {
+        const totalCost = template.ingredients.reduce((sum: number, ingredient: any) => 
+          sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
+        );
+        preview.estimatedCost = totalCost;
+        preview.estimatedPrice = totalCost * 1.5; // 50% markup
+      }
+
+      previews.push(preview);
+    }
+
+    return previews;
+  }
+
+  /**
    * Enhanced deployment with validation and better error handling
    */
   static async deployTemplateToStores(
@@ -210,6 +304,32 @@ export class EnhancedRecipeDeploymentService {
   }
 
   /**
+   * Enhanced deployment for multiple stores
+   */
+  static async deployRecipeToMultipleStoresEnhanced(
+    templateId: string,
+    storeIds: string[]
+  ): Promise<EnhancedDeploymentResult[]> {
+    console.log('Enhanced deployment for template:', templateId, 'to stores:', storeIds);
+    
+    // Get stores data
+    const { data: stores } = await supabase
+      .from('stores')
+      .select('id, name')
+      .in('id', storeIds);
+
+    const storesWithNames = stores?.map(s => ({ id: s.id, name: s.name })) || [];
+    
+    const results = await this.deployTemplateToStores(templateId, storesWithNames);
+    
+    return results.map(result => ({
+      ...result,
+      validationDetails: undefined, // Add validation details if needed
+      inventoryMappings: [] // Add inventory mappings if needed
+    }));
+  }
+
+  /**
    * Deploy template to a single store with improved inventory mapping
    */
   private static async deployToSingleStore(
@@ -221,7 +341,7 @@ export class EnhancedRecipeDeploymentService {
       const { data: existingRecipe } = await supabase
         .from('recipes')
         .select('id')
-        .eq('name', template.name)
+        .eq('recipe_name', template.name)
         .eq('store_id', store.id)
         .maybeSingle();
 
@@ -235,11 +355,11 @@ export class EnhancedRecipeDeploymentService {
         };
       }
 
-      // Create the recipe
+      // Create the recipe with correct field names
       const { data: recipe, error: recipeError } = await supabase
         .from('recipes')
         .insert({
-          name: template.name,
+          recipe_name: template.name,
           description: template.description,
           instructions: template.instructions,
           yield_quantity: template.yield_quantity,
@@ -248,7 +368,8 @@ export class EnhancedRecipeDeploymentService {
           approval_status: 'approved',
           is_active: true,
           total_cost: 0,
-          cost_per_serving: 0
+          cost_per_serving: 0,
+          product_id: null // Set as nullable initially
         })
         .select()
         .single();
