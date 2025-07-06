@@ -61,6 +61,12 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       return false;
     }
 
+    // Streamlined validation - require photo
+    if (!startPhoto) {
+      toast.error("Photo is required to start shift");
+      return false;
+    }
+
     try {
       // Verify authentication status before attempting to create a shift
       const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -70,19 +76,19 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      console.log(`Starting shift for store: ${currentStore.id} with user: ${user.id}`);
+      console.log(`🚀 Starting streamlined shift for store: ${currentStore.id} with user: ${user.id}`);
 
       const shift = await createShift(
         user.id,
         currentStore.id,
         startingCash,
-        startPhoto,
+        startPhoto, // Required photo
         cashierId
       );
 
       if (shift) {
         setCurrentShift(shift);
-        toast.success("Shift started successfully");
+        toast.success("Shift started successfully! 🎉");
         return true;
       } else {
         toast.error("Failed to create shift - check your permissions");
@@ -117,6 +123,12 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       return false;
     }
 
+    // Streamlined validation - require photo
+    if (!endPhoto) {
+      toast.error("Photo is required to end shift");
+      return false;
+    }
+
     try {
       // Verify authentication status before attempting to end the shift
       const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -126,16 +138,18 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
+      console.log(`🏁 Ending streamlined shift with auto-generated inventory report`);
+
       const success = await closeShift(
         currentShift.id,
         endingCash,
-        endPhoto,
+        endPhoto, // Required photo
         queryClient
       );
 
       if (success) {
         setCurrentShift(null);
-        toast.success("Shift ended successfully");
+        toast.success("Shift ended successfully! 📊 Inventory report generated automatically.");
         return true;
       } else {
         toast.error("Failed to end shift");
