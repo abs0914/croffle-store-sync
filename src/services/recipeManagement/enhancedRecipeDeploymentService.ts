@@ -1,227 +1,407 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { 
-  deployRecipeWithMapping, 
-  validateRecipeDeployment,
-  getDeploymentPreview,
-  type DeploymentValidation 
-} from "./recipeInventoryMappingService";
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-export interface EnhancedDeploymentResult {
-  storeId: string;
-  storeName?: string;
+export interface DeploymentResult {
   success: boolean;
-  error?: string;
+  storeId: string;
+  storeName: string;
   recipeId?: string;
-  productId?: string;
-  validation?: DeploymentValidation;
-  warnings: string[];
+  error?: string;
+  details?: string;
 }
 
-/**
- * Enhanced recipe deployment with smart inventory mapping
- */
-export const deployRecipeTemplateEnhanced = async (
-  templateId: string,
-  storeId: string
-): Promise<EnhancedDeploymentResult> => {
-  try {
-    console.log(`Enhanced deployment: Recipe template "${templateId}" to store ${storeId}`);
+export interface DeploymentValidation {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  templateInfo: {
+    hasIngredients: boolean;
+    ingredientCount: number;
+    hasInstructions: boolean;
+    isActive: boolean;
+  };
+}
 
-    // Get store info
-    const { data: store } = await supabase
-      .from('stores')
-      .select('name')
-      .eq('id', storeId)
-      .single();
-
-    // Validate deployment first
-    const validation = await validateRecipeDeployment(templateId, storeId);
+export class EnhancedRecipeDeploymentService {
+  /**
+   * Validate a template before deployment
+   */
+  static async validateTemplate(templateId: string): Promise<DeploymentValidation> {
+    console.log('Validating template:', templateId);
     
-    const warnings: string[] = [];
-    if (validation.lowStockIngredients.length > 0) {
-      warnings.push(`Low stock ingredients: ${validation.lowStockIngredients.join(', ')}`);
-    }
+    try {
+      // Get template with ingredients
+      const { data: template, error: templateError } = await supabase
+        .from('recipe_templates')
+        .select(`
+          *,
+          ingredients:recipe_template_ingredients(*)
+        `)
+        .eq('id', templateId)
+        .single();
 
-    if (!validation.canDeploy) {
+      if (templateError) {
+        return {
+          isValid: false,
+          errors: [`Template not found: ${templateError.message}`],
+          warnings: [],
+          templateInfo: {
+            hasIngredients: false,
+            ingredientCount: 0,
+            hasInstructions: false,
+            isActive: false
+          }
+        };
+      }
+
+      const errors: string[] = [];
+      const warnings: string[] = [];
+
+      // Check if template exists
+      if (!template) {
+        errors.push('Template not found');
+      }
+
+      // Check if template is active
+      if (template && !template.is_active) {
+        errors.push('Template is not active');
+      }
+
+      // Check if template has ingredients
+      const hasIngredients = template?.ingredients && template.ingredients.length > 0;
+      if (!hasIngredients) {
+        errors.push('Template has no ingredients defined');
+      }
+
+      // Check if template has instructions
+      if (!template?.instructions || template.instructions.trim() === '') {
+        warnings.push('Template has no instructions defined');
+      }
+
+      // Check ingredient completeness
+      if (hasIngredients && template.ingredients) {
+        const incompleteIngredients = template.ingredients.filter((ing: any) => 
+          !ing.ingredient_name || !ing.quantity || !ing.unit
+        );
+        
+        if (incompleteIngredients.length > 0) {
+          errors.push(`${incompleteIngredients.length} ingredients are incomplete (missing name, quantity, or unit)`);
+        }
+
+        // Check for commissary mapping
+        const unmappedIngredients = template.ingredients.filter((ing: any) => 
+          !ing.commissary_item_name && !ing.commissary_item_id
+        );
+        
+        if (unmappedIngredients.length > 0) {
+          warnings.push(`${unmappedIngredients.length} ingredients may not map to commissary items`);
+        }
+      }
+
       return {
-        storeId,
-        storeName: store?.name,
-        success: false,
-        error: `Cannot deploy: ${validation.mappingIssues.join('; ')}`,
-        validation,
-        warnings
+        isValid: errors.length === 0,
+        errors,
+        warnings,
+        templateInfo: {
+          hasIngredients,
+          ingredientCount: template?.ingredients?.length || 0,
+          hasInstructions: !!(template?.instructions && template.instructions.trim()),
+          isActive: template?.is_active || false
+        }
+      };
+
+    } catch (error) {
+      console.error('Template validation error:', error);
+      return {
+        isValid: false,
+        errors: [`Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        warnings: [],
+        templateInfo: {
+          hasIngredients: false,
+          ingredientCount: 0,
+          hasInstructions: false,
+          isActive: false
+        }
       };
     }
+  }
 
-    // Check if recipe already exists
-    const { data: template } = await supabase
+  /**
+   * Enhanced deployment with validation and better error handling
+   */
+  static async deployTemplateToStores(
+    templateId: string,
+    stores: Array<{ id: string; name: string }>
+  ): Promise<DeploymentResult[]> {
+    console.log('Starting enhanced deployment for template:', templateId, 'to stores:', stores);
+
+    // Pre-deployment validation
+    const validation = await this.validateTemplate(templateId);
+    
+    if (!validation.isValid) {
+      const errorMessage = `Template validation failed: ${validation.errors.join(', ')}`;
+      console.error(errorMessage);
+      
+      return stores.map(store => ({
+        success: false,
+        storeId: store.id,
+        storeName: store.name,
+        error: 'Template Validation Failed',
+        details: validation.errors.join('; ')
+      }));
+    }
+
+    // Show warnings if any
+    if (validation.warnings.length > 0) {
+      console.warn('Template warnings:', validation.warnings);
+      toast.warning(`Template has warnings: ${validation.warnings.join(', ')}`);
+    }
+
+    // Get validated template data
+    const { data: template, error: templateError } = await supabase
       .from('recipe_templates')
-      .select('name')
+      .select(`
+        *,
+        ingredients:recipe_template_ingredients(*)
+      `)
       .eq('id', templateId)
       .single();
 
-    if (template) {
+    if (templateError || !template) {
+      const errorMessage = `Failed to fetch template: ${templateError?.message || 'Template not found'}`;
+      console.error(errorMessage);
+      
+      return stores.map(store => ({
+        success: false,
+        storeId: store.id,
+        storeName: store.name,
+        error: 'Template Fetch Failed',
+        details: errorMessage
+      }));
+    }
+
+    // Deploy to each store
+    const results: DeploymentResult[] = [];
+    
+    for (const store of stores) {
+      try {
+        console.log(`Deploying template "${template.name}" to store "${store.name}"`);
+        
+        const result = await this.deployToSingleStore(template, store);
+        results.push(result);
+        
+        // Small delay between deployments to avoid overwhelming the database
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        console.error(`Deployment to store ${store.name} failed:`, error);
+        results.push({
+          success: false,
+          storeId: store.id,
+          storeName: store.name,
+          error: 'Deployment Failed',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Deploy template to a single store with improved inventory mapping
+   */
+  private static async deployToSingleStore(
+    template: any,
+    store: { id: string; name: string }
+  ): Promise<DeploymentResult> {
+    try {
+      // Check for existing recipe to prevent duplicates
       const { data: existingRecipe } = await supabase
         .from('recipes')
         .select('id')
         .eq('name', template.name)
-        .eq('store_id', storeId)
+        .eq('store_id', store.id)
         .maybeSingle();
 
       if (existingRecipe) {
         return {
-          storeId,
-          storeName: store?.name,
           success: false,
-          error: `Recipe "${template.name}" already exists in this store`,
-          validation,
-          warnings
+          storeId: store.id,
+          storeName: store.name,
+          error: 'Recipe Already Exists',
+          details: `Recipe "${template.name}" already deployed to ${store.name}`
         };
+      }
+
+      // Create the recipe
+      const { data: recipe, error: recipeError } = await supabase
+        .from('recipes')
+        .insert({
+          name: template.name,
+          description: template.description,
+          instructions: template.instructions,
+          yield_quantity: template.yield_quantity,
+          serving_size: template.serving_size,
+          store_id: store.id,
+          approval_status: 'approved',
+          is_active: true,
+          total_cost: 0,
+          cost_per_serving: 0
+        })
+        .select()
+        .single();
+
+      if (recipeError) {
+        throw new Error(`Recipe creation failed: ${recipeError.message}`);
+      }
+
+      console.log(`Created recipe ${recipe.id} for store ${store.name}`);
+
+      // Process ingredients with improved mapping
+      const ingredientResults = await this.processRecipeIngredients(
+        recipe.id,
+        template.ingredients,
+        store.id
+      );
+
+      // Calculate total cost
+      const totalCost = ingredientResults.reduce((sum, ing) => sum + (ing.totalCost || 0), 0);
+      const costPerServing = template.serving_size > 0 ? totalCost / template.serving_size : totalCost;
+
+      // Update recipe with calculated costs
+      await supabase
+        .from('recipes')
+        .update({
+          total_cost: totalCost,
+          cost_per_serving: costPerServing
+        })
+        .eq('id', recipe.id);
+
+      console.log(`Successfully deployed "${template.name}" to "${store.name}" with ${ingredientResults.length} ingredients`);
+
+      return {
+        success: true,
+        storeId: store.id,
+        storeName: store.name,
+        recipeId: recipe.id,
+        details: `Recipe deployed with ${ingredientResults.length} ingredients. Total cost: $${totalCost.toFixed(2)}`
+      };
+
+    } catch (error) {
+      console.error(`Deployment to ${store.name} failed:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process recipe ingredients with smart inventory mapping
+   */
+  private static async processRecipeIngredients(
+    recipeId: string,
+    ingredients: any[],
+    storeId: string
+  ) {
+    const results = [];
+
+    for (const ingredient of ingredients) {
+      try {
+        // Try to find matching inventory stock
+        const inventoryStock = await this.findBestInventoryMatch(
+          ingredient.ingredient_name || ingredient.commissary_item_name,
+          storeId
+        );
+
+        const recipeIngredient = {
+          recipe_id: recipeId,
+          inventory_stock_id: inventoryStock?.id || null,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+          cost_per_unit: ingredient.cost_per_unit || inventoryStock?.cost || 0,
+          notes: inventoryStock ? null : 'No inventory mapping found - manual review needed'
+        };
+
+        const { data: insertedIngredient, error: ingredientError } = await supabase
+          .from('recipe_ingredients')
+          .insert(recipeIngredient)
+          .select()
+          .single();
+
+        if (ingredientError) {
+          console.error(`Failed to create ingredient for ${ingredient.ingredient_name}:`, ingredientError);
+          throw new Error(`Ingredient creation failed: ${ingredientError.message}`);
+        }
+
+        results.push({
+          ...insertedIngredient,
+          totalCost: (ingredient.quantity || 0) * (ingredient.cost_per_unit || inventoryStock?.cost || 0),
+          hasInventoryMapping: !!inventoryStock
+        });
+
+        console.log(`Created ingredient: ${ingredient.ingredient_name} (${inventoryStock ? 'mapped' : 'unmapped'})`);
+
+      } catch (error) {
+        console.error(`Error processing ingredient ${ingredient.ingredient_name}:`, error);
+        throw error;
       }
     }
 
-    // Deploy with smart mapping
-    const deploymentResult = await deployRecipeWithMapping(templateId, storeId);
-
-    if (deploymentResult.success) {
-      return {
-        storeId,
-        storeName: store?.name,
-        success: true,
-        recipeId: deploymentResult.recipeId,
-        productId: deploymentResult.productId,
-        validation,
-        warnings
-      };
-    } else {
-      return {
-        storeId,
-        storeName: store?.name,
-        success: false,
-        error: deploymentResult.errors.join('; '),
-        validation,
-        warnings
-      };
-    }
-
-  } catch (error: any) {
-    console.error(`Error in enhanced deployment to store ${storeId}:`, error);
-    return {
-      storeId,
-      storeName: '',
-      success: false,
-      error: error.message || 'Unknown error occurred',
-      warnings: []
-    };
-  }
-};
-
-/**
- * Deploy recipe template to multiple stores with enhanced validation
- */
-export const deployRecipeToMultipleStoresEnhanced = async (
-  templateId: string,
-  storeIds: string[]
-): Promise<EnhancedDeploymentResult[]> => {
-  console.log(`Enhanced deployment: Recipe template "${templateId}" to ${storeIds.length} stores`);
-  
-  const results: EnhancedDeploymentResult[] = [];
-  
-  // Deploy to each store sequentially
-  for (const storeId of storeIds) {
-    const result = await deployRecipeTemplateEnhanced(templateId, storeId);
-    results.push(result);
+    return results;
   }
 
-  // Log summary
-  const successCount = results.filter(r => r.success).length;
-  const failCount = results.filter(r => !r.success).length;
-  const warningCount = results.filter(r => r.warnings.length > 0).length;
-  
-  console.log(`Enhanced deployment complete: ${successCount} successful, ${failCount} failed, ${warningCount} with warnings`);
-  
-  // Show summary toast
-  if (successCount > 0) {
-    toast.success(`Successfully deployed to ${successCount} store(s)`);
-  }
-  if (failCount > 0) {
-    toast.error(`Failed to deploy to ${failCount} store(s)`);
-  }
-  if (warningCount > 0) {
-    toast.warning(`${warningCount} deployment(s) completed with warnings`);
-  }
-  
-  return results;
-};
+  /**
+   * Smart inventory matching algorithm
+   */
+  private static async findBestInventoryMatch(itemName: string, storeId: string) {
+    if (!itemName) return null;
 
-/**
- * Batch validate multiple stores for recipe deployment
- */
-export const batchValidateDeployment = async (
-  templateId: string,
-  storeIds: string[]
-): Promise<Record<string, DeploymentValidation & { storeName: string }>> => {
-  const validations: Record<string, DeploymentValidation & { storeName: string }> = {};
-  
-  // Get store names
-  const { data: stores } = await supabase
-    .from('stores')
-    .select('id, name')
-    .in('id', storeIds);
-
-  const storeMap = new Map(stores?.map(s => [s.id, s.name]) || []);
-
-  // Validate each store
-  for (const storeId of storeIds) {
     try {
-      const validation = await validateRecipeDeployment(templateId, storeId);
-      validations[storeId] = {
-        ...validation,
-        storeName: storeMap.get(storeId) || 'Unknown Store'
-      };
+      // Try exact match first
+      const { data: exactMatch } = await supabase
+        .from('inventory_stock')
+        .select('*')
+        .eq('store_id', storeId)
+        .eq('item', itemName)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (exactMatch) {
+        return exactMatch;
+      }
+
+      // Try case-insensitive match
+      const { data: caseInsensitiveMatch } = await supabase
+        .from('inventory_stock')
+        .select('*')
+        .eq('store_id', storeId)
+        .ilike('item', itemName)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (caseInsensitiveMatch) {
+        return caseInsensitiveMatch;
+      }
+
+      // Try partial match (contains)
+      const { data: partialMatches } = await supabase
+        .from('inventory_stock')
+        .select('*')
+        .eq('store_id', storeId)
+        .or(`item.ilike.%${itemName}%,item.ilike.%${itemName.toLowerCase()}%`)
+        .eq('is_active', true)
+        .limit(5);
+
+      if (partialMatches && partialMatches.length > 0) {
+        // Return the first match (could be improved with fuzzy matching)
+        return partialMatches[0];
+      }
+
+      return null;
     } catch (error) {
-      validations[storeId] = {
-        canDeploy: false,
-        missingIngredients: [],
-        lowStockIngredients: [],
-        mappingIssues: ['Validation failed'],
-        storeName: storeMap.get(storeId) || 'Unknown Store'
-      };
+      console.error('Error finding inventory match:', error);
+      return null;
     }
   }
-
-  return validations;
-};
-
-/**
- * Get comprehensive deployment preview for multiple stores
- */
-export const getMultiStoreDeploymentPreview = async (
-  templateId: string,
-  storeIds: string[]
-) => {
-  const previews = [];
-  
-  for (const storeId of storeIds) {
-    try {
-      const preview = await getDeploymentPreview(templateId, storeId);
-      const { data: store } = await supabase
-        .from('stores')
-        .select('name')
-        .eq('id', storeId)
-        .single();
-      
-      previews.push({
-        storeId,
-        storeName: store?.name || 'Unknown Store',
-        ...preview
-      });
-    } catch (error) {
-      console.error(`Error getting preview for store ${storeId}:`, error);
-    }
-  }
-  
-  return previews;
-};
+}

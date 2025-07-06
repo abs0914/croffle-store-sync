@@ -12,12 +12,12 @@ import { MenuStructureTab } from '@/components/Admin/components/MenuStructureTab
 import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/EnhancedRecipeTemplateForm';
 import { StoreSelector } from '@/components/admin/StoreSelector';
 import { RecipeDebugPanel } from '@/components/Admin/components/RecipeDebugPanel';
+import { EnhancedRecipeDeploymentDialog } from '@/components/Admin/components/EnhancedRecipeDeploymentDialog';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Package, AlertTriangle } from 'lucide-react';
-import { RecipeDeploymentDialog } from '@/components/Admin/components/RecipeDeploymentDialog';
 
 export default function AdminRecipes() {
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>([]);
@@ -26,7 +26,7 @@ export default function AdminRecipes() {
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
   const [formCategory, setFormCategory] = useState<string>('');
   const [formSubcategory, setFormSubcategory] = useState<string>('');
-  const [isDeploymentDialogOpen, setIsDeploymentDialogOpen] = useState(false);
+  const [isEnhancedDeploymentDialogOpen, setIsEnhancedDeploymentDialogOpen] = useState(false);
   const [selectedTemplateForDeployment, setSelectedTemplateForDeployment] = useState<any>(null);
   const [selectedStoresForDeployment, setSelectedStoresForDeployment] = useState<Array<{ id: string; name: string }>>([]);
   
@@ -177,9 +177,10 @@ export default function AdminRecipes() {
   };
 
   const handleEnhancedDeployment = (template: any, selectedStores: Array<{ id: string; name: string }>) => {
+    console.log('Starting enhanced deployment for template:', template);
     setSelectedTemplateForDeployment(template);
     setSelectedStoresForDeployment(selectedStores);
-    setIsDeploymentDialogOpen(true);
+    setIsEnhancedDeploymentDialogOpen(true);
   };
 
   const handleDeploymentComplete = (results: any[]) => {
@@ -190,10 +191,14 @@ export default function AdminRecipes() {
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;
     
+    console.log('Deployment completed:', { successCount, failCount, results });
+    
     if (successCount > 0 && failCount === 0) {
       toast.success(`Successfully deployed to all ${successCount} store(s)`);
     } else if (successCount > 0 && failCount > 0) {
       toast.warning(`Deployed to ${successCount} store(s), failed on ${failCount} store(s)`);
+    } else if (failCount > 0) {
+      toast.error(`Deployment failed for all ${failCount} store(s)`);
     }
   };
 
@@ -299,9 +304,9 @@ export default function AdminRecipes() {
         subcategory={formSubcategory}
       />
 
-      <RecipeDeploymentDialog
-        isOpen={isDeploymentDialogOpen}
-        onClose={() => setIsDeploymentDialogOpen(false)}
+      <EnhancedRecipeDeploymentDialog
+        isOpen={isEnhancedDeploymentDialogOpen}
+        onClose={() => setIsEnhancedDeploymentDialogOpen(false)}
         templateId={selectedTemplateForDeployment?.id || ''}
         templateName={selectedTemplateForDeployment?.name || ''}
         selectedStores={selectedStoresForDeployment}
