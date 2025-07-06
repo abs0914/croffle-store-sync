@@ -341,7 +341,7 @@ export class EnhancedRecipeDeploymentService {
       const { data: existingRecipe } = await supabase
         .from('recipes')
         .select('id')
-        .eq('recipe_name', template.name)
+        .eq('name', template.name)
         .eq('store_id', store.id)
         .maybeSingle();
 
@@ -359,7 +359,7 @@ export class EnhancedRecipeDeploymentService {
       const { data: recipe, error: recipeError } = await supabase
         .from('recipes')
         .insert({
-          recipe_name: template.name,
+          name: template.name,
           description: template.description,
           instructions: template.instructions,
           yield_quantity: template.yield_quantity,
