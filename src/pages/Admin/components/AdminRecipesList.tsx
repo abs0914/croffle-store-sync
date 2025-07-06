@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Package, AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react";
+import { Package, AlertTriangle, Info, CheckCircle, XCircle, Edit } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { cleanupDuplicateRecipes } from '@/services/recipeManagement/recipeDeploymentService';
 
@@ -61,7 +61,7 @@ export function AdminRecipesList({
       const result = await cleanupDuplicateRecipes();
       if (result.cleaned > 0) {
         toast.success(`Cleaned up ${result.cleaned} duplicate recipes`);
-        onRefresh(); // Refresh the list
+        onRefresh();
       } else {
         toast.info('No duplicate recipes found');
       }
@@ -97,38 +97,44 @@ export function AdminRecipesList({
 
   const duplicateCount = Object.values(recipeGroups).filter((group: any) => group.length > 1).length;
 
-  // Check if recipe is deployment ready
-  const isDeploymentReady = (recipe: any) => {
+  // More permissive readiness check - focuses on whether it can be deployed
+  const getDeploymentStatus = (recipe: any) => {
+    const hasName = recipe.name && recipe.name.trim().length > 0;
+    if (!hasName) return { ready: false, reason: 'No name' };
+    
     const hasIngredients = recipe.ingredients && recipe.ingredients.length > 0;
     const hasInstructions = recipe.instructions && recipe.instructions.trim().length > 0;
-    const hasValidName = recipe.name && recipe.name.trim().length > 0;
     
-    return hasIngredients && hasInstructions && hasValidName;
+    // Always deployable if it has a name
+    return { 
+      ready: true, 
+      hasIngredients,
+      hasInstructions,
+      warnings: [
+        ...(!hasIngredients ? ['No ingredients (can be added after deployment)'] : []),
+        ...(!hasInstructions ? ['No instructions'] : [])
+      ]
+    };
   };
 
-  const getReadinessIcon = (recipe: any) => {
-    if (isDeploymentReady(recipe)) {
-      return <CheckCircle className="h-4 w-4 text-green-600" />;
+  const getStatusIcon = (recipe: any) => {
+    const status = getDeploymentStatus(recipe);
+    if (status.ready) {
+      return status.warnings.length > 0 
+        ? <AlertTriangle className="h-4 w-4 text-yellow-600" />
+        : <CheckCircle className="h-4 w-4 text-green-600" />;
     }
     return <XCircle className="h-4 w-4 text-red-600" />;
   };
 
-  const getReadinessStatus = (recipe: any) => {
-    const issues = [];
-    
-    if (!recipe.ingredients || recipe.ingredients.length === 0) {
-      issues.push('No ingredients');
+  const getStatusText = (recipe: any) => {
+    const status = getDeploymentStatus(recipe);
+    if (status.ready) {
+      return status.warnings.length > 0 
+        ? `Ready (${status.warnings.length} warnings)`
+        : 'Ready for deployment';
     }
-    
-    if (!recipe.instructions || recipe.instructions.trim().length === 0) {
-      issues.push('No instructions');
-    }
-    
-    if (!recipe.name || recipe.name.trim().length === 0) {
-      issues.push('No name');
-    }
-    
-    return issues.length > 0 ? issues.join(', ') : 'Ready for deployment';
+    return 'Cannot deploy';
   };
 
   return (
@@ -168,8 +174,7 @@ export function AdminRecipesList({
             <span className="font-semibold text-orange-800">Duplicate Recipes Detected</span>
           </div>
           <p className="text-sm text-orange-700">
-            Found {duplicateCount} sets of duplicate recipes. This can happen when templates are deployed multiple times to the same store.
-            Click "Fix Duplicates" to clean them up automatically.
+            Found {duplicateCount} sets of duplicate recipes. Click "Fix Duplicates" to clean them up automatically.
           </p>
         </div>
       )}
@@ -183,7 +188,7 @@ export function AdminRecipesList({
           </Badge>
         )}
         <Badge variant="outline" className="text-green-600 border-green-200">
-          {filteredRecipes.filter(isDeploymentReady).length} deployment ready
+          {filteredRecipes.filter(r => getDeploymentStatus(r).ready).length} ready to deploy
         </Badge>
       </div>
 
@@ -191,7 +196,7 @@ export function AdminRecipesList({
       <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
         {filteredRecipes.map((recipe) => {
           const isDuplicate = recipeGroups[`${recipe.name}-${recipe.store_id}`]?.length > 1;
-          const deploymentReady = isDeploymentReady(recipe);
+          const deploymentStatus = getDeploymentStatus(recipe);
           
           return (
             <Card key={recipe.id} className={`${viewMode === 'list' ? 'p-4' : ''} ${isDuplicate ? 'border-orange-200 bg-orange-50' : ''}`}>
@@ -221,8 +226,8 @@ export function AdminRecipesList({
                     <Badge variant="secondary" className="text-xs">
                       {recipe.approval_status || 'unknown'}
                     </Badge>
-                    <div className="flex items-center gap-1" title={getReadinessStatus(recipe)}>
-                      {getReadinessIcon(recipe)}
+                    <div className="flex items-center gap-1" title={getStatusText(recipe)}>
+                      {getStatusIcon(recipe)}
                     </div>
                   </div>
                 </div>
@@ -242,17 +247,17 @@ export function AdminRecipesList({
                     <div>Created: {new Date(recipe.created_at).toLocaleDateString()}</div>
                   </div>
 
-                  {/* Deployment readiness */}
+                  {/* Deployment status */}
                   <div className="p-2 border rounded text-xs">
                     <div className="flex items-center gap-1 mb-1">
-                      {getReadinessIcon(recipe)}
+                      {getStatusIcon(recipe)}
                       <span className="font-medium">
-                        {deploymentReady ? 'Ready for Deployment' : 'Not Ready'}
+                        {getStatusText(recipe)}
                       </span>
                     </div>
-                    {!deploymentReady && (
-                      <div className="text-red-600">
-                        Issues: {getReadinessStatus(recipe)}
+                    {deploymentStatus.warnings && deploymentStatus.warnings.length > 0 && (
+                      <div className="text-yellow-600">
+                        Warnings: {deploymentStatus.warnings.join(', ')}
                       </div>
                     )}
                   </div>
@@ -274,10 +279,24 @@ export function AdminRecipesList({
                       size="sm"
                       onClick={() => handleEnhancedDeploy(recipe)}
                       className="flex items-center gap-1"
-                      disabled={isDuplicate || !deploymentReady}
+                      disabled={isDuplicate || !deploymentStatus.ready}
                     >
                       <Package className="h-3 w-3" />
-                      {isDuplicate ? 'Duplicate' : !deploymentReady ? 'Not Ready' : 'Enhanced Deploy'}
+                      {isDuplicate ? 'Duplicate' : !deploymentStatus.ready ? 'Cannot Deploy' : 'Deploy'}
+                    </Button>
+                    
+                    {/* Add edit button for deployed recipes */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex items-center gap-1"
+                      onClick={() => {
+                        // This would open an edit dialog - placeholder for now
+                        toast.info('Recipe editing will be available soon');
+                      }}
+                    >
+                      <Edit className="h-3 w-3" />
+                      Edit
                     </Button>
                   </div>
                 </div>
