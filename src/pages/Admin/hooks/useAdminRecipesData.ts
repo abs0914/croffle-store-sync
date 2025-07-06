@@ -22,20 +22,25 @@ export const useAdminRecipesData = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [storeFilter, setStoreFilter] = useState('all');
+  const [selectedStoreForDeployment, setSelectedStoreForDeployment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchRecipes();
     fetchStores();
   }, []);
+
+  // Fetch recipes when store filter changes
+  useEffect(() => {
+    fetchRecipes();
+  }, [storeFilter]);
 
   const fetchRecipes = async () => {
     setIsLoading(true);
     try {
-      console.log('Fetching deployed recipes...');
+      console.log('Fetching deployed recipes for store filter:', storeFilter);
       
-      // Fetch all deployed recipes with their ingredients and store information
-      const { data, error } = await supabase
+      // Build the query based on store filter
+      let query = supabase
         .from('recipes')
         .select(`
           *,
@@ -49,6 +54,14 @@ export const useAdminRecipesData = () => {
           )
         `)
         .order('created_at', { ascending: false });
+
+      // Apply store filter if not "all"
+      if (storeFilter !== 'all' && storeFilter) {
+        console.log('Filtering by store:', storeFilter);
+        query = query.eq('store_id', storeFilter);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching recipes:', error);
@@ -65,6 +78,7 @@ export const useAdminRecipesData = () => {
         store_name: recipe.stores?.name || 'Unknown Store'
       })) as Recipe[];
       
+      console.log('Transformed recipes:', transformedRecipes.length);
       setRecipes(transformedRecipes);
       
     } catch (error: any) {
@@ -127,13 +141,8 @@ export const useAdminRecipesData = () => {
       });
     }
 
-    // Apply store filter
-    if (storeFilter !== 'all') {
-      filtered = filtered.filter(recipe => recipe.store_id === storeFilter);
-    }
-
     return filtered;
-  }, [recipes, searchQuery, statusFilter, storeFilter]);
+  }, [recipes, searchQuery, statusFilter]);
 
   const recipeMetrics: RecipeMetrics = useMemo(() => {
     console.log('Calculating metrics for recipes:', recipes.length);
@@ -173,6 +182,13 @@ export const useAdminRecipesData = () => {
     return metrics;
   }, [recipes]);
 
+  // Custom setter for store filter that also updates selected store for deployment
+  const handleStoreFilterChange = (newStoreFilter: string) => {
+    console.log('Store filter changing to:', newStoreFilter);
+    setStoreFilter(newStoreFilter);
+    setSelectedStoreForDeployment(newStoreFilter);
+  };
+
   return {
     recipes,
     stores,
@@ -182,7 +198,9 @@ export const useAdminRecipesData = () => {
     statusFilter,
     setStatusFilter,
     storeFilter,
-    setStoreFilter,
+    setStoreFilter: handleStoreFilterChange,
+    selectedStoreForDeployment,
+    setSelectedStoreForDeployment,
     isLoading,
     refreshRecipes: fetchRecipes,
     recipeMetrics

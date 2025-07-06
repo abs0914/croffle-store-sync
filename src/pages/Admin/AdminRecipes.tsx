@@ -25,7 +25,6 @@ export default function AdminRecipes() {
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
   const [formCategory, setFormCategory] = useState<string>('');
   const [formSubcategory, setFormSubcategory] = useState<string>('');
-  const [selectedStoreForDeployment, setSelectedStoreForDeployment] = useState<string>('');
   const [isDeploymentDialogOpen, setIsDeploymentDialogOpen] = useState(false);
   const [selectedTemplateForDeployment, setSelectedTemplateForDeployment] = useState<any>(null);
   const [selectedStoresForDeployment, setSelectedStoresForDeployment] = useState<Array<{ id: string; name: string }>>([]);
@@ -39,6 +38,8 @@ export default function AdminRecipes() {
     setStatusFilter,
     storeFilter,
     setStoreFilter,
+    selectedStoreForDeployment,
+    setSelectedStoreForDeployment,
     isLoading,
     refreshRecipes,
     recipeMetrics,
