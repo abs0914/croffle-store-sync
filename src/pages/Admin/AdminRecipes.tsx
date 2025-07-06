@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminRecipesHeader } from './components/AdminRecipesHeader';
@@ -7,7 +6,6 @@ import { AdminRecipesList } from './components/AdminRecipesList';
 import { AdminRecipeBulkActions } from './components/AdminRecipeBulkActions';
 import { RecipeManagementTab } from './components/RecipeManagementTab';
 import { AdminRecipeBulkUploadTab } from './components/AdminRecipeBulkUploadTab';
-import { AdminCommissaryIntegrationTab } from './components/AdminCommissaryIntegrationTab';
 import { MenuStructureTab } from '@/components/Admin/components/MenuStructureTab';
 import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/EnhancedRecipeTemplateForm';
 import { StoreSelector } from '@/components/admin/StoreSelector';
@@ -211,12 +209,11 @@ export default function AdminRecipes() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="menu-structure">Menu Structure</TabsTrigger>
           <TabsTrigger value="recipe-templates">Recipe Templates</TabsTrigger>
           <TabsTrigger value="deployed-recipes">Deployed Recipes</TabsTrigger>
           <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
-          <TabsTrigger value="commissary-integration">Commissary Integration</TabsTrigger>
         </TabsList>
 
         <TabsContent value="menu-structure" className="space-y-4">
@@ -286,10 +283,6 @@ export default function AdminRecipes() {
 
         <TabsContent value="bulk-upload">
           <AdminRecipeBulkUploadTab />
-        </TabsContent>
-
-        <TabsContent value="commissary-integration">
-          <AdminCommissaryIntegrationTab />
         </TabsContent>
       </Tabs>
 
