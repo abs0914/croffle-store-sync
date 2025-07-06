@@ -24,14 +24,14 @@ export const processRecipeUploadAsTemplate = async (
       .from('recipe_templates')
       .insert({
         name: recipe.name,
-        description: recipe.description,
+        description: recipe.description || `Recipe template for ${recipe.name}`,
         category_name: recipe.category,
-        instructions: recipe.instructions,
-        yield_quantity: recipe.yield_quantity,
+        instructions: recipe.instructions || 'Instructions to be added',
+        yield_quantity: recipe.yield_quantity || 1,
         serving_size: recipe.serving_size || 1,
         version: 1,
         is_active: true,
-        created_by: currentUserId // Use actual user ID instead of "system"
+        created_by: currentUserId
       })
       .select()
       .single();
@@ -48,35 +48,63 @@ export const processRecipeUploadAsTemplate = async (
       const ingredientInserts = [];
 
       for (const ingredient of recipe.ingredients) {
-        // Find the commissary item
-        const commissaryItem = uploadData.commissaryMap.get(ingredient.commissary_item_name.toLowerCase());
-        
-        if (!commissaryItem) {
-          console.warn(`Ingredient "${ingredient.commissary_item_name}" not found in commissary inventory`);
-          continue;
+        // Handle choice-based ingredients (like "Choose 1: Chocolate Sauce OR Caramel Sauce")
+        if (ingredient.name.toLowerCase().includes('choose') || ingredient.name.toLowerCase().includes('or')) {
+          console.log(`Processing choice-based ingredient: ${ingredient.name}`);
+          
+          // For now, create all options as separate ingredients
+          // Future enhancement: implement ingredient groups
+          const options = ingredient.name.split(/\s+or\s+|\s+OR\s+/i);
+          
+          for (const option of options) {
+            const cleanOption = option.replace(/choose\s+\d+:\s*/i, '').trim();
+            if (cleanOption) {
+              ingredientInserts.push({
+                recipe_template_id: template.id,
+                ingredient_name: cleanOption,
+                quantity: ingredient.quantity,
+                unit: ingredient.uom,
+                cost_per_unit: ingredient.cost || 0,
+                recipe_unit: ingredient.uom,
+                purchase_unit: ingredient.uom,
+                conversion_factor: 1,
+                location_type: 'all'
+              });
+            }
+          }
+        } else {
+          // Regular ingredient processing
+          ingredientInserts.push({
+            recipe_template_id: template.id,
+            ingredient_name: ingredient.name, // Fixed: Use ingredient_name instead of commissary_item_name
+            quantity: ingredient.quantity,
+            unit: ingredient.uom,
+            cost_per_unit: ingredient.cost || 0,
+            recipe_unit: ingredient.uom,
+            purchase_unit: ingredient.uom,
+            conversion_factor: 1,
+            location_type: 'all'
+          });
         }
-
-        ingredientInserts.push({
-          recipe_template_id: template.id,
-          commissary_item_id: commissaryItem.id,
-          commissary_item_name: ingredient.commissary_item_name,
-          quantity: ingredient.quantity,
-          unit: ingredient.uom, // Use uom instead of unit
-          cost_per_unit: ingredient.cost_per_unit || commissaryItem.unit_cost || 0
-        });
       }
 
       if (ingredientInserts.length > 0) {
+        console.log(`Inserting ${ingredientInserts.length} ingredients for template ${recipe.name}`);
+        
         const { error: ingredientsError } = await supabase
           .from('recipe_template_ingredients')
           .insert(ingredientInserts);
 
         if (ingredientsError) {
           console.error(`Error adding ingredients for template ${recipe.name}:`, ingredientsError);
-          return false;
+          console.error('Ingredient data that failed:', ingredientInserts);
+          
+          // Don't fail the entire template creation if only ingredients fail
+          // The template is created successfully, ingredients can be added manually
+          console.warn(`Template created but ingredients failed to insert`);
+        } else {
+          console.log(`Successfully added ${ingredientInserts.length} ingredients to template ${recipe.name}`);
         }
-
-        console.log(`Added ${ingredientInserts.length} ingredients to template ${recipe.name}`);
       }
     }
 
