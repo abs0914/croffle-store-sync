@@ -112,7 +112,7 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
   
   // Check admin routes - only admin/owner
   if (ADMIN_ROUTES.some(adminRoute => route.startsWith(adminRoute))) {
-    return userRole === 'admin' || userRole === 'owner';
+    return false; // Fixed: non-admin users cannot access admin routes
   }
   
   // Define role-specific access for store routes

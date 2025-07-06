@@ -1,3 +1,4 @@
+
 import { UserRole } from '@/types';
 import { ROUTE_PATHS, checkRouteAccess } from '@/contexts/auth/role-utils';
 
@@ -26,8 +27,8 @@ export const auditRouteAccess = () => {
       requiresStoreAccess: true
     },
     {
-      route: ROUTE_PATHS.PRODUCT_CATALOG,
-      description: 'Product catalog - accessible to all with store access',
+      route: ROUTE_PATHS.PRODUCTS,
+      description: 'Product management - accessible to all with store access',
       allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
       requiresStoreAccess: true
     },
@@ -62,13 +63,13 @@ export const auditRouteAccess = () => {
       requiresStoreAccess: true
     },
     {
-      route: ROUTE_PATHS.PRODUCTION,
-      description: 'Production management - accessible to managers and above with store access',
-      allowedRoles: ['admin', 'owner', 'manager'],
-      requiresStoreAccess: true
+      route: ROUTE_PATHS.ADMIN_PRODUCTION,
+      description: 'Production management - accessible to owners and admins only',
+      allowedRoles: ['admin', 'owner'],
+      requiresStoreAccess: false
     },
     {
-      route: ROUTE_PATHS.COMMISSARY_INVENTORY,
+      route: ROUTE_PATHS.ADMIN_COMMISSARY,
       description: 'Commissary inventory - accessible to owners and admins only',
       allowedRoles: ['admin', 'owner'],
       requiresStoreAccess: false
