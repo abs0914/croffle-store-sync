@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminRecipesHeader } from './components/AdminRecipesHeader';
@@ -11,6 +10,7 @@ import { AdminCommissaryIntegrationTab } from './components/AdminCommissaryInteg
 import { MenuStructureTab } from '@/components/Admin/components/MenuStructureTab';
 import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/EnhancedRecipeTemplateForm';
 import { StoreSelector } from '@/components/admin/StoreSelector';
+import { RecipeDebugPanel } from '@/components/Admin/components/RecipeDebugPanel';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -276,6 +276,9 @@ export default function AdminRecipes() {
             stores={stores}
             onEnhancedDeployment={handleEnhancedDeployment}
           />
+
+          {/* Temporary Debug Panel */}
+          <RecipeDebugPanel />
         </TabsContent>
 
         <TabsContent value="bulk-upload">

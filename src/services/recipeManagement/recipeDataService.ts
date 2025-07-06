@@ -4,6 +4,8 @@ import { RecipeTemplate } from "./types";
 
 export const getRecipeTemplates = async (): Promise<RecipeTemplate[]> => {
   try {
+    console.log('Fetching recipe templates...');
+    
     const { data, error } = await supabase
       .from('recipe_templates')
       .select(`
@@ -13,7 +15,12 @@ export const getRecipeTemplates = async (): Promise<RecipeTemplate[]> => {
       .eq('is_active', true)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching recipe templates:', error);
+      throw error;
+    }
+    
+    console.log('Fetched recipe templates:', data?.length || 0);
     
     return (data || []).map(template => ({
       id: template.id,
@@ -47,6 +54,8 @@ export const getRecipeTemplates = async (): Promise<RecipeTemplate[]> => {
 
 export const getDeployedRecipes = async (): Promise<any[]> => {
   try {
+    console.log('Fetching deployed recipes from database...');
+    
     const { data, error } = await supabase
       .from('recipes')
       .select(`
@@ -55,11 +64,31 @@ export const getDeployedRecipes = async (): Promise<any[]> => {
           *,
           inventory_stock (*)
         ),
-        stores:store_id (name)
+        stores:store_id (
+          id,
+          name
+        )
       `)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching deployed recipes:', error);
+      throw error;
+    }
+    
+    console.log('Successfully fetched deployed recipes:', data?.length || 0);
+    
+    if (data && data.length > 0) {
+      console.log('Sample deployed recipe:', {
+        id: data[0].id,
+        name: data[0].name,
+        store_id: data[0].store_id,
+        ingredients_count: data[0].recipe_ingredients?.length || 0,
+        approval_status: data[0].approval_status,
+        is_active: data[0].is_active
+      });
+    }
+    
     return data || [];
   } catch (error: any) {
     console.error('Error fetching deployed recipes:', error);

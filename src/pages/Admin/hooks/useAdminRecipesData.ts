@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Recipe } from '@/types/inventoryManagement';
 import { Store } from '@/types';
-import { getDeployedRecipes } from '@/services/recipeManagement/recipeDataService';
 
 interface RecipeMetrics {
   totalRecipes: number;
@@ -35,17 +34,43 @@ export const useAdminRecipesData = () => {
     try {
       console.log('Fetching deployed recipes...');
       
-      const data = await getDeployedRecipes();
-      console.log('Fetched deployed recipes:', data?.length || 0);
-      console.log('Recipe data:', data);
+      // Fetch all deployed recipes with their ingredients and store information
+      const { data, error } = await supabase
+        .from('recipes')
+        .select(`
+          *,
+          recipe_ingredients (
+            *,
+            inventory_stock (*)
+          ),
+          stores:store_id (
+            id,
+            name
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching recipes:', error);
+        throw error;
+      }
+
+      console.log('Fetched recipes:', data?.length || 0);
+      console.log('Recipe data sample:', data?.[0]);
       
-      // Set recipes directly
-      setRecipes(data as Recipe[] || []);
+      // Transform the data to match our Recipe interface
+      const transformedRecipes = (data || []).map(recipe => ({
+        ...recipe,
+        ingredients: recipe.recipe_ingredients || [],
+        store_name: recipe.stores?.name || 'Unknown Store'
+      })) as Recipe[];
+      
+      setRecipes(transformedRecipes);
       
     } catch (error: any) {
       console.error('Error fetching recipes:', error);
       toast.error('Failed to load recipes');
-      setRecipes([]); // Clear recipes on error
+      setRecipes([]);
     } finally {
       setIsLoading(false);
     }
@@ -111,11 +136,15 @@ export const useAdminRecipesData = () => {
   }, [recipes, searchQuery, statusFilter, storeFilter]);
 
   const recipeMetrics: RecipeMetrics = useMemo(() => {
+    console.log('Calculating metrics for recipes:', recipes.length);
+    
     const activeRecipes = recipes.filter(recipe => recipe.is_active).length;
     const draftRecipes = recipes.filter(recipe => recipe.approval_status === 'draft' || !recipe.approval_status).length;
     const pendingApproval = recipes.filter(recipe => recipe.approval_status === 'pending_approval').length;
     const approved = recipes.filter(recipe => recipe.approval_status === 'approved').length;
     const rejected = recipes.filter(recipe => recipe.approval_status === 'rejected').length;
+    
+    // Calculate unique stores that have deployed recipes
     const uniqueStores = new Set(recipes.map(recipe => recipe.store_id)).size;
     
     // Calculate average cost from recipe ingredients
@@ -129,7 +158,7 @@ export const useAdminRecipesData = () => {
     
     const averageCost = recipes.length > 0 ? totalCost / recipes.length : 0;
     
-    return {
+    const metrics = {
       totalRecipes: recipes.length,
       activeRecipes,
       draftRecipes,
@@ -139,6 +168,9 @@ export const useAdminRecipesData = () => {
       approved,
       rejected
     };
+    
+    console.log('Calculated metrics:', metrics);
+    return metrics;
   }, [recipes]);
 
   return {
