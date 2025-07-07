@@ -88,7 +88,7 @@ export default function StartShiftDialog({
     onOpenChange(false);
   };
 
-  const canSubmit = !!(dialogState.photo && dialogState.selectedCashierId);
+  const canSubmit = !!(dialogState.photo && dialogState.startingCash > 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
