@@ -54,47 +54,42 @@ export class CartCalculationService {
     otherDiscount?: OtherDiscount | null,
     totalDiners: number = 1
   ): CartCalculations {
-    // Basic calculations - all items are VAT-inclusive
+    // Basic calculations - treat as VAT-exclusive (PWD calculator standard)
     const grossSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
     const numberOfSeniors = seniorDiscounts.length;
     const effectiveTotalDiners = Math.max(totalDiners, numberOfSeniors);
     
-    // BIR-compliant senior discount calculations
+    // BIR-compliant senior discount calculations for VAT-exclusive amounts
     let vatExemption = 0;
     let seniorDiscountAmount = 0;
     let vatableSales = grossSubtotal;
     let vatExemptSales = 0;
-    let netAmount = grossSubtotal / (1 + this.VAT_RATE);
+    let netAmount = grossSubtotal; // Already VAT-exclusive
     
     if (numberOfSeniors > 0 && effectiveTotalDiners > 0) {
-      // Step 1: Calculate per-person gross share
-      const perPersonGrossShare = grossSubtotal / effectiveTotalDiners;
+      // Step 1: Calculate per-person share (VAT-exclusive)
+      const perPersonShare = grossSubtotal / effectiveTotalDiners;
       
-      // Step 2: Calculate senior portion (VAT-inclusive)
-      const seniorPortionGross = perPersonGrossShare * numberOfSeniors;
+      // Step 2: Calculate senior portion (VAT-exclusive)
+      const seniorPortionVATExempt = perPersonShare * numberOfSeniors;
       
-      // Step 3: Calculate VAT-exempt amount for senior portion
-      // BIR Formula: VAT-Exempt Sale = Gross Selling Price ÷ (1 + VAT Rate)
-      const seniorPortionVATExempt = seniorPortionGross / (1 + this.VAT_RATE);
-      
-      // Step 4: Calculate 20% discount on VAT-exempt amount
+      // Step 3: Calculate 20% discount on VAT-exempt amount
       // BIR Formula: 20% Discount = VAT-Exempt Sale × 0.20
       seniorDiscountAmount = seniorPortionVATExempt * this.SENIOR_DISCOUNT_RATE;
       
-      // Step 5: Calculate VAT exemption (VAT not collected on senior portion)
-      vatExemption = seniorPortionGross - seniorPortionVATExempt;
+      // Step 4: No VAT exemption since amounts are already VAT-exclusive
+      vatExemption = 0;
       
       // For BIR reporting breakdown
       vatExemptSales = seniorPortionVATExempt;
       
-      // Vatable sales = non-senior portion (still subject to VAT)
-      const nonSeniorPortionGross = grossSubtotal - seniorPortionGross;
-      vatableSales = nonSeniorPortionGross;
+      // Vatable sales = non-senior portion  
+      const nonSeniorPortion = grossSubtotal - seniorPortionVATExempt;
+      vatableSales = nonSeniorPortion;
       
-      // Adjust net amount calculation
-      const nonSeniorPortionNet = nonSeniorPortionGross / (1 + this.VAT_RATE);
-      netAmount = seniorPortionVATExempt + nonSeniorPortionNet;
+      // Net amount remains the same since already VAT-exclusive
+      netAmount = grossSubtotal;
     }
     
     // Other discount calculations

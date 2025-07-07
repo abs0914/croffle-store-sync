@@ -35,8 +35,8 @@ export function useOptimizedProductGrid(storeId: string) {
     {
       enabled: !!storeId,
       cacheConfig: {
-        staleTime: 3 * 60 * 1000, // 3 minutes
-        cacheTime: 10 * 60 * 1000, // 10 minutes
+        staleTime: 30 * 1000, // 30 seconds for fresh pricing
+        cacheTime: 2 * 60 * 1000, // 2 minutes
       }
     }
   );
