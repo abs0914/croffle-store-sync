@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Image } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Store } from '@/types';
@@ -31,6 +31,7 @@ export default function AdminStoreForm() {
   });
   
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (isEditing && id) {
@@ -92,6 +93,48 @@ export default function AdminStoreForm() {
 
   const handleInputChange = (field: keyof Store, value: any) => {
     setStore(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `store-${Date.now()}.${fileExt}`;
+      const filePath = `store-photos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      handleInputChange('store_location_photo_url', publicUrl);
+      toast.success('Photo uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast.error('Failed to upload photo');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
   if (isLoading && isEditing) {
@@ -258,15 +301,15 @@ export default function AdminStoreForm() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="franchise_fee_percentage">Franchise Fee (%)</Label>
+                    <Label htmlFor="franchise_fee_amount">Franchise Fee (PHP)</Label>
                     <Input
-                      id="franchise_fee_percentage"
+                      id="franchise_fee_amount"
                       type="number"
                       step="0.01"
                       min="0"
-                      max="100"
-                      value={store.franchise_fee_percentage || ''}
-                      onChange={(e) => handleInputChange('franchise_fee_percentage', parseFloat(e.target.value) || 0)}
+                      value={store.franchise_fee_amount || ''}
+                      onChange={(e) => handleInputChange('franchise_fee_amount', parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
                     />
                   </div>
                 </div>
@@ -313,6 +356,124 @@ export default function AdminStoreForm() {
                     placeholder="e.g., Zone A, Zone B"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Store Photo Upload */}
+            <div className="space-y-4 border-t pt-6">
+              <h3 className="text-lg font-medium">Store Location Photo</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="store_photo">Upload Store Photo</Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      id="store_photo"
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      disabled={isUploadingPhoto}
+                      className="max-w-sm"
+                    />
+                    {isUploadingPhoto && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Upload className="h-4 w-4 animate-spin" />
+                        Uploading...
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Accepted formats: JPG, PNG, GIF. Max size: 5MB
+                  </p>
+                </div>
+
+                {store.store_location_photo_url && (
+                  <div className="mt-4">
+                    <Label>Current Store Photo</Label>
+                    <div className="mt-2 relative inline-block">
+                      <img
+                        src={store.store_location_photo_url}
+                        alt="Store location"
+                        className="w-48 h-32 object-cover rounded-lg border"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleInputChange('store_location_photo_url', '')}
+                        className="absolute top-2 right-2"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Owner Information */}
+            <div className="space-y-4 border-t pt-6">
+              <h3 className="text-lg font-medium">Owner Information</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="owner_name">Owner Name</Label>
+                  <Input
+                    id="owner_name"
+                    value={store.owner_name || ''}
+                    onChange={(e) => handleInputChange('owner_name', e.target.value)}
+                    placeholder="Full name of the owner"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="owner_email">Owner Email</Label>
+                  <Input
+                    id="owner_email"
+                    type="email"
+                    value={store.owner_email || ''}
+                    onChange={(e) => handleInputChange('owner_email', e.target.value)}
+                    placeholder="owner@example.com"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="owner_contact_number">Owner Contact Number</Label>
+                  <Input
+                    id="owner_contact_number"
+                    value={store.owner_contact_number || ''}
+                    onChange={(e) => handleInputChange('owner_contact_number', e.target.value)}
+                    placeholder="+63 9XX XXX XXXX"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="business_type">Business Type</Label>
+                  <Select 
+                    value={store.business_type || ''} 
+                    onValueChange={(value) => handleInputChange('business_type', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select business type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sole_proprietor">Sole Proprietor</SelectItem>
+                      <SelectItem value="corporation">Corporation</SelectItem>
+                      <SelectItem value="partnership">Partnership</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="owner_address">Owner Address</Label>
+                <Textarea
+                  id="owner_address"
+                  value={store.owner_address || ''}
+                  onChange={(e) => handleInputChange('owner_address', e.target.value)}
+                  placeholder="Complete address of the owner"
+                  rows={3}
+                />
               </div>
             </div>
             

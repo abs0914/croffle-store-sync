@@ -3342,12 +3342,14 @@ export type Database = {
         Row: {
           address: string
           business_name: string | null
+          business_type: string | null
           city: string | null
           country: string | null
           created_at: string | null
           date_issued: string | null
           email: string | null
           franchise_agreement_date: string | null
+          franchise_fee_amount: number | null
           franchise_fee_percentage: number | null
           franchisee_contact_info: Json | null
           id: string
@@ -3360,12 +3362,17 @@ export type Database = {
           machine_serial_number: string | null
           name: string
           opening_date: string | null
+          owner_address: string | null
+          owner_contact_number: string | null
+          owner_email: string | null
+          owner_name: string | null
           ownership_type: string | null
           permit_number: string | null
           phone: string | null
           pos_version: string | null
           region: string | null
           state: string | null
+          store_location_photo_url: string | null
           tax_id: string | null
           tin: string | null
           updated_at: string | null
@@ -3375,12 +3382,14 @@ export type Database = {
         Insert: {
           address: string
           business_name?: string | null
+          business_type?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
           date_issued?: string | null
           email?: string | null
           franchise_agreement_date?: string | null
+          franchise_fee_amount?: number | null
           franchise_fee_percentage?: number | null
           franchisee_contact_info?: Json | null
           id?: string
@@ -3393,12 +3402,17 @@ export type Database = {
           machine_serial_number?: string | null
           name: string
           opening_date?: string | null
+          owner_address?: string | null
+          owner_contact_number?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
           ownership_type?: string | null
           permit_number?: string | null
           phone?: string | null
           pos_version?: string | null
           region?: string | null
           state?: string | null
+          store_location_photo_url?: string | null
           tax_id?: string | null
           tin?: string | null
           updated_at?: string | null
@@ -3408,12 +3422,14 @@ export type Database = {
         Update: {
           address?: string
           business_name?: string | null
+          business_type?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
           date_issued?: string | null
           email?: string | null
           franchise_agreement_date?: string | null
+          franchise_fee_amount?: number | null
           franchise_fee_percentage?: number | null
           franchisee_contact_info?: Json | null
           id?: string
@@ -3426,12 +3442,17 @@ export type Database = {
           machine_serial_number?: string | null
           name?: string
           opening_date?: string | null
+          owner_address?: string | null
+          owner_contact_number?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
           ownership_type?: string | null
           permit_number?: string | null
           phone?: string | null
           pos_version?: string | null
           region?: string | null
           state?: string | null
+          store_location_photo_url?: string | null
           tax_id?: string | null
           tin?: string | null
           updated_at?: string | null
