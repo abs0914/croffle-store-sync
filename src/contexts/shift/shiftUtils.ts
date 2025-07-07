@@ -61,18 +61,16 @@ export async function createShift(
       userId, storeId, startingCash, cashierId
     });
 
-    // Handle cashier ID - only use it if it's from the legacy cashiers table
+    // For current logged-in users (app_users table), don't set cashier_id
+    // Only set cashier_id if it's from the legacy cashiers table
     let finalCashierId: string | null = null;
-    if (cashierId) {
-      if (cashierId.startsWith('app_user:')) {
-        // This is from app_users table, don't set cashier_id (foreign key constraint)
-        console.log("Cashier is from app_users table, not setting cashier_id foreign key");
-        finalCashierId = null;
-      } else {
-        // This is from legacy cashiers table, safe to use
-        console.log("Cashier is from legacy cashiers table, setting cashier_id");
-        finalCashierId = cashierId;
-      }
+    if (cashierId && cashierId !== userId) {
+      // Only set if cashier_id is different from current user (legacy cashiers)
+      console.log("Using legacy cashier ID");
+      finalCashierId = cashierId;
+    } else {
+      console.log("Current user is cashier, not setting cashier_id foreign key");
+      finalCashierId = null;
     }
 
     const newShift = {
