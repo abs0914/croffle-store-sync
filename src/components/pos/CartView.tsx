@@ -121,8 +121,8 @@ export default function CartView({
   const canCheckout = items.length > 0 && isShiftActive && !isValidating && !validationMessage;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full space-y-4">
+      <div className="flex items-center justify-between flex-shrink-0">
         <h3 className="text-lg font-semibold">Cart</h3>
         {items.length > 0 && (
           <Button variant="outline" size="sm" onClick={clearCart}>
@@ -133,14 +133,15 @@ export default function CartView({
 
       {/* Validation Message */}
       {validationMessage && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-2">
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-2 flex-shrink-0">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           <span className="text-sm text-amber-800">{validationMessage}</span>
         </div>
       )}
 
-      {/* Cart Items */}
-      <div className="space-y-2 max-h-60 overflow-y-auto">
+      {/* Cart Items - Scrollable */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="space-y-2 h-full overflow-y-auto">
         {items.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">Your cart is empty</p>
         ) : (
@@ -213,10 +214,12 @@ export default function CartView({
             );
           })
         )}
+        </div>
       </div>
 
+      {/* Bottom Section - Fixed */}
       {items.length > 0 && (
-        <>
+        <div className="flex-shrink-0 space-y-4">
           <Separator />
           
           {/* Customer Selection */}
@@ -267,7 +270,6 @@ export default function CartView({
 
           {/* Action Buttons */}
           <div className="space-y-2">
-            
             <Button
               onClick={() => setIsPaymentDialogOpen(true)}
               className="w-full"
@@ -280,7 +282,7 @@ export default function CartView({
                'Proceed to Payment'}
             </Button>
           </div>
-        </>
+        </div>
       )}
 
       {/* Dialogs */}

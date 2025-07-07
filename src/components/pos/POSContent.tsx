@@ -77,8 +77,8 @@ export default function POSContent({
   } = useStoreDisplay();
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-col min-h-0 h-full">
+      <div className="flex justify-between items-center mb-4 px-4 sm:px-0">
         <div className="flex items-center gap-2">
           {currentStore && config.contentMode !== "hidden" && (
             <StoreNameDisplay variant="badge" size="sm" showLogo={true} />
@@ -103,14 +103,13 @@ export default function POSContent({
         </div>
       </div>
       
-      <div className="flex flex-col lg:flex-row gap-4 h-full">
-        {/* Product Selection Area */}
-        <div className="flex-1">
-          {/* Shift Manager */}
+      {/* Mobile/Tablet Layout: Stack vertically */}
+      <div className="flex-1 flex flex-col gap-4 overflow-hidden md:hidden">
+        {/* Product Selection Area - Mobile */}
+        <div className="flex-1 min-h-0">
           <ShiftManager />
-          
           <Card className="h-full border-croffle-primary/20">
-            <CardContent className="p-4">
+            <CardContent className="p-4 h-full overflow-hidden">
               <ProductGrid 
                 products={products} 
                 categories={categories} 
@@ -125,10 +124,60 @@ export default function POSContent({
           </Card>
         </div>
         
-        {/* Cart Area */}
-        <div className="w-full lg:w-96">
-          <Card className="border-croffle-primary/20">
-            <CardContent className="p-4">
+        {/* Cart Area - Mobile (Fixed height at bottom) */}
+        <div className="flex-shrink-0 h-80">
+          <Card className="border-croffle-primary/20 h-full">
+            <CardContent className="p-4 h-full">
+              <CartView 
+                items={items} 
+                subtotal={subtotal} 
+                tax={tax} 
+                total={total} 
+                discount={discount} 
+                discountType={discountType} 
+                discountIdNumber={discountIdNumber} 
+                seniorDiscounts={seniorDiscounts}
+                otherDiscount={otherDiscount}
+                removeItem={removeItem} 
+                updateQuantity={updateQuantity} 
+                clearCart={clearCart} 
+                selectedCustomer={selectedCustomer} 
+                setSelectedCustomer={setSelectedCustomer} 
+                handleApplyDiscount={handleApplyDiscount} 
+                handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
+                handlePaymentComplete={handlePaymentComplete} 
+                isShiftActive={!!currentShift} 
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Desktop Layout: Side by side */}
+      <div className="flex-1 flex-row gap-4 overflow-hidden hidden md:flex">
+        {/* Product Selection Area - Desktop */}
+        <div className="flex-1 min-h-0">
+          <ShiftManager />
+          <Card className="h-full border-croffle-primary/20">
+            <CardContent className="p-4 h-full overflow-hidden">
+              <ProductGrid 
+                products={products} 
+                categories={categories} 
+                activeCategory={activeCategory} 
+                setActiveCategory={setActiveCategory} 
+                addItemToCart={addItemToCart} 
+                isShiftActive={!!currentShift} 
+                isLoading={isLoading}
+                storeId={storeId}
+              />
+            </CardContent>
+          </Card>
+        </div>
+        
+        {/* Cart Area - Desktop */}
+        <div className="w-96 flex-shrink-0">
+          <Card className="border-croffle-primary/20 h-full">
+            <CardContent className="p-4 h-full">
               <CartView 
                 items={items} 
                 subtotal={subtotal} 

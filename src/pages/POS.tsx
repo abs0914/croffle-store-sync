@@ -155,10 +155,10 @@ export default function POS() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden">
       {/* Store and Cashier Info Header */}
       {(currentStore || currentShift?.cashier_id) && (
-        <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
           <div className="flex items-center justify-between">
             {currentStore && (
               <div className="flex items-center space-x-3">
@@ -176,7 +176,7 @@ export default function POS() {
       )}
       
       {/* Main POS Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 p-4">
         <POSContent
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}
