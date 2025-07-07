@@ -9,6 +9,12 @@ import { formatCurrency } from "@/utils/format";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import { AddCommissaryItemDialog } from "@/pages/Inventory/components/AddCommissaryItemDialog";
+import { InventoryItemCard } from "@/pages/CommissaryInventory/components/InventoryItemCard";
+import { EditCommissaryItemDialog } from "@/pages/Inventory/components/EditCommissaryItemDialog";
+import { StockAdjustmentDialog } from "@/pages/CommissaryInventory/components/StockAdjustmentDialog";
+import { deleteCommissaryInventoryItem } from "@/services/inventoryManagement/commissaryInventoryService";
+import { CommissaryInventoryItem } from "@/types/inventoryManagement";
+
 interface CommissaryItem {
   id: string;
   name: string;
@@ -32,6 +38,10 @@ export function CommissaryInventoryTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showStockDialog, setShowStockDialog] = useState(false);
+  const [editItem, setEditItem] = useState<CommissaryInventoryItem | null>(null);
+  const [adjustItem, setAdjustItem] = useState<CommissaryInventoryItem | null>(null);
 
   // Check if user has appropriate permissions
   const hasCommissaryAccess = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
@@ -113,6 +123,55 @@ export function CommissaryInventoryTab() {
   const handleAddSuccess = () => {
     loadItems();
     toast.success('Item added successfully');
+  };
+
+  // Transform data to match InventoryItemCard interface
+  const transformToCommissaryInventoryItem = (item: CommissaryItem): CommissaryInventoryItem => ({
+    ...item,
+    uom: item.unit, // Map unit to uom
+    category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+    item_type: 'raw_material' as 'raw_material', // Default type
+    sku: '',
+    barcode: '',
+    expiry_date: '',
+    storage_location: '',
+    is_active: true,
+    created_at: '',
+    updated_at: '',
+    supplier: undefined // Remove incompatible supplier object
+  });
+
+  const handleEdit = (item: CommissaryInventoryItem) => {
+    setEditItem(item);
+    setShowEditDialog(true);
+  };
+
+  const handleStockAdjustment = (item: CommissaryInventoryItem) => {
+    setAdjustItem(item);
+    setShowStockDialog(true);
+  };
+
+  const handleDelete = async (item: CommissaryInventoryItem) => {
+    if (!window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
+      return;
+    }
+
+    const success = await deleteCommissaryInventoryItem(item.id);
+    if (success) {
+      loadItems();
+    }
+  };
+
+  const handleEditSuccess = () => {
+    loadItems();
+    setShowEditDialog(false);
+    setEditItem(null);
+  };
+
+  const handleAdjustSuccess = () => {
+    loadItems();
+    setShowStockDialog(false);
+    setAdjustItem(null);
   };
   
   const filteredItems = items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.category.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -244,47 +303,15 @@ export function CommissaryInventoryTab() {
                   Add First Item
                 </Button>}
             </div> : <div className="space-y-4">
-              {filteredItems.map(item => <div key={item.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{item.name}</h3>
-                        <Badge variant="outline">{item.category.replace('_', ' ')}</Badge>
-                        {item.current_stock <= item.minimum_threshold && <Badge variant="destructive">Low Stock</Badge>}
-                      </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Stock:</span>
-                          <span className="ml-2 font-medium">
-                            {item.current_stock} {item.unit}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Min Threshold:</span>
-                          <span className="ml-2 font-medium">
-                            {item.minimum_threshold} {item.unit}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Unit Cost:</span>
-                          <span className="ml-2 font-medium">{formatCurrency(item.unit_cost)}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Total Value:</span>
-                          <span className="ml-2 font-bold text-green-600">
-                            {formatCurrency(item.current_stock * item.unit_cost)}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {item.supplier && <div className="text-sm">
-                          <span className="text-muted-foreground">Supplier:</span>
-                          <span className="ml-2">{item.supplier.name}</span>
-                        </div>}
-                    </div>
-                  </div>
-                </div>)}
+              {filteredItems.map(item => 
+                <InventoryItemCard
+                  key={item.id}
+                  item={transformToCommissaryInventoryItem(item)}
+                  onEdit={handleEdit}
+                  onStockAdjustment={handleStockAdjustment}
+                  onDelete={handleDelete}
+                />
+              )}
             </div>}
         </CardContent>
       </Card>
@@ -293,6 +320,20 @@ export function CommissaryInventoryTab() {
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onSuccess={handleAddSuccess}
+      />
+      
+      <EditCommissaryItemDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        item={editItem}
+        onSuccess={handleEditSuccess}
+      />
+      
+      <StockAdjustmentDialog
+        open={showStockDialog}
+        onOpenChange={setShowStockDialog}
+        item={adjustItem}
+        onSuccess={handleAdjustSuccess}
       />
     </div>;
 }
