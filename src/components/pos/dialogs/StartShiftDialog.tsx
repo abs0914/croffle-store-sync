@@ -26,6 +26,7 @@ interface DialogState {
   selectedCashierId: string | null;
   showCameraView: boolean;
   isLoading: boolean;
+  startingInventoryCount: number;
 }
 
 export default function StartShiftDialog({
@@ -40,7 +41,8 @@ export default function StartShiftDialog({
     photo: null,
     selectedCashierId: null,
     showCameraView: false,
-    isLoading: false
+    isLoading: false,
+    startingInventoryCount: 0
   });
 
   const handleStateChange = useCallback((state: DialogState) => {
@@ -68,7 +70,8 @@ export default function StartShiftDialog({
       console.log("Starting shift with params:", {
         startingCash: dialogState.startingCash,
         storeId,
-        cashierId: dialogState.selectedCashierId
+        cashierId: dialogState.selectedCashierId,
+        startingInventoryCount: dialogState.startingInventoryCount
       });
       
       await onStartShift(
@@ -88,7 +91,7 @@ export default function StartShiftDialog({
     onOpenChange(false);
   };
 
-  const canSubmit = !!(dialogState.photo && dialogState.startingCash > 0);
+  const canSubmit = !!(dialogState.photo && dialogState.selectedCashierId);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

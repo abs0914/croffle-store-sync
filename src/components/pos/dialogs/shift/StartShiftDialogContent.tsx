@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { fetchCashiers } from "@/services/cashier";
 import { useAuth } from "@/contexts/auth";
@@ -11,6 +12,7 @@ interface DialogState {
   selectedCashierId: string | null;
   showCameraView: boolean;
   isLoading: boolean;
+  startingInventoryCount: number;
 }
 interface StartShiftDialogContentProps {
   isOpen: boolean;
@@ -29,6 +31,7 @@ export default function StartShiftDialogContent({
   const [photo, setPhoto] = useState<string | null>(null);
   const [selectedCashierId, setSelectedCashierId] = useState<string | null>(null);
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
+  const [startingInventoryCount, setStartingInventoryCount] = useState<number>(0);
 
   // Fetch cashiers for the store
   const {
@@ -60,9 +63,10 @@ export default function StartShiftDialogContent({
       photo,
       selectedCashierId,
       showCameraView,
-      isLoading: isLoadingCashiers
+      isLoading: isLoadingCashiers,
+      startingInventoryCount
     });
-  }, [startingCash, photo, selectedCashierId, showCameraView, isLoadingCashiers, onStateChange]);
+  }, [startingCash, photo, selectedCashierId, showCameraView, isLoadingCashiers, startingInventoryCount, onStateChange]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -71,17 +75,69 @@ export default function StartShiftDialogContent({
       setPhoto(null);
       setSelectedCashierId(null);
       setShowCameraView(false);
+      setStartingInventoryCount(0);
     }
   }, [isOpen]);
   return <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto">
-      {/* Simplified Cash Entry */}
+      {/* Starting Cash Entry */}
       <div className="space-y-2">
         <Label htmlFor="startingCash" className="text-base font-medium">
           Starting Cash Amount (₱) *
         </Label>
-        <Input id="startingCash" type="number" min="0" step="0.01" value={startingCash} onChange={e => setStartingCash(parseFloat(e.target.value) || 0)} placeholder="Enter starting cash amount" className="text-lg p-3" autoFocus />
+        <Input 
+          id="startingCash" 
+          type="number" 
+          min="0" 
+          step="0.01" 
+          value={startingCash} 
+          onChange={e => setStartingCash(parseFloat(e.target.value) || 0)} 
+          placeholder="Enter starting cash amount" 
+          className="text-lg p-3" 
+          autoFocus 
+        />
         <p className="text-sm text-muted-foreground">
           Count your cash drawer and enter the total amount
+        </p>
+      </div>
+
+      {/* Cashier Selection */}
+      <div className="space-y-2">
+        <Label className="text-base font-medium">
+          Select Cashier *
+        </Label>
+        <Select value={selectedCashierId || ""} onValueChange={setSelectedCashierId}>
+          <SelectTrigger className="text-lg p-3">
+            <SelectValue placeholder="Choose a cashier" />
+          </SelectTrigger>
+          <SelectContent>
+            {cashiers.map((cashier) => (
+              <SelectItem key={cashier.id} value={cashier.id}>
+                {cashier.first_name} {cashier.last_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-muted-foreground">
+          Select the cashier for this shift
+        </p>
+      </div>
+
+      {/* Starting Inventory Count */}
+      <div className="space-y-2">
+        <Label htmlFor="startingInventoryCount" className="text-base font-medium">
+          Starting Inventory Count
+        </Label>
+        <Input 
+          id="startingInventoryCount" 
+          type="number" 
+          min="0" 
+          value={startingInventoryCount} 
+          onChange={e => setStartingInventoryCount(parseInt(e.target.value) || 0)} 
+          placeholder="Enter total item count" 
+          className="text-lg p-3" 
+        />
+        <p className="text-sm text-muted-foreground">
+          Count total items in your inventory (optional)
         </p>
       </div>
 
@@ -90,19 +146,13 @@ export default function StartShiftDialogContent({
         <Label className="text-base font-medium">
           Cash Drawer Photo *
         </Label>
-        <ShiftPhotoSection photo={photo} setPhoto={setPhoto} showCameraView={showCameraView} setShowCameraView={setShowCameraView} />
+        <ShiftPhotoSection 
+          photo={photo} 
+          setPhoto={setPhoto} 
+          showCameraView={showCameraView} 
+          setShowCameraView={setShowCameraView} 
+        />
         <p className="text-sm text-muted-foreground">Take a selfie to serve as your attendance</p>
       </div>
-
-      {/* Auto-Selected Cashier Info */}
-      {selectedCashierId && <div className="space-y-2">
-          <Label className="text-base font-medium">Selected Cashier</Label>
-          <div className="p-3 bg-muted rounded-md">
-            {(() => {
-          const selected = cashiers.find(c => c.id === selectedCashierId);
-          return selected ? <p className="font-medium">{selected.first_name} {selected.last_name}</p> : <p className="text-muted-foreground">Auto-selected</p>;
-        })()}
-          </div>
-        </div>}
     </div>;
 }
