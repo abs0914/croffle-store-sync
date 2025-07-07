@@ -308,17 +308,27 @@ export default function MultipleSeniorDiscountSelector({
                   </p>
                 </>
               )}
-              {discountMode === 'other' && preview.otherDiscountAmount > 0 && (
+              {discountMode === 'other' && (
                 <p className="text-sm">
                   {otherDiscountType.toUpperCase()} Discount: 
-                  <span className="font-medium text-green-600"> -{formatCurrency(preview.otherDiscountAmount)}</span>
+                  <span className="font-medium text-green-600"> -{formatCurrency(
+                    CartCalculationService.calculateCartTotals([], [], {
+                      type: otherDiscountType,
+                      amount: 0,
+                      idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
+                    }, 1).otherDiscountAmount
+                  )}</span>
                 </p>
               )}
               <p className="text-sm font-medium mt-2 pt-2 border-t">
                 Final Total: {formatCurrency(
                   discountMode === 'senior' 
                     ? subtotal - preview.totalSeniorDiscount
-                    : subtotal - preview.otherDiscountAmount
+                    : subtotal - CartCalculationService.calculateCartTotals([], [], {
+                        type: otherDiscountType,
+                        amount: 0,
+                        idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
+                      }, 1).otherDiscountAmount
                 )}
               </p>
             </div>
