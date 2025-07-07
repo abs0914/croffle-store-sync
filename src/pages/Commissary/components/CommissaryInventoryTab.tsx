@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/utils/format";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
+import { AddCommissaryItemDialog } from "@/pages/Inventory/components/AddCommissaryItemDialog";
 interface CommissaryItem {
   id: string;
   name: string;
@@ -30,6 +31,7 @@ export function CommissaryInventoryTab() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Check if user has appropriate permissions
   const hasCommissaryAccess = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
@@ -107,6 +109,12 @@ export function CommissaryInventoryTab() {
       setLoading(false);
     }
   };
+  
+  const handleAddSuccess = () => {
+    loadItems();
+    toast.success('Item added successfully');
+  };
+  
   const filteredItems = items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.category.toLowerCase().includes(searchTerm.toLowerCase()));
   const lowStockItems = items.filter(item => item.current_stock <= item.minimum_threshold);
 
@@ -198,7 +206,7 @@ export function CommissaryInventoryTab() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Commissary Inventory</CardTitle>
-            <Button>
+            <Button onClick={() => setShowAddDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Item
             </Button>
@@ -231,7 +239,7 @@ export function CommissaryInventoryTab() {
               <p className="text-muted-foreground">
                 {searchTerm ? 'Try adjusting your search terms' : 'No commissary inventory items have been added yet'}
               </p>
-              {!searchTerm && <Button className="mt-4">
+              {!searchTerm && <Button className="mt-4" onClick={() => setShowAddDialog(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add First Item
                 </Button>}
@@ -280,5 +288,11 @@ export function CommissaryInventoryTab() {
             </div>}
         </CardContent>
       </Card>
+      
+      <AddCommissaryItemDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onSuccess={handleAddSuccess}
+      />
     </div>;
 }
