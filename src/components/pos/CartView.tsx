@@ -118,6 +118,12 @@ export default function CartView({
     }
   };
 
+  // Calculate the actual total with discounts applied
+  const totalSeniorDiscount = seniorDiscounts.reduce((sum, senior) => sum + senior.discountAmount, 0);
+  const totalOtherDiscount = otherDiscount?.amount || 0;
+  const totalDiscountAmount = totalSeniorDiscount + totalOtherDiscount + discount;
+  const actualTotal = total - totalDiscountAmount;
+  
   const canCheckout = items.length > 0 && isShiftActive && !isValidating && !validationMessage;
 
   return (
@@ -284,7 +290,7 @@ export default function CartView({
             
             <div className="flex justify-between font-semibold">
               <span>Total</span>
-              <span>₱{total.toFixed(2)}</span>
+              <span>₱{actualTotal.toFixed(2)}</span>
             </div>
           </div>
 
@@ -317,7 +323,7 @@ export default function CartView({
       <PaymentDialog
         isOpen={isPaymentDialogOpen}
         onClose={() => setIsPaymentDialogOpen(false)}
-        total={total}
+        total={actualTotal}
         onPaymentComplete={handlePaymentCompleteWithDeduction}
       />
 

@@ -31,7 +31,13 @@ interface MobileCartDrawerProps {
 }
 
 export default function MobileCartDrawer(props: MobileCartDrawerProps) {
-  const { items, total, open, onOpenChange } = props;
+  const { items, seniorDiscounts, otherDiscount, discount, total, open, onOpenChange } = props;
+  
+  // Calculate the actual total with discounts applied
+  const totalSeniorDiscount = seniorDiscounts.reduce((sum, senior) => sum + senior.discountAmount, 0);
+  const totalOtherDiscount = otherDiscount?.amount || 0;
+  const totalDiscountAmount = totalSeniorDiscount + totalOtherDiscount + discount;
+  const actualTotal = total - totalDiscountAmount;
   
   return (
     <>
@@ -63,7 +69,7 @@ export default function MobileCartDrawer(props: MobileCartDrawerProps) {
             <SheetHeader className="pb-4">
               <SheetTitle className="flex items-center justify-between">
                 <span>Cart ({items.length} items)</span>
-                <span className="text-lg font-bold">₱{total.toFixed(2)}</span>
+                <span className="text-lg font-bold">₱{actualTotal.toFixed(2)}</span>
               </SheetTitle>
             </SheetHeader>
             <div className="h-full overflow-hidden">
@@ -82,7 +88,7 @@ export default function MobileCartDrawer(props: MobileCartDrawerProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">{items.length} items</p>
-              <p className="font-semibold">₱{total.toFixed(2)}</p>
+              <p className="font-semibold">₱{actualTotal.toFixed(2)}</p>
             </div>
             <div className="text-xs text-muted-foreground flex items-center gap-1">
               Tap to view cart
