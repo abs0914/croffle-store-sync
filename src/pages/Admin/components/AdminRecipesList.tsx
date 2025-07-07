@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Package, AlertTriangle, Info, CheckCircle, XCircle, Edit } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { cleanupDuplicateRecipes } from '@/services/recipeManagement/recipeDeploymentService';
-import { RecipeEditDialog } from '@/components/Admin/components/RecipeEditDialog';
+import { RecipeDeploymentEditDialog } from '@/components/Admin/components/RecipeDeploymentEditDialog';
 
 interface AdminRecipesListProps {
   recipes: any[];
@@ -279,7 +279,7 @@ export function AdminRecipesList({
                       onClick={() => handleEditRecipe(recipe)}
                     >
                       <Edit className="h-3 w-3" />
-                      Edit
+                      Edit Deployment
                     </Button>
                   </div>
                 </div>
@@ -302,7 +302,7 @@ export function AdminRecipesList({
         </div>
       )}
 
-      <RecipeEditDialog
+      <RecipeDeploymentEditDialog
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
         recipe={editingRecipe}
