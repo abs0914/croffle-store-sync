@@ -26,7 +26,7 @@ interface DialogState {
   selectedCashierId: string | null;
   showCameraView: boolean;
   isLoading: boolean;
-  startingInventoryCount: number;
+  inventoryCounts: Record<string, number>;
 }
 
 export default function StartShiftDialog({
@@ -42,7 +42,7 @@ export default function StartShiftDialog({
     selectedCashierId: null,
     showCameraView: false,
     isLoading: false,
-    startingInventoryCount: 0
+    inventoryCounts: {}
   });
 
   const handleStateChange = useCallback((state: DialogState) => {
@@ -71,7 +71,8 @@ export default function StartShiftDialog({
         startingCash: dialogState.startingCash,
         storeId,
         cashierId: dialogState.selectedCashierId,
-        startingInventoryCount: dialogState.startingInventoryCount
+        inventoryItemsCount: Object.keys(dialogState.inventoryCounts).length,
+        totalInventoryCount: Object.values(dialogState.inventoryCounts).reduce((sum, count) => sum + count, 0)
       });
       
       await onStartShift(
@@ -91,7 +92,7 @@ export default function StartShiftDialog({
     onOpenChange(false);
   };
 
-  const canSubmit = !!(dialogState.photo && dialogState.selectedCashierId);
+  const canSubmit = !!(dialogState.photo && dialogState.selectedCashierId && Object.keys(dialogState.inventoryCounts).length > 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
