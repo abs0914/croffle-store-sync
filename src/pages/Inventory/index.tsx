@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Routes, Route } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -12,8 +12,19 @@ import { SearchFilters } from "./components/SearchFilters";
 import { useProductData } from "./hooks/useProductData";
 import { deleteProduct } from "@/services/product";
 import { Product } from "@/types";
+import ProductForm from "./ProductForm";
 
 export default function Inventory() {
+  return (
+    <Routes>
+      <Route path="/" element={<InventoryMain />} />
+      <Route path="/product/new" element={<ProductForm />} />
+      <Route path="/product/:id" element={<ProductForm />} />
+    </Routes>
+  );
+}
+
+function InventoryMain() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { 
@@ -43,6 +54,10 @@ export default function Inventory() {
     }
   });
 
+  const handleAddItem = () => {
+    navigate("/inventory/product/new");
+  };
+
   const handleEditProduct = (product: Product) => {
     navigate(`/inventory/product/${product.id}`);
   };
@@ -65,6 +80,11 @@ export default function Inventory() {
     navigate(`/inventory/product/${product.id}`);
   };
 
+  const handleStockUpdated = () => {
+    // Refresh the products data after stock update
+    queryClient.invalidateQueries({ queryKey: ['products', currentStore?.id] });
+  };
+
   if (!currentStore) {
     return (
       <div className="container mx-auto p-4">
@@ -79,6 +99,8 @@ export default function Inventory() {
       <InventoryHeader
         title="Store Inventory Management"
         description="Manage your store's product catalog and stock levels for customer orders and sales."
+        onAddItem={handleAddItem}
+        showAddButton={true}
       />
 
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -118,6 +140,7 @@ export default function Inventory() {
             onView={handleViewProduct}
             onDelete={handleDeleteProduct}
             onStockAdjust={handleStockAdjustment}
+            onStockUpdated={handleStockUpdated}
           />
         </CardContent>
       </Card>
