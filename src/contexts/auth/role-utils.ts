@@ -134,6 +134,7 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
     cashier: [
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
+      ROUTE_PATHS.PRODUCTS,
       ROUTE_PATHS.CUSTOMERS,
       ROUTE_PATHS.EXPENSES
     ]
