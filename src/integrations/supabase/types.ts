@@ -2632,9 +2632,15 @@ export type Database = {
           cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string | null
+          group_selection_type:
+            | Database["public"]["Enums"]["ingredient_group_selection_type"]
+            | null
           id: string
+          ingredient_group_id: string | null
+          ingredient_group_name: string | null
           ingredient_name: string
           ingredient_type: string | null
+          is_optional: boolean | null
           location_type: string | null
           purchase_unit: string | null
           quantity: number
@@ -2649,9 +2655,15 @@ export type Database = {
           cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
+          group_selection_type?:
+            | Database["public"]["Enums"]["ingredient_group_selection_type"]
+            | null
           id?: string
+          ingredient_group_id?: string | null
+          ingredient_group_name?: string | null
           ingredient_name: string
           ingredient_type?: string | null
+          is_optional?: boolean | null
           location_type?: string | null
           purchase_unit?: string | null
           quantity: number
@@ -2666,9 +2678,15 @@ export type Database = {
           cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
+          group_selection_type?:
+            | Database["public"]["Enums"]["ingredient_group_selection_type"]
+            | null
           id?: string
+          ingredient_group_id?: string | null
+          ingredient_group_name?: string | null
           ingredient_name?: string
           ingredient_type?: string | null
+          is_optional?: boolean | null
           location_type?: string | null
           purchase_unit?: string | null
           quantity?: number
@@ -3819,6 +3837,10 @@ export type Database = {
         | "partial_delivery"
         | "delivery_complete"
       grn_status: "pending" | "verified" | "discrepancy_noted"
+      ingredient_group_selection_type:
+        | "required_one"
+        | "optional_one"
+        | "multiple"
       inventory_category: "ingredients" | "packaging" | "supplies"
       inventory_unit:
         | "kg"
@@ -3969,6 +3991,11 @@ export const Constants = {
         "delivery_complete",
       ],
       grn_status: ["pending", "verified", "discrepancy_noted"],
+      ingredient_group_selection_type: [
+        "required_one",
+        "optional_one",
+        "multiple",
+      ],
       inventory_category: ["ingredients", "packaging", "supplies"],
       inventory_unit: ["kg", "g", "pieces", "liters", "ml", "boxes", "packs"],
       order_status: [
