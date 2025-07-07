@@ -34,7 +34,11 @@ export default function MultipleSeniorDiscountSelector({
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>(currentSeniorDiscounts);
   const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo'>('pwd');
   const [otherIdNumber, setOtherIdNumber] = useState(currentOtherDiscount?.idNumber || '');
-  const [totalDiners, setTotalDiners] = useState<number>(currentSeniorDiscounts.length || 1);
+  const [totalDiners, setTotalDiners] = useState<number>(
+    currentSeniorDiscounts.length > 0 
+      ? Math.max(currentSeniorDiscounts.length, 2) // Default to at least 2 diners if seniors exist
+      : 1
+  );
   
   // BIR mandated discounts
   const SENIOR_DISCOUNT_RATE = 0.20; // 20% for senior citizens

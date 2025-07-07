@@ -237,7 +237,35 @@ export default function CartView({
               <span>₱{subtotal.toFixed(2)}</span>
             </div>
             
-            {discount > 0 && (
+            {/* Multiple Senior Citizens Discount Display */}
+            {seniorDiscounts.length > 0 && (
+              <div className="space-y-1">
+                {seniorDiscounts.map((senior, index) => (
+                  <div key={senior.id} className="flex justify-between text-sm text-green-600">
+                    <span>Senior {index + 1} ({senior.idNumber})</span>
+                    <span>-₱{senior.discountAmount.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-sm text-green-600 font-medium border-t border-green-200 pt-1">
+                  <span>Total Senior Discount</span>
+                  <span>-₱{seniorDiscounts.reduce((sum, s) => sum + s.discountAmount, 0).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Other Discount Display */}
+            {otherDiscount && otherDiscount.amount > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>
+                  {otherDiscount.type.toUpperCase()} Discount
+                  {otherDiscount.idNumber && ` - ${otherDiscount.idNumber}`}
+                </span>
+                <span>-₱{otherDiscount.amount.toFixed(2)}</span>
+              </div>
+            )}
+            
+            {/* Legacy Single Discount Display (fallback) */}
+            {discount > 0 && seniorDiscounts.length === 0 && !otherDiscount && (
               <div className="flex justify-between text-sm text-green-600">
                 <span>
                   Discount {discountType && `(${discountType.toUpperCase()})`}
