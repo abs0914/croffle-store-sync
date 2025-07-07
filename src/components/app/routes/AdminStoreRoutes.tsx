@@ -8,6 +8,8 @@ import AdminStoreQR from "@/pages/Admin/components/AdminStoreQR";
 import AdminStoreSettings from "@/pages/Admin/components/AdminStoreSettings";
 
 export function AdminStoreRoutes() {
+  console.log('🔵 AdminStoreRoutes component loading...');
+  
   return (
     <>
       {/* Admin Store Management Routes */}

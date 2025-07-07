@@ -14,6 +14,7 @@ import CommissaryManagement from '@/pages/Commissary/CommissaryManagement';
 import ProductionManagement from '@/pages/ProductionManagement';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
+import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
 
 export const AdminAppRoutes = () => {
   console.log('🔵 AdminAppRoutes component loading...');
@@ -32,17 +33,6 @@ export const AdminAppRoutes = () => {
         }
       />
 
-      {/* Admin Stores Management */}
-      <Route
-        path="/admin/stores"
-        element={
-          <AdminProtectedRoute>
-            <AdminLayout>
-              <AdminStores />
-            </AdminLayout>
-          </AdminProtectedRoute>
-        }
-      />
 
       {/* Admin Recipe Management - Admin Only */}
       <Route
@@ -131,6 +121,7 @@ export const AdminAppRoutes = () => {
       {/* Modular Admin Routes */}
       {AdminInventoryRoutes()}
       {AdminUserRoutes()}
+      {AdminStoreRoutes()}
     </>
   );
 };
