@@ -5,6 +5,8 @@ import { toast } from "sonner";
 
 export const fetchProducts = async (storeId: string): Promise<Product[]> => {
   try {
+    console.log("fetchProducts: Starting fetch for store:", storeId);
+    
     const { data, error } = await supabase
       .from("products")
       .select(`
@@ -15,14 +17,23 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       .order("name");
     
     if (error) {
-      throw new Error(error.message);
+      console.error("fetchProducts: Supabase error:", error);
+      throw new Error(`Database error: ${error.message}`);
     }
     
-    // Log raw data for debugging
-    console.log("Raw product data:", data?.[0]);
+    console.log("fetchProducts: Raw data received:", {
+      count: data?.length || 0,
+      sample: data?.[0],
+      storeId
+    });
+    
+    if (!data || data.length === 0) {
+      console.warn("fetchProducts: No products found for store:", storeId);
+      return [];
+    }
     
     // Map database fields to our TypeScript interface
-    return data?.map(item => ({
+    const mappedProducts = data.map(item => ({
       id: item.id,
       name: item.name,
       description: item.description || undefined,
@@ -51,10 +62,30 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       cost: item.cost || undefined,
       stock_quantity: item.stock_quantity,
       stockQuantity: item.stock_quantity
-    })) || [];
+    }));
+    
+    console.log("fetchProducts: Mapped products:", {
+      count: mappedProducts.length,
+      sampleProduct: mappedProducts[0]
+    });
+    
+    return mappedProducts;
   } catch (error) {
-    console.error("Error fetching products:", error);
-    toast.error("Failed to load products");
+    console.error("fetchProducts: Error occurred:", error);
+    
+    // More specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('JWT')) {
+        toast.error("Authentication error. Please log in again.");
+      } else if (error.message.includes('permission')) {
+        toast.error("Permission denied. Check your store access.");
+      } else {
+        toast.error(`Failed to load products: ${error.message}`);
+      }
+    } else {
+      toast.error("Failed to load products");
+    }
+    
     return [];
   }
 };

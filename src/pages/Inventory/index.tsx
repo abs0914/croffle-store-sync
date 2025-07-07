@@ -3,12 +3,14 @@ import { useState } from "react";
 import { useNavigate, Routes, Route } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Package } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import InventoryHeader from "./components/InventoryHeader";
 import { ProductsTable } from "./components/ProductsTable";
 import { SearchFilters } from "./components/SearchFilters";
+import { InventoryDebugPanel } from "./components/InventoryDebugPanel";
 import { useProductData } from "./hooks/useProductData";
 import { deleteProduct } from "@/services/product/productDelete";
 import { Product } from "@/types";
@@ -42,13 +44,26 @@ function InventoryMain() {
     error
   } = useProductData();
 
-  console.log("Inventory Debug:", { 
-    currentStore: currentStore?.id, 
-    totalProducts: products?.length, 
-    filteredProducts: filteredProducts?.length, 
-    isLoading,
-    error 
+  console.log("=== INVENTORY DEBUG ===");
+  console.log("Current Store:", {
+    id: currentStore?.id,
+    name: currentStore?.name,
+    exists: !!currentStore
   });
+  console.log("Data State:", {
+    isLoading,
+    productsCount: products?.length || 0,
+    filteredCount: filteredProducts?.length || 0,
+    categoriesCount: categories?.length || 0,
+    hasError: !!error,
+    errorMessage: error?.message
+  });
+  console.log("Filter State:", {
+    searchTerm,
+    activeCategory,
+    activeTab
+  });
+  console.log("======================");
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
@@ -97,8 +112,41 @@ function InventoryMain() {
   if (!currentStore) {
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Store Inventory Management</h1>
-        <p>Please select a store first</p>
+        <InventoryHeader
+          title="Store Inventory Management"
+          description="Manage your store's product catalog and stock levels for customer orders and sales."
+          onAddItem={handleAddItem}
+          showAddButton={false}
+        />
+        <div className="mt-8 text-center p-12 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/25">
+          <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+          <h3 className="text-xl font-semibold mb-2">No Store Selected</h3>
+          <p className="text-muted-foreground mb-4">
+            Please select a store from the sidebar to view and manage its inventory.
+          </p>
+          <div className="text-sm text-muted-foreground">
+            <p>• Use the store selector in the sidebar</p>
+            <p>• Make sure you have access to at least one store</p>
+            <p>• Contact your administrator if you need store access</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <InventoryHeader
+          title="Store Inventory Management"
+          description="Manage your store's product catalog and stock levels for customer orders and sales."
+          onAddItem={handleAddItem}
+          showAddButton={false}
+        />
+        <div className="text-center p-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading inventory...</p>
+        </div>
       </div>
     );
   }
@@ -112,6 +160,8 @@ function InventoryMain() {
         showAddButton={true}
       />
 
+      <InventoryDebugPanel />
+
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <h3 className="font-semibold text-blue-800 mb-2">Store-Level Products</h3>
         <p className="text-sm text-blue-700">
@@ -120,9 +170,18 @@ function InventoryMain() {
       </div>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h3 className="font-semibold text-red-800 mb-2">Error Loading Inventory</h3>
-          <p className="text-sm text-red-700">{error.message}</p>
+        <div className="mb-4 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
+          <h3 className="font-semibold text-destructive mb-2">Error Loading Inventory</h3>
+          <p className="text-sm text-destructive/80 mb-3">{error.message}</p>
+          <div className="text-xs text-muted-foreground">
+            <p>Common solutions:</p>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              <li>Check your internet connection</li>
+              <li>Verify you have permission to access this store</li>
+              <li>Try refreshing the page</li>
+              <li>Contact support if the issue persists</li>
+            </ul>
+          </div>
         </div>
       )}
 

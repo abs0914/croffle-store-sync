@@ -118,8 +118,22 @@ export const ProductsTable = ({
 
   if (products.length === 0) {
     return (
-      <div className="text-center p-8 text-muted-foreground">
-        <p>No products found. Add your first product to get started.</p>
+      <div className="text-center p-12 text-muted-foreground">
+        <div className="mb-4">
+          <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">No products found</h3>
+        <p className="mb-4">
+          {searchTerm ? 
+            `No products match your search "${searchTerm}". Try adjusting your search terms.` :
+            "Add your first product to get started with inventory management."
+          }
+        </p>
+        <div className="text-sm text-muted-foreground">
+          <p>• Make sure you have products added to this store</p>
+          <p>• Check if the correct store is selected</p>
+          <p>• Verify you have permission to view this store's inventory</p>
+        </div>
       </div>
     );
   }
