@@ -3800,6 +3800,17 @@ export type Database = {
         }
         Returns: string
       }
+      sync_auth_user_to_app_users: {
+        Args: {
+          user_email: string
+          first_name: string
+          last_name: string
+          user_role?: Database["public"]["Enums"]["app_role"]
+          store_ids?: string[]
+          contact_number?: string
+        }
+        Returns: string
+      }
       transfer_commissary_to_store: {
         Args: {
           p_commissary_item_id: string
