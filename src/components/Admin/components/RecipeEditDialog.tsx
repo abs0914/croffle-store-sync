@@ -361,11 +361,13 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
                           <SelectValue placeholder="Select item" />
                         </SelectTrigger>
                         <SelectContent>
-                          {inventoryStock.map(stock => (
-                            <SelectItem key={stock.id} value={stock.id}>
-                              {stock.item} ({stock.unit}) - ₱{stock.cost}
-                            </SelectItem>
-                          ))}
+                          {inventoryStock
+                            .filter(stock => stock.id && stock.id.trim() !== '')
+                            .map(stock => (
+                              <SelectItem key={stock.id} value={stock.id}>
+                                {stock.item} ({stock.unit}) - ₱{stock.cost}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>

@@ -100,11 +100,13 @@ export function RecipeIngredientsForm({ ingredients, onChange, storeId }: Recipe
                   <SelectValue placeholder="Select item" />
                 </SelectTrigger>
                 <SelectContent>
-                  {inventoryStock.map((stock) => (
-                    <SelectItem key={stock.id} value={stock.id}>
-                      {stock.item} ({stock.unit})
-                    </SelectItem>
-                  ))}
+                  {inventoryStock
+                    .filter(stock => stock.id && stock.id.trim() !== '')
+                    .map((stock) => (
+                      <SelectItem key={stock.id} value={stock.id}>
+                        {stock.item} ({stock.unit})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
