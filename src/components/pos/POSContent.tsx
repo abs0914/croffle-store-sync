@@ -14,6 +14,9 @@ import { PrinterStatusIndicator } from "@/components/printer/PrinterStatusIndica
 import { ThermalPrinterSettings } from "@/components/printer/ThermalPrinterSettings";
 import { Settings } from "lucide-react";
 import { SeniorDiscount } from "@/hooks/useTransactionHandler";
+import MobileCartDrawer from "./MobileCartDrawer";
+import CompactShiftManager from "./CompactShiftManager";
+import { useState } from "react";
 
 interface POSContentProps {
   activeCategory: string;
@@ -75,9 +78,12 @@ export default function POSContent({
   const {
     config
   } = useStoreDisplay();
+  
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
 
   return (
     <div className="flex flex-col min-h-0 h-full">
+      {/* Compact Header */}
       <div className="flex justify-between items-center mb-4 px-4 sm:px-0">
         <div className="flex items-center gap-2">
           {currentStore && config.contentMode !== "hidden" && (
@@ -97,18 +103,64 @@ export default function POSContent({
           <ThermalPrinterSettings>
             <Button variant="outline" size="sm" className="flex items-center gap-1">
               <Settings className="h-4 w-4" />
-              Printer
+              <span className="hidden sm:inline">Printer</span>
             </Button>
           </ThermalPrinterSettings>
         </div>
       </div>
+
+      {/* Collapsible Shift Manager */}
+      <div className="mb-4">
+        <CompactShiftManager />
+      </div>
       
-      {/* Mobile/Tablet Layout: Stack vertically */}
-      <div className="flex-1 flex flex-col gap-4 overflow-hidden md:hidden">
-        {/* Product Selection Area - Mobile */}
-        <div className="flex-1 min-h-0">
-          <ShiftManager />
-          <Card className="h-full border-croffle-primary/20">
+      {/* Mobile Layout: Full-screen products with sliding cart */}
+      <div className="flex-1 overflow-hidden tablet:hidden pb-20">
+        <Card className="h-full border-primary/20">
+          <CardContent className="p-2 sm:p-4 h-full flex flex-col overflow-hidden">
+            <ProductGrid
+              products={products} 
+              categories={categories} 
+              activeCategory={activeCategory} 
+              setActiveCategory={setActiveCategory} 
+              addItemToCart={addItemToCart} 
+              isShiftActive={!!currentShift} 
+              isLoading={isLoading}
+              storeId={storeId}
+            />
+          </CardContent>
+        </Card>
+        
+        {/* Mobile Cart Drawer */}
+        <MobileCartDrawer
+          items={items}
+          subtotal={subtotal}
+          tax={tax}
+          total={total}
+          discount={discount}
+          discountType={discountType}
+          discountIdNumber={discountIdNumber}
+          seniorDiscounts={seniorDiscounts}
+          otherDiscount={otherDiscount}
+          removeItem={removeItem}
+          updateQuantity={updateQuantity}
+          clearCart={clearCart}
+          selectedCustomer={selectedCustomer}
+          setSelectedCustomer={setSelectedCustomer}
+          handleApplyDiscount={handleApplyDiscount}
+          handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
+          handlePaymentComplete={handlePaymentComplete}
+          isShiftActive={!!currentShift}
+          open={isMobileCartOpen}
+          onOpenChange={setIsMobileCartOpen}
+        />
+      </div>
+
+      {/* Tablet Layout: 60/40 Split */}
+      <div className="flex-1 flex-row gap-4 overflow-hidden hidden tablet:flex desktop:hidden">
+        {/* Product Selection Area - 60% */}
+        <div className="flex-[3] min-h-0">
+          <Card className="h-full border-primary/20">
             <CardContent className="p-4 h-full flex flex-col overflow-hidden">
               <ProductGrid
                 products={products} 
@@ -124,9 +176,9 @@ export default function POSContent({
           </Card>
         </div>
         
-        {/* Cart Area - Mobile (Fixed height at bottom) */}
-        <div className="flex-shrink-0 h-80">
-          <Card className="border-croffle-primary/20 h-full">
+        {/* Cart Area - 40% */}
+        <div className="flex-[2] flex-shrink-0">
+          <Card className="border-primary/20 h-full">
             <CardContent className="p-4 h-full">
               <CartView 
                 items={items} 
@@ -153,12 +205,11 @@ export default function POSContent({
         </div>
       </div>
 
-      {/* Desktop Layout: Side by side */}
-      <div className="flex-1 flex-row gap-4 overflow-hidden hidden md:flex">
+      {/* Desktop Layout: Traditional side by side */}
+      <div className="flex-1 flex-row gap-4 overflow-hidden hidden desktop:flex">
         {/* Product Selection Area - Desktop */}
         <div className="flex-1 min-h-0">
-          <ShiftManager />
-          <Card className="h-full border-croffle-primary/20">
+          <Card className="h-full border-primary/20">
             <CardContent className="p-4 h-full flex flex-col overflow-hidden">
               <ProductGrid
                 products={products} 
@@ -176,7 +227,7 @@ export default function POSContent({
         
         {/* Cart Area - Desktop */}
         <div className="w-96 flex-shrink-0">
-          <Card className="border-croffle-primary/20 h-full">
+          <Card className="border-primary/20 h-full">
             <CardContent className="p-4 h-full">
               <CartView 
                 items={items} 
