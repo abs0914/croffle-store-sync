@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchCashiers } from "@/services/cashier";
 import { useAuth } from "@/contexts/auth";
 import ShiftPhotoSection from "./ShiftPhotoSection";
-
 interface DialogState {
   startingCash: number;
   photo: string | null;
@@ -14,26 +12,29 @@ interface DialogState {
   showCameraView: boolean;
   isLoading: boolean;
 }
-
 interface StartShiftDialogContentProps {
   isOpen: boolean;
   storeId: string | null;
   onStateChange: (state: DialogState) => void;
 }
-
 export default function StartShiftDialogContent({
   isOpen,
   storeId,
   onStateChange
 }: StartShiftDialogContentProps) {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [startingCash, setStartingCash] = useState<number>(0);
   const [photo, setPhoto] = useState<string | null>(null);
   const [selectedCashierId, setSelectedCashierId] = useState<string | null>(null);
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
 
   // Fetch cashiers for the store
-  const { data: cashiers = [], isLoading: isLoadingCashiers } = useQuery({
+  const {
+    data: cashiers = [],
+    isLoading: isLoadingCashiers
+  } = useQuery({
     queryKey: ["cashiers", storeId],
     queryFn: () => storeId ? fetchCashiers(storeId) : Promise.resolve([]),
     enabled: !!(isOpen && storeId)
@@ -72,25 +73,13 @@ export default function StartShiftDialogContent({
       setShowCameraView(false);
     }
   }, [isOpen]);
-
-  return (
-    <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto">
+  return <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto">
       {/* Simplified Cash Entry */}
       <div className="space-y-2">
         <Label htmlFor="startingCash" className="text-base font-medium">
           Starting Cash Amount (₱) *
         </Label>
-        <Input
-          id="startingCash"
-          type="number"
-          min="0"
-          step="0.01"
-          value={startingCash}
-          onChange={(e) => setStartingCash(parseFloat(e.target.value) || 0)}
-          placeholder="Enter starting cash amount"
-          className="text-lg p-3"
-          autoFocus
-        />
+        <Input id="startingCash" type="number" min="0" step="0.01" value={startingCash} onChange={e => setStartingCash(parseFloat(e.target.value) || 0)} placeholder="Enter starting cash amount" className="text-lg p-3" autoFocus />
         <p className="text-sm text-muted-foreground">
           Count your cash drawer and enter the total amount
         </p>
@@ -101,33 +90,19 @@ export default function StartShiftDialogContent({
         <Label className="text-base font-medium">
           Cash Drawer Photo *
         </Label>
-        <ShiftPhotoSection 
-          photo={photo}
-          setPhoto={setPhoto}
-          showCameraView={showCameraView}
-          setShowCameraView={setShowCameraView}
-        />
-        <p className="text-sm text-muted-foreground">
-          Take a photo of your cash drawer for audit purposes
-        </p>
+        <ShiftPhotoSection photo={photo} setPhoto={setPhoto} showCameraView={showCameraView} setShowCameraView={setShowCameraView} />
+        <p className="text-sm text-muted-foreground">Take a selfie to serve as your attendance</p>
       </div>
 
       {/* Auto-Selected Cashier Info */}
-      {selectedCashierId && (
-        <div className="space-y-2">
+      {selectedCashierId && <div className="space-y-2">
           <Label className="text-base font-medium">Selected Cashier</Label>
           <div className="p-3 bg-muted rounded-md">
             {(() => {
-              const selected = cashiers.find(c => c.id === selectedCashierId);
-              return selected ? (
-                <p className="font-medium">{selected.first_name} {selected.last_name}</p>
-              ) : (
-                <p className="text-muted-foreground">Auto-selected</p>
-              );
-            })()}
+          const selected = cashiers.find(c => c.id === selectedCashierId);
+          return selected ? <p className="font-medium">{selected.first_name} {selected.last_name}</p> : <p className="text-muted-foreground">Auto-selected</p>;
+        })()}
           </div>
-        </div>
-      )}
-    </div>
-  );
+        </div>}
+    </div>;
 }
