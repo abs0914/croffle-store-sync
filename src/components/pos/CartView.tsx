@@ -14,7 +14,7 @@ import { Trash2, Plus, Minus, AlertTriangle } from 'lucide-react';
 import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
 import { useStore } from '@/contexts/StoreContext';
 import { toast } from 'sonner';
-import { SeniorDiscount } from '@/hooks/useTransactionHandler';
+import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
 
 interface CartViewProps {
   items: CartItem[];
@@ -323,6 +323,7 @@ export default function CartView({
             onApplyDiscounts={handleApplyMultipleDiscounts}
             currentSeniorDiscounts={seniorDiscounts}
             currentOtherDiscount={otherDiscount}
+            currentTotalDiners={3}
           />
 
           {/* Action Buttons */}

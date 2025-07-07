@@ -8,26 +8,22 @@ import { Badge } from "@/components/ui/badge";
 import { BadgePercent, Plus, X, Users } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 import { Card, CardContent } from "@/components/ui/card";
-
-interface SeniorDiscount {
-  id: string;
-  idNumber: string;
-  name: string;
-  discountAmount: number;
-}
+import { CartCalculationService, SeniorDiscount, OtherDiscount } from "@/services/cart/CartCalculationService";
 
 interface MultipleSeniorDiscountSelectorProps {
   subtotal: number;
-  onApplyDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }) => void;
+  onApplyDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: OtherDiscount | null, totalDiners?: number) => void;
   currentSeniorDiscounts: SeniorDiscount[];
-  currentOtherDiscount?: { type: string, amount: number, idNumber?: string };
+  currentOtherDiscount?: OtherDiscount | null;
+  currentTotalDiners: number;
 }
 
 export default function MultipleSeniorDiscountSelector({ 
   subtotal, 
   onApplyDiscounts, 
   currentSeniorDiscounts,
-  currentOtherDiscount
+  currentOtherDiscount,
+  currentTotalDiners
 }: MultipleSeniorDiscountSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [discountMode, setDiscountMode] = useState<'senior' | 'other'>('senior');
@@ -35,9 +31,7 @@ export default function MultipleSeniorDiscountSelector({
   const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo'>('pwd');
   const [otherIdNumber, setOtherIdNumber] = useState(currentOtherDiscount?.idNumber || '');
   const [totalDiners, setTotalDiners] = useState<number>(
-    currentSeniorDiscounts.length > 0 
-      ? Math.max(currentSeniorDiscounts.length, 2) // Default to at least 2 diners if seniors exist
-      : 1
+    currentTotalDiners || Math.max(currentSeniorDiscounts.length, 1)
   );
   
   // BIR mandated discounts
@@ -66,82 +60,52 @@ export default function MultipleSeniorDiscountSelector({
     ));
   };
 
-  const calculateSeniorDiscountAmount = (numberOfSeniors: number) => {
-    if (numberOfSeniors === 0 || totalDiners === 0) return 0;
-    
-    // BIR-compliant calculation for multiple senior citizens
-    // 1. Per-person gross share = Subtotal ÷ Total Diners
-    const perPersonGrossShare = subtotal / totalDiners;
-    
-    // 2. Per-senior VAT-exempt sale = Per-person share ÷ 1.12
-    const perSeniorVatExemptSale = perPersonGrossShare / 1.12;
-    
-    // 3. Per-senior discount = VAT-exempt sale × 0.20
-    const perSeniorDiscountAmount = perSeniorVatExemptSale * SENIOR_DISCOUNT_RATE;
-    
-    // 4. Total discount for all seniors
-    return perSeniorDiscountAmount * numberOfSeniors;
-  };
-
-  const calculateBirCompliantTotal = (numberOfSeniors: number) => {
-    if (numberOfSeniors === 0 || totalDiners === 0) return subtotal;
-    
-    const perPersonGrossShare = subtotal / totalDiners;
-    const perSeniorVatExemptSale = perPersonGrossShare / 1.12;
-    const perSeniorDiscountAmount = perSeniorVatExemptSale * SENIOR_DISCOUNT_RATE;
-    const perSeniorPays = perSeniorVatExemptSale - perSeniorDiscountAmount;
-    
-    const numberOfNonSeniors = totalDiners - numberOfSeniors;
-    
-    // Total due = (seniors × senior pays) + (non-seniors × gross share)
-    return (numberOfSeniors * perSeniorPays) + (numberOfNonSeniors * perPersonGrossShare);
-  };
-
-  const calculateOtherDiscount = (type: string): number => {
-    switch(type) {
-      case 'pwd':
-        return subtotal * PWD_DISCOUNT_RATE;
-      case 'employee':
-        return subtotal * EMPLOYEE_DISCOUNT_RATE;
-      case 'loyalty':
-        return subtotal * LOYALTY_DISCOUNT_RATE;
-      case 'promo':
-        return 0; // Custom amount will be entered
-      default:
-        return 0;
+  // Use the calculation service
+  const getDiscountPreview = () => {
+    if (discountMode === 'senior') {
+      const validSeniors = seniorDiscounts.filter(d => d.idNumber.trim() !== '').length;
+      return CartCalculationService.calculateSeniorDiscountPreview(subtotal, validSeniors, totalDiners);
+    } else {
+      const otherDiscountObj: OtherDiscount = {
+        type: otherDiscountType,
+        amount: 0,
+        idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
+      };
+      const calculations = CartCalculationService.calculateCartTotals([], [], otherDiscountObj, 1);
+      return {
+        perPersonGrossShare: 0,
+        perSeniorVATExemptSale: 0,
+        perSeniorDiscountAmount: 0,
+        totalSeniorDiscount: 0,
+        perSeniorPays: 0,
+        otherDiscountAmount: calculations.otherDiscountAmount
+      };
     }
   };
 
   const handleApplyDiscounts = () => {
     let finalSeniorDiscounts: SeniorDiscount[] = [];
-    let finalOtherDiscount;
+    let finalOtherDiscount: OtherDiscount | null = null;
 
     if (discountMode === 'senior' && seniorDiscounts.length > 0) {
-      // Validate all senior discounts have ID numbers
       const validSeniorDiscounts = seniorDiscounts.filter(d => d.idNumber.trim() !== '');
       if (validSeniorDiscounts.length > 0) {
-        const totalSeniorDiscount = calculateSeniorDiscountAmount(validSeniorDiscounts.length);
-        const perSeniorAmount = totalSeniorDiscount / validSeniorDiscounts.length;
-        
-        finalSeniorDiscounts = validSeniorDiscounts.map(d => ({
-          ...d,
-          discountAmount: perSeniorAmount
-        }));
+        const preview = CartCalculationService.calculateSeniorDiscountPreview(subtotal, validSeniorDiscounts.length, totalDiners);
+        finalSeniorDiscounts = CartCalculationService.distributeSeniorDiscounts(preview.totalSeniorDiscount, validSeniorDiscounts);
       }
     } else if (discountMode === 'other') {
       finalOtherDiscount = {
         type: otherDiscountType,
-        amount: calculateOtherDiscount(otherDiscountType),
+        amount: 0, // Will be calculated by the service
         idNumber: (otherDiscountType === 'pwd') ? otherIdNumber : undefined
       };
     }
 
-    onApplyDiscounts(finalSeniorDiscounts, finalOtherDiscount);
+    onApplyDiscounts(finalSeniorDiscounts, finalOtherDiscount, totalDiners);
     setIsOpen(false);
   };
 
-  const totalSeniorDiscount = calculateSeniorDiscountAmount(seniorDiscounts.filter(d => d.idNumber.trim() !== '').length);
-  const totalOtherDiscount = discountMode === 'other' ? calculateOtherDiscount(otherDiscountType) : 0;
+  const preview = getDiscountPreview();
   const totalCurrentDiscounts = currentSeniorDiscounts.reduce((sum, d) => sum + d.discountAmount, 0) + (currentOtherDiscount?.amount || 0);
 
   return (
@@ -328,35 +292,33 @@ export default function MultipleSeniorDiscountSelector({
               <p className="text-sm">
                 Subtotal (with VAT): <span className="font-medium">{formatCurrency(subtotal)}</span>
               </p>
-              {discountMode === 'senior' && totalSeniorDiscount > 0 && (
+              {discountMode === 'senior' && preview.totalSeniorDiscount > 0 && (
                 <>
                   <div className="mt-2 space-y-1 text-xs">
                     <p className="font-medium">BIR-Compliant Calculation:</p>
                     <p>• Total diners: {totalDiners}</p>
                     <p>• Senior citizens: {seniorDiscounts.filter(d => d.idNumber.trim() !== '').length}</p>
-                    <p>• Non-seniors: {totalDiners - seniorDiscounts.filter(d => d.idNumber.trim() !== '').length}</p>
-                    <p>• Per-person gross share: {formatCurrency(subtotal / totalDiners)}</p>
-                    <p>• Per-senior VAT-exempt sale: {formatCurrency((subtotal / totalDiners) / 1.12)}</p>
-                    <p>• Per-senior discount (20%): {formatCurrency(((subtotal / totalDiners) / 1.12) * 0.20)}</p>
-                    <p>• Per-senior pays: {formatCurrency(((subtotal / totalDiners) / 1.12) * 0.80)}</p>
+                    <p>• Per-person gross share: {formatCurrency(preview.perPersonGrossShare)}</p>
+                    <p>• Per-senior VAT-exempt sale: {formatCurrency(preview.perSeniorVATExemptSale)}</p>
+                    <p>• Per-senior discount (20%): {formatCurrency(preview.perSeniorDiscountAmount)}</p>
                   </div>
                   <p className="text-sm mt-2">
                     Total Senior Discount: 
-                    <span className="font-medium text-green-600"> -{formatCurrency(totalSeniorDiscount)}</span>
+                    <span className="font-medium text-green-600"> -{formatCurrency(preview.totalSeniorDiscount)}</span>
                   </p>
                 </>
               )}
-              {discountMode === 'other' && totalOtherDiscount > 0 && (
+              {discountMode === 'other' && preview.otherDiscountAmount > 0 && (
                 <p className="text-sm">
                   {otherDiscountType.toUpperCase()} Discount: 
-                  <span className="font-medium text-green-600"> -{formatCurrency(totalOtherDiscount)}</span>
+                  <span className="font-medium text-green-600"> -{formatCurrency(preview.otherDiscountAmount)}</span>
                 </p>
               )}
               <p className="text-sm font-medium mt-2 pt-2 border-t">
                 Final Total: {formatCurrency(
                   discountMode === 'senior' 
-                    ? calculateBirCompliantTotal(seniorDiscounts.filter(d => d.idNumber.trim() !== '').length)
-                    : subtotal - totalOtherDiscount
+                    ? subtotal - preview.totalSeniorDiscount
+                    : subtotal - preview.otherDiscountAmount
                 )}
               </p>
             </div>

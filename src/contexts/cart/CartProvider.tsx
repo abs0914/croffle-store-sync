@@ -4,16 +4,14 @@ import { CartItem, Product, ProductVariation } from "@/types";
 import { toast } from "sonner";
 import { useStore } from "../StoreContext";
 import { CartContext } from "./CartContext";
-
-const TAX_RATE = 0.12; // 12% VAT (Philippines), VAT-inclusive
+import { CartCalculationService, SeniorDiscount, OtherDiscount, CartCalculations } from "@/services/cart/CartCalculationService";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { currentStore } = useStore();
   const [items, setItems] = useState<CartItem[]>([]);
-  const [subtotal, setSubtotal] = useState(0);
-  const [tax, setTax] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [itemCount, setItemCount] = useState(0);
+  const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>([]);
+  const [otherDiscount, setOtherDiscount] = useState<OtherDiscount | null>(null);
+  const [totalDiners, setTotalDiners] = useState(1);
   const [storeId, setStoreId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,23 +21,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [currentStore]);
 
-  useEffect(() => {
-    const newTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const newNetAmount = newTotal / (1 + TAX_RATE);
-    const newTax = newTotal - newNetAmount;
-    setSubtotal(newTotal);
-    setTax(newTax);
-    setTotal(newTotal);
-    setItemCount(items.reduce((sum, item) => sum + item.quantity, 0));
+  // Get calculations using the centralized service
+  const getCartCalculations = (): CartCalculations => {
+    return CartCalculationService.calculateCartTotals(
+      items,
+      seniorDiscounts,
+      otherDiscount,
+      totalDiners
+    );
+  };
 
-    console.log("CartContext: Cart items updated (VAT-inclusive):", {
-      itemsCount: items.length,
-      vatInclusiveTotal: newTotal,
-      netAmount: newNetAmount,
-      vatAmount: newTax,
-      items: items.map(item => ({ name: item.product.name, quantity: item.quantity, price: item.price })),
-    });
-  }, [items]);
+  const calculations = getCartCalculations();
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const addItem = (product: Product, quantity = 1, variation?: ProductVariation) => {
     console.log("CartContext: addItem function called! Arguments:", {
@@ -149,8 +142,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = () => {
     setItems([]);
+    setSeniorDiscounts([]);
+    setOtherDiscount(null);
+    setTotalDiners(1);
     toast.info('Cart cleared');
     console.log("CartContext: Cart cleared");
+  };
+
+  const applyDiscounts = (newSeniorDiscounts: SeniorDiscount[], newOtherDiscount?: OtherDiscount | null, newTotalDiners: number = 1) => {
+    setSeniorDiscounts(newSeniorDiscounts);
+    setOtherDiscount(newOtherDiscount || null);
+    setTotalDiners(newTotalDiners);
   };
 
   console.log("CartContext: Provider rendering with items:", items.length);
@@ -163,11 +165,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeItem,
         updateQuantity,
         clearCart,
-        subtotal,
-        tax,
-        total,
+        subtotal: calculations.grossSubtotal,
+        tax: calculations.adjustedVAT,
+        total: calculations.finalTotal,
         itemCount,
         storeId,
+        // New discount management
+        seniorDiscounts,
+        otherDiscount,
+        totalDiners,
+        applyDiscounts,
+        calculations,
+        getCartCalculations,
       }}
     >
       {children}
