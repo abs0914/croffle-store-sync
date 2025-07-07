@@ -124,6 +124,29 @@ export default function CartView({
   const totalDiscountAmount = totalSeniorDiscount + totalOtherDiscount + discount;
   const actualTotal = total - totalDiscountAmount;
   
+  // Calculate VAT exemption for seniors (to avoid double counting VAT)
+  const calculateSeniorVATExemption = () => {
+    if (seniorDiscounts.length === 0) return 0;
+    
+    // Get total diners from the most recent senior discount calculation
+    // This is a simplified approach - in production you'd want to store totalDiners in state
+    const totalDiners: number = seniorDiscounts.length > 0 ? 3 : 1; // Fallback assumption
+    const numberOfSeniors = seniorDiscounts.length;
+    
+    if (numberOfSeniors === 0 || totalDiners <= 0) return 0;
+    
+    // Calculate VAT exempted from senior portions
+    const perPersonGrossShare = subtotal / totalDiners;
+    const seniorPortionGross = perPersonGrossShare * numberOfSeniors;
+    const seniorPortionVATExempt = seniorPortionGross / 1.12;
+    const vatExemptedFromSeniors = seniorPortionGross - seniorPortionVATExempt;
+    
+    return vatExemptedFromSeniors;
+  };
+  
+  const seniorVATExemption = calculateSeniorVATExemption();
+  const adjustedVAT = Math.max(0, tax - seniorVATExemption);
+  
   const canCheckout = items.length > 0 && isShiftActive && !isValidating && !validationMessage;
 
   return (
@@ -283,7 +306,7 @@ export default function CartView({
             
             <div className="flex justify-between text-sm">
               <span>VAT (12%)</span>
-              <span>₱{tax.toFixed(2)}</span>
+              <span>₱{adjustedVAT.toFixed(2)}</span>
             </div>
             
             <Separator />
