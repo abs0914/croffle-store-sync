@@ -10,7 +10,7 @@ import InventoryHeader from "./components/InventoryHeader";
 import { ProductsTable } from "./components/ProductsTable";
 import { SearchFilters } from "./components/SearchFilters";
 import { useProductData } from "./hooks/useProductData";
-import { deleteProduct } from "@/services/product";
+import { deleteProduct } from "@/services/product/productDelete";
 import { Product } from "@/types";
 import ProductForm from "./ProductForm";
 
@@ -38,8 +38,17 @@ function InventoryMain() {
     activeCategory,
     setActiveCategory,
     activeTab,
-    setActiveTab
+    setActiveTab,
+    error
   } = useProductData();
+
+  console.log("Inventory Debug:", { 
+    currentStore: currentStore?.id, 
+    totalProducts: products?.length, 
+    filteredProducts: filteredProducts?.length, 
+    isLoading,
+    error 
+  });
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
@@ -109,6 +118,13 @@ function InventoryMain() {
           Manage menu items and finished products available for sale in your store. This includes items that customers can purchase directly through your POS system.
         </p>
       </div>
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h3 className="font-semibold text-red-800 mb-2">Error Loading Inventory</h3>
+          <p className="text-sm text-red-700">{error.message}</p>
+        </div>
+      )}
 
       <div className="flex justify-between items-center mb-4">
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
