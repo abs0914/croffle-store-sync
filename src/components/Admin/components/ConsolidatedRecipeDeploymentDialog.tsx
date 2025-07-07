@@ -10,9 +10,9 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { RecipeTemplate } from '@/services/recipeManagement/types';
 import { deployRecipeToMultipleStores, DeploymentResult } from '@/services/recipeManagement/recipeDeploymentService';
-import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Package } from 'lucide-react';
 
-interface RecipeDeploymentDialogProps {
+interface ConsolidatedRecipeDeploymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   template: RecipeTemplate | null;
@@ -31,7 +31,7 @@ interface StoreWithDeploymentStatus extends Store {
   existingProductId?: string;
 }
 
-export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
+export const ConsolidatedRecipeDeploymentDialog: React.FC<ConsolidatedRecipeDeploymentDialogProps> = ({
   isOpen,
   onClose,
   template,
@@ -43,10 +43,7 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentResults, setDeploymentResults] = useState<DeploymentResult[]>([]);
   const [showResults, setShowResults] = useState(false);
-  const [pricing, setPricing] = useState({
-    price: 0,
-    markup: 1.5
-  });
+  const [price, setPrice] = useState(0);
 
   useEffect(() => {
     if (isOpen && template) {
@@ -59,10 +56,7 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
       const totalCost = template.ingredients.reduce((sum, ingredient) => 
         sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
       );
-      setPricing({
-        price: totalCost * 1.5, // Default 50% markup
-        markup: 1.5
-      });
+      setPrice(totalCost * 1.5); // Default 50% markup
     }
   }, [isOpen, template]);
 
@@ -166,7 +160,10 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Deploy Recipe to Product Catalog: {template.name}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Deploy Recipe to Product Catalog: {template.name}
+          </DialogTitle>
         </DialogHeader>
 
         {!showResults ? (
@@ -181,39 +178,15 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
             {/* Pricing Configuration */}
             <div className="space-y-4">
               <Label className="text-base font-medium">Product Pricing</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="price">Product Price (₱)</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    value={pricing.price}
-                    onChange={(e) => setPricing(prev => ({ 
-                      ...prev, 
-                      price: parseFloat(e.target.value) || 0 
-                    }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="markup">Markup Multiplier</Label>
-                  <Input
-                    id="markup"
-                    type="number"
-                    step="0.1"
-                    value={pricing.markup}
-                    onChange={(e) => {
-                      const markup = parseFloat(e.target.value) || 1;
-                      const totalCost = template.ingredients.reduce((sum, ingredient) => 
-                        sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
-                      );
-                      setPricing({ 
-                        markup, 
-                        price: totalCost * markup 
-                      });
-                    }}
-                  />
-                </div>
+              <div>
+                <Label htmlFor="price">Product Price (₱)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                />
               </div>
             </div>
 

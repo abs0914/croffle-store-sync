@@ -9,7 +9,7 @@ import { AdminRecipeBulkUploadTab } from './components/AdminRecipeBulkUploadTab'
 import { EnhancedMenuStructureTab } from '@/components/Admin/components/EnhancedMenuStructureTab';
 import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/EnhancedRecipeTemplateForm';
 import { StoreSelector } from '@/components/admin/StoreSelector';
-import { EnhancedRecipeDeploymentDialog } from '@/components/Admin/components/EnhancedRecipeDeploymentDialog';
+import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -280,13 +280,14 @@ export default function AdminRecipes() {
         subcategory={formSubcategory}
       />
 
-      <EnhancedRecipeDeploymentDialog
+      <ConsolidatedRecipeDeploymentDialog
         isOpen={isEnhancedDeploymentDialogOpen}
         onClose={() => setIsEnhancedDeploymentDialogOpen(false)}
-        templateId={selectedTemplateForDeployment?.id || ''}
-        templateName={selectedTemplateForDeployment?.name || ''}
-        selectedStores={selectedStoresForDeployment}
-        onDeploymentComplete={handleDeploymentComplete}
+        template={selectedTemplateForDeployment}
+        onSuccess={() => {
+          refreshRecipes();
+          toast.success('Recipe deployed successfully!');
+        }}
       />
     </div>
   );

@@ -26,7 +26,7 @@ import {
   RecipeTemplateWithMetrics
 } from '@/services/recipeManagement/recipeTemplateService';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
-import { RecipeDeploymentDialog } from './DeployRecipeDialog';
+import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
@@ -277,7 +277,7 @@ export const RecipeManagementTab: React.FC = () => {
       />
 
       {/* Deploy Template Dialog */}
-      <RecipeDeploymentDialog
+      <ConsolidatedRecipeDeploymentDialog
         isOpen={showDeployDialog}
         onClose={() => {
           setShowDeployDialog(false);
