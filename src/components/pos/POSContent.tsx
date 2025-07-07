@@ -109,8 +109,8 @@ export default function POSContent({
         <div className="flex-1 min-h-0">
           <ShiftManager />
           <Card className="h-full border-croffle-primary/20">
-            <CardContent className="p-4 h-full overflow-hidden">
-              <ProductGrid 
+            <CardContent className="p-4 h-full flex flex-col overflow-hidden">
+              <ProductGrid
                 products={products} 
                 categories={categories} 
                 activeCategory={activeCategory} 
@@ -159,8 +159,8 @@ export default function POSContent({
         <div className="flex-1 min-h-0">
           <ShiftManager />
           <Card className="h-full border-croffle-primary/20">
-            <CardContent className="p-4 h-full overflow-hidden">
-              <ProductGrid 
+            <CardContent className="p-4 h-full flex flex-col overflow-hidden">
+              <ProductGrid
                 products={products} 
                 categories={categories} 
                 activeCategory={activeCategory} 

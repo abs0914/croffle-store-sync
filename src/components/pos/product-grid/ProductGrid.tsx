@@ -143,48 +143,50 @@ export default function ProductGrid({
 
   return (
     <>
-      <div className="mb-4 flex gap-2">
-        <ProductSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-      </div>
-      
-      <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory}>
-        <ProductCategoryTabs 
-          categories={categories} 
-          activeCategory={activeCategory} 
-          setActiveCategory={setActiveCategory} 
-        />
+      <div className="flex flex-col h-full">
+        <div className="mb-4 flex gap-2 flex-shrink-0">
+          <ProductSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        </div>
         
-        <TabsContent value={activeCategory} className="mt-0">
-          {!isShiftActive && (
-            <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mb-4 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              <span className="text-sm text-amber-800">You need to start a shift before adding items to cart</span>
-            </div>
-          )}
+        <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory} className="flex flex-col h-full">
+          <ProductCategoryTabs 
+            categories={categories} 
+            activeCategory={activeCategory} 
+            setActiveCategory={setActiveCategory} 
+          />
           
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <p>Loading products...</p>
-            </div>
-          ) : filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {filteredProducts.map(product => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  isShiftActive={isShiftActive}
-                  getCategoryName={getCategoryName}
-                  onClick={handleProductClick}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex justify-center items-center h-64">
-              <p>No products found in this category</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          <TabsContent value={activeCategory} className="mt-0 flex-1 overflow-y-auto">
+            {!isShiftActive && (
+              <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mb-4 flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-500" />
+                <span className="text-sm text-amber-800">You need to start a shift before adding items to cart</span>
+              </div>
+            )}
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <p>Loading products...</p>
+              </div>
+            ) : filteredProducts.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredProducts.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    isShiftActive={isShiftActive}
+                    getCategoryName={getCategoryName}
+                    onClick={handleProductClick}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex justify-center items-center h-64">
+                <p>No products found in this category</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Product Variations Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
