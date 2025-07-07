@@ -53,7 +53,7 @@ export default function ProductCard({
               
               <div className="w-full p-3 bg-white">
                 <p className="font-medium text-sm truncate">{product.name}</p>
-                <p className="text-xs text-muted-foreground">{categoryName}</p>
+                <p className="text-xs text-green-600 font-semibold">₱{(product.price || 0).toFixed(2)}</p>
                 {!isActive && (
                   <span className="inline-block bg-gray-200 text-gray-700 text-xs px-1 rounded mt-1">Inactive</span>
                 )}

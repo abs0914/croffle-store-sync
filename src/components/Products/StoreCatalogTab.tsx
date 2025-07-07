@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { 
   Search, 
   Package, 
@@ -11,10 +13,13 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  Edit3
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/format';
 import { fetchUnifiedProducts, toggleProductAvailability, UnifiedProduct } from '@/services/product/unifiedProductService';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 
 interface StoreCatalogTabProps {
@@ -22,10 +27,15 @@ interface StoreCatalogTabProps {
 }
 
 export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
+  const { user, hasPermission } = useAuth();
   const [products, setProducts] = useState<UnifiedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<UnifiedProduct | null>(null);
+  const [editPrice, setEditPrice] = useState('');
+  
+  const canEditPrices = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
 
   useEffect(() => {
     if (storeId) {
@@ -58,6 +68,42 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
       }
     } catch (error) {
       console.error('Error toggling product availability:', error);
+    }
+  };
+
+  const handleEditPrice = (product: UnifiedProduct) => {
+    setEditingProduct(product);
+    setEditPrice(product.price?.toString() || '0');
+  };
+
+  const handleSavePrice = async () => {
+    if (!editingProduct) return;
+    
+    const newPrice = parseFloat(editPrice);
+    if (isNaN(newPrice) || newPrice < 0) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ price: newPrice })
+        .eq('id', editingProduct.id);
+
+      if (error) throw error;
+
+      setProducts(prev => prev.map(product => 
+        product.id === editingProduct.id 
+          ? { ...product, price: newPrice }
+          : product
+      ));
+
+      setEditingProduct(null);
+      toast.success('Price updated successfully');
+    } catch (error) {
+      console.error('Error updating price:', error);
+      toast.error('Failed to update price');
     }
   };
 
@@ -227,8 +273,20 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
                 </p>
                 
                 <div className="flex items-center justify-between">
-                  <div className="text-lg font-bold text-green-600">
-                    {formatCurrency(product.price || 0)}
+                  <div className="flex items-center gap-2">
+                    <div className="text-lg font-bold text-green-600">
+                      {formatCurrency(product.price || 0)}
+                    </div>
+                    {canEditPrices && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditPrice(product)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Edit3 className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                   <Badge variant={product.product_type === 'recipe' ? 'secondary' : 'outline'}>
                     {product.product_type === 'recipe' ? 'Recipe' : 'Direct'}
@@ -276,6 +334,46 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Price Edit Dialog */}
+      <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Product Price</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="product-name">Product</Label>
+              <Input
+                id="product-name"
+                value={editingProduct?.name || ''}
+                disabled
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="price">Price (₱)</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={editPrice}
+                onChange={(e) => setEditPrice(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setEditingProduct(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSavePrice}>
+                Save Price
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
