@@ -147,9 +147,7 @@ export function CommissaryInventoryTab() {
   }
   return <div className="space-y-6">
       {/* Debug Information (temporary) */}
-      {process.env.NODE_ENV === 'development' && <Card className="border-yellow-200 bg-yellow-50">
-          
-        </Card>}
+      {process.env.NODE_ENV === 'development'}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
