@@ -32,6 +32,11 @@ export interface RecipeTemplateIngredient {
   conversion_factor?: number;
   cost_per_recipe_unit?: number;
   location_type: LocationType;
+  // Ingredient Group fields
+  ingredient_group_id?: string;
+  ingredient_group_name?: string;
+  is_optional?: boolean;
+  group_selection_type?: 'required_one' | 'optional_one' | 'multiple';
   created_at?: string;
 }
 
@@ -43,6 +48,11 @@ export interface RecipeTemplateIngredientInput {
   purchase_unit?: string;
   conversion_factor?: number;
   location_type: LocationType;
+  // Ingredient Group fields
+  ingredient_group_id?: string;
+  ingredient_group_name?: string;
+  is_optional?: boolean;
+  group_selection_type?: 'required_one' | 'optional_one' | 'multiple';
 }
 
 export interface LocationBasedIngredientSet {

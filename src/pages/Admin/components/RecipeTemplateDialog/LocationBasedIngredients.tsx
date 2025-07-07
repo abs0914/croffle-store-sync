@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Plus, MapPin, Globe, Calculator } from 'lucide-react';
+import { Plus, MapPin, Globe, Calculator, Users } from 'lucide-react';
 import { RecipeTemplateIngredientInput, LOCATION_TYPES, LocationType } from '@/services/recipeManagement/types';
 import { IngredientForm } from './IngredientForm';
 
@@ -18,6 +18,22 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
   setIngredients
 }) => {
   const [activeLocationTab, setActiveLocationTab] = useState<LocationType>('all');
+  const [ingredientGroups, setIngredientGroups] = useState<Array<{id: string; name: string; type: 'required_one' | 'optional_one' | 'multiple'}>>([]);
+
+  // Initialize groups from existing ingredients
+  useEffect(() => {
+    const existingGroups = new Map();
+    ingredients.forEach(ingredient => {
+      if (ingredient.ingredient_group_id && ingredient.ingredient_group_name && ingredient.group_selection_type) {
+        existingGroups.set(ingredient.ingredient_group_id, {
+          id: ingredient.ingredient_group_id,
+          name: ingredient.ingredient_group_name,
+          type: ingredient.group_selection_type
+        });
+      }
+    });
+    setIngredientGroups(Array.from(existingGroups.values()));
+  }, [ingredients]);
 
   // Group ingredients by location type
   const ingredientsByLocation = ingredients.reduce((acc, ingredient) => {
@@ -48,6 +64,18 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
       location_type: locationType
     };
     setIngredients(prev => [...prev, newIngredient]);
+  };
+
+  const createIngredientGroup = (groupName: string, selectionType: 'required_one' | 'optional_one' | 'multiple'): string => {
+    const groupId = `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newGroup = {
+      id: groupId,
+      name: groupName,
+      type: selectionType
+    };
+    
+    setIngredientGroups(prev => [...prev, newGroup]);
+    return groupId;
   };
 
   const updateIngredient = (index: number, field: keyof RecipeTemplateIngredientInput, value: any) => {
@@ -90,6 +118,26 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
     }
   };
 
+  // Group ingredients by location type and then by group
+  const groupIngredientsByLocationAndGroup = (locationIngredients: RecipeTemplateIngredientInput[]) => {
+    const grouped = locationIngredients.reduce((acc, ingredient, index) => {
+      const groupId = ingredient.ingredient_group_id || 'individual';
+      const groupName = ingredient.ingredient_group_name || 'Individual Ingredients';
+      
+      if (!acc[groupId]) {
+        acc[groupId] = {
+          groupName,
+          groupType: ingredient.group_selection_type,
+          ingredients: []
+        };
+      }
+      acc[groupId].ingredients.push({ ingredient, index });
+      return acc;
+    }, {} as Record<string, {groupName: string; groupType?: string; ingredients: Array<{ingredient: RecipeTemplateIngredientInput; index: number}>}>);
+    
+    return grouped;
+  };
+
   // Check which location types have ingredients
   const usedLocationTypes = LOCATION_TYPES.filter(locType => 
     ingredientsByLocation[locType.value]?.length > 0
@@ -100,11 +148,11 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5" />
-          Location-Based Ingredients
+          Location-Based Ingredients with Groups
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Configure different ingredients for stores in different locations. This allows you to handle 
-          regional supply chain variations (e.g., pre-mixed vs separate ingredients).
+          Configure different ingredients for stores in different locations. Create groups like "Choose 1 Sauce" 
+          for customizable products.
         </p>
       </CardHeader>
       
@@ -165,16 +213,33 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
                     </div>
                   )}
 
-                  {currentIngredients.map((ingredient, index) => (
-                    <IngredientForm
-                      key={`${activeLocationTab}-${index}`}
-                      ingredient={ingredient}
-                      index={index}
-                      onUpdate={updateIngredient}
-                      onRemove={removeIngredient}
-                      showLocationBadge={true}
-                      locationColor={getLocationColor(ingredient.location_type)}
-                    />
+                  {/* Render grouped ingredients */}
+                  {Object.entries(groupIngredientsByLocationAndGroup(currentIngredients)).map(([groupId, group]) => (
+                    <div key={groupId} className="space-y-2">
+                      {groupId !== 'individual' && (
+                        <div className="flex items-center gap-2 mb-3">
+                          <Users className="h-4 w-4 text-primary" />
+                          <h4 className="font-medium text-primary">{group.groupName}</h4>
+                          <Badge variant="secondary" className="text-xs">
+                            {group.groupType?.replace('_', ' ') || 'group'}
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      {group.ingredients.map(({ ingredient, index }) => (
+                        <IngredientForm
+                          key={`${activeLocationTab}-${index}`}
+                          ingredient={ingredient}
+                          index={index}
+                          onUpdate={updateIngredient}
+                          onRemove={removeIngredient}
+                          showLocationBadge={true}
+                          locationColor={getLocationColor(ingredient.location_type)}
+                          onCreateGroup={createIngredientGroup}
+                          availableGroups={ingredientGroups}
+                        />
+                      ))}
+                    </div>
                   ))}
                 </>
               )}
@@ -196,6 +261,29 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
                   <div className="text-sm font-medium">
                     {ingredientsByLocation[locType.value]?.length || 0} ingredients
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Ingredient Groups Summary */}
+        {ingredientGroups.length > 0 && (
+          <div className="mt-6 p-4 border rounded-lg bg-blue-50/50">
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Ingredient Groups
+            </h4>
+            <div className="space-y-2">
+              {ingredientGroups.map(group => (
+                <div key={group.id} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-3 w-3 text-primary" />
+                    <span className="font-medium">{group.name}</span>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {group.type.replace('_', ' ')}
+                  </Badge>
                 </div>
               ))}
             </div>
