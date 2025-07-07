@@ -33,10 +33,7 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
   onSuccess
 }) => {
   const [stores, setStores] = useState<StoreDeployment[]>([]);
-  const [pricing, setPricing] = useState({
-    basePrice: 0,
-    markup: 1.5
-  });
+  const [basePrice, setBasePrice] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -60,19 +57,20 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
 
       if (storesError) throw storesError;
 
-      // Check which stores have this recipe deployed
-      const { data: productsData, error: productsError } = await supabase
-        .from('product_catalog')
-        .select('id, store_id, price')
-        .eq('product_name', recipe.name);
+      // Check which stores have this recipe template deployed
+      const { data: recipesData, error: recipesError } = await supabase
+        .from('recipes')
+        .select('id, store_id, product_id, total_cost')
+        .eq('template_id', recipe.id);
 
-      if (productsError) throw productsError;
+      if (recipesError) throw recipesError;
 
       // Create deployment status map
       const deploymentMap = new Map(
-        productsData?.map(product => [product.store_id, { 
-          productId: product.id, 
-          price: product.price 
+        recipesData?.map(recipe => [recipe.store_id, { 
+          recipeId: recipe.id, 
+          productId: recipe.product_id,
+          cost: recipe.total_cost || 0
         }]) || []
       );
 
@@ -81,27 +79,21 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
         ...store,
         isDeployed: deploymentMap.has(store.id),
         productId: deploymentMap.get(store.id)?.productId,
-        price: deploymentMap.get(store.id)?.price || 0
+        price: deploymentMap.get(store.id)?.cost || 0
       }));
 
       setStores(storesWithDeployment);
 
-      // Set initial pricing based on existing deployment or calculate from ingredients
-      const existingPrice = productsData?.[0]?.price;
-      if (existingPrice) {
-        setPricing({
-          basePrice: existingPrice,
-          markup: 1.5 // Default markup for display
-        });
+      // Set initial pricing based on existing deployment or template
+      const existingCost = recipesData?.[0]?.total_cost;
+      if (existingCost) {
+        setBasePrice(existingCost * 1.5);
       } else {
-        // Calculate suggested price from recipe ingredients
+        // Calculate suggested price from template ingredients
         const totalCost = recipe.ingredients?.reduce((sum: number, ingredient: any) => 
           sum + ((ingredient.quantity || 0) * (ingredient.cost_per_unit || 0)), 0
         ) || 0;
-        setPricing({
-          basePrice: totalCost * 1.5,
-          markup: 1.5
-        });
+        setBasePrice(totalCost * 1.5);
       }
     } catch (error) {
       console.error('Error loading deployment data:', error);
@@ -150,33 +142,23 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
       // Add/update deployed stores
       for (const store of deployedStores) {
         if (store.productId) {
-          // Update existing deployment
-          const { error } = await supabase
-            .from('product_catalog')
-            .update({
-              price: store.price || pricing.basePrice,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', store.productId);
-          
-          if (error) throw error;
+            // Update existing deployment price in product catalog
+            if (store.productId) {
+              const { error } = await supabase
+                .from('product_catalog')
+                .update({
+                  price: store.price || basePrice,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', store.productId);
+              
+              if (error) throw error;
+            }
         } else {
-          // Create new deployment
-          const { error } = await supabase
-            .from('product_catalog')
-            .insert({
-              store_id: store.id,
-              product_name: recipe.name,
-              description: recipe.description,
-              price: store.price || pricing.basePrice,
-              category: recipe.category || 'General',
-              is_available: true,
-              approval_status: 'pending',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-          
-          if (error) throw error;
+          // Create new deployment through the enhanced deployment service
+          console.log(`Creating new deployment for store ${store.name}`);
+          // Note: New deployments should be created through the deployment service
+          // This edit dialog is primarily for managing existing deployments
         }
       }
 
@@ -194,7 +176,7 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
   const applyPriceToAll = () => {
     setStores(prev => prev.map(store => ({
       ...store,
-      price: pricing.basePrice
+      price: basePrice
     })));
   };
 
@@ -214,9 +196,9 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Recipe Info */}
+          {/* Recipe Template Info */}
           <div className="bg-muted/50 p-4 rounded-md">
-            <h3 className="font-medium mb-2">Recipe Information</h3>
+            <h3 className="font-medium mb-2">Recipe Template Information</h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Description:</span>
@@ -225,6 +207,14 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
               <div>
                 <span className="text-muted-foreground">Ingredients:</span>
                 <p>{recipe.ingredients?.length || 0} ingredients</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Category:</span>
+                <p>{recipe.category || 'No category'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Yield:</span>
+                <p>{recipe.yield_quantity || 1} servings</p>
               </div>
             </div>
           </div>
@@ -243,37 +233,15 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
           {/* Global Pricing */}
           <div className="space-y-4">
             <h3 className="font-medium">Pricing Configuration</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="basePrice">Base Price (₱)</Label>
                 <Input
                   id="basePrice"
                   type="number"
                   step="0.01"
-                  value={pricing.basePrice}
-                  onChange={(e) => setPricing(prev => ({ 
-                    ...prev, 
-                    basePrice: parseFloat(e.target.value) || 0 
-                  }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="markup">Markup Multiplier</Label>
-                <Input
-                  id="markup"
-                  type="number"
-                  step="0.1"
-                  value={pricing.markup}
-                  onChange={(e) => {
-                    const markup = parseFloat(e.target.value) || 1;
-                    const totalCost = recipe.ingredients?.reduce((sum: number, ingredient: any) => 
-                      sum + ((ingredient.quantity || 0) * (ingredient.cost_per_unit || 0)), 0
-                    ) || 0;
-                    setPricing({ 
-                      markup, 
-                      basePrice: totalCost * markup 
-                    });
-                  }}
+                  value={basePrice}
+                  onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
                 />
               </div>
               <div className="flex items-end">
@@ -283,7 +251,7 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
                   onClick={applyPriceToAll}
                   className="w-full"
                 >
-                  Apply to All
+                  Apply to All Stores
                 </Button>
               </div>
             </div>
@@ -328,7 +296,7 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
                             id={`price-${store.id}`}
                             type="number"
                             step="0.01"
-                            value={store.price || pricing.basePrice}
+                            value={store.price || basePrice}
                             onChange={(e) => handlePriceChange(store.id, parseFloat(e.target.value) || 0)}
                             className="w-24"
                           />

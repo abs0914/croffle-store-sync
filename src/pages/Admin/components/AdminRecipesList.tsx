@@ -82,7 +82,7 @@ export function AdminRecipesList({
 
   const duplicateCount = Object.values(recipeGroups).filter((group: any) => group.length > 1).length;
 
-  // More permissive readiness check - focuses on whether it can be deployed
+  // Template deployment status check
   const getDeploymentStatus = (recipe: any) => {
     const hasName = recipe.name && recipe.name.trim().length > 0;
     if (!hasName) return { ready: false, reason: 'No name' };
@@ -90,11 +90,12 @@ export function AdminRecipesList({
     const hasIngredients = recipe.ingredients && recipe.ingredients.length > 0;
     const hasInstructions = recipe.instructions && recipe.instructions.trim().length > 0;
     
-    // Always deployable if it has a name
     return { 
       ready: true, 
       hasIngredients,
       hasInstructions,
+      deploymentCount: recipe.deployment_count || 0,
+      deployedStores: recipe.deployed_stores || [],
       warnings: [
         ...(!hasIngredients ? ['No ingredients (can be added after deployment)'] : []),
         ...(!hasInstructions ? ['No instructions'] : [])
@@ -103,23 +104,17 @@ export function AdminRecipesList({
   };
 
   const getStatusIcon = (recipe: any) => {
-    const status = getDeploymentStatus(recipe);
-    if (status.ready) {
-      return status.warnings.length > 0 
-        ? <AlertTriangle className="h-4 w-4 text-yellow-600" />
-        : <CheckCircle className="h-4 w-4 text-green-600" />;
+    if (recipe.deployment_count > 0) {
+      return <CheckCircle className="h-4 w-4 text-green-600" />;
     }
-    return <XCircle className="h-4 w-4 text-red-600" />;
+    return <Package className="h-4 w-4 text-blue-600" />;
   };
 
   const getStatusText = (recipe: any) => {
-    const status = getDeploymentStatus(recipe);
-    if (status.ready) {
-      return status.warnings.length > 0 
-        ? `Ready (${status.warnings.length} warnings)`
-        : 'Ready for deployment';
+    if (recipe.deployment_count > 0) {
+      return `Deployed to ${recipe.deployment_count} store${recipe.deployment_count !== 1 ? 's' : ''}`;
     }
-    return 'Cannot deploy';
+    return 'Template (not deployed)';
   };
 
   const handleEditRecipe = (recipe: any) => {
@@ -188,14 +183,13 @@ export function AdminRecipesList({
         </Badge>
       </div>
 
-      {/* Recipe Grid/List */}
+      {/* Recipe Templates Grid/List */}
       <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
         {filteredRecipes.map((recipe) => {
-          const isDuplicate = recipeGroups[`${recipe.name}-${recipe.store_id}`]?.length > 1;
           const deploymentStatus = getDeploymentStatus(recipe);
           
           return (
-            <Card key={recipe.id} className={`${viewMode === 'list' ? 'p-4' : ''} ${isDuplicate ? 'border-orange-200 bg-orange-50' : ''}`}>
+            <Card key={recipe.id} className={viewMode === 'list' ? 'p-4' : ''}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -209,18 +203,13 @@ export function AdminRecipesList({
                         {recipe.name}
                       </Label>
                       <span className="text-xs text-muted-foreground">
-                        {recipe.store_name} • {recipe.id.substring(0, 8)}
+                        Template • {recipe.category || 'No Category'}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {isDuplicate && (
-                      <Badge variant="outline" className="text-orange-600 border-orange-200 text-xs">
-                        Duplicate
-                      </Badge>
-                    )}
-                    <Badge variant="secondary" className="text-xs">
-                      {recipe.approval_status || 'unknown'}
+                    <Badge variant={recipe.deployment_count > 0 ? "default" : "secondary"} className="text-xs">
+                      {recipe.deployment_count > 0 ? `${recipe.deployment_count} stores` : 'Not deployed'}
                     </Badge>
                     <div className="flex items-center gap-1" title={getStatusText(recipe)}>
                       {getStatusIcon(recipe)}
@@ -235,11 +224,11 @@ export function AdminRecipesList({
                     {recipe.description || 'No description'}
                   </div>
                   
-                  {/* Recipe info */}
+                  {/* Template info */}
                   <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                    <div>Ingredients: {recipe.ingredients?.length || 0}</div>
-                    <div>Active: {recipe.is_active ? 'Yes' : 'No'}</div>
-                    <div>Product ID: {recipe.product_id ? 'Linked' : 'None'}</div>
+                    <div>Ingredients: {recipe.ingredient_count || 0}</div>
+                    <div>Category: {recipe.category || 'None'}</div>
+                    <div>Deployments: {recipe.deployment_count || 0}</div>
                     <div>Created: {new Date(recipe.created_at).toLocaleDateString()}</div>
                   </div>
 
@@ -251,36 +240,30 @@ export function AdminRecipesList({
                         {getStatusText(recipe)}
                       </span>
                     </div>
+                    {recipe.deployed_stores && recipe.deployed_stores.length > 0 && (
+                      <div className="text-green-600">
+                        Stores: {recipe.deployed_stores.join(', ')}
+                      </div>
+                    )}
                     {deploymentStatus.warnings && deploymentStatus.warnings.length > 0 && (
                       <div className="text-yellow-600">
                         Warnings: {deploymentStatus.warnings.join(', ')}
                       </div>
                     )}
                   </div>
-
-                  {/* Debug info for duplicates */}
-                  {isDuplicate && (
-                    <div className="p-2 bg-orange-100 rounded text-xs">
-                      <div className="flex items-center gap-1 mb-1">
-                        <Info className="h-3 w-3" />
-                        <span className="font-medium">Duplicate Info:</span>
-                      </div>
-                      <div>Store: {recipe.store_id}</div>
-                      <div>Recipe ID: {recipe.id}</div>
-                    </div>
-                  )}
                   
                   <div className="flex gap-2 mt-4">
-                    {/* Only show Edit button for deployed recipes */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex items-center gap-1"
-                      onClick={() => handleEditRecipe(recipe)}
-                    >
-                      <Edit className="h-3 w-3" />
-                      Edit Deployment
-                    </Button>
+                    {recipe.deployment_count > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex items-center gap-1"
+                        onClick={() => handleEditRecipe(recipe)}
+                      >
+                        <Edit className="h-3 w-3" />
+                        Manage Deployments
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
