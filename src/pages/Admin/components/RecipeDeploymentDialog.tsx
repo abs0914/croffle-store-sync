@@ -39,10 +39,7 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
-  const [pricing, setPricing] = useState({
-    price: 0,
-    markup: 1.5
-  });
+  const [price, setPrice] = useState(0);
 
   useEffect(() => {
     if (isOpen && template) {
@@ -53,10 +50,7 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
       const totalCost = template.ingredients.reduce((sum, ingredient) => 
         sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
       );
-      setPricing({
-        price: totalCost * 1.5, // Default 50% markup
-        markup: 1.5
-      });
+      setPrice(totalCost * 1.5); // Default 50% markup
     }
   }, [isOpen, template]);
 
@@ -162,39 +156,15 @@ export const RecipeDeploymentDialog: React.FC<RecipeDeploymentDialogProps> = ({
           {/* Pricing Configuration */}
           <div className="space-y-4">
             <Label className="text-base font-medium">Product Pricing</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="price">Product Price (₱)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  value={pricing.price}
-                  onChange={(e) => setPricing(prev => ({ 
-                    ...prev, 
-                    price: parseFloat(e.target.value) || 0 
-                  }))}
-                />
-              </div>
-              <div>
-                <Label htmlFor="markup">Markup Multiplier</Label>
-                <Input
-                  id="markup"
-                  type="number"
-                  step="0.1"
-                  value={pricing.markup}
-                  onChange={(e) => {
-                    const markup = parseFloat(e.target.value) || 1;
-                    const totalCost = template.ingredients.reduce((sum, ingredient) => 
-                      sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
-                    );
-                    setPricing({ 
-                      markup, 
-                      price: totalCost * markup 
-                    });
-                  }}
-                />
-              </div>
+            <div>
+              <Label htmlFor="price">Product Price (₱)</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+              />
             </div>
           </div>
 
