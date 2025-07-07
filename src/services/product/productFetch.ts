@@ -7,6 +7,15 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
   try {
     console.log("fetchProducts: Starting fetch for store:", storeId);
     
+    // First try a simple query to test basic access
+    const { data: simpleTest } = await supabase
+      .from("products")
+      .select("id, name")
+      .eq("store_id", storeId)
+      .limit(1);
+    
+    console.log("fetchProducts: Simple test result:", simpleTest);
+    
     const { data, error } = await supabase
       .from("products")
       .select(`
