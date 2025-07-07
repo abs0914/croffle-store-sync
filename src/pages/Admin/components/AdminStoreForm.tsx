@@ -81,7 +81,7 @@ export default function AdminStoreForm() {
         toast.success('Store created successfully');
       }
       
-      navigate('/admin/stores');
+      navigate('/admin/stores/list');
     } catch (error) {
       console.error('Error saving store:', error);
       toast.error('Failed to save store');
@@ -101,7 +101,7 @@ export default function AdminStoreForm() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => navigate('/admin/stores')}>
+        <Button variant="outline" onClick={() => navigate('/admin/stores/list')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Stores
         </Button>
@@ -320,7 +320,7 @@ export default function AdminStoreForm() {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => navigate('/admin/stores')}
+                onClick={() => navigate('/admin/stores/list')}
               >
                 Cancel
               </Button>
