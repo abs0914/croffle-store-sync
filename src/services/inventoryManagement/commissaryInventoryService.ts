@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
+import { CommissaryInventoryItem } from "@/types/commissary";
 import { toast } from "sonner";
 
 // Helper function to map units to valid database units
@@ -101,6 +101,8 @@ export const fetchCommissaryInventory = async (filters?: any): Promise<Commissar
 
 export const createCommissaryInventoryItem = async (item: Omit<CommissaryInventoryItem, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
   try {
+    console.log('Creating commissary item:', item);
+    
     // Map uom to valid unit for database compatibility
     const dbItem = {
       name: item.name,
@@ -118,11 +120,20 @@ export const createCommissaryInventoryItem = async (item: Omit<CommissaryInvento
       is_active: item.is_active
     };
     
-    const { error } = await supabase
+    console.log('Mapped database item:', dbItem);
+    
+    const { data, error } = await supabase
       .from('commissary_inventory')
-      .insert(dbItem);
+      .insert(dbItem)
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error:', error);
+      throw error;
+    }
+    
+    console.log('Successfully created item:', data);
     toast.success('Commissary item created successfully');
     return true;
   } catch (error) {
