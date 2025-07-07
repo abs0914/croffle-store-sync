@@ -30,13 +30,6 @@ export function AdminRoutes() {
         </AdminProtectedRoute>
       } />
       
-      <Route path="/admin/stores" element={
-        <AdminProtectedRoute>
-          <AdminLayout>
-            <AdminStores />
-          </AdminLayout>
-        </AdminProtectedRoute>
-      } />
       
       <Route path="/admin/recipes" element={
         <AdminProtectedRoute>

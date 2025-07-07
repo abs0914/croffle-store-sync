@@ -11,6 +11,13 @@ export function AdminStoreRoutes() {
   return (
     <>
       {/* Admin Store Management Routes */}
+      <Route path="/admin/stores" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AdminStores />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
       <Route path="/admin/stores/list" element={
         <AdminProtectedRoute>
           <AdminLayout>
