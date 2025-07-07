@@ -34,6 +34,7 @@ export default function MultipleSeniorDiscountSelector({
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>(currentSeniorDiscounts);
   const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo'>('pwd');
   const [otherIdNumber, setOtherIdNumber] = useState(currentOtherDiscount?.idNumber || '');
+  const [totalDiners, setTotalDiners] = useState<number>(currentSeniorDiscounts.length || 1);
   
   // BIR mandated discounts
   const SENIOR_DISCOUNT_RATE = 0.20; // 20% for senior citizens
@@ -62,10 +63,34 @@ export default function MultipleSeniorDiscountSelector({
   };
 
   const calculateSeniorDiscountAmount = (numberOfSeniors: number) => {
-    if (numberOfSeniors === 0) return 0;
-    // Each senior gets 20% discount on their portion
-    const perSeniorAmount = (subtotal / numberOfSeniors) * SENIOR_DISCOUNT_RATE;
-    return perSeniorAmount * numberOfSeniors;
+    if (numberOfSeniors === 0 || totalDiners === 0) return 0;
+    
+    // BIR-compliant calculation for multiple senior citizens
+    // 1. Per-person gross share = Subtotal ÷ Total Diners
+    const perPersonGrossShare = subtotal / totalDiners;
+    
+    // 2. Per-senior VAT-exempt sale = Per-person share ÷ 1.12
+    const perSeniorVatExemptSale = perPersonGrossShare / 1.12;
+    
+    // 3. Per-senior discount = VAT-exempt sale × 0.20
+    const perSeniorDiscountAmount = perSeniorVatExemptSale * SENIOR_DISCOUNT_RATE;
+    
+    // 4. Total discount for all seniors
+    return perSeniorDiscountAmount * numberOfSeniors;
+  };
+
+  const calculateBirCompliantTotal = (numberOfSeniors: number) => {
+    if (numberOfSeniors === 0 || totalDiners === 0) return subtotal;
+    
+    const perPersonGrossShare = subtotal / totalDiners;
+    const perSeniorVatExemptSale = perPersonGrossShare / 1.12;
+    const perSeniorDiscountAmount = perSeniorVatExemptSale * SENIOR_DISCOUNT_RATE;
+    const perSeniorPays = perSeniorVatExemptSale - perSeniorDiscountAmount;
+    
+    const numberOfNonSeniors = totalDiners - numberOfSeniors;
+    
+    // Total due = (seniors × senior pays) + (non-seniors × gross share)
+    return (numberOfSeniors * perSeniorPays) + (numberOfNonSeniors * perPersonGrossShare);
   };
 
   const calculateOtherDiscount = (type: string): number => {
@@ -160,6 +185,25 @@ export default function MultipleSeniorDiscountSelector({
 
             {discountMode === 'senior' && (
               <div className="space-y-4">
+                {/* Total Diners Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="totalDiners" className="text-sm font-medium">Total Number of Diners *</Label>
+                  <Input
+                    id="totalDiners"
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={totalDiners}
+                    onChange={(e) => setTotalDiners(Math.max(1, parseInt(e.target.value) || 1))}
+                    placeholder="Enter total number of diners (including seniors and non-seniors)"
+                    className="text-sm"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This includes both senior citizens and non-senior diners sharing the bill
+                  </p>
+                </div>
+                
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium">Senior Citizens</h4>
                   <Button
@@ -168,11 +212,18 @@ export default function MultipleSeniorDiscountSelector({
                     size="sm"
                     onClick={addSeniorDiscount}
                     className="flex items-center gap-1"
+                    disabled={seniorDiscounts.length >= totalDiners}
                   >
                     <Plus className="h-3 w-3" />
                     Add Senior
                   </Button>
                 </div>
+
+                {seniorDiscounts.length >= totalDiners && (
+                  <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                    Cannot add more seniors than total diners
+                  </div>
+                )}
 
                 {seniorDiscounts.map((senior, index) => (
                   <Card key={senior.id} className="p-3">
@@ -271,13 +322,25 @@ export default function MultipleSeniorDiscountSelector({
             
             <div className="mt-4 p-3 bg-muted rounded-lg">
               <p className="text-sm">
-                Subtotal: <span className="font-medium">{formatCurrency(subtotal)}</span>
+                Subtotal (with VAT): <span className="font-medium">{formatCurrency(subtotal)}</span>
               </p>
               {discountMode === 'senior' && totalSeniorDiscount > 0 && (
-                <p className="text-sm">
-                  Senior Discount ({seniorDiscounts.filter(d => d.idNumber.trim() !== '').length} seniors): 
-                  <span className="font-medium text-green-600"> -{formatCurrency(totalSeniorDiscount)}</span>
-                </p>
+                <>
+                  <div className="mt-2 space-y-1 text-xs">
+                    <p className="font-medium">BIR-Compliant Calculation:</p>
+                    <p>• Total diners: {totalDiners}</p>
+                    <p>• Senior citizens: {seniorDiscounts.filter(d => d.idNumber.trim() !== '').length}</p>
+                    <p>• Non-seniors: {totalDiners - seniorDiscounts.filter(d => d.idNumber.trim() !== '').length}</p>
+                    <p>• Per-person gross share: {formatCurrency(subtotal / totalDiners)}</p>
+                    <p>• Per-senior VAT-exempt sale: {formatCurrency((subtotal / totalDiners) / 1.12)}</p>
+                    <p>• Per-senior discount (20%): {formatCurrency(((subtotal / totalDiners) / 1.12) * 0.20)}</p>
+                    <p>• Per-senior pays: {formatCurrency(((subtotal / totalDiners) / 1.12) * 0.80)}</p>
+                  </div>
+                  <p className="text-sm mt-2">
+                    Total Senior Discount: 
+                    <span className="font-medium text-green-600"> -{formatCurrency(totalSeniorDiscount)}</span>
+                  </p>
+                </>
               )}
               {discountMode === 'other' && totalOtherDiscount > 0 && (
                 <p className="text-sm">
@@ -285,8 +348,12 @@ export default function MultipleSeniorDiscountSelector({
                   <span className="font-medium text-green-600"> -{formatCurrency(totalOtherDiscount)}</span>
                 </p>
               )}
-              <p className="text-sm font-medium mt-1">
-                Final Total: {formatCurrency(subtotal - (discountMode === 'senior' ? totalSeniorDiscount : totalOtherDiscount))}
+              <p className="text-sm font-medium mt-2 pt-2 border-t">
+                Final Total: {formatCurrency(
+                  discountMode === 'senior' 
+                    ? calculateBirCompliantTotal(seniorDiscounts.filter(d => d.idNumber.trim() !== '').length)
+                    : subtotal - totalOtherDiscount
+                )}
               </p>
             </div>
           </div>
