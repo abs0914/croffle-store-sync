@@ -13,6 +13,7 @@ import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
 import { Trash2, Plus, Minus, AlertTriangle } from 'lucide-react';
 import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
 import { useStore } from '@/contexts/StoreContext';
+import { useCart } from '@/contexts/cart/CartContext';
 import { toast } from 'sonner';
 import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
 
@@ -118,34 +119,12 @@ export default function CartView({
     }
   };
 
-  // Calculate the actual total with discounts applied
-  const totalSeniorDiscount = seniorDiscounts.reduce((sum, senior) => sum + senior.discountAmount, 0);
-  const totalOtherDiscount = otherDiscount?.amount || 0;
-  const totalDiscountAmount = totalSeniorDiscount + totalOtherDiscount + discount;
-  const actualTotal = total - totalDiscountAmount;
+  // Use centralized cart calculations from context
+  const { calculations, items: cartItems, seniorDiscounts: contextSeniorDiscounts, otherDiscount: contextOtherDiscount } = useCart();
   
-  // Calculate VAT exemption for seniors (to avoid double counting VAT)
-  const calculateSeniorVATExemption = () => {
-    if (seniorDiscounts.length === 0) return 0;
-    
-    // Get total diners from the most recent senior discount calculation
-    // This is a simplified approach - in production you'd want to store totalDiners in state
-    const totalDiners: number = seniorDiscounts.length > 0 ? 3 : 1; // Fallback assumption
-    const numberOfSeniors = seniorDiscounts.length;
-    
-    if (numberOfSeniors === 0 || totalDiners <= 0) return 0;
-    
-    // Calculate VAT exempted from senior portions
-    const perPersonGrossShare = subtotal / totalDiners;
-    const seniorPortionGross = perPersonGrossShare * numberOfSeniors;
-    const seniorPortionVATExempt = seniorPortionGross / 1.12;
-    const vatExemptedFromSeniors = seniorPortionGross - seniorPortionVATExempt;
-    
-    return vatExemptedFromSeniors;
-  };
-  
-  const seniorVATExemption = calculateSeniorVATExemption();
-  const adjustedVAT = Math.max(0, tax - seniorVATExemption);
+  // Calculate the actual total with proper BIR-compliant calculations
+  const actualTotal = calculations.finalTotal;
+  const adjustedVAT = calculations.adjustedVAT;
   
   const canCheckout = items.length > 0 && isShiftActive && !isValidating && !validationMessage;
 
@@ -263,11 +242,19 @@ export default function CartView({
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Subtotal</span>
-              <span>₱{subtotal.toFixed(2)}</span>
+              <span>₱{calculations.grossSubtotal.toFixed(2)}</span>
             </div>
             
+            {/* VAT Exemption Display */}
+            {calculations.vatExemption > 0 && (
+              <div className="flex justify-between text-sm text-blue-600">
+                <span>VAT Exemption (Senior)</span>
+                <span>-₱{calculations.vatExemption.toFixed(2)}</span>
+              </div>
+            )}
+            
             {/* Multiple Senior Citizens Discount Display */}
-            {seniorDiscounts.length > 0 && (
+            {calculations.numberOfSeniors > 0 && (
               <div className="space-y-1">
                 {seniorDiscounts.map((senior, index) => (
                   <div key={senior.id} className="flex justify-between text-sm text-green-600">
@@ -277,53 +264,42 @@ export default function CartView({
                 ))}
                 <div className="flex justify-between text-sm text-green-600 font-medium border-t border-green-200 pt-1">
                   <span>Total Senior Discount</span>
-                  <span>-₱{seniorDiscounts.reduce((sum, s) => sum + s.discountAmount, 0).toFixed(2)}</span>
+                  <span>-₱{calculations.seniorDiscountAmount.toFixed(2)}</span>
                 </div>
               </div>
             )}
             
             {/* Other Discount Display */}
-            {otherDiscount && otherDiscount.amount > 0 && (
+            {calculations.otherDiscountAmount > 0 && (
               <div className="flex justify-between text-sm text-green-600">
                 <span>
-                  {otherDiscount.type.toUpperCase()} Discount
-                  {otherDiscount.idNumber && ` - ${otherDiscount.idNumber}`}
+                  {otherDiscount?.type.toUpperCase()} Discount
+                  {otherDiscount?.idNumber && ` - ${otherDiscount.idNumber}`}
                 </span>
-                <span>-₱{otherDiscount.amount.toFixed(2)}</span>
-              </div>
-            )}
-            
-            {/* Legacy Single Discount Display (fallback) */}
-            {discount > 0 && seniorDiscounts.length === 0 && !otherDiscount && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>
-                  Discount {discountType && `(${discountType.toUpperCase()})`}
-                  {discountIdNumber && ` - ${discountIdNumber}`}
-                </span>
-                <span>-₱{discount.toFixed(2)}</span>
+                <span>-₱{calculations.otherDiscountAmount.toFixed(2)}</span>
               </div>
             )}
             
             <div className="flex justify-between text-sm">
               <span>VAT (12%)</span>
-              <span>₱{adjustedVAT.toFixed(2)}</span>
+              <span>₱{calculations.adjustedVAT.toFixed(2)}</span>
             </div>
             
             <Separator />
             
             <div className="flex justify-between font-semibold">
               <span>Total</span>
-              <span>₱{actualTotal.toFixed(2)}</span>
+              <span>₱{calculations.finalTotal.toFixed(2)}</span>
             </div>
           </div>
 
           {/* Multiple Discount Selector */}
           <MultipleSeniorDiscountSelector
-            subtotal={subtotal}
+            subtotal={calculations.grossSubtotal}
             onApplyDiscounts={handleApplyMultipleDiscounts}
             currentSeniorDiscounts={seniorDiscounts}
             currentOtherDiscount={otherDiscount}
-            currentTotalDiners={3}
+            currentTotalDiners={calculations.totalDiners}
           />
 
           {/* Action Buttons */}
@@ -347,7 +323,7 @@ export default function CartView({
       <PaymentDialog
         isOpen={isPaymentDialogOpen}
         onClose={() => setIsPaymentDialogOpen(false)}
-        total={actualTotal}
+        total={calculations.finalTotal}
         onPaymentComplete={handlePaymentCompleteWithDeduction}
       />
 
