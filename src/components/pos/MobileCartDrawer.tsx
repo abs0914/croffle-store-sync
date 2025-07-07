@@ -75,15 +75,19 @@ export default function MobileCartDrawer(props: MobileCartDrawerProps) {
 
       {/* Bottom Summary Bar */}
       {items.length > 0 && !open && (
-        <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 tablet:hidden z-40">
+        <div 
+          className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 tablet:hidden z-40 cursor-pointer hover:bg-accent/5 transition-colors active:bg-accent/10"
+          onClick={() => onOpenChange(true)}
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">{items.length} items</p>
               <p className="font-semibold">₱{total.toFixed(2)}</p>
             </div>
-            <Button onClick={() => onOpenChange(true)}>
-              View Cart
-            </Button>
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              Tap to view cart
+              <span className="text-primary">↑</span>
+            </div>
           </div>
         </div>
       )}
