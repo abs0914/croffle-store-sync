@@ -71,9 +71,7 @@ export default function POSContent({
     removeItem,
     updateQuantity,
     clearCart,
-    subtotal,
-    tax,
-    total
+    calculations
   } = useCart();
   const {
     config
@@ -134,9 +132,9 @@ export default function POSContent({
         {/* Mobile Cart Drawer */}
         <MobileCartDrawer
           items={items}
-          subtotal={subtotal}
-          tax={tax}
-          total={total}
+          subtotal={calculations.grossSubtotal}
+          tax={calculations.adjustedVAT}
+          total={calculations.finalTotal}
           discount={discount}
           discountType={discountType}
           discountIdNumber={discountIdNumber}
@@ -182,9 +180,9 @@ export default function POSContent({
             <CardContent className="p-4 h-full">
               <CartView 
                 items={items} 
-                subtotal={subtotal} 
-                tax={tax} 
-                total={total} 
+                subtotal={calculations.grossSubtotal} 
+                tax={calculations.adjustedVAT} 
+                total={calculations.finalTotal}
                 discount={discount} 
                 discountType={discountType} 
                 discountIdNumber={discountIdNumber} 
@@ -231,9 +229,9 @@ export default function POSContent({
             <CardContent className="p-4 h-full">
               <CartView 
                 items={items} 
-                subtotal={subtotal} 
-                tax={tax} 
-                total={total} 
+                subtotal={calculations.grossSubtotal} 
+                tax={calculations.adjustedVAT} 
+                total={calculations.finalTotal}
                 discount={discount} 
                 discountType={discountType} 
                 discountIdNumber={discountIdNumber} 

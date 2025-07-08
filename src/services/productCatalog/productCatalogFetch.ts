@@ -35,7 +35,7 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
       image: item.image_url || undefined, // Map to frontend compatibility field
       is_active: item.is_available,
       isActive: item.is_available,
-      product_status: item.product_status, // Include enhanced status
+      product_status: item.product_status as any, // Include enhanced status
       store_id: item.store_id,
       storeId: item.store_id,
       sku: `PC-${item.id.substring(0, 8)}`, // Generate SKU from ID

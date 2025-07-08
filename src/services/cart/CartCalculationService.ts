@@ -100,15 +100,16 @@ export class CartCalculationService {
     // Other discount calculations
     let otherDiscountAmount = 0;
     if (otherDiscount) {
+      const discountSubtotal = grossSubtotal > 0 ? grossSubtotal : items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       switch (otherDiscount.type) {
         case 'pwd':
-          otherDiscountAmount = grossSubtotal * this.PWD_DISCOUNT_RATE;
+          otherDiscountAmount = discountSubtotal * this.PWD_DISCOUNT_RATE;
           break;
         case 'employee':
-          otherDiscountAmount = grossSubtotal * this.EMPLOYEE_DISCOUNT_RATE;
+          otherDiscountAmount = discountSubtotal * this.EMPLOYEE_DISCOUNT_RATE;
           break;
         case 'loyalty':
-          otherDiscountAmount = grossSubtotal * this.LOYALTY_DISCOUNT_RATE;
+          otherDiscountAmount = discountSubtotal * this.LOYALTY_DISCOUNT_RATE;
           break;
         case 'promo':
           otherDiscountAmount = otherDiscount.amount;

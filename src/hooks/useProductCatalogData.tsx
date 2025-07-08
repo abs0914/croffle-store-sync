@@ -34,10 +34,11 @@ export function useProductCatalogData(storeId: string | null) {
   });
   
   // Manual refetch function
-  const refetch = useCallback(async () => {
+  const manualRefetch = useCallback(async () => {
     // This is a placeholder - the useProductCatalogFetch will handle the actual refetch
     // based on the storeId dependency
-  }, []);
+    return refetch();
+  }, [refetch]);
 
   return {
     products: filteredProducts,
@@ -52,6 +53,6 @@ export function useProductCatalogData(storeId: string | null) {
     setActiveTab,
     lastSync,
     isConnected,
-    refetch
+    refetch: manualRefetch
   };
 }
