@@ -30,24 +30,14 @@ export function RolePermissionsProvider({ children }: { children: ReactNode }) {
   // Get user role directly from auth user object
   const userRole = user?.role || null;
   
-  // Enhanced debug logging
-  console.log('🔐 RolePermissionsProvider - Enhanced Debug:', {
+  // CRITICAL DEBUG: Log every render
+  console.log('🔐 RolePermissionsProvider RENDER:', {
+    hasUser: !!user,
+    userRole: user?.role,
+    extractedRole: userRole,
     isLoading,
-    userExists: !!user,
-    userRole,
-    userRoleType: typeof userRole,
-    userFromAuth: user,
-    directRoleAccess: user?.role
+    timestamp: new Date().toISOString()
   });
-  
-  // Debug logging for role permissions context
-  console.log('🔐 RolePermissionsProvider - Auth isLoading:', isLoading);
-  console.log('🔐 RolePermissionsProvider - User object:', user);
-  console.log('🔐 RolePermissionsProvider - User role:', userRole);
-  console.log('🔐 RolePermissionsProvider - User exists:', !!user);
-  console.log('🔐 RolePermissionsProvider - User role type:', typeof userRole);
-  console.log('🔐 RolePermissionsProvider - User.role direct access:', user?.role);
-  console.log('🔐 RolePermissionsProvider - User object keys:', user ? Object.keys(user) : 'no user');
   
   const checkPermission = (permission: keyof RolePermissions): boolean => {
     const hasPermissionResult = userRole ? hasPermission(userRole, permission) : false;
