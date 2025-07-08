@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart } from "lucide-react";
@@ -61,9 +63,11 @@ export default function MobileCartDrawer(props: MobileCartDrawerProps) {
                 <span className="text-lg font-bold">₱{actualTotal.toFixed(2)}</span>
               </SheetTitle>
             </SheetHeader>
-            <div className="flex-1 overflow-y-auto">
-              <CartView {...props} />
-            </div>
+            <ScrollArea className="flex-1">
+              <div className="px-1">
+                <CartView {...props} />
+              </div>
+            </ScrollArea>
           </SheetContent>
         </Sheet>
       </div>
