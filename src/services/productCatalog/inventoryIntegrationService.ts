@@ -84,13 +84,8 @@ export const processProductSale = async (
       return false;
     }
 
-    // Check for auto-reorder triggers
-    const reorderResult = await checkAndTriggerAutoReorder(storeId);
-    if (reorderResult.triggered) {
-      console.log('Auto-reorder triggered:', reorderResult.message);
-      toast.info(reorderResult.message);
-    }
-
+    // Auto-reorder system disabled - manual ordering through Order Management
+    console.log('Product sale processed successfully - auto-reorder disabled');
     return true;
   } catch (error) {
     console.error('Error processing product sale:', error);
@@ -100,72 +95,13 @@ export const processProductSale = async (
 };
 
 export const checkAndTriggerAutoReorder = async (storeId: string): Promise<AutoReorderResult> => {
-  try {
-    console.log('Checking auto-reorder triggers for store:', storeId);
-
-    // Get items below minimum threshold using proper SQL query
-    const { data: lowStockItemsData, error } = await supabase
-      .rpc('get_low_stock_items', { 
-        store_id_param: storeId 
-      });
-    
-    const lowStockItems = lowStockItemsData as any[];
-
-    if (error) throw error;
-
-    if (!lowStockItems || lowStockItems.length === 0) {
-      return {
-        triggered: false,
-        orderIds: [],
-        message: 'No auto-reorder needed'
-      };
-    }
-
-    // Generate order number
-    const orderNumber = `AUTO-${Date.now()}`;
-
-    // Create stock order for low stock items
-    const { data: stockOrder, error: orderError } = await supabase
-      .from('stock_orders')
-      .insert({
-        store_id: storeId,
-        status: 'requested',
-        notes: 'Auto-generated order for low stock items',
-        order_number: orderNumber,
-        requested_by: (await supabase.auth.getUser()).data.user?.id
-      })
-      .select()
-      .single();
-
-    if (orderError) throw orderError;
-
-    // Add items to the order
-    const orderItems = lowStockItems.map(item => ({
-      stock_order_id: stockOrder.id,
-      inventory_stock_id: item.id,
-      requested_quantity: (item.maximum_capacity || 100) - item.stock_quantity,
-      notes: `Auto-reorder: Current stock ${item.stock_quantity}, Threshold ${item.minimum_threshold}`
-    }));
-
-    const { error: itemsError } = await supabase
-      .from('stock_order_items')
-      .insert(orderItems);
-
-    if (itemsError) throw itemsError;
-
-    return {
-      triggered: true,
-      orderIds: [stockOrder.id],
-      message: `Auto-reorder created for ${lowStockItems.length} low stock items`
-    };
-  } catch (error) {
-    console.error('Error checking auto-reorder:', error);
-    return {
-      triggered: false,
-      orderIds: [],
-      message: 'Auto-reorder check failed'
-    };
-  }
+  // Auto-reorder system disabled - use manual order management instead
+  console.log('Auto-reorder disabled for store:', storeId);
+  return {
+    triggered: false,
+    orderIds: [],
+    message: 'Auto-reorder disabled - use Order Management for manual ordering'
+  };
 };
 
 export const getInventoryStatus = async (storeId: string) => {
