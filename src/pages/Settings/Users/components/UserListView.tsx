@@ -110,10 +110,16 @@ export default function UserListView({
               </Button>
             )}
             
-            {canManageUsers && (
-              <Button size="sm" onClick={onAddUser} disabled={isLoading} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                <PlusIcon className="h-4 w-4 mr-1" />
-                Add New User
+            {/* Debug: Always show the Add User button for now */}
+            <Button size="sm" onClick={onAddUser} disabled={isLoading} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Add New User
+            </Button>
+            
+            {/* Debug info */}
+            {!canManageUsers && (
+              <Button variant="outline" size="sm" disabled>
+                No Permission
               </Button>
             )}
           </div>
