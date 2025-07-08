@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           contact_number: string | null
           created_at: string | null
+          custom_permissions: Json | null
           email: string | null
           first_name: string
           id: string
@@ -31,6 +32,7 @@ export type Database = {
         Insert: {
           contact_number?: string | null
           created_at?: string | null
+          custom_permissions?: Json | null
           email?: string | null
           first_name: string
           id?: string
@@ -44,6 +46,7 @@ export type Database = {
         Update: {
           contact_number?: string | null
           created_at?: string | null
+          custom_permissions?: Json | null
           email?: string | null
           first_name?: string
           id?: string

@@ -158,3 +158,27 @@ export function getRolesByHierarchy(): UserRoleDefinition[] {
     .map(([key, definition]) => ({ ...definition, key }))
     .sort((a, b) => b.hierarchy - a.hierarchy);
 }
+
+export function resolveUserPermissions(role: string, customPermissions?: Partial<RolePermissions>): RolePermissions {
+  const roleDefinition = getUserRoleDefinition(role);
+  const basePermissions = roleDefinition?.permissions || {
+    pos: false,
+    dashboard: false,
+    inventory_management: false,
+    commissary_inventory: false,
+    production_management: false,
+    order_management: false,
+    expenses: false,
+    recipe_management: false,
+    reports: false,
+    settings: false,
+    user_management: false,
+    purchasing: false,
+  };
+
+  // Merge base permissions with custom overrides
+  return {
+    ...basePermissions,
+    ...customPermissions,
+  };
+}

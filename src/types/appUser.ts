@@ -1,5 +1,6 @@
 
 import { UserRole } from "./user";
+import { RolePermissions } from "./rolePermissions";
 
 export interface AppUser {
   id: string;
@@ -14,6 +15,7 @@ export interface AppUser {
   fullName?: string;
   createdAt: string;
   updatedAt: string;
+  customPermissions?: Partial<RolePermissions>;
 }
 
 export interface AppUserFormData {
@@ -27,4 +29,5 @@ export interface AppUserFormData {
   storeIds: string[];
   isActive: boolean;
   password?: string;
+  customPermissions?: Partial<RolePermissions>;
 }

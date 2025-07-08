@@ -37,10 +37,11 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
     lastName: "",
     contactNumber: "",
     email: "",
-    role: user?.role || "cashier",
-    storeIds: [],
-    isActive: true
-  });
+        role: user?.role || "cashier",
+        storeIds: [],
+        isActive: true,
+        customPermissions: undefined
+      });
 
   const updateMutation = useMutation({
     mutationFn: updateAppUser,
@@ -66,7 +67,8 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
         email: user.email || "",
         role: user.role,
         storeIds: user.storeIds || [],
-        isActive: user.isActive
+        isActive: user.isActive,
+        customPermissions: user.customPermissions
       });
     }
   }, [user]);

@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { AppUser, AppUserFormData } from "@/types/appUser";
+import { RolePermissions } from "@/types/rolePermissions";
 import { toast } from "sonner";
 
 export const createAppUser = async (data: AppUserFormData): Promise<AppUser | null> => {
@@ -15,7 +16,8 @@ export const createAppUser = async (data: AppUserFormData): Promise<AppUser | nu
         contact_number: data.contactNumber,
         role: data.role,
         store_ids: data.storeIds,
-        is_active: data.isActive
+        is_active: data.isActive,
+        custom_permissions: data.customPermissions || null
       })
       .select()
       .single();
@@ -30,20 +32,21 @@ export const createAppUser = async (data: AppUserFormData): Promise<AppUser | nu
     }
 
     toast.success('User created successfully');
-    return {
-      id: newUser.id,
-      userId: newUser.user_id,
-      firstName: newUser.first_name,
-      lastName: newUser.last_name,
-      fullName: `${newUser.first_name} ${newUser.last_name}`,
-      email: newUser.email,
-      contactNumber: newUser.contact_number,
-      role: newUser.role,
-      storeIds: newUser.store_ids || [],
-      isActive: newUser.is_active,
-      createdAt: newUser.created_at,
-      updatedAt: newUser.updated_at
-    };
+      return {
+        id: newUser.id,
+        userId: newUser.user_id,
+        firstName: newUser.first_name,
+        lastName: newUser.last_name,
+        fullName: `${newUser.first_name} ${newUser.last_name}`,
+        email: newUser.email,
+        contactNumber: newUser.contact_number,
+        role: newUser.role,
+        storeIds: newUser.store_ids || [],
+        isActive: newUser.is_active,
+        createdAt: newUser.created_at,
+        updatedAt: newUser.updated_at,
+        customPermissions: newUser.custom_permissions ? newUser.custom_permissions as Partial<RolePermissions> : undefined
+      };
   } catch (error: any) {
     console.error('Error in createAppUser:', error);
     // Only show toast for non-RLS policy errors to avoid duplicate creation noise
@@ -70,7 +73,8 @@ export const updateAppUser = async (data: AppUserFormData): Promise<AppUser | nu
         contact_number: data.contactNumber,
         role: data.role,
         store_ids: data.storeIds,
-        is_active: data.isActive
+        is_active: data.isActive,
+        custom_permissions: data.customPermissions || null
       })
       .eq('id', data.id)
       .select()
@@ -95,7 +99,8 @@ export const updateAppUser = async (data: AppUserFormData): Promise<AppUser | nu
       storeIds: updatedUser.store_ids || [],
       isActive: updatedUser.is_active,
       createdAt: updatedUser.created_at,
-      updatedAt: updatedUser.updated_at
+      updatedAt: updatedUser.updated_at,
+      customPermissions: updatedUser.custom_permissions ? updatedUser.custom_permissions as Partial<RolePermissions> : undefined
     };
   } catch (error: any) {
     console.error('Error in updateAppUser:', error);

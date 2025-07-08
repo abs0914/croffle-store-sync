@@ -115,6 +115,7 @@ export default function AddUserDialog({ isOpen, onOpenChange, stores }: AddUserD
             onChange={handleChange}
             stores={stores}
             includePassword={true}
+            showPermissionOverrides={true}
           />
           <DialogFooter className="pt-4">
             <Button
