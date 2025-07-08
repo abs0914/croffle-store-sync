@@ -171,12 +171,13 @@ export const updateProduct = async (
     await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
     console.log('✅ Product Catalog: Cache invalidation broadcasted successfully');
 
-    toast.success('Product updated successfully');
+    // Don't show toast here - let the component handle it
+    console.log('✅ Product Catalog: Product updated successfully');
     return true;
   } catch (error) {
     console.error('❌ Product Catalog: Error updating product:', error);
-    toast.error('Failed to update product');
-    return false;
+    // Don't show toast here - let the component handle it with rollback
+    throw error;
   }
 };
 
@@ -222,12 +223,13 @@ export const toggleProductAvailability = async (
       await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
     }
 
-    toast.success(`Product ${isAvailable ? 'enabled' : 'disabled'} successfully`);
+    // Don't show toast here - let the component handle it
+    console.log(`✅ Product Catalog: Product ${isAvailable ? 'enabled' : 'disabled'} successfully`);
     return true;
   } catch (error) {
     console.error('Error updating product availability:', error);
-    toast.error('Failed to update product availability');
-    return false;
+    // Don't show toast here - let the component handle it with rollback
+    throw error;
   }
 };
 
@@ -266,11 +268,12 @@ export const updateProductStatus = async (
       discontinued: 'discontinued'
     };
 
-    toast.success(`Product marked as ${statusLabels[status]}`);
+    // Don't show toast here - let the component handle it
+    console.log(`✅ Product Catalog: Product marked as ${statusLabels[status]}`);
     return true;
   } catch (error) {
     console.error('Error updating product status:', error);
-    toast.error('Failed to update product status');
-    return false;
+    // Don't show toast here - let the component handle it with rollback
+    throw error;
   }
 };
