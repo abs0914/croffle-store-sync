@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -64,6 +64,7 @@ export default function CartView({
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string>('');
+  const [isOrderTypeTransitioning, setIsOrderTypeTransitioning] = useState(false);
   
   // Use centralized cart calculations from context
   const { 
@@ -79,6 +80,29 @@ export default function CartView({
     setDeliveryOrderNumber,
     updateItemPrice 
   } = useCart();
+
+  // Debug logging for cart items
+  useEffect(() => {
+    console.log('CartView: Cart items changed', {
+      itemCount: cartItems?.length || 0,
+      orderType,
+      isTransitioning: isOrderTypeTransitioning,
+      items: cartItems?.map(item => ({ id: item.productId, name: item.product.name }))
+    });
+  }, [cartItems, orderType, isOrderTypeTransitioning]);
+
+  // Handle order type transitions with loading state
+  const handleOrderTypeChange = (newOrderType: any) => {
+    console.log('CartView: Order type changing', { from: orderType, to: newOrderType });
+    setIsOrderTypeTransitioning(true);
+    setOrderType(newOrderType);
+    
+    // Small delay to ensure context stability
+    setTimeout(() => {
+      setIsOrderTypeTransitioning(false);
+      console.log('CartView: Order type transition complete');
+    }, 100);
+  };
 
   const { 
     isValidating, 
@@ -169,7 +193,7 @@ export default function CartView({
       <div className="flex-shrink-0">
         <OrderTypeSelector
           orderType={orderType}
-          onOrderTypeChange={setOrderType}
+          onOrderTypeChange={handleOrderTypeChange}
           deliveryPlatform={deliveryPlatform}
           onDeliveryPlatformChange={setDeliveryPlatform}
           deliveryOrderNumber={deliveryOrderNumber}
@@ -180,10 +204,18 @@ export default function CartView({
       {/* Cart Items - Scrollable */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <div className="space-y-2 h-full overflow-y-auto">
-        {cartItems.length === 0 ? (
+        {/* Show loading during transitions to prevent empty cart flicker */}
+        {isOrderTypeTransitioning ? (
+          <div className="text-center text-muted-foreground py-8">
+            <div className="flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              <span>Updating cart...</span>
+            </div>
+          </div>
+        ) : cartItems?.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">Your cart is empty</p>
         ) : (
-          cartItems.map((item, index) => {
+          cartItems?.map((item, index) => {
             const validation = getItemValidation(item.productId, item.variationId);
             const hasStockIssue = validation && !validation.isValid;
             
@@ -201,7 +233,7 @@ export default function CartView({
                 validation={validation}
               />
             );
-          })
+          }) || []
         )}
         </div>
       </div>
