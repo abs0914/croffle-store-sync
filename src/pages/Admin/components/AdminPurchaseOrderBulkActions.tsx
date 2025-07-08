@@ -2,7 +2,8 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, XCircle, X } from 'lucide-react';
+import { CheckCircle, XCircle, X, Trash2 } from 'lucide-react';
+import { useAuth } from '@/contexts/auth';
 
 interface AdminPurchaseOrderBulkActionsProps {
   selectedCount: number;
@@ -15,6 +16,8 @@ export function AdminPurchaseOrderBulkActions({
   onBulkAction,
   onClearSelection
 }: AdminPurchaseOrderBulkActionsProps) {
+  const { hasPermission } = useAuth();
+  
   return (
     <Card>
       <CardContent className="p-4">
@@ -42,6 +45,17 @@ export function AdminPurchaseOrderBulkActions({
                 <XCircle className="h-4 w-4 mr-1" />
                 Reject All
               </Button>
+              {hasPermission('admin') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onBulkAction('delete')}
+                  className="text-destructive hover:text-destructive/80"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete All
+                </Button>
+              )}
             </div>
           </div>
           <Button

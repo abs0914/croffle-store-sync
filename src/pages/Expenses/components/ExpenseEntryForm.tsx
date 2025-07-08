@@ -100,6 +100,21 @@ export default function ExpenseEntryForm({ onSuccess }: ExpenseEntryFormProps) {
       return;
     }
 
+    if (!data.category_id || data.category_id === '') {
+      toast.error('Please select a category');
+      return;
+    }
+
+    if (!data.description || data.description.trim() === '') {
+      toast.error('Please enter a description');
+      return;
+    }
+
+    if (data.amount <= 0) {
+      toast.error('Amount must be greater than 0');
+      return;
+    }
+
     let receiptUrl = undefined;
     
     // In a real implementation, you would upload the receipt to storage here
@@ -111,6 +126,7 @@ export default function ExpenseEntryForm({ onSuccess }: ExpenseEntryFormProps) {
     const expenseData: CreateExpenseRequest = {
       ...data,
       store_id: currentStore.id,
+      category_id: data.category_id, // Ensure this is not empty
       receipt_url: receiptUrl
     };
 
@@ -146,13 +162,14 @@ export default function ExpenseEntryForm({ onSuccess }: ExpenseEntryFormProps) {
               <FormField
                 control={form.control}
                 name="category_id"
+                rules={{ required: 'Category is required' }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category *</FormLabel>
                     <FormControl>
                       <Select 
                         onValueChange={field.onChange} 
-                        defaultValue={field.value}
+                        value={field.value}
                         disabled={categoriesLoading}
                       >
                         <SelectTrigger>
@@ -176,6 +193,10 @@ export default function ExpenseEntryForm({ onSuccess }: ExpenseEntryFormProps) {
               <FormField
                 control={form.control}
                 name="amount"
+                rules={{ 
+                  required: 'Amount is required',
+                  min: { value: 0.01, message: 'Amount must be greater than 0' }
+                }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Amount (₱) *</FormLabel>
@@ -183,7 +204,7 @@ export default function ExpenseEntryForm({ onSuccess }: ExpenseEntryFormProps) {
                       <Input
                         type="number"
                         step="0.01"
-                        min="0"
+                        min="0.01"
                         placeholder="0.00"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
@@ -199,6 +220,7 @@ export default function ExpenseEntryForm({ onSuccess }: ExpenseEntryFormProps) {
             <FormField
               control={form.control}
               name="description"
+              rules={{ required: 'Description is required' }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Description *</FormLabel>
@@ -218,6 +240,7 @@ export default function ExpenseEntryForm({ onSuccess }: ExpenseEntryFormProps) {
             <FormField
               control={form.control}
               name="expense_date"
+              rules={{ required: 'Expense date is required' }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Expense Date *</FormLabel>

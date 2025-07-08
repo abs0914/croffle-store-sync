@@ -1,7 +1,42 @@
-
 // Standard UOM options for consistency across the application
 export const STANDARD_UOM_OPTIONS = [
-  'kg', 'g', 'pieces', 'liters', 'ml', 'boxes', 'packs', 'serving', 'portion', 'scoop', 'pair'
+  'pieces',
+  'boxes',
+  'packs',
+  'kg',
+  'g',
+  'liters',
+  'ml',
+  '1 Box',
+  '1 Kilo', 
+  '1 Liter',
+  '900 grams',
+  '2500 grams',
+  '5000 grams', 
+  '1000 grams',
+  '750 grams',
+  '454 grams',
+  '500 grams',
+  '680 grams',
+  '6000 grams',
+  '630 grams',
+  'Piece',
+  'Pack of 25',
+  'Pack of 50', 
+  'Pack of 100',
+  'Pack of 20',
+  'Pack of 32',
+  'Pack of 24',
+  'Pack of 27',
+  'Box',
+  'Piping Bag',
+  'liter',
+  'pack',
+  'piece',
+  'serving',
+  'portion',
+  'scoop',
+  'pair'
 ] as const;
 
 // Commissary inventory item interface

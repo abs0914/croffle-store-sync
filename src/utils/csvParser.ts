@@ -6,17 +6,17 @@ export interface RecipeUpload {
   serving_size: number;
   instructions?: string;
   ingredients: {
-    name: string;
-    uom: string; // Changed from unit to uom
+    commissary_item_name: string;
+    uom: string;
     quantity: number;
-    cost?: number;
+    cost_per_unit?: number;
   }[];
 }
 
 export interface RawIngredientUpload {
   name: string;
   category: 'raw_materials' | 'packaging_materials' | 'supplies';
-  uom: string; // Changed from unit to uom
+  uom: string;
   unit_cost?: number;
   current_stock?: number;
   minimum_threshold?: number;
@@ -100,7 +100,7 @@ const mapCategoryToValidValue = (category: string): 'raw_materials' | 'packaging
   return categoryMapping[normalizedCategory] || null;
 };
 
-// Create mapping for common header variations - removed item_price and item_quantity
+// Create mapping for common header variations
 const createHeaderMapping = (headers: string[]): Record<string, number> => {
   const mapping: Record<string, number> = {};
   
@@ -130,7 +130,7 @@ const createHeaderMapping = (headers: string[]): Record<string, number> => {
   return mapping;
 };
 
-// Updated conversion recipe header mapping to match the exact headers from your CSV
+// Updated conversion recipe header mapping
 const createConversionRecipeHeaderMapping = (headers: string[]): Record<string, number> => {
   const mapping: Record<string, number> = {};
   
@@ -197,10 +197,15 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
   const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
   const recipes: Map<string, RecipeUpload> = new Map();
 
+  console.log('CSV headers:', headers);
+
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
     
-    if (values.length < headers.length) continue;
+    if (values.length < headers.length) {
+      console.log(`Skipping line ${i + 1}: insufficient columns`);
+      continue;
+    }
 
     const row: Record<string, string> = {};
     headers.forEach((header, index) => {
@@ -210,11 +215,16 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     const recipeName = row['name'] || row['recipe name'] || row['product'];
     const category = row['category'];
     const ingredientName = row['ingredient name'];
-    const uom = row['uom'] || row['unit of measure'] || row['unit']; // Support both UOM and unit columns
+    const uom = row['uom'] || row['unit of measure'] || row['unit'];
     const quantity = parseFloat(row['quantity used'] || row['quantity']) || 0;
     const cost = parseFloat(row['cost per unit']) || 0;
 
-    if (!recipeName || !ingredientName || !uom || quantity <= 0) continue;
+    console.log(`Processing line ${i + 1}:`, { recipeName, category, ingredientName, uom, quantity, cost });
+
+    if (!recipeName || !ingredientName || !uom || quantity <= 0) {
+      console.log(`Skipping line ${i + 1}: missing required fields`);
+      continue;
+    }
 
     if (!recipes.has(recipeName)) {
       recipes.set(recipeName, {
@@ -230,16 +240,20 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
 
     const recipe = recipes.get(recipeName)!;
     recipe.ingredients.push({
-      name: ingredientName,
+      commissary_item_name: ingredientName,
       uom: uom,
       quantity: quantity,
-      cost: cost
+      cost_per_unit: cost
     });
   }
 
-  return Array.from(recipes.values()).filter(recipe => 
+  const parsedRecipes = Array.from(recipes.values()).filter(recipe => 
     recipe.ingredients.length > 0 && recipe.category
   );
+
+  console.log(`Parsed ${parsedRecipes.length} recipes with ingredients:`, parsedRecipes);
+  
+  return parsedRecipes;
 };
 
 export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] => {
@@ -270,7 +284,6 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
       continue;
     }
 
-    // Extract values using header mapping - removed item_price and item_quantity
     const name = values[headerMapping['name']] || '';
     const rawCategory = values[headerMapping['category']] || '';
     const uom = values[headerMapping['uom']] || '';
@@ -283,13 +296,11 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
 
     console.log(`Extracted data for line ${i}:`, { name, category: rawCategory, uom, unit_cost });
 
-    // Validate required fields
     if (!name || !rawCategory || !uom) {
       console.log(`Skipping line ${i}: missing required fields (name: ${name}, category: ${rawCategory}, uom: ${uom})`);
       continue;
     }
 
-    // Map category to valid database value
     const mappedCategory = mapCategoryToValidValue(rawCategory);
     if (!mappedCategory) {
       console.log(`Skipping line ${i}: invalid category "${rawCategory}" - could not map to valid category`);
@@ -318,7 +329,6 @@ export const parseRawIngredientsCSV = (csvText: string): RawIngredientUpload[] =
   return ingredients;
 };
 
-// Fixed conversion recipe parser with better header mapping and debugging
 export const parseConversionRecipesCSV = (csvContent: string): ConversionRecipeUpload[] => {
   try {
     console.log('Starting conversion recipe CSV parsing...');
@@ -332,11 +342,9 @@ export const parseConversionRecipesCSV = (csvContent: string): ConversionRecipeU
     const headers = parseCSVLine(lines[0]);
     console.log('CSV Headers found:', headers);
     
-    // Use the updated header mapping function
     const headerMapping = createConversionRecipeHeaderMapping(headers);
     console.log('Header mapping result:', headerMapping);
     
-    // Check if we have all required fields mapped
     const requiredFields = ['name', 'input_item_name', 'input_quantity', 'input_unit', 'output_product_name', 'output_quantity', 'output_unit'];
     const missingFields = requiredFields.filter(field => headerMapping[field] === undefined);
     
@@ -349,12 +357,10 @@ export const parseConversionRecipesCSV = (csvContent: string): ConversionRecipeU
 
     const recipes: ConversionRecipeUpload[] = [];
     
-    // Process each data row (skip header)
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i]);
       console.log(`Processing row ${i + 1}:`, values);
       
-      // Skip empty rows
       if (values.every(v => !v.trim())) {
         console.log(`Skipping empty row ${i + 1}`);
         continue;
@@ -379,7 +385,6 @@ export const parseConversionRecipesCSV = (csvContent: string): ConversionRecipeU
 
         console.log(`Parsed recipe data for row ${i + 1}:`, recipe);
 
-        // Validate required fields
         if (!recipe.name || !recipe.input_item_name || !recipe.output_product_name) {
           console.warn(`Skipping row ${i + 1}: Missing required fields - name: "${recipe.name}", input_item: "${recipe.input_item_name}", output_product: "${recipe.output_product_name}"`);
           continue;

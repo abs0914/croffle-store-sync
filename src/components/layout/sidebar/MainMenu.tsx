@@ -7,7 +7,10 @@ import {
   Package, 
   FileText, 
   Settings,
-  DollarSign
+  DollarSign,
+  Users,
+  ClipboardList,
+  Archive
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,22 +26,27 @@ const menuItems = [
     href: "/pos",
   },
   {
-    title: "Products",
+    title: "Product Catalog",
     icon: Package,
     href: "/products",
   },
   {
     title: "Inventory",
-    icon: Package,
+    icon: Archive,
     href: "/inventory",
   },
   {
-    title: "Orders",
-    icon: FileText,
-    href: "/orders",
+    title: "Order Management",
+    icon: ClipboardList,
+    href: "/order-management",
   },
   {
-    title: "Expenses", // New expense menu item for stores
+    title: "Customers",
+    icon: Users,
+    href: "/customers",
+  },
+  {
+    title: "Expenses",
     icon: DollarSign,
     href: "/expenses",
   },

@@ -1,0 +1,1 @@
+export { StoreCatalogTab } from './StoreCatalogTab';

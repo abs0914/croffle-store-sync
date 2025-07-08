@@ -23,14 +23,12 @@ export interface ShiftState {
   currentShift: Shift | null;
   isLoading: boolean;
   startShift: (
-    startingCash: number, 
-    startInventoryCount: Record<string, number>,
+    startingCash: number,
     startPhoto?: string,
     cashierId?: string
   ) => Promise<boolean>;
   endShift: (
-    endingCash: number, 
-    endInventoryCount: Record<string, number>,
+    endingCash: number,
     endPhoto?: string
   ) => Promise<boolean>;
   fetchActiveShift: () => Promise<void>;

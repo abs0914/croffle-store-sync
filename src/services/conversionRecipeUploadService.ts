@@ -1,10 +1,10 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ConversionRecipeUpload } from "@/utils/csvParser";
+import { ParsedConversionRecipe } from "@/utils/conversionRecipeParser";
 
-// Helper function to map CSV units to valid database units
-const mapToValidUnit = (csvUnit: string): string => {
+// Helper function to normalize unit values to valid database units
+const normalizeUnitValue = (unit: string): string => {
   const unitMapping: Record<string, string> = {
     // Weight units
     'kg': 'kg',
@@ -44,6 +44,11 @@ const mapToValidUnit = (csvUnit: string): string => {
     'packs': 'packs',
     'package': 'packs',
     'packages': 'packs',
+    'pack of 10': 'packs',
+    'pack of 20': 'packs',
+    'pack of 25': 'packs',
+    'pack of 50': 'packs',
+    'pack of 100': 'packs',
     
     // Special units
     'serving': 'serving',
@@ -56,203 +61,201 @@ const mapToValidUnit = (csvUnit: string): string => {
     'pairs': 'pair'
   };
   
-  const normalizedUnit = csvUnit.toLowerCase().trim();
+  const normalizedUnit = unit.toLowerCase().trim();
   return unitMapping[normalizedUnit] || 'pieces'; // Default to pieces if not found
 };
 
-export const bulkUploadConversionRecipes = async (recipes: ConversionRecipeUpload[]): Promise<boolean> => {
+export const bulkUploadConversionRecipes = async (
+  conversionRecipes: ParsedConversionRecipe[]
+): Promise<boolean> => {
   try {
-    console.log('Starting bulk upload of conversion recipes:', recipes);
-    
-    // Get commissary items for validation
-    const { data: commissaryData, error: commissaryError } = await supabase
+    console.log('Starting bulk upload of conversion recipes:', conversionRecipes.length);
+
+    // Get all commissary inventory items for matching
+    const { data: commissaryItems, error: commissaryError } = await supabase
       .from('commissary_inventory')
-      .select('id, name')
+      .select('id, name, unit, current_stock')
       .eq('is_active', true);
 
-    if (commissaryError || !commissaryData) {
+    if (commissaryError) {
       console.error('Error fetching commissary inventory:', commissaryError);
-      toast.error('Failed to load commissary inventory for validation');
+      throw commissaryError;
+    }
+
+    const commissaryMap = new Map();
+    commissaryItems?.forEach(item => {
+      commissaryMap.set(item.name.toLowerCase(), item);
+    });
+
+    let successCount = 0;
+    let skipCount = 0;
+    const missingIngredients = new Set<string>();
+    const processedRecipes: ParsedConversionRecipe[] = [];
+
+    // First pass: identify missing ingredients and mark them
+    for (const recipe of conversionRecipes) {
+      console.log(`Processing recipe: ${recipe.name} with ${recipe.input_items.length} ingredients`);
+      
+      const updatedInputItems = recipe.input_items.map(inputItem => {
+        const commissaryItem = commissaryMap.get(inputItem.commissary_item_name.toLowerCase());
+        if (!commissaryItem) {
+          missingIngredients.add(inputItem.commissary_item_name);
+          return { ...inputItem, is_missing: true };
+        }
+        return inputItem;
+      });
+
+      // Only process recipes that have at least one valid ingredient
+      const validIngredients = updatedInputItems.filter(item => !item.is_missing);
+      
+      if (validIngredients.length > 0) {
+        processedRecipes.push({
+          ...recipe,
+          input_items: validIngredients // Only include valid ingredients
+        });
+        
+        // Log multi-ingredient recipes
+        if (validIngredients.length > 1) {
+          console.log(`Multi-ingredient recipe "${recipe.name}" has ${validIngredients.length} valid ingredients`);
+        }
+      } else {
+        console.warn(`Skipping recipe "${recipe.name}" - no valid ingredients found`);
+        skipCount++;
+      }
+    }
+
+    // Show warning about missing ingredients but continue processing
+    if (missingIngredients.size > 0) {
+      const missingList = Array.from(missingIngredients).join(', ');
+      console.warn('Missing ingredients (will be skipped):', missingList);
+      toast.warning(`Some ingredients not found in commissary inventory and will be skipped: ${missingList}`);
+    }
+
+    if (processedRecipes.length === 0) {
+      toast.error('No valid conversion recipes to process');
       return false;
     }
 
-    const commissaryMap = new Map(commissaryData.map(item => [item.name.toLowerCase().trim(), item]));
-    console.log('Available commissary items:', commissaryData.map(item => item.name));
+    // Process each recipe
+    for (const recipe of processedRecipes) {
+      try {
+        console.log(`Creating conversion recipe: ${recipe.name}`);
+        
+        // Generate comprehensive instructions for multi-ingredient recipes
+        const ingredientList = recipe.input_items.map(i => 
+          `${i.quantity} ${i.unit} ${i.commissary_item_name}`
+        ).join(', ');
+        
+        const instructions = recipe.input_items.length > 1 
+          ? `Multi-ingredient conversion: Combine ${ingredientList} to produce ${recipe.output_item.quantity} ${recipe.output_item.uom} ${recipe.output_item.name}`
+          : `Convert ${ingredientList} into ${recipe.output_item.quantity} ${recipe.output_item.uom} ${recipe.output_item.name}`;
 
-    const validRecipes = [];
-    const errors = [];
+        // Create the conversion recipe
+        const { data: conversionRecipe, error: recipeError } = await supabase
+          .from('conversion_recipes')
+          .insert({
+            name: recipe.name,
+            description: recipe.description,
+            finished_item_name: recipe.output_item.name,
+            finished_item_unit: normalizeUnitValue(recipe.output_item.uom), // Normalize unit
+            yield_quantity: recipe.output_item.quantity,
+            instructions: instructions,
+            created_by: (await supabase.auth.getUser()).data.user?.id,
+            is_active: true
+          })
+          .select()
+          .single();
 
-    // Validate each recipe with strict matching only
-    for (const recipe of recipes) {
-      const inputItemKey = recipe.input_item_name.toLowerCase().trim();
-      const inventoryItem = commissaryMap.get(inputItemKey);
-      
-      if (!inventoryItem) {
-        errors.push(`Input item "${recipe.input_item_name}" not found in commissary inventory. Available items: ${Array.from(commissaryMap.keys()).slice(0, 10).join(', ')}${commissaryMap.size > 10 ? '...' : ''}`);
-        console.warn(`Skipping recipe "${recipe.name}" - input item "${recipe.input_item_name}" not found`);
+        if (recipeError) {
+          console.error(`Error creating recipe "${recipe.name}":`, recipeError);
+          continue;
+        }
+
+        console.log(`Created conversion recipe with ID: ${conversionRecipe.id}`);
+
+        // Create recipe ingredients (support multiple ingredients)
+        const ingredientInserts = recipe.input_items
+          .filter(inputItem => !inputItem.is_missing)
+          .map(inputItem => {
+            const commissaryItem = commissaryMap.get(inputItem.commissary_item_name.toLowerCase());
+            return {
+              conversion_recipe_id: conversionRecipe.id,
+              commissary_item_id: commissaryItem.id,
+              quantity: inputItem.quantity
+            };
+          });
+
+        if (ingredientInserts.length > 0) {
+          console.log(`Inserting ${ingredientInserts.length} ingredients for recipe "${recipe.name}"`);
+          
+          const { error: ingredientsError } = await supabase
+            .from('conversion_recipe_ingredients')
+            .insert(ingredientInserts);
+
+          if (ingredientsError) {
+            console.error(`Error creating ingredients for recipe "${recipe.name}":`, ingredientsError);
+            continue;
+          }
+        }
+
+        // Create the finished product in commissary inventory with proper SKU and stock
+        const finishedProductSku = recipe.output_item.sku || 
+          `FP-${recipe.output_item.name.toUpperCase().replace(/\s+/g, '-').substring(0, 20)}`;
+
+        const normalizedUnit = normalizeUnitValue(recipe.output_item.uom);
+        console.log(`Creating finished product with normalized unit: ${recipe.output_item.uom} -> ${normalizedUnit}`);
+        console.log(`Using SKU: ${finishedProductSku}, Unit Cost: ${recipe.output_item.unit_cost || 0}`);
+
+        const { error: productError } = await supabase
+          .from('commissary_inventory')
+          .insert({
+            name: recipe.output_item.name,
+            category: recipe.output_item.category,
+            item_type: 'orderable_item',
+            current_stock: 0, // Start with 0 stock - will be updated when conversion is executed
+            minimum_threshold: 10,
+            unit: normalizedUnit, // Use normalized unit
+            unit_cost: recipe.output_item.unit_cost || 0,
+            sku: finishedProductSku,
+            storage_location: recipe.output_item.storage_location || 'Finished Goods',
+            is_active: true
+          });
+
+        if (productError) {
+          console.error(`Error creating finished product "${recipe.output_item.name}":`, productError);
+          console.error('Product error details:', productError);
+          // Continue processing other recipes even if this one fails
+        } else {
+          console.log(`Created finished product: ${recipe.output_item.name} with SKU: ${finishedProductSku}`);
+        }
+
+        successCount++;
+        console.log(`Successfully processed recipe: ${recipe.name}`);
+
+      } catch (recipeError) {
+        console.error(`Error processing recipe "${recipe.name}":`, recipeError);
         continue;
       }
-
-      validRecipes.push({
-        ...recipe,
-        commissary_item_id: inventoryItem.id
-      });
     }
 
-    if (validRecipes.length === 0) {
-      console.log('No valid conversion recipes found after validation');
-      console.log('Validation errors:', errors);
-      toast.error(`No valid conversion recipes found. All ${recipes.length} recipes had missing ingredients. Please ensure input items exist in commissary inventory.`);
-      
-      // Show first few errors to help user understand what's missing
-      if (errors.length > 0) {
-        const firstErrors = errors.slice(0, 3);
-        firstErrors.forEach(error => console.error(error));
-        toast.error(`Missing ingredients: ${firstErrors.map(e => e.split('"')[1]).join(', ')}`);
-      }
-      
-      return false;
-    }
-
-    console.log(`Found ${validRecipes.length} valid recipes out of ${recipes.length} total`);
-
-    // Get current user for created_by field
-    const { data: userData } = await supabase.auth.getUser();
-    const currentUserId = userData.user?.id;
-
-    if (!currentUserId) {
-      toast.error('Authentication required');
-      return false;
-    }
-
-    // Create conversion recipe templates
-    const conversionRecipeInserts = validRecipes.map(recipe => ({
-      name: recipe.name,
-      description: recipe.description,
-      finished_item_name: recipe.output_product_name,
-      finished_item_unit: mapToValidUnit(recipe.output_unit), // Map to valid unit
-      yield_quantity: recipe.output_quantity,
-      instructions: recipe.instructions,
-      is_active: true,
-      created_by: currentUserId
-    }));
-
-    const { data: insertedRecipes, error: recipeError } = await supabase
-      .from('conversion_recipes')
-      .insert(conversionRecipeInserts)
-      .select('id, name');
-
-    if (recipeError) {
-      console.error('Error inserting conversion recipes:', recipeError);
-      toast.error('Failed to create conversion recipes');
-      return false;
-    }
-
-    if (!insertedRecipes || insertedRecipes.length === 0) {
-      toast.error('No conversion recipes were created');
-      return false;
-    }
-
-    console.log('Created conversion recipes:', insertedRecipes);
-
-    // Create conversion recipe ingredients
-    const ingredientInserts = [];
+    const totalAttempted = successCount + skipCount;
+    const multiIngredientCount = processedRecipes.filter(r => r.input_items.length > 1).length;
     
-    for (let i = 0; i < validRecipes.length; i++) {
-      const recipe = validRecipes[i];
-      const insertedRecipe = insertedRecipes[i];
+    if (successCount > 0) {
+      const message = `Successfully created ${successCount} conversion recipe(s)` + 
+        (multiIngredientCount > 0 ? ` (${multiIngredientCount} multi-ingredient)` : '') +
+        (skipCount > 0 ? ` (${skipCount} skipped due to missing ingredients)` : '');
       
-      if (insertedRecipe && recipe.commissary_item_id) {
-        ingredientInserts.push({
-          conversion_recipe_id: insertedRecipe.id,
-          commissary_item_id: recipe.commissary_item_id,
-          quantity: recipe.input_quantity
-        });
-      }
-    }
-
-    if (ingredientInserts.length > 0) {
-      console.log('Inserting conversion recipe ingredients:', ingredientInserts);
-      
-      const { error: ingredientError } = await supabase
-        .from('conversion_recipe_ingredients')
-        .insert(ingredientInserts);
-
-      if (ingredientError) {
-        console.error('Error inserting conversion recipe ingredients:', ingredientError);
-        
-        if (ingredientError.code === '23503') {
-          toast.error('Database constraint error: Invalid commissary item reference');
-        } else if (ingredientError.code === '42703') {
-          toast.error('Database error: Column does not exist in conversion_recipe_ingredients table');
-        } else {
-          toast.error(`Failed to add ingredients to conversion recipes: ${ingredientError.message}`);
-        }
-        return false;
-      }
-    }
-
-    // Create orderable items in commissary inventory with mapped units
-    console.log('Creating orderable items from conversion recipes...');
-    const orderableItemInserts = [];
-    
-    for (const recipe of validRecipes) {
-      // Map output category to database category
-      const categoryMapping = {
-        'raw_materials': 'raw_materials',
-        'packaging_materials': 'packaging_materials', 
-        'supplies': 'supplies'
-      };
-      
-      const dbCategory = categoryMapping[recipe.output_product_category as keyof typeof categoryMapping] || 'supplies';
-      const mappedUnit = mapToValidUnit(recipe.output_unit); // Map the output unit
-      
-      orderableItemInserts.push({
-        name: recipe.output_product_name,
-        category: dbCategory,
-        item_type: 'orderable_item',
-        current_stock: 0, // Start with 0 stock
-        minimum_threshold: Math.max(1, Math.floor(recipe.output_quantity * 0.1)), // 10% of output quantity
-        unit: mappedUnit, // Use mapped unit
-        unit_cost: recipe.output_unit_cost || 0,
-        sku: recipe.output_sku || `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        storage_location: recipe.output_storage_location || 'Finished Goods',
-        is_active: true
-      });
-    }
-
-    if (orderableItemInserts.length > 0) {
-      const { data: createdOrderableItems, error: orderableError } = await supabase
-        .from('commissary_inventory')
-        .insert(orderableItemInserts)
-        .select('id, name');
-
-      if (orderableError) {
-        console.error('Error creating orderable items:', orderableError);
-        toast.error(`Failed to create orderable items: ${orderableError.message}`);
-        return false;
-      }
-
-      console.log('Created orderable items:', createdOrderableItems);
-      toast.success(`Successfully created ${validRecipes.length} conversion recipes and ${createdOrderableItems?.length || 0} orderable items`);
-    }
-
-    console.log('Conversion recipes and orderable items created successfully');
-
-    // Provide detailed success/warning message
-    if (errors.length > 0) {
-      const skippedCount = recipes.length - validRecipes.length;
-      toast.warning(`Created ${validRecipes.length} conversion recipes and orderable items successfully. ${skippedCount} recipes were skipped due to missing commissary items.`);
-      console.warn('Skipped recipes due to missing ingredients:', errors);
+      toast.success(message);
     } else {
-      toast.success(`Successfully created ${validRecipes.length} conversion recipe templates and orderable items`);
+      toast.error('No conversion recipes could be created');
     }
 
-    return true;
+    return successCount > 0;
 
   } catch (error) {
-    console.error('Bulk upload error:', error);
-    toast.error('Failed to upload conversion recipes');
+    console.error('Error in bulk upload conversion recipes:', error);
+    toast.error('Failed to process conversion recipes');
     return false;
   }
 };

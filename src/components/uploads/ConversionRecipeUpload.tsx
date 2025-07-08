@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Upload, Download, Package, Info, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { parseConversionRecipesCSV } from "@/utils/csvParser";
+import { parseConversionRecipesCSV } from "@/utils/conversionRecipeParser";
 import { bulkUploadConversionRecipes } from "@/services/conversionRecipeUploadService";
 import { fetchCommissaryInventory } from "@/services/inventoryManagement/commissaryInventoryService";
 import { CommissaryInventoryItem } from "@/types/commissary";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const ConversionRecipeUpload = () => {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -64,30 +65,75 @@ export const ConversionRecipeUpload = () => {
     }
   };
 
-  const downloadTemplate = () => {
-    // Create template using actual commissary inventory items
-    let csvContent = `Conversion Name,Input Item,Input Qty,Input UOM,Output Item,Output Qty,Output UOM,Notes\n`;
+  const downloadSingleIngredientTemplate = () => {
+    let csvContent = `Conversion Name,Input Item,Input Qty,Input UOM,Output Item,Output Qty,Output UOM,Output Unit Cost,Output SKU,Notes\n`;
     
     if (commissaryItems.length > 0) {
-      // Use first few items as examples
       const sampleItems = commissaryItems.slice(0, 3);
       
       sampleItems.forEach((item, index) => {
         const conversionName = `${item.name} Processing ${index + 1}`;
         const outputName = `Processed ${item.name}`;
-        csvContent += `${conversionName},${item.name},1,${item.uom},${outputName},5,pieces,Convert ${item.name} into processed units\n`;
+        const outputUnitCost = item.unit_cost ? (item.unit_cost * 1.2).toFixed(2) : '50.00'; // 20% markup or default
+        const outputSKU = `FP-${outputName.toUpperCase().replace(/\s+/g, '-').substring(0, 15)}`;
+        csvContent += `${conversionName},${item.name},1,${item.uom},${outputName},5,pieces,${outputUnitCost},${outputSKU},Convert ${item.name} into processed units\n`;
       });
     } else {
-      // Fallback if no items loaded
-      csvContent += `Sample Conversion,Raw Material Name,1,kg,Finished Product Name,10,pieces,Sample conversion process\n`;
-      csvContent += `Bulk to Individual,Bulk Item Name,1,box,Individual Item Name,24,pieces,Breaking down bulk items\n`;
+      csvContent += `Sample Conversion,Raw Material Name,1,kg,Finished Product Name,10,pieces,100.00,FP-FINISHED-PRODUCT,Sample conversion process\n`;
     }
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    downloadCSV(csvContent, 'single_ingredient_conversion_template.csv');
+  };
+
+  const downloadMultiIngredientTemplate = () => {
+    let csvContent = `Conversion Name,Input Items,Input Quantities,Input UOMs,Output Item,Output Qty,Output UOM,Output Unit Cost,Output SKU,Notes\n`;
+    
+    if (commissaryItems.length >= 2) {
+      const items = commissaryItems.slice(0, 2);
+      const inputItems = items.map(item => item.name).join('|');
+      const inputQtys = items.map(() => '1').join('|');
+      const inputUOMs = items.map(item => item.uom).join('|');
+      const totalInputCost = items.reduce((sum, item) => sum + (item.unit_cost || 0), 0);
+      const outputUnitCost = (totalInputCost * 1.3).toFixed(2); // 30% markup
+      const outputSKU = `FP-COMBO-${items[0].name.substring(0, 8).toUpperCase()}`;
+      
+      csvContent += `Multi-Ingredient Combo,${inputItems},${inputQtys},${inputUOMs},Combined Product,1,combo,${outputUnitCost},${outputSKU},Multi-ingredient conversion\n`;
+    } else {
+      csvContent += `Croissant + Cream Combo,"Croissant Box|Whipped Cream Container","1|7","box|pieces",Regular Croissant + Whipped Cream,1,combo,2660.00,FP-CROIS-CREAM,Multi-ingredient combo\n`;
+    }
+
+    csvContent += `Whipped Cream Mix + Monalisa,"Whipped Cream Mix|Monalisa Cream","12|12","bags|liters",Premium Whipped Cream,12,piping bags,3360.00,FP-PREM-CREAM,Premium cream mixture\n`;
+    
+    downloadCSV(csvContent, 'multi_ingredient_conversion_template.csv');
+  };
+
+  const downloadMultiRowTemplate = () => {
+    let csvContent = `Conversion Name,Input Item,Input Qty,Input UOM,Output Item,Output Qty,Output UOM,Output Unit Cost,Output SKU,Notes\n`;
+    
+    if (commissaryItems.length >= 2) {
+      const items = commissaryItems.slice(0, 2);
+      const outputName = `${items[0].name} + ${items[1].name} Combo`;
+      const totalInputCost = items.reduce((sum, item) => sum + (item.unit_cost || 0), 0);
+      const outputUnitCost = (totalInputCost * 1.3).toFixed(2); // 30% markup
+      const outputSKU = `FP-COMBO-${items[0].name.substring(0, 8).toUpperCase()}`;
+      
+      items.forEach((item, index) => {
+        csvContent += `Multi-Row Combo,${item.name},${index === 0 ? '1' : '7'},${item.uom},${outputName},1,combo,${outputUnitCost},${outputSKU},Multi-ingredient via multiple rows\n`;
+      });
+    } else {
+      csvContent += `Croissant + Cream Combo,Croissant Box,1,box,Regular Croissant + Whipped Cream,1,combo,2660.00,FP-CROIS-CREAM,Multi-ingredient combo\n`;
+      csvContent += `Croissant + Cream Combo,Whipped Cream Container,7,pieces,Regular Croissant + Whipped Cream,1,combo,2660.00,FP-CROIS-CREAM,Multi-ingredient combo\n`;
+    }
+    
+    downloadCSV(csvContent, 'multi_row_conversion_template.csv');
+  };
+
+  const downloadCSV = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'conversion_recipe_template.csv';
+    a.download = filename;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -98,8 +144,8 @@ export const ConversionRecipeUpload = () => {
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            <strong>Important:</strong> Input items must exactly match items in your commissary inventory. 
-            The template below uses your actual inventory items.
+            <strong>Multi-Ingredient Support:</strong> This system now supports both single and multi-ingredient conversion recipes. 
+            Use the templates below to see different formats for creating complex products like "Croissant + Whipped Cream".
           </AlertDescription>
         </Alert>
 
@@ -139,16 +185,56 @@ export const ConversionRecipeUpload = () => {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Button
-            onClick={downloadTemplate}
-            variant="outline"
-            className="w-full"
-            disabled={isLoadingItems}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Download CSV Template (Using Your Inventory)
-          </Button>
+        {/* Template Downloads */}
+        <div className="space-y-4">
+          <Label className="text-base font-medium">CSV Templates</Label>
+          
+          <Tabs defaultValue="single" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="single">Single Ingredient</TabsTrigger>
+              <TabsTrigger value="multi-pipe">Multi (Pipe-Separated)</TabsTrigger>
+              <TabsTrigger value="multi-row">Multi (Multiple Rows)</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="single" className="space-y-2">
+              <p className="text-sm text-muted-foreground">For simple 1-to-1 conversions</p>
+              <Button
+                onClick={downloadSingleIngredientTemplate}
+                variant="outline"
+                className="w-full"
+                disabled={isLoadingItems}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Single Ingredient Template
+              </Button>
+            </TabsContent>
+            
+            <TabsContent value="multi-pipe" className="space-y-2">
+              <p className="text-sm text-muted-foreground">Multiple ingredients in one row, separated by pipes (|)</p>
+              <Button
+                onClick={downloadMultiIngredientTemplate}
+                variant="outline"
+                className="w-full"
+                disabled={isLoadingItems}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Multi-Ingredient Template (Pipe-Separated)
+              </Button>
+            </TabsContent>
+            
+            <TabsContent value="multi-row" className="space-y-2">
+              <p className="text-sm text-muted-foreground">Multiple ingredients using separate rows with same conversion name</p>
+              <Button
+                onClick={downloadMultiRowTemplate}
+                variant="outline"
+                className="w-full"
+                disabled={isLoadingItems}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Multi-Ingredient Template (Multiple Rows)
+              </Button>
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="space-y-2 my-[2px] py-[6px]">
@@ -171,15 +257,17 @@ export const ConversionRecipeUpload = () => {
         </Button>
 
         <div className="text-sm text-muted-foreground">
-          <p className="font-medium mb-2">CSV Format Requirements:</p>
+          <p className="font-medium mb-2">Multi-Ingredient CSV Format Options:</p>
           <ul className="list-disc list-inside space-y-1">
-            <li><strong>Required columns:</strong> Conversion Name, Input Item, Input Qty, Input UOM, Output Item, Output Qty, Output UOM</li>
-            <li><strong>Optional columns:</strong> Notes (for conversion instructions)</li>
-            <li><strong>Critical:</strong> Input Item must match commissary inventory items exactly (case-sensitive)</li>
-            <li>Copy item names from the "Available Commissary Items" list above</li>
+            <li><strong>Pipe-Separated Format:</strong> Use "Input Items", "Input Quantities", "Input UOMs" columns with values separated by "|"</li>
+            <li><strong>Multi-Row Format:</strong> Use multiple rows with the same "Conversion Name" for different ingredients</li>
+            <li><strong>Required columns:</strong> Conversion Name, Output Item, Output Qty, Output UOM, Output Unit Cost, Output SKU</li>
+            <li><strong>Input validation:</strong> All input items must exist in commissary inventory</li>
+            <li><strong>Example multi-ingredient:</strong> "Croissant Box|Whipped Cream" becomes "Regular Croissant + Whipped Cream"</li>
+            <li>Copy exact item names from the "Available Commissary Items" list above</li>
             <li>Use standard units (kg, g, pieces, liters, ml, box, container, etc.)</li>
-            <li>Each row represents one conversion recipe</li>
-            <li>Templates can be used for inventory preparation processes</li>
+            <li><strong>Output Unit Cost:</strong> Set the selling price/cost per unit for the finished product</li>
+            <li><strong>Output SKU:</strong> Unique identifier for the finished product (e.g., FP-PRODUCT-NAME)</li>
           </ul>
         </div>
       </CardContent>

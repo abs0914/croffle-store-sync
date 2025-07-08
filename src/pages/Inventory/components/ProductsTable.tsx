@@ -9,12 +9,13 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Edit, Eye, Trash2 } from "lucide-react";
+import { Edit, Eye, Trash2, Package } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
@@ -31,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { QuickStockAdjustmentDialog } from "./QuickStockAdjustmentDialog";
 
 interface ProductsTableProps {
   products: Product[];
@@ -39,6 +41,7 @@ interface ProductsTableProps {
   onView: (product: Product) => void;
   onDelete: (product: Product) => void;
   onStockAdjust?: (product: Product) => void;
+  onStockUpdated?: () => void;
 }
 
 export const ProductsTable = ({ 
@@ -47,7 +50,8 @@ export const ProductsTable = ({
   onEdit, 
   onView,
   onDelete,
-  onStockAdjust 
+  onStockAdjust,
+  onStockUpdated 
 }: ProductsTableProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: keyof Product; direction: 'asc' | 'desc' }>({
@@ -55,6 +59,7 @@ export const ProductsTable = ({
     direction: 'asc'
   });
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
+  const [quickStockProduct, setQuickStockProduct] = useState<Product | null>(null);
 
   // Filter products based on search
   const filteredProducts = products.filter(product => 
@@ -92,6 +97,17 @@ export const ProductsTable = ({
     return typeof category === 'string' ? category : category.name;
   };
 
+  const getStockLevel = (stock: number) => {
+    if (stock === 0) return { status: 'out', className: 'text-destructive font-semibold' };
+    if (stock <= 5) return { status: 'critical', className: 'text-orange-600 font-semibold' };
+    if (stock <= 10) return { status: 'low', className: 'text-yellow-600 font-medium' };
+    return { status: 'good', className: 'text-foreground' };
+  };
+
+  const handleQuickStockAdjust = (product: Product) => {
+    setQuickStockProduct(product);
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center p-8">
@@ -102,8 +118,22 @@ export const ProductsTable = ({
 
   if (products.length === 0) {
     return (
-      <div className="text-center p-8 text-muted-foreground">
-        <p>No products found. Add your first product to get started.</p>
+      <div className="text-center p-12 text-muted-foreground">
+        <div className="mb-4">
+          <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">No products found</h3>
+        <p className="mb-4">
+          {searchTerm ? 
+            `No products match your search "${searchTerm}". Try adjusting your search terms.` :
+            "Add your first product to get started with inventory management."
+          }
+        </p>
+        <div className="text-sm text-muted-foreground">
+          <p>• Make sure you have products added to this store</p>
+          <p>• Check if the correct store is selected</p>
+          <p>• Verify you have permission to view this store's inventory</p>
+        </div>
       </div>
     );
   }
@@ -167,9 +197,22 @@ export const ProductsTable = ({
                 {formatCurrency(product.price)}
               </TableCell>
               <TableCell className="text-right">
-                <span className={`font-medium ${(product.stock_quantity || product.stockQuantity || 0) <= 10 ? 'text-destructive' : ''}`}>
-                  {product.stock_quantity || product.stockQuantity || 0}
-                </span>
+                <div className="flex items-center justify-end gap-2">
+                  {(() => {
+                    const stock = product.stock_quantity || product.stockQuantity || 0;
+                    const stockInfo = getStockLevel(stock);
+                    return (
+                      <>
+                        <span className={stockInfo.className}>
+                          {stock}
+                        </span>
+                        {stock === 0 && <span className="text-xs text-destructive">(Out)</span>}
+                        {stock <= 5 && stock > 0 && <span className="text-xs text-orange-600">(Critical)</span>}
+                        {stock <= 10 && stock > 5 && <span className="text-xs text-yellow-600">(Low)</span>}
+                      </>
+                    );
+                  })()}
+                </div>
               </TableCell>
               <TableCell>
                 {getCategoryName(product.category)}
@@ -213,11 +256,20 @@ export const ProductsTable = ({
                         Edit Product
                       </DropdownMenuItem>
                       
+                      <DropdownMenuSeparator />
+                      
+                      <DropdownMenuItem onClick={() => handleQuickStockAdjust(product)}>
+                        <Package className="h-4 w-4 mr-2" />
+                        Quick Stock Adjust
+                      </DropdownMenuItem>
+                      
                       {onStockAdjust && (
                         <DropdownMenuItem onClick={() => onStockAdjust(product)}>
-                          Adjust Stock
+                          Advanced Stock Management
                         </DropdownMenuItem>
                       )}
+                      
+                      <DropdownMenuSeparator />
                       
                       <DropdownMenuItem 
                         className="text-destructive" 
@@ -255,6 +307,14 @@ export const ProductsTable = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Quick Stock Adjustment Dialog */}
+      <QuickStockAdjustmentDialog
+        isOpen={!!quickStockProduct}
+        onClose={() => setQuickStockProduct(null)}
+        product={quickStockProduct}
+        onStockUpdated={onStockUpdated}
+      />
     </>
   );
 };

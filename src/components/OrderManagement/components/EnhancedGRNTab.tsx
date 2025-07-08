@@ -224,78 +224,80 @@ export const EnhancedGRNTab: React.FC = () => {
       </div>
 
       {/* GRN Items Table */}
-      <Card>
-        <CardHeader>
+      <Card className="flex flex-col max-h-[60vh]">
+        <CardHeader className="flex-shrink-0">
           <CardTitle>Received Items Inspection</CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Ordered</TableHead>
-                <TableHead>Received</TableHead>
-                <TableHead>Damaged</TableHead>
-                <TableHead>Good</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Damage Reason</TableHead>
-                <TableHead>Impact (₱)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {grnItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium">{item.item_name}</TableCell>
-                  <TableCell>{item.ordered_quantity}</TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={item.received_quantity}
-                      onChange={(e) => updateGRNItem(item.id, 'received_quantity', Number(e.target.value))}
-                      className="w-20"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      value={item.damaged_quantity}
-                      onChange={(e) => updateGRNItem(item.id, 'damaged_quantity', Number(e.target.value))}
-                      className="w-20"
-                      max={item.received_quantity}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{item.good_quantity}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getQualityStatusIcon(item.quality_status)}
-                      <span className="text-sm capitalize">{item.quality_status.replace('_', ' ')}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {item.damaged_quantity > 0 && (
-                      <Select value={item.damage_reason} onValueChange={(value) => updateGRNItem(item.id, 'damage_reason', value)}>
-                        <SelectTrigger className="w-48">
-                          <SelectValue placeholder="Select reason..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {damageReasons.map((reason) => (
-                            <SelectItem key={reason} value={reason}>{reason}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className={item.financial_impact > 0 ? "text-red-600 font-medium" : ""}>
-                      ₱{item.financial_impact.toFixed(2)}
-                    </span>
-                  </TableCell>
+        <CardContent className="flex-1 overflow-hidden p-0">
+          <div className="overflow-auto max-h-full">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow>
+                  <TableHead className="min-w-[120px]">Item</TableHead>
+                  <TableHead className="min-w-[80px]">Ordered</TableHead>
+                  <TableHead className="min-w-[90px]">Received</TableHead>
+                  <TableHead className="min-w-[90px]">Damaged</TableHead>
+                  <TableHead className="min-w-[70px]">Good</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
+                  <TableHead className="min-w-[200px]">Damage Reason</TableHead>
+                  <TableHead className="min-w-[100px]">Impact (₱)</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {grnItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.item_name}</TableCell>
+                    <TableCell>{item.ordered_quantity}</TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={item.received_quantity}
+                        onChange={(e) => updateGRNItem(item.id, 'received_quantity', Number(e.target.value))}
+                        className="w-20"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={item.damaged_quantity}
+                        onChange={(e) => updateGRNItem(item.id, 'damaged_quantity', Number(e.target.value))}
+                        className="w-20"
+                        max={item.received_quantity}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{item.good_quantity}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getQualityStatusIcon(item.quality_status)}
+                        <span className="text-sm capitalize">{item.quality_status.replace('_', ' ')}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {item.damaged_quantity > 0 && (
+                        <Select value={item.damage_reason} onValueChange={(value) => updateGRNItem(item.id, 'damage_reason', value)}>
+                          <SelectTrigger className="w-48">
+                            <SelectValue placeholder="Select reason..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {damageReasons.map((reason) => (
+                              <SelectItem key={reason} value={reason}>{reason}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className={item.financial_impact > 0 ? "text-red-600 font-medium" : ""}>
+                        ₱{item.financial_impact.toFixed(2)}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

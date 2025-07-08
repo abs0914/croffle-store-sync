@@ -26,8 +26,8 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
   ]);
   const [outputItem, setOutputItem] = useState({
     name: "",
-    category: "supplies" as const, // Default to supplies for finished products
-    uom: "",
+    category: "supplies" as const,
+    uom: "pieces", // Default to a standard unit
     quantity: 1,
     unit_cost: 0,
     sku: "",
@@ -41,7 +41,7 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
     setOutputItem({
       name: "",
       category: "supplies",
-      uom: "",
+      uom: "pieces",
       quantity: 1,
       unit_cost: 0,
       sku: "",
@@ -83,12 +83,28 @@ export function ConversionForm({ rawMaterials, onConversionComplete }: Conversio
       };
     });
 
+    // Calculate unit cost if not provided
+    const calculatedUnitCost = outputItem.unit_cost || (() => {
+      const totalInputCost = inputItemsWithUnits.reduce((sum, item) => {
+        const material = rawMaterials.find(rm => rm.id === item.commissary_item_id);
+        return sum + (item.quantity * (material?.unit_cost || 0));
+      }, 0);
+      
+      // Add 10% processing overhead
+      return (totalInputCost * 1.1) / outputItem.quantity;
+    })();
+
     const conversionRequest: ConversionRequest = {
       name: conversionName,
       description,
       input_items: inputItemsWithUnits,
-      output_item: outputItem
+      output_item: {
+        ...outputItem,
+        unit_cost: calculatedUnitCost
+      }
     };
+
+    console.log('Executing conversion:', conversionRequest);
 
     setConverting(true);
     const success = await executeConversion(conversionRequest);

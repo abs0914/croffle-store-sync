@@ -8,6 +8,13 @@ import { ShiftType } from "@/types";
 import { Customer } from "@/types";
 import { usePOSInventoryValidation } from "@/hooks/pos/usePOSInventoryValidation";
 
+export interface SeniorDiscount {
+  id: string;
+  idNumber: string;
+  name: string;
+  discountAmount: number;
+}
+
 export interface CompletedTransaction {
   id: string;
   receipt_number: string;
@@ -20,26 +27,70 @@ export interface CompletedTransaction {
   amount_tendered: number;
   change: number;
   created_at: string;
+  senior_discounts?: SeniorDiscount[];
+  other_discount?: {
+    type: string;
+    amount: number;
+    idNumber?: string;
+  };
 }
 
 export const useTransactionHandler = (storeId: string) => {
   const [completedTransaction, setCompletedTransaction] = useState<CompletedTransaction | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>([]);
+  const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | null>(null);
+  
+  // Legacy discount fields for backward compatibility
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | ''>('');
   const [discountIdNumber, setDiscountIdNumber] = useState<string>('');
 
   const { validateCartItems, processCartInventoryDeduction } = usePOSInventoryValidation(storeId);
 
+  const handleApplyMultipleDiscounts = useCallback((
+    newSeniorDiscounts: SeniorDiscount[], 
+    newOtherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }
+  ) => {
+    setSeniorDiscounts(newSeniorDiscounts);
+    setOtherDiscount(newOtherDiscount || null);
+    
+    // Calculate total discount for legacy compatibility
+    const totalSeniorDiscount = newSeniorDiscounts.reduce((sum, d) => sum + d.discountAmount, 0);
+    const totalOtherDiscount = newOtherDiscount?.amount || 0;
+    setDiscount(totalSeniorDiscount + totalOtherDiscount);
+    
+    // Set primary discount type for legacy compatibility
+    if (newSeniorDiscounts.length > 0) {
+      setDiscountType('senior');
+      setDiscountIdNumber(newSeniorDiscounts[0].idNumber);
+    } else if (newOtherDiscount) {
+      setDiscountType(newOtherDiscount.type);
+      setDiscountIdNumber(newOtherDiscount.idNumber || '');
+    } else {
+      setDiscountType('');
+      setDiscountIdNumber('');
+    }
+  }, []);
+
+  // Legacy function for backward compatibility
   const handleApplyDiscount = useCallback((
     discountAmount: number, 
     type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', 
     idNumber: string
   ) => {
-    setDiscount(discountAmount);
-    setDiscountType(type);
-    setDiscountIdNumber(idNumber);
-  }, []);
+    if (type === 'senior') {
+      const seniorDiscount: SeniorDiscount = {
+        id: `senior-${Date.now()}`,
+        idNumber,
+        name: 'Senior Citizen',
+        discountAmount
+      };
+      handleApplyMultipleDiscounts([seniorDiscount]);
+    } else {
+      handleApplyMultipleDiscounts([], { type: type as any, amount: discountAmount, idNumber });
+    }
+  }, [handleApplyMultipleDiscounts]);
 
   const generateReceiptNumber = () => {
     const now = new Date();
@@ -82,6 +133,10 @@ export const useTransactionHandler = (storeId: string) => {
         throw new Error("User not authenticated");
       }
 
+      // Calculate separate discount amounts for BIR compliance
+      const totalSeniorDiscount = seniorDiscounts.reduce((sum, d) => sum + d.discountAmount, 0);
+      const totalPwdDiscount = otherDiscount?.type === 'pwd' ? otherDiscount.amount : 0;
+
       // Step 2: Create transaction record
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
@@ -101,6 +156,13 @@ export const useTransactionHandler = (storeId: string) => {
           change,
           discount_type: discountType || null,
           discount_id_number: discountIdNumber || null,
+          senior_citizen_discount: totalSeniorDiscount || null,
+          pwd_discount: totalPwdDiscount || null,
+          senior_discounts: seniorDiscounts.length > 0 ? JSON.stringify(seniorDiscounts) : null,
+          discount_details: (seniorDiscounts.length > 0 || otherDiscount) ? JSON.stringify({
+            senior_discounts: seniorDiscounts,
+            other_discount: otherDiscount
+          }) : null,
           payment_details: paymentDetails ? JSON.stringify(paymentDetails) : null,
           order_status: 'completed',
           status: 'completed'
@@ -162,7 +224,9 @@ export const useTransactionHandler = (storeId: string) => {
         payment_method: paymentMethod,
         amount_tendered: amountTendered,
         change,
-        created_at: transaction.created_at
+        created_at: transaction.created_at,
+        senior_discounts: seniorDiscounts,
+        other_discount: otherDiscount
       });
 
       toast.success("Transaction completed successfully!");
@@ -173,11 +237,13 @@ export const useTransactionHandler = (storeId: string) => {
       toast.error(`Failed to complete transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
-  }, [selectedCustomer, discount, discountType, discountIdNumber, validateCartItems, processCartInventoryDeduction]);
+  }, [selectedCustomer, discount, discountType, discountIdNumber, seniorDiscounts, otherDiscount, validateCartItems, processCartInventoryDeduction]);
 
   const startNewSale = useCallback(() => {
     setCompletedTransaction(null);
     setSelectedCustomer(null);
+    setSeniorDiscounts([]);
+    setOtherDiscount(null);
     setDiscount(0);
     setDiscountType('');
     setDiscountIdNumber('');
@@ -190,7 +256,10 @@ export const useTransactionHandler = (storeId: string) => {
     discount,
     discountType,
     discountIdNumber,
+    seniorDiscounts,
+    otherDiscount,
     handleApplyDiscount,
+    handleApplyMultipleDiscounts,
     handlePaymentComplete,
     startNewSale
   };

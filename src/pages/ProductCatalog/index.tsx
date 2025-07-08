@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { ProductCatalogManagement } from './ProductCatalogManagement';
+import StoreProductAvailability from './StoreProductAvailability';
 
 const ProductCatalogPage: React.FC = () => {
-  return <ProductCatalogManagement />;
+  return <StoreProductAvailability />;
 };
 
 export default ProductCatalogPage;

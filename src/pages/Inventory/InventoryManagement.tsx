@@ -2,6 +2,7 @@
 import { useStore } from "@/contexts/StoreContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { InventoryStats } from "./components/inventoryManagement/InventoryStats";
+import { EnhancedInventoryDashboard } from "@/components/inventory/EnhancedInventoryDashboard";
 
 export default function InventoryManagement() {
   const { currentStore } = useStore();
@@ -55,7 +56,7 @@ export default function InventoryManagement() {
         </p>
       </div>
 
-      <InventoryStats storeId={currentStore.id} />
+      <EnhancedInventoryDashboard storeId={currentStore.id} />
     </div>
   );
 }

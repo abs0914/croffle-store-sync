@@ -2,7 +2,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from './contexts/auth';
 import { StoreProvider } from './contexts/StoreContext';
 import { ShiftProvider } from './contexts/shift';

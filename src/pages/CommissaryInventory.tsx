@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +13,7 @@ import { AddCommissaryItemDialog } from "./CommissaryInventory/components/AddCom
 import { EditCommissaryItemDialog } from "./CommissaryInventory/components/EditCommissaryItemDialog";
 import { StockAdjustmentDialog } from "./CommissaryInventory/components/StockAdjustmentDialog";
 import { DeleteConfirmationDialog } from "./CommissaryInventory/components/DeleteConfirmationDialog";
+import { DataSyncPanel } from "./CommissaryInventory/components/DataSyncPanel";
 
 export default function CommissaryInventory() {
   const {
@@ -73,6 +73,9 @@ export default function CommissaryInventory() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <CommissaryInventoryHeader />
+
+      {/* Add the data sync panel at the top for debugging */}
+      <DataSyncPanel />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">

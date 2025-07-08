@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { CommissaryInventoryItem } from "@/types/commissary"; // Use commissary types instead
+import { CommissaryInventoryItem } from "@/types/commissary";
 import { toast } from "sonner";
 
 // Helper function to map units to valid database units
@@ -102,6 +101,8 @@ export const fetchCommissaryInventory = async (filters?: any): Promise<Commissar
 
 export const createCommissaryInventoryItem = async (item: Omit<CommissaryInventoryItem, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
   try {
+    console.log('Creating commissary item:', item);
+    
     // Map uom to valid unit for database compatibility
     const dbItem = {
       name: item.name,
@@ -119,11 +120,20 @@ export const createCommissaryInventoryItem = async (item: Omit<CommissaryInvento
       is_active: item.is_active
     };
     
-    const { error } = await supabase
+    console.log('Mapped database item:', dbItem);
+    
+    const { data, error } = await supabase
       .from('commissary_inventory')
-      .insert(dbItem);
+      .insert(dbItem)
+      .select()
+      .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error:', error);
+      throw error;
+    }
+    
+    console.log('Successfully created item:', data);
     toast.success('Commissary item created successfully');
     return true;
   } catch (error) {
@@ -306,12 +316,26 @@ export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> 
   try {
     console.log('Fetching orderable items...');
     
+    // First, let's check what data exists in the table with minimal filtering
+    const { data: allData, error: allError } = await supabase
+      .from('commissary_inventory')
+      .select('*')
+      .order('name');
+
+    if (allError) {
+      console.error('Error fetching all commissary items:', allError);
+    } else {
+      console.log('ALL commissary items (no filters):', allData);
+      console.log('Sample item structure:', allData?.[0]);
+    }
+
+    // Now try the specific query for orderable items
     const { data, error } = await supabase
       .from('commissary_inventory')
       .select('*')
       .eq('is_active', true)
-      .eq('item_type', 'orderable_item') // Only fetch converted/finished products
-      .gt('current_stock', 0) // Only items with stock > 0
+      .eq('item_type', 'orderable_item')
+      .gte('current_stock', 0)
       .order('name');
 
     if (error) {
@@ -320,6 +344,34 @@ export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> 
     }
     
     console.log('Raw orderable items from DB:', data);
+    console.log('Query used: is_active = true, item_type = orderable_item, current_stock >= 0');
+    
+    if (!data || data.length === 0) {
+      console.log('No orderable items found. Checking all commissary items...');
+      
+      // Enhanced debug query to see ALL items regardless of filters
+      const { data: debugItems } = await supabase
+        .from('commissary_inventory')
+        .select('id, name, item_type, is_active, current_stock, category')
+        .order('name');
+      
+      console.log('DEBUG - All items in commissary_inventory:', debugItems);
+      
+      if (debugItems && debugItems.length > 0) {
+        console.log('Items by is_active status:');
+        console.log('- Active items:', debugItems.filter(item => item.is_active === true));
+        console.log('- Inactive items:', debugItems.filter(item => item.is_active === false));
+        
+        console.log('Items by item_type:');
+        const itemTypes = [...new Set(debugItems.map(item => item.item_type))];
+        itemTypes.forEach(type => {
+          console.log(`- ${type}:`, debugItems.filter(item => item.item_type === type));
+        });
+        
+        console.log('Items with stock >= 0:', debugItems.filter(item => item.current_stock >= 0));
+        console.log('Items with stock < 0:', debugItems.filter(item => item.current_stock < 0));
+      }
+    }
     
     const processedItems = (data || []).map(item => ({
       ...item,
@@ -329,6 +381,8 @@ export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> 
     }));
     
     console.log('Processed orderable items:', processedItems);
+    console.log('Total orderable items found:', processedItems.length);
+    
     return processedItems;
   } catch (error) {
     console.error('Error fetching orderable items:', error);

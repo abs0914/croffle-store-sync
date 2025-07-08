@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
-import { Camera } from "lucide-react";
+import { Camera, DollarSign } from "lucide-react";
 
 interface StartShiftDialogFooterProps {
   onCancel: () => void;
@@ -17,21 +17,29 @@ export default function StartShiftDialogFooter({
   canSubmit
 }: StartShiftDialogFooterProps) {
   return (
-    <DialogFooter>
-      <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
+    <DialogFooter className="gap-2">
+      <Button 
+        variant="outline" 
+        onClick={onCancel}
+        disabled={isSubmitting}
+      >
         Cancel
       </Button>
       <Button 
         onClick={onSubmit} 
         disabled={!canSubmit || isSubmitting}
-        className="flex items-center"
+        className="flex items-center gap-2"
       >
         {isSubmitting ? (
-          <>Submitting...</>
+          <>
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Starting...
+          </>
         ) : (
           <>
-            <Camera className="mr-2 h-4 w-4" />
-            Start Shift with Photo
+            <DollarSign className="w-4 h-4" />
+            <Camera className="w-4 h-4" />
+            Start Shift
           </>
         )}
       </Button>

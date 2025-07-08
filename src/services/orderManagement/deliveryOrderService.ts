@@ -1,19 +1,30 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { DeliveryOrder } from "@/types/orderManagement";
 import { toast } from "sonner";
 
-export const fetchDeliveryOrders = async (): Promise<DeliveryOrder[]> => {
+export const fetchDeliveryOrders = async (storeId?: string): Promise<DeliveryOrder[]> => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('delivery_orders')
       .select(`
         *,
         purchase_order:purchase_orders(
           *,
-          supplier:suppliers(*)
+          store:stores(id, name, address),
+          items:purchase_order_items(
+            *,
+            inventory_stock:inventory_stock(*)
+          )
         )
       `)
       .order('created_at', { ascending: false });
+
+    if (storeId) {
+      query = query.eq('purchase_order.store_id', storeId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data || [];
@@ -24,74 +35,23 @@ export const fetchDeliveryOrders = async (): Promise<DeliveryOrder[]> => {
   }
 };
 
-export const createDeliveryOrder = async (
-  purchaseOrderId: string
-): Promise<DeliveryOrder | null> => {
-  try {
-    const deliveryNumber = await generateDeliveryOrderNumber();
-    
-    const { data, error } = await supabase
-      .from('delivery_orders')
-      .insert({
-        delivery_number: deliveryNumber,
-        purchase_order_id: purchaseOrderId,
-        status: 'for_delivery'
-      })
-      .select(`
-        *,
-        purchase_order:purchase_orders(
-          *,
-          supplier:suppliers(*)
-        )
-      `)
-      .single();
-
-    if (error) throw error;
-    toast.success('Delivery order created successfully');
-    return data;
-  } catch (error) {
-    console.error('Error creating delivery order:', error);
-    toast.error('Failed to create delivery order');
-    return null;
-  }
-};
-
 export const updateDeliveryOrder = async (
   id: string,
   updates: Partial<DeliveryOrder>
-): Promise<DeliveryOrder | null> => {
+): Promise<boolean> => {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('delivery_orders')
       .update(updates)
-      .eq('id', id)
-      .select(`
-        *,
-        purchase_order:purchase_orders(
-          *,
-          supplier:suppliers(*)
-        )
-      `)
-      .single();
+      .eq('id', id);
 
     if (error) throw error;
+
     toast.success('Delivery order updated successfully');
-    return data;
+    return true;
   } catch (error) {
     console.error('Error updating delivery order:', error);
     toast.error('Failed to update delivery order');
-    return null;
-  }
-};
-
-const generateDeliveryOrderNumber = async (): Promise<string> => {
-  try {
-    // Generate a simple delivery order number with timestamp
-    const timestamp = Date.now();
-    const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `DO${timestamp}${randomSuffix}`;
-  } catch (error) {
-    console.error('Error generating delivery order number:', error);
-    return `DO${Date.now()}`;
+    return false;
   }
 };

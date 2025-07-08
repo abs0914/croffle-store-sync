@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       app_users: {
@@ -50,6 +55,183 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      bir_audit_logs: {
+        Row: {
+          cashier_name: string | null
+          created_at: string
+          event_data: Json
+          event_name: string
+          hash_value: string
+          id: string
+          ip_address: unknown | null
+          log_type: string
+          previous_hash: string | null
+          receipt_number: string | null
+          sequence_number: number
+          store_id: string
+          terminal_id: string | null
+          transaction_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          cashier_name?: string | null
+          created_at?: string
+          event_data: Json
+          event_name: string
+          hash_value: string
+          id?: string
+          ip_address?: unknown | null
+          log_type: string
+          previous_hash?: string | null
+          receipt_number?: string | null
+          sequence_number: number
+          store_id: string
+          terminal_id?: string | null
+          transaction_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          cashier_name?: string | null
+          created_at?: string
+          event_data?: Json
+          event_name?: string
+          hash_value?: string
+          id?: string
+          ip_address?: unknown | null
+          log_type?: string
+          previous_hash?: string | null
+          receipt_number?: string | null
+          sequence_number?: number
+          store_id?: string
+          terminal_id?: string | null
+          transaction_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_audit_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bir_cumulative_sales: {
+        Row: {
+          created_at: string
+          grand_total_sales: number
+          grand_total_transactions: number
+          id: string
+          last_receipt_number: string | null
+          last_transaction_date: string | null
+          store_id: string
+          terminal_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grand_total_sales?: number
+          grand_total_transactions?: number
+          id?: string
+          last_receipt_number?: string | null
+          last_transaction_date?: string | null
+          store_id: string
+          terminal_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grand_total_sales?: number
+          grand_total_transactions?: number
+          id?: string
+          last_receipt_number?: string | null
+          last_transaction_date?: string | null
+          store_id?: string
+          terminal_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_cumulative_sales_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bir_ejournal: {
+        Row: {
+          backup_date: string | null
+          beginning_receipt: string | null
+          created_at: string
+          ending_receipt: string | null
+          gross_sales: number
+          id: string
+          is_backed_up: boolean | null
+          journal_data: Json
+          journal_date: string
+          net_sales: number
+          store_id: string
+          terminal_id: string
+          transaction_count: number
+          vat_amount: number
+          vat_exempt_sales: number
+          vat_sales: number
+          zero_rated_sales: number
+        }
+        Insert: {
+          backup_date?: string | null
+          beginning_receipt?: string | null
+          created_at?: string
+          ending_receipt?: string | null
+          gross_sales?: number
+          id?: string
+          is_backed_up?: boolean | null
+          journal_data: Json
+          journal_date: string
+          net_sales?: number
+          store_id: string
+          terminal_id: string
+          transaction_count?: number
+          vat_amount?: number
+          vat_exempt_sales?: number
+          vat_sales?: number
+          zero_rated_sales?: number
+        }
+        Update: {
+          backup_date?: string | null
+          beginning_receipt?: string | null
+          created_at?: string
+          ending_receipt?: string | null
+          gross_sales?: number
+          id?: string
+          is_backed_up?: boolean | null
+          journal_data?: Json
+          journal_date?: string
+          net_sales?: number
+          store_id?: string
+          terminal_id?: string
+          transaction_count?: number
+          vat_amount?: number
+          vat_exempt_sales?: number
+          vat_sales?: number
+          zero_rated_sales?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_ejournal_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cashiers: {
         Row: {
@@ -817,6 +999,62 @@ export type Database = {
           },
         ]
       }
+      expense_audit_trail: {
+        Row: {
+          action: string
+          changed_fields: string[] | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+          reason: string | null
+          store_id: string | null
+          user_id: string
+          user_name: string | null
+          user_role: string | null
+        }
+        Insert: {
+          action: string
+          changed_fields?: string[] | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          reason?: string | null
+          store_id?: string | null
+          user_id: string
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          action?: string
+          changed_fields?: string[] | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+          reason?: string | null
+          store_id?: string | null
+          user_id?: string
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_audit_trail_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_budgets: {
         Row: {
           allocated_amount: number
@@ -987,46 +1225,106 @@ export type Database = {
       goods_received_notes: {
         Row: {
           created_at: string | null
-          delivery_order_id: string
           digital_signature: string | null
           grn_number: string
           id: string
+          purchase_order_id: string
           quality_check_passed: boolean | null
           received_at: string | null
           received_by: string
           remarks: string | null
-          status: Database["public"]["Enums"]["grn_status"] | null
         }
         Insert: {
           created_at?: string | null
-          delivery_order_id: string
           digital_signature?: string | null
           grn_number: string
           id?: string
+          purchase_order_id: string
           quality_check_passed?: boolean | null
           received_at?: string | null
           received_by: string
           remarks?: string | null
-          status?: Database["public"]["Enums"]["grn_status"] | null
         }
         Update: {
           created_at?: string | null
-          delivery_order_id?: string
           digital_signature?: string | null
           grn_number?: string
           id?: string
+          purchase_order_id?: string
           quality_check_passed?: boolean | null
           received_at?: string | null
           received_by?: string
           remarks?: string | null
-          status?: Database["public"]["Enums"]["grn_status"] | null
         }
         Relationships: [
           {
-            foreignKeyName: "goods_received_notes_delivery_order_id_fkey"
-            columns: ["delivery_order_id"]
+            foreignKeyName: "goods_received_notes_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: true
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grn_discrepancy_resolutions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          completed_at: string | null
+          created_at: string | null
+          financial_adjustment: number | null
+          grn_id: string
+          id: string
+          processed_by: string | null
+          purchase_order_id: string
+          resolution_notes: string | null
+          resolution_status: string
+          resolution_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          financial_adjustment?: number | null
+          grn_id: string
+          id?: string
+          processed_by?: string | null
+          purchase_order_id: string
+          resolution_notes?: string | null
+          resolution_status?: string
+          resolution_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          financial_adjustment?: number | null
+          grn_id?: string
+          id?: string
+          processed_by?: string | null
+          purchase_order_id?: string
+          resolution_notes?: string | null
+          resolution_status?: string
+          resolution_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grn_discrepancy_resolutions_grn_id_fkey"
+            columns: ["grn_id"]
             isOneToOne: false
-            referencedRelation: "delivery_orders"
+            referencedRelation: "goods_received_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_discrepancy_resolutions_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -1075,6 +1373,99 @@ export type Database = {
             columns: ["purchase_order_item_id"]
             isOneToOne: false
             referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingredient_unit_conversions: {
+        Row: {
+          conversion_factor: number
+          created_at: string | null
+          from_unit: string
+          id: string
+          ingredient_name: string
+          notes: string | null
+          to_unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversion_factor: number
+          created_at?: string | null
+          from_unit: string
+          id?: string
+          ingredient_name: string
+          notes?: string | null
+          to_unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversion_factor?: number
+          created_at?: string | null
+          from_unit?: string
+          id?: string
+          ingredient_name?: string
+          notes?: string | null
+          to_unit?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      inventory_conversion_mappings: {
+        Row: {
+          bundle_id: string | null
+          component_ratio: number | null
+          conversion_factor: number
+          created_at: string | null
+          id: string
+          inventory_stock_id: string
+          is_active: boolean
+          is_bundle_component: boolean | null
+          notes: string | null
+          recipe_ingredient_name: string
+          recipe_ingredient_unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          bundle_id?: string | null
+          component_ratio?: number | null
+          conversion_factor: number
+          created_at?: string | null
+          id?: string
+          inventory_stock_id: string
+          is_active?: boolean
+          is_bundle_component?: boolean | null
+          notes?: string | null
+          recipe_ingredient_name: string
+          recipe_ingredient_unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          bundle_id?: string | null
+          component_ratio?: number | null
+          conversion_factor?: number
+          created_at?: string | null
+          id?: string
+          inventory_stock_id?: string
+          is_active?: boolean
+          is_bundle_component?: boolean | null
+          notes?: string | null
+          recipe_ingredient_name?: string
+          recipe_ingredient_unit?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_conversion_mappings_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "product_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_conversion_mappings_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
         ]
@@ -1266,6 +1657,7 @@ export type Database = {
         Row: {
           cost: number | null
           created_at: string | null
+          fractional_stock: number | null
           id: string
           is_active: boolean | null
           item: string
@@ -1281,6 +1673,7 @@ export type Database = {
         Insert: {
           cost?: number | null
           created_at?: string | null
+          fractional_stock?: number | null
           id?: string
           is_active?: boolean | null
           item: string
@@ -1296,6 +1689,7 @@ export type Database = {
         Update: {
           cost?: number | null
           created_at?: string | null
+          fractional_stock?: number | null
           id?: string
           is_active?: boolean | null
           item?: string
@@ -1381,56 +1775,6 @@ export type Database = {
             columns: ["variation_id"]
             isOneToOne: false
             referencedRelation: "product_variations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      location_pricing: {
-        Row: {
-          base_price: number
-          commissary_item_id: string
-          created_at: string
-          id: string
-          is_active: boolean | null
-          lead_time_days: number | null
-          location_type: string
-          markup_percentage: number | null
-          minimum_order_quantity: number | null
-          shipping_cost: number | null
-          updated_at: string
-        }
-        Insert: {
-          base_price?: number
-          commissary_item_id: string
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          lead_time_days?: number | null
-          location_type: string
-          markup_percentage?: number | null
-          minimum_order_quantity?: number | null
-          shipping_cost?: number | null
-          updated_at?: string
-        }
-        Update: {
-          base_price?: number
-          commissary_item_id?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          lead_time_days?: number | null
-          location_type?: string
-          markup_percentage?: number | null
-          minimum_order_quantity?: number | null
-          shipping_cost?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "location_pricing_commissary_item_id_fkey"
-            columns: ["commissary_item_id"]
-            isOneToOne: false
-            referencedRelation: "commissary_inventory"
             referencedColumns: ["id"]
           },
         ]
@@ -1692,6 +2036,81 @@ export type Database = {
         }
         Relationships: []
       }
+      product_bundle_components: {
+        Row: {
+          bundle_id: string
+          commissary_item_id: string
+          created_at: string | null
+          id: string
+          quantity: number
+          unit: string
+        }
+        Insert: {
+          bundle_id: string
+          commissary_item_id: string
+          created_at?: string | null
+          id?: string
+          quantity?: number
+          unit: string
+        }
+        Update: {
+          bundle_id?: string
+          commissary_item_id?: string
+          created_at?: string | null
+          id?: string
+          quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_bundle_components_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "product_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_bundle_components_commissary_item_id_fkey"
+            columns: ["commissary_item_id"]
+            isOneToOne: false
+            referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_bundles: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          total_price: number
+          unit_description: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          total_price?: number
+          unit_description?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          total_price?: number
+          unit_description?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       product_catalog: {
         Row: {
           created_at: string
@@ -1947,9 +2366,13 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          inventory_stock_id: string | null
           is_active: boolean | null
           name: string
           price: number
+          product_type: string | null
+          recipe_id: string | null
+          selling_quantity: number | null
           sku: string
           stock_quantity: number
           store_id: string
@@ -1963,9 +2386,13 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          inventory_stock_id?: string | null
           is_active?: boolean | null
           name: string
           price?: number
+          product_type?: string | null
+          recipe_id?: string | null
+          selling_quantity?: number | null
           sku: string
           stock_quantity?: number
           store_id: string
@@ -1979,9 +2406,13 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          inventory_stock_id?: string | null
           is_active?: boolean | null
           name?: string
           price?: number
+          product_type?: string | null
+          recipe_id?: string | null
+          selling_quantity?: number | null
           sku?: string
           stock_quantity?: number
           store_id?: string
@@ -1993,6 +2424,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
           {
@@ -2055,16 +2493,16 @@ export type Database = {
           approved_by: string | null
           created_at: string | null
           created_by: string
+          delivery_notes: string | null
+          delivery_scheduled_date: string | null
+          fulfilled_at: string | null
+          fulfilled_by: string | null
           id: string
-          location_type: string | null
-          logistics_notes: string | null
           notes: string | null
           order_number: string
           requested_delivery_date: string | null
-          shipping_cost: number | null
           status: Database["public"]["Enums"]["purchase_order_status"] | null
           store_id: string
-          supplier_id: string | null
           total_amount: number | null
           updated_at: string | null
         }
@@ -2073,16 +2511,16 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           created_by: string
+          delivery_notes?: string | null
+          delivery_scheduled_date?: string | null
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
           id?: string
-          location_type?: string | null
-          logistics_notes?: string | null
           notes?: string | null
           order_number: string
           requested_delivery_date?: string | null
-          shipping_cost?: number | null
           status?: Database["public"]["Enums"]["purchase_order_status"] | null
           store_id: string
-          supplier_id?: string | null
           total_amount?: number | null
           updated_at?: string | null
         }
@@ -2091,16 +2529,16 @@ export type Database = {
           approved_by?: string | null
           created_at?: string | null
           created_by?: string
+          delivery_notes?: string | null
+          delivery_scheduled_date?: string | null
+          fulfilled_at?: string | null
+          fulfilled_by?: string | null
           id?: string
-          location_type?: string | null
-          logistics_notes?: string | null
           notes?: string | null
           order_number?: string
           requested_delivery_date?: string | null
-          shipping_cost?: number | null
           status?: Database["public"]["Enums"]["purchase_order_status"] | null
           store_id?: string
-          supplier_id?: string | null
           total_amount?: number | null
           updated_at?: string | null
         }
@@ -2112,44 +2550,52 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "purchase_orders_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
         ]
       }
       recipe_ingredients: {
         Row: {
           commissary_item_id: string | null
+          conversion_factor: number | null
+          cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string
           id: string
+          ingredient_name: string | null
           inventory_stock_id: string
+          purchase_unit: string | null
           quantity: number
           recipe_id: string
+          recipe_unit: string | null
           unit: Database["public"]["Enums"]["inventory_unit"]
         }
         Insert: {
           commissary_item_id?: string | null
+          conversion_factor?: number | null
+          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string
           id?: string
+          ingredient_name?: string | null
           inventory_stock_id: string
+          purchase_unit?: string | null
           quantity: number
           recipe_id: string
+          recipe_unit?: string | null
           unit: Database["public"]["Enums"]["inventory_unit"]
         }
         Update: {
           commissary_item_id?: string | null
+          conversion_factor?: number | null
+          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string
           id?: string
+          ingredient_name?: string | null
           inventory_stock_id?: string
+          purchase_unit?: string | null
           quantity?: number
           recipe_id?: string
+          recipe_unit?: string | null
           unit?: Database["public"]["Enums"]["inventory_unit"]
         }
         Relationships: [
@@ -2185,33 +2631,72 @@ export type Database = {
       }
       recipe_template_ingredients: {
         Row: {
-          commissary_item_id: string
-          commissary_item_name: string
+          commissary_item_id: string | null
+          commissary_item_name: string | null
+          conversion_factor: number | null
+          cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string | null
+          group_selection_type:
+            | Database["public"]["Enums"]["ingredient_group_selection_type"]
+            | null
           id: string
+          ingredient_group_id: string | null
+          ingredient_group_name: string | null
+          ingredient_name: string
+          ingredient_type: string | null
+          is_optional: boolean | null
+          location_type: string | null
+          purchase_unit: string | null
           quantity: number
           recipe_template_id: string
+          recipe_unit: string | null
           unit: string
         }
         Insert: {
-          commissary_item_id: string
-          commissary_item_name: string
+          commissary_item_id?: string | null
+          commissary_item_name?: string | null
+          conversion_factor?: number | null
+          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
+          group_selection_type?:
+            | Database["public"]["Enums"]["ingredient_group_selection_type"]
+            | null
           id?: string
+          ingredient_group_id?: string | null
+          ingredient_group_name?: string | null
+          ingredient_name: string
+          ingredient_type?: string | null
+          is_optional?: boolean | null
+          location_type?: string | null
+          purchase_unit?: string | null
           quantity: number
           recipe_template_id: string
+          recipe_unit?: string | null
           unit: string
         }
         Update: {
-          commissary_item_id?: string
-          commissary_item_name?: string
+          commissary_item_id?: string | null
+          commissary_item_name?: string | null
+          conversion_factor?: number | null
+          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
+          group_selection_type?:
+            | Database["public"]["Enums"]["ingredient_group_selection_type"]
+            | null
           id?: string
+          ingredient_group_id?: string | null
+          ingredient_group_name?: string | null
+          ingredient_name?: string
+          ingredient_type?: string | null
+          is_optional?: boolean | null
+          location_type?: string | null
+          purchase_unit?: string | null
           quantity?: number
           recipe_template_id?: string
+          recipe_unit?: string | null
           unit?: string
         }
         Relationships: [
@@ -2351,6 +2836,7 @@ export type Database = {
           rejection_reason: string | null
           serving_size: number | null
           store_id: string
+          template_id: string | null
           total_cost: number | null
           updated_at: string
           variation_id: string | null
@@ -2373,6 +2859,7 @@ export type Database = {
           rejection_reason?: string | null
           serving_size?: number | null
           store_id: string
+          template_id?: string | null
           total_cost?: number | null
           updated_at?: string
           variation_id?: string | null
@@ -2395,6 +2882,7 @@ export type Database = {
           rejection_reason?: string | null
           serving_size?: number | null
           store_id?: string
+          template_id?: string | null
           total_cost?: number | null
           updated_at?: string
           variation_id?: string | null
@@ -2417,51 +2905,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "recipes_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "recipes_variation_id_fkey"
             columns: ["variation_id"]
             isOneToOne: false
             referencedRelation: "product_variations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      regional_suppliers: {
-        Row: {
-          created_at: string
-          id: string
-          is_preferred: boolean | null
-          lead_time_days: number | null
-          location_type: string
-          priority: number | null
-          shipping_cost: number | null
-          supplier_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_preferred?: boolean | null
-          lead_time_days?: number | null
-          location_type: string
-          priority?: number | null
-          shipping_cost?: number | null
-          supplier_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_preferred?: boolean | null
-          lead_time_days?: number | null
-          location_type?: string
-          priority?: number | null
-          shipping_cost?: number | null
-          supplier_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regional_suppliers_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -2836,6 +3290,7 @@ export type Database = {
       }
       store_settings: {
         Row: {
+          bir_compliance_config: Json | null
           created_at: string | null
           currency: string | null
           id: string
@@ -2848,6 +3303,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bir_compliance_config?: Json | null
           created_at?: string | null
           currency?: string | null
           id?: string
@@ -2860,6 +3316,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bir_compliance_config?: Json | null
           created_at?: string | null
           currency?: string | null
           id?: string
@@ -2884,74 +3341,122 @@ export type Database = {
       stores: {
         Row: {
           address: string
+          business_name: string | null
+          business_type: string | null
           city: string | null
           country: string | null
           created_at: string | null
+          date_issued: string | null
           email: string | null
           franchise_agreement_date: string | null
+          franchise_fee_amount: number | null
           franchise_fee_percentage: number | null
           franchisee_contact_info: Json | null
           id: string
           is_active: boolean | null
+          is_bir_accredited: boolean | null
           location_type: string | null
           logistics_zone: string | null
           logo_url: string | null
+          machine_accreditation_number: string | null
+          machine_serial_number: string | null
           name: string
+          opening_date: string | null
+          owner_address: string | null
+          owner_contact_number: string | null
+          owner_email: string | null
+          owner_name: string | null
           ownership_type: string | null
+          permit_number: string | null
           phone: string | null
+          pos_version: string | null
           region: string | null
-          shipping_cost_multiplier: number | null
           state: string | null
+          store_location_photo_url: string | null
           tax_id: string | null
+          tin: string | null
           updated_at: string | null
+          valid_until: string | null
           zip_code: string | null
         }
         Insert: {
           address: string
+          business_name?: string | null
+          business_type?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
+          date_issued?: string | null
           email?: string | null
           franchise_agreement_date?: string | null
+          franchise_fee_amount?: number | null
           franchise_fee_percentage?: number | null
           franchisee_contact_info?: Json | null
           id?: string
           is_active?: boolean | null
+          is_bir_accredited?: boolean | null
           location_type?: string | null
           logistics_zone?: string | null
           logo_url?: string | null
+          machine_accreditation_number?: string | null
+          machine_serial_number?: string | null
           name: string
+          opening_date?: string | null
+          owner_address?: string | null
+          owner_contact_number?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
           ownership_type?: string | null
+          permit_number?: string | null
           phone?: string | null
+          pos_version?: string | null
           region?: string | null
-          shipping_cost_multiplier?: number | null
           state?: string | null
+          store_location_photo_url?: string | null
           tax_id?: string | null
+          tin?: string | null
           updated_at?: string | null
+          valid_until?: string | null
           zip_code?: string | null
         }
         Update: {
           address?: string
+          business_name?: string | null
+          business_type?: string | null
           city?: string | null
           country?: string | null
           created_at?: string | null
+          date_issued?: string | null
           email?: string | null
           franchise_agreement_date?: string | null
+          franchise_fee_amount?: number | null
           franchise_fee_percentage?: number | null
           franchisee_contact_info?: Json | null
           id?: string
           is_active?: boolean | null
+          is_bir_accredited?: boolean | null
           location_type?: string | null
           logistics_zone?: string | null
           logo_url?: string | null
+          machine_accreditation_number?: string | null
+          machine_serial_number?: string | null
           name?: string
+          opening_date?: string | null
+          owner_address?: string | null
+          owner_contact_number?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
           ownership_type?: string | null
+          permit_number?: string | null
           phone?: string | null
+          pos_version?: string | null
           region?: string | null
-          shipping_cost_multiplier?: number | null
           state?: string | null
+          store_location_photo_url?: string | null
           tax_id?: string | null
+          tin?: string | null
           updated_at?: string | null
+          valid_until?: string | null
           zip_code?: string | null
         }
         Relationships: []
@@ -3003,6 +3508,7 @@ export type Database = {
           created_at: string | null
           customer_id: string | null
           discount: number
+          discount_details: Json | null
           discount_id_number: string | null
           discount_type: string | null
           estimated_completion_time: string | null
@@ -3012,14 +3518,22 @@ export type Database = {
           order_status: string | null
           payment_details: Json | null
           payment_method: string
+          pwd_discount: number | null
           receipt_number: string
+          senior_citizen_discount: number | null
+          senior_discounts: Json | null
+          sequence_number: number | null
           shift_id: string
           status: string
           store_id: string
           subtotal: number
           tax: number
+          terminal_id: string | null
           total: number
           user_id: string
+          vat_exempt_sales: number | null
+          vat_sales: number | null
+          zero_rated_sales: number | null
         }
         Insert: {
           amount_tendered?: number | null
@@ -3028,6 +3542,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string | null
           discount?: number
+          discount_details?: Json | null
           discount_id_number?: string | null
           discount_type?: string | null
           estimated_completion_time?: string | null
@@ -3037,14 +3552,22 @@ export type Database = {
           order_status?: string | null
           payment_details?: Json | null
           payment_method: string
+          pwd_discount?: number | null
           receipt_number: string
+          senior_citizen_discount?: number | null
+          senior_discounts?: Json | null
+          sequence_number?: number | null
           shift_id: string
           status?: string
           store_id: string
           subtotal?: number
           tax?: number
+          terminal_id?: string | null
           total?: number
           user_id: string
+          vat_exempt_sales?: number | null
+          vat_sales?: number | null
+          zero_rated_sales?: number | null
         }
         Update: {
           amount_tendered?: number | null
@@ -3053,6 +3576,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string | null
           discount?: number
+          discount_details?: Json | null
           discount_id_number?: string | null
           discount_type?: string | null
           estimated_completion_time?: string | null
@@ -3062,14 +3586,22 @@ export type Database = {
           order_status?: string | null
           payment_details?: Json | null
           payment_method?: string
+          pwd_discount?: number | null
           receipt_number?: string
+          senior_citizen_discount?: number | null
+          senior_discounts?: Json | null
+          sequence_number?: number | null
           shift_id?: string
           status?: string
           store_id?: string
           subtotal?: number
           tax?: number
+          terminal_id?: string | null
           total?: number
           user_id?: string
+          vat_exempt_sales?: number | null
+          vat_sales?: number | null
+          zero_rated_sales?: number | null
         }
         Relationships: [
           {
@@ -3151,6 +3683,10 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_cost_per_recipe_unit: {
+        Args: { purchase_cost: number; conversion_factor: number }
+        Returns: number
+      }
       calculate_recipe_cost: {
         Args: { recipe_id: number }
         Returns: number
@@ -3217,22 +3753,27 @@ export type Database = {
           is_active: boolean
         }[]
       }
-      get_location_pricing: {
-        Args: { item_id: string; store_location: string }
-        Returns: {
-          base_price: number
-          markup_percentage: number
-          final_price: number
-          minimum_order_quantity: number
-          shipping_cost: number
-          lead_time_days: number
-        }[]
-      }
       get_location_suppliers: {
-        Args: Record<PropertyKey, never> | { store_location: string }
+        Args: Record<PropertyKey, never>
         Returns: {
           supplier_id: number
           supplier_name: string
+        }[]
+      }
+      get_low_stock_items: {
+        Args: { store_id_param: string }
+        Returns: {
+          id: string
+          store_id: string
+          item: string
+          unit: string
+          stock_quantity: number
+          minimum_threshold: number
+          maximum_capacity: number
+          cost: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
         }[]
       }
       get_store_users: {
@@ -3271,6 +3812,31 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      log_bir_audit: {
+        Args: {
+          p_store_id: string
+          p_log_type: string
+          p_event_name: string
+          p_event_data: Json
+          p_user_id?: string
+          p_cashier_name?: string
+          p_terminal_id?: string
+          p_transaction_id?: string
+          p_receipt_number?: string
+        }
+        Returns: string
+      }
+      sync_auth_user_to_app_users: {
+        Args: {
+          user_email: string
+          first_name: string
+          last_name: string
+          user_role?: Database["public"]["Enums"]["app_role"]
+          store_ids?: string[]
+          contact_number?: string
+        }
+        Returns: string
+      }
       transfer_commissary_to_store: {
         Args: {
           p_commissary_item_id: string
@@ -3308,6 +3874,10 @@ export type Database = {
         | "partial_delivery"
         | "delivery_complete"
       grn_status: "pending" | "verified" | "discrepancy_noted"
+      ingredient_group_selection_type:
+        | "required_one"
+        | "optional_one"
+        | "multiple"
       inventory_category: "ingredients" | "packaging" | "supplies"
       inventory_unit:
         | "kg"
@@ -3332,6 +3902,10 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+        | "fulfilled"
+        | "delivered"
+        | "replaced"
+        | "refunded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3339,21 +3913,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -3371,14 +3949,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -3394,14 +3974,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -3417,14 +3999,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -3432,14 +4016,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
@@ -3454,6 +4040,11 @@ export const Constants = {
         "delivery_complete",
       ],
       grn_status: ["pending", "verified", "discrepancy_noted"],
+      ingredient_group_selection_type: [
+        "required_one",
+        "optional_one",
+        "multiple",
+      ],
       inventory_category: ["ingredients", "packaging", "supplies"],
       inventory_unit: ["kg", "g", "pieces", "liters", "ml", "boxes", "packs"],
       order_status: [
@@ -3472,6 +4063,10 @@ export const Constants = {
         "in_progress",
         "completed",
         "cancelled",
+        "fulfilled",
+        "delivered",
+        "replaced",
+        "refunded",
       ],
     },
   },

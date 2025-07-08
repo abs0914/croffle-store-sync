@@ -1,11 +1,16 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { RecipeUpload } from "@/types/commissary";
-import { UploadData } from "./recipeUploadHelpers";
+
+// Simplified interface for template creation
+interface TemplateUploadData {
+  categoryMap: Map<string, any>;
+  commissaryMap: Map<string, any>;
+}
 
 export const processRecipeUploadAsTemplate = async (
   recipe: RecipeUpload,
-  uploadData: UploadData
+  uploadData: TemplateUploadData
 ): Promise<boolean> => {
   try {
     console.log(`Processing recipe template: ${recipe.name}`);
@@ -24,14 +29,14 @@ export const processRecipeUploadAsTemplate = async (
       .from('recipe_templates')
       .insert({
         name: recipe.name,
-        description: recipe.description,
+        description: recipe.description || `Recipe template for ${recipe.name}`,
         category_name: recipe.category,
-        instructions: recipe.instructions,
-        yield_quantity: recipe.yield_quantity,
+        instructions: recipe.instructions || 'Instructions to be added',
+        yield_quantity: recipe.yield_quantity || 1,
         serving_size: recipe.serving_size || 1,
         version: 1,
         is_active: true,
-        created_by: currentUserId // Use actual user ID instead of "system"
+        created_by: currentUserId
       })
       .select()
       .single();
@@ -48,36 +53,71 @@ export const processRecipeUploadAsTemplate = async (
       const ingredientInserts = [];
 
       for (const ingredient of recipe.ingredients) {
-        // Find the commissary item
-        const commissaryItem = uploadData.commissaryMap.get(ingredient.commissary_item_name.toLowerCase());
+        const ingredientName = ingredient.commissary_item_name;
         
-        if (!commissaryItem) {
-          console.warn(`Ingredient "${ingredient.commissary_item_name}" not found in commissary inventory`);
-          continue;
+        // Handle choice-based ingredients (like "Choose 1: Chocolate Sauce OR Caramel Sauce")
+        if (ingredientName.toLowerCase().includes('choose') || ingredientName.toLowerCase().includes('or')) {
+          console.log(`Processing choice-based ingredient: ${ingredientName}`);
+          
+          // Parse choice-based ingredients: "Choose 1: Option A OR Option B"
+          const options = ingredientName.split(/\s+or\s+|\s+OR\s+/i);
+          
+          for (const option of options) {
+            const cleanOption = option.replace(/choose\s+\d+:\s*/i, '').trim();
+            if (cleanOption) {
+              ingredientInserts.push({
+                recipe_template_id: template.id,
+                ingredient_name: cleanOption,
+                commissary_item_name: cleanOption,
+                quantity: ingredient.quantity,
+                unit: ingredient.uom,
+                cost_per_unit: ingredient.cost_per_unit || 0,
+                recipe_unit: ingredient.uom,
+                purchase_unit: ingredient.uom,
+                conversion_factor: 1,
+                location_type: 'all'
+              });
+            }
+          }
+        } else {
+          // Regular ingredient processing
+          ingredientInserts.push({
+            recipe_template_id: template.id,
+            ingredient_name: ingredientName,
+            commissary_item_name: ingredientName,
+            quantity: ingredient.quantity,
+            unit: ingredient.uom,
+            cost_per_unit: ingredient.cost_per_unit || 0,
+            recipe_unit: ingredient.uom,
+            purchase_unit: ingredient.uom,
+            conversion_factor: 1,
+            location_type: 'all'
+          });
         }
-
-        ingredientInserts.push({
-          recipe_template_id: template.id,
-          commissary_item_id: commissaryItem.id,
-          commissary_item_name: ingredient.commissary_item_name,
-          quantity: ingredient.quantity,
-          unit: ingredient.uom, // Use uom instead of unit
-          cost_per_unit: ingredient.cost_per_unit || commissaryItem.unit_cost || 0
-        });
       }
 
       if (ingredientInserts.length > 0) {
-        const { error: ingredientsError } = await supabase
+        console.log(`Attempting to insert ${ingredientInserts.length} ingredients for template ${recipe.name}`);
+        console.log('Ingredient data:', ingredientInserts);
+        
+        const { data: insertedIngredients, error: ingredientsError } = await supabase
           .from('recipe_template_ingredients')
-          .insert(ingredientInserts);
+          .insert(ingredientInserts)
+          .select();
 
         if (ingredientsError) {
           console.error(`Error adding ingredients for template ${recipe.name}:`, ingredientsError);
-          return false;
+          console.error('Failed ingredient data:', ingredientInserts);
+          
+          // Don't fail the entire template creation if only ingredients fail
+          console.warn(`Template created but ingredients failed to insert`);
+        } else {
+          console.log(`Successfully added ${insertedIngredients?.length || ingredientInserts.length} ingredients to template ${recipe.name}`);
+          console.log('Inserted ingredients:', insertedIngredients);
         }
-
-        console.log(`Added ${ingredientInserts.length} ingredients to template ${recipe.name}`);
       }
+    } else {
+      console.log(`No ingredients found for recipe ${recipe.name}`);
     }
 
     return true;

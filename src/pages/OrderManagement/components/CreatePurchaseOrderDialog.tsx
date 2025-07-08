@@ -1,19 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, X, AlertTriangle } from "lucide-react";
-import { createPurchaseOrder, addPurchaseOrderItem, generatePurchaseOrderNumber } from "@/services/orderManagement/purchaseOrderService";
-import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
-import { CommissaryInventoryItem } from "@/types/commissaryPurchases";
-import { useAuth } from "@/contexts/auth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Plus, Minus, AlertCircle, RefreshCw } from "lucide-react";
+import { CommissaryInventoryItem } from "@/types/inventoryManagement";
+import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
+import { createPurchaseOrder } from "@/services/orderManagement/purchaseOrderService";
+import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 interface CreatePurchaseOrderDialogProps {
   open: boolean;
@@ -23,21 +22,11 @@ interface CreatePurchaseOrderDialogProps {
 
 interface OrderItem {
   commissary_item_id: string;
+  item_name: string;
   quantity: number;
   unit_price: number;
-  specifications: string;
-  selected: boolean;
+  specifications?: string;
 }
-
-// Business-relevant category mapping for display
-const BUSINESS_CATEGORIES = {
-  'Regular Croissants': ['regular croissant', 'plain croissant', 'butter croissant'],
-  'Flavored Croissants': ['chocolate croissant', 'almond croissant', 'cheese croissant', 'ham croissant'],
-  'Sauces & Spreads': ['sauce', 'spread', 'cream', 'jam', 'butter'],
-  'Toppings & Add-ons': ['topping', 'sprinkle', 'powder', 'syrup'],
-  'Packaging & Boxes': ['box', 'bag', 'container', 'packaging'],
-  'Miscellaneous': [] // catch-all for items that don't match other categories
-};
 
 export function CreatePurchaseOrderDialog({
   open,
@@ -46,185 +35,114 @@ export function CreatePurchaseOrderDialog({
 }: CreatePurchaseOrderDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [itemsLoading, setItemsLoading] = useState(false);
   const [orderableItems, setOrderableItems] = useState<CommissaryInventoryItem[]>([]);
-  const [formData, setFormData] = useState({
-    order_number: '',
-    requested_delivery_date: '',
-    notes: '',
-    branch_location: 'CEBU' // Default to CEBU
-  });
-  const [items, setItems] = useState<OrderItem[]>([]);
-  const [groupedItems, setGroupedItems] = useState<Record<string, CommissaryInventoryItem[]>>({});
+  const [loadingItems, setLoadingItems] = useState(true);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [notes, setNotes] = useState('');
+  const [requestedDeliveryDate, setRequestedDeliveryDate] = useState('');
+
+  const loadOrderableItems = async () => {
+    console.log('Loading orderable items for user:', user?.email, 'role:', user?.role);
+    setLoadingItems(true);
+    try {
+      const items = await fetchOrderableItems();
+      console.log('Loaded orderable items:', items.length, items);
+      setOrderableItems(items);
+    } catch (error) {
+      console.error('Error loading orderable items:', error);
+      toast.error('Failed to load available products');
+    } finally {
+      setLoadingItems(false);
+    }
+  };
 
   useEffect(() => {
     if (open) {
       loadOrderableItems();
-      generateOrderNumber();
     }
   }, [open]);
 
-  const categorizeItem = (item: CommissaryInventoryItem): string => {
-    const itemName = item.name.toLowerCase();
+  const addOrderItem = (item: CommissaryInventoryItem) => {
+    const existingIndex = orderItems.findIndex(oi => oi.commissary_item_id === item.id);
     
-    for (const [category, keywords] of Object.entries(BUSINESS_CATEGORIES)) {
-      if (keywords.length === 0) continue; // Skip miscellaneous for now
-      
-      if (keywords.some(keyword => itemName.includes(keyword))) {
-        return category;
-      }
-    }
-    
-    return 'Miscellaneous';
-  };
-
-  const loadOrderableItems = async () => {
-    setItemsLoading(true);
-    try {
-      const itemsData = await fetchOrderableItems();
-      console.log('Loaded orderable items:', itemsData);
-      
-      // Filter to only show orderable items (converted products)
-      const orderableOnly = itemsData.filter(item => item.item_type === 'orderable_item');
-      setOrderableItems(orderableOnly);
-      
-      // Group items by business categories
-      const grouped = orderableOnly.reduce((acc, item) => {
-        const category = categorizeItem(item);
-        if (!acc[category]) acc[category] = [];
-        acc[category].push(item);
-        return acc;
-      }, {} as Record<string, CommissaryInventoryItem[]>);
-      
-      setGroupedItems(grouped);
-      
-      // Initialize items array with all orderable items
-      const initialItems = orderableOnly.map(item => ({
+    if (existingIndex >= 0) {
+      const updated = [...orderItems];
+      updated[existingIndex].quantity += 1;
+      setOrderItems(updated);
+    } else {
+      setOrderItems([...orderItems, {
         commissary_item_id: item.id,
-        quantity: 0,
+        item_name: item.name,
+        quantity: 1,
         unit_price: item.unit_cost || 0,
-        specifications: '',
-        selected: false
-      }));
-      setItems(initialItems);
-    } catch (error) {
-      console.error('Error loading orderable items:', error);
-      toast.error('Failed to load orderable items');
-    } finally {
-      setItemsLoading(false);
+        specifications: ''
+      }]);
     }
   };
 
-  const generateOrderNumber = async () => {
-    const orderNumber = await generatePurchaseOrderNumber();
-    setFormData(prev => ({ ...prev, order_number: orderNumber }));
+  const updateOrderItemQuantity = (index: number, quantity: number) => {
+    if (quantity <= 0) {
+      setOrderItems(orderItems.filter((_, i) => i !== index));
+    } else {
+      const updated = [...orderItems];
+      updated[index].quantity = quantity;
+      setOrderItems(updated);
+    }
   };
 
-  const updateItem = (index: number, field: keyof OrderItem, value: any) => {
-    const updated = [...items];
-    updated[index] = { ...updated[index], [field]: value };
-    setItems(updated);
+  const updateOrderItemPrice = (index: number, price: number) => {
+    const updated = [...orderItems];
+    updated[index].unit_price = price;
+    setOrderItems(updated);
   };
 
-  const getLowStockItems = () => {
-    return orderableItems.filter(item => 
-      item.current_stock <= item.minimum_threshold
-    );
+  const updateOrderItemSpecs = (index: number, specs: string) => {
+    const updated = [...orderItems];
+    updated[index].specifications = specs;
+    setOrderItems(updated);
   };
 
-  const getItemDetails = (itemId: string) => {
-    return orderableItems.find(item => item.id === itemId);
-  };
+  const totalAmount = orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 
-  const handleBulkSelect = (category: string, selected: boolean) => {
-    const categoryItems = groupedItems[category] || [];
-    const updatedItems = items.map(item => {
-      const itemDetails = getItemDetails(item.commissary_item_id);
-      if (itemDetails && categorizeItem(itemDetails) === category) {
-        return { ...item, selected, quantity: selected ? 1 : 0 };
-      }
-      return item;
-    });
-    setItems(updatedItems);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user?.storeIds?.[0]) return;
-    
-    const selectedItems = items.filter(item => item.selected && item.quantity > 0);
-    
-    if (selectedItems.length === 0) {
-      toast.error('Please select at least one item for the order');
+  const handleSubmit = async () => {
+    if (!user?.storeIds?.[0]) {
+      toast.error('No store assigned to user');
       return;
     }
-    
-    setLoading(true);
 
+    if (orderItems.length === 0) {
+      toast.error('Please add at least one item to the order');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const totalAmount = selectedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-      
-      const purchaseOrder = await createPurchaseOrder({
-        order_number: formData.order_number,
+      const orderData = {
         store_id: user.storeIds[0],
         created_by: user.id,
+        status: 'pending' as const,
         total_amount: totalAmount,
-        status: 'pending',
-        requested_delivery_date: formData.requested_delivery_date || undefined,
-        notes: `${formData.notes}\nBranch Location: ${formData.branch_location}` || undefined
-      });
+        requested_delivery_date: requestedDeliveryDate || undefined,
+        notes: notes || undefined,
+        items: orderItems.map(item => ({
+          // Pass the commissary item ID as inventory_stock_id (the service will handle the mapping)
+          inventory_stock_id: item.commissary_item_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          specifications: item.specifications
+        }))
+      };
 
-      if (purchaseOrder) {
-        // Create purchase order items
-        for (const item of selectedItems) {
-          if (item.commissary_item_id && item.quantity > 0) {
-            let inventoryStockId = item.commissary_item_id;
-            
-            const itemDetails = getItemDetails(item.commissary_item_id);
-            if (itemDetails) {
-              const { data: existingStock } = await supabase
-                .from('inventory_stock')
-                .select('id')
-                .eq('store_id', user.storeIds[0])
-                .eq('item', itemDetails.name)
-                .eq('unit', itemDetails.uom)
-                .single();
-              
-              if (existingStock) {
-                inventoryStockId = existingStock.id;
-              } else {
-                const { data: newStock } = await supabase
-                  .from('inventory_stock')
-                  .insert({
-                    store_id: user.storeIds[0],
-                    item: itemDetails.name,
-                    unit: itemDetails.uom,
-                    stock_quantity: 0,
-                    cost: item.unit_price
-                  })
-                  .select('id')
-                  .single();
-                
-                if (newStock) {
-                  inventoryStockId = newStock.id;
-                }
-              }
-            }
-
-            await addPurchaseOrderItem({
-              purchase_order_id: purchaseOrder.id,
-              inventory_stock_id: inventoryStockId,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              specifications: `${item.specifications} - Finished Product: ${itemDetails?.name || 'Unknown'}`
-            });
-          }
-        }
-
+      console.log('Creating purchase order with data:', orderData);
+      const result = await createPurchaseOrder(orderData);
+      if (result) {
+        toast.success('Purchase order created successfully');
         onSuccess();
         onOpenChange(false);
-        resetForm();
-        toast.success('Purchase order created successfully');
+        // Reset form
+        setOrderItems([]);
+        setNotes('');
+        setRequestedDeliveryDate('');
       }
     } catch (error) {
       console.error('Error creating purchase order:', error);
@@ -234,215 +152,177 @@ export function CreatePurchaseOrderDialog({
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      order_number: '',
-      requested_delivery_date: '',
-      notes: '',
-      branch_location: 'CEBU'
-    });
-    setItems([]);
-  };
-
-  const lowStockItems = getLowStockItems();
-  const selectedItems = items.filter(item => item.selected);
-  const totalAmount = selectedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Purchase Order - Finished Products</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Select finished products (converted items) from commissary inventory for your store
-          </p>
+          <DialogTitle>Create Purchase Order</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="order_number">Order Number *</Label>
+        <div className="space-y-6">
+          {/* Order Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="delivery-date">Requested Delivery Date</Label>
               <Input
-                id="order_number"
-                value={formData.order_number}
-                onChange={(e) => setFormData(prev => ({ ...prev, order_number: e.target.value }))}
-                required
-                readOnly
+                id="delivery-date"
+                type="date"
+                value={requestedDeliveryDate}
+                onChange={(e) => setRequestedDeliveryDate(e.target.value)}
               />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="branch_location">Branch Location</Label>
-              <Select 
-                value={formData.branch_location} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, branch_location: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CEBU">CEBU</SelectItem>
-                  <SelectItem value="OUTSIDE_CEBU">OUTSIDE CEBU</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="requested_delivery_date">Requested Delivery Date</Label>
-              <Input
-                id="requested_delivery_date"
-                type="date"
-                value={formData.requested_delivery_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, requested_delivery_date: e.target.value }))}
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Order notes or special instructions..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
               />
             </div>
           </div>
 
-          {lowStockItems.length > 0 && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <span className="font-medium text-amber-800">Low Stock Alert</span>
+          {/* Available Products */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Available Products</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadOrderableItems}
+                  disabled={loadingItems}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingItems ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
               </div>
-              <p className="text-sm text-amber-700 mb-2">
-                {lowStockItems.length} finished product{lowStockItems.length !== 1 ? 's' : ''} below minimum threshold
-              </p>
-            </div>
-          )}
+            </CardHeader>
+            <CardContent>
+              {loadingItems ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-croffle-accent mx-auto"></div>
+                  <p className="text-muted-foreground mt-2">Loading available products...</p>
+                </div>
+              ) : orderableItems.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No finished products available for ordering</h3>
+                  <p className="text-muted-foreground mb-4">
+                    There are no products currently marked as orderable in the commissary inventory.
+                  </p>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>Debug info:</p>
+                    <p>User: {user?.email}</p>
+                    <p>Role: {user?.role}</p>
+                    <p>Store IDs: {user?.storeIds?.join(', ')}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-60 overflow-y-auto">
+                  {orderableItems.map((item) => (
+                    <div key={item.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm">{item.name}</h4>
+                        <Badge variant="secondary" className="text-xs">
+                          {item.current_stock} {item.uom}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Cost: ₱{item.unit_cost?.toFixed(2) || '0.00'} per {item.uom}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addOrderItem(item)}
+                        className="w-full"
+                        disabled={item.current_stock <= 0}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add to Order
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Available Finished Products ({selectedItems.length} selected)</Label>
-              <div className="text-sm font-medium">
-                Total: ₱{totalAmount.toFixed(2)}
-              </div>
-            </div>
-            
-            {itemsLoading ? (
-              <div className="text-center py-8">Loading finished products...</div>
-            ) : Object.keys(groupedItems).length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  No finished products available. Please create conversions in Production Management first.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {Object.entries(groupedItems).map(([category, categoryItems]) => (
-                  <div key={category} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="font-semibold text-lg">{category}</h3>
+          {/* Order Items */}
+          {orderItems.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Items ({orderItems.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {orderItems.map((item, index) => (
+                    <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.item_name}</h4>
+                        <Input
+                          placeholder="Specifications (optional)"
+                          value={item.specifications || ''}
+                          onChange={(e) => updateOrderItemSpecs(index, e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
                       <div className="flex items-center gap-2">
                         <Button
-                          type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleBulkSelect(category, true)}
+                          onClick={() => updateOrderItemQuantity(index, item.quantity - 1)}
                         >
-                          Select All
+                          <Minus className="h-3 w-3" />
                         </Button>
+                        <span className="w-12 text-center">{item.quantity}</span>
                         <Button
-                          type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleBulkSelect(category, false)}
+                          onClick={() => updateOrderItemQuantity(index, item.quantity + 1)}
                         >
-                          Clear All
+                          <Plus className="h-3 w-3" />
                         </Button>
                       </div>
+                      <div className="w-32">
+                        <Label className="text-xs">Unit Price</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updateOrderItemPrice(index, parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="w-24 text-right">
+                        <div className="text-sm font-medium">
+                          ₱{(item.quantity * item.unit_price).toFixed(2)}
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div className="grid grid-cols-1 gap-3">
-                      {categoryItems.map((orderableItem) => {
-                        const itemIndex = items.findIndex(item => item.commissary_item_id === orderableItem.id);
-                        const item = items[itemIndex];
-                        const isLowStock = orderableItem.current_stock <= orderableItem.minimum_threshold;
-                        
-                        return (
-                          <div key={orderableItem.id} className="grid grid-cols-12 gap-3 items-center p-3 border rounded-lg">
-                            <div className="col-span-1">
-                              <Checkbox
-                                checked={item?.selected || false}
-                                onCheckedChange={(checked) => updateItem(itemIndex, 'selected', checked)}
-                              />
-                            </div>
-                            
-                            <div className="col-span-4">
-                              <div className="font-medium">{orderableItem.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                Stock: {orderableItem.current_stock} {orderableItem.uom}
-                                {isLowStock && <span className="text-amber-600 ml-1">(Low Stock)</span>}
-                              </div>
-                            </div>
-                            
-                            <div className="col-span-2">
-                              <Label className="text-xs">Unit Price</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={item?.unit_price || 0}
-                                onChange={(e) => updateItem(itemIndex, 'unit_price', parseFloat(e.target.value) || 0)}
-                                disabled={!item?.selected}
-                              />
-                            </div>
-                            
-                            <div className="col-span-1">
-                              <Label className="text-xs">Unit</Label>
-                              <div className="text-sm font-medium">{orderableItem.uom}</div>
-                            </div>
-                            
-                            <div className="col-span-2">
-                              <Label className="text-xs">Quantity</Label>
-                              <Input
-                                type="number"
-                                min="0"
-                                value={item?.quantity || 0}
-                                onChange={(e) => updateItem(itemIndex, 'quantity', parseInt(e.target.value) || 0)}
-                                disabled={!item?.selected}
-                              />
-                            </div>
-                            
-                            <div className="col-span-2">
-                              <Label className="text-xs">Amount</Label>
-                              <div className="text-sm font-medium">
-                                ₱{((item?.quantity || 0) * (item?.unit_price || 0)).toFixed(2)}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  ))}
+                  <div className="flex justify-between items-center pt-4 border-t">
+                    <span className="text-lg font-semibold">Total Amount:</span>
+                    <span className="text-lg font-semibold">₱{totalAmount.toFixed(2)}</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Order Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Additional notes for the commissary..."
-              rows={3}
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
+          {/* Actions */}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || selectedItems.length === 0 || itemsLoading}>
-              {loading ? 'Creating...' : `Create Order (${selectedItems.length} items)`}
+            <Button
+              onClick={handleSubmit}
+              disabled={loading || orderItems.length === 0}
+            >
+              {loading ? 'Creating...' : 'Create Purchase Order'}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

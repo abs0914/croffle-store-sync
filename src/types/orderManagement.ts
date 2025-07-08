@@ -1,19 +1,25 @@
-
 export interface PurchaseOrder {
   id: string;
   order_number: string;
   store_id: string;
-  supplier_id?: string;
   created_by: string;
   approved_by?: string;
-  status: 'draft' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
+  fulfilled_by?: string;
+  status: 'pending' | 'approved' | 'fulfilled' | 'delivered' | 'cancelled' | 'draft' | 'in_progress' | 'completed' | 'replaced' | 'refunded';
   total_amount: number;
   requested_delivery_date?: string;
+  delivery_scheduled_date?: string;
+  delivery_notes?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
   approved_at?: string;
-  supplier?: Supplier;
+  fulfilled_at?: string;
+  store?: {
+    id: string;
+    name: string;
+    address: string;
+  };
   items?: PurchaseOrderItem[];
 }
 
@@ -44,15 +50,14 @@ export interface DeliveryOrder {
 export interface GoodsReceivedNote {
   id: string;
   grn_number: string;
-  delivery_order_id: string;
+  purchase_order_id: string;
   received_by: string;
-  status: 'pending' | 'verified' | 'discrepancy_noted';
   quality_check_passed?: boolean;
   remarks?: string;
   digital_signature?: string;
   received_at: string;
   created_at: string;
-  delivery_order?: DeliveryOrder;
+  purchase_order?: PurchaseOrder;
   items?: GRNItem[];
 }
 
@@ -80,19 +85,6 @@ export interface OrderAuditTrail {
   created_at: string;
 }
 
-export interface Supplier {
-  id: string;
-  name: string;
-  contact_person?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  lead_time_days: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface InventoryStock {
   id: string;
   store_id: string;
@@ -104,4 +96,22 @@ export interface InventoryStock {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface GRNDiscrepancyResolution {
+  id: string;
+  grn_id: string;
+  purchase_order_id: string;
+  resolution_type: 'replace' | 'refund';
+  resolution_status: 'pending' | 'approved' | 'rejected' | 'completed';
+  resolution_notes?: string;
+  financial_adjustment?: number;
+  processed_by?: string;
+  approved_by?: string;
+  created_at: string;
+  updated_at: string;
+  approved_at?: string;
+  completed_at?: string;
+  grn?: GoodsReceivedNote;
+  purchase_order?: PurchaseOrder;
 }

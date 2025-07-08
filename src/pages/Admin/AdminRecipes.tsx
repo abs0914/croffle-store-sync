@@ -6,9 +6,10 @@ import { AdminRecipesList } from './components/AdminRecipesList';
 import { AdminRecipeBulkActions } from './components/AdminRecipeBulkActions';
 import { RecipeManagementTab } from './components/RecipeManagementTab';
 import { AdminRecipeBulkUploadTab } from './components/AdminRecipeBulkUploadTab';
-import { AdminCommissaryIntegrationTab } from './components/AdminCommissaryIntegrationTab';
-import { MenuStructureTab } from '@/components/Admin/components/MenuStructureTab';
+import { EnhancedMenuStructureTab } from '@/components/Admin/components/EnhancedMenuStructureTab';
 import { EnhancedRecipeTemplateForm } from '@/components/Admin/components/EnhancedRecipeTemplateForm';
+import { StoreSelector } from '@/components/admin/StoreSelector';
+import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
 import { useAdminRecipesData } from './hooks/useAdminRecipesData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -22,6 +23,9 @@ export default function AdminRecipes() {
   const [isRecipeFormOpen, setIsRecipeFormOpen] = useState(false);
   const [formCategory, setFormCategory] = useState<string>('');
   const [formSubcategory, setFormSubcategory] = useState<string>('');
+  const [isEnhancedDeploymentDialogOpen, setIsEnhancedDeploymentDialogOpen] = useState(false);
+  const [selectedTemplateForDeployment, setSelectedTemplateForDeployment] = useState<any>(null);
+  const [selectedStoresForDeployment, setSelectedStoresForDeployment] = useState<Array<{ id: string; name: string }>>([]);
   
   const {
     recipes,
@@ -32,6 +36,8 @@ export default function AdminRecipes() {
     setStatusFilter,
     storeFilter,
     setStoreFilter,
+    selectedStoreForDeployment,
+    setSelectedStoreForDeployment,
     isLoading,
     refreshRecipes,
     recipeMetrics,
@@ -83,17 +89,22 @@ export default function AdminRecipes() {
     console.log('Bulk action:', action, 'on recipes:', selectedRecipes);
     
     if (action === 'delete') {
+      if (selectedRecipes.length === 0) {
+        toast.error('No recipes selected for deletion');
+        return;
+      }
+
+      if (!window.confirm(`Are you sure you want to delete ${selectedRecipes.length} recipe(s)? This action cannot be undone.`)) {
+        return;
+      }
+
       try {
         console.log('Starting bulk delete for recipes:', selectedRecipes);
         
-        if (selectedRecipes.length === 0) {
-          toast.error('No recipes selected for deletion');
-          return;
-        }
-
         const recipeIds = [...selectedRecipes];
         console.log('Recipe IDs to delete:', recipeIds);
 
+        // First, check if recipes exist
         const { data: existingRecipes, error: checkError } = await supabase
           .from('recipes')
           .select('id, name')
@@ -104,31 +115,36 @@ export default function AdminRecipes() {
           throw checkError;
         }
 
-        console.log('Found existing recipes to delete:', existingRecipes?.length || 0);
+        console.log('Found existing recipes:', existingRecipes?.length || 0, existingRecipes);
 
         if (!existingRecipes || existingRecipes.length === 0) {
           toast.error('No matching recipes found in database');
           return;
         }
 
+        const foundRecipeIds = existingRecipes.map(r => r.id);
+        console.log('Actual recipe IDs found in DB:', foundRecipeIds);
+
+        // Delete recipe ingredients first
         console.log('Deleting recipe ingredients...');
-        const { error: ingredientsError, count: ingredientsCount } = await supabase
+        const { error: ingredientsError } = await supabase
           .from('recipe_ingredients')
-          .delete({ count: 'exact' })
-          .in('recipe_id', recipeIds);
+          .delete()
+          .in('recipe_id', foundRecipeIds);
 
         if (ingredientsError) {
           console.error('Error deleting ingredients:', ingredientsError);
           throw ingredientsError;
         }
 
-        console.log(`Deleted ${ingredientsCount || 0} recipe ingredients`);
+        console.log('Recipe ingredients deleted successfully');
 
+        // Delete recipes
         console.log('Deleting recipes...');
         const { error: recipesError, count: recipesCount } = await supabase
           .from('recipes')
           .delete({ count: 'exact' })
-          .in('id', recipeIds);
+          .in('id', foundRecipeIds);
 
         if (recipesError) {
           console.error('Error deleting recipes:', recipesError);
@@ -137,21 +153,49 @@ export default function AdminRecipes() {
 
         console.log(`Deleted ${recipesCount || 0} recipes from database`);
 
+        // Clear selection
         setSelectedRecipes([]);
         
-        toast.success(`Successfully deleted ${recipeIds.length} recipe${recipeIds.length !== 1 ? 's' : ''} and their ingredients`);
+        toast.success(`Successfully deleted ${foundRecipeIds.length} recipe${foundRecipeIds.length !== 1 ? 's' : ''} and their ingredients`);
         
         console.log('Refreshing recipes data...');
         await refreshRecipes();
         
-        console.log('Bulk delete completed');
+        console.log('Bulk delete completed successfully');
       } catch (error: any) {
         console.error('Error deleting recipes:', error);
         toast.error(`Failed to delete recipes: ${error.message || 'Unknown error'}`);
       }
     } else {
+      // Handle other bulk actions
       setSelectedRecipes([]);
       await refreshRecipes();
+    }
+  };
+
+  const handleEnhancedDeployment = (template: any, selectedStores: Array<{ id: string; name: string }>) => {
+    console.log('Starting enhanced deployment for template:', template);
+    setSelectedTemplateForDeployment(template);
+    setSelectedStoresForDeployment(selectedStores);
+    setIsEnhancedDeploymentDialogOpen(true);
+  };
+
+  const handleDeploymentComplete = (results: any[]) => {
+    // Refresh recipes data after deployment
+    refreshRecipes();
+    
+    // Show detailed results
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+    
+    console.log('Deployment completed:', { successCount, failCount, results });
+    
+    if (successCount > 0 && failCount === 0) {
+      toast.success(`Successfully deployed to all ${successCount} store(s)`);
+    } else if (successCount > 0 && failCount > 0) {
+      toast.warning(`Deployed to ${successCount} store(s), failed on ${failCount} store(s)`);
+    } else if (failCount > 0) {
+      toast.error(`Deployment failed for all ${failCount} store(s)`);
     }
   };
 
@@ -165,29 +209,15 @@ export default function AdminRecipes() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="menu-structure">Menu Structure</TabsTrigger>
           <TabsTrigger value="recipe-templates">Recipe Templates</TabsTrigger>
           <TabsTrigger value="deployed-recipes">Deployed Recipes</TabsTrigger>
           <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
-          <TabsTrigger value="commissary-integration">Commissary Integration</TabsTrigger>
         </TabsList>
 
         <TabsContent value="menu-structure" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold">Complete Menu Structure</h3>
-              <p className="text-sm text-muted-foreground">
-                Create templates for all menu items with exact pricing
-              </p>
-            </div>
-            <Button onClick={handleBulkCreateMenuTemplates} className="bg-green-600 hover:bg-green-700">
-              <Package className="h-4 w-4 mr-2" />
-              Create All Menu Templates
-            </Button>
-          </div>
-          
-          <MenuStructureTab onCreateRecipeTemplate={handleCreateRecipeTemplate} />
+          <EnhancedMenuStructureTab onCreateRecipeTemplate={handleCreateRecipeTemplate} />
         </TabsContent>
 
         <TabsContent value="recipe-templates">
@@ -195,6 +225,14 @@ export default function AdminRecipes() {
         </TabsContent>
 
         <TabsContent value="deployed-recipes" className="space-y-6">
+          <StoreSelector
+            stores={stores}
+            selectedStore={selectedStoreForDeployment}
+            onStoreChange={setSelectedStoreForDeployment}
+            title="Store Management"
+            description="Select a store to view and manage its deployed recipes"
+          />
+          
           <AdminRecipesHeader 
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -226,15 +264,12 @@ export default function AdminRecipes() {
             onSelectAll={handleSelectAll}
             onRefresh={refreshRecipes}
             stores={stores}
+            onEnhancedDeployment={handleEnhancedDeployment}
           />
         </TabsContent>
 
         <TabsContent value="bulk-upload">
           <AdminRecipeBulkUploadTab />
-        </TabsContent>
-
-        <TabsContent value="commissary-integration">
-          <AdminCommissaryIntegrationTab />
         </TabsContent>
       </Tabs>
 
@@ -243,6 +278,16 @@ export default function AdminRecipes() {
         onClose={() => setIsRecipeFormOpen(false)}
         category={formCategory}
         subcategory={formSubcategory}
+      />
+
+      <ConsolidatedRecipeDeploymentDialog
+        isOpen={isEnhancedDeploymentDialogOpen}
+        onClose={() => setIsEnhancedDeploymentDialogOpen(false)}
+        template={selectedTemplateForDeployment}
+        onSuccess={() => {
+          refreshRecipes();
+          toast.success('Recipe deployed successfully!');
+        }}
       />
     </div>
   );

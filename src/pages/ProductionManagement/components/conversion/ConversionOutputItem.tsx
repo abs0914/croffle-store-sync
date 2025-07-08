@@ -1,8 +1,6 @@
-
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { STANDARD_UOM_OPTIONS } from "@/types/commissary";
 
 interface ConversionOutputItemProps {
   outputItem: {
@@ -17,14 +15,27 @@ interface ConversionOutputItemProps {
   setOutputItem: (item: any) => void;
 }
 
+// Standard units that are allowed in the commissary inventory system
+const STANDARD_UOM_OPTIONS = [
+  'pieces',
+  'kg',
+  'g',
+  'liters',
+  'ml',
+  'boxes',
+  'packs',
+  'servings',
+  'portions',
+  'units',
+  'containers',
+  'Piping Bag'
+];
+
 // Define business-relevant categories for finished products
 const FINISHED_PRODUCT_CATEGORIES = [
-  { value: 'regular_croissants', label: 'Regular Croissants' },
-  { value: 'flavored_croissants', label: 'Flavored Croissants' },
-  { value: 'sauces', label: 'Sauces' },
-  { value: 'toppings', label: 'Toppings' },
-  { value: 'packaging', label: 'Boxes & Packaging' },
-  { value: 'miscellaneous', label: 'Miscellaneous' }
+  { value: 'supplies', label: 'Finished Products' },
+  { value: 'raw_materials', label: 'Processed Materials' },  
+  { value: 'packaging_materials', label: 'Packaged Items' }
 ];
 
 export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOutputItemProps) {
@@ -125,15 +136,8 @@ export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOu
           id="storage-location"
           value={outputItem.storage_location}
           onChange={(e) => setOutputItem(prev => ({ ...prev, storage_location: e.target.value }))}
-          placeholder="e.g., Finished Goods, Cold Storage"
+          placeholder="e.g., Cold Storage, Pantry, Freezer"
         />
-      </div>
-      
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-700">
-          <strong>Tip:</strong> For simple repackaging (like croissants), use the same UOM as input. 
-          Cost will be auto-calculated with minimal processing overhead.
-        </p>
       </div>
     </div>
   );

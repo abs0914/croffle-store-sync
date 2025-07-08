@@ -16,17 +16,17 @@ import StartShiftDialogFooter from "./shift/StartShiftDialogFooter";
 interface StartShiftDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onStartShift: (startingCash: number, startInventoryCount: Record<string, number>, photo?: string, cashierId?: string) => Promise<void>;
+  onStartShift: (startingCash: number, photo?: string, cashierId?: string) => Promise<void>;
   storeId: string | null;
 }
 
 interface DialogState {
   startingCash: number;
   photo: string | null;
-  inventoryCount: Record<string, number>;
   selectedCashierId: string | null;
   showCameraView: boolean;
   isLoading: boolean;
+  inventoryCounts: Record<string, number>;
 }
 
 export default function StartShiftDialog({
@@ -39,10 +39,10 @@ export default function StartShiftDialog({
   const [dialogState, setDialogState] = useState<DialogState>({
     startingCash: 0,
     photo: null,
-    inventoryCount: {},
     selectedCashierId: null,
     showCameraView: false,
-    isLoading: false
+    isLoading: false,
+    inventoryCounts: {}
   });
 
   const handleStateChange = useCallback((state: DialogState) => {
@@ -69,15 +69,15 @@ export default function StartShiftDialog({
       setIsSubmitting(true);
       console.log("Starting shift with params:", {
         startingCash: dialogState.startingCash,
-        inventoryCount: Object.keys(dialogState.inventoryCount).length,
         storeId,
-        cashierId: dialogState.selectedCashierId
+        cashierId: dialogState.selectedCashierId,
+        inventoryItemsCount: Object.keys(dialogState.inventoryCounts).length,
+        totalInventoryCount: Object.values(dialogState.inventoryCounts).reduce((sum, count) => sum + count, 0)
       });
       
       await onStartShift(
-        dialogState.startingCash, 
-        dialogState.inventoryCount, 
-        dialogState.photo, 
+        dialogState.startingCash,
+        dialogState.photo,
         dialogState.selectedCashierId
       );
     } catch (error) {
@@ -92,7 +92,7 @@ export default function StartShiftDialog({
     onOpenChange(false);
   };
 
-  const canSubmit = !!(dialogState.photo && dialogState.selectedCashierId);
+  const canSubmit = !!(dialogState.photo && dialogState.selectedCashierId && Object.keys(dialogState.inventoryCounts).length > 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -100,7 +100,7 @@ export default function StartShiftDialog({
         <DialogHeader>
           <DialogTitle>Start New Shift</DialogTitle>
           <DialogDescription>
-            Please count your cash drawer and inventory levels before starting your shift.
+            Please count your cash drawer before starting your shift.
           </DialogDescription>
         </DialogHeader>
         

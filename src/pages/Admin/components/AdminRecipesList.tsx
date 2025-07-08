@@ -1,288 +1,296 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  ChefHat, 
-  Store,
-  Package,
-  AlertCircle
-} from 'lucide-react';
-import { approveRecipe, rejectRecipe } from '@/services/recipeManagement/recipeApprovalService';
-import { useState } from 'react';
+
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Package, AlertTriangle, Info, CheckCircle, XCircle, Edit } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
+import { cleanupDuplicateRecipes } from '@/services/recipeManagement/recipeDeploymentService';
+import { RecipeDeploymentEditDialog } from '@/components/Admin/components/RecipeDeploymentEditDialog';
 
 interface AdminRecipesListProps {
   recipes: any[];
   selectedRecipes: string[];
-  viewMode: 'grid' | 'list';
-  isLoading: boolean;
   onSelectRecipe: (recipeId: string) => void;
   onSelectAll: () => void;
+  viewMode: 'grid' | 'list';
+  isLoading: boolean;
   onRefresh: () => void;
   stores: any[];
+  onEnhancedDeployment?: (template: any, selectedStores: Array<{ id: string; name: string }>) => void;
 }
 
-export const AdminRecipesList: React.FC<AdminRecipesListProps> = ({
+export function AdminRecipesList({
   recipes,
   selectedRecipes,
-  viewMode,
-  isLoading,
   onSelectRecipe,
   onSelectAll,
+  viewMode,
+  isLoading,
   onRefresh,
-  stores
-}) => {
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [selectedRecipeForRejection, setSelectedRecipeForRejection] = useState<string | null>(null);
+  stores,
+  onEnhancedDeployment
+}: AdminRecipesListProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const getStatusBadge = (status?: string) => {
-    switch (status) {
-      case 'approved':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
-      case 'pending_approval':
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending Approval</Badge>;
-      default:
-        return <Badge variant="outline"><AlertCircle className="h-3 w-3 mr-1" />Draft</Badge>;
+  const handleCleanupDuplicates = async () => {
+    setIsCleaningUp(true);
+    try {
+      const result = await cleanupDuplicateRecipes();
+      if (result.cleaned > 0) {
+        toast.success(`Cleaned up ${result.cleaned} duplicate recipes`);
+        onRefresh();
+      } else {
+        toast.info('No duplicate recipes found');
+      }
+      
+      if (result.errors.length > 0) {
+        toast.warning(`Cleanup completed with ${result.errors.length} errors`);
+        console.error('Cleanup errors:', result.errors);
+      }
+    } catch (error) {
+      console.error('Error cleaning up duplicates:', error);
+      toast.error('Failed to clean up duplicates');
+    } finally {
+      setIsCleaningUp(false);
     }
   };
 
-  const getStoreName = (storeId: string) => {
-    const store = stores.find(s => s.id === storeId);
-    return store?.name || 'Unknown Store';
-  };
+  // Filter recipes based on search
+  const filteredRecipes = recipes.filter(recipe => 
+    recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (recipe.description && recipe.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (recipe.store_name && recipe.store_name.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
-  const handleApprove = async (recipeId: string) => {
-    const success = await approveRecipe(recipeId);
-    if (success) {
-      onRefresh();
+  // Group recipes to identify duplicates
+  const recipeGroups = filteredRecipes.reduce((acc: any, recipe: any) => {
+    const key = `${recipe.name}-${recipe.store_id}`;
+    if (!acc[key]) {
+      acc[key] = [];
     }
+    acc[key].push(recipe);
+    return acc;
+  }, {});
+
+  const duplicateCount = Object.values(recipeGroups).filter((group: any) => group.length > 1).length;
+
+  // Template deployment status check
+  const getDeploymentStatus = (recipe: any) => {
+    const hasName = recipe.name && recipe.name.trim().length > 0;
+    if (!hasName) return { ready: false, reason: 'No name' };
+    
+    const hasIngredients = recipe.ingredients && recipe.ingredients.length > 0;
+    const hasInstructions = recipe.instructions && recipe.instructions.trim().length > 0;
+    
+    return { 
+      ready: true, 
+      hasIngredients,
+      hasInstructions,
+      deploymentCount: recipe.deployment_count || 0,
+      deployedStores: recipe.deployed_stores || [],
+      warnings: [
+        ...(!hasIngredients ? ['No ingredients (can be added after deployment)'] : []),
+        ...(!hasInstructions ? ['No instructions'] : [])
+      ]
+    };
   };
 
-  const handleReject = async (recipeId: string, reason: string) => {
-    const success = await rejectRecipe(recipeId, reason);
-    if (success) {
-      onRefresh();
-      setSelectedRecipeForRejection(null);
-      setRejectionReason('');
+  const getStatusIcon = (recipe: any) => {
+    if (recipe.deployment_count > 0) {
+      return <CheckCircle className="h-4 w-4 text-green-600" />;
     }
+    return <Package className="h-4 w-4 text-blue-600" />;
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <div className="animate-pulse space-y-4">
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+  const getStatusText = (recipe: any) => {
+    if (recipe.deployment_count > 0) {
+      return `Deployed to ${recipe.deployment_count} store${recipe.deployment_count !== 1 ? 's' : ''}`;
+    }
+    return 'Template (not deployed)';
+  };
+
+  const handleEditRecipe = (recipe: any) => {
+    setEditingRecipe(recipe);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    onRefresh();
+    setEditingRecipe(null);
+    setIsEditDialogOpen(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header with search and actions */}
+      <div className="flex items-center justify-between">
+        <Input
+          placeholder="Search recipes..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="max-w-md"
+        />
+        <div className="flex gap-2">
+          {duplicateCount > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleCleanupDuplicates}
+              disabled={isCleaningUp}
+              className="text-orange-600 border-orange-200 hover:bg-orange-50"
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              {isCleaningUp ? 'Cleaning...' : `Fix ${duplicateCount} Duplicates`}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
+            Refresh
+          </Button>
+        </div>
       </div>
-    );
-  }
 
-  if (recipes.length === 0) {
-    return (
-      <Card>
-        <CardContent className="text-center py-12">
-          <ChefHat className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-medium mb-2">No Deployed Recipes Found</h3>
-          <p className="text-muted-foreground">
-            Recipes will appear here once they are deployed to stores from the Recipe Management tab.
+      {/* Duplicate warning */}
+      {duplicateCount > 0 && (
+        <div className="p-4 border border-orange-200 rounded-lg bg-orange-50">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <span className="font-semibold text-orange-800">Duplicate Recipes Detected</span>
+          </div>
+          <p className="text-sm text-orange-700">
+            Found {duplicateCount} sets of duplicate recipes. Click "Fix Duplicates" to clean them up automatically.
           </p>
-        </CardContent>
-      </Card>
-    );
-  }
+        </div>
+      )}
 
-  if (viewMode === 'grid') {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {recipes.map(recipe => (
-          <Card key={recipe.id} className="relative">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    checked={selectedRecipes.includes(recipe.id)}
-                    onCheckedChange={() => onSelectRecipe(recipe.id)}
-                  />
-                  <div>
-                    <CardTitle className="text-lg">{recipe.name}</CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Store className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        {getStoreName(recipe.store_id)}
+      {/* Recipe count info */}
+      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        <span>Showing {filteredRecipes.length} of {recipes.length} recipes</span>
+        {duplicateCount > 0 && (
+          <Badge variant="outline" className="text-orange-600 border-orange-200">
+            {duplicateCount} duplicate sets
+          </Badge>
+        )}
+        <Badge variant="outline" className="text-green-600 border-green-200">
+          {filteredRecipes.filter(r => getDeploymentStatus(r).ready).length} ready to deploy
+        </Badge>
+      </div>
+
+      {/* Recipe Templates Grid/List */}
+      <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
+        {filteredRecipes.map((recipe) => {
+          const deploymentStatus = getDeploymentStatus(recipe);
+          
+          return (
+            <Card key={recipe.id} className={viewMode === 'list' ? 'p-4' : ''}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`select-${recipe.id}`}
+                      checked={selectedRecipes.includes(recipe.id)}
+                      onCheckedChange={() => onSelectRecipe(recipe.id)}
+                    />
+                    <div className="flex flex-col">
+                      <Label htmlFor={`select-${recipe.id}`} className="cursor-pointer font-medium">
+                        {recipe.name}
+                      </Label>
+                      <span className="text-xs text-muted-foreground">
+                        Template • {recipe.category || 'No Category'}
                       </span>
                     </div>
                   </div>
-                </div>
-                {getStatusBadge(recipe.approval_status)}
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              {recipe.description && (
-                <p className="text-sm text-muted-foreground">{recipe.description}</p>
-              )}
-              
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <ChefHat className="h-3 w-3" />
-                  <span>Yield: {recipe.yield_quantity}</span>
-                </div>
-                {recipe.product_id && (
-                  <div className="flex items-center gap-1">
-                    <Package className="h-3 w-3" />
-                    <span>Product Created</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={recipe.deployment_count > 0 ? "default" : "secondary"} className="text-xs">
+                      {recipe.deployment_count > 0 ? `${recipe.deployment_count} stores` : 'Not deployed'}
+                    </Badge>
+                    <div className="flex items-center gap-1" title={getStatusText(recipe)}>
+                      {getStatusIcon(recipe)}
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {recipe.rejection_reason && (
-                <div className="p-2 bg-red-50 border border-red-200 rounded">
-                  <p className="text-sm text-red-700">
-                    <strong>Rejection Reason:</strong> {recipe.rejection_reason}
-                  </p>
                 </div>
-              )}
-
-              {recipe.approval_status === 'pending_approval' && (
-                <div className="flex gap-2 pt-2">
-                  <Button 
-                    size="sm" 
-                    onClick={() => handleApprove(recipe.id)}
-                    className="flex-1"
-                  >
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Approve
-                  </Button>
+              </CardHeader>
+              
+              <CardContent className="pt-2">
+                <div className="space-y-2">
+                  <div className="text-sm text-muted-foreground">
+                    {recipe.description || 'No description'}
+                  </div>
                   
-                  <AlertDialog 
-                    open={selectedRecipeForRejection === recipe.id}
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        setSelectedRecipeForRejection(null);
-                        setRejectionReason('');
-                      }
-                    }}
-                  >
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => setSelectedRecipeForRejection(recipe.id)}
-                        className="flex-1"
-                      >
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Reject
-                      </Button>
-                    </AlertDialogTrigger>
-                    
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Reject Recipe</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Please provide a reason for rejecting "{recipe.name}".
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="rejection-reason">Rejection Reason</Label>
-                        <Textarea
-                          id="rejection-reason"
-                          value={rejectionReason}
-                          onChange={(e) => setRejectionReason(e.target.value)}
-                          placeholder="Enter reason for rejection..."
-                          rows={3}
-                        />
-                      </div>
-                      
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleReject(recipe.id, rejectionReason)}
-                          disabled={!rejectionReason.trim()}
-                          className="bg-red-600 hover:bg-red-700"
-                        >
-                          Reject Recipe
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-  // List view (simplified for brevity)
-  return (
-    <div className="space-y-4">
-      {recipes.map(recipe => (
-        <Card key={recipe.id}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  checked={selectedRecipes.includes(recipe.id)}
-                  onCheckedChange={() => onSelectRecipe(recipe.id)}
-                />
-                <div>
-                  <h3 className="font-medium">{recipe.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {getStoreName(recipe.store_id)} • Yield: {recipe.yield_quantity}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                {getStatusBadge(recipe.approval_status)}
-                
-                {recipe.approval_status === 'pending_approval' && (
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleApprove(recipe.id)}>
-                      Approve
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setSelectedRecipeForRejection(recipe.id)}
-                    >
-                      Reject
-                    </Button>
+                  {/* Template info */}
+                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <div>Ingredients: {recipe.ingredient_count || 0}</div>
+                    <div>Category: {recipe.category || 'None'}</div>
+                    <div>Deployments: {recipe.deployment_count || 0}</div>
+                    <div>Created: {new Date(recipe.created_at).toLocaleDateString()}</div>
                   </div>
-                )}
-              </div>
-            </div>
-            
-            {recipe.rejection_reason && (
-              <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
-                <p className="text-sm text-red-700">
-                  <strong>Rejection Reason:</strong> {recipe.rejection_reason}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+
+                  {/* Deployment status */}
+                  <div className="p-2 border rounded text-xs">
+                    <div className="flex items-center gap-1 mb-1">
+                      {getStatusIcon(recipe)}
+                      <span className="font-medium">
+                        {getStatusText(recipe)}
+                      </span>
+                    </div>
+                    {recipe.deployed_stores && recipe.deployed_stores.length > 0 && (
+                      <div className="text-green-600">
+                        Stores: {recipe.deployed_stores.join(', ')}
+                      </div>
+                    )}
+                    {deploymentStatus.warnings && deploymentStatus.warnings.length > 0 && (
+                      <div className="text-yellow-600">
+                        Warnings: {deploymentStatus.warnings.join(', ')}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex gap-2 mt-4">
+                    {recipe.deployment_count > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex items-center gap-1"
+                        onClick={() => handleEditRecipe(recipe)}
+                      >
+                        <Edit className="h-3 w-3" />
+                        Manage Deployments
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {filteredRecipes.length === 0 && !isLoading && (
+        <div className="text-center py-8 text-muted-foreground">
+          <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <h3 className="text-lg font-semibold mb-2">No recipes found</h3>
+          <p>
+            {searchQuery 
+              ? `No recipes match "${searchQuery}"`
+              : "No deployed recipes available for the selected store"
+            }
+          </p>
+        </div>
+      )}
+
+      <RecipeDeploymentEditDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        recipe={editingRecipe}
+        onSuccess={handleEditSuccess}
+      />
     </div>
   );
-};
+}

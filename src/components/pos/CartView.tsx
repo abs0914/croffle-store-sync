@@ -9,10 +9,13 @@ import { CartItem, Customer } from '@/types';
 import { PaymentDialog } from './PaymentDialog';
 import { CustomerSelector } from './CustomerSelector';
 import { DiscountDialog } from './DiscountDialog';
+import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
 import { Trash2, Plus, Minus, AlertTriangle } from 'lucide-react';
 import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
 import { useStore } from '@/contexts/StoreContext';
+import { useCart } from '@/contexts/cart/CartContext';
 import { toast } from 'sonner';
+import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
 
 interface CartViewProps {
   items: CartItem[];
@@ -22,12 +25,15 @@ interface CartViewProps {
   discount: number;
   discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
   discountIdNumber?: string;
+  seniorDiscounts: SeniorDiscount[];
+  otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | null;
   removeItem: (index: number) => void;
   updateQuantity: (index: number, quantity: number) => void;
   clearCart: () => void;
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
+  handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }) => void;
   handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any) => void;
   isShiftActive: boolean;
 }
@@ -40,12 +46,15 @@ export default function CartView({
   discount,
   discountType,
   discountIdNumber,
+  seniorDiscounts,
+  otherDiscount,
   removeItem,
   updateQuantity,
   clearCart,
   selectedCustomer,
   setSelectedCustomer,
   handleApplyDiscount,
+  handleApplyMultipleDiscounts,
   handlePaymentComplete,
   isShiftActive
 }: CartViewProps) {
@@ -110,11 +119,18 @@ export default function CartView({
     }
   };
 
+  // Use centralized cart calculations from context
+  const { calculations, items: cartItems, seniorDiscounts: contextSeniorDiscounts, otherDiscount: contextOtherDiscount } = useCart();
+  
+  // Calculate the actual total with proper BIR-compliant calculations
+  const actualTotal = calculations.finalTotal;
+  const adjustedVAT = calculations.adjustedVAT;
+  
   const canCheckout = items.length > 0 && isShiftActive && !isValidating && !validationMessage;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col h-full space-y-4">
+      <div className="flex items-center justify-between flex-shrink-0">
         <h3 className="text-lg font-semibold">Cart</h3>
         {items.length > 0 && (
           <Button variant="outline" size="sm" onClick={clearCart}>
@@ -125,14 +141,15 @@ export default function CartView({
 
       {/* Validation Message */}
       {validationMessage && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-2">
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-2 flex-shrink-0">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           <span className="text-sm text-amber-800">{validationMessage}</span>
         </div>
       )}
 
-      {/* Cart Items */}
-      <div className="space-y-2 max-h-60 overflow-y-auto">
+      {/* Cart Items - Scrollable */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="space-y-2 h-full overflow-y-auto">
         {items.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">Your cart is empty</p>
         ) : (
@@ -205,10 +222,12 @@ export default function CartView({
             );
           })
         )}
+        </div>
       </div>
 
+      {/* Bottom Section - Fixed */}
       {items.length > 0 && (
-        <>
+        <div className="flex-shrink-0 space-y-4">
           <Separator />
           
           {/* Customer Selection */}
@@ -223,43 +242,68 @@ export default function CartView({
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>Subtotal</span>
-              <span>₱{subtotal.toFixed(2)}</span>
+              <span>₱{calculations.grossSubtotal.toFixed(2)}</span>
             </div>
             
-            {discount > 0 && (
+            {/* VAT Exemption Display */}
+            {calculations.vatExemption > 0 && (
+              <div className="flex justify-between text-sm text-blue-600">
+                <span>VAT Exemption (Senior)</span>
+                <span>-₱{calculations.vatExemption.toFixed(2)}</span>
+              </div>
+            )}
+            
+            {/* Multiple Senior Citizens Discount Display */}
+            {calculations.numberOfSeniors > 0 && (
+              <div className="space-y-1">
+                {seniorDiscounts.map((senior, index) => (
+                  <div key={senior.id} className="flex justify-between text-sm text-green-600">
+                    <span>Senior {index + 1} ({senior.idNumber})</span>
+                    <span>-₱{senior.discountAmount.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between text-sm text-green-600 font-medium border-t border-green-200 pt-1">
+                  <span>Total Senior Discount</span>
+                  <span>-₱{calculations.seniorDiscountAmount.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Other Discount Display */}
+            {calculations.otherDiscountAmount > 0 && (
               <div className="flex justify-between text-sm text-green-600">
                 <span>
-                  Discount {discountType && `(${discountType.toUpperCase()})`}
-                  {discountIdNumber && ` - ${discountIdNumber}`}
+                  {otherDiscount?.type.toUpperCase()} Discount
+                  {otherDiscount?.idNumber && ` - ${otherDiscount.idNumber}`}
                 </span>
-                <span>-₱{discount.toFixed(2)}</span>
+                <span>-₱{calculations.otherDiscountAmount.toFixed(2)}</span>
               </div>
             )}
             
             <div className="flex justify-between text-sm">
               <span>VAT (12%)</span>
-              <span>₱{tax.toFixed(2)}</span>
+              <span>₱{calculations.adjustedVAT.toFixed(2)}</span>
             </div>
             
             <Separator />
             
             <div className="flex justify-between font-semibold">
               <span>Total</span>
-              <span>₱{total.toFixed(2)}</span>
+              <span>₱{calculations.finalTotal.toFixed(2)}</span>
             </div>
           </div>
 
+          {/* Multiple Discount Selector */}
+          <MultipleSeniorDiscountSelector
+            subtotal={calculations.grossSubtotal}
+            onApplyDiscounts={handleApplyMultipleDiscounts}
+            currentSeniorDiscounts={seniorDiscounts}
+            currentOtherDiscount={otherDiscount}
+            currentTotalDiners={calculations.totalDiners}
+          />
+
           {/* Action Buttons */}
           <div className="space-y-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsDiscountDialogOpen(true)}
-              className="w-full"
-              disabled={!isShiftActive}
-            >
-              Apply Discount
-            </Button>
-            
             <Button
               onClick={() => setIsPaymentDialogOpen(true)}
               className="w-full"
@@ -272,23 +316,17 @@ export default function CartView({
                'Proceed to Payment'}
             </Button>
           </div>
-        </>
+        </div>
       )}
 
       {/* Dialogs */}
       <PaymentDialog
         isOpen={isPaymentDialogOpen}
         onClose={() => setIsPaymentDialogOpen(false)}
-        total={total}
+        total={calculations.finalTotal}
         onPaymentComplete={handlePaymentCompleteWithDeduction}
       />
 
-      <DiscountDialog
-        isOpen={isDiscountDialogOpen}
-        onClose={() => setIsDiscountDialogOpen(false)}
-        onApplyDiscount={handleApplyDiscount}
-        currentTotal={subtotal}
-      />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import ExpensesDashboard from '@/pages/Expenses/ExpensesDashboard';
+import AdminExpensesDashboard from './components/AdminExpensesDashboard';
 import AdminExpenseApprovals from './components/AdminExpenseApprovals';
 import AdminExpenseBudgets from './components/AdminExpenseBudgets';
 import AdminExpenseReports from './components/AdminExpenseReports';
@@ -28,7 +28,7 @@ export default function AdminExpenses() {
         </TabsList>
 
         <TabsContent value="dashboard">
-          <ExpensesDashboard />
+          <AdminExpensesDashboard />
         </TabsContent>
 
         <TabsContent value="approvals">

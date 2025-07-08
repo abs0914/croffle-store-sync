@@ -1,14 +1,14 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Product, Category } from "@/types";
+import { UnifiedProduct } from "@/services/product/unifiedProductService";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProductCardProps {
-  product: Product;
+  product: UnifiedProduct;
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
-  onClick: (product: Product) => void;
+  onClick: (product: UnifiedProduct) => void;
 }
 
 export default function ProductCard({ 
@@ -30,7 +30,7 @@ export default function ProductCard({
         <TooltipTrigger asChild>
           <Button
             variant="outline"
-            className={`h-auto p-0 flex flex-col items-center justify-between text-left border border-croffle-primary/20 overflow-hidden rounded-lg ${
+            className={`h-auto p-0 flex flex-col items-center justify-between text-left border border-primary/20 overflow-hidden rounded-lg hover:shadow-md transition-shadow min-h-[180px] ${
               !isShiftActive || !isActive ? 'opacity-70' : ''
             }`}
             onClick={() => onClick(product)}
@@ -38,7 +38,7 @@ export default function ProductCard({
           >
             <div className="w-full">
               {product.image_url || product.image ? (
-                <div className="w-full h-36 overflow-hidden bg-white">
+                <div className="w-full h-28 sm:h-36 overflow-hidden bg-white">
                   <img 
                     src={product.image_url || product.image} 
                     alt={product.name} 
@@ -46,14 +46,14 @@ export default function ProductCard({
                   />
                 </div>
               ) : (
-                <div className="w-full h-36 bg-croffle-background flex items-center justify-center">
-                  <span className="text-croffle-primary">No image</span>
+                <div className="w-full h-28 sm:h-36 bg-muted flex items-center justify-center">
+                  <span className="text-muted-foreground text-sm">No image</span>
                 </div>
               )}
               
               <div className="w-full p-3 bg-white">
                 <p className="font-medium text-sm truncate">{product.name}</p>
-                <p className="text-xs text-muted-foreground">{categoryName}</p>
+                <p className="text-xs text-green-600 font-semibold">₱{(product.price || 0).toFixed(2)}</p>
                 {!isActive && (
                   <span className="inline-block bg-gray-200 text-gray-700 text-xs px-1 rounded mt-1">Inactive</span>
                 )}

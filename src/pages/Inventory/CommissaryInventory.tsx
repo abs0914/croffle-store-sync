@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/utils/format";
 
 export default function CommissaryInventory() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [items, setItems] = useState<CommissaryInventoryItem[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,28 +38,47 @@ export default function CommissaryInventory() {
   });
 
   // Check if user has admin access
-  const hasAdminAccess = user?.role === 'admin' || user?.role === 'owner';
+  const hasAdminAccess = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
+
+  // Debug logging
+  useEffect(() => {
+    console.log('CommissaryInventory: Current user:', user);
+    console.log('CommissaryInventory: User role:', user?.role);
+    console.log('CommissaryInventory: Has admin access:', hasAdminAccess);
+  }, [user, hasAdminAccess]);
 
   useEffect(() => {
-    if (!hasAdminAccess) {
-      toast.error('Access denied. Commissary inventory is only available to administrators.');
+    if (!user) {
+      console.log('CommissaryInventory: No user found, stopping load');
+      setLoading(false);
       return;
     }
+
+    if (!hasAdminAccess) {
+      console.log('CommissaryInventory: User does not have admin access');
+      toast.error('Access denied. Commissary inventory is only available to administrators, owners, and managers.');
+      setLoading(false);
+      return;
+    }
+
+    console.log('CommissaryInventory: Loading data for user with access');
     loadData();
-  }, [hasAdminAccess]);
+  }, [user, hasAdminAccess]);
 
   useEffect(() => {
-    if (hasAdminAccess) {
+    if (hasAdminAccess && user) {
+      console.log('CommissaryInventory: Reloading items due to filter change');
       loadItems();
     }
-  }, [filters, hasAdminAccess]);
+  }, [filters, hasAdminAccess, user]);
 
   const loadData = async () => {
     setLoading(true);
     try {
+      console.log('CommissaryInventory: Starting to load all data');
       await Promise.all([loadItems(), loadSuppliers()]);
     } catch (error) {
-      console.error('Error loading commissary data:', error);
+      console.error('CommissaryInventory: Error loading commissary data:', error);
       toast.error('Failed to load commissary data');
     } finally {
       setLoading(false);
@@ -68,12 +86,16 @@ export default function CommissaryInventory() {
   };
 
   const loadItems = async () => {
+    console.log('CommissaryInventory: Loading items with filters:', filters);
     const data = await fetchCommissaryInventory(filters);
+    console.log('CommissaryInventory: Loaded items:', data.length);
     setItems(data);
   };
 
   const loadSuppliers = async () => {
+    console.log('CommissaryInventory: Loading suppliers');
     const data = await fetchSuppliers();
+    console.log('CommissaryInventory: Loaded suppliers:', data.length);
     setSuppliers(data);
   };
 
@@ -115,6 +137,27 @@ export default function CommissaryInventory() {
     setShowDeleteDialog(true);
   };
 
+  // Show authentication required message
+  if (!user) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-orange-600" />
+            <h2 className="text-2xl font-semibold mb-2">Authentication Required</h2>
+            <p className="text-muted-foreground mb-4">
+              Please log in to access the commissary inventory management.
+            </p>
+            <Button onClick={() => window.location.href = '/auth'}>
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show access restricted message
   if (!hasAdminAccess) {
     return (
       <div className="container mx-auto p-6">
@@ -122,9 +165,15 @@ export default function CommissaryInventory() {
           <CardContent className="p-8 text-center">
             <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
             <h2 className="text-2xl font-semibold mb-2">Access Restricted</h2>
-            <p className="text-muted-foreground">
-              Commissary inventory management is only available to administrators and owners.
+            <p className="text-muted-foreground mb-4">
+              Commissary inventory management is only available to administrators, owners, and managers.
             </p>
+            <p className="text-sm text-muted-foreground">
+              Current role: {user?.role || 'Unknown'} | Email: {user?.email}
+            </p>
+            <Button variant="outline" onClick={() => window.location.href = '/dashboard'} className="mt-4">
+              Go to Dashboard
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -141,6 +190,16 @@ export default function CommissaryInventory() {
         <p className="text-muted-foreground">
           Manage raw materials and supplies for conversion to store inventory
         </p>
+        
+        {/* Debug Information (temporary, only in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm">
+              <strong>Debug:</strong> User: {user?.email} | Role: {user?.role} | 
+              Access: {hasAdminAccess ? 'Granted' : 'Denied'} | Items: {items.length}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -230,18 +289,24 @@ export default function CommissaryInventory() {
         <CardContent>
           {loading ? (
             <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-16 bg-gray-200 rounded"></div>
-                </div>
-              ))}
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                <p className="mt-2 text-muted-foreground">Loading commissary inventory...</p>
+              </div>
             </div>
           ) : items.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">
-                No commissary inventory items found
+              <h3 className="text-lg font-semibold mb-2">No commissary inventory items found</h3>
+              <p className="text-muted-foreground mb-4">
+                {filters.search ? 'Try adjusting your search filters' : 'No commissary items have been added yet'}
               </p>
+              {!filters.search && (
+                <Button onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add First Item
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

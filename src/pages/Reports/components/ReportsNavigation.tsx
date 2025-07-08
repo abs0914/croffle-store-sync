@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse } from "lucide-react";
+import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse, Database } from "lucide-react";
 import { ReportType } from "..";
 import { useAuth } from "@/contexts/auth";
 
@@ -21,12 +21,23 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
     { id: 'profit_loss' as ReportType, name: 'Profit & Loss', icon: <FileSpreadsheet className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'cashier' as ReportType, name: 'Cashier Performance', icon: <UserRound className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
 
+    // Separator for Cashier Reports (only visible to cashiers)
+    ...(user?.role === 'cashier' ? [null] : []),
+
+    // Cashier-specific reports
+    ...(user?.role === 'cashier' ? [
+      { id: 'daily_shift' as ReportType, name: 'My Daily Shift Report', icon: <BarChart className="h-4 w-4" />, roles: ['cashier'] },
+      { id: 'inventory_status' as ReportType, name: 'Inventory Status', icon: <Warehouse className="h-4 w-4" />, roles: ['cashier'] },
+    ] : []),
+
     // Separator for BIR Reports
     null,
 
     // BIR Reports
     { id: 'x_reading' as ReportType, name: 'X-Reading Report', icon: <Receipt className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'z_reading' as ReportType, name: 'Z-Reading Report', icon: <Receipt className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
+    { id: 'bir_ejournal' as ReportType, name: 'BIR E-Journal', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
+    { id: 'bir_backup' as ReportType, name: 'BIR Data Backup', icon: <Database className="h-4 w-4" />, roles: ['admin', 'owner'] },
     { id: 'daily_summary' as ReportType, name: 'Daily Sales Summary', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager', 'cashier'] },
     { id: 'vat' as ReportType, name: 'VAT Report', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
   ];
@@ -45,7 +56,9 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
           item === null ? (
             <div key={`separator-${index}`} className="my-2 px-2">
               <Separator />
-              <p className="text-xs text-muted-foreground mt-2 font-medium">BIR Reports</p>
+              <p className="text-xs text-muted-foreground mt-2 font-medium">
+                {index === 1 && user?.role === 'cashier' ? 'My Reports' : 'BIR Reports'}
+              </p>
             </div>
           ) : (
             <Button

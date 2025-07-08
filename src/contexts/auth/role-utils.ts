@@ -29,34 +29,70 @@ export const checkPermission = (userRole: UserRole | undefined, requiredRole: Us
 };
 
 /**
- * Route constants for better maintainability
+ * Route constants for better maintainability - OPTIMIZED STRUCTURE
  */
 export const ROUTE_PATHS = {
-  // Main App Routes
+  // Core Routes
   ROOT: '/',
+  LOGIN: '/login',
   DASHBOARD: '/dashboard',
+  
+  // Store-Level Routes (Role-based access)
   POS: '/pos',
-  PRODUCT_CATALOG: '/product-catalog',
-  STOCK_ORDERS: '/stock-orders',
-  INVENTORY: '/inventory',
-  ORDER_MANAGEMENT: '/order-management',
+  PRODUCTS: '/products', // Unified product management for stores
+  INVENTORY: '/inventory', // Store inventory management
+  ORDER_MANAGEMENT: '/order-management', // Store order management
   CUSTOMERS: '/customers',
+  EXPENSES: '/expenses',
   REPORTS: '/reports',
   SETTINGS: '/settings',
-  // Admin Routes
-  ADMIN_DASHBOARD: '/admin',
+  STOCK_ORDERS: '/stock-orders',
+  
+  // Admin-Only Routes (Clear separation)
+  ADMIN_ROOT: '/admin',
   ADMIN_STORES: '/admin/stores',
-  ADMIN_RECIPES: '/admin/recipes',
-  COMMISSARY_INVENTORY: '/admin/commissary-inventory',
-  PRODUCTION: '/admin/production-management',
-  ADMIN_CUSTOMERS: '/admin/customers',
-  ADMIN_ORDERS: '/admin/orders',
+  ADMIN_RECIPES: '/admin/recipes', // Recipe management (admin only)
+  ADMIN_COMMISSARY: '/admin/commissary-inventory', // Commissary management
+  ADMIN_PRODUCTION: '/admin/production-management',
   ADMIN_ORDER_MANAGEMENT: '/admin/order-management',
+  ADMIN_CUSTOMERS: '/admin/customers',
   ADMIN_USERS: '/admin/users',
   ADMIN_MANAGERS: '/admin/managers',
   ADMIN_CASHIERS: '/admin/cashiers',
-  ADMIN_REPORTS: '/admin/reports'
+  ADMIN_REPORTS: '/admin/reports',
+  ADMIN_EXPENSES: '/admin/expenses'
 } as const;
+
+/**
+ * Define clear role-based route access
+ */
+const STORE_ROUTES = [
+  ROUTE_PATHS.DASHBOARD,
+  ROUTE_PATHS.POS,
+  ROUTE_PATHS.PRODUCTS,
+  ROUTE_PATHS.INVENTORY,
+  ROUTE_PATHS.ORDER_MANAGEMENT,
+  ROUTE_PATHS.CUSTOMERS,
+  ROUTE_PATHS.EXPENSES,
+  ROUTE_PATHS.REPORTS,
+  ROUTE_PATHS.SETTINGS,
+  ROUTE_PATHS.STOCK_ORDERS
+];
+
+const ADMIN_ROUTES = [
+  ROUTE_PATHS.ADMIN_ROOT,
+  ROUTE_PATHS.ADMIN_STORES,
+  ROUTE_PATHS.ADMIN_RECIPES,
+  ROUTE_PATHS.ADMIN_COMMISSARY,
+  ROUTE_PATHS.ADMIN_PRODUCTION,
+  ROUTE_PATHS.ADMIN_ORDER_MANAGEMENT,
+  ROUTE_PATHS.ADMIN_CUSTOMERS,
+  ROUTE_PATHS.ADMIN_USERS,
+  ROUTE_PATHS.ADMIN_MANAGERS,
+  ROUTE_PATHS.ADMIN_CASHIERS,
+  ROUTE_PATHS.ADMIN_REPORTS,
+  ROUTE_PATHS.ADMIN_EXPENSES
+];
 
 /**
  * Check if a user has access to a specific route based on their role
@@ -69,33 +105,38 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
     return true;
   }
   
-  // Root route should be accessible to all authenticated users (redirects to dashboard)
-  if (route === ROUTE_PATHS.ROOT) {
+  // Root route accessible to all authenticated users
+  if (route === ROUTE_PATHS.ROOT || route === ROUTE_PATHS.LOGIN) {
     return true;
   }
   
-  // Define allowed routes for each role with detailed access control
+  // Check admin routes - only admin/owner
+  if (ADMIN_ROUTES.some(adminRoute => route.startsWith(adminRoute))) {
+    return false; // Fixed: non-admin users cannot access admin routes
+  }
+  
+  // Define role-specific access for store routes
   const roleRoutes: Record<UserRole, string[]> = {
-    admin: [], // Admin gets everything, handled above
-    owner: [], // Owner gets everything, handled above
+    admin: [...STORE_ROUTES, ...ADMIN_ROUTES], // Admin gets everything
+    owner: [...STORE_ROUTES, ...ADMIN_ROUTES], // Owner gets everything
     manager: [
-      ROUTE_PATHS.ROOT,
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
-      ROUTE_PATHS.PRODUCT_CATALOG,
-      ROUTE_PATHS.STOCK_ORDERS,
+      ROUTE_PATHS.PRODUCTS,
       ROUTE_PATHS.INVENTORY,
       ROUTE_PATHS.ORDER_MANAGEMENT,
       ROUTE_PATHS.CUSTOMERS,
+      ROUTE_PATHS.EXPENSES,
       ROUTE_PATHS.REPORTS,
-      ROUTE_PATHS.SETTINGS
+      ROUTE_PATHS.SETTINGS,
+      ROUTE_PATHS.STOCK_ORDERS
     ],
     cashier: [
-      ROUTE_PATHS.ROOT,
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
-      ROUTE_PATHS.PRODUCT_CATALOG,
-      ROUTE_PATHS.CUSTOMERS
+      ROUTE_PATHS.PRODUCTS,
+      ROUTE_PATHS.CUSTOMERS,
+      ROUTE_PATHS.EXPENSES
     ]
   };
   
@@ -164,25 +205,26 @@ export const getRouteAccessDescription = (route: string): string => {
     [ROUTE_PATHS.ROOT]: 'All authenticated users',
     [ROUTE_PATHS.DASHBOARD]: 'All authenticated users',
     [ROUTE_PATHS.POS]: 'All authenticated users with store access',
-    [ROUTE_PATHS.PRODUCT_CATALOG]: 'All authenticated users with store access',
+    [ROUTE_PATHS.PRODUCTS]: 'All authenticated users with store access',
     [ROUTE_PATHS.STOCK_ORDERS]: 'Managers and above with store access',
     [ROUTE_PATHS.INVENTORY]: 'Managers and above with store access',
     [ROUTE_PATHS.ORDER_MANAGEMENT]: 'Managers and above with store access',
     [ROUTE_PATHS.CUSTOMERS]: 'All authenticated users with store access',
-    [ROUTE_PATHS.REPORTS]: 'Managers and above with store access',
+    [ROUTE_PATHS.EXPENSES]: 'All authenticated users with store access',
+    [ROUTE_PATHS.REPORTS]: 'All authenticated users with store access',
     [ROUTE_PATHS.SETTINGS]: 'Managers and above',
-    [ROUTE_PATHS.ADMIN_DASHBOARD]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_ROOT]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_STORES]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_RECIPES]: 'Admin and owner only',
-    [ROUTE_PATHS.COMMISSARY_INVENTORY]: 'Admin and owner only',
-    [ROUTE_PATHS.PRODUCTION]: 'Admin and owner only',
-    [ROUTE_PATHS.ADMIN_CUSTOMERS]: 'Admin and owner only',
-    [ROUTE_PATHS.ADMIN_ORDERS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_COMMISSARY]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_PRODUCTION]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_ORDER_MANAGEMENT]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_CUSTOMERS]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_USERS]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_MANAGERS]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_CASHIERS]: 'Admin and owner only',
-    [ROUTE_PATHS.ADMIN_REPORTS]: 'Admin and owner only'
+    [ROUTE_PATHS.ADMIN_REPORTS]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_EXPENSES]: 'Admin and owner only'
   };
   
   return accessMap[route] || 'All authenticated users';

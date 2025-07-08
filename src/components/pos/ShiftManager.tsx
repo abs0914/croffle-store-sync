@@ -28,8 +28,7 @@ export default function ShiftManager() {
   });
 
   const handleStartShift = async (
-    startingCash: number, 
-    startInventoryCount: Record<string, number>, 
+    startingCash: number,
     photo?: string,
     cashierId?: string
   ) => {
@@ -41,13 +40,12 @@ export default function ShiftManager() {
     try {
       setIsStartingShift(true);
       console.log("About to call startShift with", {
-        cashValue: startingCash, 
-        inventoryCount: Object.keys(startInventoryCount).length + " items",
+        cashValue: startingCash,
         hasPhoto: !!photo,
         cashierId
       });
       
-      const success = await startShift(startingCash, startInventoryCount, photo, cashierId);
+      const success = await startShift(startingCash, photo, cashierId);
       
       if (success) {
         setIsStartShiftOpen(false);
@@ -64,15 +62,14 @@ export default function ShiftManager() {
   };
 
   const handleEndShift = async (
-    endingCash: number, 
-    endInventoryCount: Record<string, number>, 
+    endingCash: number,
     photo?: string
   ) => {
     if (!currentShift) return;
     
     try {
       setIsEndingShift(true);
-      const success = await endShift(endingCash, endInventoryCount, photo);
+      const success = await endShift(endingCash, photo);
       
       if (success) {
         setIsEndShiftOpen(false);

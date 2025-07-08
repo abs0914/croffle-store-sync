@@ -69,7 +69,6 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
     setUploadProgress(0);
 
     try {
-      // Read and parse the CSV file
       const text = await file.text();
       setUploadProgress(20);
       
@@ -89,34 +88,31 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
 
       setUploadProgress(50);
 
-      // Transform RecipeUpload[] to RecipeUploadData[] ensuring category is always present
+      // Transform RecipeUpload[] to RecipeUploadData[]
       const recipeUploadData: RecipeUploadData[] = recipes.map(recipe => ({
         name: recipe.name,
-        category: recipe.category || 'General', // Ensure category is always present
+        category: recipe.category || 'General',
         ingredients: recipe.ingredients
       }));
 
-      // Upload recipes as templates
       console.log(`Uploading ${recipeUploadData.length} recipe templates...`);
       const success = await bulkUploadRecipes(recipeUploadData);
       
       setUploadProgress(100);
 
       if (success) {
-        // For now, we'll show success for all recipes since bulkUploadRecipes returns a boolean
-        // In the future, we could modify bulkUploadRecipes to return detailed results
         setUploadResult({
           success: recipes.length,
           failed: 0,
           errors: []
         });
-        toast.success(`Successfully created ${recipes.length} recipe templates`);
+        toast.success(`Successfully created ${recipes.length} recipe templates! Check the console for detailed processing logs.`);
         setFile(null);
       } else {
         setUploadResult({
           success: 0,
           failed: recipes.length,
-          errors: ['Upload failed. Please ensure all ingredient names match items in commissary inventory exactly.']
+          errors: ['Upload failed. Please check console for detailed error information.']
         });
       }
 
@@ -138,33 +134,35 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
   };
 
   const downloadTemplate = () => {
-    // Create template using actual commissary inventory items
     let csvContent = `Product,Category,Ingredient Name,Unit of Measure,Quantity Used,Cost per Unit\n`;
     
     if (commissaryItems.length > 0) {
-      // Use first few items as examples for different products
       const sampleItems = commissaryItems.slice(0, 6);
       
-      // Create sample products using actual inventory items
       if (sampleItems.length >= 3) {
-        csvContent += `Sample Product A,Classic,${sampleItems[0].name},${sampleItems[0].uom},1,${sampleItems[0].unit_cost || 10}\n`;
-        csvContent += `Sample Product A,Classic,${sampleItems[1].name},${sampleItems[1].uom},0.5,${sampleItems[1].unit_cost || 5}\n`;
-        csvContent += `Sample Product A,Classic,${sampleItems[2].name},${sampleItems[2].uom},1,${sampleItems[2].unit_cost || 3}\n`;
+        csvContent += `Sample Product A,Classic,${sampleItems[0].name},${sampleItems[0].uom || 'piece'},1,${sampleItems[0].unit_cost || 10}\n`;
+        csvContent += `Sample Product A,Classic,${sampleItems[1].name},${sampleItems[1].uom || 'piece'},0.5,${sampleItems[1].unit_cost || 5}\n`;
+        csvContent += `Sample Product A,Classic,${sampleItems[2].name},${sampleItems[2].uom || 'piece'},1,${sampleItems[2].unit_cost || 3}\n`;
       }
       
       if (sampleItems.length >= 6) {
-        csvContent += `Sample Product B,Special,${sampleItems[3].name},${sampleItems[3].uom},2,${sampleItems[3].unit_cost || 10}\n`;
-        csvContent += `Sample Product B,Special,${sampleItems[4].name},${sampleItems[4].uom},1,${sampleItems[4].unit_cost || 8}\n`;
-        csvContent += `Sample Product B,Special,${sampleItems[5].name},${sampleItems[5].uom},0.25,${sampleItems[5].unit_cost || 6}\n`;
+        csvContent += `Sample Product B,Special,${sampleItems[3].name},${sampleItems[3].uom || 'piece'},2,${sampleItems[3].unit_cost || 10}\n`;
+        csvContent += `Sample Product B,Special,${sampleItems[4].name},${sampleItems[4].uom || 'piece'},1,${sampleItems[4].unit_cost || 8}\n`;
+        csvContent += `Sample Product B,Special,${sampleItems[5].name},${sampleItems[5].uom || 'piece'},0.25,${sampleItems[5].unit_cost || 6}\n`;
       }
+      
+      // Add example for choice-based ingredients
+      csvContent += `Croffle Overload,Overload,Choose 1: Chocolate Sauce OR Caramel Sauce,portion,1,2.5\n`;
+      csvContent += `Mini Croffle,Mini,Choose 1: Vanilla Ice Cream OR Strawberry Ice Cream,scoop,1,15\n`;
     } else {
-      // Fallback if no items loaded
       csvContent += `Sample Product A,Classic,Sample Ingredient 1,piece,1,10\n`;
       csvContent += `Sample Product A,Classic,Sample Ingredient 2,serving,1,5\n`;
       csvContent += `Sample Product A,Classic,Sample Ingredient 3,portion,1,3\n`;
       csvContent += `Sample Product B,Special,Sample Ingredient 1,piece,2,10\n`;
       csvContent += `Sample Product B,Special,Sample Ingredient 4,ml,50,0.5\n`;
-      csvContent += `Sample Product B,Special,Sample Ingredient 5,piece,1,8`;
+      csvContent += `Sample Product B,Special,Sample Ingredient 5,piece,1,8\n`;
+      csvContent += `Croffle Overload,Overload,Choose 1: Chocolate Sauce OR Caramel Sauce,portion,1,2.5\n`;
+      csvContent += `Mini Croffle,Mini,Choose 1: Vanilla Ice Cream OR Strawberry Ice Cream,scoop,1,15`;
     }
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -182,8 +180,8 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
       <Alert>
         <ChefHat className="h-4 w-4" />
         <AlertDescription>
-          Upload recipe templates that will be available for deployment to all stores. 
-          All ingredients must exist in commissary inventory with exact name matching.
+          <strong>Enhanced Upload System:</strong> Upload recipe templates that will be available for deployment to all stores. 
+          The system now supports choice-based ingredients (e.g., "Choose 1: Chocolate Sauce OR Caramel Sauce").
         </AlertDescription>
       </Alert>
 
@@ -207,7 +205,7 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
             </Button>
           </div>
           <CardDescription>
-            These are the exact ingredient names you must use in your CSV file
+            These are the exact ingredient names you should use in your CSV file (for reference)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -219,7 +217,7 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
                 {commissaryItems.map((item) => (
                   <div key={item.id} className="truncate p-1 bg-background rounded border">
                     <div className="font-medium">{item.name}</div>
-                    <div className="text-muted-foreground">({item.uom})</div>
+                    <div className="text-muted-foreground">({item.uom || 'piece'})</div>
                   </div>
                 ))}
               </div>
@@ -238,13 +236,13 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
             Download Template
           </CardTitle>
           <CardDescription>
-            Download a CSV template with examples using your actual commissary inventory items
+            Download a CSV template with examples including choice-based ingredients
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={downloadTemplate} variant="outline" disabled={isLoadingItems}>
             <Download className="h-4 w-4 mr-2" />
-            Download CSV Template (Using Your Inventory)
+            Download Enhanced CSV Template
           </Button>
         </CardContent>
       </Card>
@@ -257,7 +255,7 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
             Upload Recipe Templates
           </CardTitle>
           <CardDescription>
-            Upload a CSV file containing recipe template data
+            Upload a CSV file containing recipe template data with enhanced ingredient support
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -297,7 +295,7 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
             className="w-full"
           >
             {isUploading ? (
-              <>Processing...</>
+              <>Processing Templates...</>
             ) : (
               <>
                 <Upload className="h-4 w-4 mr-2" />
@@ -357,7 +355,7 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
       {/* Format Guidelines */}
       <Card>
         <CardHeader>
-          <CardTitle>Format Guidelines</CardTitle>
+          <CardTitle>Enhanced Format Guidelines</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 text-sm">
@@ -366,20 +364,29 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
               <ul className="list-disc list-inside ml-4 mt-1">
                 <li>Product - The name of the recipe/product</li>
                 <li>Category - Recipe category (e.g., Classic, Overload, Mini)</li>
-                <li>Ingredient Name - Must match commissary inventory items exactly</li>
+                <li>Ingredient Name - Ingredient name or choice description</li>
                 <li>Unit of Measure - Unit of measurement (piece, serving, portion, etc.)</li>
                 <li>Quantity Used - Numeric quantity of the ingredient</li>
                 <li>Cost per Unit - Cost per unit of ingredient (optional)</li>
               </ul>
             </div>
             <div>
+              <strong>Choice-Based Ingredients:</strong>
+              <ul className="list-disc list-inside ml-4 mt-1">
+                <li>Use format: "Choose 1: Option A OR Option B OR Option C"</li>
+                <li>Example: "Choose 1: Chocolate Sauce OR Caramel Sauce"</li>
+                <li>System will create separate ingredient entries for each option</li>
+                <li>All options will be available for selection during deployment</li>
+              </ul>
+            </div>
+            <div>
               <strong>Important Notes:</strong>
               <ul className="list-disc list-inside ml-4 mt-1">
-                <li>Copy ingredient names exactly from the "Available Commissary Items" list above</li>
                 <li>Multiple ingredients for the same product should be on separate rows</li>
                 <li>Recipe templates can be deployed to multiple stores</li>
                 <li>Quantities must be numeric values</li>
-                <li>Total cost will be calculated automatically during POS processing</li>
+                <li>Enhanced error handling and detailed console logging</li>
+                <li>Templates are created even if some ingredients fail</li>
                 <li>File size limit: 10MB</li>
               </ul>
             </div>

@@ -1,0 +1,338 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Search, 
+  Eye, 
+  EyeOff, 
+  Package,
+  Image as ImageIcon,
+  DollarSign,
+  RefreshCw,
+  ChefHat,
+  Zap,
+  AlertTriangle
+} from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { 
+  fetchUnifiedProducts, 
+  toggleProductAvailability,
+  UnifiedProduct 
+} from '@/services/product/unifiedProductService';
+import { formatCurrency } from '@/utils/format';
+import { toast } from 'sonner';
+import { useOptimizedMutation } from '@/hooks/useOptimizedDataFetch';
+import { supabase } from '@/integrations/supabase/client';
+import { useEffect } from 'react';
+
+interface StoreCatalogTabProps {
+  storeId: string;
+}
+
+export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: products = [], isLoading, refetch } = useQuery({
+    queryKey: ['unified-products', storeId],
+    queryFn: () => fetchUnifiedProducts(storeId),
+    enabled: !!storeId,
+    staleTime: 30 * 1000, // 30 seconds for fresh data
+    gcTime: 2 * 60 * 1000, // 2 minutes cache
+    refetchInterval: 30000, // Refresh every 30 seconds for inventory status
+  });
+
+  // Real-time subscription for product updates
+  useEffect(() => {
+    if (!storeId) return;
+
+    const channel = supabase
+      .channel('products-changes-catalog')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: `store_id=eq.${storeId}`
+        },
+        () => {
+          // Invalidate cache when products are updated
+          queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [storeId, queryClient]);
+
+  // Optimized mutation for toggling product availability
+  const { mutate: toggleAvailability } = useOptimizedMutation(
+    async ({ productId, newStatus }: { productId: string; newStatus: boolean }) => {
+      const success = await toggleProductAvailability(productId, newStatus);
+      if (!success) throw new Error('Failed to toggle product availability');
+      return success;
+    },
+    {
+      onSuccess: () => {
+        toast.success('Product availability updated successfully');
+      },
+      onError: (error) => {
+        console.error('Error toggling product availability:', error);
+        toast.error('Failed to update product availability');
+      },
+      invalidateQueries: [['unified-products', storeId]]
+    }
+  );
+
+  const handleToggleAvailability = async (productId: string, currentAvailability: boolean) => {
+    toggleAvailability({ productId, newStatus: !currentAvailability });
+  };
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesAvailability = !showUnavailableOnly || !product.is_active;
+    return matchesSearch && matchesAvailability;
+  });
+
+  const availableCount = products.filter(p => p.is_active).length;
+  const unavailableCount = products.filter(p => !p.is_active).length;
+  const inStockCount = products.filter(p => p.inventory_status === 'in_stock').length;
+  const lowStockCount = products.filter(p => p.inventory_status === 'low_stock').length;
+  const outOfStockCount = products.filter(p => p.inventory_status === 'out_of_stock').length;
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-32 bg-muted rounded"></div>
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-blue-600" />
+              <div className="text-sm text-muted-foreground">Total Products</div>
+            </div>
+            <div className="text-2xl font-bold">{products.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 text-green-600" />
+              <div className="text-sm text-muted-foreground">Available</div>
+            </div>
+            <div className="text-2xl font-bold">{availableCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-green-500" />
+              <div className="text-sm text-muted-foreground">In Stock</div>
+            </div>
+            <div className="text-2xl font-bold">{inStockCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <div className="text-sm text-muted-foreground">Low Stock</div>
+            </div>
+            <div className="text-2xl font-bold">{lowStockCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <EyeOff className="h-4 w-4 text-red-600" />
+              <div className="text-sm text-muted-foreground">Out of Stock</div>
+            </div>
+            <div className="text-2xl font-bold">{outOfStockCount}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex gap-4 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button
+              variant={showUnavailableOnly ? "default" : "outline"}
+              onClick={() => setShowUnavailableOnly(!showUnavailableOnly)}
+              className="flex items-center gap-2"
+            >
+              <EyeOff className="h-4 w-4" />
+              Unavailable Only
+            </Button>
+            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] })} variant="outline" className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Products Grid */}
+      {filteredProducts.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">
+              {products.length === 0 ? 'No products deployed' : 'No products found'}
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {products.length === 0 
+                ? 'Products will appear here when recipes are deployed from the admin panel.'
+                : 'Try adjusting your search terms or filters.'
+              }
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredProducts.map((product) => (
+            <Card key={product.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {product.product_type === 'recipe' ? 
+                        <ChefHat className="h-4 w-4 text-orange-600" /> : 
+                        <Package className="h-4 w-4 text-blue-600" />
+                      }
+                      <CardTitle className="text-base line-clamp-2">
+                        {product.name}
+                      </CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={product.product_type === 'recipe' ? "default" : "secondary"} className="text-xs">
+                        {product.product_type === 'recipe' ? 'Recipe' : 'Direct'}
+                      </Badge>
+                      {(() => {
+                        switch (product.inventory_status) {
+                          case 'out_of_stock':
+                            return <Badge variant="destructive" className="text-xs">Out of Stock</Badge>;
+                          case 'low_stock':
+                            return <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-700">Low Stock</Badge>;
+                          case 'in_stock':
+                            return <Badge variant="default" className="text-xs bg-green-100 text-green-800">In Stock</Badge>;
+                          default:
+                            return <Badge variant="secondary" className="text-xs">Unknown</Badge>;
+                        }
+                      })()}
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleToggleAvailability(product.id, product.is_active)}
+                    className="ml-2"
+                  >
+                    {product.is_active ? (
+                      <Eye className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {/* Product Image */}
+                <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
+                  {product.image_url ? (
+                    <img 
+                      src={product.image_url} 
+                      alt={product.name}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  ) : (
+                    <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                  )}
+                </div>
+
+                {/* Product Details */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-semibold text-success">
+                      {formatCurrency(product.price)}
+                    </span>
+                    <Badge 
+                      variant={product.is_active ? "default" : "secondary"}
+                    >
+                      {product.is_active ? 'Available' : 'Unavailable'}
+                    </Badge>
+                  </div>
+
+                  {product.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {product.description}
+                    </p>
+                  )}
+
+                  <div className="text-xs text-muted-foreground">
+                    SKU: {product.sku}
+                  </div>
+
+                  {product.recipe_ingredients && product.recipe_ingredients.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <ChefHat className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        {product.recipe_ingredients.length} ingredient{product.recipe_ingredients.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Actions */}
+                <div className="pt-2 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleToggleAvailability(product.id, product.is_active)}
+                    className="w-full"
+                  >
+                    {product.is_active ? 'Make Unavailable' : 'Make Available'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};

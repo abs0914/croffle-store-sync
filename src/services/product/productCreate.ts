@@ -18,6 +18,10 @@ export const createProduct = async (product: Omit<Product, "id">): Promise<Produ
       is_active: product.is_active !== undefined ? product.is_active : (product.isActive || true),
       image_url: product.image_url || product.image || null,
       store_id: product.store_id || product.storeId,
+      product_type: product.product_type || 'recipe',
+      inventory_stock_id: product.inventory_stock_id || null,
+      selling_quantity: product.selling_quantity || 1,
+      recipe_id: product.recipe_id || null,
     };
     
     const { data, error } = await supabase
@@ -50,7 +54,11 @@ export const createProduct = async (product: Omit<Product, "id">): Promise<Produ
       barcode: data.barcode || undefined,
       cost: data.cost || undefined,
       stock_quantity: data.stock_quantity,
-      stockQuantity: data.stock_quantity
+      stockQuantity: data.stock_quantity,
+      product_type: (data as any).product_type || 'recipe',
+      inventory_stock_id: (data as any).inventory_stock_id || null,
+      selling_quantity: (data as any).selling_quantity || 1,
+      recipe_id: (data as any).recipe_id || null,
     };
   } catch (error) {
     console.error("Error creating product:", error);

@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BulkUploadTab } from "./ProductionManagement/components/BulkUploadTab";
 import { ConversionProcessTab } from "./ProductionManagement/components/ConversionProcessTab";
+import InventoryConversion from "./InventoryConversion";
 import { useStore } from "@/contexts/StoreContext";
-import { Upload, Package, History } from "lucide-react";
+import { Upload, Package, History, ArrowRightLeft } from "lucide-react";
 
 export default function ProductionManagement() {
   const { currentStore } = useStore();
@@ -24,10 +25,14 @@ export default function ProductionManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="conversion" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             Conversion Management
+          </TabsTrigger>
+          <TabsTrigger value="inventory-conversion" className="flex items-center gap-2">
+            <ArrowRightLeft className="h-4 w-4" />
+            Inventory Conversion
           </TabsTrigger>
           <TabsTrigger value="bulk-upload" className="flex items-center gap-2">
             <Upload className="h-4 w-4" />
@@ -49,6 +54,24 @@ export default function ProductionManagement() {
             </CardHeader>
             <CardContent>
               <ConversionProcessTab />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="inventory-conversion">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ArrowRightLeft className="h-5 w-5" />
+                Inventory Conversion
+              </CardTitle>
+              <CardDescription>
+                Manage conversion mappings between bulk inventory items and recipe ingredients, including bundled products.
+                Set up product bundles and enhanced conversion mappings for complex inventory management.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <InventoryConversion />
             </CardContent>
           </Card>
         </TabsContent>

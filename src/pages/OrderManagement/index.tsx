@@ -1,19 +1,15 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth";
 import { PurchaseOrdersTab } from "./components/PurchaseOrdersTab";
-import { DeliveryOrdersTab } from "./components/DeliveryOrdersTab";
 import { GRNTab } from "./components/GRNTab";
-import { AuditTrailTab } from "./components/AuditTrailTab";
-import { OrderStatusManagement } from "./components/OrderStatusManagement";
-import { OrderMetricsDashboard } from "./components/OrderMetricsDashboard";
-import { ShoppingCart, Truck, ClipboardCheck, History, Clock, BarChart3 } from "lucide-react";
+import { ShoppingCart, ClipboardCheck } from "lucide-react";
 
 export default function OrderManagement() {
   const { user, hasPermission } = useAuth();
-  const [activeTab, setActiveTab] = useState("purchase-orders");
+  const [activeTab, setActiveTab] = useState("my-orders");
 
   if (!user || (!hasPermission('manager') && !hasPermission('admin') && !hasPermission('owner'))) {
     return (
@@ -33,66 +29,31 @@ export default function OrderManagement() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Order Management System</h1>
+          <h1 className="text-3xl font-bold">Order Management</h1>
           <p className="text-muted-foreground">
-            {user.role === 'manager' 
-              ? "Create purchase orders from commissary inventory and manage store orders"
-              : "Comprehensive order processing from purchase to delivery"
-            }
+            Create purchase orders and track deliveries from commissary
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="purchase-orders" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="my-orders" className="flex items-center gap-2">
             <ShoppingCart className="h-4 w-4" />
-            Purchase Orders
+            My Orders
           </TabsTrigger>
-          <TabsTrigger value="dashboard" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="delivery-orders" className="flex items-center gap-2">
-            <Truck className="h-4 w-4" />
-            Delivery Orders
-          </TabsTrigger>
-          <TabsTrigger value="grn" className="flex items-center gap-2">
+          <TabsTrigger value="receiving" className="flex items-center gap-2">
             <ClipboardCheck className="h-4 w-4" />
-            Goods Received
-          </TabsTrigger>
-          <TabsTrigger value="order-status" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Order Status
-          </TabsTrigger>
-          <TabsTrigger value="audit-trail" className="flex items-center gap-2">
-            <History className="h-4 w-4" />
-            Audit Trail
+            Receiving
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="purchase-orders">
+        <TabsContent value="my-orders">
           <PurchaseOrdersTab />
         </TabsContent>
 
-        <TabsContent value="dashboard">
-          <OrderMetricsDashboard />
-        </TabsContent>
-
-        <TabsContent value="delivery-orders">
-          <DeliveryOrdersTab />
-        </TabsContent>
-
-        <TabsContent value="grn">
+        <TabsContent value="receiving">
           <GRNTab />
-        </TabsContent>
-
-        <TabsContent value="order-status">
-          <OrderStatusManagement />
-        </TabsContent>
-
-        <TabsContent value="audit-trail">
-          <AuditTrailTab />
         </TabsContent>
       </Tabs>
     </div>

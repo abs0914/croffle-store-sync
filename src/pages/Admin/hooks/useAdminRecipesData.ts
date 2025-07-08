@@ -1,21 +1,11 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { fetchRecipes, fetchStores } from './services/adminRecipesDataService';
+import { calculateRecipeMetrics } from './utils/recipeMetricsCalculator';
+import { useRecipeFilters } from './utils/recipeFilters';
 import { Recipe } from '@/types/inventoryManagement';
 import { Store } from '@/types';
-import { getDeployedRecipes } from '@/services/recipeManagement/recipeDataService';
-
-interface RecipeMetrics {
-  totalRecipes: number;
-  activeRecipes: number;
-  draftRecipes: number;
-  deployedStores: number;
-  averageCost: number;
-  pendingApproval: number;
-  approved: number;
-  rejected: number;
-}
 
 export const useAdminRecipesData = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -23,123 +13,55 @@ export const useAdminRecipesData = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [storeFilter, setStoreFilter] = useState('all');
+  const [selectedStoreForDeployment, setSelectedStoreForDeployment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Load stores on mount
   useEffect(() => {
-    fetchRecipes();
-    fetchStores();
+    loadStores();
   }, []);
 
-  const fetchRecipes = async () => {
+  // Fetch recipes when store filter changes
+  useEffect(() => {
+    loadRecipes();
+  }, [storeFilter]);
+
+  // Use the filtered recipes hook - this must be called unconditionally
+  const filteredRecipes = useRecipeFilters(recipes, searchQuery, statusFilter);
+
+  // Calculate metrics using the utility function - this must be called unconditionally
+  const recipeMetrics = calculateRecipeMetrics(recipes);
+
+  const loadRecipes = async () => {
     setIsLoading(true);
     try {
-      console.log('Fetching deployed recipes...');
-      
-      const data = await getDeployedRecipes();
-      console.log('Fetched deployed recipes:', data?.length || 0);
-      console.log('Recipe data:', data);
-      
-      // Set recipes directly without delays or timeouts
-      setRecipes(data as Recipe[] || []);
-      
+      const data = await fetchRecipes(storeFilter);
+      setRecipes(data);
     } catch (error: any) {
       console.error('Error fetching recipes:', error);
       toast.error('Failed to load recipes');
-      setRecipes([]); // Clear recipes on error
+      setRecipes([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchStores = async () => {
+  const loadStores = async () => {
     try {
-      const { data, error } = await supabase
-        .from('stores')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) {
-        throw error;
-      }
-
-      setStores(data as Store[] || []);
+      const data = await fetchStores();
+      setStores(data);
     } catch (error: any) {
       console.error('Error fetching stores:', error);
       toast.error('Failed to load stores');
     }
   };
 
-  const filteredRecipes = useMemo(() => {
-    let filtered = recipes;
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(recipe => 
-        recipe.name.toLowerCase().includes(query) ||
-        (recipe.description && recipe.description.toLowerCase().includes(query))
-      );
-    }
-
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(recipe => {
-        switch (statusFilter) {
-          case 'active':
-            return recipe.is_active;
-          case 'inactive':
-            return !recipe.is_active;
-          case 'pending':
-            return recipe.approval_status === 'pending_approval';
-          case 'approved':
-            return recipe.approval_status === 'approved';
-          case 'rejected':
-            return recipe.approval_status === 'rejected';
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Apply store filter
-    if (storeFilter !== 'all') {
-      filtered = filtered.filter(recipe => recipe.store_id === storeFilter);
-    }
-
-    return filtered;
-  }, [recipes, searchQuery, statusFilter, storeFilter]);
-
-  const recipeMetrics: RecipeMetrics = useMemo(() => {
-    const activeRecipes = recipes.filter(recipe => recipe.is_active).length;
-    const draftRecipes = recipes.filter(recipe => recipe.approval_status === 'draft' || !recipe.approval_status).length;
-    const pendingApproval = recipes.filter(recipe => recipe.approval_status === 'pending_approval').length;
-    const approved = recipes.filter(recipe => recipe.approval_status === 'approved').length;
-    const rejected = recipes.filter(recipe => recipe.approval_status === 'rejected').length;
-    const uniqueStores = new Set(recipes.map(recipe => recipe.store_id)).size;
-    
-    // Calculate average cost from recipe ingredients
-    const totalCost = recipes.reduce((sum, recipe) => {
-      const recipeCost = recipe.ingredients?.reduce((ingredientSum, ingredient) => {
-        const cost = ingredient.inventory_stock?.cost || 0;
-        return ingredientSum + (cost * ingredient.quantity);
-      }, 0) || 0;
-      return sum + recipeCost;
-    }, 0);
-    
-    const averageCost = recipes.length > 0 ? totalCost / recipes.length : 0;
-    
-    return {
-      totalRecipes: recipes.length,
-      activeRecipes,
-      draftRecipes,
-      deployedStores: uniqueStores,
-      averageCost,
-      pendingApproval,
-      approved,
-      rejected
-    };
-  }, [recipes]);
+  // Custom setter for store filter that also updates selected store for deployment
+  const handleStoreFilterChange = (newStoreFilter: string) => {
+    console.log('Store filter changing from', storeFilter, 'to:', newStoreFilter);
+    setStoreFilter(newStoreFilter);
+    setSelectedStoreForDeployment(newStoreFilter);
+  };
 
   return {
     recipes,
@@ -150,9 +72,11 @@ export const useAdminRecipesData = () => {
     statusFilter,
     setStatusFilter,
     storeFilter,
-    setStoreFilter,
+    setStoreFilter: handleStoreFilterChange,
+    selectedStoreForDeployment,
+    setSelectedStoreForDeployment,
     isLoading,
-    refreshRecipes: fetchRecipes,
+    refreshRecipes: loadRecipes,
     recipeMetrics
   };
 };

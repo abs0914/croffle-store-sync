@@ -43,8 +43,7 @@ export function DeliveryOrdersTab() {
 
   const filteredOrders = deliveryOrders.filter(order =>
     order.delivery_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.purchase_order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.purchase_order?.supplier?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    order.purchase_order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -96,7 +95,7 @@ export function DeliveryOrdersTab() {
                       PO: {order.purchase_order?.order_number}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Supplier: {order.purchase_order?.supplier?.name}
+                      Store: {order.purchase_order?.store?.name || 'N/A'}
                     </p>
                   </div>
                   

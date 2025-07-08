@@ -98,6 +98,13 @@ export function AdminInventoryRoutes() {
           </AdminLayout>
         </AdminProtectedRoute>
       } />
+      <Route path="/admin/conversion-mappings" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <InventoryConversion />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
     </>
   );
 }

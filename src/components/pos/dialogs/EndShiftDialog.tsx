@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,22 +9,20 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
-import { Shift, InventoryStock } from "@/types";
-import { useQuery } from "@tanstack/react-query";
-import { fetchInventoryStock } from "@/services/inventoryStock";
-import { Camera } from "lucide-react";
+import { Shift } from "@/types";
+import { Camera, CheckCircle } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 
 // Import the refactored components
 import ShiftPhotoSection from "./shift/ShiftPhotoSection";
 import EndingCashSection from "./shift/EndingCashSection";
-import EndShiftInventorySection from "./shift/EndShiftInventorySection";
+import AutoInventoryReport from "./shift/AutoInventoryReport";
 
 interface EndShiftDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   currentShift: Shift | null;
-  onEndShift: (endingCash: number, endInventoryCount: Record<string, number>, photo?: string) => Promise<void>;
+  onEndShift: (endingCash: number, photo?: string) => Promise<void>;
 }
 
 export default function EndShiftDialog({
@@ -35,45 +33,27 @@ export default function EndShiftDialog({
 }: EndShiftDialogProps) {
   const [endingCash, setEndingCash] = useState<number>(0);
   const [photo, setPhoto] = useState<string | null>(null);
-  const [inventoryCount, setInventoryCount] = useState<Record<string, number>>({});
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
   const [cashError, setCashError] = useState<string | null>(null);
-
-  // Fetch inventory items for this store
-  const { data: inventoryItems = [], isLoading: isLoadingInventory } = useQuery({
-    queryKey: ["inventory-stock", currentShift?.storeId],
-    queryFn: () => currentShift?.storeId ? fetchInventoryStock(currentShift.storeId) : Promise.resolve([]),
-    enabled: isOpen && !!currentShift?.storeId,
-  });
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Reset state when dialog closes
   useEffect(() => {
     if (!isOpen) {
       setEndingCash(0);
       setPhoto(null);
-      setInventoryCount({});
       setShowCameraView(false);
       setCashError(null);
+      setIsSubmitting(false);
     }
   }, [isOpen]);
 
-  // Initialize inventory count and ending cash when dialog opens and inventory loads
+  // Initialize ending cash when dialog opens
   useEffect(() => {
-    if (isOpen && inventoryItems.length > 0) {
-      // Initialize inventory count with current stock quantities
-      const initialCount = inventoryItems.reduce((acc, item) => {
-        acc[item.id] = item.stock_quantity || 0;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      setInventoryCount(initialCount);
-      
-      // Set ending cash to at least the starting cash amount
-      if (currentShift?.startingCash) {
-        setEndingCash(currentShift.startingCash);
-      }
+    if (isOpen && currentShift?.startingCash) {
+      setEndingCash(currentShift.startingCash);
     }
-  }, [isOpen, inventoryItems.length, currentShift?.startingCash]);
+  }, [isOpen, currentShift?.startingCash]);
 
   // Validate ending cash amount whenever it changes
   useEffect(() => {
@@ -84,24 +64,31 @@ export default function EndShiftDialog({
     }
   }, [endingCash, currentShift?.startingCash]);
 
-  const handleInventoryCountChange = useCallback((itemId: string, value: number) => {
-    setInventoryCount(prev => ({
-      ...prev,
-      [itemId]: value
-    }));
-  }, []);
-
   const handleSubmit = async () => {
     if (!currentShift) return;
     
-    // Double check cash validation
+    // Validate cash amount
     if (endingCash < currentShift.startingCash) {
       setCashError(`Ending cash must be at least ${formatCurrency(currentShift.startingCash)} (starting cash amount)`);
       return;
     }
+
+    // Require photo capture
+    if (!photo) {
+      // Auto-show camera if no photo taken
+      setShowCameraView(true);
+      return;
+    }
     
-    await onEndShift(endingCash, inventoryCount, photo || undefined);
-    setShowCameraView(false);
+    try {
+      setIsSubmitting(true);
+      await onEndShift(endingCash, photo);
+      setShowCameraView(false);
+    } catch (error) {
+      console.error('Error ending shift:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -109,17 +96,22 @@ export default function EndShiftDialog({
     setShowCameraView(false);
   };
 
+  const canSubmit = !cashError && photo && !isSubmitting;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>End Current Shift</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            End Current Shift
+          </DialogTitle>
           <DialogDescription>
-            Please count your cash drawer and inventory levels before ending your shift.
+            Enter your ending cash amount and take a photo to complete your shift.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4 flex-1 overflow-hidden">
+        <div className="space-y-6 py-4 flex-1 overflow-y-auto">
           {/* Cash Section */}
           <EndingCashSection 
             endingCash={endingCash}
@@ -128,35 +120,45 @@ export default function EndShiftDialog({
             cashError={cashError}
           />
           
-          {/* Photo Section */}
-          <ShiftPhotoSection 
-            photo={photo}
-            setPhoto={setPhoto}
-            showCameraView={showCameraView}
-            setShowCameraView={setShowCameraView}
-          />
+          {/* Required Photo Section */}
+          <div className="space-y-2">
+            <ShiftPhotoSection 
+              photo={photo}
+              setPhoto={setPhoto}
+              showCameraView={showCameraView}
+              setShowCameraView={setShowCameraView}
+            />
+            {!photo && (
+              <p className="text-sm text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                📸 Photo required: Please take a photo of your cash drawer before ending your shift.
+              </p>
+            )}
+          </div>
           
-          {/* Inventory Section */}
-          <EndShiftInventorySection 
-            inventoryItems={inventoryItems}
-            inventoryCount={inventoryCount}
-            handleInventoryCountChange={handleInventoryCountChange}
-            isLoadingInventory={isLoadingInventory}
-            currentShift={currentShift}
-          />
+          {/* Auto-Generated Inventory Report */}
+          <AutoInventoryReport currentShift={currentShift} />
         </div>
         
-        <DialogFooter>
-          <Button variant="outline" onClick={handleCancel}>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={!!cashError || !photo}
-            className="flex items-center"
+            disabled={!canSubmit}
+            className="flex items-center gap-2"
           >
-            <Camera className="mr-2 h-4 w-4" />
-            End Shift with Photo
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Ending Shift...
+              </>
+            ) : (
+              <>
+                <Camera className="w-4 h-4" />
+                End Shift
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

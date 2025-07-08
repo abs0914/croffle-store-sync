@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PurchaseOrder } from "@/types/orderManagement";
-import { updatePurchaseOrder } from "@/services/orderManagement/purchaseOrderService";
-import { createDeliveryOrder } from "@/services/orderManagement/deliveryOrderService";
+import { updatePurchaseOrder, deletePurchaseOrderItem } from "@/services/orderManagement/purchaseOrderService";
 import { useAuth } from "@/contexts/auth";
+import { CheckCircle, XCircle, Package, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 interface ViewPurchaseOrderDialogProps {
   order: PurchaseOrder;
@@ -21,17 +22,43 @@ export function ViewPurchaseOrderDialog({
   onOpenChange,
   onSuccess
 }: ViewPurchaseOrderDialogProps) {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const [deletingItem, setDeletingItem] = useState<string | null>(null);
 
-  const handleStatusUpdate = async (newStatus: string) => {
-    await updatePurchaseOrder(order.id, { status: newStatus as any });
-    onSuccess();
+  const handleApprove = async () => {
+    const success = await updatePurchaseOrder(order.id, {
+      status: 'approved',
+      approved_by: user?.id,
+      approved_at: new Date().toISOString()
+    });
+    
+    if (success) {
+      onSuccess();
+      onOpenChange(false);
+    }
   };
 
-  const handleCreateDeliveryOrder = async () => {
-    await createDeliveryOrder(order.id);
-    await updatePurchaseOrder(order.id, { status: 'completed' });
-    onSuccess();
+  const handleReject = async () => {
+    const success = await updatePurchaseOrder(order.id, {
+      status: 'cancelled'
+    });
+    
+    if (success) {
+      onSuccess();
+      onOpenChange(false);
+    }
+  };
+
+  const handleDeleteItem = async (itemId: string) => {
+    setDeletingItem(itemId);
+    try {
+      const success = await deletePurchaseOrderItem(itemId);
+      if (success) {
+        onSuccess(); // Refresh the order data
+      }
+    } finally {
+      setDeletingItem(null);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -48,136 +75,120 @@ export function ViewPurchaseOrderDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Purchase Order Details</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Purchase Order {order.order_number}
+            </DialogTitle>
+            <Badge variant={getStatusColor(order.status)}>
+              {order.status.replace('_', ' ')}
+            </Badge>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Order Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Order Number:</span>
-                  <span>{order.order_number}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Status:</span>
-                  <Badge variant={getStatusColor(order.status)}>
-                    {order.status.replace('_', ' ')}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Supplier:</span>
-                  <span>{order.supplier?.name || 'No supplier'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Total Amount:</span>
-                  <span>₱{order.total_amount.toFixed(2)}</span>
-                </div>
-                {order.requested_delivery_date && (
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Requested Delivery:</span>
-                    <span>{new Date(order.requested_delivery_date).toLocaleDateString()}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Dates</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Created:</span>
-                  <span>{new Date(order.created_at).toLocaleDateString()}</span>
-                </div>
-                {order.approved_at && (
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Approved:</span>
-                    <span>{new Date(order.approved_at).toLocaleDateString()}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">Last Updated:</span>
-                  <span>{new Date(order.updated_at).toLocaleDateString()}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {order.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p>{order.notes}</p>
-              </CardContent>
-            </Card>
-          )}
-
+          {/* Order Details */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Items</CardTitle>
+              <CardTitle>Order Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
+                  <p className="text-lg font-semibold">₱{order.total_amount.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Created</p>
+                  <p>{new Date(order.created_at).toLocaleDateString()}</p>
+                </div>
+                {order.requested_delivery_date && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Requested Delivery</p>
+                    <p>{new Date(order.requested_delivery_date).toLocaleDateString()}</p>
+                  </div>
+                )}
+              </div>
+              {order.notes && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Notes</p>
+                  <p>{order.notes}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Order Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Items</CardTitle>
             </CardHeader>
             <CardContent>
               {order.items && order.items.length > 0 ? (
-                <div className="space-y-2">
-                  {order.items.map((item) => (
-                    <div key={item.id} className="flex justify-between items-center p-3 border rounded">
-                      <div>
-                        <span className="font-medium">{item.inventory_stock?.item}</span>
-                        <span className="text-sm text-muted-foreground ml-2">
-                          ({item.inventory_stock?.unit})
-                        </span>
+                <div className="space-y-3">
+                  {order.items.map((item, index) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <p className="font-medium">
+                          {item.inventory_stock?.item || `Item ${index + 1}`}
+                        </p>
                         {item.specifications && (
                           <p className="text-sm text-muted-foreground">{item.specifications}</p>
                         )}
                       </div>
-                      <div className="text-right">
-                        <p>Qty: {item.quantity}</p>
-                        {item.unit_price && (
-                          <p className="text-sm text-muted-foreground">
-                            ₱{item.unit_price.toFixed(2)} each
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className="font-medium">
+                            {item.quantity} × ₱{item.unit_price?.toFixed(2) || '0.00'}
                           </p>
+                          <p className="text-sm text-muted-foreground">
+                            = ₱{((item.quantity * (item.unit_price || 0))).toFixed(2)}
+                          </p>
+                        </div>
+                        {hasPermission('admin') && order.status === 'pending' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteItem(item.id)}
+                            disabled={deletingItem === item.id}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground">No items added</p>
+                <p className="text-muted-foreground text-center py-4">No items in this order</p>
               )}
             </CardContent>
           </Card>
 
-          <div className="flex justify-between items-center pt-4">
-            <div className="flex gap-2">
-              {user?.role === 'admin' && order.status === 'approved' && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleStatusUpdate('in_progress')}
-                  >
-                    Mark In Progress
-                  </Button>
-                  <Button
-                    onClick={handleCreateDeliveryOrder}
-                  >
-                    Create Delivery Order
-                  </Button>
-                </>
-              )}
-            </div>
-            
+          {/* Actions */}
+          <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
+            {order.status === 'pending' && (hasPermission('admin') || hasPermission('owner')) && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleReject}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Reject
+                </Button>
+                <Button onClick={handleApprove}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -1,18 +1,23 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CommissaryInventoryItem } from "@/types/commissary";
 import { createCommissaryInventoryItem } from "@/services/inventoryManagement/commissaryInventoryService";
 import { fetchSuppliers } from "@/services/inventoryManagement/supplierService";
-import { UOMSelect } from "@/components/shared/UOMSelect";
+import { toast } from "sonner";
 
 interface AddCommissaryItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+}
+
+interface Supplier {
+  id: string;
+  name: string;
 }
 
 export function AddCommissaryItemDialog({
@@ -21,14 +26,14 @@ export function AddCommissaryItemDialog({
   onSuccess
 }: AddCommissaryItemDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies',
     item_type: 'raw_material' as 'raw_material' | 'supply' | 'orderable_item',
     current_stock: 0,
     minimum_threshold: 0,
-    uom: '',
+    uom: 'pieces',
     unit_cost: 0,
     supplier_id: '',
     sku: '',
@@ -53,43 +58,54 @@ export function AddCommissaryItemDialog({
   }, [formData.category]);
 
   const loadSuppliers = async () => {
-    const data = await fetchSuppliers();
-    setSuppliers(data);
+    try {
+      const data = await fetchSuppliers();
+      setSuppliers(data);
+    } catch (error) {
+      console.error('Error loading suppliers:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const item = await createCommissaryInventoryItem({
-      ...formData,
-      supplier_id: formData.supplier_id || undefined,
-      sku: formData.sku || undefined,
-      barcode: formData.barcode || undefined,
-      expiry_date: formData.expiry_date || undefined,
-      storage_location: formData.storage_location || undefined,
-      is_active: true
-    });
-
-    setLoading(false);
-
-    if (item) {
-      onSuccess();
-      onOpenChange(false);
-      setFormData({
-        name: '',
-        category: 'raw_materials',
-        item_type: 'raw_material',
-        current_stock: 0,
-        minimum_threshold: 0,
-        uom: '',
-        unit_cost: 0,
-        supplier_id: '',
-        sku: '',
-        barcode: '',
-        expiry_date: '',
-        storage_location: ''
+    try {
+      const success = await createCommissaryInventoryItem({
+        ...formData,
+        supplier_id: formData.supplier_id || undefined,
+        sku: formData.sku || undefined,
+        barcode: formData.barcode || undefined,
+        expiry_date: formData.expiry_date || undefined,
+        storage_location: formData.storage_location || undefined,
+        is_active: true
       });
+
+      if (success) {
+        toast.success('Commissary item created successfully');
+        onSuccess();
+        onOpenChange(false);
+        // Reset form
+        setFormData({
+          name: '',
+          category: 'raw_materials',
+          item_type: 'raw_material',
+          current_stock: 0,
+          minimum_threshold: 0,
+          uom: 'pieces',
+          unit_cost: 0,
+          supplier_id: '',
+          sku: '',
+          barcode: '',
+          expiry_date: '',
+          storage_location: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error creating item:', error);
+      toast.error('Failed to create commissary item');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,6 +125,7 @@ export function AddCommissaryItemDialog({
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 required
+                placeholder="Enter item name"
               />
             </div>
             
@@ -158,12 +175,24 @@ export function AddCommissaryItemDialog({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="uom">UOM *</Label>
-              <UOMSelect
+              <Label htmlFor="uom">Unit of Measure *</Label>
+              <Select
                 value={formData.uom}
-                onChange={(value) => setFormData(prev => ({ ...prev, uom: value }))}
-                placeholder="Select UOM"
-              />
+                onValueChange={(value) => setFormData(prev => ({ ...prev, uom: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pieces">Pieces</SelectItem>
+                  <SelectItem value="kg">Kilograms</SelectItem>
+                  <SelectItem value="g">Grams</SelectItem>
+                  <SelectItem value="liters">Liters</SelectItem>
+                  <SelectItem value="ml">Milliliters</SelectItem>
+                  <SelectItem value="boxes">Boxes</SelectItem>
+                  <SelectItem value="packs">Packs</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -177,6 +206,7 @@ export function AddCommissaryItemDialog({
                 step="0.01"
                 value={formData.unit_cost}
                 onChange={(e) => setFormData(prev => ({ ...prev, unit_cost: parseFloat(e.target.value) || 0 }))}
+                placeholder="0.00"
               />
             </div>
             
@@ -207,27 +237,7 @@ export function AddCommissaryItemDialog({
                 id="sku"
                 value={formData.sku}
                 onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="barcode">Barcode</Label>
-              <Input
-                id="barcode"
-                value={formData.barcode}
-                onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="expiry_date">Expiry Date</Label>
-              <Input
-                id="expiry_date"
-                type="date"
-                value={formData.expiry_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, expiry_date: e.target.value }))}
+                placeholder="Item SKU"
               />
             </div>
             

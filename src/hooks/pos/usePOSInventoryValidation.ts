@@ -1,19 +1,34 @@
 
 import { useState, useCallback } from 'react';
-import { 
-  checkProductInventoryAvailability, 
-  processInventoryDeduction,
-  InventoryCheckResult,
-  POSInventoryUpdate
-} from '@/services/pos/inventoryIntegrationService';
-import { CartItem } from '@/contexts/cart/types';
 import { toast } from 'sonner';
+import { useUnifiedInventoryDeduction, ProductSaleItem } from '@/hooks/inventory/useUnifiedInventoryDeduction';
+import { CartItem } from '@/contexts/cart/types';
 
+export interface InventoryCheckResult {
+  isAvailable: boolean;
+  productName: string;
+  availableQuantity: number;
+  requiredQuantity: number;
+  insufficientItems?: string[];
+}
+
+/**
+ * @deprecated Use useUnifiedInventoryDeduction instead
+ * This hook is kept for backward compatibility
+ */
 export const usePOSInventoryValidation = (storeId: string) => {
   const [isValidating, setIsValidating] = useState(false);
   const [inventoryResults, setInventoryResults] = useState<Map<string, InventoryCheckResult>>(new Map());
+  
+  const {
+    checkProductAvailability,
+    processProductSales,
+    isProcessing
+  } = useUnifiedInventoryDeduction(storeId);
 
   const validateCartItems = useCallback(async (items: CartItem[]): Promise<boolean> => {
+    console.warn('usePOSInventoryValidation is deprecated, use useUnifiedInventoryDeduction instead');
+    
     if (!storeId) return false;
     
     setIsValidating(true);
@@ -21,24 +36,46 @@ export const usePOSInventoryValidation = (storeId: string) => {
     let allValid = true;
 
     try {
-      for (const item of items) {
+      // Convert CartItem to ProductSaleItem
+      const productSaleItems: ProductSaleItem[] = items.map(item => ({
+        productId: item.productId,
+        variationId: item.variationId,
+        quantity: item.quantity,
+        // Check if product has recipe_id in its data, otherwise undefined
+        recipeId: (item.product as any)?.recipe_id || undefined
+      }));
+
+      const availability = await checkProductAvailability(productSaleItems);
+      
+      // Create results map for backward compatibility
+      items.forEach(item => {
         const key = `${item.productId}-${item.variationId || 'default'}`;
-        const result = await checkProductInventoryAvailability(
-          item.productId,
-          item.quantity,
-          storeId,
-          item.variationId
+        const unavailable = availability.unavailableProducts.find(
+          up => up.product.productId === item.productId
         );
         
-        results.set(key, result);
-        
-        if (!result.isAvailable) {
+        if (unavailable) {
           allValid = false;
+          results.set(key, {
+            isAvailable: false,
+            productName: item.product?.name || 'Unknown Product',
+            availableQuantity: unavailable.maxQuantity,
+            requiredQuantity: item.quantity,
+            insufficientItems: [unavailable.reason]
+          });
+          
           toast.error(
-            `Insufficient stock for ${result.productName}. Available: ${result.availableQuantity}, Requested: ${item.quantity}`
+            `Insufficient stock for ${item.product?.name}. Available: ${unavailable.maxQuantity}, Requested: ${item.quantity}`
           );
+        } else {
+          results.set(key, {
+            isAvailable: true,
+            productName: item.product?.name || 'Unknown Product',
+            availableQuantity: item.quantity,
+            requiredQuantity: item.quantity
+          });
         }
-      }
+      });
 
       setInventoryResults(results);
       return allValid;
@@ -49,7 +86,7 @@ export const usePOSInventoryValidation = (storeId: string) => {
     } finally {
       setIsValidating(false);
     }
-  }, [storeId]);
+  }, [storeId, checkProductAvailability]);
 
   const processCartInventoryDeduction = useCallback(async (
     items: CartItem[],
@@ -58,15 +95,16 @@ export const usePOSInventoryValidation = (storeId: string) => {
     if (!storeId) return false;
 
     try {
-      const updates: POSInventoryUpdate[] = items.map(item => ({
+      // Convert CartItem to ProductSaleItem
+      const productSaleItems: ProductSaleItem[] = items.map(item => ({
         productId: item.productId,
         variationId: item.variationId,
-        quantitySold: item.quantity,
-        transactionId,
-        storeId
+        quantity: item.quantity,
+        // Check if product has recipe_id in its data, otherwise undefined
+        recipeId: (item.product as any)?.recipe_id || undefined
       }));
 
-      const result = await processInventoryDeduction(updates);
+      const result = await processProductSales(productSaleItems, transactionId);
       
       if (!result.success) {
         console.error('Inventory deduction errors:', result.errors);
@@ -81,7 +119,7 @@ export const usePOSInventoryValidation = (storeId: string) => {
       toast.error('Failed to update inventory');
       return false;
     }
-  }, [storeId]);
+  }, [storeId, processProductSales]);
 
   const getItemAvailability = useCallback((productId: string, variationId?: string): InventoryCheckResult | null => {
     const key = `${productId}-${variationId || 'default'}`;
@@ -89,7 +127,7 @@ export const usePOSInventoryValidation = (storeId: string) => {
   }, [inventoryResults]);
 
   return {
-    isValidating,
+    isValidating: isValidating || isProcessing,
     inventoryResults,
     validateCartItems,
     processCartInventoryDeduction,

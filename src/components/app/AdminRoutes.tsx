@@ -8,7 +8,7 @@ import AdminRecipes from "@/pages/Admin/AdminRecipes";
 import AdminCustomers from "@/pages/Admin/AdminCustomers";
 import AdminReports from "@/pages/Admin/AdminReports";
 import AdminExpenses from "@/pages/Admin/AdminExpenses";
-import OrderManagement from "@/pages/OrderManagement";
+import AdminOrders from "@/pages/Admin/AdminOrders";
 import CommissaryManagement from "@/pages/Commissary/CommissaryManagement";
 
 // Import modular route components
@@ -17,6 +17,8 @@ import { AdminUserRoutes } from "./routes/AdminUserRoutes";
 import { AdminStoreRoutes } from "./routes/AdminStoreRoutes";
 
 export function AdminRoutes() {
+  console.log('🔵 AdminRoutes component loading...');
+  
   return (
     <>
       {/* Core Admin Routes */}
@@ -28,13 +30,6 @@ export function AdminRoutes() {
         </AdminProtectedRoute>
       } />
       
-      <Route path="/admin/stores" element={
-        <AdminProtectedRoute>
-          <AdminLayout>
-            <AdminStores />
-          </AdminLayout>
-        </AdminProtectedRoute>
-      } />
       
       <Route path="/admin/recipes" element={
         <AdminProtectedRoute>
@@ -60,7 +55,7 @@ export function AdminRoutes() {
         </AdminProtectedRoute>
       } />
 
-      {/* New Expense Management Route */}
+      {/* Expense Management Route */}
       <Route path="/admin/expenses" element={
         <AdminProtectedRoute>
           <AdminLayout>
@@ -69,11 +64,11 @@ export function AdminRoutes() {
         </AdminProtectedRoute>
       } />
       
-      {/* Consolidated Order Management - replaces both /admin/orders and /admin/order-management */}
+      {/* Admin Order Management - Ensure this uses AdminOrders */}
       <Route path="/admin/order-management" element={
         <AdminProtectedRoute>
           <AdminLayout>
-            <OrderManagement />
+            <AdminOrders />
           </AdminLayout>
         </AdminProtectedRoute>
       } />

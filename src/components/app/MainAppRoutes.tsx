@@ -3,89 +3,200 @@ import React from 'react';
 import { Route } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { MainLayout } from '@/components/layout/MainLayout';
-import Dashboard from '@/pages/Dashboard';
-import POS from '@/pages/POS';
-import Products from '@/pages/Products';
-import Inventory from '@/pages/Inventory';
-import Orders from '@/pages/Orders';
-import OrderManagement from '@/pages/OrderManagement';
-import Reports from '@/pages/Reports';
-import Settings from '@/pages/Settings';
-import ExpensesDashboard from '@/pages/Expenses/ExpensesDashboard';
 
-export const MainAppRoutes = () => [
-  // Main application routes
-  <Route key="dashboard" path="/dashboard" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <Dashboard />
-      </MainLayout>
-    </ProtectedRoute>
-  } />,
-  
-  <Route key="pos" path="/pos" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <POS />
-      </MainLayout>
-    </ProtectedRoute>
-  } />,
-  
-  <Route key="products" path="/products" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <Products />
-      </MainLayout>
-    </ProtectedRoute>
-  } />,
-  
-  <Route key="inventory" path="/inventory" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <Inventory />
-      </MainLayout>
-    </ProtectedRoute>
-  } />,
-  
-  <Route key="orders" path="/orders" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <Orders />
-      </MainLayout>
-    </ProtectedRoute>
-  } />,
+// Lazy load components for better performance
+const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
+const POS = React.lazy(() => import('@/pages/POS'));
+const Products = React.lazy(() => import('@/pages/Products'));
+const ProductForm = React.lazy(() => import('@/pages/Inventory/ProductForm'));
+const Inventory = React.lazy(() => import('@/pages/Inventory'));
+const OrderManagement = React.lazy(() => import('@/pages/OrderManagement/index'));
+const Reports = React.lazy(() => import('@/pages/Reports'));
+const Expenses = React.lazy(() => import('@/pages/Expenses'));
+const Settings = React.lazy(() => import('@/pages/Settings'));
+const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
 
-  // New Order Management route for managers and above
-  <Route key="order-management" path="/order-management" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <OrderManagement />
-      </MainLayout>
-    </ProtectedRoute>
-  } />,
+// Loading component
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+  </div>
+);
 
-  // New expense route for stores
-  <Route key="expenses" path="/expenses" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <ExpensesDashboard />
-      </MainLayout>
-    </ProtectedRoute>
-  } />,
-  
-  <Route key="reports" path="/reports" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <Reports />
-      </MainLayout>
-    </ProtectedRoute>
-  } />,
-  
-  <Route key="settings" path="/settings" element={
-    <ProtectedRoute>
-      <MainLayout>
-        <Settings />
-      </MainLayout>
-    </ProtectedRoute>
-  } />
-];
+export const MainAppRoutes = () => {
+  return (
+    <>
+      {/* Core Store Routes - Optimized Structure */}
+      
+      {/* Dashboard - Accessible to all authenticated users */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Dashboard />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* POS - Accessible to all with store access */}
+      <Route
+        path="/pos"
+        element={
+          <ProtectedRoute requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <POS />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Products - Unified product management for stores */}
+      <Route
+        path="/products"
+        element={
+          <ProtectedRoute requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Products />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Product Form Routes */}
+      <Route
+        path="/products/new"
+        element={
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <ProductForm />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/products/edit/:id"
+        element={
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <ProductForm />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Inventory - Store inventory management (Managers+) */}
+      <Route
+        path="/inventory/*"
+        element={
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Inventory />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Stock Orders - Store stock management (Managers+) */}
+      <Route
+        path="/stock-orders"
+        element={
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <StockOrders />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Order Management - Store order management (Managers+) */}
+      <Route
+        path="/order-management/*"
+        element={
+          <ProtectedRoute requiredRole="manager" requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <OrderManagement />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Reports - All with store access */}
+      <Route
+        path="/reports/*"
+        element={
+          <ProtectedRoute requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Reports />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Expenses - All with store access */}
+      <Route
+        path="/expenses"
+        element={
+          <ProtectedRoute requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Expenses />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Settings - Managers+ */}
+      <Route
+        path="/settings/*"
+        element={
+          <ProtectedRoute requiredRole="manager">
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Settings />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Customers - All with store access */}
+      <Route
+        path="/customers"
+        element={
+          <ProtectedRoute requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <div className="p-4">
+                  <h1 className="text-2xl font-bold">Customer Management</h1>
+                  <p className="text-gray-600 mt-2">Manage customer information and relationships.</p>
+                </div>
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+    </>
+  );
+};

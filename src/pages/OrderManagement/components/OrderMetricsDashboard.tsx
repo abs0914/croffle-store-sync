@@ -1,272 +1,232 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Download, Eye, CheckCircle, XCircle } from 'lucide-react';
-import { useAdminPurchaseOrdersData } from '@/pages/Admin/hooks/useAdminPurchaseOrdersData';
-import { PurchaseOrder } from '@/types/orderManagement';
-import { ViewPurchaseOrderDialog } from './ViewPurchaseOrderDialog';
-import { updatePurchaseOrder } from '@/services/orderManagement/purchaseOrderService';
-import { useAuth } from '@/contexts/auth';
-import { formatCurrency } from '@/utils/format';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/auth";
+import { useStore } from "@/contexts/StoreContext";
+import { supabase } from "@/integrations/supabase/client";
+import { ShoppingCart, Truck, ClipboardCheck, DollarSign, Clock, Package } from "lucide-react";
+
+interface OrderMetrics {
+  totalOrders: number;
+  pendingOrders: number;
+  approvedOrders: number;
+  completedOrders: number;
+  totalValue: number;
+  averageOrderValue: number;
+  commissaryProducts: number;
+  locationBreakdown: {
+    inside_cebu: number;
+    outside_cebu: number;
+  };
+}
 
 export function OrderMetricsDashboard() {
   const { user } = useAuth();
-  const [viewingOrder, setViewingOrder] = useState<PurchaseOrder | null>(null);
-  
-  const {
-    orders,
-    filteredOrders,
-    searchQuery,
-    setSearchQuery,
-    storeFilter,
-    setStoreFilter,
-    statusFilter,
-    setStatusFilter,
-    dateRange,
-    setDateRange,
-    isLoading,
-    refreshOrders,
-    orderMetrics,
-    stores
-  } = useAdminPurchaseOrdersData();
+  const { currentStore } = useStore();
+  const [metrics, setMetrics] = useState<OrderMetrics>({
+    totalOrders: 0,
+    pendingOrders: 0,
+    approvedOrders: 0,
+    completedOrders: 0,
+    totalValue: 0,
+    averageOrderValue: 0,
+    commissaryProducts: 0,
+    locationBreakdown: { inside_cebu: 0, outside_cebu: 0 }
+  });
+  const [loading, setLoading] = useState(true);
 
-  const handleApproveOrder = async (orderId: string) => {
-    await updatePurchaseOrder(orderId, {
-      status: 'approved',
-      approved_by: user?.id,
-      approved_at: new Date().toISOString()
-    });
-    await refreshOrders();
-  };
+  useEffect(() => {
+    if (user?.storeIds?.[0]) {
+      loadMetrics();
+    }
+  }, [user]);
 
-  const handleRejectOrder = async (orderId: string) => {
-    await updatePurchaseOrder(orderId, {
-      status: 'cancelled',
-      approved_by: user?.id
-    });
-    await refreshOrders();
-  };
+  const loadMetrics = async () => {
+    if (!user?.storeIds?.[0]) return;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'secondary';
-      case 'pending': return 'secondary';
-      case 'approved': return 'default';
-      case 'in_progress': return 'default';
-      case 'completed': return 'default';
-      case 'cancelled': return 'destructive';
-      default: return 'secondary';
+    setLoading(true);
+    try {
+      // Fetch purchase orders for the store
+      const { data: orders, error: ordersError } = await supabase
+        .from('purchase_orders')
+        .select('*')
+        .eq('store_id', user.storeIds[0]);
+
+      if (ordersError) throw ordersError;
+
+      // Fetch commissary products count
+      const { data: commissaryItems, error: commissaryError } = await supabase
+        .from('commissary_inventory')
+        .select('id')
+        .eq('item_type', 'orderable_item')
+        .eq('is_active', true);
+
+      if (commissaryError) throw commissaryError;
+
+      // Calculate metrics
+      const totalOrders = orders?.length || 0;
+      const pendingOrders = orders?.filter(o => o.status === 'pending').length || 0;
+      const approvedOrders = orders?.filter(o => o.status === 'approved').length || 0;
+      const completedOrders = orders?.filter(o => o.status === 'completed').length || 0;
+      const totalValue = orders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+      const averageOrderValue = totalOrders > 0 ? totalValue / totalOrders : 0;
+      const commissaryProducts = commissaryItems?.length || 0;
+
+      // Location breakdown - removed as purchase_orders table doesn't have location_type
+      const locationBreakdown = {
+        inside_cebu: 0,
+        outside_cebu: 0
+      };
+
+      setMetrics({
+        totalOrders,
+        pendingOrders,
+        approvedOrders,
+        completedOrders,
+        totalValue,
+        averageOrderValue,
+        commissaryProducts,
+        locationBreakdown
+      });
+    } catch (error) {
+      console.error('Error loading metrics:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(8)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6">
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Order Management Dashboard</h2>
+        <Badge variant="secondary">{currentStore?.name}</Badge>
+      </div>
+
+      {/* Main Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{orderMetrics.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">All purchase orders</p>
+            <div className="text-2xl font-bold">{metrics.totalOrders}</div>
+            <p className="text-xs text-muted-foreground">All time orders</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{orderMetrics.pendingOrders}</div>
+            <div className="text-2xl font-bold text-yellow-600">{metrics.pendingOrders}</div>
             <p className="text-xs text-muted-foreground">Awaiting approval</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CardTitle className="text-sm font-medium">Approved Orders</CardTitle>
+            <ClipboardCheck className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{orderMetrics.approvedOrders}</div>
-            <p className="text-xs text-muted-foreground">Ready for processing</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{orderMetrics.completedOrders}</div>
-            <p className="text-xs text-muted-foreground">Successfully delivered</p>
+            <div className="text-2xl font-bold text-green-600">{metrics.approvedOrders}</div>
+            <p className="text-xs text-muted-foreground">Ready for delivery</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(orderMetrics.totalValue)}</div>
-            <p className="text-xs text-muted-foreground">Combined order value</p>
+            <div className="text-2xl font-bold">₱{metrics.totalValue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Avg: ₱{metrics.averageOrderValue.toFixed(0)}
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Additional Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Available Products</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.commissaryProducts}</div>
+            <p className="text-xs text-muted-foreground">Commissary finished products</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Store Location</CardTitle>
+            <Truck className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold text-blue-600">
+              {currentStore?.location_type === 'inside_cebu' ? 'Inside Cebu' : 
+               currentStore?.location_type === 'outside_cebu' ? 'Outside Cebu' : 'Not Set'}
+            </div>
+            <p className="text-xs text-muted-foreground">Current store location</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Region</CardTitle>
+            <Truck className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-lg font-bold text-orange-600">
+              {currentStore?.region || 'Not Set'}
+            </div>
+            <p className="text-xs text-muted-foreground">Store region</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Purchase Orders Overview
-          </CardTitle>
+          <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search orders, suppliers, notes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            <Select value={storeFilter} onValueChange={setStoreFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Stores" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Stores</SelectItem>
-                {stores.map((store) => (
-                  <SelectItem key={store.id} value={store.id}>
-                    {store.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-                <SelectItem value="365">Last year</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Orders List */}
-          <div className="space-y-4">
-            {isLoading ? (
-              <div className="space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="animate-pulse">
-                    <div className="h-20 bg-gray-200 rounded"></div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">
-                  {searchQuery ? 'No orders found matching your search' : 'No orders found'}
-                </p>
-              </div>
-            ) : (
-              filteredOrders.map((order) => (
-                <div key={order.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{order.order_number}</h3>
-                        <Badge variant={getStatusColor(order.status)}>
-                          {order.status.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Supplier: {order.supplier?.name || 'No supplier'}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Total: {formatCurrency(order.total_amount)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Created: {new Date(order.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setViewingOrder(order)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                      
-                      {order.status === 'pending' && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleApproveOrder(order.id)}
-                            className="text-green-600 border-green-600 hover:bg-green-50"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRejectOrder(order.id)}
-                            className="text-red-600 border-red-600 hover:bg-red-50"
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline" className="cursor-pointer hover:bg-muted">
+              View Pending Orders ({metrics.pendingOrders})
+            </Badge>
+            <Badge variant="outline" className="cursor-pointer hover:bg-muted">
+              Check Deliveries
+            </Badge>
+            <Badge variant="outline" className="cursor-pointer hover:bg-muted">
+              Review GRNs
+            </Badge>
           </div>
         </CardContent>
       </Card>
-
-      {viewingOrder && (
-        <ViewPurchaseOrderDialog
-          order={viewingOrder}
-          open={!!viewingOrder}
-          onOpenChange={(open) => !open && setViewingOrder(null)}
-          onSuccess={refreshOrders}
-        />
-      )}
     </div>
   );
 }

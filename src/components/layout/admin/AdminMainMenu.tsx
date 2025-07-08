@@ -11,63 +11,66 @@ import {
   Factory,
   Receipt,
   DollarSign,
-  ChevronDown
+  ChevronDown,
+  Warehouse
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ROUTE_PATHS } from "@/contexts/auth/role-utils";
 
+// OPTIMIZED ADMIN MENU STRUCTURE
 const menuItems = [
   {
     title: "Dashboard",
     icon: LayoutDashboard,
-    href: "/admin",
+    href: ROUTE_PATHS.ADMIN_ROOT,
   },
   {
     title: "Stores",
     icon: Store,
-    href: "/admin/stores",
+    href: ROUTE_PATHS.ADMIN_STORES,
   },
   {
-    title: "Inventory",
+    title: "Recipes",
+    icon: Receipt,
+    href: ROUTE_PATHS.ADMIN_RECIPES,
+  },
+  {
+    title: "Commissary & Production",
     icon: Package,
     items: [
-      { title: "Commissary Inventory", href: "/admin/commissary-inventory" },
-      { title: "Production Management", href: "/admin/production-management" },
+      { title: "Commissary Inventory", href: ROUTE_PATHS.ADMIN_COMMISSARY },
+      { title: "Production Management", href: ROUTE_PATHS.ADMIN_PRODUCTION },
     ],
   },
   {
     title: "Users",
     icon: Users,
     items: [
-      { title: "All Users", href: "/admin/users" },
-      { title: "Cashiers", href: "/admin/cashiers" },
-      { title: "Managers", href: "/admin/managers" },
+      { title: "All Users", href: ROUTE_PATHS.ADMIN_USERS },
+      { title: "Cashiers", href: ROUTE_PATHS.ADMIN_CASHIERS },
+      { title: "Managers", href: ROUTE_PATHS.ADMIN_MANAGERS },
     ],
   },
   {
     title: "Orders",
     icon: ShoppingCart,
-    href: "/admin/order-management",
+    href: ROUTE_PATHS.ADMIN_ORDER_MANAGEMENT,
   },
   {
-    title: "Recipes",
-    icon: Receipt,
-    href: "/admin/recipes",
-  },
-  {
-    title: "Expenses", // New expense menu item
+    title: "Expenses",
     icon: DollarSign,
-    href: "/admin/expenses",
+    href: ROUTE_PATHS.ADMIN_EXPENSES,
   },
   {
     title: "Customers",
     icon: Users,
-    href: "/admin/customers",
+    href: ROUTE_PATHS.ADMIN_CUSTOMERS,
   },
   {
     title: "Reports",
     icon: FileText,
-    href: "/admin/reports",
+    href: ROUTE_PATHS.ADMIN_REPORTS,
   },
 ];
 

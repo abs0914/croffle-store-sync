@@ -1,9 +1,9 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useOptimizedDataFetch } from '@/hooks/useOptimizedDataFetch';
-import { fetchProducts } from '@/services/product/productFetch';
+import { fetchUnifiedProducts, UnifiedProduct } from '@/services/product/unifiedProductService';
 import { fetchCategories } from '@/services/categoryService';
-import { Product, Category } from '@/types';
+import { Category } from '@/types';
 import { useDebounce } from '@/hooks/useDebounce';
 
 interface ProductGridFilters {
@@ -29,14 +29,14 @@ export function useOptimizedProductGrid(storeId: string) {
     data: products = [],
     isLoading: isLoadingProducts,
     error: productsError
-  } = useOptimizedDataFetch(
-    ['products', storeId],
-    () => fetchProducts(storeId),
+  } = useOptimizedDataFetch<UnifiedProduct[]>(
+    ['unified-products', storeId],
+    () => fetchUnifiedProducts(storeId),
     {
       enabled: !!storeId,
       cacheConfig: {
-        staleTime: 3 * 60 * 1000, // 3 minutes
-        cacheTime: 10 * 60 * 1000, // 10 minutes
+        staleTime: 30 * 1000, // 30 seconds for fresh pricing
+        cacheTime: 2 * 60 * 1000, // 2 minutes
       }
     }
   );

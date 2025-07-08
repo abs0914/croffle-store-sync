@@ -15,10 +15,14 @@ export function useProductFetch(storeId: string | null) {
     async function loadData() {
       try {
         if (!storeId) {
+          console.log("useProductFetch: No storeId provided");
           setIsLoading(false);
+          setProducts([]);
+          setCategories([]);
           return;
         }
 
+        console.log("useProductFetch: Loading data for store:", storeId);
         setIsLoading(true);
         setError(null);
         
@@ -28,6 +32,9 @@ export function useProductFetch(storeId: string | null) {
           fetchCategories(storeId)
         ]);
         
+        console.log("useProductFetch: Fetched products:", productsData.length);
+        console.log("useProductFetch: Fetched categories:", categoriesData.length);
+        
         setProducts(productsData);
         
         // Filter out the "Desserts" category
@@ -36,8 +43,12 @@ export function useProductFetch(storeId: string | null) {
         );
         
         setCategories(filteredCategories);
+        
+        if (productsData.length === 0) {
+          console.warn("useProductFetch: No products found for store:", storeId);
+        }
       } catch (error) {
-        console.error("Error loading data:", error);
+        console.error("useProductFetch: Error loading data:", error);
         setError(error instanceof Error ? error : new Error("Failed to load data"));
         toast.error("Failed to load products and categories");
       } finally {
