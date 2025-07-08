@@ -129,7 +129,7 @@ export const AdminReportsContent: React.FC<AdminReportsContentProps> = ({
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={reportData.storeBreakdown}>
+            <BarChart data={reportData.storeBreakdown || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="storeName" />
               <YAxis />
@@ -149,7 +149,7 @@ export const AdminReportsContent: React.FC<AdminReportsContentProps> = ({
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={reportData.ownershipBreakdown}>
+            <BarChart data={reportData.ownershipBreakdown || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="ownershipType" />
               <YAxis />
@@ -167,7 +167,7 @@ export const AdminReportsContent: React.FC<AdminReportsContentProps> = ({
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={reportData.profitByDate}>
+            <LineChart data={reportData.profitByDate || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
@@ -187,7 +187,7 @@ export const AdminReportsContent: React.FC<AdminReportsContentProps> = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {reportData.productProfitability.slice(0, 5).map((product: any, index: number) => (
+            {(reportData.productProfitability || []).slice(0, 5).map((product: any, index: number) => (
               <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div>
                   <h4 className="font-medium">{product.name}</h4>
@@ -203,6 +203,11 @@ export const AdminReportsContent: React.FC<AdminReportsContentProps> = ({
                 </div>
               </div>
             ))}
+            {(!reportData.productProfitability || reportData.productProfitability.length === 0) && (
+              <div className="text-center py-8 text-gray-500">
+                No product profitability data available
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
