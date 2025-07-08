@@ -39,15 +39,6 @@ export function CartItemsList({
   return (
     <div className="flex-1 min-h-0 overflow-hidden">
       <div className="space-y-2 h-full overflow-y-auto">
-        {/* Debug section - TEMPORARY */}
-        <div className="p-2 bg-yellow-100 border border-yellow-300 rounded text-xs">
-          <p><strong>DEBUG INFO:</strong></p>
-          <p>Items Length: {items?.length || 0}</p>
-          <p>Is Transitioning: {isTransitioning ? 'YES' : 'NO'}</p>
-          <p>Order Type: {orderType}</p>
-          <p>Items Data: {items ? JSON.stringify(items.map(i => ({ name: i.product?.name, qty: i.quantity }))) : 'NULL'}</p>
-        </div>
-
         {/* Show loading during transitions to prevent empty cart flicker */}
         {isTransitioning ? (
           <div className="text-center text-muted-foreground py-8">
@@ -59,11 +50,9 @@ export function CartItemsList({
         ) : !items || items.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
             <p>Your cart is empty</p>
-            <p className="text-xs mt-2">Items array: {items ? 'Empty array' : 'NULL/undefined'}</p>
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-xs text-green-600">RENDERING {items.length} ITEMS:</p>
             {items.map((item, index) => {
               console.log('CartItemsList: Rendering item', { item, index, orderType });
               

@@ -32,6 +32,15 @@ export function EditableCartItem({
   hasStockIssue = false,
   validation
 }: EditableCartItemProps) {
+  // Debug logging
+  console.log('EditableCartItem: Rendering item', {
+    productName: item.product?.name,
+    quantity,
+    price: item.price,
+    canEditPrice,
+    hasStockIssue,
+    index
+  });
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [editPrice, setEditPrice] = useState(item.price.toString());
 
