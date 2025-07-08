@@ -1,6 +1,7 @@
 
 import { BrowserRouter as Router } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
+import { RolePermissionsProvider } from "@/contexts/RolePermissionsContext";
 import { StoreProvider } from "@/contexts/StoreContext";
 import { StoreDisplayProvider } from "@/contexts/StoreDisplayContext";
 import { CartProvider } from "@/contexts/CartContext";
@@ -14,18 +15,20 @@ interface AppProvidersProps {
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <AuthProvider>
-      <StoreProvider>
-        <CartProvider>
-          <ShiftProvider>
-            <Router>
-              <StoreDisplayProvider>
-                {children}
-                <Toaster />
-              </StoreDisplayProvider>
-            </Router>
-          </ShiftProvider>
-        </CartProvider>
-      </StoreProvider>
+      <RolePermissionsProvider>
+        <StoreProvider>
+          <CartProvider>
+            <ShiftProvider>
+              <Router>
+                <StoreDisplayProvider>
+                  {children}
+                  <Toaster />
+                </StoreDisplayProvider>
+              </Router>
+            </ShiftProvider>
+          </CartProvider>
+        </StoreProvider>
+      </RolePermissionsProvider>
     </AuthProvider>
   );
 }

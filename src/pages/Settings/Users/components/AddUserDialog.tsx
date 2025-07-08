@@ -8,7 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { AppUserFormData } from "@/types/appUser";
 import { UserRole } from "@/types/user";
-import { useAuth } from "@/contexts/auth";
+import { useRolePermissions } from "@/contexts/RolePermissionsContext";
 import UserFormFields from "./UserFormFields";
 import {
   Dialog,
@@ -27,10 +27,10 @@ interface AddUserDialogProps {
 
 export default function AddUserDialog({ isOpen, onOpenChange, stores }: AddUserDialogProps) {
   const queryClient = useQueryClient();
-  const { hasPermission } = useAuth();
+  const { hasPermission } = useRolePermissions();
 
-  // Permission check - only admin and owner can create users
-  const canManageUsers = hasPermission('admin') || hasPermission('owner');
+  // Permission check - only users with user_management permission can create users
+  const canManageUsers = hasPermission('user_management');
 
 
 

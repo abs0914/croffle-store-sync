@@ -1,9 +1,8 @@
 
 import { Store } from "@/types/store";
 import { AppUserFormData } from "@/types/appUser";
-
+import { RoleSelectionInterface } from "@/components/admin/RoleSelectionInterface";
 import BasicInfoFields from "./form/BasicInfoFields";
-import RoleSelector from "./form/RoleSelector";
 import StoreSelectionList from "./form/StoreSelectionList";
 import StatusToggle from "./form/StatusToggle";
 import { UserRole } from "@/types/user";
@@ -21,8 +20,8 @@ export default function UserFormFields({
   stores,
   includePassword = false
 }: UserFormFieldsProps) {
-  const handleRoleChange = (role: UserRole) => {
-    onChange("role", role);
+  const handleRoleChange = (role: string) => {
+    onChange("role", role as UserRole);
   };
   
   const handleStoreSelectionChange = (storeIds: string[]) => {
@@ -41,9 +40,10 @@ export default function UserFormFields({
         includePassword={includePassword} 
       />
       
-      <RoleSelector 
-        value={formData.role} 
-        onChange={handleRoleChange} 
+      <RoleSelectionInterface 
+        selectedRole={formData.role} 
+        onRoleChange={handleRoleChange}
+        showPermissions={true}
       />
       
       <StoreSelectionList 

@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateAppUser } from "@/services/appUser";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { Store } from "@/types/store";
-import { useAuth } from "@/contexts/auth";
+import { useRolePermissions } from "@/contexts/RolePermissionsContext";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -25,8 +25,8 @@ interface EditUserDialogProps {
 
 export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: EditUserDialogProps) {
   const queryClient = useQueryClient();
-  const { hasPermission } = useAuth();
-  const isAdmin = hasPermission('admin');
+  const { hasPermission } = useRolePermissions();
+  const canManageUsers = hasPermission('user_management');
   
   const [activeTab, setActiveTab] = useState<string>("general");
   const [formData, setFormData] = useState<AppUserFormData>({
@@ -92,7 +92,7 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader />
         
-        {isAdmin && (
+        {canManageUsers && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="general">User Details</TabsTrigger>

@@ -2,6 +2,7 @@
 import { Link } from "react-router-dom";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/auth";
+import { useRolePermissions } from "@/contexts/RolePermissionsContext";
 import { UserListView, ErrorView, LoadingView } from "./components";
 import { useUserDebug, useUsersData, useUserDialogs } from "./hooks";
 import UserAccessView from "./components/UserAccessView";
@@ -13,14 +14,12 @@ import { ArrowLeftIcon } from "lucide-react";
 
 export default function UsersPage() {
   const { currentStore, stores } = useStore();
-  const { hasPermission, user } = useAuth();
-  const isAdmin = hasPermission('admin');
-  const isOwner = hasPermission('owner');
-  const isManager = user?.role === 'manager';
-  const canManageUsers = isAdmin || isOwner;
+  const { user } = useAuth();
+  const { hasPermission } = useRolePermissions();
+  const canManageUsers = hasPermission('user_management');
 
-  // Route protection: Only admin and owner can access this page
-  if (user && !canManageUsers && !isManager) {
+  // Route protection: Only users with user_management permission can access this page
+  if (user && !canManageUsers) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <h2 className="text-xl font-semibold text-gray-900">Access Denied</h2>
@@ -49,7 +48,7 @@ export default function UsersPage() {
   } = useUserDialogs();
 
   // Debug hook
-  useUserDebug({ user, isAdmin, isOwner, canManageUsers, currentStore });
+  useUserDebug({ user, canManageUsers, currentStore });
 
   // Function to handle user synchronization
   const handleSyncUsers = async () => {
@@ -107,13 +106,13 @@ export default function UsersPage() {
     );
   }
 
-  // Handle restricted access views for managers or errors
-  if (isManager && !canManageUsers || error) {
+  // Handle error cases
+  if (error) {
     return (
       <UserAccessView
-        isManager={isManager && !canManageUsers}
+        isManager={false}
         isLoading={isLoading}
-        error={error ? (error as Error) : null}
+        error={error as Error}
         currentStoreExists={!!currentStore || canManageUsers}
         users={users}
         currentUserEmail={user?.email}
