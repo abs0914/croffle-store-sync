@@ -53,15 +53,15 @@ export default function MobileCartDrawer(props: MobileCartDrawerProps) {
           </SheetTrigger>
           <SheetContent 
             side="bottom" 
-            className="h-[85vh] rounded-t-xl"
+            className="h-[85vh] rounded-t-xl overflow-hidden flex flex-col"
           >
-            <SheetHeader className="pb-4">
+            <SheetHeader className="pb-4 flex-shrink-0">
               <SheetTitle className="flex items-center justify-between">
                 <span>Cart ({items.length} items)</span>
                 <span className="text-lg font-bold">₱{actualTotal.toFixed(2)}</span>
               </SheetTitle>
             </SheetHeader>
-            <div className="h-full overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
               <CartView {...props} />
             </div>
           </SheetContent>
