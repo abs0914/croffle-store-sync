@@ -133,9 +133,79 @@ export function EnhancedRoleSelectionInterface({
       </div>
 
       {/* Impact Preview */}
-      {showImpactPreview && selectedRoleDefinition}
+      {showImpactPreview && selectedRoleDefinition && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Role Impact Preview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {canDo.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-green-600 mb-2">Can Access:</h4>
+                <div className="flex flex-wrap gap-1">
+                  {canDo.map(permission => (
+                    <Badge key={permission} variant="secondary" className="text-xs">
+                      {permission}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {cannotDo.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Cannot Access:</h4>
+                <div className="flex flex-wrap gap-1">
+                  {cannotDo.map(permission => (
+                    <Badge key={permission} variant="outline" className="text-xs text-muted-foreground">
+                      {permission}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Detailed Permissions */}
-      {showPermissions && selectedRoleDefinition}
+      {showPermissions && selectedRoleDefinition && (
+        <Collapsible open={showPermissionDetails} onOpenChange={setShowPermissionDetails}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              <span className="flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                View Detailed Permissions
+              </span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-4 mt-4">
+            {Object.entries(PERMISSION_GROUPS).map(([groupName, permissions]) => (
+              <Card key={groupName}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">{groupName}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {permissions.map(permission => {
+                    const hasAccess = selectedRoleDefinition.permissions[permission as keyof typeof selectedRoleDefinition.permissions];
+                    const IconComponent = PERMISSION_ICONS[permission as keyof typeof PERMISSION_ICONS] || Settings;
+                    return (
+                      <div key={permission} className="flex items-center gap-3">
+                        <IconComponent className="h-4 w-4" />
+                        <span className="text-sm flex-1">
+                          {permission.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                        <Badge variant={hasAccess ? "default" : "secondary"} className="text-xs">
+                          {hasAccess ? "Granted" : "Denied"}
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>;
 }
