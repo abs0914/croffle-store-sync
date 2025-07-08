@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Store } from '@/types';
+import { fetchExpenseReport } from './useExpenseReportData';
 
 interface ReportMetrics {
   totalRevenue: number;
@@ -89,9 +90,10 @@ interface PerformanceReportData {
 type ReportData = SalesReportData | InventoryReportData | CustomerReportData | PerformanceReportData;
 
 export const useAdminReportsData = (
-  reportType: 'sales' | 'inventory' | 'customers' | 'performance',
+  reportType: 'sales' | 'customers' | 'expenses',
   dateRange: { from: string; to: string },
-  storeFilter: string
+  storeFilter: string,
+  ownershipFilter: 'all' | 'company_owned' | 'franchise'
 ) => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [stores, setStores] = useState<Store[]>([]);
@@ -103,15 +105,20 @@ export const useAdminReportsData = (
 
   useEffect(() => {
     fetchReportData();
-  }, [reportType, dateRange, storeFilter]);
+  }, [reportType, dateRange, storeFilter, ownershipFilter]);
 
   const fetchStores = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('stores')
         .select('*')
-        .eq('is_active', true)
-        .order('name');
+        .eq('is_active', true);
+
+      if (ownershipFilter !== 'all') {
+        query = query.eq('ownership_type', ownershipFilter);
+      }
+
+      const { data, error } = await query.order('name');
 
       if (error) throw error;
       setStores(data as Store[] || []);
@@ -128,14 +135,11 @@ export const useAdminReportsData = (
         case 'sales':
           await fetchSalesReport();
           break;
-        case 'inventory':
-          await fetchInventoryReport();
-          break;
         case 'customers':
           await fetchCustomerReport();
           break;
-        case 'performance':
-          await fetchPerformanceReport();
+        case 'expenses':
+          await fetchExpenseReportData();
           break;
       }
     } catch (error: any) {
@@ -147,7 +151,11 @@ export const useAdminReportsData = (
   };
 
   const fetchSalesReport = async () => {
-    const storeIds = storeFilter === 'all' ? stores.map(s => s.id) : [storeFilter];
+    let filteredStores = stores;
+    if (ownershipFilter !== 'all') {
+      filteredStores = stores.filter(s => s.ownership_type === (ownershipFilter === 'franchise' ? 'franchisee' : ownershipFilter));
+    }
+    const storeIds = storeFilter === 'all' ? filteredStores.map(s => s.id) : [storeFilter];
     
     const { data: transactions, error } = await supabase
       .from('transactions')
@@ -189,60 +197,46 @@ export const useAdminReportsData = (
     // Top products (simplified - using transaction items)
     const topProducts = generateTopProducts(transactions || []);
 
+    // Ownership breakdown
+    const ownershipBreakdown = [
+      {
+        ownershipType: 'Company Owned',
+        revenue: storeBreakdown
+          .filter(s => stores.find(st => st.id === s.storeId)?.ownership_type === 'company_owned')
+          .reduce((sum, s) => sum + s.revenue, 0)
+      },
+      {
+        ownershipType: 'Franchise',
+        revenue: storeBreakdown
+          .filter(s => stores.find(st => st.id === s.storeId)?.ownership_type === 'franchisee')
+          .reduce((sum, s) => sum + s.revenue, 0)
+      }
+    ];
+
     setReportData({
       storeBreakdown,
       dailyTrends,
-      topProducts
+      topProducts,
+      ownershipBreakdown
     } as SalesReportData);
   };
 
-  const fetchInventoryReport = async () => {
-    const storeIds = storeFilter === 'all' ? stores.map(s => s.id) : [storeFilter];
-    
-    const { data: products, error } = await supabase
-      .from('products')
-      .select(`
-        *,
-        stores:store_id(name)
-      `)
-      .in('store_id', storeIds)
-      .eq('is_active', true);
-
-    if (error) throw error;
-
-    const storeBreakdown = stores.map(store => {
-      const storeProducts = products?.filter(p => p.store_id === store.id) || [];
-      const lowStockItems = storeProducts.filter(p => p.stock_quantity <= 10).length;
-      const outOfStockItems = storeProducts.filter(p => p.stock_quantity <= 0).length;
-      const inventoryValue = storeProducts.reduce((sum, p) => sum + (p.stock_quantity * (p.cost || 0)), 0);
-
-      return {
-        storeId: store.id,
-        storeName: store.name,
-        totalItems: storeProducts.length,
-        lowStockItems,
-        outOfStockItems,
-        inventoryValue
-      };
-    });
-
-    const lowStockItems = (products || [])
-      .filter(p => p.stock_quantity <= 10)
-      .map(p => ({
-        productName: p.name,
-        storeName: stores.find(s => s.id === p.store_id)?.name || 'Unknown',
-        currentStock: p.stock_quantity,
-        minThreshold: 10
-      }));
-
-    setReportData({
-      storeBreakdown,
-      lowStockItems
-    } as InventoryReportData);
+  const fetchExpenseReportData = async () => {
+    try {
+      const expenseData = await fetchExpenseReport(stores, dateRange, storeFilter, ownershipFilter);
+      setReportData(expenseData as any);
+    } catch (error) {
+      console.error('Error fetching expense report:', error);
+      throw error;
+    }
   };
 
   const fetchCustomerReport = async () => {
-    const storeIds = storeFilter === 'all' ? stores.map(s => s.id) : [storeFilter];
+    let filteredStores = stores;
+    if (ownershipFilter !== 'all') {
+      filteredStores = stores.filter(s => s.ownership_type === (ownershipFilter === 'franchise' ? 'franchisee' : ownershipFilter));
+    }
+    const storeIds = storeFilter === 'all' ? filteredStores.map(s => s.id) : [storeFilter];
     
     const { data: customers, error: customersError } = await supabase
       .from('customers')
@@ -299,63 +293,6 @@ export const useAdminReportsData = (
     } as CustomerReportData);
   };
 
-  const fetchPerformanceReport = async () => {
-    // Combine data from sales, inventory, and customers for performance metrics
-    const storeIds = storeFilter === 'all' ? stores.map(s => s.id) : [storeFilter];
-    
-    const [transactionsResult, productsResult, customersResult] = await Promise.all([
-      supabase
-        .from('transactions')
-        .select('store_id, total, created_at')
-        .in('store_id', storeIds)
-        .gte('created_at', `${dateRange.from}T00:00:00`)
-        .lte('created_at', `${dateRange.to}T23:59:59`),
-      supabase
-        .from('products')
-        .select('store_id, id')
-        .in('store_id', storeIds)
-        .eq('is_active', true),
-      supabase
-        .from('customers')
-        .select('store_id, id')
-        .in('store_id', storeIds)
-    ]);
-
-    const transactions = transactionsResult.data || [];
-    const products = productsResult.data || [];
-    const customers = customersResult.data || [];
-
-    const storePerformance = stores.map(store => {
-      const storeTransactions = transactions.filter(t => t.store_id === store.id);
-      const storeProducts = products.filter(p => p.store_id === store.id);
-      const storeCustomers = customers.filter(c => c.store_id === store.id);
-      
-      const revenue = storeTransactions.reduce((sum, t) => sum + t.total, 0);
-      const transactionCount = storeTransactions.length;
-      
-      // Simple efficiency calculation: revenue per product per customer
-      const efficiency = (storeProducts.length > 0 && storeCustomers.length > 0) 
-        ? revenue / (storeProducts.length * storeCustomers.length) 
-        : 0;
-
-      return {
-        storeId: store.id,
-        storeName: store.name,
-        revenue,
-        transactions: transactionCount,
-        customers: storeCustomers.length,
-        products: storeProducts.length,
-        efficiency
-      };
-    });
-
-    const trends = generatePerformanceTrends(transactions, dateRange);
-
-    setReportData({
-      storePerformance,
-      trends
-    } as PerformanceReportData);
-  };
 
   const reportMetrics: ReportMetrics = useMemo(() => {
     if (!reportData) return {
@@ -383,22 +320,19 @@ export const useAdminReportsData = (
           growthRate: calculateGrowthRate(data.dailyTrends)
         };
       }
-      case 'inventory': {
-        const data = reportData as InventoryReportData;
-        const totalProducts = data.storeBreakdown.reduce((sum, s) => sum + s.totalItems, 0);
-        const lowStockItems = data.storeBreakdown.reduce((sum, s) => sum + s.lowStockItems, 0);
-        const topStore = data.storeBreakdown.reduce((top, store) => 
-          store.inventoryValue > top.inventoryValue ? store : top, data.storeBreakdown[0] || { storeName: '', inventoryValue: 0 }
+      case 'expenses': {
+        const data = reportData as any;
+        const totalExpenses = data.storeBreakdown.reduce((sum: number, s: any) => sum + s.totalExpenses, 0);
+        const topStore = data.storeBreakdown.reduce((top: any, store: any) => 
+          store.totalExpenses > top.totalExpenses ? store : top, data.storeBreakdown[0] || { storeName: '', totalExpenses: 0 }
         );
         
         return {
-          totalRevenue: data.storeBreakdown.reduce((sum, s) => sum + s.inventoryValue, 0),
-          totalTransactions: 0,
+          totalRevenue: totalExpenses,
+          totalTransactions: data.storeBreakdown.reduce((sum: number, s: any) => sum + s.expenseCount, 0),
           averageOrderValue: 0,
           topPerformingStore: topStore.storeName,
-          growthRate: 0,
-          totalProducts,
-          lowStockItems
+          growthRate: 0
         };
       }
       case 'customers': {
@@ -416,22 +350,6 @@ export const useAdminReportsData = (
           topPerformingStore: topStore.storeName,
           growthRate: calculateCustomerGrowthRate(data.customerGrowth),
           totalCustomers
-        };
-      }
-      case 'performance': {
-        const data = reportData as PerformanceReportData;
-        const totalRevenue = data.storePerformance.reduce((sum, s) => sum + s.revenue, 0);
-        const totalTransactions = data.storePerformance.reduce((sum, s) => sum + s.transactions, 0);
-        const topStore = data.storePerformance.reduce((top, store) => 
-          store.efficiency > top.efficiency ? store : top, data.storePerformance[0] || { storeName: '', efficiency: 0 }
-        );
-        
-        return {
-          totalRevenue,
-          totalTransactions,
-          averageOrderValue: totalTransactions > 0 ? totalRevenue / totalTransactions : 0,
-          topPerformingStore: topStore.storeName,
-          growthRate: calculatePerformanceGrowthRate(data.trends)
         };
       }
       default:
