@@ -377,7 +377,7 @@ export function EnhancedRecipeIngredientsForm({
               open={!group.isCollapsed}
               onOpenChange={() => toggleGroupCollapse(group.id)}
             >
-              <Card className="overflow-hidden">
+              <Card className="overflow-visible">
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
                     <div className="flex items-center justify-between">
