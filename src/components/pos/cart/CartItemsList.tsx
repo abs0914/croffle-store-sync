@@ -37,8 +37,8 @@ export function CartItemsList({
   });
 
   return (
-    <div className="flex-1 overflow-hidden">
-      <div className="h-full overflow-y-auto space-y-2 pr-2">
+    <div className="flex-1 overflow-hidden min-h-[200px] bg-red-50 border border-red-300">
+      <div className="h-full overflow-y-auto space-y-2 pr-2 bg-blue-50 border border-blue-300">
         {/* Show loading during transitions to prevent empty cart flicker */}
         {isTransitioning ? (
           <div className="text-center text-muted-foreground py-8">
