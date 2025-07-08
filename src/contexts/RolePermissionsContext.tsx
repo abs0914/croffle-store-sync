@@ -21,6 +21,10 @@ export function RolePermissionsProvider({ children }: { children: ReactNode }) {
   
   const userRole = user?.role || null;
   
+  // Debug logging for role permissions context
+  console.log('🔐 RolePermissionsProvider - User object:', user);
+  console.log('🔐 RolePermissionsProvider - User role:', userRole);
+  
   const checkPermission = (permission: keyof RolePermissions): boolean => {
     if (!userRole) return false;
     return hasPermission(userRole, permission);

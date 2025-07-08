@@ -108,7 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (newSession?.user) {
           // Use setTimeout to avoid recursive auth state changes
           setTimeout(async () => {
+            authLog('🔐 Mapping user in auth state change...');
             const mappedUser = await mapSupabaseUser(newSession.user);
+            authLog('🔐 Mapped user result:', mappedUser);
             setUser(mappedUser);
             setIsLoading(false);
             
@@ -126,7 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       if (currentSession?.user) {
         authLog('Existing session found');
+        authLog('🔐 Mapping user from existing session...');
         const mappedUser = await mapSupabaseUser(currentSession.user);
+        authLog('🔐 Mapped user from existing session:', mappedUser);
         setSession(currentSession);
         setUser(mappedUser);
         
