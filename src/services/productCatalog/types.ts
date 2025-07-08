@@ -1,4 +1,10 @@
 
+export type ProductStatus =
+  | 'available'
+  | 'out_of_stock'
+  | 'temporarily_unavailable'
+  | 'discontinued';
+
 export interface ProductCatalog {
   id: string;
   store_id: string;
@@ -6,6 +12,7 @@ export interface ProductCatalog {
   description?: string;
   price: number;
   is_available: boolean;
+  product_status?: ProductStatus;
   display_order?: number;
   image_url?: string;
   recipe_id?: string;

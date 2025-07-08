@@ -1,4 +1,10 @@
 
+export type ProductStatus =
+  | 'available'
+  | 'out_of_stock'
+  | 'temporarily_unavailable'
+  | 'discontinued';
+
 export interface Product {
   id: string;
   name: string;
@@ -8,6 +14,7 @@ export interface Product {
   store_id: string;
   image_url?: string;
   is_active: boolean;
+  product_status?: ProductStatus;
   created_at?: string;
   updated_at?: string;
   product_variations?: ProductVariation[];

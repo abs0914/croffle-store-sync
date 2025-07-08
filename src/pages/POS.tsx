@@ -1,13 +1,17 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
 import { useCart } from "@/contexts/cart/CartContext";
 import { useProductCatalogData } from "@/hooks/useProductCatalogData";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
+import { useAutomaticAvailability } from "@/hooks/useAutomaticAvailability";
+import { realTimeNotificationService } from "@/services/notifications/realTimeNotificationService";
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
 import ActiveCashierDisplay from "@/components/pos/ActiveCashierDisplay";
+import RealTimeSyncStatus from "@/components/pos/RealTimeSyncStatus";
+import AvailabilityStatusBar from "@/components/pos/AvailabilityStatusBar";
 import { toast } from "sonner";
 import { TransactionItem } from "@/types/transaction";
 
@@ -30,13 +34,26 @@ export default function POS() {
   } = useTransactionHandler(currentStore?.id || '');
 
   // Load product data from product_catalog using consolidated hook
-  const { 
-    products, 
-    categories, 
-    isLoading, 
-    activeCategory, 
-    setActiveCategory 
+  const {
+    products,
+    categories,
+    isLoading,
+    activeCategory,
+    setActiveCategory,
+    lastSync,
+    isConnected
   } = useProductCatalogData(currentStore?.id || null);
+
+  // Set up automatic availability monitoring
+  useAutomaticAvailability(currentStore?.id || null, !!currentStore?.id);
+
+  // Set up real-time notifications
+  useEffect(() => {
+    if (!currentStore?.id) return;
+
+    const cleanup = realTimeNotificationService.setupRealTimeListeners(currentStore.id);
+    return cleanup;
+  }, [currentStore?.id]);
   
   // Check the product activation status - for debugging
   const activeProductsCount = products.filter(p => p.is_active).length;
@@ -168,10 +185,25 @@ export default function POS() {
             {currentShift?.cashier_id && (
               <ActiveCashierDisplay cashierId={currentShift.cashier_id} />
             )}
+            {lastSync && (
+              <RealTimeSyncStatus
+                isConnected={isConnected}
+                lastSync={lastSync}
+                className="ml-4"
+              />
+            )}
           </div>
         </div>
       )}
       
+      {/* Availability Status Bar */}
+      {currentStore?.id && (
+        <AvailabilityStatusBar
+          storeId={currentStore.id}
+          className="mx-4 mb-4"
+        />
+      )}
+
       {/* Main POS Content */}
       <div className="flex-1 overflow-hidden">
         <POSContent

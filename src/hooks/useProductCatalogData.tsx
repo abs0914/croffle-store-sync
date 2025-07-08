@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 
 export function useProductCatalogData(storeId: string | null) {
   // Fetch base product data from product_catalog
-  const { products, categories, isLoading, error } = useProductCatalogFetch(storeId);
+  const { products, categories, isLoading, error, lastSync, isConnected, refetch } = useProductCatalogFetch(storeId);
   
   // Filter functionality with search term and category filter
   const { 
@@ -39,10 +39,9 @@ export function useProductCatalogData(storeId: string | null) {
     // based on the storeId dependency
   }, []);
 
-  return { 
-    products, 
-    categories, 
-    filteredProducts,
+  return {
+    products: filteredProducts,
+    categories,
     isLoading,
     error,
     searchTerm,
@@ -51,6 +50,8 @@ export function useProductCatalogData(storeId: string | null) {
     setActiveCategory,
     activeTab,
     setActiveTab,
+    lastSync,
+    isConnected,
     refetch
   };
 }

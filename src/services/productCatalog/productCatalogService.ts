@@ -1,7 +1,31 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ProductCatalog, ProductIngredient } from "./types";
+import { ProductCatalog, ProductIngredient, ProductStatus } from "./types";
 import { toast } from "sonner";
+
+// Cache invalidation helper
+const broadcastCacheInvalidation = async (productId: string, storeId: string, eventType: 'UPDATE' | 'INSERT' | 'DELETE') => {
+  try {
+    // Broadcast cache invalidation to all connected clients
+    await supabase
+      .channel('cache_invalidation')
+      .send({
+        type: 'broadcast',
+        event: 'product_catalog_changed',
+        payload: {
+          productId,
+          storeId,
+          eventType,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+    console.log(`Cache invalidation broadcasted for product ${productId} in store ${storeId}`);
+  } catch (error) {
+    console.warn('Failed to broadcast cache invalidation:', error);
+    // Don't throw error as this is not critical for the main operation
+  }
+};
 
 export const fetchProductCatalog = async (storeId: string): Promise<ProductCatalog[]> => {
   try {
@@ -52,6 +76,9 @@ export const createProduct = async (
       if (ingredientsError) throw ingredientsError;
     }
 
+    // Broadcast cache invalidation for new product
+    await broadcastCacheInvalidation(productData.id, productData.store_id, 'INSERT');
+
     toast.success('Product created successfully');
     return productData;
   } catch (error) {
@@ -66,12 +93,24 @@ export const updateProduct = async (
   updates: Partial<ProductCatalog>
 ): Promise<boolean> => {
   try {
+    // First get the store_id for cache invalidation
+    const { data: existingProduct } = await supabase
+      .from('product_catalog')
+      .select('store_id')
+      .eq('id', id)
+      .single();
+
     const { error } = await supabase
       .from('product_catalog')
       .update(updates)
       .eq('id', id);
 
     if (error) throw error;
+
+    // Broadcast cache invalidation for updated product
+    if (existingProduct?.store_id) {
+      await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
+    }
 
     toast.success('Product updated successfully');
     return true;
@@ -105,6 +144,13 @@ export const toggleProductAvailability = async (
   isAvailable: boolean
 ): Promise<boolean> => {
   try {
+    // First get the store_id for cache invalidation
+    const { data: existingProduct } = await supabase
+      .from('product_catalog')
+      .select('store_id')
+      .eq('id', id)
+      .single();
+
     const { error } = await supabase
       .from('product_catalog')
       .update({ is_available: isAvailable })
@@ -112,11 +158,60 @@ export const toggleProductAvailability = async (
 
     if (error) throw error;
 
+    // Broadcast cache invalidation for availability change
+    if (existingProduct?.store_id) {
+      await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
+    }
+
     toast.success(`Product ${isAvailable ? 'enabled' : 'disabled'} successfully`);
     return true;
   } catch (error) {
     console.error('Error updating product availability:', error);
     toast.error('Failed to update product availability');
+    return false;
+  }
+};
+
+export const updateProductStatus = async (
+  id: string,
+  status: ProductStatus,
+  isAvailable: boolean
+): Promise<boolean> => {
+  try {
+    // First get the store_id for cache invalidation
+    const { data: existingProduct } = await supabase
+      .from('product_catalog')
+      .select('store_id')
+      .eq('id', id)
+      .single();
+
+    const { error } = await supabase
+      .from('product_catalog')
+      .update({
+        product_status: status,
+        is_available: isAvailable
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    // Broadcast cache invalidation for status change
+    if (existingProduct?.store_id) {
+      await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
+    }
+
+    const statusLabels = {
+      available: 'available',
+      out_of_stock: 'out of stock',
+      temporarily_unavailable: 'temporarily unavailable',
+      discontinued: 'discontinued'
+    };
+
+    toast.success(`Product marked as ${statusLabels[status]}`);
+    return true;
+  } catch (error) {
+    console.error('Error updating product status:', error);
+    toast.error('Failed to update product status');
     return false;
   }
 };

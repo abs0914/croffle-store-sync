@@ -14,8 +14,10 @@ import { Search,
   Image as ImageIcon,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchProductCatalog, toggleProductAvailability } from '@/services/productCatalog/productCatalogService';
-import { ProductCatalog } from '@/services/productCatalog/types';
+import { fetchProductCatalog, updateProductStatus } from '@/services/productCatalog/productCatalogService';
+import { ProductCatalog, ProductStatus } from '@/services/productCatalog/types';
+import { ProductStatusManager, getProductStatusBadge } from '@/components/productCatalog/ProductStatusManager';
+import { AvailabilityMonitor } from '@/components/productCatalog/AvailabilityMonitor';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -52,6 +54,22 @@ export const ProductCatalogManagement: React.FC = () => {
   const handleRefetch = () => {
     refetch();
     queryClient.invalidateQueries({ queryKey: ['product-catalog'] });
+  };
+
+  const handleStatusChange = async (productId: string, status: ProductStatus, isAvailable: boolean) => {
+    try {
+      const success = await updateProductStatus(productId, status, isAvailable);
+      if (success) {
+        // Update local state
+        setProducts(prev => prev.map(product =>
+          product.id === productId
+            ? { ...product, product_status: status, is_available: isAvailable }
+            : product
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating product status:', error);
+    }
   };
 
   return (
@@ -118,20 +136,24 @@ export const ProductCatalogManagement: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="management">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Advanced Menu Configuration
-              </CardTitle>
-              <p className="text-muted-foreground">
-                Configure menu items, variations, and pricing rules
-              </p>
-            </CardHeader>
-            <CardContent>
-              <EnhancedProductCatalogManager />
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Advanced Menu Configuration
+                </CardTitle>
+                <p className="text-muted-foreground">
+                  Configure menu items, variations, and pricing rules
+                </p>
+              </CardHeader>
+              <CardContent>
+                <EnhancedProductCatalogManager />
+              </CardContent>
+            </Card>
+
+            <AvailabilityMonitor storeId={storeId} />
+          </div>
         </TabsContent>
 
         <TabsContent value="current">
@@ -189,11 +211,13 @@ export const ProductCatalogManagement: React.FC = () => {
                       <span className="text-lg font-semibold text-green-600">
                         ₱{product.price.toFixed(2)}
                       </span>
-                      <Badge 
-                        variant={product.is_available ? "default" : "secondary"}
-                      >
-                        {product.is_available ? 'Available' : 'Unavailable'}
-                      </Badge>
+                      <ProductStatusManager
+                        currentStatus={product.product_status || (product.is_available ? 'available' : 'out_of_stock')}
+                        isAvailable={product.is_available}
+                        onStatusChange={(status, isAvailable) =>
+                          handleStatusChange(product.id, status, isAvailable)
+                        }
+                      />
                     </div>
 
                     {product.description && (

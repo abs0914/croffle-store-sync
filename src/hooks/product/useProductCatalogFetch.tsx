@@ -1,8 +1,9 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Product, Category } from "@/types";
 import { fetchProductCatalogForPOS } from "@/services/productCatalog/productCatalogFetch";
 import { fetchCategories } from "@/services/category/categoryFetch";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export function useProductCatalogFetch(storeId: string | null) {
@@ -10,43 +11,136 @@ export function useProductCatalogFetch(storeId: string | null) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [lastSync, setLastSync] = useState<Date>(new Date());
+  const [isConnected, setIsConnected] = useState(true);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        if (!storeId) {
-          setIsLoading(false);
-          return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-        
-        // Fetch products from product_catalog and categories in parallel
-        const [productsData, categoriesData] = await Promise.all([
-          fetchProductCatalogForPOS(storeId),
-          fetchCategories(storeId)
-        ]);
-        
-        setProducts(productsData);
-        
-        // Filter out the "Desserts" category
-        const filteredCategories = categoriesData.filter(
-          category => category.name.toLowerCase() !== "desserts"
-        );
-        
-        setCategories(filteredCategories);
-      } catch (error) {
-        console.error("Error loading product catalog data:", error);
-        setError(error instanceof Error ? error : new Error("Failed to load data"));
-        toast.error("Failed to load products and categories");
-      } finally {
+  const loadData = useCallback(async () => {
+    try {
+      if (!storeId) {
         setIsLoading(false);
+        return;
       }
+
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch products from product_catalog and categories in parallel
+      const [productsData, categoriesData] = await Promise.all([
+        fetchProductCatalogForPOS(storeId),
+        fetchCategories(storeId)
+      ]);
+
+      setProducts(productsData);
+
+      // Filter out the "Desserts" category
+      const filteredCategories = categoriesData.filter(
+        category => category.name.toLowerCase() !== "desserts"
+      );
+
+      setCategories(filteredCategories);
+      setLastSync(new Date());
+      setIsConnected(true);
+    } catch (error) {
+      console.error("Error loading product catalog data:", error);
+      setError(error instanceof Error ? error : new Error("Failed to load data"));
+      setIsConnected(false);
+      toast.error("Failed to load products and categories");
+    } finally {
+      setIsLoading(false);
     }
-    
-    loadData();
   }, [storeId]);
 
-  return { products, categories, isLoading, error };
+  // Initial data load
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Real-time subscriptions for product catalog changes
+  useEffect(() => {
+    if (!storeId) return;
+
+    console.log(`Setting up real-time subscription for store: ${storeId}`);
+
+    const subscription = supabase
+      .channel(`product_catalog_changes_${storeId}`)
+      .on('postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'product_catalog',
+          filter: `store_id=eq.${storeId}`
+        },
+        (payload) => {
+          console.log('Product catalog change detected:', payload);
+
+          // Show notification for real-time updates
+          if (payload.eventType === 'UPDATE') {
+            toast.info('Product information updated', {
+              description: 'Menu has been refreshed with latest changes'
+            });
+          } else if (payload.eventType === 'INSERT') {
+            toast.success('New product added', {
+              description: 'Menu has been updated with new item'
+            });
+          } else if (payload.eventType === 'DELETE') {
+            toast.info('Product removed', {
+              description: 'Menu has been updated'
+            });
+          }
+
+          // Reload data to reflect changes
+          loadData();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        setIsConnected(status === 'SUBSCRIBED');
+      });
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log(`Cleaning up subscription for store: ${storeId}`);
+      subscription.unsubscribe();
+    };
+  }, [storeId, loadData]);
+
+  // Cache invalidation listener for management updates
+  useEffect(() => {
+    if (!storeId) return;
+
+    console.log(`Setting up cache invalidation listener for store: ${storeId}`);
+
+    const cacheInvalidationSubscription = supabase
+      .channel('cache_invalidation')
+      .on('broadcast',
+        { event: 'product_catalog_changed' },
+        (payload) => {
+          console.log('Cache invalidation received:', payload);
+
+          // Only reload if the change is for our store
+          if (payload.payload.storeId === storeId) {
+            toast.info('Product data updated', {
+              description: 'Refreshing menu with latest changes'
+            });
+            loadData();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log(`Cleaning up cache invalidation listener for store: ${storeId}`);
+      cacheInvalidationSubscription.unsubscribe();
+    };
+  }, [storeId, loadData]);
+
+  return {
+    products,
+    categories,
+    isLoading,
+    error,
+    lastSync,
+    isConnected,
+    refetch: loadData
+  };
 }
