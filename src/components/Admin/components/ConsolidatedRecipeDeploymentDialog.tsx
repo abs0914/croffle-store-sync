@@ -132,6 +132,28 @@ export const ConsolidatedRecipeDeploymentDialog: React.FC<ConsolidatedRecipeDepl
       setDeploymentResults(results);
       setShowResults(true);
       
+      // After successful deployment, update prices if they were customized
+      if (price !== template.ingredients.reduce((sum, ing) => sum + (ing.quantity * (ing.cost_per_unit || 0)), 0)) {
+        for (const result of results) {
+          if (result.success && result.storeId) {
+            // Update the product catalog price if it differs from cost
+            const { data: catalogProduct } = await supabase
+              .from('product_catalog')
+              .select('id')
+              .eq('product_name', template.name)
+              .eq('store_id', result.storeId)
+              .single();
+
+            if (catalogProduct) {
+              await supabase
+                .from('product_catalog')
+                .update({ price })
+                .eq('id', catalogProduct.id);
+            }
+          }
+        }
+      }
+      
       // Check if all deployments were successful
       const allSuccessful = results.every(r => r.success);
       if (allSuccessful) {

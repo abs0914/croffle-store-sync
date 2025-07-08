@@ -120,7 +120,7 @@ export const deployRecipeToProductCatalog = async (
       .insert({
         product_name: template.name,
         description: template.description,
-        price: totalCost,
+        price: totalCost, // Use the same cost as the products table
         store_id: storeId,
         is_available: true,
         display_order: 0,

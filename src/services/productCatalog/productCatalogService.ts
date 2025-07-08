@@ -101,13 +101,18 @@ export const updateProduct = async (
   updates: Partial<ProductCatalog>
 ): Promise<boolean> => {
   try {
-    // First get the store_id for cache invalidation
+    // First get the existing product data including recipe_id
     const { data: existingProduct } = await supabase
       .from('product_catalog')
-      .select('store_id')
+      .select('store_id, recipe_id, product_name')
       .eq('id', id)
       .single();
 
+    if (!existingProduct) {
+      throw new Error('Product not found');
+    }
+
+    // Update the product catalog
     const { error } = await supabase
       .from('product_catalog')
       .update(updates)
@@ -115,10 +120,30 @@ export const updateProduct = async (
 
     if (error) throw error;
 
-    // Broadcast cache invalidation for updated product
-    if (existingProduct?.store_id) {
-      await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
+    // If price was updated, also update related product table if it exists
+    if (updates.price !== undefined && existingProduct.product_name) {
+      // Find and update corresponding product in products table
+      const { data: productTableEntry } = await supabase
+        .from('products')
+        .select('id')
+        .eq('name', existingProduct.product_name)
+        .eq('store_id', existingProduct.store_id)
+        .maybeSingle();
+
+      if (productTableEntry) {
+        const { error: productUpdateError } = await supabase
+          .from('products')
+          .update({ price: updates.price })
+          .eq('id', productTableEntry.id);
+
+        if (productUpdateError) {
+          console.warn('Failed to sync price to products table:', productUpdateError);
+        }
+      }
     }
+
+    // Broadcast cache invalidation for updated product
+    await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
 
     toast.success('Product updated successfully');
     return true;
