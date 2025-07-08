@@ -110,24 +110,17 @@ export default function UserListView({
               </Button>
             )}
             
-            {/* Always show Add User button with debug */}
-            <Button 
-              size="sm" 
-              onClick={() => {
-                console.log('🔐 Add User button clicked!', { canManageUsers, onAddUser });
-                onAddUser();
-              }} 
-              disabled={isLoading} 
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <PlusIcon className="h-4 w-4 mr-1" />
-              Add New User
-            </Button>
-            
-            {/* Debug info */}
-            <Button variant="outline" size="sm" disabled>
-              Debug: {canManageUsers ? 'Can Manage' : 'No Permission'}
-            </Button>
+            {canManageUsers && (
+              <Button 
+                size="sm" 
+                onClick={onAddUser} 
+                disabled={isLoading} 
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <PlusIcon className="h-4 w-4 mr-1" />
+                Add New User
+              </Button>
+            )}
           </div>
         </CardHeader>
       </Card>

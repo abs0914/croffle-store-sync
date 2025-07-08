@@ -19,7 +19,7 @@ const RolePermissionsContext = createContext<RolePermissionsContextType>({
 export function RolePermissionsProvider({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
   
-  // FIXED: Directly use user.role if available, since the mapping seems to be working
+  // Get user role directly from auth user object
   const userRole = user?.role || null;
   
   // Enhanced debug logging
