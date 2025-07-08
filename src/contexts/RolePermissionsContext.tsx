@@ -48,36 +48,58 @@ export function RolePermissionsProvider({ children }: { children: ReactNode }) {
   };
 
   const canAccessRoute = (routePermission: keyof RolePermissions): boolean => {
-    // Don't grant access if still loading or if no role is available
-    if (isLoading || !userRole) {
-      console.log('🔐 RolePermissionsProvider - Denying access: loading or no role', { isLoading, userRole });
+    // Don't grant access if still loading
+    if (isLoading) {
+      console.log('🔐 RolePermissionsProvider - Denying access: still loading');
       return false;
     }
-    return checkPermission(routePermission);
+    
+    // FIXED: Use user.role directly if userRole is null but user exists
+    const effectiveRole = userRole || user?.role;
+    
+    if (!effectiveRole) {
+      console.log('🔐 RolePermissionsProvider - Denying access: no effective role', { userRole, userFromAuth: user?.role });
+      return false;
+    }
+    
+    const hasAccess = hasPermission(effectiveRole, routePermission);
+    console.log('🔐 canAccessRoute check:', { routePermission, effectiveRole, hasAccess });
+    return hasAccess;
   };
 
-  const permissions = userRole ? {
-    pos: checkPermission('pos'),
-    dashboard: checkPermission('dashboard'),
-    inventory_management: checkPermission('inventory_management'),
-    commissary_inventory: checkPermission('commissary_inventory'),
-    production_management: checkPermission('production_management'),
-    order_management: checkPermission('order_management'),
-    expenses: checkPermission('expenses'),
-    recipe_management: checkPermission('recipe_management'),
-    reports: checkPermission('reports'),
-    settings: checkPermission('settings'),
-    user_management: checkPermission('user_management'),
-    purchasing: checkPermission('purchasing'),
+  // FIXED: Use effective role (fallback to user.role if userRole is null)
+  const effectiveRole = userRole || user?.role;
+  
+  const permissions = effectiveRole ? {
+    pos: hasPermission(effectiveRole, 'pos'),
+    dashboard: hasPermission(effectiveRole, 'dashboard'),
+    inventory_management: hasPermission(effectiveRole, 'inventory_management'),
+    commissary_inventory: hasPermission(effectiveRole, 'commissary_inventory'),
+    production_management: hasPermission(effectiveRole, 'production_management'),
+    order_management: hasPermission(effectiveRole, 'order_management'),
+    expenses: hasPermission(effectiveRole, 'expenses'),
+    recipe_management: hasPermission(effectiveRole, 'recipe_management'),
+    reports: hasPermission(effectiveRole, 'reports'),
+    settings: hasPermission(effectiveRole, 'settings'),
+    user_management: hasPermission(effectiveRole, 'user_management'),
+    purchasing: hasPermission(effectiveRole, 'purchasing'),
   } : null;
+
+  // Enhanced check permission function
+  const enhancedCheckPermission = (permission: keyof RolePermissions): boolean => {
+    const roleToCheck = effectiveRole;
+    const hasPermissionResult = roleToCheck ? hasPermission(roleToCheck, permission) : false;
+    console.log(`🔐 Enhanced Permission check: ${permission} for role ${roleToCheck} = ${hasPermissionResult}`);
+    return hasPermissionResult;
+  };
 
   return (
     <RolePermissionsContext.Provider
       value={{
         permissions,
-        hasPermission: checkPermission,
+        hasPermission: enhancedCheckPermission,
         canAccessRoute,
-        userRole,
+        userRole: effectiveRole, // Use effective role
       }}
     >
       {children}
