@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { IngredientGroupDialog } from './IngredientGroupDialog';
 
 interface IngredientGroup {
   id: string;
@@ -61,9 +62,7 @@ export function EnhancedRecipeIngredientsForm({
   const [inventoryStock, setInventoryStock] = useState<any[]>([]);
   const [commissaryItems, setCommissaryItems] = useState<any[]>([]);
   const [ingredientGroups, setIngredientGroups] = useState<IngredientGroup[]>([]);
-  const [showGroupCreator, setShowGroupCreator] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupType, setNewGroupType] = useState<'required_one' | 'optional_one' | 'multiple'>('required_one');
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
 
   useEffect(() => {
     if (storeId && !isTemplate) {
@@ -149,21 +148,17 @@ export function EnhancedRecipeIngredientsForm({
     setIngredientGroups(Array.from(groupsMap.values()));
   };
 
-  const createNewGroup = () => {
-    if (!newGroupName.trim()) return;
-
+  const handleCreateGroup = (groupData: Omit<{ id: string; name: string; selectionType: 'required_one' | 'optional_one' | 'multiple'; isOptional: boolean; displayOrder: number; }, 'id'>) => {
     const groupId = `group-${Date.now()}`;
     const newGroup: IngredientGroup = {
       id: groupId,
-      name: newGroupName.trim(),
-      type: newGroupType,
+      name: groupData.name,
+      type: groupData.selectionType,
       isCollapsed: false,
       ingredients: []
     };
 
     setIngredientGroups(prev => [...prev, newGroup]);
-    setNewGroupName('');
-    setShowGroupCreator(false);
     toast.success(`Group "${newGroup.name}" created successfully`);
   };
 
@@ -310,7 +305,7 @@ export function EnhancedRecipeIngredientsForm({
               type="button" 
               variant="outline" 
               size="sm"
-              onClick={() => setShowGroupCreator(!showGroupCreator)}
+              onClick={() => setShowGroupDialog(true)}
             >
               <Settings className="h-4 w-4 mr-1" />
               Create Group
@@ -319,55 +314,19 @@ export function EnhancedRecipeIngredientsForm({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Group Creator */}
-        {showGroupCreator && (
-          <Card className="border-dashed">
-            <CardContent className="pt-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  <Label className="font-medium">Create New Ingredient Group</Label>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-sm">Group Name</Label>
-                    <Input
-                      placeholder="e.g., Choose 1 Topping, Choose 1 Sauce"
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm">Selection Type</Label>
-                    <Select value={newGroupType} onValueChange={(value: any) => setNewGroupType(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="required_one">Choose 1 (Required)</SelectItem>
-                        <SelectItem value="optional_one">Choose 1 (Optional)</SelectItem>
-                        <SelectItem value="multiple">Multiple Selection</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="button" size="sm" onClick={createNewGroup}>
-                    Create Group
-                  </Button>
-                  <Button 
-                    type="button" 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => setShowGroupCreator(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Group Creation Dialog */}
+        <IngredientGroupDialog
+          isOpen={showGroupDialog}
+          onClose={() => setShowGroupDialog(false)}
+          onCreateGroup={handleCreateGroup}
+          existingGroups={ingredientGroups.map(g => ({
+            id: g.id,
+            name: g.name,
+            selectionType: g.type,
+            isOptional: g.type === 'optional_one',
+            displayOrder: 0
+          }))}
+        />
 
         {/* Ingredient Groups */}
         <div className="space-y-4">

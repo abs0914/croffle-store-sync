@@ -170,9 +170,9 @@ export function UnifiedRecipeEditDialog({
           </Card>
         )}
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
               <TabsTrigger value="instructions">Instructions</TabsTrigger>
@@ -180,8 +180,8 @@ export function UnifiedRecipeEditDialog({
               {isRecipe && <TabsTrigger value="details">Details</TabsTrigger>}
             </TabsList>
 
-            <div className="flex-1 overflow-y-auto">
-              <TabsContent value="basic" className="mt-0 h-full">
+            <div className="flex-1 min-h-0">
+              <TabsContent value="basic" className="mt-0 h-full overflow-y-auto p-4">
                 <EnhancedRecipeBasicInfoForm
                   formData={formData}
                   onChange={setFormData}
@@ -189,7 +189,7 @@ export function UnifiedRecipeEditDialog({
                 />
               </TabsContent>
 
-              <TabsContent value="ingredients" className="mt-0 h-full">
+              <TabsContent value="ingredients" className="mt-0 h-full overflow-y-auto p-4">
                 <EnhancedRecipeIngredientsForm
                   ingredients={ingredients}
                   onChange={setIngredients}
@@ -198,7 +198,7 @@ export function UnifiedRecipeEditDialog({
                 />
               </TabsContent>
 
-              <TabsContent value="instructions" className="mt-0 h-full">
+              <TabsContent value="instructions" className="mt-0 h-full overflow-y-auto p-4">
                 <RecipeInstructionsForm
                   instructions={formData.instructions || ''}
                   onChange={(instructions) => setFormData(prev => ({ ...prev, instructions }))}
@@ -206,7 +206,7 @@ export function UnifiedRecipeEditDialog({
               </TabsContent>
 
               {isTemplate && (
-                <TabsContent value="deployment" className="mt-0 h-full">
+                <TabsContent value="deployment" className="mt-0 h-full overflow-y-auto p-4">
                   <RecipeDeploymentInfo
                     template={item}
                     stores={stores}
@@ -215,7 +215,7 @@ export function UnifiedRecipeEditDialog({
               )}
 
               {isRecipe && (
-                <TabsContent value="details" className="mt-0 h-full">
+                <TabsContent value="details" className="mt-0 h-full overflow-y-auto p-4">
                   <Card>
                     <CardHeader>
                       <CardTitle>Recipe Details</CardTitle>
