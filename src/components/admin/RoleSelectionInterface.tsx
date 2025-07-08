@@ -37,7 +37,7 @@ export function RoleSelectionInterface({
   
   // Only allow assignment of roles with equal or lower hierarchy
   const availableRoles = getRolesByHierarchy().filter(role => {
-    if (!userRoleDefinition) return false;
+    if (!userRoleDefinition) return true; // Allow all roles if no user role definition found
     return role.hierarchy <= userRoleDefinition.hierarchy;
   });
 
