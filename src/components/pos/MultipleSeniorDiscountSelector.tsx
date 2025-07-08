@@ -330,8 +330,19 @@ export default function MultipleSeniorDiscountSelector({
               )}
               <p className="text-sm font-medium mt-2 pt-2 border-t">
                 Final Total: {formatCurrency(
-                  discountMode === 'senior' 
-                    ? subtotal - ((preview as any).totalVATExemption || 0) - preview.totalSeniorDiscount
+                  discountMode === 'senior'
+                    ? (() => {
+                        // Calculate proper final total for senior discounts using the calculation service
+                        const validSeniors = seniorDiscounts.filter(d => d.idNumber.trim() !== '').length;
+                        if (validSeniors === 0) return subtotal;
+
+                        const seniorDiscountObjs = seniorDiscounts
+                          .filter(d => d.idNumber.trim() !== '')
+                          .map(d => ({ id: d.id, idNumber: d.idNumber, discountAmount: 0 }));
+
+                        const calculations = CartCalculationService.calculateCartTotals([], seniorDiscountObjs, null, totalDiners);
+                        return calculations.finalTotal;
+                      })()
                     : subtotal - CartCalculationService.calculateCartTotals([], [], {
                         type: otherDiscountType,
                         amount: 0,

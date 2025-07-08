@@ -6,6 +6,7 @@ import { PrinterStatusIndicator } from "@/components/printer/PrinterStatusIndica
 import { QuickPrinterSetup } from "@/components/printer/QuickPrinterSetup";
 import { Button } from "@/components/ui/button";
 import { Bluetooth } from "lucide-react";
+import { useCart } from "@/contexts/cart/CartContext";
 
 interface CartSummaryProps {
   subtotal: number;
@@ -33,18 +34,14 @@ export default function CartSummary({
   discountType,
   handlePaymentComplete
 }: CartSummaryProps) {
-  // For VAT-inclusive pricing:
-  // subtotal = VAT-inclusive total (e.g., ₱65.00)
-  // tax = VAT amount embedded in the total (calculated in CartContext)
-  // total = same as subtotal for VAT-inclusive pricing
+  // Use the cart context to get proper calculations
+  const { calculations } = useCart();
 
-  // Calculate the net amount (price without VAT) from VAT-inclusive total
-  const netAmount = subtotal / 1.12;
-  // Use the VAT amount calculated in CartContext
-  const vatAmount = tax;
-
-  // Calculate final total after discount (VAT-inclusive)
-  const finalTotal = subtotal - discount;
+  // Use the proper calculations from the cart context
+  // This ensures consistency with the main cart display
+  const netAmount = calculations.netAmount;
+  const vatAmount = calculations.adjustedVAT;
+  const finalTotal = calculations.finalTotal;
 
   return (
     <div className="space-y-2 pt-4">
@@ -60,10 +57,19 @@ export default function CartSummary({
         <span className="font-medium">{formatCurrency(vatAmount)}</span>
       </div>
 
-      {discount > 0 && (
+      {/* Show VAT Exemption if applicable */}
+      {calculations.vatExemption > 0 && (
+        <div className="flex justify-between text-blue-600">
+          <span>VAT Exemption</span>
+          <span>-{formatCurrency(calculations.vatExemption)}</span>
+        </div>
+      )}
+
+      {/* Show total discount amount if applicable */}
+      {calculations.totalDiscountAmount > 0 && (
         <div className="flex justify-between text-green-600">
-          <span>Discount</span>
-          <span>-{formatCurrency(discount)}</span>
+          <span>Total Discount</span>
+          <span>-{formatCurrency(calculations.totalDiscountAmount)}</span>
         </div>
       )}
 

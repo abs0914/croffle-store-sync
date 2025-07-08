@@ -6,6 +6,7 @@ import { ShoppingCart } from "lucide-react";
 import CartView from "./CartView";
 import { CartItem, Customer } from "@/types";
 import { SeniorDiscount } from "@/hooks/useTransactionHandler";
+import { useCart } from "@/contexts/cart/CartContext";
 
 interface MobileCartDrawerProps {
   items: CartItem[];
@@ -32,12 +33,12 @@ interface MobileCartDrawerProps {
 
 export default function MobileCartDrawer(props: MobileCartDrawerProps) {
   const { items, seniorDiscounts, otherDiscount, discount, total, open, onOpenChange } = props;
-  
-  // Calculate the actual total with discounts applied
-  const totalSeniorDiscount = seniorDiscounts.reduce((sum, senior) => sum + senior.discountAmount, 0);
-  const totalOtherDiscount = otherDiscount?.amount || 0;
-  const totalDiscountAmount = totalSeniorDiscount + totalOtherDiscount + discount;
-  const actualTotal = total - totalDiscountAmount;
+
+  // Use the cart context to get the correct calculations
+  const { calculations } = useCart();
+
+  // Use the final total from calculations which already includes all discounts
+  const actualTotal = calculations.finalTotal;
   
   return (
     <>
