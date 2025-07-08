@@ -181,6 +181,12 @@ export default function CartView({
       </div>
 
       {/* Cart Items */}
+      <div className="p-2 bg-blue-100 border border-blue-300 rounded text-xs mb-2">
+        <p><strong>CARTVIEW DEBUG:</strong></p>
+        <p>CartItems from context: {cartItems ? cartItems.length : 'NULL'}</p>
+        <p>Is transitioning: {isOrderTypeTransitioning ? 'YES' : 'NO'}</p>
+        <p>Raw cartItems: {JSON.stringify(cartItems?.slice(0, 2))}</p>
+      </div>
       <CartItemsList
         items={cartItems || []}
         isTransitioning={isOrderTypeTransitioning}

@@ -62,27 +62,30 @@ export function CartItemsList({
             <p className="text-xs mt-2">Items array: {items ? 'Empty array' : 'NULL/undefined'}</p>
           </div>
         ) : (
-          items.map((item, index) => {
-            console.log('CartItemsList: Rendering item', { item, index, orderType });
-            
-            const validation = getItemValidation(item.productId, item.variationId);
-            const hasStockIssue = validation && !validation.isValid;
-            
-            return (
-              <EditableCartItem
-                key={`${item.productId}-${item.variationId || 'default'}-${index}`}
-                item={item}
-                index={index}
-                quantity={item.quantity}
-                onUpdateQuantity={updateQuantity}
-                onUpdatePrice={updateItemPrice}
-                onRemoveItem={removeItem}
-                canEditPrice={orderType === 'online_delivery'}
-                hasStockIssue={hasStockIssue}
-                validation={validation}
-              />
-            );
-          })
+          <div className="space-y-2">
+            <p className="text-xs text-green-600">RENDERING {items.length} ITEMS:</p>
+            {items.map((item, index) => {
+              console.log('CartItemsList: Rendering item', { item, index, orderType });
+              
+              const validation = getItemValidation(item.productId, item.variationId);
+              const hasStockIssue = validation && !validation.isValid;
+              
+              return (
+                <EditableCartItem
+                  key={`${item.productId}-${item.variationId || 'default'}-${index}`}
+                  item={item}
+                  index={index}
+                  quantity={item.quantity}
+                  onUpdateQuantity={updateQuantity}
+                  onUpdatePrice={updateItemPrice}
+                  onRemoveItem={removeItem}
+                  canEditPrice={orderType === 'online_delivery'}
+                  hasStockIssue={hasStockIssue}
+                  validation={validation}
+                />
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
