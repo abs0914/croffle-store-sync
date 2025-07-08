@@ -114,7 +114,7 @@ const updateProductCost = async (productId: string, ingredientInserts: any[]): P
     return sum + (ingredient.quantity * ingredient.cost_per_unit);
   }, 0);
 
-  const suggestedPrice = totalCost * 2.5; // 150% markup as example
+  const suggestedPrice = totalCost; // Use cost as base price without markup
   
   await supabase
     .from('products')

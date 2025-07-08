@@ -84,16 +84,16 @@ export const RecipeDeploymentEditDialog: React.FC<RecipeDeploymentEditDialogProp
 
       setStores(storesWithDeployment);
 
-      // Set initial pricing based on existing deployment or template
+      // Set initial pricing based on existing deployment or template cost (no markup)
       const existingCost = recipesData?.[0]?.total_cost;
       if (existingCost) {
-        setBasePrice(existingCost * 1.5);
+        setBasePrice(existingCost);
       } else {
-        // Calculate suggested price from template ingredients
+        // Calculate cost from template ingredients without markup
         const totalCost = recipe.ingredients?.reduce((sum: number, ingredient: any) => 
           sum + ((ingredient.quantity || 0) * (ingredient.cost_per_unit || 0)), 0
         ) || 0;
-        setBasePrice(totalCost * 1.5);
+        setBasePrice(totalCost);
       }
     } catch (error) {
       console.error('Error loading deployment data:', error);

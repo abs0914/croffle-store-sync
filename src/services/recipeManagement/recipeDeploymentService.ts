@@ -97,7 +97,7 @@ export const deployRecipeToProductCatalog = async (
         name: template.name,
         description: template.description,
         sku: uniqueSku,
-        price: totalCost * 1.5, // 50% markup as default
+        price: totalCost, // Use cost directly without markup
         cost: totalCost,
         stock_quantity: 0,
         store_id: storeId,
@@ -120,7 +120,7 @@ export const deployRecipeToProductCatalog = async (
       .insert({
         product_name: template.name,
         description: template.description,
-        price: totalCost * 1.5,
+        price: totalCost,
         store_id: storeId,
         is_available: true,
         display_order: 0,

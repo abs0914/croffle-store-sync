@@ -78,9 +78,9 @@ export const validateDataForMigration = async (): Promise<{
         continue;
       }
 
-      // Calculate suggested price (cost + 50% markup)
+      // Use cost as suggested price without markup
       const totalCost = recipe.total_cost || 0;
-      const suggestedPrice = totalCost * 1.5;
+      const suggestedPrice = totalCost;
 
       recipesNeedingMigration.push({
         recipeId: recipe.id,

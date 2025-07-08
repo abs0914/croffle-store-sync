@@ -56,7 +56,7 @@ export const ConsolidatedRecipeDeploymentDialog: React.FC<ConsolidatedRecipeDepl
       const totalCost = template.ingredients.reduce((sum, ingredient) => 
         sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
       );
-      setPrice(totalCost * 1.5); // Default 50% markup
+      setPrice(totalCost); // Use cost as base price without markup
     }
   }, [isOpen, template]);
 

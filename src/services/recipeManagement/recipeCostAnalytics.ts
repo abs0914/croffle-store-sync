@@ -78,12 +78,12 @@ export const getRecipeCostBreakdown = async (recipeId: string): Promise<RecipeCo
       ing.percentageOfTotal = totalCost > 0 ? (ing.totalCost / totalCost) * 100 : 0;
     });
 
-    // Calculate profitability metrics
+    // Provide cost-based pricing suggestions without automatic markup
     const profitability = {
-      suggestedPrice: totalCost * 2.5, // 150% markup
-      profitMargin: 60, // 60% profit margin
-      competitivePrice: totalCost * 2.0, // 100% markup
-      priceFloor: totalCost * 1.3 // 30% markup minimum
+      suggestedPrice: totalCost, // Base cost - manual markup can be applied
+      profitMargin: 0, // No automatic margin
+      competitivePrice: totalCost, // Same as base cost
+      priceFloor: totalCost // Minimum is the cost
     };
 
     return {
