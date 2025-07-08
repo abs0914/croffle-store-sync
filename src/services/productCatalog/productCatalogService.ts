@@ -3,24 +3,32 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProductCatalog, ProductIngredient, ProductStatus } from "./types";
 import { toast } from "sonner";
 
-// Cache invalidation helper
+// Cache invalidation helper - now using proper broadcast method
 const broadcastCacheInvalidation = async (productId: string, storeId: string, eventType: 'UPDATE' | 'INSERT' | 'DELETE') => {
   try {
-    // Broadcast cache invalidation to all connected clients
-    await supabase
-      .channel('cache_invalidation')
-      .send({
-        type: 'broadcast',
-        event: 'product_catalog_changed',
-        payload: {
-          productId,
-          storeId,
-          eventType,
-          timestamp: new Date().toISOString()
-        }
-      });
+    console.log(`Broadcasting cache invalidation for product ${productId} in store ${storeId}`);
+    
+    // Create a temporary channel for broadcasting
+    const channel = supabase.channel('cache_invalidation_temp');
+    
+    // Send the broadcast message
+    const result = await channel.send({
+      type: 'broadcast',
+      event: 'product_catalog_changed',
+      payload: {
+        productId,
+        storeId,
+        eventType,
+        timestamp: new Date().toISOString()
+      }
+    });
 
-    console.log(`Cache invalidation broadcasted for product ${productId} in store ${storeId}`);
+    console.log(`Cache invalidation broadcast result:`, result);
+    
+    // Clean up the temporary channel
+    await supabase.removeChannel(channel);
+    
+    console.log(`Cache invalidation broadcasted successfully for product ${productId} in store ${storeId}`);
   } catch (error) {
     console.warn('Failed to broadcast cache invalidation:', error);
     // Don't throw error as this is not critical for the main operation
