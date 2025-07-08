@@ -3,7 +3,7 @@ import { useState, useEffect, ReactNode } from "react";
 import { CartItem, Product, ProductVariation } from "@/types";
 import { toast } from "sonner";
 import { useStore } from "../StoreContext";
-import { CartContext } from "./CartContext";
+import { CartContext, OrderType, DeliveryPlatform } from "./CartContext";
 import { CartCalculationService, SeniorDiscount, OtherDiscount, CartCalculations } from "@/services/cart/CartCalculationService";
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -13,6 +13,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [otherDiscount, setOtherDiscount] = useState<OtherDiscount | null>(null);
   const [totalDiners, setTotalDiners] = useState(1);
   const [storeId, setStoreId] = useState<string | null>(null);
+  
+  // Order type state
+  const [orderType, setOrderType] = useState<OrderType>('dine_in');
+  const [deliveryPlatform, setDeliveryPlatform] = useState<DeliveryPlatform | null>(null);
+  const [deliveryOrderNumber, setDeliveryOrderNumber] = useState('');
 
   useEffect(() => {
     if (currentStore?.id) {
@@ -140,11 +145,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateItemPrice = (itemIndex: number, price: number) => {
+    if (price < 0) return;
+
+    const newItems = [...items];
+    newItems[itemIndex].price = price;
+    setItems(newItems);
+    console.log("CartContext: Updated price for item", {
+      product: newItems[itemIndex].product.name,
+      newPrice: price
+    });
+    toast.success(`Price updated for ${newItems[itemIndex].product.name}`);
+  };
+
   const clearCart = () => {
     setItems([]);
     setSeniorDiscounts([]);
     setOtherDiscount(null);
     setTotalDiners(1);
+    // Reset order type state when clearing cart
+    setOrderType('dine_in');
+    setDeliveryPlatform(null);
+    setDeliveryOrderNumber('');
     toast.info('Cart cleared');
     console.log("CartContext: Cart cleared");
   };
@@ -164,13 +186,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
         addItem,
         removeItem,
         updateQuantity,
+        updateItemPrice,
         clearCart,
         subtotal: calculations.grossSubtotal,
         tax: calculations.adjustedVAT,
         total: calculations.finalTotal,
         itemCount,
         storeId,
-        // New discount management
+        // Order type management
+        orderType,
+        setOrderType,
+        deliveryPlatform,
+        setDeliveryPlatform,
+        deliveryOrderNumber,
+        setDeliveryOrderNumber,
+        // Discount management
         seniorDiscounts,
         otherDiscount,
         totalDiners,

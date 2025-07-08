@@ -10,6 +10,8 @@ import { PaymentDialog } from './PaymentDialog';
 import { CustomerSelector } from './CustomerSelector';
 import { DiscountDialog } from './DiscountDialog';
 import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
+import { OrderTypeSelector } from './OrderTypeSelector';
+import { EditableCartItem } from './EditableCartItem';
 import { Trash2, Plus, Minus, AlertTriangle } from 'lucide-react';
 import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
 import { useStore } from '@/contexts/StoreContext';
@@ -120,13 +122,29 @@ export default function CartView({
   };
 
   // Use centralized cart calculations from context
-  const { calculations, items: cartItems, seniorDiscounts: contextSeniorDiscounts, otherDiscount: contextOtherDiscount } = useCart();
+  const { 
+    calculations, 
+    items: cartItems, 
+    seniorDiscounts: contextSeniorDiscounts, 
+    otherDiscount: contextOtherDiscount,
+    orderType,
+    setOrderType,
+    deliveryPlatform,
+    setDeliveryPlatform,
+    deliveryOrderNumber,
+    setDeliveryOrderNumber,
+    updateItemPrice 
+  } = useCart();
   
   // Calculate the actual total with proper BIR-compliant calculations
   const actualTotal = calculations.finalTotal;
   const adjustedVAT = calculations.adjustedVAT;
   
-  const canCheckout = items.length > 0 && isShiftActive && !isValidating && !validationMessage;
+  // Validation for online delivery orders
+  const isDeliveryOrderValid = orderType === 'dine_in' || 
+    (orderType === 'online_delivery' && deliveryPlatform && deliveryOrderNumber.trim());
+  
+  const canCheckout = items.length > 0 && isShiftActive && !isValidating && !validationMessage && isDeliveryOrderValid;
 
   return (
     <div className="flex flex-col h-full space-y-4 max-h-screen overflow-hidden">
@@ -147,6 +165,18 @@ export default function CartView({
         </div>
       )}
 
+      {/* Order Type Selector */}
+      <div className="flex-shrink-0">
+        <OrderTypeSelector
+          orderType={orderType}
+          onOrderTypeChange={setOrderType}
+          deliveryPlatform={deliveryPlatform}
+          onDeliveryPlatformChange={setDeliveryPlatform}
+          deliveryOrderNumber={deliveryOrderNumber}
+          onDeliveryOrderNumberChange={setDeliveryOrderNumber}
+        />
+      </div>
+
       {/* Cart Items - Scrollable */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <div className="space-y-2 h-full overflow-y-auto">
@@ -158,67 +188,18 @@ export default function CartView({
             const hasStockIssue = validation && !validation.isValid;
             
             return (
-              <Card key={`${item.productId}-${item.variationId || 'default'}-${index}`} 
-                    className={hasStockIssue ? 'border-amber-200 bg-amber-50' : ''}>
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">
-                        {item.product.name}
-                        {item.variation && (
-                          <span className="text-muted-foreground"> ({item.variation.name})</span>
-                        )}
-                      </h4>
-                      {hasStockIssue && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          Insufficient stock: {validation.insufficientItems.join(', ')}
-                        </p>
-                      )}
-                      <p className="text-sm text-muted-foreground">
-                        ₱{item.price.toFixed(2)} each
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(index, Math.max(1, item.quantity - 1))}
-                          disabled={item.quantity <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-8 text-center text-sm">{item.quantity}</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(index, item.quantity + 1)}
-                          disabled={hasStockIssue}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => removeItem(index)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-sm font-medium">
-                      ₱{(item.price * item.quantity).toFixed(2)}
-                    </span>
-                    {hasStockIssue && (
-                      <Badge variant="secondary" className="text-xs">
-                        Stock Issue
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <EditableCartItem
+                key={`${item.productId}-${item.variationId || 'default'}-${index}`}
+                item={item}
+                index={index}
+                quantity={item.quantity}
+                onUpdateQuantity={updateQuantity}
+                onUpdatePrice={updateItemPrice}
+                onRemoveItem={removeItem}
+                canEditPrice={orderType === 'online_delivery'}
+                hasStockIssue={hasStockIssue}
+                validation={validation}
+              />
             );
           })
         )}
@@ -313,8 +294,16 @@ export default function CartView({
               {!isShiftActive ? 'Start Shift to Checkout' : 
                isValidating ? 'Validating Stock...' :
                validationMessage ? 'Fix Stock Issues' :
+               !isDeliveryOrderValid ? 'Complete Delivery Info' :
                'Proceed to Payment'}
             </Button>
+            
+            {/* Delivery validation message */}
+            {orderType === 'online_delivery' && !isDeliveryOrderValid && (
+              <p className="text-xs text-center text-destructive">
+                Please select delivery platform and enter order number
+              </p>
+            )}
           </div>
         </div>
       )}

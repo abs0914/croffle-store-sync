@@ -61,6 +61,10 @@ export interface Transaction {
   status: 'completed' | 'voided';
   createdAt: string;
   receiptNumber: string;
+  // Order type information
+  orderType?: 'dine_in' | 'online_delivery';
+  deliveryPlatform?: 'grab_food' | 'food_panda';
+  deliveryOrderNumber?: string;
   // BIR Compliance Fields
   vat_sales?: number;
   vat_exempt_sales?: number;

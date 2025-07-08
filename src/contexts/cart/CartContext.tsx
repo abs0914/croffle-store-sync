@@ -3,17 +3,28 @@ import { createContext, useContext } from "react";
 import { CartItem, Product, ProductVariation } from "@/types";
 import { SeniorDiscount, OtherDiscount, CartCalculations } from "@/services/cart/CartCalculationService";
 
+export type OrderType = 'dine_in' | 'online_delivery';
+export type DeliveryPlatform = 'grab_food' | 'food_panda';
+
 export interface CartState {
   items: CartItem[];
   addItem: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   removeItem: (itemIndex: number) => void;
   updateQuantity: (itemIndex: number, quantity: number) => void;
+  updateItemPrice: (itemIndex: number, price: number) => void;
   clearCart: () => void;
   subtotal: number;
   tax: number;
   total: number;
   itemCount: number;
   storeId: string | null;
+  // Order type management
+  orderType: OrderType;
+  setOrderType: (orderType: OrderType) => void;
+  deliveryPlatform: DeliveryPlatform | null;
+  setDeliveryPlatform: (platform: DeliveryPlatform | null) => void;
+  deliveryOrderNumber: string;
+  setDeliveryOrderNumber: (orderNumber: string) => void;
   // Discount management
   seniorDiscounts: SeniorDiscount[];
   otherDiscount: OtherDiscount | null;
@@ -28,12 +39,20 @@ const initialState: CartState = {
   addItem: () => {},
   removeItem: () => {},
   updateQuantity: () => {},
+  updateItemPrice: () => {},
   clearCart: () => {},
   subtotal: 0,
   tax: 0,
   total: 0,
   itemCount: 0,
   storeId: null,
+  // Order type defaults
+  orderType: 'dine_in',
+  setOrderType: () => {},
+  deliveryPlatform: null,
+  setDeliveryPlatform: () => {},
+  deliveryOrderNumber: '',
+  setDeliveryOrderNumber: () => {},
   seniorDiscounts: [],
   otherDiscount: null,
   totalDiners: 1,
