@@ -9,8 +9,8 @@ import { RefreshCw, Download, Calendar, TrendingUp } from 'lucide-react';
 import { Store } from '@/types';
 
 interface AdminReportsHeaderProps {
-  reportType: 'sales' | 'customers' | 'expenses';
-  setReportType: (type: 'sales' | 'customers' | 'expenses') => void;
+  reportType: 'sales' | 'profit-loss' | 'expenses';
+  setReportType: (type: 'sales' | 'profit-loss' | 'expenses') => void;
   dateRange: { from: string; to: string };
   setDateRange: (range: { from: string; to: string }) => void;
   storeFilter: string;
@@ -68,7 +68,7 @@ export const AdminReportsHeader: React.FC<AdminReportsHeaderProps> = ({
         <Tabs value={reportType} onValueChange={(value) => setReportType(value as any)}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
-            <TabsTrigger value="customers">Customer Analytics</TabsTrigger>
+            <TabsTrigger value="profit-loss">Profit & Loss</TabsTrigger>
             <TabsTrigger value="expenses">Expense Analytics</TabsTrigger>
           </TabsList>
         </Tabs>

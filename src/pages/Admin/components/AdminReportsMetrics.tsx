@@ -16,7 +16,7 @@ interface ReportMetrics {
 
 interface AdminReportsMetricsProps {
   metrics: ReportMetrics;
-  reportType: 'sales' | 'customers' | 'expenses';
+  reportType: 'sales' | 'profit-loss' | 'expenses';
 }
 
 export const AdminReportsMetrics: React.FC<AdminReportsMetricsProps> = ({
@@ -53,31 +53,31 @@ export const AdminReportsMetrics: React.FC<AdminReportsMetricsProps> = ({
           }
         ];
 
-      case 'customers':
+      case 'profit-loss':
         return [
           {
-            title: 'Total Customers',
-            value: (metrics.totalCustomers || 0).toLocaleString(),
-            icon: Users,
-            color: 'text-blue-600'
-          },
-          {
-            title: 'Total Lifetime Value',
+            title: 'Total Profit',
             value: `₱${metrics.totalRevenue.toFixed(2)}`,
             icon: DollarSign,
             color: 'text-green-600'
           },
           {
-            title: 'Average Customer Value',
-            value: `₱${metrics.averageOrderValue.toFixed(2)}`,
+            title: 'Profit Margin',
+            value: `${metrics.averageOrderValue.toFixed(1)}%`,
             icon: TrendingUp,
+            color: 'text-blue-600'
+          },
+          {
+            title: 'Top Performing Store',
+            value: metrics.topPerformingStore || 'N/A',
+            icon: Users,
             color: 'text-purple-600'
           },
           {
-            title: 'Top Store by Customers',
-            value: metrics.topPerformingStore || 'N/A',
-            icon: Users,
-            color: 'text-orange-600'
+            title: 'Profitability Status',
+            value: metrics.totalRevenue > 0 ? 'Profitable' : 'Loss',
+            icon: metrics.totalRevenue > 0 ? TrendingUp : AlertTriangle,
+            color: metrics.totalRevenue > 0 ? 'text-green-600' : 'text-red-600'
           }
         ];
 

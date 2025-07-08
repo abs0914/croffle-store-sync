@@ -8,7 +8,7 @@ import { AdminExpenseReportContent } from './AdminExpenseReportContent';
 
 interface AdminReportsContentProps {
   reportData: any;
-  reportType: 'sales' | 'customers' | 'expenses';
+  reportType: 'sales' | 'profit-loss' | 'expenses';
   isLoading: boolean;
   stores: Store[];
 }
@@ -120,12 +120,12 @@ export const AdminReportsContent: React.FC<AdminReportsContentProps> = ({
     </div>
   );
 
-  const renderCustomerReport = () => (
+  const renderProfitLossReport = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Customers by Store</CardTitle>
-          <CardDescription>Customer distribution across stores</CardDescription>
+          <CardTitle>Revenue vs Cost Breakdown</CardTitle>
+          <CardDescription>Revenue, cost, and profit by store</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -133,8 +133,10 @@ export const AdminReportsContent: React.FC<AdminReportsContentProps> = ({
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="storeName" />
               <YAxis />
-              <Tooltip />
-              <Bar dataKey="totalCustomers" fill="#8884d8" />
+              <Tooltip formatter={(value) => [`₱${Number(value).toFixed(2)}`]} />
+              <Bar dataKey="revenue" fill="#00C49F" name="Revenue" />
+              <Bar dataKey="cost" fill="#FF8042" name="Cost" />
+              <Bar dataKey="profit" fill="#8884d8" name="Profit" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -142,18 +144,37 @@ export const AdminReportsContent: React.FC<AdminReportsContentProps> = ({
 
       <Card>
         <CardHeader>
-          <CardTitle>Customer Growth</CardTitle>
-          <CardDescription>New customer acquisition over time</CardDescription>
+          <CardTitle>Company vs Franchise Profit</CardTitle>
+          <CardDescription>Profit comparison by ownership type</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={reportData.customerGrowth}>
+            <BarChart data={reportData.ownershipBreakdown}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="ownershipType" />
+              <YAxis />
+              <Tooltip formatter={(value) => [`₱${Number(value).toFixed(2)}`, 'Profit']} />
+              <Bar dataKey="profit" fill="#8884d8" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Daily Profit Trends</CardTitle>
+          <CardDescription>Daily profit and loss over the selected period</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={reportData.profitByDate}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="newCustomers" stroke="#8884d8" name="New Customers" />
-              <Line type="monotone" dataKey="totalCustomers" stroke="#82ca9d" name="Total Customers" />
+              <Tooltip formatter={(value) => [`₱${Number(value).toFixed(2)}`]} />
+              <Line type="monotone" dataKey="revenue" stroke="#00C49F" name="Revenue" />
+              <Line type="monotone" dataKey="cost" stroke="#FF8042" name="Cost" />
+              <Line type="monotone" dataKey="profit" stroke="#8884d8" name="Profit" />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
@@ -161,24 +182,24 @@ export const AdminReportsContent: React.FC<AdminReportsContentProps> = ({
 
       <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle>Store Performance</CardTitle>
-          <CardDescription>Customer metrics by store</CardDescription>
+          <CardTitle>Product Profitability</CardTitle>
+          <CardDescription>Most profitable products by margin</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {reportData.storeBreakdown.map((store: any, index: number) => (
+            {reportData.productProfitability.slice(0, 5).map((product: any, index: number) => (
               <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div>
-                  <h4 className="font-medium">{store.storeName}</h4>
+                  <h4 className="font-medium">{product.name}</h4>
                   <div className="flex gap-4 text-sm text-gray-600 mt-1">
-                    <span>Total: {store.totalCustomers}</span>
-                    <span>Active: {store.activeCustomers}</span>
-                    <span>New: {store.newCustomers}</span>
+                    <span>Revenue: ₱{product.revenue.toFixed(2)}</span>
+                    <span>Cost: ₱{product.cost.toFixed(2)}</span>
+                    <span>Margin: {product.margin.toFixed(1)}%</span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">₱{store.averageLifetimeValue.toFixed(2)}</p>
-                  <p className="text-xs text-gray-500">Avg Lifetime Value</p>
+                  <p className="font-semibold">₱{product.profit.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500">Profit</p>
                 </div>
               </div>
             ))}
@@ -192,8 +213,8 @@ export const AdminReportsContent: React.FC<AdminReportsContentProps> = ({
   switch (reportType) {
     case 'sales':
       return renderSalesReport();
-    case 'customers':
-      return renderCustomerReport();
+    case 'profit-loss':
+      return renderProfitLossReport();
     case 'expenses':
       return <AdminExpenseReportContent reportData={reportData} />;
     default:

@@ -70,27 +70,40 @@ interface CustomerReportData {
   }>;
 }
 
-interface PerformanceReportData {
-  storePerformance: Array<{
+interface ProfitLossReportData {
+  storeBreakdown: Array<{
     storeId: string;
     storeName: string;
     revenue: number;
-    transactions: number;
-    customers: number;
-    products: number;
-    efficiency: number;
+    cost: number;
+    profit: number;
+    margin: number;
   }>;
-  trends: Array<{
-    date: string;
-    efficiency: number;
+  ownershipBreakdown: Array<{
+    ownershipType: string;
     revenue: number;
+    cost: number;
+    profit: number;
+  }>;
+  profitByDate: Array<{
+    date: string;
+    revenue: number;
+    cost: number;
+    profit: number;
+  }>;
+  productProfitability: Array<{
+    name: string;
+    revenue: number;
+    cost: number;
+    profit: number;
+    margin: number;
   }>;
 }
 
-type ReportData = SalesReportData | InventoryReportData | CustomerReportData | PerformanceReportData;
+type ReportData = SalesReportData | InventoryReportData | CustomerReportData | ProfitLossReportData;
 
 export const useAdminReportsData = (
-  reportType: 'sales' | 'customers' | 'expenses',
+  reportType: 'sales' | 'profit-loss' | 'expenses',
   dateRange: { from: string; to: string },
   storeFilter: string,
   ownershipFilter: 'all' | 'company_owned' | 'franchise'
@@ -135,8 +148,8 @@ export const useAdminReportsData = (
         case 'sales':
           await fetchSalesReport();
           break;
-        case 'customers':
-          await fetchCustomerReport();
+        case 'profit-loss':
+          await fetchProfitLossReport();
           break;
         case 'expenses':
           await fetchExpenseReportData();
@@ -231,66 +244,106 @@ export const useAdminReportsData = (
     }
   };
 
-  const fetchCustomerReport = async () => {
+  const fetchProfitLossReport = async () => {
     let filteredStores = stores;
     if (ownershipFilter !== 'all') {
       filteredStores = stores.filter(s => s.ownership_type === (ownershipFilter === 'franchise' ? 'franchisee' : ownershipFilter));
     }
     const storeIds = storeFilter === 'all' ? filteredStores.map(s => s.id) : [storeFilter];
     
-    const { data: customers, error: customersError } = await supabase
-      .from('customers')
+    // Fetch transactions with items
+    const { data: transactions, error } = await supabase
+      .from('transactions')
       .select(`
         *,
-        stores:store_id(name)
+        stores:store_id(name, ownership_type)
       `)
-      .in('store_id', storeIds);
-
-    if (customersError) throw customersError;
-
-    const { data: transactions, error: transactionsError } = await supabase
-      .from('transactions')
-      .select('customer_id, total, created_at, store_id')
       .in('store_id', storeIds)
       .gte('created_at', `${dateRange.from}T00:00:00`)
-      .lte('created_at', `${dateRange.to}T23:59:59`);
+      .lte('created_at', `${dateRange.to}T23:59:59`)
+      .order('created_at', { ascending: false });
 
-    if (transactionsError) throw transactionsError;
+    if (error) throw error;
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    // Fetch product costs
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('id, name, cost')
+      .in('store_id', storeIds);
 
+    if (productsError) throw productsError;
+
+    const productCostMap: Record<string, number> = {};
+    products?.forEach(product => {
+      productCostMap[product.id] = product.cost || 0;
+    });
+
+    // Calculate profit by store
     const storeBreakdown = stores.map(store => {
-      const storeCustomers = customers?.filter(c => c.store_id === store.id) || [];
       const storeTransactions = transactions?.filter(t => t.store_id === store.id) || [];
-      
-      const activeCustomers = storeCustomers.filter(c => 
-        storeTransactions.some(t => t.customer_id === c.id && new Date(t.created_at) > thirtyDaysAgo)
-      ).length;
+      let revenue = 0;
+      let cost = 0;
 
-      const newCustomers = storeCustomers.filter(c => 
-        new Date(c.created_at!) > new Date(dateRange.from)
-      ).length;
-
-      const totalSpent = storeTransactions.reduce((sum, t) => sum + t.total, 0);
-      const averageLifetimeValue = storeCustomers.length > 0 ? totalSpent / storeCustomers.length : 0;
+      storeTransactions.forEach(tx => {
+        const items = typeof tx.items === 'string' ? JSON.parse(tx.items) : tx.items;
+        items?.forEach((item: any) => {
+          const itemRevenue = item.totalPrice || (item.price * item.quantity);
+          const itemCost = (productCostMap[item.productId] || 0) * item.quantity;
+          revenue += itemRevenue;
+          cost += itemCost;
+        });
+      });
 
       return {
         storeId: store.id,
         storeName: store.name,
-        totalCustomers: storeCustomers.length,
-        activeCustomers,
-        newCustomers,
-        averageLifetimeValue
+        revenue,
+        cost,
+        profit: revenue - cost,
+        margin: revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0
       };
     });
 
-    const customerGrowth = generateCustomerGrowth(customers || [], dateRange);
+    // Calculate ownership breakdown
+    const ownershipBreakdown = [
+      {
+        ownershipType: 'Company Owned',
+        revenue: storeBreakdown
+          .filter(s => stores.find(st => st.id === s.storeId)?.ownership_type === 'company_owned')
+          .reduce((sum, s) => sum + s.revenue, 0),
+        cost: storeBreakdown
+          .filter(s => stores.find(st => st.id === s.storeId)?.ownership_type === 'company_owned')
+          .reduce((sum, s) => sum + s.cost, 0),
+        profit: storeBreakdown
+          .filter(s => stores.find(st => st.id === s.storeId)?.ownership_type === 'company_owned')
+          .reduce((sum, s) => sum + s.profit, 0)
+      },
+      {
+        ownershipType: 'Franchise',
+        revenue: storeBreakdown
+          .filter(s => stores.find(st => st.id === s.storeId)?.ownership_type === 'franchisee')
+          .reduce((sum, s) => sum + s.revenue, 0),
+        cost: storeBreakdown
+          .filter(s => stores.find(st => st.id === s.storeId)?.ownership_type === 'franchisee')
+          .reduce((sum, s) => sum + s.cost, 0),
+        profit: storeBreakdown
+          .filter(s => stores.find(st => st.id === s.storeId)?.ownership_type === 'franchisee')
+          .reduce((sum, s) => sum + s.profit, 0)
+      }
+    ];
+
+    // Generate daily profit trends
+    const profitByDate = generateProfitTrends(transactions || [], productCostMap, dateRange);
+
+    // Calculate product profitability
+    const productProfitability = generateProductProfitability(transactions || [], productCostMap);
 
     setReportData({
       storeBreakdown,
-      customerGrowth
-    } as CustomerReportData);
+      ownershipBreakdown,
+      profitByDate,
+      productProfitability
+    } as ProfitLossReportData);
   };
 
 
@@ -335,21 +388,21 @@ export const useAdminReportsData = (
           growthRate: 0
         };
       }
-      case 'customers': {
-        const data = reportData as CustomerReportData;
-        const totalCustomers = data.storeBreakdown.reduce((sum, s) => sum + s.totalCustomers, 0);
-        const totalRevenue = data.storeBreakdown.reduce((sum, s) => sum + (s.averageLifetimeValue * s.totalCustomers), 0);
-        const topStore = data.storeBreakdown.reduce((top, store) => 
-          store.totalCustomers > top.totalCustomers ? store : top, data.storeBreakdown[0] || { storeName: '', totalCustomers: 0 }
+      case 'profit-loss': {
+        const data = reportData as ProfitLossReportData;
+        const totalRevenue = data.storeBreakdown.reduce((sum: number, s: any) => sum + s.revenue, 0);
+        const totalCost = data.storeBreakdown.reduce((sum: number, s: any) => sum + s.cost, 0);
+        const totalProfit = totalRevenue - totalCost;
+        const topStore = data.storeBreakdown.reduce((top: any, store: any) => 
+          store.profit > top.profit ? store : top, data.storeBreakdown[0] || { storeName: '', profit: 0 }
         );
         
         return {
-          totalRevenue,
+          totalRevenue: totalProfit,
           totalTransactions: 0,
-          averageOrderValue: totalCustomers > 0 ? totalRevenue / totalCustomers : 0,
+          averageOrderValue: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0, // Profit margin
           topPerformingStore: topStore.storeName,
-          growthRate: calculateCustomerGrowthRate(data.customerGrowth),
-          totalCustomers
+          growthRate: 0
         };
       }
       default:
@@ -468,13 +521,73 @@ const calculateGrowthRate = (dailyTrends: any[]) => {
   return firstHalfAvg > 0 ? ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100 : 0;
 };
 
-const calculateCustomerGrowthRate = (customerGrowth: any[]) => {
-  if (customerGrowth.length < 2) return 0;
+const generateProfitTrends = (transactions: any[], productCostMap: Record<string, number>, dateRange: { from: string; to: string }) => {
+  const days = [];
+  const start = new Date(dateRange.from);
+  const end = new Date(dateRange.to);
   
-  const start = customerGrowth[0]?.totalCustomers || 0;
-  const end = customerGrowth[customerGrowth.length - 1]?.totalCustomers || 0;
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split('T')[0];
+    const dayTransactions = transactions.filter(t => 
+      t.created_at.startsWith(dateStr)
+    );
+    
+    let revenue = 0;
+    let cost = 0;
+    
+    dayTransactions.forEach(tx => {
+      const items = typeof tx.items === 'string' ? JSON.parse(tx.items) : tx.items;
+      items?.forEach((item: any) => {
+        revenue += item.totalPrice || (item.price * item.quantity);
+        cost += (productCostMap[item.productId] || 0) * item.quantity;
+      });
+    });
+    
+    days.push({
+      date: dateStr,
+      revenue,
+      cost,
+      profit: revenue - cost
+    });
+  }
   
-  return start > 0 ? ((end - start) / start) * 100 : 0;
+  return days;
+};
+
+const generateProductProfitability = (transactions: any[], productCostMap: Record<string, number>) => {
+  const productMap = new Map();
+  
+  transactions.forEach(transaction => {
+    if (transaction.items) {
+      const items = typeof transaction.items === 'string' ? JSON.parse(transaction.items) : transaction.items;
+      items?.forEach((item: any) => {
+        const key = item.productId || item.name || 'Unknown Product';
+        const revenue = item.totalPrice || (item.price * item.quantity);
+        const cost = (productCostMap[item.productId] || 0) * item.quantity;
+        
+        if (productMap.has(key)) {
+          const existing = productMap.get(key);
+          existing.revenue += revenue;
+          existing.cost += cost;
+        } else {
+          productMap.set(key, {
+            name: item.name || 'Unknown Product',
+            revenue,
+            cost
+          });
+        }
+      });
+    }
+  });
+  
+  return Array.from(productMap.values())
+    .map((product: any) => ({
+      ...product,
+      profit: product.revenue - product.cost,
+      margin: product.revenue > 0 ? ((product.revenue - product.cost) / product.revenue) * 100 : 0
+    }))
+    .sort((a, b) => b.profit - a.profit)
+    .slice(0, 10);
 };
 
 const calculatePerformanceGrowthRate = (trends: any[]) => {

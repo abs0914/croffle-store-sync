@@ -6,7 +6,7 @@ import { AdminReportsContent } from './components/AdminReportsContent';
 import { useAdminReportsData } from './hooks/useAdminReportsData';
 
 export default function AdminReports() {
-  const [reportType, setReportType] = useState<'sales' | 'customers' | 'expenses'>('sales');
+  const [reportType, setReportType] = useState<'sales' | 'profit-loss' | 'expenses'>('sales');
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
