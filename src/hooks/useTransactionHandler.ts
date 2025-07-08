@@ -7,6 +7,7 @@ import { Store } from "@/types";
 import { ShiftType } from "@/types";
 import { Customer } from "@/types";
 import { usePOSInventoryValidation } from "@/hooks/pos/usePOSInventoryValidation";
+import { useCart } from "@/contexts/cart/CartContext";
 
 export interface SeniorDiscount {
   id: string;
@@ -40,6 +41,7 @@ export const useTransactionHandler = (storeId: string) => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>([]);
   const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | null>(null);
+  const [totalDiners, setTotalDiners] = useState(1);
   
   // Legacy discount fields for backward compatibility
   const [discount, setDiscount] = useState(0);
@@ -47,13 +49,23 @@ export const useTransactionHandler = (storeId: string) => {
   const [discountIdNumber, setDiscountIdNumber] = useState<string>('');
 
   const { validateCartItems, processCartInventoryDeduction } = usePOSInventoryValidation(storeId);
+  const { applyDiscounts } = useCart();
 
   const handleApplyMultipleDiscounts = useCallback((
     newSeniorDiscounts: SeniorDiscount[], 
-    newOtherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }
+    newOtherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string },
+    newTotalDiners: number = 1
   ) => {
     setSeniorDiscounts(newSeniorDiscounts);
     setOtherDiscount(newOtherDiscount || null);
+    setTotalDiners(newTotalDiners);
+    
+    // Synchronize with cart context for proper calculation display
+    applyDiscounts(
+      newSeniorDiscounts,
+      newOtherDiscount || null,
+      newTotalDiners
+    );
     
     // Calculate total discount for legacy compatibility
     const totalSeniorDiscount = newSeniorDiscounts.reduce((sum, d) => sum + d.discountAmount, 0);
@@ -71,7 +83,7 @@ export const useTransactionHandler = (storeId: string) => {
       setDiscountType('');
       setDiscountIdNumber('');
     }
-  }, []);
+  }, [applyDiscounts]);
 
   // Legacy function for backward compatibility
   const handleApplyDiscount = useCallback((
@@ -244,10 +256,14 @@ export const useTransactionHandler = (storeId: string) => {
     setSelectedCustomer(null);
     setSeniorDiscounts([]);
     setOtherDiscount(null);
+    setTotalDiners(1);
     setDiscount(0);
     setDiscountType('');
     setDiscountIdNumber('');
-  }, []);
+    
+    // Reset cart discounts too
+    applyDiscounts([], null, 1);
+  }, [applyDiscounts]);
 
   return {
     completedTransaction,
@@ -258,6 +274,7 @@ export const useTransactionHandler = (storeId: string) => {
     discountIdNumber,
     seniorDiscounts,
     otherDiscount,
+    totalDiners,
     handleApplyDiscount,
     handleApplyMultipleDiscounts,
     handlePaymentComplete,
