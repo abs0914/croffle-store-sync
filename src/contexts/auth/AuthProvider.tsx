@@ -111,7 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             authLog('🔐 Mapping user in auth state change...');
             const mappedUser = await mapSupabaseUser(newSession.user);
             authLog('🔐 Mapped user result:', mappedUser);
+            authLog('🔐 Setting user in auth context...');
             setUser(mappedUser);
+            authLog('🔐 User set in auth context successfully');
             setIsLoading(false);
             
             // Setup token refresh for the new session
@@ -132,7 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const mappedUser = await mapSupabaseUser(currentSession.user);
         authLog('🔐 Mapped user from existing session:', mappedUser);
         setSession(currentSession);
+        authLog('🔐 Setting user from existing session...');
         setUser(mappedUser);
+        authLog('🔐 User set from existing session successfully');
         
         // Setup token refresh
         setupTokenRefresh(currentSession);

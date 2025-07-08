@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/auth';
 import { useRolePermissions } from '@/contexts/RolePermissionsContext';
 import { RolePermissions } from '@/types/rolePermissions';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +21,7 @@ export function RoleBasedRouteGuard({
   showAccessDenied = true
 }: RoleBasedRouteGuardProps) {
   const { canAccessRoute, userRole, hasPermission } = useRolePermissions();
+  const { isLoading } = useAuth();
 
   const hasAccess = canAccessRoute(requiredPermission);
   
@@ -28,8 +30,18 @@ export function RoleBasedRouteGuard({
     userRole,
     requiredPermission,
     hasAccess,
-    hasUserManagement: hasPermission('user_management')
+    hasUserManagement: hasPermission('user_management'),
+    isLoading
   });
+
+  // Show loading state while auth is being processed
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!hasAccess) {
     if (!showAccessDenied) {
