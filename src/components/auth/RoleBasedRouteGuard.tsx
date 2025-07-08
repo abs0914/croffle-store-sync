@@ -19,9 +19,17 @@ export function RoleBasedRouteGuard({
   fallbackPath = '/dashboard',
   showAccessDenied = true
 }: RoleBasedRouteGuardProps) {
-  const { canAccessRoute, userRole } = useRolePermissions();
+  const { canAccessRoute, userRole, hasPermission } = useRolePermissions();
 
   const hasAccess = canAccessRoute(requiredPermission);
+  
+  // Debug logging
+  console.log('🔐 RoleBasedRouteGuard Debug:', {
+    userRole,
+    requiredPermission,
+    hasAccess,
+    hasUserManagement: hasPermission('user_management')
+  });
 
   if (!hasAccess) {
     if (!showAccessDenied) {
