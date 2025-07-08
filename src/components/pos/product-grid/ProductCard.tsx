@@ -1,14 +1,14 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Product, Category } from "@/types";
+import { UnifiedProduct } from "@/services/product/unifiedProductService";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProductCardProps {
-  product: Product;
+  product: UnifiedProduct;
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
-  onClick: (product: Product) => void;
+  onClick: (product: UnifiedProduct) => void;
 }
 
 export default function ProductCard({ 

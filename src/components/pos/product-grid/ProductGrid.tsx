@@ -1,7 +1,8 @@
 
 import { useState } from "react";
 import { AlertCircle } from "lucide-react";
-import { Product, Category, ProductVariation } from "@/types";
+import { Category, ProductVariation } from "@/types";
+import { UnifiedProduct } from "@/services/product/unifiedProductService";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -18,11 +19,11 @@ import ProductVariationsList from "./ProductVariationsList";
 import { useProductFilters } from "@/hooks/product/useProductFilters";
 
 interface ProductGridProps {
-  products: Product[];
+  products: UnifiedProduct[];
   categories: Category[];
   activeCategory: string;
   setActiveCategory: (category: string) => void;
-  addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
+  addItemToCart: (product: UnifiedProduct, quantity?: number, variation?: ProductVariation) => void;
   isShiftActive: boolean;
   isLoading: boolean;
   storeId?: string;
@@ -39,13 +40,13 @@ export default function ProductGrid({
   storeId
 }: ProductGridProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<UnifiedProduct | null>(null);
   const [productVariations, setProductVariations] = useState<ProductVariation[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoadingVariations, setIsLoadingVariations] = useState(false);
   
   // Handle product selection
-  const handleProductClick = async (product: Product) => {
+  const handleProductClick = async (product: UnifiedProduct) => {
     console.log("ProductGrid: Product clicked", {
       productName: product.name,
       productId: product.id,
