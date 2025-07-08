@@ -2607,9 +2607,14 @@ export type Database = {
           cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string
+          display_order: number | null
+          group_selection_type: string | null
           id: string
+          ingredient_group_id: string | null
+          ingredient_group_name: string | null
           ingredient_name: string | null
           inventory_stock_id: string
+          is_optional: boolean | null
           purchase_unit: string | null
           quantity: number
           recipe_id: string
@@ -2622,9 +2627,14 @@ export type Database = {
           cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string
+          display_order?: number | null
+          group_selection_type?: string | null
           id?: string
+          ingredient_group_id?: string | null
+          ingredient_group_name?: string | null
           ingredient_name?: string | null
           inventory_stock_id: string
+          is_optional?: boolean | null
           purchase_unit?: string | null
           quantity: number
           recipe_id: string
@@ -2637,9 +2647,14 @@ export type Database = {
           cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string
+          display_order?: number | null
+          group_selection_type?: string | null
           id?: string
+          ingredient_group_id?: string | null
+          ingredient_group_name?: string | null
           ingredient_name?: string | null
           inventory_stock_id?: string
+          is_optional?: boolean | null
           purchase_unit?: string | null
           quantity?: number
           recipe_id?: string
@@ -2685,6 +2700,7 @@ export type Database = {
           cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string | null
+          display_order: number | null
           group_selection_type:
             | Database["public"]["Enums"]["ingredient_group_selection_type"]
             | null
@@ -2708,6 +2724,7 @@ export type Database = {
           cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
+          display_order?: number | null
           group_selection_type?:
             | Database["public"]["Enums"]["ingredient_group_selection_type"]
             | null
@@ -2731,6 +2748,7 @@ export type Database = {
           cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
+          display_order?: number | null
           group_selection_type?:
             | Database["public"]["Enums"]["ingredient_group_selection_type"]
             | null

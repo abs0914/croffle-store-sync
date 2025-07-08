@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Save, ArrowLeft, RefreshCw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { EnhancedRecipeBasicInfoForm } from './EnhancedRecipeBasicInfoForm';
-import { RecipeIngredientsForm } from './RecipeIngredientsForm';
+import { EnhancedRecipeIngredientsForm } from './EnhancedRecipeIngredientsForm';
 import { RecipeInstructionsForm } from './RecipeInstructionsForm';
 import { RecipeDeploymentInfo } from './RecipeDeploymentInfo';
 import { UnifiedRecipeItem } from '@/hooks/admin/useUnifiedRecipeState';
@@ -190,7 +190,7 @@ export function UnifiedRecipeEditDialog({
               </TabsContent>
 
               <TabsContent value="ingredients" className="mt-0 h-full">
-                <RecipeIngredientsForm
+                <EnhancedRecipeIngredientsForm
                   ingredients={ingredients}
                   onChange={setIngredients}
                   storeId={isRecipe ? item.store_id : undefined}
