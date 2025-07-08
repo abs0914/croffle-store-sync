@@ -15,7 +15,7 @@ import {
   Zap,
   AlertTriangle
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   fetchUnifiedProducts, 
   toggleProductAvailability,
@@ -23,6 +23,9 @@ import {
 } from '@/services/product/unifiedProductService';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
+import { useOptimizedMutation } from '@/hooks/useOptimizedDataFetch';
+import { supabase } from '@/integrations/supabase/client';
+import { useEffect } from 'react';
 
 interface StoreCatalogTabProps {
   storeId: string;
@@ -31,24 +34,64 @@ interface StoreCatalogTabProps {
 export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: products = [], isLoading, refetch } = useQuery({
-    queryKey: ['store-catalog', storeId],
+    queryKey: ['unified-products', storeId],
     queryFn: () => fetchUnifiedProducts(storeId),
     enabled: !!storeId,
+    staleTime: 30 * 1000, // 30 seconds for fresh data
+    gcTime: 2 * 60 * 1000, // 2 minutes cache
     refetchInterval: 30000, // Refresh every 30 seconds for inventory status
   });
 
-  const handleToggleAvailability = async (productId: string, currentAvailability: boolean) => {
-    try {
-      const success = await toggleProductAvailability(productId, !currentAvailability);
-      if (success) {
-        refetch();
-      }
-    } catch (error) {
-      console.error('Error toggling product availability:', error);
-      toast.error('Failed to update product availability');
+  // Real-time subscription for product updates
+  useEffect(() => {
+    if (!storeId) return;
+
+    const channel = supabase
+      .channel('products-changes-catalog')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: `store_id=eq.${storeId}`
+        },
+        () => {
+          // Invalidate cache when products are updated
+          queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [storeId, queryClient]);
+
+  // Optimized mutation for toggling product availability
+  const { mutate: toggleAvailability } = useOptimizedMutation(
+    async ({ productId, newStatus }: { productId: string; newStatus: boolean }) => {
+      const success = await toggleProductAvailability(productId, newStatus);
+      if (!success) throw new Error('Failed to toggle product availability');
+      return success;
+    },
+    {
+      onSuccess: () => {
+        toast.success('Product availability updated successfully');
+      },
+      onError: (error) => {
+        console.error('Error toggling product availability:', error);
+        toast.error('Failed to update product availability');
+      },
+      invalidateQueries: [['unified-products', storeId]]
     }
+  );
+
+  const handleToggleAvailability = async (productId: string, currentAvailability: boolean) => {
+    toggleAvailability({ productId, newStatus: !currentAvailability });
   };
 
   const filteredProducts = products.filter(product => {
@@ -154,7 +197,7 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
               <EyeOff className="h-4 w-4" />
               Unavailable Only
             </Button>
-            <Button onClick={() => refetch()} variant="outline" className="flex items-center gap-2">
+            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] })} variant="outline" className="flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
               Refresh
             </Button>

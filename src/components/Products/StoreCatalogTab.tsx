@@ -21,6 +21,8 @@ import { fetchUnifiedProducts, toggleProductAvailability, UnifiedProduct } from 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
+import { useOptimizedDataFetch, useOptimizedMutation } from '@/hooks/useOptimizedDataFetch';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface StoreCatalogTabProps {
   storeId: string;
@@ -28,8 +30,7 @@ interface StoreCatalogTabProps {
 
 export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   const { user, hasPermission } = useAuth();
-  const [products, setProducts] = useState<UnifiedProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
   const [editingProduct, setEditingProduct] = useState<UnifiedProduct | null>(null);
@@ -37,44 +38,100 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   
   const canEditPrices = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
 
-  useEffect(() => {
-    if (storeId) {
-      loadProducts();
+  // Optimized data fetching with React Query
+  const {
+    data: products = [],
+    isLoading: loading,
+    error: productsError
+  } = useOptimizedDataFetch<UnifiedProduct[]>(
+    ['unified-products', storeId],
+    () => fetchUnifiedProducts(storeId),
+    {
+      enabled: !!storeId,
+      cacheConfig: {
+        staleTime: 30 * 1000, // 30 seconds for fresh data
+        cacheTime: 2 * 60 * 1000, // 2 minutes
+      }
     }
-  }, [storeId]);
+  );
 
-  const loadProducts = async () => {
-    setLoading(true);
-    try {
-      const productsData = await fetchUnifiedProducts(storeId);
-      setProducts(productsData);
-    } catch (error) {
-      console.error('Error loading products:', error);
-      toast.error('Failed to load products');
-    } finally {
-      setLoading(false);
+  // Real-time subscription for product updates
+  useEffect(() => {
+    if (!storeId) return;
+
+    const channel = supabase
+      .channel('products-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'products',
+          filter: `store_id=eq.${storeId}`
+        },
+        () => {
+          // Invalidate cache when products are updated
+          queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [storeId, queryClient]);
+
+  // Optimized mutation for toggling product availability
+  const { mutate: toggleAvailability } = useOptimizedMutation(
+    async ({ productId, newStatus }: { productId: string; newStatus: boolean }) => {
+      const success = await toggleProductAvailability(productId, newStatus);
+      if (!success) throw new Error('Failed to toggle product availability');
+      return success;
+    },
+    {
+      onSuccess: () => {
+        toast.success('Product availability updated successfully');
+      },
+      onError: (error) => {
+        console.error('Error toggling product availability:', error);
+        toast.error('Failed to update product availability');
+      },
+      invalidateQueries: [['unified-products', storeId]]
     }
-  };
+  );
 
   const handleToggleAvailability = async (productId: string, currentStatus: boolean) => {
-    try {
-      const success = await toggleProductAvailability(productId, !currentStatus);
-      if (success) {
-        setProducts(prev => prev.map(product => 
-          product.id === productId 
-            ? { ...product, is_active: !currentStatus }
-            : product
-        ));
-      }
-    } catch (error) {
-      console.error('Error toggling product availability:', error);
-    }
+    toggleAvailability({ productId, newStatus: !currentStatus });
   };
 
   const handleEditPrice = (product: UnifiedProduct) => {
     setEditingProduct(product);
     setEditPrice(product.price?.toString() || '0');
   };
+
+  // Optimized mutation for updating product price
+  const { mutate: updatePrice } = useOptimizedMutation(
+    async ({ productId, newPrice }: { productId: string; newPrice: number }) => {
+      const { error } = await supabase
+        .from('products')
+        .update({ price: newPrice })
+        .eq('id', productId);
+
+      if (error) throw error;
+      return true;
+    },
+    {
+      onSuccess: () => {
+        setEditingProduct(null);
+        toast.success('Price updated successfully');
+      },
+      onError: (error) => {
+        console.error('Error updating price:', error);
+        toast.error('Failed to update price');
+      },
+      invalidateQueries: [['unified-products', storeId]]
+    }
+  );
 
   const handleSavePrice = async () => {
     if (!editingProduct) return;
@@ -85,26 +142,7 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from('products')
-        .update({ price: newPrice })
-        .eq('id', editingProduct.id);
-
-      if (error) throw error;
-
-      setProducts(prev => prev.map(product => 
-        product.id === editingProduct.id 
-          ? { ...product, price: newPrice }
-          : product
-      ));
-
-      setEditingProduct(null);
-      toast.success('Price updated successfully');
-    } catch (error) {
-      console.error('Error updating price:', error);
-      toast.error('Failed to update price');
-    }
+    updatePrice({ productId: editingProduct.id, newPrice });
   };
 
   const filteredProducts = products.filter(product => {
@@ -232,7 +270,7 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
         >
           Unavailable Only
         </Button>
-        <Button onClick={loadProducts} variant="outline" size="sm">
+        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] })} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
