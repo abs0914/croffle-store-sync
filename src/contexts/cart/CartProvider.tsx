@@ -19,6 +19,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [deliveryPlatform, setDeliveryPlatform] = useState<DeliveryPlatform | null>(null);
   const [deliveryOrderNumber, setDeliveryOrderNumber] = useState('');
 
+  // Debug order type changes
+  const handleSetOrderType = (newOrderType: OrderType) => {
+    console.log("CartContext: Order type changing", { 
+      from: orderType, 
+      to: newOrderType, 
+      itemsCount: items.length,
+      itemsData: items.map(i => ({ name: i.product.name, qty: i.quantity }))
+    });
+    setOrderType(newOrderType);
+  };
+
   useEffect(() => {
     if (currentStore?.id) {
       setStoreId(currentStore.id);
@@ -163,12 +174,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setSeniorDiscounts([]);
     setOtherDiscount(null);
     setTotalDiners(1);
-    // Reset order type state when clearing cart
-    setOrderType('dine_in');
-    setDeliveryPlatform(null);
-    setDeliveryOrderNumber('');
+    // DON'T reset order type when clearing cart - preserve user's selection
+    // setOrderType('dine_in');
+    // setDeliveryPlatform(null);
+    // setDeliveryOrderNumber('');
     toast.info('Cart cleared');
-    console.log("CartContext: Cart cleared");
+    console.log("CartContext: Cart cleared - preserving order type:", orderType);
   };
 
   const applyDiscounts = (newSeniorDiscounts: SeniorDiscount[], newOtherDiscount?: OtherDiscount | null, newTotalDiners: number = 1) => {
@@ -195,7 +206,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         storeId,
         // Order type management
         orderType,
-        setOrderType,
+        setOrderType: handleSetOrderType,
         deliveryPlatform,
         setDeliveryPlatform,
         deliveryOrderNumber,

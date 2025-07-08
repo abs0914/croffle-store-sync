@@ -22,9 +22,32 @@ export function CartItemsList({
   removeItem,
   getItemValidation
 }: CartItemsListProps) {
+  // Debug logging to track what data we receive
+  console.log('CartItemsList: Render with data', {
+    itemsLength: items?.length || 0,
+    itemsArray: items,
+    isTransitioning,
+    orderType,
+    actualItems: items?.map(item => ({ 
+      id: item.productId, 
+      name: item.product?.name,
+      quantity: item.quantity,
+      price: item.price 
+    }))
+  });
+
   return (
     <div className="flex-1 min-h-0 overflow-hidden">
       <div className="space-y-2 h-full overflow-y-auto">
+        {/* Debug section - TEMPORARY */}
+        <div className="p-2 bg-yellow-100 border border-yellow-300 rounded text-xs">
+          <p><strong>DEBUG INFO:</strong></p>
+          <p>Items Length: {items?.length || 0}</p>
+          <p>Is Transitioning: {isTransitioning ? 'YES' : 'NO'}</p>
+          <p>Order Type: {orderType}</p>
+          <p>Items Data: {items ? JSON.stringify(items.map(i => ({ name: i.product?.name, qty: i.quantity }))) : 'NULL'}</p>
+        </div>
+
         {/* Show loading during transitions to prevent empty cart flicker */}
         {isTransitioning ? (
           <div className="text-center text-muted-foreground py-8">
@@ -33,10 +56,15 @@ export function CartItemsList({
               <span>Updating cart...</span>
             </div>
           </div>
-        ) : items?.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">Your cart is empty</p>
+        ) : !items || items.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            <p>Your cart is empty</p>
+            <p className="text-xs mt-2">Items array: {items ? 'Empty array' : 'NULL/undefined'}</p>
+          </div>
         ) : (
-          items?.map((item, index) => {
+          items.map((item, index) => {
+            console.log('CartItemsList: Rendering item', { item, index, orderType });
+            
             const validation = getItemValidation(item.productId, item.variationId);
             const hasStockIssue = validation && !validation.isValid;
             
@@ -54,7 +82,7 @@ export function CartItemsList({
                 validation={validation}
               />
             );
-          }) || []
+          })
         )}
       </div>
     </div>

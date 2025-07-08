@@ -65,7 +65,9 @@ export default function CartView({
     itemCount: cartItems?.length || 0,
     orderType,
     calculations: calculations.finalTotal,
-    seniorDiscountsCount: seniorDiscounts?.length || 0
+    seniorDiscountsCount: seniorDiscounts?.length || 0,
+    cartItemsRaw: cartItems,
+    isOrderTypeTransitioning
   });
 
   // Debug logging for cart items
