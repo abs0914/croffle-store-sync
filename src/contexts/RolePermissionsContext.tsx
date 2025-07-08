@@ -27,6 +27,8 @@ export function RolePermissionsProvider({ children }: { children: ReactNode }) {
   console.log('🔐 RolePermissionsProvider - User role:', userRole);
   console.log('🔐 RolePermissionsProvider - User exists:', !!user);
   console.log('🔐 RolePermissionsProvider - User role type:', typeof userRole);
+  console.log('🔐 RolePermissionsProvider - User.role direct access:', user?.role);
+  console.log('🔐 RolePermissionsProvider - User object keys:', user ? Object.keys(user) : 'no user');
   
   const checkPermission = (permission: keyof RolePermissions): boolean => {
     if (!userRole) return false;

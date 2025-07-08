@@ -38,7 +38,17 @@ export function RoleBasedRouteGuard({
 
   // Wait for authentication to complete AND user role to be fully loaded
   // This prevents race conditions where permissions are checked before role is available
-  if (isLoading || (user && !userRole)) {
+  // TEMPORARY FIX: For admin users, bypass the role check if userRole is null but user.role exists
+  const shouldBypassRoleCheck = user?.role === 'admin' && !userRole;
+  
+  if (isLoading || (user && !userRole && !shouldBypassRoleCheck)) {
+    console.log('🔐 RoleBasedRouteGuard - Loading state:', { 
+      isLoading, 
+      userExists: !!user, 
+      userRole, 
+      userRoleFromAuth: user?.role,
+      shouldBypassRoleCheck
+    });
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -46,7 +56,10 @@ export function RoleBasedRouteGuard({
     );
   }
 
-  if (!hasAccess) {
+  // If we're bypassing role check for admin, grant access
+  const finalHasAccess = shouldBypassRoleCheck ? true : hasAccess;
+
+  if (!finalHasAccess) {
     if (!showAccessDenied) {
       return <Navigate to={fallbackPath} replace />;
     }
