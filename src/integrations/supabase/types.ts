@@ -2555,6 +2555,51 @@ export type Database = {
           },
         ]
       }
+      recipe_components: {
+        Row: {
+          component_recipe_id: string | null
+          component_type: string | null
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          parent_recipe_id: string | null
+          quantity: number | null
+        }
+        Insert: {
+          component_recipe_id?: string | null
+          component_type?: string | null
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          parent_recipe_id?: string | null
+          quantity?: number | null
+        }
+        Update: {
+          component_recipe_id?: string | null
+          component_type?: string | null
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          parent_recipe_id?: string | null
+          quantity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_components_component_recipe_id_fkey"
+            columns: ["component_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_components_parent_recipe_id_fkey"
+            columns: ["parent_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_ingredients: {
         Row: {
           commissary_item_id: string | null
@@ -2722,6 +2767,7 @@ export type Database = {
       recipe_templates: {
         Row: {
           category_name: string | null
+          combo_rules: Json | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -2730,6 +2776,7 @@ export type Database = {
           instructions: string | null
           is_active: boolean | null
           name: string
+          recipe_type: string | null
           serving_size: number | null
           updated_at: string | null
           version: number | null
@@ -2737,6 +2784,7 @@ export type Database = {
         }
         Insert: {
           category_name?: string | null
+          combo_rules?: Json | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -2745,6 +2793,7 @@ export type Database = {
           instructions?: string | null
           is_active?: boolean | null
           name: string
+          recipe_type?: string | null
           serving_size?: number | null
           updated_at?: string | null
           version?: number | null
@@ -2752,6 +2801,7 @@ export type Database = {
         }
         Update: {
           category_name?: string | null
+          combo_rules?: Json | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -2760,6 +2810,7 @@ export type Database = {
           instructions?: string | null
           is_active?: boolean | null
           name?: string
+          recipe_type?: string | null
           serving_size?: number | null
           updated_at?: string | null
           version?: number | null
@@ -2828,6 +2879,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           category_name: string | null
+          combo_rules: Json | null
           cost_per_serving: number | null
           created_at: string
           description: string | null
@@ -2836,6 +2888,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           product_id: string
+          recipe_type: string | null
           rejection_reason: string | null
           serving_size: number | null
           store_id: string
@@ -2851,6 +2904,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           category_name?: string | null
+          combo_rules?: Json | null
           cost_per_serving?: number | null
           created_at?: string
           description?: string | null
@@ -2859,6 +2913,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           product_id: string
+          recipe_type?: string | null
           rejection_reason?: string | null
           serving_size?: number | null
           store_id: string
@@ -2874,6 +2929,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           category_name?: string | null
+          combo_rules?: Json | null
           cost_per_serving?: number | null
           created_at?: string
           description?: string | null
@@ -2882,6 +2938,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           product_id?: string
+          recipe_type?: string | null
           rejection_reason?: string | null
           serving_size?: number | null
           store_id?: string
