@@ -15,8 +15,13 @@ import { ArrowLeftIcon } from "lucide-react";
 export default function UsersPage() {
   const { currentStore, stores } = useStore();
   const { user } = useAuth();
-  const { hasPermission } = useRolePermissions();
+  const { hasPermission, userRole } = useRolePermissions();
   const canManageUsers = hasPermission('user_management');
+  
+  // Debug logging for permission state
+  console.log('🔐 UsersPage - canManageUsers:', canManageUsers);
+  console.log('🔐 UsersPage - user from auth:', user);
+  console.log('🔐 UsersPage - userRole from permissions:', userRole);
 
   // Note: Route protection is handled by RoleBasedRouteGuard in the routing configuration
   // No need for redundant permission check here
