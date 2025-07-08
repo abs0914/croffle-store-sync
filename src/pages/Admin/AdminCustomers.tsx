@@ -4,11 +4,20 @@ import { AdminCustomersHeader } from './components/AdminCustomersHeader';
 import { AdminCustomersMetrics } from './components/AdminCustomersMetrics';
 import { AdminCustomersList } from './components/AdminCustomersList';
 import { AdminCustomerBulkActions } from './components/AdminCustomerBulkActions';
+import { EditCustomerDialog } from './components/EditCustomerDialog';
+import { DeleteCustomerDialog } from './components/DeleteCustomerDialog';
+import { CustomerDetailsDialog } from './components/CustomerDetailsDialog';
 import { useAdminCustomersData } from './hooks/useAdminCustomersData';
+import { CustomerWithStats } from './types/adminTypes';
 
 export default function AdminCustomers() {
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  
+  // Dialog states
+  const [editCustomer, setEditCustomer] = useState<CustomerWithStats | null>(null);
+  const [deleteCustomer, setDeleteCustomer] = useState<CustomerWithStats | null>(null);
+  const [viewCustomer, setViewCustomer] = useState<CustomerWithStats | null>(null);
   
   const {
     customers,
@@ -47,6 +56,23 @@ export default function AdminCustomers() {
     await refreshCustomers();
   };
 
+  const handleViewDetails = (customer: CustomerWithStats) => {
+    setViewCustomer(customer);
+  };
+
+  const handleEditCustomer = (customer: CustomerWithStats) => {
+    setEditCustomer(customer);
+  };
+
+  const handleDeleteCustomer = (customer: CustomerWithStats) => {
+    setDeleteCustomer(customer);
+  };
+
+  const handleCustomerUpdated = () => {
+    refreshCustomers();
+    setSelectedCustomers([]);
+  };
+
   return (
     <div className="space-y-6">
       <AdminCustomersHeader 
@@ -80,6 +106,34 @@ export default function AdminCustomers() {
         onSelectAll={handleSelectAll}
         onRefresh={refreshCustomers}
         stores={stores}
+        onViewDetails={handleViewDetails}
+        onEditCustomer={handleEditCustomer}
+        onDeleteCustomer={handleDeleteCustomer}
+      />
+
+      {/* Customer Details Dialog */}
+      <CustomerDetailsDialog
+        customer={viewCustomer}
+        isOpen={!!viewCustomer}
+        onOpenChange={(open) => !open && setViewCustomer(null)}
+        stores={stores}
+      />
+
+      {/* Edit Customer Dialog */}
+      <EditCustomerDialog
+        customer={editCustomer}
+        isOpen={!!editCustomer}
+        onOpenChange={(open) => !open && setEditCustomer(null)}
+        onCustomerUpdated={handleCustomerUpdated}
+        stores={stores}
+      />
+
+      {/* Delete Customer Dialog */}
+      <DeleteCustomerDialog
+        customer={deleteCustomer}
+        isOpen={!!deleteCustomer}
+        onOpenChange={(open) => !open && setDeleteCustomer(null)}
+        onCustomerDeleted={handleCustomerUpdated}
       />
     </div>
   );

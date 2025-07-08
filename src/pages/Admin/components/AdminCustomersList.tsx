@@ -15,6 +15,9 @@ interface AdminCustomersListProps {
   onSelectAll: () => void;
   onRefresh: () => void;
   stores: Store[];
+  onViewDetails?: (customer: CustomerWithStats) => void;
+  onEditCustomer?: (customer: CustomerWithStats) => void;
+  onDeleteCustomer?: (customer: CustomerWithStats) => void;
 }
 
 export const AdminCustomersList: React.FC<AdminCustomersListProps> = ({
@@ -25,7 +28,10 @@ export const AdminCustomersList: React.FC<AdminCustomersListProps> = ({
   onSelectCustomer,
   onSelectAll,
   onRefresh,
-  stores
+  stores,
+  onViewDetails,
+  onEditCustomer,
+  onDeleteCustomer
 }) => {
   if (isLoading) {
     return (
@@ -70,6 +76,9 @@ export const AdminCustomersList: React.FC<AdminCustomersListProps> = ({
               isSelected={selectedCustomers.includes(customer.id)}
               onSelect={() => onSelectCustomer(customer.id)}
               stores={stores}
+              onViewDetails={onViewDetails}
+              onEditCustomer={onEditCustomer}
+              onDeleteCustomer={onDeleteCustomer}
             />
           ))}
         </div>
