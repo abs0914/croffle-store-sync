@@ -101,7 +101,7 @@ export function RecipeIngredientsForm({ ingredients, onChange, storeId }: Recipe
                 </SelectTrigger>
                 <SelectContent>
                   {inventoryStock
-                    .filter(stock => stock.id && stock.id.trim() !== '')
+                    .filter(stock => stock.id && stock.id.trim() !== '' && stock.item && stock.item.trim() !== '')
                     .map((stock) => (
                       <SelectItem key={stock.id} value={stock.id}>
                         {stock.item} ({stock.unit})
