@@ -49,7 +49,7 @@ export const checkProductAvailabilityByRecipe = async (
       return {
         productId: product.id,
         productName: product.product_name,
-        currentStatus: product.product_status || (product.is_available ? 'available' : 'out_of_stock'),
+        currentStatus: (product.product_status || (product.is_available ? 'available' : 'out_of_stock')) as any,
         suggestedStatus: 'available',
         reason: 'No recipe dependencies',
         canMake: true,
@@ -98,7 +98,7 @@ export const checkProductAvailabilityByRecipe = async (
     return {
       productId: product.id,
       productName: product.product_name,
-      currentStatus: product.product_status || (product.is_available ? 'available' : 'out_of_stock'),
+      currentStatus: (product.product_status || (product.is_available ? 'available' : 'out_of_stock')) as any,
       suggestedStatus,
       reason,
       canMake,

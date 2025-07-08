@@ -42,7 +42,7 @@ export const fetchProductCatalog = async (storeId: string): Promise<ProductCatal
       .order('display_order');
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as any;
   } catch (error) {
     console.error('Error fetching product catalog:', error);
     toast.error('Failed to fetch product catalog');
@@ -80,7 +80,7 @@ export const createProduct = async (
     await broadcastCacheInvalidation(productData.id, productData.store_id, 'INSERT');
 
     toast.success('Product created successfully');
-    return productData;
+    return productData as any;
   } catch (error) {
     console.error('Error creating product:', error);
     toast.error('Failed to create product');

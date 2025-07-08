@@ -2121,6 +2121,7 @@ export type Database = {
           is_available: boolean
           price: number
           product_name: string
+          product_status: string | null
           recipe_id: string | null
           store_id: string
           updated_at: string
@@ -2134,6 +2135,7 @@ export type Database = {
           is_available?: boolean
           price?: number
           product_name: string
+          product_status?: string | null
           recipe_id?: string | null
           store_id: string
           updated_at?: string
@@ -2147,6 +2149,7 @@ export type Database = {
           is_available?: boolean
           price?: number
           product_name?: string
+          product_status?: string | null
           recipe_id?: string | null
           store_id?: string
           updated_at?: string
