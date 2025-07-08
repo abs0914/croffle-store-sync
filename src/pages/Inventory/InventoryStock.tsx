@@ -9,7 +9,7 @@ import { AddStockItemForm } from "./components/inventoryStock/AddStockItemForm";
 import { EditStockItemForm } from "./components/inventoryStock/EditStockItemForm";
 import { StockAdjustmentModal } from "./components/inventoryStock/StockAdjustmentModal";
 import { StockTransferModal } from "./components/inventoryStock/StockTransferModal";
-import { ProactiveReorderingSystem } from "@/components/Inventory/components/ProactiveReorderingSystem";
+// Removed ProactiveReorderingSystem import as it was deleted
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 
@@ -159,7 +159,9 @@ export default function InventoryStock() {
         </TabsContent>
 
         <TabsContent value="reordering">
-          <ProactiveReorderingSystem />
+          <div className="text-center p-8 text-muted-foreground">
+            Proactive reordering system is not available in this simplified version.
+          </div>
         </TabsContent>
       </Tabs>
 

@@ -12,7 +12,7 @@ import {
   Bell,
   Settings
 } from 'lucide-react';
-import { SmartReorderingSystem } from './SmartReorderingSystem';
+// Removed SmartReorderingSystem import as it was deleted
 import { StockMovementTracker } from './StockMovementTracker';
 import { RealTimeInventorySync } from '@/services/inventory/realTimeInventorySync';
 import { RealTimeProductInventorySync } from '@/services/inventory/realTimeProductSync';
@@ -295,7 +295,9 @@ export function EnhancedInventoryDashboard({ storeId }: EnhancedInventoryDashboa
         </TabsContent>
 
         <TabsContent value="reordering">
-          <SmartReorderingSystem storeId={storeId} />
+          <div className="text-center p-8 text-muted-foreground">
+            Smart reordering system is not available in this simplified version.
+          </div>
         </TabsContent>
 
         <TabsContent value="movements">

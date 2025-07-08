@@ -8,11 +8,11 @@ import { getInventoryMetrics } from '@/services/storeInventory/storeMetricsServi
 import { useStore } from '@/contexts/StoreContext';
 import { InventoryStockList } from '@/pages/Inventory/components/inventoryStock/InventoryStockList';
 import { useInventoryStockData } from '@/pages/Inventory/components/inventoryStock/useInventoryStockData';
-import { AddStockItemModal } from '@/pages/Inventory/components/inventoryStock/modals/AddStockItemModal';
-import { EditStockItemModal } from '@/pages/Inventory/components/inventoryStock/modals/EditStockItemModal';
-import { StockAdjustmentModal } from '@/pages/Inventory/components/inventoryStock/modals/StockAdjustmentModal';
-import { StockTransferModal } from '@/pages/Inventory/components/inventoryStock/modals/StockTransferModal';
-import { DeleteConfirmationModal } from '@/pages/Inventory/components/inventoryStock/modals/DeleteConfirmationModal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { AddStockItemForm } from '@/pages/Inventory/components/inventoryStock/AddStockItemForm';
+import { EditStockItemForm } from '@/pages/Inventory/components/inventoryStock/EditStockItemForm';
+import { StockAdjustmentModal } from '@/pages/Inventory/components/inventoryStock/StockAdjustmentModal';
+import { StockTransferModal } from '@/pages/Inventory/components/inventoryStock/StockTransferModal';
 import { Input } from '@/components/ui/input';
 import { Search, Download, Upload } from 'lucide-react';
 
@@ -219,42 +219,73 @@ export default function Inventory() {
       </Card>
 
       {/* Modals */}
-      <AddStockItemModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={handleAddStockItem}
-        storeId={currentStore.id}
-      />
-
-      <EditStockItemModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSubmit={handleUpdateStockItem}
-        stockItem={currentStockItem}
-      />
-
-      <StockAdjustmentModal
-        isOpen={isStockModalOpen}
-        onClose={() => setIsStockModalOpen(false)}
-        onSubmit={handleStockAdjustment}
-        stockItem={currentStockItem}
-      />
-
-      {hasMultipleStores && (
-        <StockTransferModal
-          isOpen={isTransferModalOpen}
-          onClose={() => setIsTransferModalOpen(false)}
-          onSubmit={handleStockTransfer}
-          stockItem={currentStockItem}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <AddStockItemForm 
+          onSave={handleAddStockItem}
+          onCancel={() => setIsAddModalOpen(false)}
+          isLoading={false}
         />
+      </Dialog>
+
+      {currentStockItem && (
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <EditStockItemForm
+            stockItem={currentStockItem}
+            onUpdate={handleUpdateStockItem}
+            onCancel={() => setIsEditModalOpen(false)}
+            isLoading={false}
+          />
+        </Dialog>
       )}
 
-      <DeleteConfirmationModal
-        isOpen={isDeleteConfirmOpen}
-        onClose={() => setIsDeleteConfirmOpen(false)}
-        onConfirm={handleDeleteStockItem}
-        itemName={currentStockItem?.item || ''}
-      />
+      {currentStockItem && (
+        <Dialog open={isStockModalOpen} onOpenChange={setIsStockModalOpen}>
+          <StockAdjustmentModal
+            stockItem={currentStockItem}
+            onSave={handleStockAdjustment}
+            onCancel={() => setIsStockModalOpen(false)}
+            isLoading={false}
+          />
+        </Dialog>
+      )}
+
+      {hasMultipleStores && currentStockItem && (
+        <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+          <StockTransferModal
+            stockItem={currentStockItem}
+            onTransfer={handleStockTransfer}
+            onCancel={() => setIsTransferModalOpen(false)}
+            isLoading={false}
+          />
+        </Dialog>
+      )}
+
+      {currentStockItem && (
+        <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Inventory Item</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{currentStockItem.item}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDeleteConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => handleDeleteStockItem(currentStockItem)}
+              >
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

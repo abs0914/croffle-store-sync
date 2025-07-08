@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { RealTimeAvailabilityDashboard } from '@/components/Inventory/components/RealTimeAvailabilityDashboard';
 import { ComboInventoryHandler } from '@/components/Inventory/components/ComboInventoryHandler';
-import { ProactiveReorderingSystem } from '@/components/Inventory/components/ProactiveReorderingSystem';
+// Removed ProactiveReorderingSystem import as it was deleted
 
 export const EnhancedInventoryDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('availability');
@@ -58,7 +58,9 @@ export const EnhancedInventoryDashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="reordering">
-          <ProactiveReorderingSystem />
+          <div className="text-center p-8 text-muted-foreground">
+            Proactive reordering system is not available in this simplified version.
+          </div>
         </TabsContent>
 
         <TabsContent value="analytics">
