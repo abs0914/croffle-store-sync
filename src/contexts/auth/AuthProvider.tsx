@@ -2,7 +2,8 @@ import React, { createContext, useContext, ReactNode, useEffect, useRef } from "
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session, AuthState } from "./types";
 import { useAuthState } from "./useAuthState";
-import { checkPermission, checkStoreAccess, mapSupabaseUser } from "./utils";
+import { checkPermission, checkStoreAccess } from "./utils";
+import { mapSupabaseUser } from "./user-mapping-utils";
 import { UserRole } from "@/types";
 
 // Helper function to control logging based on environment
@@ -108,16 +109,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (newSession?.user) {
           // Use setTimeout to avoid recursive auth state changes
           setTimeout(async () => {
-            authLog('🔐 Mapping user in auth state change...');
-            const mappedUser = await mapSupabaseUser(newSession.user);
-            authLog('🔐 Mapped user result:', mappedUser);
-            authLog('🔐 Setting user in auth context...');
-            setUser(mappedUser);
-            authLog('🔐 User set in auth context successfully');
-            setIsLoading(false);
-            
-            // Setup token refresh for the new session
-            setupTokenRefresh(newSession);
+            try {
+              authLog('🔐 Mapping user in auth state change...');
+              const mappedUser = await mapSupabaseUser(newSession.user);
+              authLog('🔐 Mapped user result:', mappedUser);
+              authLog('🔐 Setting user in auth context...');
+              setUser(mappedUser);
+              authLog('🔐 User set in auth context successfully. User role:', mappedUser.role);
+              setIsLoading(false);
+              
+              // Setup token refresh for the new session
+              setupTokenRefresh(newSession);
+            } catch (error) {
+              authError('Error mapping user in auth state change:', error);
+              setIsLoading(false);
+            }
           }, 0);
         } else {
           setUser(null);

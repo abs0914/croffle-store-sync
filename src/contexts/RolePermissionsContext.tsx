@@ -17,11 +17,12 @@ const RolePermissionsContext = createContext<RolePermissionsContextType>({
 });
 
 export function RolePermissionsProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   
   const userRole = user?.role || null;
   
   // Debug logging for role permissions context
+  console.log('🔐 RolePermissionsProvider - Auth isLoading:', isLoading);
   console.log('🔐 RolePermissionsProvider - User object:', user);
   console.log('🔐 RolePermissionsProvider - User role:', userRole);
   console.log('🔐 RolePermissionsProvider - User exists:', !!user);
