@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { hasPermission, RolePermissions } from '@/types/rolePermissions';
 
@@ -18,6 +18,14 @@ const RolePermissionsContext = createContext<RolePermissionsContextType>({
 
 export function RolePermissionsProvider({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
+  const [forceUpdate, setForceUpdate] = useState(0);
+  
+  // Force update when user changes
+  useEffect(() => {
+    if (user) {
+      setForceUpdate(prev => prev + 1);
+    }
+  }, [user?.id, user?.role]);
   
   // Get user role directly from auth user object
   const userRole = user?.role || null;
