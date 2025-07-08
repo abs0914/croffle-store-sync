@@ -18,23 +18,8 @@ export default function UsersPage() {
   const { hasPermission } = useRolePermissions();
   const canManageUsers = hasPermission('user_management');
 
-  // Route protection: Only users with user_management permission can access this page
-  if (user && !canManageUsers) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900">Access Denied</h2>
-        <p className="text-gray-600 text-center max-w-md">
-          You don't have permission to access user management. Only administrators and owners can manage users.
-        </p>
-        <Button asChild variant="outline">
-          <Link to="/dashboard">
-            <ArrowLeftIcon className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Link>
-        </Button>
-      </div>
-    );
-  }
+  // Note: Route protection is handled by RoleBasedRouteGuard in the routing configuration
+  // No need for redundant permission check here
 
   // Custom hooks
   const { users, isLoading, error, refetch } = useUsersData();

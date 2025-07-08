@@ -34,6 +34,11 @@ export function RolePermissionsProvider({ children }: { children: ReactNode }) {
   };
 
   const canAccessRoute = (routePermission: keyof RolePermissions): boolean => {
+    // Don't grant access if still loading or if no role is available
+    if (isLoading || !userRole) {
+      console.log('🔐 RolePermissionsProvider - Denying access: loading or no role', { isLoading, userRole });
+      return false;
+    }
     return checkPermission(routePermission);
   };
 

@@ -21,7 +21,7 @@ export function RoleBasedRouteGuard({
   showAccessDenied = true
 }: RoleBasedRouteGuardProps) {
   const { canAccessRoute, userRole, hasPermission } = useRolePermissions();
-  const { isLoading } = useAuth();
+  const { isLoading, user } = useAuth();
 
   const hasAccess = canAccessRoute(requiredPermission);
   
@@ -31,11 +31,14 @@ export function RoleBasedRouteGuard({
     requiredPermission,
     hasAccess,
     hasUserManagement: hasPermission('user_management'),
-    isLoading
+    isLoading,
+    userExists: !!user,
+    userRoleFromAuth: user?.role
   });
 
-  // Show loading state while auth is being processed
-  if (isLoading) {
+  // Wait for authentication to complete AND user role to be fully loaded
+  // This prevents race conditions where permissions are checked before role is available
+  if (isLoading || (user && !userRole)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

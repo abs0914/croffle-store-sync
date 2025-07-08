@@ -135,17 +135,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       if (currentSession?.user) {
-        authLog('Existing session found');
-        authLog('🔐 Mapping user from existing session...');
-        const mappedUser = await mapSupabaseUser(currentSession.user);
-        authLog('🔐 Mapped user from existing session:', mappedUser);
-        setSession(currentSession);
-        authLog('🔐 Setting user from existing session...');
-        setUser(mappedUser);
-        authLog('🔐 User set from existing session successfully');
-        
-        // Setup token refresh
-        setupTokenRefresh(currentSession);
+        try {
+          authLog('Existing session found');
+          authLog('🔐 Mapping user from existing session...');
+          const mappedUser = await mapSupabaseUser(currentSession.user);
+          authLog('🔐 Mapped user from existing session:', mappedUser);
+          setSession(currentSession);
+          authLog('🔐 Setting user from existing session...');
+          setUser(mappedUser);
+          authLog('🔐 User set from existing session successfully. Role:', mappedUser.role);
+          
+          // Setup token refresh
+          setupTokenRefresh(currentSession);
+        } catch (error) {
+          authError("Error mapping user from existing session:", error);
+        }
       } else {
         authLog('No existing session found');
       }
