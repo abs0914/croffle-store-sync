@@ -300,12 +300,20 @@ export default function MultipleSeniorDiscountSelector({
                     <p>• Senior citizens: {seniorDiscounts.filter(d => d.idNumber.trim() !== '').length}</p>
                     <p>• Per-person gross share: {formatCurrency(preview.perPersonGrossShare)}</p>
                     <p>• Per-senior VAT-exempt sale: {formatCurrency(preview.perSeniorVATExemptSale)}</p>
+                    <p>• Per-senior VAT exemption: {formatCurrency((preview as any).totalVATExemption / seniorDiscounts.filter(d => d.idNumber.trim() !== '').length || 0)}</p>
                     <p>• Per-senior discount (20%): {formatCurrency(preview.perSeniorDiscountAmount)}</p>
+                    <p>• Senior pays per person: {formatCurrency((preview as any).perSeniorPays || 0)}</p>
                   </div>
-                  <p className="text-sm mt-2">
-                    Total Senior Discount: 
-                    <span className="font-medium text-green-600"> -{formatCurrency(preview.totalSeniorDiscount)}</span>
-                  </p>
+                  <div className="mt-2 space-y-1 text-sm">
+                    <p>
+                      VAT Exemption: 
+                      <span className="font-medium text-blue-600"> -{formatCurrency((preview as any).totalVATExemption || 0)}</span>
+                    </p>
+                    <p>
+                      Senior Discount (20%): 
+                      <span className="font-medium text-green-600"> -{formatCurrency(preview.totalSeniorDiscount)}</span>
+                    </p>
+                  </div>
                 </>
               )}
               {discountMode === 'other' && (
@@ -323,7 +331,7 @@ export default function MultipleSeniorDiscountSelector({
               <p className="text-sm font-medium mt-2 pt-2 border-t">
                 Final Total: {formatCurrency(
                   discountMode === 'senior' 
-                    ? subtotal - preview.totalSeniorDiscount
+                    ? subtotal - ((preview as any).totalVATExemption || 0) - preview.totalSeniorDiscount
                     : subtotal - CartCalculationService.calculateCartTotals([], [], {
                         type: otherDiscountType,
                         amount: 0,
