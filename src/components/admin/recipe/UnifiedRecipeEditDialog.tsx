@@ -10,6 +10,7 @@ import { EnhancedRecipeBasicInfoForm } from './EnhancedRecipeBasicInfoForm';
 import { EnhancedRecipeIngredientsForm } from './EnhancedRecipeIngredientsForm';
 import { RecipeInstructionsForm } from './RecipeInstructionsForm';
 import { RecipeDeploymentInfo } from './RecipeDeploymentInfo';
+import { ComboManagement } from './ComboManagement';
 import { UnifiedRecipeItem } from '@/hooks/admin/useUnifiedRecipeState';
 
 interface UnifiedRecipeEditDialogProps {
@@ -172,9 +173,16 @@ export function UnifiedRecipeEditDialog({
 
         <div className="flex-1 min-h-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
+            <TabsList className={`grid w-full flex-shrink-0 ${
+              formData.recipe_type === 'combo' 
+                ? isTemplate ? 'grid-cols-5' : 'grid-cols-5' 
+                : isTemplate ? 'grid-cols-4' : 'grid-cols-4'
+            }`}>
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="ingredients">Ingredients</TabsTrigger>
+              {formData.recipe_type === 'combo' && (
+                <TabsTrigger value="combo">Combo Config</TabsTrigger>
+              )}
               <TabsTrigger value="instructions">Instructions</TabsTrigger>
               {isTemplate && <TabsTrigger value="deployment">Deployment</TabsTrigger>}
               {isRecipe && <TabsTrigger value="details">Details</TabsTrigger>}
@@ -197,6 +205,17 @@ export function UnifiedRecipeEditDialog({
                   isTemplate={isTemplate}
                 />
               </TabsContent>
+
+              {formData.recipe_type === 'combo' && (
+                <TabsContent value="combo" className="mt-0 h-full overflow-y-auto p-4">
+                  <ComboManagement
+                    formData={formData}
+                    onChange={setFormData}
+                    isTemplate={isTemplate}
+                    storeId={isRecipe ? item.store_id : undefined}
+                  />
+                </TabsContent>
+              )}
 
               <TabsContent value="instructions" className="mt-0 h-full overflow-y-auto p-4">
                 <RecipeInstructionsForm
