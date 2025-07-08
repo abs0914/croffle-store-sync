@@ -19,8 +19,18 @@ const RolePermissionsContext = createContext<RolePermissionsContextType>({
 export function RolePermissionsProvider({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
   
-  // TEMPORARY FIX: Directly use user.role if available, since the mapping seems to be working
+  // FIXED: Directly use user.role if available, since the mapping seems to be working
   const userRole = user?.role || null;
+  
+  // Enhanced debug logging
+  console.log('🔐 RolePermissionsProvider - Enhanced Debug:', {
+    isLoading,
+    userExists: !!user,
+    userRole,
+    userRoleType: typeof userRole,
+    userFromAuth: user,
+    directRoleAccess: user?.role
+  });
   
   // Debug logging for role permissions context
   console.log('🔐 RolePermissionsProvider - Auth isLoading:', isLoading);
@@ -32,8 +42,9 @@ export function RolePermissionsProvider({ children }: { children: ReactNode }) {
   console.log('🔐 RolePermissionsProvider - User object keys:', user ? Object.keys(user) : 'no user');
   
   const checkPermission = (permission: keyof RolePermissions): boolean => {
-    if (!userRole) return false;
-    return hasPermission(userRole, permission);
+    const hasPermissionResult = userRole ? hasPermission(userRole, permission) : false;
+    console.log(`🔐 Permission check: ${permission} for role ${userRole} = ${hasPermissionResult}`);
+    return hasPermissionResult;
   };
 
   const canAccessRoute = (routePermission: keyof RolePermissions): boolean => {
