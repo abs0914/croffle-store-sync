@@ -16,7 +16,8 @@ export default function UsersPage() {
   const { currentStore, stores } = useStore();
   const { user } = useAuth();
   const { hasPermission, userRole } = useRolePermissions();
-  const canManageUsers = hasPermission('user_management');
+  // TEMPORARY FIX: Force admin users to have user management permissions
+  const canManageUsers = user?.role === 'admin' || user?.role === 'owner' || hasPermission('user_management');
   
   // Debug logging for permission state
   console.log('🔐 UsersPage - canManageUsers:', canManageUsers);

@@ -110,20 +110,17 @@ export default function UserListView({
               </Button>
             )}
             
-            {/* Force button to show for admin users + debug */}
-            <Button 
-              size="sm" 
-              onClick={() => {
-                console.log('🔐 Add User button clicked! canManageUsers:', canManageUsers);
-                console.log('🔐 Button debug - user role:', (window as any).__user_role);
-                onAddUser();
-              }} 
-              disabled={isLoading} 
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              <PlusIcon className="h-4 w-4 mr-1" />
-              Add New User {canManageUsers ? '✓' : '✗'}
-            </Button>
+            {canManageUsers && (
+              <Button 
+                size="sm" 
+                onClick={onAddUser} 
+                disabled={isLoading} 
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <PlusIcon className="h-4 w-4 mr-1" />
+                Add New User
+              </Button>
+            )}
           </div>
         </CardHeader>
       </Card>
