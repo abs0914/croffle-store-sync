@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Save, ArrowLeft, RefreshCw, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { RecipeBasicInfoForm } from './RecipeBasicInfoForm';
+import { EnhancedRecipeBasicInfoForm } from './EnhancedRecipeBasicInfoForm';
 import { RecipeIngredientsForm } from './RecipeIngredientsForm';
 import { RecipeInstructionsForm } from './RecipeInstructionsForm';
 import { RecipeDeploymentInfo } from './RecipeDeploymentInfo';
@@ -46,6 +46,9 @@ export function UnifiedRecipeEditDialog({
         instructions: item.instructions || '',
         category_name: item.category_name || '',
         image_url: item.image_url || '',
+        images: item.images || [],
+        recipe_type: item.recipe_type || 'single',
+        combo_rules: item.combo_rules || undefined,
         yield_quantity: item.yield_quantity,
         serving_size: item.serving_size,
         is_active: item.is_active
@@ -63,9 +66,12 @@ export function UnifiedRecipeEditDialog({
         formData.name !== item.name ||
         formData.description !== item.description ||
         formData.instructions !== item.instructions ||
+        formData.recipe_type !== item.recipe_type ||
         formData.yield_quantity !== item.yield_quantity ||
         formData.serving_size !== item.serving_size ||
         formData.is_active !== item.is_active ||
+        JSON.stringify(formData.images || []) !== JSON.stringify(item.images || []) ||
+        JSON.stringify(formData.combo_rules) !== JSON.stringify(item.combo_rules) ||
         JSON.stringify(ingredients) !== JSON.stringify(item.ingredients || []);
       
       setIsDirty(hasChanges);
@@ -176,7 +182,7 @@ export function UnifiedRecipeEditDialog({
 
             <div className="flex-1 overflow-y-auto">
               <TabsContent value="basic" className="mt-0 h-full">
-                <RecipeBasicInfoForm
+                <EnhancedRecipeBasicInfoForm
                   formData={formData}
                   onChange={setFormData}
                   isTemplate={isTemplate}

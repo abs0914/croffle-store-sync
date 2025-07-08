@@ -11,6 +11,15 @@ export interface UnifiedRecipeItem {
   instructions?: string;
   category_name?: string;
   image_url?: string;
+  images?: any[];
+  recipe_type?: 'single' | 'combo' | 'component';
+  combo_rules?: {
+    pricing_matrix?: Array<{
+      primary_component: string;
+      secondary_component: string;
+      price: number;
+    }>;
+  };
   yield_quantity: number;
   serving_size: number;
   total_cost: number;
@@ -36,6 +45,7 @@ export interface UnifiedRecipeItem {
   
   // Relations
   ingredients?: any[];
+  components?: any[];
 }
 
 export interface UnifiedRecipeFilters {
@@ -79,9 +89,15 @@ export function useUnifiedRecipeState() {
       return (data || []).map(template => ({
         ...template,
         item_type: 'template' as const,
+        recipe_type: (template.recipe_type as 'single' | 'combo' | 'component') || 'single',
         deployment_count: template.deployed_recipes?.length || 0,
         deployed_stores: template.deployed_recipes?.map((r: any) => r.stores?.name).filter(Boolean) || [],
         ingredients: template.ingredients || [],
+        images: Array.isArray(template.images) ? template.images : 
+                (template.images ? JSON.parse(template.images as string) : []),
+        combo_rules: template.combo_rules ? 
+                    (typeof template.combo_rules === 'string' ? 
+                     JSON.parse(template.combo_rules) : template.combo_rules) : undefined,
         total_cost: 0, // Templates don't have computed costs
         cost_per_serving: 0
       }));
@@ -109,10 +125,16 @@ export function useUnifiedRecipeState() {
       return (data || []).map(recipe => ({
         ...recipe,
         item_type: 'recipe' as const,
+        recipe_type: (recipe.recipe_type as 'single' | 'combo' | 'component') || 'single',
         store_name: recipe.stores?.name,
         template_name: recipe.template?.name,
         template_version: recipe.template?.version,
-        ingredients: recipe.ingredients || []
+        ingredients: recipe.ingredients || [],
+        images: Array.isArray(recipe.images) ? recipe.images : 
+                (recipe.images ? JSON.parse(recipe.images as string) : []),
+        combo_rules: recipe.combo_rules ? 
+                    (typeof recipe.combo_rules === 'string' ? 
+                     JSON.parse(recipe.combo_rules) : recipe.combo_rules) : undefined
       }));
     },
     staleTime: 30000,
