@@ -19,7 +19,7 @@ export const AdminExpenseReportContent: React.FC<ExpenseReportContentProps> = ({
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
-              data={reportData.categoryBreakdown}
+              data={reportData.categoryBreakdown || []}
               cx="50%"
               cy="50%"
               outerRadius={80}
@@ -27,7 +27,7 @@ export const AdminExpenseReportContent: React.FC<ExpenseReportContentProps> = ({
               dataKey="amount"
               label={({ name, percentage }) => `${name} ${percentage}%`}
             >
-              {reportData.categoryBreakdown.map((_: any, index: number) => (
+              {(reportData.categoryBreakdown || []).map((_: any, index: number) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
@@ -44,7 +44,7 @@ export const AdminExpenseReportContent: React.FC<ExpenseReportContentProps> = ({
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={reportData.ownershipBreakdown}>
+          <BarChart data={reportData.ownershipBreakdown || []}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="ownershipType" />
             <YAxis />
@@ -62,7 +62,7 @@ export const AdminExpenseReportContent: React.FC<ExpenseReportContentProps> = ({
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={reportData.monthlyTrends}>
+          <LineChart data={reportData.monthlyTrends || []}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
             <YAxis />
@@ -81,7 +81,7 @@ export const AdminExpenseReportContent: React.FC<ExpenseReportContentProps> = ({
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={reportData.budgetComparison}>
+          <BarChart data={reportData.budgetComparison || []}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="category" />
             <YAxis />
@@ -100,7 +100,7 @@ export const AdminExpenseReportContent: React.FC<ExpenseReportContentProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {reportData.storeBreakdown.map((store: any, index: number) => (
+          {(reportData.storeBreakdown || []).map((store: any, index: number) => (
             <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div>
                 <h4 className="font-medium">{store.storeName}</h4>
@@ -118,6 +118,11 @@ export const AdminExpenseReportContent: React.FC<ExpenseReportContentProps> = ({
               </div>
             </div>
           ))}
+          {(!reportData.storeBreakdown || reportData.storeBreakdown.length === 0) && (
+            <div className="text-center py-8 text-gray-500">
+              No store expense data available
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
