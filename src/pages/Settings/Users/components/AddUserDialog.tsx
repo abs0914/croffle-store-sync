@@ -102,7 +102,7 @@ export default function AddUserDialog({ isOpen, onOpenChange, stores }: AddUserD
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>
