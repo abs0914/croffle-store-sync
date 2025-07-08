@@ -3876,6 +3876,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_user_role_permissions: {
+        Args: { user_role: Database["public"]["Enums"]["app_role"] }
+        Returns: string[]
+      }
       get_users_needing_sync: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3883,6 +3887,13 @@ export type Database = {
           email: string
           user_metadata: Json
         }[]
+      }
+      has_route_access: {
+        Args: {
+          user_role: Database["public"]["Enums"]["app_role"]
+          required_access: string
+        }
+        Returns: boolean
       }
       is_admin_or_owner: {
         Args: Record<PropertyKey, never>
@@ -3952,7 +3963,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "owner" | "manager" | "cashier"
+      app_role:
+        | "admin"
+        | "owner"
+        | "manager"
+        | "cashier"
+        | "stock_user"
+        | "production_user"
       delivery_order_status:
         | "for_delivery"
         | "partial_delivery"
@@ -4117,7 +4134,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "owner", "manager", "cashier"],
+      app_role: [
+        "admin",
+        "owner",
+        "manager",
+        "cashier",
+        "stock_user",
+        "production_user",
+      ],
       delivery_order_status: [
         "for_delivery",
         "partial_delivery",

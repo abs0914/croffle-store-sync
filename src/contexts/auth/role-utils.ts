@@ -19,9 +19,11 @@ export const checkPermission = (userRole: UserRole | undefined, requiredRole: Us
   if (!userRole) return false;
   
   const roleHierarchy: Record<UserRole, number> = {
-    admin: 4,
-    owner: 3,
-    manager: 2,
+    admin: 6,
+    owner: 5,
+    stock_user: 4,
+    manager: 3,
+    production_user: 2,
     cashier: 1
   };
   
@@ -119,6 +121,16 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
   const roleRoutes: Record<UserRole, string[]> = {
     admin: [...STORE_ROUTES, ...ADMIN_ROUTES], // Admin gets everything
     owner: [...STORE_ROUTES, ...ADMIN_ROUTES], // Owner gets everything
+    stock_user: [
+      ROUTE_PATHS.DASHBOARD,
+      ROUTE_PATHS.INVENTORY,
+      ROUTE_PATHS.ORDER_MANAGEMENT,
+      ROUTE_PATHS.EXPENSES,
+      ROUTE_PATHS.STOCK_ORDERS
+    ],
+    production_user: [
+      ROUTE_PATHS.DASHBOARD
+    ],
     manager: [
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,

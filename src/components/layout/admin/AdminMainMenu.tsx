@@ -17,65 +17,96 @@ import {
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ROUTE_PATHS } from "@/contexts/auth/role-utils";
+import { useRolePermissions } from "@/contexts/RolePermissionsContext";
 
-// OPTIMIZED ADMIN MENU STRUCTURE
+// ROLE-BASED ADMIN MENU STRUCTURE
 const menuItems = [
   {
     title: "Dashboard",
     icon: LayoutDashboard,
     href: ROUTE_PATHS.ADMIN_ROOT,
+    permission: 'dashboard' as const,
   },
   {
     title: "Stores",
     icon: Store,
     href: ROUTE_PATHS.ADMIN_STORES,
+    permission: 'settings' as const,
   },
   {
     title: "Recipes",
     icon: Receipt,
     href: ROUTE_PATHS.ADMIN_RECIPES,
+    permission: 'recipe_management' as const,
   },
   {
     title: "Commissary & Production",
     icon: Package,
+    permission: 'commissary_inventory' as const,
     items: [
-      { title: "Commissary Inventory", href: ROUTE_PATHS.ADMIN_COMMISSARY },
-      { title: "Production Management", href: ROUTE_PATHS.ADMIN_PRODUCTION },
+      { 
+        title: "Commissary Inventory", 
+        href: ROUTE_PATHS.ADMIN_COMMISSARY,
+        permission: 'commissary_inventory' as const,
+      },
+      { 
+        title: "Production Management", 
+        href: ROUTE_PATHS.ADMIN_PRODUCTION,
+        permission: 'production_management' as const,
+      },
     ],
   },
   {
     title: "Users",
     icon: Users,
+    permission: 'user_management' as const,
     items: [
-      { title: "All Users", href: ROUTE_PATHS.ADMIN_USERS },
-      { title: "Cashiers", href: ROUTE_PATHS.ADMIN_CASHIERS },
-      { title: "Managers", href: ROUTE_PATHS.ADMIN_MANAGERS },
+      { 
+        title: "All Users", 
+        href: ROUTE_PATHS.ADMIN_USERS,
+        permission: 'user_management' as const,
+      },
+      { 
+        title: "Cashiers", 
+        href: ROUTE_PATHS.ADMIN_CASHIERS,
+        permission: 'user_management' as const,
+      },
+      { 
+        title: "Managers", 
+        href: ROUTE_PATHS.ADMIN_MANAGERS,
+        permission: 'user_management' as const,
+      },
     ],
   },
   {
     title: "Orders",
     icon: ShoppingCart,
     href: ROUTE_PATHS.ADMIN_ORDER_MANAGEMENT,
+    permission: 'order_management' as const,
   },
   {
     title: "Expenses",
     icon: DollarSign,
     href: ROUTE_PATHS.ADMIN_EXPENSES,
+    permission: 'expenses' as const,
   },
   {
     title: "Customers",
     icon: Users,
     href: ROUTE_PATHS.ADMIN_CUSTOMERS,
+    permission: 'user_management' as const,
   },
   {
     title: "Reports",
     icon: FileText,
     href: ROUTE_PATHS.ADMIN_REPORTS,
+    permission: 'reports' as const,
   },
 ];
 
 export function AdminMainMenu() {
   const location = useLocation();
+  const { hasPermission } = useRolePermissions();
   const [openSections, setOpenSections] = React.useState<string[]>([]);
 
   const toggleSection = (title: string) => {
@@ -91,13 +122,29 @@ export function AdminMainMenu() {
            (href !== "/admin" && location.pathname.startsWith(href));
   };
 
-  const isActiveSectionItem = (items: { href: string }[]) => {
-    return items.some(item => isActiveLink(item.href));
+  const isActiveSectionItem = (items: { href: string; permission?: keyof import('@/types/rolePermissions').RolePermissions }[]) => {
+    return items.some(item => 
+      hasPermission(item.permission || 'dashboard') && isActiveLink(item.href)
+    );
   };
+
+  // Filter menu items based on user permissions
+  const visibleMenuItems = menuItems.filter(item => {
+    if (item.permission && !hasPermission(item.permission)) {
+      return false;
+    }
+    if (item.items) {
+      // Show section if user has access to at least one sub-item
+      return item.items.some(subItem => 
+        hasPermission(subItem.permission || 'dashboard')
+      );
+    }
+    return true;
+  });
 
   return (
     <nav className="space-y-2">
-      {menuItems.map((item) => {
+      {visibleMenuItems.map((item) => {
         if (item.items) {
           const isOpen = openSections.includes(item.title);
           const hasActiveChild = isActiveSectionItem(item.items);
@@ -121,7 +168,9 @@ export function AdminMainMenu() {
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pl-6 space-y-1">
-                {item.items.map((subItem) => (
+                {item.items
+                  .filter(subItem => hasPermission(subItem.permission || 'dashboard'))
+                  .map((subItem) => (
                   <Link
                     key={subItem.href}
                     to={subItem.href}
