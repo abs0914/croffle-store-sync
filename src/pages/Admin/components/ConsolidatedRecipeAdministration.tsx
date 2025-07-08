@@ -21,6 +21,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 import { useUnifiedRecipeState, UnifiedRecipeFilters, UnifiedRecipeItem } from '@/hooks/admin/useUnifiedRecipeState';
 import { UnifiedRecipeEditDialog } from '@/components/admin/recipe/UnifiedRecipeEditDialog';
+import { EnhancedRecipeFilters } from '@/components/admin/recipe/EnhancedRecipeFilters';
+import { RecipeTypeIndicator, RecipeComplexityIndicator } from '@/components/admin/recipe/RecipeTypeIndicator';
+import { ComponentRelationshipVisualization } from '@/components/admin/recipe/ComponentRelationshipVisualization';
 import { toast } from 'sonner';
 
 export function ConsolidatedRecipeAdministration() {
@@ -44,12 +47,14 @@ export function ConsolidatedRecipeAdministration() {
     status: 'all',
     store: 'all',
     category: 'all',
-    itemType: 'all'
+    itemType: 'all',
+    recipeType: 'all'
   });
 
   const [selectedItem, setSelectedItem] = useState<UnifiedRecipeItem | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('templates');
+  const [showRelationshipView, setShowRelationshipView] = useState(false);
 
   // Combine and filter data
   const allItems = [...templates, ...recipes];
@@ -66,6 +71,11 @@ export function ConsolidatedRecipeAdministration() {
     
     // Store filter (for recipes)
     if (filters.store !== 'all' && item.store_id !== filters.store) {
+      return false;
+    }
+    
+    // Recipe type filter
+    if (filters.recipeType !== 'all' && item.recipe_type !== filters.recipeType) {
       return false;
     }
     
@@ -333,7 +343,8 @@ export function ConsolidatedRecipeAdministration() {
                 status: 'all',
                 store: 'all',
                 category: 'all',
-                itemType: 'all'
+                itemType: 'all',
+                recipeType: 'all'
               })}
             >
               <Filter className="h-4 w-4 mr-2" />

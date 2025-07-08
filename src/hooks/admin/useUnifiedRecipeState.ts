@@ -3,6 +3,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Helper functions for cost calculations
+function calculateTotalCost(recipe: any, ingredients: any[]): number {
+  if (recipe.recipe_type === 'combo' && recipe.combo_rules?.pricing_matrix) {
+    // For combo recipes, sum up all component costs
+    return recipe.combo_rules.pricing_matrix.reduce((total: number, matrix: any) => {
+      return total + (matrix.price || 0);
+    }, 0);
+  }
+  
+  // For single/component recipes, sum ingredient costs
+  return ingredients.reduce((total, ingredient) => {
+    return total + ((ingredient.quantity || 0) * (ingredient.cost_per_unit || 0));
+  }, 0);
+}
+
+function calculateCostPerServing(recipe: any, ingredients: any[]): number {
+  const totalCost = calculateTotalCost(recipe, ingredients);
+  const servingSize = recipe.serving_size || 1;
+  return servingSize > 0 ? totalCost / servingSize : totalCost;
+}
+
 // Unified data types for both templates and recipes
 export interface UnifiedRecipeItem {
   id: string;
@@ -54,6 +75,7 @@ export interface UnifiedRecipeFilters {
   store: string;
   category: string;
   itemType: 'all' | 'template' | 'recipe';
+  recipeType: 'all' | 'single' | 'combo' | 'component';
 }
 
 /**
@@ -98,8 +120,8 @@ export function useUnifiedRecipeState() {
         combo_rules: template.combo_rules ? 
                     (typeof template.combo_rules === 'string' ? 
                      JSON.parse(template.combo_rules) : template.combo_rules) : undefined,
-        total_cost: 0, // Templates don't have computed costs
-        cost_per_serving: 0
+        total_cost: calculateTotalCost(template, template.ingredients || []),
+        cost_per_serving: calculateCostPerServing(template, template.ingredients || [])
       }));
     },
     staleTime: 30000,
@@ -199,7 +221,7 @@ export function useUnifiedRecipeState() {
     }
   });
 
-  // Template-Recipe Synchronization
+  // Enhanced Template-Recipe Synchronization for Combo Recipes
   const syncTemplateToRecipesMutation = useMutation({
     mutationFn: async ({ templateId, updates }: { templateId: string; updates: Partial<UnifiedRecipeItem> }) => {
       // Update template first
@@ -213,7 +235,7 @@ export function useUnifiedRecipeState() {
       // Find all deployed recipes using this template
       const { data: deployedRecipes, error: recipesError } = await supabase
         .from('recipes')
-        .select('id, store_id')
+        .select('id, store_id, recipe_type')
         .eq('template_id', templateId)
         .eq('is_active', true);
 
@@ -221,19 +243,35 @@ export function useUnifiedRecipeState() {
 
       // Update all deployed recipes with template changes
       if (deployedRecipes && deployedRecipes.length > 0) {
+        const baseUpdates = {
+          name: updates.name,
+          description: updates.description,
+          instructions: updates.instructions,
+          yield_quantity: updates.yield_quantity,
+          serving_size: updates.serving_size,
+          updated_at: new Date().toISOString()
+        };
+
+        // Add combo-specific updates
+        const comboUpdates = updates.recipe_type === 'combo' ? {
+          ...baseUpdates,
+          recipe_type: updates.recipe_type,
+          combo_rules: updates.combo_rules
+        } : baseUpdates;
+
         const { error: updateError } = await supabase
           .from('recipes')
-          .update({
-            name: updates.name,
-            description: updates.description,
-            instructions: updates.instructions,
-            yield_quantity: updates.yield_quantity,
-            serving_size: updates.serving_size,
-            updated_at: new Date().toISOString()
-          })
+          .update(comboUpdates)
           .in('id', deployedRecipes.map(r => r.id));
 
         if (updateError) throw updateError;
+
+        // If updating combo recipes, also sync ingredients
+        if (updates.recipe_type === 'combo' && updates.ingredients) {
+          for (const recipe of deployedRecipes) {
+            await syncComboIngredients(recipe.id, updates.ingredients);
+          }
+        }
       }
 
       return { templateId, affectedRecipes: deployedRecipes?.length || 0 };
@@ -317,6 +355,27 @@ export function useUnifiedRecipeState() {
     };
   }, [queryClient]);
 
+  // Helper function to sync combo ingredients
+  const syncComboIngredients = async (recipeId: string, ingredients: any[]) => {
+    // Delete existing ingredients
+    await supabase
+      .from('recipe_ingredients')
+      .delete()
+      .eq('recipe_id', recipeId);
+
+    // Insert new ingredients
+    if (ingredients.length > 0) {
+      await supabase
+        .from('recipe_ingredients')
+        .insert(
+          ingredients.map(ing => ({
+            recipe_id: recipeId,
+            ...ing
+          }))
+        );
+    }
+  };
+
   return {
     // Data
     templates: templatesQuery.data || [],
@@ -347,6 +406,10 @@ export function useUnifiedRecipeState() {
     // Refresh functions
     refetchTemplates: templatesQuery.refetch,
     refetchRecipes: recipesQuery.refetch,
-    refetchStores: storesQuery.refetch
+    refetchStores: storesQuery.refetch,
+    
+    // Helper functions
+    calculateTotalCost,
+    calculateCostPerServing
   };
 }
