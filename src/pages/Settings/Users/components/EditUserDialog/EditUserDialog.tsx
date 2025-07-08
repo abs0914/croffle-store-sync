@@ -5,6 +5,7 @@ import { updateAppUser } from "@/services/appUser";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { Store } from "@/types/store";
 import { useRolePermissions } from "@/contexts/RolePermissionsContext";
+import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -26,7 +27,9 @@ interface EditUserDialogProps {
 export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: EditUserDialogProps) {
   const queryClient = useQueryClient();
   const { hasPermission } = useRolePermissions();
-  const canManageUsers = hasPermission('user_management');
+  const { user: currentUser } = useAuth();
+  // TEMPORARY FIX: Force admin users to have user management permissions
+  const canManageUsers = currentUser?.role === 'admin' || currentUser?.role === 'owner' || hasPermission('user_management');
   
   const [activeTab, setActiveTab] = useState<string>("general");
   const [formData, setFormData] = useState<AppUserFormData>({

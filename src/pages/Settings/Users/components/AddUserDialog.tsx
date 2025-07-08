@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { AppUserFormData } from "@/types/appUser";
 import { UserRole } from "@/types/user";
 import { useRolePermissions } from "@/contexts/RolePermissionsContext";
+import { useAuth } from "@/contexts/auth";
 import UserFormFields from "./UserFormFields";
 import {
   Dialog,
@@ -28,11 +29,10 @@ interface AddUserDialogProps {
 export default function AddUserDialog({ isOpen, onOpenChange, stores }: AddUserDialogProps) {
   const queryClient = useQueryClient();
   const { hasPermission } = useRolePermissions();
+  const { user } = useAuth();
 
-  // Permission check - only users with user_management permission can create users
-  const canManageUsers = hasPermission('user_management');
-
-
+  // TEMPORARY FIX: Force admin users to have user management permissions
+  const canManageUsers = user?.role === 'admin' || user?.role === 'owner' || hasPermission('user_management');
 
   // Security check: Close dialog and show error if user doesn't have permission
   if (isOpen && !canManageUsers) {
