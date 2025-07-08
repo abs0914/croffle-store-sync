@@ -71,7 +71,9 @@ export default function MultipleSeniorDiscountSelector({
         amount: 0,
         idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
       };
-      const calculations = CartCalculationService.calculateCartTotals([], [], otherDiscountObj, 1);
+      // Create a mock cart item to calculate discount properly
+      const mockCartItems = [{ price: subtotal, quantity: 1, productId: 'mock', product: {} as any }];
+      const calculations = CartCalculationService.calculateCartTotals(mockCartItems, [], otherDiscountObj, 1);
       return {
         perPersonGrossShare: 0,
         perSeniorVATExemptSale: 0,
@@ -320,7 +322,7 @@ export default function MultipleSeniorDiscountSelector({
                 <p className="text-sm">
                   {otherDiscountType.toUpperCase()} Discount: 
                   <span className="font-medium text-green-600"> -{formatCurrency(
-                    CartCalculationService.calculateCartTotals([], [], {
+                    CartCalculationService.calculateCartTotals([{ price: subtotal, quantity: 1, productId: 'mock', product: {} as any }], [], {
                       type: otherDiscountType,
                       amount: 0,
                       idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
@@ -332,7 +334,7 @@ export default function MultipleSeniorDiscountSelector({
                 Final Total: {formatCurrency(
                   discountMode === 'senior' 
                     ? subtotal - ((preview as any).totalVATExemption || 0) - preview.totalSeniorDiscount
-                    : subtotal - CartCalculationService.calculateCartTotals([], [], {
+                    : subtotal - CartCalculationService.calculateCartTotals([{ price: subtotal, quantity: 1, productId: 'mock', product: {} as any }], [], {
                         type: otherDiscountType,
                         amount: 0,
                         idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined

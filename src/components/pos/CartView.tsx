@@ -129,7 +129,7 @@ export default function CartView({
   const canCheckout = items.length > 0 && isShiftActive && !isValidating && !validationMessage;
 
   return (
-    <div className="flex flex-col h-full space-y-4">
+    <div className="flex flex-col h-full space-y-4 max-h-screen overflow-hidden">
       <div className="flex items-center justify-between flex-shrink-0">
         <h3 className="text-lg font-semibold">Cart</h3>
         {items.length > 0 && (
@@ -225,9 +225,9 @@ export default function CartView({
         </div>
       </div>
 
-      {/* Bottom Section - Fixed */}
+      {/* Bottom Section - Fixed with better spacing */}
       {items.length > 0 && (
-        <div className="flex-shrink-0 space-y-4">
+        <div className="flex-shrink-0 space-y-3 pb-4">
           <Separator />
           
           {/* Customer Selection */}
@@ -303,7 +303,7 @@ export default function CartView({
           />
 
           {/* Action Buttons */}
-          <div className="space-y-2">
+          <div className="space-y-2 pt-2">
             <Button
               onClick={() => setIsPaymentDialogOpen(true)}
               className="w-full"
