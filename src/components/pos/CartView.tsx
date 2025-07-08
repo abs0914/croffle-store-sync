@@ -65,6 +65,21 @@ export default function CartView({
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string>('');
   
+  // Use centralized cart calculations from context
+  const { 
+    calculations, 
+    items: cartItems, 
+    seniorDiscounts: contextSeniorDiscounts, 
+    otherDiscount: contextOtherDiscount,
+    orderType,
+    setOrderType,
+    deliveryPlatform,
+    setDeliveryPlatform,
+    deliveryOrderNumber,
+    setDeliveryOrderNumber,
+    updateItemPrice 
+  } = useCart();
+
   const { 
     isValidating, 
     validateCartItems, 
@@ -75,12 +90,12 @@ export default function CartView({
   // Validate cart items when they change
   useEffect(() => {
     const validateCart = async () => {
-      if (items.length === 0) {
+      if (cartItems.length === 0) {
         setValidationMessage('');
         return;
       }
 
-      const isValid = await validateCartItems(items);
+      const isValid = await validateCartItems(cartItems);
       if (!isValid) {
         setValidationMessage('Some items have insufficient stock');
       } else {
@@ -89,7 +104,7 @@ export default function CartView({
     };
 
     validateCart();
-  }, [items, validateCartItems]);
+  }, [cartItems, validateCartItems]);
 
   const handlePaymentCompleteWithDeduction = async (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
@@ -106,7 +121,7 @@ export default function CartView({
     
     try {
       // Process inventory deductions first
-      const deductionSuccess = await processCartSale(items, tempTransactionId);
+      const deductionSuccess = await processCartSale(cartItems, tempTransactionId);
       if (!deductionSuccess) {
         toast.error('Failed to process inventory deductions');
         return;
@@ -120,21 +135,6 @@ export default function CartView({
       toast.error('Payment processing failed');
     }
   };
-
-  // Use centralized cart calculations from context
-  const { 
-    calculations, 
-    items: cartItems, 
-    seniorDiscounts: contextSeniorDiscounts, 
-    otherDiscount: contextOtherDiscount,
-    orderType,
-    setOrderType,
-    deliveryPlatform,
-    setDeliveryPlatform,
-    deliveryOrderNumber,
-    setDeliveryOrderNumber,
-    updateItemPrice 
-  } = useCart();
   
   // Calculate the actual total with proper BIR-compliant calculations
   const actualTotal = calculations.finalTotal;
@@ -144,13 +144,13 @@ export default function CartView({
   const isDeliveryOrderValid = orderType === 'dine_in' || 
     (orderType === 'online_delivery' && deliveryPlatform && deliveryOrderNumber.trim());
   
-  const canCheckout = items.length > 0 && isShiftActive && !isValidating && !validationMessage && isDeliveryOrderValid;
+  const canCheckout = cartItems.length > 0 && isShiftActive && !isValidating && !validationMessage && isDeliveryOrderValid;
 
   return (
     <div className="flex flex-col h-full space-y-4 max-h-screen overflow-hidden">
       <div className="flex items-center justify-between flex-shrink-0">
         <h3 className="text-lg font-semibold">Cart</h3>
-        {items.length > 0 && (
+        {cartItems.length > 0 && (
           <Button variant="outline" size="sm" onClick={clearCart}>
             Clear Cart
           </Button>
@@ -180,10 +180,10 @@ export default function CartView({
       {/* Cart Items - Scrollable */}
       <div className="flex-1 min-h-0 overflow-hidden">
         <div className="space-y-2 h-full overflow-y-auto">
-        {items.length === 0 ? (
+        {cartItems.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">Your cart is empty</p>
         ) : (
-          items.map((item, index) => {
+          cartItems.map((item, index) => {
             const validation = getItemValidation(item.productId, item.variationId);
             const hasStockIssue = validation && !validation.isValid;
             
@@ -207,7 +207,7 @@ export default function CartView({
       </div>
 
       {/* Bottom Section - Fixed with better spacing */}
-      {items.length > 0 && (
+      {cartItems.length > 0 && (
         <div className="flex-shrink-0 space-y-3 pb-4">
           <Separator />
           
