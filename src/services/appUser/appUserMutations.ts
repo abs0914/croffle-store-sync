@@ -6,6 +6,24 @@ import { toast } from "sonner";
 
 export const createAppUser = async (data: AppUserFormData): Promise<AppUser | null> => {
   try {
+    // For admin and owner users, automatically assign all active stores if no stores are specified
+    let storeIds = data.storeIds;
+    if ((data.role === 'admin' || data.role === 'owner') && (!storeIds || storeIds.length === 0)) {
+      try {
+        const { data: stores, error: storeError } = await supabase
+          .from('stores')
+          .select('id')
+          .eq('is_active', true);
+        
+        if (!storeError && stores) {
+          storeIds = stores.map(store => store.id);
+          console.log(`Assigning all ${stores.length} stores to ${data.role} user:`, data.email);
+        }
+      } catch (error) {
+        console.error('Error fetching stores for admin/owner:', error);
+      }
+    }
+
     const { data: newUser, error } = await supabase
       .from('app_users')
       .insert({
@@ -15,7 +33,7 @@ export const createAppUser = async (data: AppUserFormData): Promise<AppUser | nu
         email: data.email,
         contact_number: data.contactNumber,
         role: data.role,
-        store_ids: data.storeIds,
+        store_ids: storeIds,
         is_active: data.isActive,
         custom_permissions: data.customPermissions || null
       })

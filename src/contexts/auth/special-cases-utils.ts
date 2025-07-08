@@ -22,8 +22,8 @@ export const handleSpecialCases = async (userData: any = null, email: string = '
   let role = initialRole;
   let storeIds: string[] = [];
 
-  // If it's a known admin or test account, set appropriate values
-  if (email === 'admin@example.com') {
+  // Handle admin users - both specific email and pattern matching
+  if (email === 'admin@example.com' || email.includes('admin') || email.match(/\.admin@/)) {
     role = 'admin';
 
     // Admins get access to all stores
@@ -36,10 +36,19 @@ export const handleSpecialCases = async (userData: any = null, email: string = '
       console.error('Error fetching stores for admin:', error);
     }
   }
-  // Add more special cases as needed
-  else if (email.includes('owner')) {
+  // Handle owner users
+  else if (email === 'owner@example.com' || email.includes('owner') || email.match(/\.owner@/)) {
     role = 'owner';
-    // Similar logic for owners
+    
+    // Owners get access to all stores
+    try {
+      const { data, error } = await supabase.from('stores').select('id').eq('is_active', true);
+      if (!error && data) {
+        storeIds = data.map(store => store.id);
+      }
+    } catch (error) {
+      console.error('Error fetching stores for owner:', error);
+    }
   }
 
   // Create the user record if it doesn't exist yet
@@ -64,13 +73,13 @@ export const handleSpecialCases = async (userData: any = null, email: string = '
 
         // Call the create_app_user function to avoid ambiguous column error
         const { data, error } = await supabase.rpc('create_app_user', {
-          user_id: userData?.id || null,
-          user_email: email,
-          first_name: firstName,
-          last_name: lastName,
-          user_role: role,
-          store_ids: storeIds,
-          is_active: true
+          p_user_id: userData?.id || null,
+          p_user_email: email,
+          p_first_name: firstName,
+          p_last_name: lastName,
+          p_user_role: role,
+          p_store_ids: storeIds,
+          p_is_active: true
         });
 
         if (error) {

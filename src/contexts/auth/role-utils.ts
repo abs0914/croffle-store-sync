@@ -7,8 +7,17 @@ import { UserRole } from "@/types";
 export const mapUserRole = (email: string): UserRole => {
   if (email === 'admin@example.com') return 'admin';
   if (email === 'owner@example.com') return 'owner';
+  
+  // Enhanced pattern matching for admin users
+  if (email.includes('admin') || email.match(/\.admin@/)) return 'admin';
+  if (email.includes('owner') || email.match(/\.owner@/)) return 'owner';
   if (email.includes('manager') || email === 'rbsons.north.manager@croffle.com') return 'manager';
+  if (email.includes('stock') || email.match(/\.stock@/)) return 'stock_user';
+  if (email.includes('production') || email.match(/\.production@/)) return 'production_user';
+  
+  // Specific user mappings
   if (email === 'marasabaras@croffle.com' || email === 'robinsons.north@croffle.com') return 'cashier';
+  
   return 'cashier'; // Default role
 };
 

@@ -3784,13 +3784,13 @@ export type Database = {
       }
       create_app_user: {
         Args: {
-          user_id: string
-          user_email: string
-          first_name: string
-          last_name: string
-          user_role: string
-          store_ids: string[]
-          is_active: boolean
+          p_user_id: string
+          p_user_email: string
+          p_first_name: string
+          p_last_name: string
+          p_user_role: string
+          p_store_ids: string[]
+          p_is_active: boolean
         }
         Returns: string
       }
