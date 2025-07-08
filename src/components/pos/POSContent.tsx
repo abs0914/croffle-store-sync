@@ -131,18 +131,6 @@ export default function POSContent({
         
         {/* Mobile Cart Drawer */}
         <MobileCartDrawer
-          items={items}
-          subtotal={calculations.grossSubtotal}
-          tax={calculations.adjustedVAT}
-          total={calculations.finalTotal}
-          discount={discount}
-          discountType={discountType}
-          discountIdNumber={discountIdNumber}
-          seniorDiscounts={seniorDiscounts}
-          otherDiscount={otherDiscount}
-          removeItem={removeItem}
-          updateQuantity={updateQuantity}
-          clearCart={clearCart}
           selectedCustomer={selectedCustomer}
           setSelectedCustomer={setSelectedCustomer}
           handleApplyDiscount={handleApplyDiscount}
@@ -179,18 +167,6 @@ export default function POSContent({
           <Card className="border-primary/20 h-full">
             <CardContent className="p-4 h-full">
               <CartView 
-                items={items} 
-                subtotal={calculations.grossSubtotal} 
-                tax={calculations.adjustedVAT} 
-                total={calculations.finalTotal}
-                discount={discount} 
-                discountType={discountType} 
-                discountIdNumber={discountIdNumber} 
-                seniorDiscounts={seniorDiscounts}
-                otherDiscount={otherDiscount}
-                removeItem={removeItem} 
-                updateQuantity={updateQuantity} 
-                clearCart={clearCart} 
                 selectedCustomer={selectedCustomer} 
                 setSelectedCustomer={setSelectedCustomer} 
                 handleApplyDiscount={handleApplyDiscount} 
@@ -228,18 +204,6 @@ export default function POSContent({
           <Card className="border-primary/20 h-full">
             <CardContent className="p-4 h-full">
               <CartView 
-                items={items} 
-                subtotal={calculations.grossSubtotal} 
-                tax={calculations.adjustedVAT} 
-                total={calculations.finalTotal}
-                discount={discount} 
-                discountType={discountType} 
-                discountIdNumber={discountIdNumber} 
-                seniorDiscounts={seniorDiscounts}
-                otherDiscount={otherDiscount}
-                removeItem={removeItem} 
-                updateQuantity={updateQuantity} 
-                clearCart={clearCart} 
                 selectedCustomer={selectedCustomer} 
                 setSelectedCustomer={setSelectedCustomer} 
                 handleApplyDiscount={handleApplyDiscount} 

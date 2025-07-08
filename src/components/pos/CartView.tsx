@@ -20,18 +20,6 @@ import {
 } from './cart';
 
 interface CartViewProps {
-  items: CartItem[];
-  subtotal: number;
-  tax: number;
-  total: number;
-  discount: number;
-  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
-  discountIdNumber?: string;
-  seniorDiscounts: SeniorDiscount[];
-  otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | null;
-  removeItem: (index: number) => void;
-  updateQuantity: (index: number, quantity: number) => void;
-  clearCart: () => void;
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
@@ -41,18 +29,6 @@ interface CartViewProps {
 }
 
 export default function CartView({
-  items,
-  subtotal,
-  tax,
-  total,
-  discount,
-  discountType,
-  discountIdNumber,
-  seniorDiscounts,
-  otherDiscount,
-  removeItem,
-  updateQuantity,
-  clearCart,
   selectedCustomer,
   setSelectedCustomer,
   handleApplyDiscount,
@@ -70,16 +46,27 @@ export default function CartView({
   const { 
     calculations, 
     items: cartItems, 
-    seniorDiscounts: contextSeniorDiscounts, 
-    otherDiscount: contextOtherDiscount,
+    seniorDiscounts, 
+    otherDiscount,
     orderType,
     setOrderType,
     deliveryPlatform,
     setDeliveryPlatform,
     deliveryOrderNumber,
     setDeliveryOrderNumber,
-    updateItemPrice 
+    updateItemPrice,
+    removeItem,
+    updateQuantity,
+    clearCart
   } = useCart();
+
+  // Debug logging to track cart data
+  console.log('CartView: Cart data from context', {
+    itemCount: cartItems?.length || 0,
+    orderType,
+    calculations: calculations.finalTotal,
+    seniorDiscountsCount: seniorDiscounts?.length || 0
+  });
 
   // Debug logging for cart items
   useEffect(() => {

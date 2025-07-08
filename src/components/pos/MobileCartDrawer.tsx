@@ -9,18 +9,6 @@ import { SeniorDiscount } from "@/hooks/useTransactionHandler";
 import { useCart } from "@/contexts/cart/CartContext";
 
 interface MobileCartDrawerProps {
-  items: CartItem[];
-  subtotal: number;
-  tax: number;
-  total: number;
-  discount: number;
-  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
-  discountIdNumber?: string;
-  seniorDiscounts: SeniorDiscount[];
-  otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | null;
-  removeItem: (index: number) => void;
-  updateQuantity: (index: number, quantity: number) => void;
-  clearCart: () => void;
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
@@ -32,10 +20,10 @@ interface MobileCartDrawerProps {
 }
 
 export default function MobileCartDrawer(props: MobileCartDrawerProps) {
-  const { items, seniorDiscounts, otherDiscount, discount, total, open, onOpenChange } = props;
+  const { open, onOpenChange } = props;
 
-  // Use the cart context to get the correct calculations
-  const { calculations } = useCart();
+  // Use the cart context to get all cart data
+  const { items, calculations } = useCart();
 
   // Use the final total from calculations which already includes all discounts
   const actualTotal = calculations.finalTotal;
