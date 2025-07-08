@@ -1,7 +1,7 @@
 
 import { Store } from "@/types/store";
 import { AppUserFormData } from "@/types/appUser";
-import { RoleSelectionInterface } from "@/components/admin/RoleSelectionInterface";
+import { EnhancedRoleSelectionInterface } from "@/components/admin/EnhancedRoleSelectionInterface";
 import BasicInfoFields from "./form/BasicInfoFields";
 import StoreSelectionList from "./form/StoreSelectionList";
 import StatusToggle from "./form/StatusToggle";
@@ -40,10 +40,11 @@ export default function UserFormFields({
         includePassword={includePassword} 
       />
       
-      <RoleSelectionInterface 
+      <EnhancedRoleSelectionInterface 
         selectedRole={formData.role} 
         onRoleChange={handleRoleChange}
         showPermissions={true}
+        showImpactPreview={true}
       />
       
       <StoreSelectionList 
