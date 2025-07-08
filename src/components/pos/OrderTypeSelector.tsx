@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -105,24 +106,6 @@ export function OrderTypeSelector({
                   className="w-full"
                 />
               </div>
-
-              {/* Order Summary Display */}
-              {deliveryPlatform && deliveryOrderNumber && (
-                <div className="bg-muted p-3 rounded-md">
-                  <div className="text-sm space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Platform:</span>
-                      <span className="font-medium">
-                        {deliveryPlatformOptions.find(p => p.value === deliveryPlatform)?.label}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Order #:</span>
-                      <span className="font-medium">{deliveryOrderNumber}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </>
         )}
