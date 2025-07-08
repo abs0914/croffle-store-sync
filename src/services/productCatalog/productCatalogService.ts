@@ -101,15 +101,26 @@ export const updateProduct = async (
   updates: Partial<ProductCatalog>
 ): Promise<boolean> => {
   try {
+    console.log('🔄 Product Catalog: Starting price update for product:', id);
+    console.log('📝 Product Catalog: Update data:', updates);
+
     // First get the existing product data including recipe_id
     const { data: existingProduct } = await supabase
       .from('product_catalog')
-      .select('store_id, recipe_id, product_name')
+      .select('store_id, recipe_id, product_name, price')
       .eq('id', id)
       .single();
 
     if (!existingProduct) {
+      console.error('❌ Product Catalog: Product not found:', id);
       throw new Error('Product not found');
+    }
+
+    console.log('📊 Product Catalog: Current product data:', existingProduct);
+
+    // Check if price is being updated
+    if (updates.price !== undefined && updates.price !== existingProduct.price) {
+      console.log(`💰 Product Catalog: Price change detected - FROM: ₱${existingProduct.price} TO: ₱${updates.price}`);
     }
 
     // Update the product catalog
@@ -118,37 +129,52 @@ export const updateProduct = async (
       .update(updates)
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Product Catalog: Update failed:', error);
+      throw error;
+    }
+
+    console.log('✅ Product Catalog: Successfully updated product catalog entry');
 
     // If price was updated, also update related product table if it exists
     if (updates.price !== undefined && existingProduct.product_name) {
+      console.log('🔗 Product Catalog: Syncing price to products table...');
+      
       // Find and update corresponding product in products table
       const { data: productTableEntry } = await supabase
         .from('products')
-        .select('id')
+        .select('id, price')
         .eq('name', existingProduct.product_name)
         .eq('store_id', existingProduct.store_id)
         .maybeSingle();
 
       if (productTableEntry) {
+        console.log(`📦 Product Catalog: Found matching product in products table - Current price: ₱${productTableEntry.price}`);
+        
         const { error: productUpdateError } = await supabase
           .from('products')
           .update({ price: updates.price })
           .eq('id', productTableEntry.id);
 
         if (productUpdateError) {
-          console.warn('Failed to sync price to products table:', productUpdateError);
+          console.warn('⚠️ Product Catalog: Failed to sync price to products table:', productUpdateError);
+        } else {
+          console.log(`✅ Product Catalog: Successfully synced price to products table - New price: ₱${updates.price}`);
         }
+      } else {
+        console.log('ℹ️ Product Catalog: No matching product found in products table to sync');
       }
     }
 
     // Broadcast cache invalidation for updated product
+    console.log('📡 Product Catalog: Broadcasting cache invalidation...');
     await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
+    console.log('✅ Product Catalog: Cache invalidation broadcasted successfully');
 
     toast.success('Product updated successfully');
     return true;
   } catch (error) {
-    console.error('Error updating product:', error);
+    console.error('❌ Product Catalog: Error updating product:', error);
     toast.error('Failed to update product');
     return false;
   }
