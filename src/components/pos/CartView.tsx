@@ -1,23 +1,23 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
+import React, { useState, useEffect } from 'react';
 import { CartItem, Customer } from '@/types';
 import { PaymentDialog } from './PaymentDialog';
 import { CustomerSelector } from './CustomerSelector';
-import { DiscountDialog } from './DiscountDialog';
 import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
 import { OrderTypeSelector } from './OrderTypeSelector';
-import { EditableCartItem } from './EditableCartItem';
-import { Trash2, Plus, Minus, AlertTriangle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
 import { useStore } from '@/contexts/StoreContext';
 import { useCart } from '@/contexts/cart/CartContext';
 import { toast } from 'sonner';
 import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
+import {
+  CartHeader,
+  CartValidationMessage,
+  CartItemsList,
+  CartSummary,
+  CartActions
+} from './cart';
 
 interface CartViewProps {
   items: CartItem[];
@@ -168,26 +168,16 @@ export default function CartView({
   const isDeliveryOrderValid = orderType === 'dine_in' || 
     (orderType === 'online_delivery' && deliveryPlatform && deliveryOrderNumber.trim());
   
-  const canCheckout = cartItems.length > 0 && isShiftActive && !isValidating && !validationMessage && isDeliveryOrderValid;
+  const canCheckout = cartItems.length > 0 && isShiftActive && !isValidating && !Boolean(validationMessage) && isDeliveryOrderValid;
 
   return (
     <div className="flex flex-col h-full space-y-4 max-h-screen overflow-hidden">
-      <div className="flex items-center justify-between flex-shrink-0">
-        <h3 className="text-lg font-semibold">Cart</h3>
-        {cartItems.length > 0 && (
-          <Button variant="outline" size="sm" onClick={clearCart}>
-            Clear Cart
-          </Button>
-        )}
-      </div>
+      <CartHeader 
+        itemCount={cartItems?.length || 0}
+        onClearCart={clearCart}
+      />
 
-      {/* Validation Message */}
-      {validationMessage && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-2 flex-shrink-0">
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
-          <span className="text-sm text-amber-800">{validationMessage}</span>
-        </div>
-      )}
+      <CartValidationMessage message={validationMessage} />
 
       {/* Order Type Selector */}
       <div className="flex-shrink-0">
@@ -201,45 +191,19 @@ export default function CartView({
         />
       </div>
 
-      {/* Cart Items - Scrollable */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="space-y-2 h-full overflow-y-auto">
-        {/* Show loading during transitions to prevent empty cart flicker */}
-        {isOrderTypeTransitioning ? (
-          <div className="text-center text-muted-foreground py-8">
-            <div className="flex items-center justify-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              <span>Updating cart...</span>
-            </div>
-          </div>
-        ) : cartItems?.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">Your cart is empty</p>
-        ) : (
-          cartItems?.map((item, index) => {
-            const validation = getItemValidation(item.productId, item.variationId);
-            const hasStockIssue = validation && !validation.isValid;
-            
-            return (
-              <EditableCartItem
-                key={`${item.productId}-${item.variationId || 'default'}-${index}`}
-                item={item}
-                index={index}
-                quantity={item.quantity}
-                onUpdateQuantity={updateQuantity}
-                onUpdatePrice={updateItemPrice}
-                onRemoveItem={removeItem}
-                canEditPrice={orderType === 'online_delivery'}
-                hasStockIssue={hasStockIssue}
-                validation={validation}
-              />
-            );
-          }) || []
-        )}
-        </div>
-      </div>
+      {/* Cart Items */}
+      <CartItemsList
+        items={cartItems || []}
+        isTransitioning={isOrderTypeTransitioning}
+        orderType={orderType}
+        updateQuantity={updateQuantity}
+        updateItemPrice={updateItemPrice}
+        removeItem={removeItem}
+        getItemValidation={getItemValidation}
+      />
 
       {/* Bottom Section - Fixed with better spacing */}
-      {cartItems.length > 0 && (
+      {(cartItems?.length || 0) > 0 && (
         <div className="flex-shrink-0 space-y-3 pb-4">
           <Separator />
           
@@ -252,59 +216,11 @@ export default function CartView({
           </div>
 
           {/* Order Summary */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal</span>
-              <span>₱{calculations.grossSubtotal.toFixed(2)}</span>
-            </div>
-            
-            {/* VAT Exemption Display */}
-            {calculations.vatExemption > 0 && (
-              <div className="flex justify-between text-sm text-blue-600">
-                <span>VAT Exemption (Senior)</span>
-                <span>-₱{calculations.vatExemption.toFixed(2)}</span>
-              </div>
-            )}
-            
-            {/* Multiple Senior Citizens Discount Display */}
-            {calculations.numberOfSeniors > 0 && (
-              <div className="space-y-1">
-                {seniorDiscounts.map((senior, index) => (
-                  <div key={senior.id} className="flex justify-between text-sm text-green-600">
-                    <span>Senior {index + 1} ({senior.idNumber})</span>
-                    <span>-₱{senior.discountAmount.toFixed(2)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between text-sm text-green-600 font-medium border-t border-green-200 pt-1">
-                  <span>Total Senior Discount</span>
-                  <span>-₱{calculations.seniorDiscountAmount.toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-            
-            {/* Other Discount Display */}
-            {calculations.otherDiscountAmount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>
-                  {otherDiscount?.type.toUpperCase()} Discount
-                  {otherDiscount?.idNumber && ` - ${otherDiscount.idNumber}`}
-                </span>
-                <span>-₱{calculations.otherDiscountAmount.toFixed(2)}</span>
-              </div>
-            )}
-            
-            <div className="flex justify-between text-sm">
-              <span>VAT (12%)</span>
-              <span>₱{calculations.adjustedVAT.toFixed(2)}</span>
-            </div>
-            
-            <Separator />
-            
-            <div className="flex justify-between font-semibold">
-              <span>Total</span>
-              <span>₱{calculations.finalTotal.toFixed(2)}</span>
-            </div>
-          </div>
+          <CartSummary
+            calculations={calculations}
+            seniorDiscounts={seniorDiscounts}
+            otherDiscount={otherDiscount}
+          />
 
           {/* Multiple Discount Selector */}
           <MultipleSeniorDiscountSelector
@@ -316,27 +232,16 @@ export default function CartView({
           />
 
           {/* Action Buttons */}
-          <div className="space-y-2 pt-2">
-            <Button
-              onClick={() => setIsPaymentDialogOpen(true)}
-              className="w-full"
-              disabled={!canCheckout}
-              size="lg"
-            >
-              {!isShiftActive ? 'Start Shift to Checkout' : 
-               isValidating ? 'Validating Stock...' :
-               validationMessage ? 'Fix Stock Issues' :
-               !isDeliveryOrderValid ? 'Complete Delivery Info' :
-               'Proceed to Payment'}
-            </Button>
-            
-            {/* Delivery validation message */}
-            {orderType === 'online_delivery' && !isDeliveryOrderValid && (
-              <p className="text-xs text-center text-destructive">
-                Please select delivery platform and enter order number
-              </p>
-            )}
-          </div>
+          <CartActions
+            canCheckout={Boolean(canCheckout)}
+            isShiftActive={isShiftActive}
+            isValidating={isValidating}
+            validationMessage={validationMessage}
+            orderType={orderType}
+            deliveryPlatform={deliveryPlatform}
+            deliveryOrderNumber={deliveryOrderNumber}
+            onCheckout={() => setIsPaymentDialogOpen(true)}
+          />
         </div>
       )}
 
@@ -347,7 +252,6 @@ export default function CartView({
         total={calculations.finalTotal}
         onPaymentComplete={handlePaymentCompleteWithDeduction}
       />
-
     </div>
   );
 }
