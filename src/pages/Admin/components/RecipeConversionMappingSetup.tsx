@@ -77,6 +77,8 @@ export const RecipeConversionMappingSetup: React.FC = () => {
     if (selectedStore) {
       loadStoreInventory(selectedStore);
       loadStoreMappings(selectedStore);
+    } else {
+      setIsLoading(false);
     }
   }, [selectedStore]);
 
@@ -120,6 +122,8 @@ export const RecipeConversionMappingSetup: React.FC = () => {
     } catch (error) {
       console.error('Error loading stores data:', error);
       toast.error('Failed to load stores data');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -180,8 +184,6 @@ export const RecipeConversionMappingSetup: React.FC = () => {
       setMappings(data || []);
     } catch (error) {
       console.error('Error loading store mappings:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
