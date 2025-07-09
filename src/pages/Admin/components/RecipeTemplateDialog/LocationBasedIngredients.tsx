@@ -17,6 +17,7 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
   ingredients,
   setIngredients
 }) => {
+  console.log('🔥 LocationBasedIngredients RENDERING with NEW REDESIGNED UI');
   const [activeLocationTab, setActiveLocationTab] = useState<LocationType>('all');
   const [ingredientGroups, setIngredientGroups] = useState<Array<{id: string; name: string; type: 'required_one' | 'optional_one' | 'multiple'}>>([]);
 
@@ -228,19 +229,19 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
                          )}
                          
                          <div className="space-y-6">
-                           {group.ingredients.map(({ ingredient, index }) => (
-                             <IngredientFormRedesigned
-                               key={`${activeLocationTab}-${index}`}
-                               ingredient={ingredient}
-                               index={index}
-                               onUpdate={updateIngredient}
-                               onRemove={removeIngredient}
-                               showLocationBadge={true}
-                               locationColor={getLocationColor(ingredient.location_type)}
-                               onCreateGroup={createIngredientGroup}
-                               availableGroups={ingredientGroups}
-                             />
-                           ))}
+                            {group.ingredients.map(({ ingredient, index }) => (
+                              <IngredientFormRedesigned
+                                key={`redesigned-v2-${activeLocationTab}-${index}-${Date.now()}`}
+                                ingredient={ingredient}
+                                index={index}
+                                onUpdate={updateIngredient}
+                                onRemove={removeIngredient}
+                                showLocationBadge={true}
+                                locationColor={getLocationColor(ingredient.location_type)}
+                                onCreateGroup={createIngredientGroup}
+                                availableGroups={ingredientGroups}
+                              />
+                            ))}
                          </div>
                        </div>
                      ))}

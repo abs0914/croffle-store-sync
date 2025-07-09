@@ -45,6 +45,7 @@ export const IngredientFormRedesigned: React.FC<IngredientFormRedesignedProps> =
   onCreateGroup,
   availableGroups = []
 }) => {
+  console.log('🔥 IngredientFormRedesigned RENDERING - NEW COMPONENT ACTIVE');
   const [isLoading, setIsLoading] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -139,7 +140,7 @@ export const IngredientFormRedesigned: React.FC<IngredientFormRedesignedProps> =
   return (
     <div className="relative">
       {/* Main Card */}
-      <div className="p-6 border border-border rounded-lg bg-card relative">
+      <div className="p-6 border border-border rounded-lg bg-card relative border-l-4 border-l-green-500">
         {showLocationBadge && (
           <div className="absolute -top-2 -right-2">
             <div className={`w-4 h-4 rounded-full ${locationColor}`} />
