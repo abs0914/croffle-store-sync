@@ -2712,13 +2712,17 @@ export type Database = {
           ingredient_group_name: string | null
           ingredient_name: string
           ingredient_type: string | null
+          inventory_stock_id: string | null
           is_optional: boolean | null
           location_type: string | null
           purchase_unit: string | null
           quantity: number
           recipe_template_id: string
+          recipe_to_store_conversion_factor: number | null
           recipe_unit: string | null
+          store_unit: string | null
           unit: string
+          uses_store_inventory: boolean
         }
         Insert: {
           commissary_item_id?: string | null
@@ -2736,13 +2740,17 @@ export type Database = {
           ingredient_group_name?: string | null
           ingredient_name: string
           ingredient_type?: string | null
+          inventory_stock_id?: string | null
           is_optional?: boolean | null
           location_type?: string | null
           purchase_unit?: string | null
           quantity: number
           recipe_template_id: string
+          recipe_to_store_conversion_factor?: number | null
           recipe_unit?: string | null
+          store_unit?: string | null
           unit: string
+          uses_store_inventory?: boolean
         }
         Update: {
           commissary_item_id?: string | null
@@ -2760,13 +2768,17 @@ export type Database = {
           ingredient_group_name?: string | null
           ingredient_name?: string
           ingredient_type?: string | null
+          inventory_stock_id?: string | null
           is_optional?: boolean | null
           location_type?: string | null
           purchase_unit?: string | null
           quantity?: number
           recipe_template_id?: string
+          recipe_to_store_conversion_factor?: number | null
           recipe_unit?: string | null
+          store_unit?: string | null
           unit?: string
+          uses_store_inventory?: boolean
         }
         Relationships: [
           {
@@ -2774,6 +2786,13 @@ export type Database = {
             columns: ["commissary_item_id"]
             isOneToOne: false
             referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_template_ingredients_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
           {
