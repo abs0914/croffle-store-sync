@@ -67,7 +67,7 @@ export const createRecipeTemplate = async (
 
     if (templateError) throw templateError;
 
-    // Insert ingredients with location support
+    // Insert ingredients with location and store inventory support
     if (ingredients.length > 0) {
       const ingredientData = ingredients.map(ingredient => ({
         recipe_template_id: template.id,
@@ -79,7 +79,11 @@ export const createRecipeTemplate = async (
         recipe_unit: ingredient.unit,
         purchase_unit: ingredient.purchase_unit || ingredient.unit,
         conversion_factor: ingredient.conversion_factor || 1,
-        location_type: ingredient.location_type || 'all'
+        location_type: ingredient.location_type || 'all',
+        inventory_stock_id: ingredient.inventory_stock_id,
+        store_unit: ingredient.store_unit,
+        recipe_to_store_conversion_factor: ingredient.recipe_to_store_conversion_factor || 1,
+        uses_store_inventory: ingredient.uses_store_inventory || false
       }));
 
       const { error: ingredientError } = await supabase
@@ -118,7 +122,7 @@ export const updateRecipeTemplate = async (
       .delete()
       .eq('recipe_template_id', templateId);
 
-    // Insert updated ingredients with location support
+    // Insert updated ingredients with location and store inventory support
     if (ingredients.length > 0) {
       const ingredientData = ingredients.map(ingredient => ({
         recipe_template_id: templateId,
@@ -130,7 +134,11 @@ export const updateRecipeTemplate = async (
         recipe_unit: ingredient.unit,
         purchase_unit: ingredient.purchase_unit || ingredient.unit,
         conversion_factor: ingredient.conversion_factor || 1,
-        location_type: ingredient.location_type || 'all'
+        location_type: ingredient.location_type || 'all',
+        inventory_stock_id: ingredient.inventory_stock_id,
+        store_unit: ingredient.store_unit,
+        recipe_to_store_conversion_factor: ingredient.recipe_to_store_conversion_factor || 1,
+        uses_store_inventory: ingredient.uses_store_inventory || false
       }));
 
       const { error: ingredientError } = await supabase
@@ -281,7 +289,11 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
       cost_per_unit: ing.cost_per_unit,
       purchase_unit: ing.purchase_unit,
       conversion_factor: ing.conversion_factor,
-      location_type: ing.location_type || 'all'
+      location_type: ing.location_type || 'all',
+      inventory_stock_id: ing.inventory_stock_id,
+      store_unit: ing.store_unit,
+      recipe_to_store_conversion_factor: ing.recipe_to_store_conversion_factor,
+      uses_store_inventory: ing.uses_store_inventory
     }));
 
     console.log('Ingredients mapped:', ingredients.length, 'ingredients');

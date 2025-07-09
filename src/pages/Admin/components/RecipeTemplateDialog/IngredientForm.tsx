@@ -10,6 +10,7 @@ import { Trash2, Users, Settings } from 'lucide-react';
 import { RecipeTemplateIngredientInput } from '@/services/recipeManagement/types';
 import { fetchOrderableItems } from '@/services/inventoryManagement/commissaryInventoryService';
 import { CommissaryInventoryItem } from '@/types/commissary';
+import { supabase } from '@/integrations/supabase/client';
 
 interface IngredientFormProps {
   ingredient: RecipeTemplateIngredientInput;
@@ -33,6 +34,7 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
   availableGroups = []
 }) => {
   const [orderableItems, setOrderableItems] = useState<CommissaryInventoryItem[]>([]);
+  const [storeInventoryItems, setStoreInventoryItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedItemCategory, setSelectedItemCategory] = useState<string>('');
   const [showGroupSettings, setShowGroupSettings] = useState(false);
@@ -42,6 +44,7 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Load commissary items
         const items = await fetchOrderableItems();
         
         const finishedProducts = items.filter(item => 
@@ -52,6 +55,15 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
         );
         
         setOrderableItems(uniqueItems);
+
+        // Load store inventory items
+        const { data: storeItems } = await supabase
+          .from('inventory_stock')
+          .select('id, item, unit, cost, store_id')
+          .eq('is_active', true)
+          .order('item');
+
+        setStoreInventoryItems(storeItems || []);
         
         // Set category for current ingredient if it exists
         if (ingredient.ingredient_name) {
@@ -81,6 +93,27 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
       setSelectedItemCategory(selectedItem.category);
     } else {
       setSelectedItemCategory('');
+    }
+  };
+
+  const handleStoreInventoryChange = (value: string) => {
+    const selectedStoreItem = storeInventoryItems.find(item => item.id === value);
+    if (selectedStoreItem) {
+      onUpdate(index, 'inventory_stock_id', value);
+      onUpdate(index, 'ingredient_name', selectedStoreItem.item);
+      onUpdate(index, 'store_unit', selectedStoreItem.unit);
+      onUpdate(index, 'cost_per_unit', selectedStoreItem.cost || 0);
+      onUpdate(index, 'uses_store_inventory', true);
+    }
+  };
+
+  const handleInventorySourceChange = (useStore: boolean) => {
+    onUpdate(index, 'uses_store_inventory', useStore);
+    if (!useStore) {
+      // Reset store inventory fields when switching to commissary
+      onUpdate(index, 'inventory_stock_id', '');
+      onUpdate(index, 'store_unit', '');
+      onUpdate(index, 'recipe_to_store_conversion_factor', 1);
     }
   };
 
@@ -208,10 +241,33 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
         </div>
       )}
 
+      {/* Inventory Source Selection */}
+      <div className="pb-3 border-b mb-4">
+        <Label className="text-sm font-medium">Inventory Source</Label>
+        <div className="flex items-center gap-4 mt-2">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={!ingredient.uses_store_inventory}
+              onCheckedChange={(checked) => handleInventorySourceChange(!checked)}
+            />
+            <span className="text-sm">Commissary Inventory</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={ingredient.uses_store_inventory}
+              onCheckedChange={(checked) => handleInventorySourceChange(!!checked)}
+            />
+            <span className="text-sm">Store Inventory</span>
+          </div>
+        </div>
+      </div>
+
       {/* Main ingredient form */}
-      <div className="grid grid-cols-5 gap-2 items-end">
+      <div className={`grid gap-2 items-end ${ingredient.uses_store_inventory ? 'grid-cols-6' : 'grid-cols-5'}`}>
         <div>
-          <Label>Ingredient Name</Label>
+          <Label>
+            {ingredient.uses_store_inventory ? 'Store Inventory Item' : 'Ingredient Name'}
+          </Label>
           {isLoading ? (
             <Input
               value={ingredient.ingredient_name}
@@ -219,6 +275,27 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
               placeholder="Loading ingredients..."
               disabled
             />
+          ) : ingredient.uses_store_inventory ? (
+            <Select
+              value={ingredient.inventory_stock_id || ''}
+              onValueChange={handleStoreInventoryChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select store inventory" />
+              </SelectTrigger>
+              <SelectContent>
+                {storeInventoryItems.map(item => (
+                  <SelectItem key={item.id} value={item.id}>
+                    <div className="flex flex-col">
+                      <span>{item.item}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {item.unit} • ₱{item.cost?.toFixed(2) || '0.00'}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : (
             <Select
               value={ingredient.ingredient_name}
@@ -239,7 +316,7 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
               </SelectContent>
             </Select>
           )}
-          {selectedItemCategory && (
+          {selectedItemCategory && !ingredient.uses_store_inventory && (
             <div className="mt-1">
               <Badge variant="outline" className="text-xs">
                 {selectedItemCategory}
@@ -249,7 +326,7 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
         </div>
         
         <div>
-          <Label>Quantity</Label>
+          <Label>Recipe Quantity</Label>
           <Input
             type="number"
             min="0"
@@ -257,10 +334,13 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
             value={ingredient.quantity}
             onChange={(e) => onUpdate(index, 'quantity', parseFloat(e.target.value) || 0)}
           />
+          <div className="text-xs text-muted-foreground mt-1">
+            Amount needed for recipe
+          </div>
         </div>
         
         <div>
-          <Label>Unit</Label>
+          <Label>Recipe Unit</Label>
           <Select
             value={ingredient.unit}
             onValueChange={(value) => onUpdate(index, 'unit', value)}
@@ -289,8 +369,25 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
           </Select>
         </div>
 
+        {ingredient.uses_store_inventory && (
+          <div>
+            <Label>Conversion Factor</Label>
+            <Input
+              type="number"
+              min="1"
+              step="0.1"
+              value={ingredient.recipe_to_store_conversion_factor || 1}
+              onChange={(e) => onUpdate(index, 'recipe_to_store_conversion_factor', parseFloat(e.target.value) || 1)}
+              placeholder="e.g., 20"
+            />
+            <div className="text-xs text-muted-foreground mt-1">
+              How many {ingredient.unit}s per {ingredient.store_unit || 'store unit'}
+            </div>
+          </div>
+        )}
+
         <div>
-          <Label>Cost per Unit (₱)</Label>
+          <Label>Cost per {ingredient.uses_store_inventory ? (ingredient.store_unit || 'Store Unit') : 'Recipe Unit'} (₱)</Label>
           <Input
             type="number"
             min="0"
@@ -298,7 +395,13 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
             value={ingredient.cost_per_unit || 0}
             onChange={(e) => onUpdate(index, 'cost_per_unit', parseFloat(e.target.value) || 0)}
             placeholder="0.00"
+            disabled={ingredient.uses_store_inventory}
           />
+          {ingredient.uses_store_inventory && (
+            <div className="text-xs text-muted-foreground mt-1">
+              Auto-filled from store inventory
+            </div>
+          )}
         </div>
         
         <Button

@@ -76,7 +76,11 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
           cost_per_unit: Number(ing.cost_per_unit) || 0,
           purchase_unit: ing.purchase_unit || ing.unit || 'g',
           conversion_factor: Number(ing.conversion_factor) || 1,
-          location_type: ing.location_type || 'all'
+          location_type: ing.location_type || 'all',
+          inventory_stock_id: ing.inventory_stock_id,
+          store_unit: ing.store_unit,
+          recipe_to_store_conversion_factor: Number(ing.recipe_to_store_conversion_factor) || 1,
+          uses_store_inventory: ing.uses_store_inventory || false
         }));
         
         console.log('Setting ingredients:', mappedIngredients);

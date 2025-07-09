@@ -53,6 +53,11 @@ export interface RecipeTemplateIngredientInput {
   ingredient_group_name?: string;
   is_optional?: boolean;
   group_selection_type?: 'required_one' | 'optional_one' | 'multiple';
+  // Store inventory integration
+  inventory_stock_id?: string;
+  store_unit?: string;
+  recipe_to_store_conversion_factor?: number;
+  uses_store_inventory?: boolean;
 }
 
 export interface LocationBasedIngredientSet {
