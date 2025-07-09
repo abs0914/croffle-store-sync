@@ -202,12 +202,12 @@ export function EnhancedRecipeIngredientsForm({
           }
         }
 
-        if (field === 'commissary_item_id' && value && isTemplate) {
-          const commissaryItem = commissaryItems.find(item => item.id === value);
-          if (commissaryItem) {
-            updated.ingredient_name = commissaryItem.name;
-            updated.cost_per_unit = commissaryItem.unit_cost || 0;
-            updated.unit = commissaryItem.unit || 'g';
+        if (field === 'inventory_stock_id' && value) {
+          const storeItem = inventoryStock.find(item => item.id === value);
+          if (storeItem) {
+            updated.ingredient_name = storeItem.item;
+            updated.cost_per_unit = storeItem.cost || 0;
+            updated.unit = storeItem.unit;
           }
         }
 
@@ -290,7 +290,7 @@ export function EnhancedRecipeIngredientsForm({
     }
   };
 
-  const availableItems = isTemplate ? commissaryItems : inventoryStock;
+  const availableItems = inventoryStock;
 
   return (
     <Card>
@@ -402,10 +402,10 @@ export function EnhancedRecipeIngredientsForm({
                           </div>
                           
                           <div className="col-span-3">
-                            <Label className="text-xs">{isTemplate ? 'Commissary Item' : 'Inventory Item'}</Label>
+                            <Label className="text-xs">Store Inventory Item</Label>
                             <Select
-                              value={isTemplate ? ingredient.commissary_item_id || '' : ingredient.inventory_stock_id || ''}
-                              onValueChange={(value) => updateIngredient(ingredient.id, isTemplate ? 'commissary_item_id' : 'inventory_stock_id', value)}
+                              value={ingredient.inventory_stock_id || ''}
+                              onValueChange={(value) => updateIngredient(ingredient.id, 'inventory_stock_id', value)}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select item" />

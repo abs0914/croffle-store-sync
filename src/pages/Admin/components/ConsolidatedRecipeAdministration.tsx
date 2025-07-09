@@ -29,6 +29,7 @@ import { ComponentRelationshipVisualization } from '@/components/admin/recipe/Co
 import { RecipeConversionMappingSetup } from './RecipeConversionMappingSetup';
 import { RecipeDeploymentCleaner } from './RecipeDeploymentCleaner';
 import { toast } from 'sonner';
+import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 
 export function ConsolidatedRecipeAdministration() {
   const {
@@ -59,6 +60,7 @@ export function ConsolidatedRecipeAdministration() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('templates');
   const [showRelationshipView, setShowRelationshipView] = useState(false);
+  const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
 
   // Combine and filter data
   const allItems = [...templates, ...recipes];
@@ -239,7 +241,7 @@ export function ConsolidatedRecipeAdministration() {
             Unified management for recipe templates and deployed recipes
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setIsCreateTemplateOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Create Template
         </Button>
@@ -452,6 +454,16 @@ export function ConsolidatedRecipeAdministration() {
         onSyncToRecipes={handleSyncToRecipes}
         stores={stores}
         isLoading={isUpdatingTemplate || isUpdatingRecipe || isSyncing}
+      />
+
+      {/* Create Template Dialog */}
+      <RecipeTemplateDialog
+        isOpen={isCreateTemplateOpen}
+        onClose={() => setIsCreateTemplateOpen(false)}
+        onSuccess={() => {
+          setIsCreateTemplateOpen(false);
+          toast.success('Template created successfully');
+        }}
       />
     </div>
   );
