@@ -45,19 +45,16 @@ export interface RecipeTemplateIngredientInput {
   quantity: number;
   unit: string;
   cost_per_unit?: number;
-  purchase_unit?: string;
-  conversion_factor?: number;
   location_type: LocationType;
   // Ingredient Group fields
   ingredient_group_id?: string;
   ingredient_group_name?: string;
   is_optional?: boolean;
   group_selection_type?: 'required_one' | 'optional_one' | 'multiple';
-  // Store inventory integration
-  inventory_stock_id?: string;
-  store_unit?: string;
-  recipe_to_store_conversion_factor?: number;
-  uses_store_inventory?: boolean;
+  // Store inventory integration (single source)
+  inventory_stock_id: string;
+  store_unit: string;
+  recipe_to_store_conversion_factor: number;
 }
 
 export interface LocationBasedIngredientSet {

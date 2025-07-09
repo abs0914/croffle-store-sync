@@ -40,7 +40,7 @@ export const StoreInventoryIntegrationSummary: React.FC<StoreInventoryIntegratio
               </li>
               <li className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-xs">✓</Badge>
-                Support for both commissary and store inventory sources
+                Direct POS deduction from store inventory (single source)
               </li>
             </ul>
           </div>
@@ -70,9 +70,9 @@ export const StoreInventoryIntegrationSummary: React.FC<StoreInventoryIntegratio
         <div className="pt-4 border-t">
           <h4 className="font-medium mb-2">Next Steps</h4>
           <ol className="text-sm space-y-1 list-decimal list-inside">
-            <li>Edit your recipe templates and select "Store Inventory" source</li>
-            <li>Choose store inventory items and set conversion factors</li>
-            <li>Deploy templates to stores for proper inventory deduction</li>
+            <li>Create recipe templates using store inventory items only</li>
+            <li>Set conversion factors between recipe and store units</li>
+            <li>POS orders will automatically deduct from store inventory</li>
           </ol>
         </div>
       </CardContent>

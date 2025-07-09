@@ -4,59 +4,43 @@ import type { InventoryDeductionRequirement } from './types';
 import { validateMappingData } from './utils';
 
 /**
- * Get inventory deduction requirements for a recipe
+ * Get inventory deduction requirements for a recipe template (store inventory only)
  */
 export const getInventoryDeductionRequirements = async (
-  recipeId: string,
+  recipeTemplateId: string,
   quantity: number = 1
 ): Promise<InventoryDeductionRequirement[]> => {
   try {
-    // Get recipe ingredients with their mappings
+    // Get recipe template ingredients that use store inventory
     const { data: ingredients } = await supabase
-      .from('recipe_ingredients')
+      .from('recipe_template_ingredients')
       .select(`
         *,
-        inventory_conversion_mappings!inner(
-          inventory_stock_id,
-          conversion_factor
+        inventory_stock:inventory_stock_id (
+          id,
+          item,
+          unit
         )
       `)
-      .eq('recipe_id', recipeId);
+      .eq('recipe_template_id', recipeTemplateId)
+      .eq('uses_store_inventory', true);
 
     if (!ingredients) return [];
 
     const deductionRequirements: InventoryDeductionRequirement[] = [];
 
     for (const ingredient of ingredients) {
-      // Handle the mapping data properly
-      let mappingData = ingredient.inventory_conversion_mappings;
-      
-      // If it's an array, take the first element
-      if (Array.isArray(mappingData)) {
-        mappingData = mappingData[0];
-      }
-      
-      // Use the type guard to validate the mapping data
-      if (validateMappingData(mappingData)) {
-        // Calculate how much to deduct from bulk inventory
+      if (ingredient.inventory_stock_id && ingredient.recipe_to_store_conversion_factor) {
+        // Calculate deduction: recipe quantity ÷ conversion factor = store units needed
         const recipeQuantityNeeded = ingredient.quantity * quantity;
-        const bulkDeductionQuantity = recipeQuantityNeeded / mappingData.conversion_factor;
+        const storeUnitsNeeded = recipeQuantityNeeded / ingredient.recipe_to_store_conversion_factor;
 
-        // Get inventory item details
-        const { data: inventoryItem } = await supabase
-          .from('inventory_stock')
-          .select('item, unit')
-          .eq('id', mappingData.inventory_stock_id)
-          .single();
-
-        if (inventoryItem) {
-          deductionRequirements.push({
-            inventory_stock_id: mappingData.inventory_stock_id,
-            item_name: inventoryItem.item,
-            deduction_quantity: bulkDeductionQuantity,
-            unit: inventoryItem.unit
-          });
-        }
+        deductionRequirements.push({
+          inventory_stock_id: ingredient.inventory_stock_id,
+          item_name: ingredient.ingredient_name,
+          deduction_quantity: storeUnitsNeeded,
+          unit: ingredient.store_unit
+        });
       }
     }
 
@@ -68,24 +52,25 @@ export const getInventoryDeductionRequirements = async (
 };
 
 /**
- * Process inventory deductions for recipe usage
+ * Process inventory deductions for recipe usage (simplified for store inventory)
  */
 export const processRecipeInventoryDeductions = async (
-  recipeId: string,
+  recipeTemplateId: string,
   quantity: number,
   storeId: string,
   usedBy: string,
   transactionId?: string
 ): Promise<boolean> => {
   try {
-    const deductionRequirements = await getInventoryDeductionRequirements(recipeId, quantity);
+    const deductionRequirements = await getInventoryDeductionRequirements(recipeTemplateId, quantity);
 
     for (const requirement of deductionRequirements) {
-      // Update inventory stock
+      // Update inventory stock for the specific store
       const { data: currentStock } = await supabase
         .from('inventory_stock')
         .select('stock_quantity, fractional_stock')
         .eq('id', requirement.inventory_stock_id)
+        .eq('store_id', storeId)
         .single();
 
       if (currentStock) {
@@ -103,7 +88,8 @@ export const processRecipeInventoryDeductions = async (
             fractional_stock: newFractionalStock,
             updated_at: new Date().toISOString()
           })
-          .eq('id', requirement.inventory_stock_id);
+          .eq('id', requirement.inventory_stock_id)
+          .eq('store_id', storeId);
 
         // Log the transaction
         await supabase
@@ -111,13 +97,13 @@ export const processRecipeInventoryDeductions = async (
           .insert({
             store_id: storeId,
             product_id: requirement.inventory_stock_id,
-            transaction_type: 'recipe_usage',
+            transaction_type: 'recipe_template_usage',
             quantity: requirement.deduction_quantity,
             previous_quantity: totalCurrentStock,
             new_quantity: newTotalStock,
             created_by: usedBy,
             reference_id: transactionId,
-            notes: `Recipe usage deduction: ${requirement.item_name}`
+            notes: `Recipe template usage deduction: ${requirement.item_name}`
           });
       }
     }

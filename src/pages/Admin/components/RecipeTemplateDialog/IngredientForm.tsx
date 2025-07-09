@@ -5,11 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, Users, Settings } from 'lucide-react';
 import { RecipeTemplateIngredientInput } from '@/services/recipeManagement/types';
-import { fetchOrderableItems } from '@/services/inventoryManagement/commissaryInventoryService';
-import { CommissaryInventoryItem } from '@/types/commissary';
 import { supabase } from '@/integrations/supabase/client';
 
 interface IngredientFormProps {
@@ -33,10 +30,8 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
   onCreateGroup,
   availableGroups = []
 }) => {
-  const [orderableItems, setOrderableItems] = useState<CommissaryInventoryItem[]>([]);
   const [storeInventoryItems, setStoreInventoryItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedItemCategory, setSelectedItemCategory] = useState<string>('');
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupType, setNewGroupType] = useState<'required_one' | 'optional_one' | 'multiple'>('required_one');
@@ -44,19 +39,7 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load commissary items
-        const items = await fetchOrderableItems();
-        
-        const finishedProducts = items.filter(item => 
-          item.item_type === 'orderable_item'
-        );
-        const uniqueItems = finishedProducts.filter((item, idx, self) =>
-          idx === self.findIndex(i => i.name.toLowerCase() === item.name.toLowerCase())
-        );
-        
-        setOrderableItems(uniqueItems);
-
-        // Load store inventory items
+        // Load store inventory items only
         const { data: storeItems } = await supabase
           .from('inventory_stock')
           .select('id, item, unit, cost, store_id')
@@ -64,16 +47,6 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
           .order('item');
 
         setStoreInventoryItems(storeItems || []);
-        
-        // Set category for current ingredient if it exists
-        if (ingredient.ingredient_name) {
-          const currentItem = uniqueItems.find(item => 
-            item.name === ingredient.ingredient_name
-          );
-          if (currentItem) {
-            setSelectedItemCategory(currentItem.category);
-          }
-        }
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -84,18 +57,6 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
     loadData();
   }, []);
 
-  const handleIngredientChange = (value: string) => {
-    onUpdate(index, 'ingredient_name', value);
-    
-    // Update the displayed category based on selected item
-    const selectedItem = orderableItems.find(item => item.name === value);
-    if (selectedItem) {
-      setSelectedItemCategory(selectedItem.category);
-    } else {
-      setSelectedItemCategory('');
-    }
-  };
-
   const handleStoreInventoryChange = (value: string) => {
     const selectedStoreItem = storeInventoryItems.find(item => item.id === value);
     if (selectedStoreItem) {
@@ -103,17 +64,6 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
       onUpdate(index, 'ingredient_name', selectedStoreItem.item);
       onUpdate(index, 'store_unit', selectedStoreItem.unit);
       onUpdate(index, 'cost_per_unit', selectedStoreItem.cost || 0);
-      onUpdate(index, 'uses_store_inventory', true);
-    }
-  };
-
-  const handleInventorySourceChange = (useStore: boolean) => {
-    onUpdate(index, 'uses_store_inventory', useStore);
-    if (!useStore) {
-      // Reset store inventory fields when switching to commissary
-      onUpdate(index, 'inventory_stock_id', '');
-      onUpdate(index, 'store_unit', '');
-      onUpdate(index, 'recipe_to_store_conversion_factor', 1);
     }
   };
 
@@ -241,47 +191,24 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
         </div>
       )}
 
-      {/* Inventory Source Selection */}
-      <div className="pb-3 border-b mb-4">
-        <Label className="text-sm font-medium">Inventory Source</Label>
-        <div className="flex items-center gap-4 mt-2">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              checked={!ingredient.uses_store_inventory}
-              onCheckedChange={(checked) => handleInventorySourceChange(!checked)}
-            />
-            <span className="text-sm">Commissary Inventory</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              checked={ingredient.uses_store_inventory}
-              onCheckedChange={(checked) => handleInventorySourceChange(!!checked)}
-            />
-            <span className="text-sm">Store Inventory</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main ingredient form */}
-      <div className={`grid gap-2 items-end ${ingredient.uses_store_inventory ? 'grid-cols-6' : 'grid-cols-5'}`}>
+      {/* Main ingredient form - Store Inventory Only */}
+      <div className="grid gap-2 items-end grid-cols-6">
         <div>
-          <Label>
-            {ingredient.uses_store_inventory ? 'Store Inventory Item' : 'Ingredient Name'}
-          </Label>
+          <Label>Store Inventory Item</Label>
           {isLoading ? (
             <Input
               value={ingredient.ingredient_name}
               onChange={(e) => onUpdate(index, 'ingredient_name', e.target.value)}
-              placeholder="Loading ingredients..."
+              placeholder="Loading store inventory..."
               disabled
             />
-          ) : ingredient.uses_store_inventory ? (
+          ) : (
             <Select
               value={ingredient.inventory_stock_id || ''}
               onValueChange={handleStoreInventoryChange}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select store inventory" />
+                <SelectValue placeholder="Select store inventory item" />
               </SelectTrigger>
               <SelectContent>
                 {storeInventoryItems.map(item => (
@@ -296,32 +223,6 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
                 ))}
               </SelectContent>
             </Select>
-          ) : (
-            <Select
-              value={ingredient.ingredient_name}
-              onValueChange={handleIngredientChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select ingredient" />
-              </SelectTrigger>
-              <SelectContent>
-                {orderableItems.map(item => (
-                  <SelectItem key={item.id} value={item.name}>
-                    <div className="flex flex-col">
-                      <span>{item.name}</span>
-                      <span className="text-xs text-muted-foreground">{item.category}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {selectedItemCategory && !ingredient.uses_store_inventory && (
-            <div className="mt-1">
-              <Badge variant="outline" className="text-xs">
-                {selectedItemCategory}
-              </Badge>
-            </div>
           )}
         </div>
         
@@ -369,25 +270,23 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
           </Select>
         </div>
 
-        {ingredient.uses_store_inventory && (
-          <div>
-            <Label>Conversion Factor</Label>
-            <Input
-              type="number"
-              min="1"
-              step="0.1"
-              value={ingredient.recipe_to_store_conversion_factor || 1}
-              onChange={(e) => onUpdate(index, 'recipe_to_store_conversion_factor', parseFloat(e.target.value) || 1)}
-              placeholder="e.g., 20"
-            />
-            <div className="text-xs text-muted-foreground mt-1">
-              How many {ingredient.unit}s per {ingredient.store_unit || 'store unit'}
-            </div>
+        <div>
+          <Label>Conversion Factor</Label>
+          <Input
+            type="number"
+            min="1"
+            step="0.1"
+            value={ingredient.recipe_to_store_conversion_factor || 1}
+            onChange={(e) => onUpdate(index, 'recipe_to_store_conversion_factor', parseFloat(e.target.value) || 1)}
+            placeholder="e.g., 20"
+          />
+          <div className="text-xs text-muted-foreground mt-1">
+            How many {ingredient.unit}s per {ingredient.store_unit || 'store unit'}
           </div>
-        )}
+        </div>
 
         <div>
-          <Label>Cost per {ingredient.uses_store_inventory ? (ingredient.store_unit || 'Store Unit') : 'Recipe Unit'} (₱)</Label>
+          <Label>Cost per Store Unit (₱)</Label>
           <Input
             type="number"
             min="0"
@@ -395,13 +294,11 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
             value={ingredient.cost_per_unit || 0}
             onChange={(e) => onUpdate(index, 'cost_per_unit', parseFloat(e.target.value) || 0)}
             placeholder="0.00"
-            disabled={ingredient.uses_store_inventory}
+            disabled
           />
-          {ingredient.uses_store_inventory && (
-            <div className="text-xs text-muted-foreground mt-1">
-              Auto-filled from store inventory
-            </div>
-          )}
+          <div className="text-xs text-muted-foreground mt-1">
+            Auto-filled from store inventory
+          </div>
         </div>
         
         <Button

@@ -61,7 +61,10 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
       quantity: 1,
       unit: 'g',
       cost_per_unit: 0,
-      location_type: locationType
+      location_type: locationType,
+      inventory_stock_id: '',
+      store_unit: '',
+      recipe_to_store_conversion_factor: 1
     };
     setIngredients(prev => [...prev, newIngredient]);
   };
