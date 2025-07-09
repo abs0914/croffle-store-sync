@@ -73,14 +73,14 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
           ingredient_name: ing.ingredient_name || ing.commissary_item_name || '',
           quantity: Number(ing.quantity) || 1,
           unit: ing.unit || 'g',
-          cost_per_unit: Number(ing.cost_per_unit) || 0,
-          purchase_unit: ing.purchase_unit || ing.unit || 'g',
-          conversion_factor: Number(ing.conversion_factor) || 1,
+          estimated_cost_per_unit: Number(ing.cost_per_unit) || Number(ing.estimated_cost_per_unit) || 0,
           location_type: ing.location_type || 'all',
-          inventory_stock_id: ing.inventory_stock_id,
-          store_unit: ing.store_unit,
-          recipe_to_store_conversion_factor: Number(ing.recipe_to_store_conversion_factor) || 1,
-          uses_store_inventory: ing.uses_store_inventory || false
+          ingredient_group_id: ing.ingredient_group_id,
+          ingredient_group_name: ing.ingredient_group_name,
+          is_optional: ing.is_optional,
+          group_selection_type: ing.group_selection_type,
+          suggested_suppliers: ing.suggested_suppliers || [],
+          preparation_notes: ing.preparation_notes || ''
         }));
         
         console.log('Setting ingredients:', mappedIngredients);
@@ -171,7 +171,9 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="flex flex-col h-full">
+      <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
       <RecipeTemplateBasicInfo
         formData={formData}
         setFormData={setFormData}
@@ -200,14 +202,19 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
         onInstructionsChange={(instructions) => setFormData(prev => ({ ...prev, instructions }))}
       />
 
-      <div className="flex justify-end space-x-4">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Saving...' : template ? 'Update Recipe' : 'Create Recipe'}
-        </Button>
-      </div>
-    </form>
+        </div>
+        
+        <div className="border-t bg-card/50 px-6 py-4">
+          <div className="flex justify-end space-x-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Saving...' : template ? 'Update Recipe' : 'Create Recipe'}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </div>
   );
 };

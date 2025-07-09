@@ -44,17 +44,16 @@ export interface RecipeTemplateIngredientInput {
   ingredient_name: string;
   quantity: number;
   unit: string;
-  cost_per_unit?: number;
+  estimated_cost_per_unit?: number;
   location_type: LocationType;
   // Ingredient Group fields
   ingredient_group_id?: string;
   ingredient_group_name?: string;
   is_optional?: boolean;
   group_selection_type?: 'required_one' | 'optional_one' | 'multiple';
-  // Store inventory integration (single source)
-  inventory_stock_id: string;
-  store_unit: string;
-  recipe_to_store_conversion_factor: number;
+  // Template-specific fields (no store dependencies)
+  suggested_suppliers?: string[];
+  preparation_notes?: string;
 }
 
 export interface LocationBasedIngredientSet {

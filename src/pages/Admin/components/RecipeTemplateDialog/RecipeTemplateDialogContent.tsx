@@ -15,21 +15,23 @@ export const RecipeTemplateDialogContent: React.FC<RecipeTemplateDialogContentPr
   onSuccess
 }) => {
   return (
-    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>
+    <DialogContent className="max-w-6xl max-h-[95vh] flex flex-col p-0">
+      <DialogHeader className="px-6 py-4 border-b bg-card/50">
+        <DialogTitle className="text-xl">
           {template ? 'Edit Recipe Template' : 'Create Recipe Template'}
         </DialogTitle>
-        <DialogDescription>
+        <DialogDescription className="text-sm">
           {template ? 'Update the recipe template details and ingredients.' : 'Create a new recipe template with ingredients and instructions.'}
         </DialogDescription>
       </DialogHeader>
 
-      <RecipeTemplateForm
-        template={template}
-        onClose={onClose}
-        onSuccess={onSuccess}
-      />
+      <div className="flex-1 overflow-hidden">
+        <RecipeTemplateForm
+          template={template}
+          onClose={onClose}
+          onSuccess={onSuccess}
+        />
+      </div>
     </DialogContent>
   );
 };

@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Plus, MapPin, Globe, Calculator, Users } from 'lucide-react';
 import { RecipeTemplateIngredientInput, LOCATION_TYPES, LocationType } from '@/services/recipeManagement/types';
-import { IngredientForm } from './IngredientForm';
+import { IngredientFormRedesigned } from './IngredientFormRedesigned';
 
 interface LocationBasedIngredientsProps {
   ingredients: RecipeTemplateIngredientInput[];
@@ -48,10 +48,10 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
   // Get ingredients for current tab
   const currentIngredients = ingredientsByLocation[activeLocationTab] || [];
 
-  // Calculate total cost for current location
+  // Calculate estimated total cost for current location
   const calculateLocationCost = (locationIngredients: RecipeTemplateIngredientInput[]) => {
     return locationIngredients.reduce((total, ingredient) => {
-      return total + (ingredient.cost_per_unit || 0) * ingredient.quantity;
+      return total + (ingredient.estimated_cost_per_unit || 0) * ingredient.quantity;
     }, 0);
   };
 
@@ -60,11 +60,8 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
       ingredient_name: '',
       quantity: 1,
       unit: 'g',
-      cost_per_unit: 0,
-      location_type: locationType,
-      inventory_stock_id: '',
-      store_unit: '',
-      recipe_to_store_conversion_factor: 1
+      estimated_cost_per_unit: 0,
+      location_type: locationType
     };
     setIngredients(prev => [...prev, newIngredient]);
   };
@@ -201,7 +198,7 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
                 {ingredientsByLocation[locType.value]?.length > 0 && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calculator className="h-4 w-4" />
-                    <span>Total Cost: ₱{calculateLocationCost(ingredientsByLocation[locType.value]).toFixed(2)}</span>
+                    <span>Est. Cost: ₱{calculateLocationCost(ingredientsByLocation[locType.value]).toFixed(2)}</span>
                   </div>
                 )}
               </div>
@@ -217,11 +214,11 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
                   )}
 
                    {/* Render grouped ingredients with scrollable container */}
-                   <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-2">
+                   <div className="max-h-[50vh] overflow-y-auto space-y-6 pr-2">
                      {Object.entries(groupIngredientsByLocationAndGroup(currentIngredients)).map(([groupId, group]) => (
                        <div key={groupId} className="space-y-4">
                          {groupId !== 'individual' && (
-                           <div className="flex items-center gap-2 mb-3">
+                           <div className="flex items-center gap-2 mb-3 sticky top-0 bg-background/95 backdrop-blur-sm py-2 border-b">
                              <Users className="h-4 w-4 text-primary" />
                              <h4 className="font-medium text-primary">{group.groupName}</h4>
                              <Badge variant="secondary" className="text-xs">
@@ -232,7 +229,7 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
                          
                          <div className="space-y-6">
                            {group.ingredients.map(({ ingredient, index }) => (
-                             <IngredientForm
+                             <IngredientFormRedesigned
                                key={`${activeLocationTab}-${index}`}
                                ingredient={ingredient}
                                index={index}
