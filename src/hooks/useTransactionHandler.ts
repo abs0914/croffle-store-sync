@@ -150,35 +150,40 @@ export const useTransactionHandler = (storeId: string) => {
       const totalPwdDiscount = otherDiscount?.type === 'pwd' ? otherDiscount.amount : 0;
 
       // Step 2: Create transaction record
+      console.log("Creating transaction with user:", user.id, "store:", store.id);
+      
+      const transactionData = {
+        receipt_number: receiptNumber,
+        customer_id: selectedCustomer?.id || null,
+        store_id: store.id,
+        user_id: user.id,
+        shift_id: shift.id,
+        items: JSON.stringify(items),
+        subtotal: Number(subtotal),
+        tax: Number(tax),
+        discount: Number(discount),
+        total: Number(total),
+        payment_method: paymentMethod,
+        amount_tendered: Number(amountTendered),
+        change: Number(change),
+        discount_type: discountType || null,
+        discount_id_number: discountIdNumber || null,
+        senior_citizen_discount: totalSeniorDiscount || 0,
+        pwd_discount: totalPwdDiscount || 0,
+        senior_discounts: seniorDiscounts.length > 0 ? JSON.stringify(seniorDiscounts) : null,
+        discount_details: (seniorDiscounts.length > 0 || otherDiscount) ? JSON.stringify({
+          senior_discounts: seniorDiscounts,
+          other_discount: otherDiscount
+        }) : null,
+        payment_details: paymentDetails ? JSON.stringify(paymentDetails) : null,
+        status: 'completed'
+      };
+
+      console.log("Transaction data:", transactionData);
+      
       const { data: transaction, error: transactionError } = await supabase
         .from('transactions')
-        .insert({
-          receipt_number: receiptNumber,
-          customer_id: selectedCustomer?.id,
-          store_id: store.id,
-          user_id: user.id,
-          shift_id: shift.id,
-          items: JSON.stringify(items),
-          subtotal,
-          tax,
-          discount,
-          total,
-          payment_method: paymentMethod,
-          amount_tendered: amountTendered,
-          change,
-          discount_type: discountType || null,
-          discount_id_number: discountIdNumber || null,
-          senior_citizen_discount: totalSeniorDiscount || null,
-          pwd_discount: totalPwdDiscount || null,
-          senior_discounts: seniorDiscounts.length > 0 ? JSON.stringify(seniorDiscounts) : null,
-          discount_details: (seniorDiscounts.length > 0 || otherDiscount) ? JSON.stringify({
-            senior_discounts: seniorDiscounts,
-            other_discount: otherDiscount
-          }) : null,
-          payment_details: paymentDetails ? JSON.stringify(paymentDetails) : null,
-          order_status: 'completed',
-          status: 'completed'
-        })
+        .insert(transactionData)
         .select()
         .single();
 
