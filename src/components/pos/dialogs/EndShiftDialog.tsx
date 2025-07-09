@@ -16,7 +16,7 @@ import { formatCurrency } from "@/utils/format";
 // Import the refactored components
 import ShiftPhotoSection from "./shift/ShiftPhotoSection";
 import EndingCashSection from "./shift/EndingCashSection";
-import AutoInventoryReport from "./shift/AutoInventoryReport";
+import ShiftTransactionReport from "./shift/ShiftTransactionReport";
 
 interface EndShiftDialogProps {
   isOpen: boolean;
@@ -135,8 +135,8 @@ export default function EndShiftDialog({
             )}
           </div>
           
-          {/* Auto-Generated Inventory Report */}
-          <AutoInventoryReport currentShift={currentShift} />
+          {/* Shift Transaction Report */}
+          <ShiftTransactionReport currentShift={currentShift} />
         </div>
         
         <DialogFooter className="gap-2">
