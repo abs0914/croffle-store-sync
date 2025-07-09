@@ -15,7 +15,9 @@ import {
   Filter,
   MoreHorizontal,
   FileText,
-  Layers
+  Layers,
+  Target,
+  Trash2
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -24,6 +26,8 @@ import { UnifiedRecipeEditDialog } from '@/components/admin/recipe/UnifiedRecipe
 import { EnhancedRecipeFilters } from '@/components/admin/recipe/EnhancedRecipeFilters';
 import { RecipeTypeIndicator, RecipeComplexityIndicator } from '@/components/admin/recipe/RecipeTypeIndicator';
 import { ComponentRelationshipVisualization } from '@/components/admin/recipe/ComponentRelationshipVisualization';
+import { RecipeConversionMappingSetup } from './RecipeConversionMappingSetup';
+import { RecipeDeploymentCleaner } from './RecipeDeploymentCleaner';
 import { toast } from 'sonner';
 
 export function ConsolidatedRecipeAdministration() {
@@ -356,7 +360,7 @@ export function ConsolidatedRecipeAdministration() {
 
       {/* Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <Layers className="h-4 w-4" />
             Templates ({templateItems.length})
@@ -368,6 +372,14 @@ export function ConsolidatedRecipeAdministration() {
           <TabsTrigger value="unified" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             All Items ({filteredItems.length})
+          </TabsTrigger>
+          <TabsTrigger value="mappings" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            Mappings
+          </TabsTrigger>
+          <TabsTrigger value="cleanup" className="flex items-center gap-2">
+            <Trash2 className="h-4 w-4" />
+            Cleanup
           </TabsTrigger>
         </TabsList>
 
@@ -416,7 +428,15 @@ export function ConsolidatedRecipeAdministration() {
               <h3 className="text-lg font-semibold mb-2">No items found</h3>
               <p className="text-muted-foreground">No items match your current filters.</p>
             </div>
-          )}
+           )}
+        </TabsContent>
+
+        <TabsContent value="mappings" className="space-y-4">
+          <RecipeConversionMappingSetup />
+        </TabsContent>
+
+        <TabsContent value="cleanup" className="space-y-4">
+          <RecipeDeploymentCleaner />
         </TabsContent>
       </Tabs>
 
