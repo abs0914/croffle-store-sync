@@ -192,123 +192,141 @@ export const IngredientForm: React.FC<IngredientFormProps> = ({
       )}
 
       {/* Main ingredient form - Store Inventory Only */}
-      <div className="grid gap-2 items-end grid-cols-6">
-        <div>
-          <Label>Store Inventory Item</Label>
-          {isLoading ? (
+      <div className="space-y-4">
+        {/* Row 1: Store Item Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <Label className="text-sm font-medium">Store Inventory Item</Label>
+            {isLoading ? (
+              <Input
+                value={ingredient.ingredient_name}
+                onChange={(e) => onUpdate(index, 'ingredient_name', e.target.value)}
+                placeholder="Loading store inventory..."
+                disabled
+                className="mt-1"
+              />
+            ) : (
+              <Select
+                value={ingredient.inventory_stock_id || ''}
+                onValueChange={handleStoreInventoryChange}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select store inventory item" />
+                </SelectTrigger>
+                <SelectContent>
+                  {storeInventoryItems.map(item => (
+                    <SelectItem key={item.id} value={item.id}>
+                      <div className="flex flex-col">
+                        <span>{item.item}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {item.unit} • ₱{item.cost?.toFixed(2) || '0.00'}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: Recipe Quantity and Unit */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="text-sm font-medium">Recipe Quantity</Label>
             <Input
-              value={ingredient.ingredient_name}
-              onChange={(e) => onUpdate(index, 'ingredient_name', e.target.value)}
-              placeholder="Loading store inventory..."
-              disabled
+              type="number"
+              min="0"
+              step="0.1"
+              value={ingredient.quantity}
+              onChange={(e) => onUpdate(index, 'quantity', parseFloat(e.target.value) || 0)}
+              className="mt-1"
             />
-          ) : (
+            <div className="text-xs text-muted-foreground mt-1">
+              Amount needed for recipe
+            </div>
+          </div>
+          
+          <div>
+            <Label className="text-sm font-medium">Recipe Unit</Label>
             <Select
-              value={ingredient.inventory_stock_id || ''}
-              onValueChange={handleStoreInventoryChange}
+              value={ingredient.unit}
+              onValueChange={(value) => onUpdate(index, 'unit', value)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select store inventory item" />
+              <SelectTrigger className="mt-1">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {storeInventoryItems.map(item => (
-                  <SelectItem key={item.id} value={item.id}>
-                    <div className="flex flex-col">
-                      <span>{item.item}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {item.unit} • ₱{item.cost?.toFixed(2) || '0.00'}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
+                <SelectItem value="kg">kg</SelectItem>
+                <SelectItem value="g">g</SelectItem>
+                <SelectItem value="piece">piece</SelectItem>
+                <SelectItem value="pieces">pieces</SelectItem>
+                <SelectItem value="serving">serving</SelectItem>
+                <SelectItem value="portion">portion</SelectItem>
+                <SelectItem value="pair">pair</SelectItem>
+                <SelectItem value="scoop">scoop</SelectItem>
+                <SelectItem value="liters">liters</SelectItem>
+                <SelectItem value="ml">ml</SelectItem>
+                <SelectItem value="cups">cups</SelectItem>
+                <SelectItem value="tbsp">tbsp</SelectItem>
+                <SelectItem value="tsp">tsp</SelectItem>
+                <SelectItem value="boxes">boxes</SelectItem>
+                <SelectItem value="packs">packs</SelectItem>
+                <SelectItem value="Piping Bag">Piping Bag</SelectItem>
               </SelectContent>
             </Select>
-          )}
-        </div>
-        
-        <div>
-          <Label>Recipe Quantity</Label>
-          <Input
-            type="number"
-            min="0"
-            step="0.1"
-            value={ingredient.quantity}
-            onChange={(e) => onUpdate(index, 'quantity', parseFloat(e.target.value) || 0)}
-          />
-          <div className="text-xs text-muted-foreground mt-1">
-            Amount needed for recipe
           </div>
         </div>
-        
-        <div>
-          <Label>Recipe Unit</Label>
-          <Select
-            value={ingredient.unit}
-            onValueChange={(value) => onUpdate(index, 'unit', value)}
+
+        {/* Row 3: Conversion Factor and Cost */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="text-sm font-medium">Conversion Factor</Label>
+            <Input
+              type="number"
+              min="1"
+              step="0.1"
+              value={ingredient.recipe_to_store_conversion_factor || 1}
+              onChange={(e) => onUpdate(index, 'recipe_to_store_conversion_factor', parseFloat(e.target.value) || 1)}
+              placeholder="e.g., 20"
+              className="mt-1"
+            />
+            <div className="text-xs text-muted-foreground mt-1">
+              How many {ingredient.unit}s per {ingredient.store_unit || 'store unit'}
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium">Cost per Store Unit (₱)</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={ingredient.cost_per_unit || 0}
+              onChange={(e) => onUpdate(index, 'cost_per_unit', parseFloat(e.target.value) || 0)}
+              placeholder="0.00"
+              disabled
+              className="mt-1"
+            />
+            <div className="text-xs text-muted-foreground mt-1">
+              Auto-filled from store inventory
+            </div>
+          </div>
+        </div>
+
+        {/* Remove Button */}
+        <div className="flex justify-end pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onRemove(index)}
+            className="text-destructive hover:text-destructive"
           >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="kg">kg</SelectItem>
-              <SelectItem value="g">g</SelectItem>
-              <SelectItem value="piece">piece</SelectItem>
-              <SelectItem value="pieces">pieces</SelectItem>
-              <SelectItem value="serving">serving</SelectItem>
-              <SelectItem value="portion">portion</SelectItem>
-              <SelectItem value="pair">pair</SelectItem>
-              <SelectItem value="scoop">scoop</SelectItem>
-              <SelectItem value="liters">liters</SelectItem>
-              <SelectItem value="ml">ml</SelectItem>
-              <SelectItem value="cups">cups</SelectItem>
-              <SelectItem value="tbsp">tbsp</SelectItem>
-              <SelectItem value="tsp">tsp</SelectItem>
-              <SelectItem value="boxes">boxes</SelectItem>
-              <SelectItem value="packs">packs</SelectItem>
-              <SelectItem value="Piping Bag">Piping Bag</SelectItem>
-            </SelectContent>
-          </Select>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Remove
+          </Button>
         </div>
-
-        <div>
-          <Label>Conversion Factor</Label>
-          <Input
-            type="number"
-            min="1"
-            step="0.1"
-            value={ingredient.recipe_to_store_conversion_factor || 1}
-            onChange={(e) => onUpdate(index, 'recipe_to_store_conversion_factor', parseFloat(e.target.value) || 1)}
-            placeholder="e.g., 20"
-          />
-          <div className="text-xs text-muted-foreground mt-1">
-            How many {ingredient.unit}s per {ingredient.store_unit || 'store unit'}
-          </div>
-        </div>
-
-        <div>
-          <Label>Cost per Store Unit (₱)</Label>
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={ingredient.cost_per_unit || 0}
-            onChange={(e) => onUpdate(index, 'cost_per_unit', parseFloat(e.target.value) || 0)}
-            placeholder="0.00"
-            disabled
-          />
-          <div className="text-xs text-muted-foreground mt-1">
-            Auto-filled from store inventory
-          </div>
-        </div>
-        
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onRemove(index)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );

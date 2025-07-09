@@ -216,34 +216,38 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
                     </div>
                   )}
 
-                  {/* Render grouped ingredients */}
-                  {Object.entries(groupIngredientsByLocationAndGroup(currentIngredients)).map(([groupId, group]) => (
-                    <div key={groupId} className="space-y-2">
-                      {groupId !== 'individual' && (
-                        <div className="flex items-center gap-2 mb-3">
-                          <Users className="h-4 w-4 text-primary" />
-                          <h4 className="font-medium text-primary">{group.groupName}</h4>
-                          <Badge variant="secondary" className="text-xs">
-                            {group.groupType?.replace('_', ' ') || 'group'}
-                          </Badge>
-                        </div>
-                      )}
-                      
-                      {group.ingredients.map(({ ingredient, index }) => (
-                        <IngredientForm
-                          key={`${activeLocationTab}-${index}`}
-                          ingredient={ingredient}
-                          index={index}
-                          onUpdate={updateIngredient}
-                          onRemove={removeIngredient}
-                          showLocationBadge={true}
-                          locationColor={getLocationColor(ingredient.location_type)}
-                          onCreateGroup={createIngredientGroup}
-                          availableGroups={ingredientGroups}
-                        />
-                      ))}
-                    </div>
-                  ))}
+                   {/* Render grouped ingredients with scrollable container */}
+                   <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-2">
+                     {Object.entries(groupIngredientsByLocationAndGroup(currentIngredients)).map(([groupId, group]) => (
+                       <div key={groupId} className="space-y-4">
+                         {groupId !== 'individual' && (
+                           <div className="flex items-center gap-2 mb-3">
+                             <Users className="h-4 w-4 text-primary" />
+                             <h4 className="font-medium text-primary">{group.groupName}</h4>
+                             <Badge variant="secondary" className="text-xs">
+                               {group.groupType?.replace('_', ' ') || 'group'}
+                             </Badge>
+                           </div>
+                         )}
+                         
+                         <div className="space-y-6">
+                           {group.ingredients.map(({ ingredient, index }) => (
+                             <IngredientForm
+                               key={`${activeLocationTab}-${index}`}
+                               ingredient={ingredient}
+                               index={index}
+                               onUpdate={updateIngredient}
+                               onRemove={removeIngredient}
+                               showLocationBadge={true}
+                               locationColor={getLocationColor(ingredient.location_type)}
+                               onCreateGroup={createIngredientGroup}
+                               availableGroups={ingredientGroups}
+                             />
+                           ))}
+                         </div>
+                       </div>
+                     ))}
+                   </div>
                 </>
               )}
             </TabsContent>
