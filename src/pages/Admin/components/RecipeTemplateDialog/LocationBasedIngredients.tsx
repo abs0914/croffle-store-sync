@@ -18,6 +18,11 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
   setIngredients
 }) => {
   console.log('🔥 LocationBasedIngredients RENDERING with NEW REDESIGNED UI');
+  
+  // Force component identification
+  React.useEffect(() => {
+    console.log('🟢 LocationBasedIngredients useEffect - COMPONENT IS ACTIVE');
+  }, []);
   const [activeLocationTab, setActiveLocationTab] = useState<LocationType>('all');
   const [ingredientGroups, setIngredientGroups] = useState<Array<{id: string; name: string; type: 'required_one' | 'optional_one' | 'multiple'}>>([]);
 
@@ -146,10 +151,15 @@ export const LocationBasedIngredients: React.FC<LocationBasedIngredientsProps> =
 
   return (
     <Card>
+      {/* REDESIGNED UI INDICATOR */}
+      <div className="bg-green-500 text-white p-2 text-center font-bold text-sm">
+        🔥 NEW REDESIGNED INGREDIENTS UI v3.0 ACTIVE 🔥
+      </div>
+      
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5" />
-          Location-Based Ingredients with Groups
+          Location-Based Ingredients with Groups (NEW UI)
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           Configure different ingredients for stores in different locations. Create groups like "Choose 1 Sauce" 
