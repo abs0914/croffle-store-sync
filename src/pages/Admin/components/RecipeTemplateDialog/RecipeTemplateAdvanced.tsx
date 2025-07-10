@@ -25,6 +25,7 @@ import type {
 } from '@/types/advancedRecipe';
 import { RecipeTemplateIngredientGroups } from './RecipeTemplateIngredientGroups';
 import { RecipeTemplatePricingMatrix } from './RecipeTemplatePricingMatrix';
+import { AddOnManagement } from '@/components/admin/recipe/AddOnManagement';
 
 interface RecipeTemplateAdvancedProps {
   templateId?: string;
@@ -270,21 +271,7 @@ export const RecipeTemplateAdvanced: React.FC<RecipeTemplateAdvancedProps> = ({
         </TabsContent>
 
         <TabsContent value="addons">
-          <Card>
-            <CardHeader>
-              <CardTitle>Add-on Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {addonCategories.map(category => (
-                  <div key={category.id} className="border rounded-lg p-4">
-                    <h3 className="font-medium mb-2">{category.name}</h3>
-                    <Badge variant="outline">{category.category_type}</Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <AddOnManagement />
         </TabsContent>
 
         <TabsContent value="groups">

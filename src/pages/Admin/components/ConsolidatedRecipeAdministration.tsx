@@ -26,6 +26,8 @@ import { UnifiedRecipeEditDialog } from '@/components/admin/recipe/UnifiedRecipe
 import { EnhancedRecipeFilters } from '@/components/admin/recipe/EnhancedRecipeFilters';
 import { RecipeTypeIndicator, RecipeComplexityIndicator } from '@/components/admin/recipe/RecipeTypeIndicator';
 import { ComponentRelationshipVisualization } from '@/components/admin/recipe/ComponentRelationshipVisualization';
+import { RecipeInventoryMappings } from '@/components/admin/recipe/RecipeInventoryMappings';
+import { RecipeCleanupTools } from '@/components/admin/recipe/RecipeCleanupTools';
 import { toast } from 'sonner';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 
@@ -443,15 +445,11 @@ export function ConsolidatedRecipeAdministration() {
         </TabsContent>
 
         <TabsContent value="mappings" className="space-y-4">
-          <div className="text-center py-8 text-muted-foreground">
-            Conversion mappings are no longer required with the new direct inventory system.
-          </div>
+          <RecipeInventoryMappings />
         </TabsContent>
 
         <TabsContent value="cleanup" className="space-y-4">
-          <div className="text-center py-8 text-muted-foreground">
-            Recipe cleanup tools will be available in a future update.
-          </div>
+          <RecipeCleanupTools />
         </TabsContent>
       </Tabs>
 
