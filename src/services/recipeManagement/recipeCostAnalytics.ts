@@ -112,6 +112,8 @@ export const getRecipeCostBreakdown = async (templateId: string): Promise<Recipe
       totalCost: 0,
       costPerServing: 0,
       suggestedPrice: 0,
+      profitability: 0,
+      ingredients: [],
       ingredientCosts: [],
       laborCost: 0,
       overheadCost: 0
@@ -143,10 +145,13 @@ export const getIngredientCostAlerts = async (): Promise<IngredientCostAlert[]> 
         templateId: 'template-2',
         templateName: 'Chocolate Croffle',
         ingredient_name: 'Chocolate Chips',
+        ingredientName: 'Chocolate Chips',
         current_cost: 180.0,
         average_cost: 200.0,
         variance_percentage: -10.0,
+        percentageIncrease: -10.0,
         alert_type: 'low',
+        severity: 'low',
         recommendation: 'Good time to stock up on this ingredient'
       }
     ];
