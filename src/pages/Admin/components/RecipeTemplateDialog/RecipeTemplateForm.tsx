@@ -170,8 +170,6 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
     );
   }
 
-  console.log('🔥 RecipeTemplateForm RENDERING with REDESIGNED INGREDIENTS');
-  
   return (
     <div className="flex flex-col h-full">
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
