@@ -3212,7 +3212,7 @@ export type Database = {
           is_active: boolean | null
           last_cost_update: string | null
           name: string
-          product_id: string
+          product_id: string | null
           recipe_type: string | null
           rejection_reason: string | null
           serving_size: number | null
@@ -3241,7 +3241,7 @@ export type Database = {
           is_active?: boolean | null
           last_cost_update?: string | null
           name: string
-          product_id: string
+          product_id?: string | null
           recipe_type?: string | null
           rejection_reason?: string | null
           serving_size?: number | null
@@ -3270,7 +3270,7 @@ export type Database = {
           is_active?: boolean | null
           last_cost_update?: string | null
           name?: string
-          product_id?: string
+          product_id?: string | null
           recipe_type?: string | null
           rejection_reason?: string | null
           serving_size?: number | null
