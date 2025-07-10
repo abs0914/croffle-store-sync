@@ -23,6 +23,8 @@ import type {
   ComboPricingRule,
   RecipePricingMatrixForm
 } from '@/types/advancedRecipe';
+import { RecipeTemplateIngredientGroups } from './RecipeTemplateIngredientGroups';
+import { RecipeTemplatePricingMatrix } from './RecipeTemplatePricingMatrix';
 
 interface RecipeTemplateAdvancedProps {
   templateId?: string;
@@ -35,7 +37,6 @@ export const RecipeTemplateAdvanced: React.FC<RecipeTemplateAdvancedProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('pricing');
   const [loading, setLoading] = useState(false);
-
   // State for different sections
   const [ingredientGroups, setIngredientGroups] = useState<RecipeIngredientGroup[]>([]);
   const [pricingMatrix, setPricingMatrix] = useState<RecipePricingMatrix[]>([]);
@@ -161,91 +162,10 @@ export const RecipeTemplateAdvanced: React.FC<RecipeTemplateAdvancedProps> = ({
         </TabsList>
 
         <TabsContent value="pricing">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Pricing Matrix
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Add New Pricing */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border rounded-lg">
-                <div>
-                  <Label>Size Category</Label>
-                  <Select value={newPricing.size_category} onValueChange={(value) => 
-                    setNewPricing(prev => ({ ...prev, size_category: value }))
-                  }>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sizeOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Temperature</Label>
-                  <Select value={newPricing.temperature_category} onValueChange={(value) => 
-                    setNewPricing(prev => ({ ...prev, temperature_category: value }))
-                  }>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select temp" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {temperatureOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Base Price (₱)</Label>
-                  <Input
-                    type="number"
-                    value={newPricing.base_price}
-                    onChange={(e) => setNewPricing(prev => ({ 
-                      ...prev, 
-                      base_price: Number(e.target.value) 
-                    }))}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <Button onClick={handleAddPricing} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add
-                  </Button>
-                </div>
-              </div>
-
-              {/* Existing Pricing Matrix */}
-              <div className="space-y-2">
-                {pricingMatrix.map((pricing, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <Badge variant="outline">
-                        {sizeOptions.find(s => s.value === pricing.size_category)?.label}
-                      </Badge>
-                      <Badge variant="outline">
-                        {temperatureOptions.find(t => t.value === pricing.temperature_category)?.label}
-                      </Badge>
-                      <span className="font-semibold">₱{pricing.base_price}</span>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <RecipeTemplatePricingMatrix
+            templateId={templateId}
+            onPricingChange={setPricingMatrix}
+          />
         </TabsContent>
 
         <TabsContent value="combos">
@@ -368,17 +288,10 @@ export const RecipeTemplateAdvanced: React.FC<RecipeTemplateAdvancedProps> = ({
         </TabsContent>
 
         <TabsContent value="groups">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ingredient Groups</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Ingredient groups allow you to create organized selections for customers.</p>
-                <p className="text-sm">Coming soon...</p>
-              </div>
-            </CardContent>
-          </Card>
+          <RecipeTemplateIngredientGroups
+            templateId={templateId}
+            onGroupsChange={setIngredientGroups}
+          />
         </TabsContent>
       </Tabs>
     </div>
