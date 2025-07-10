@@ -63,12 +63,12 @@ export const getDirectInventoryItems = async (storeId?: string) => {
       .select(`
         id,
         item,
-        serving_unit,
-        serving_quantity,
-        fractional_stock,
-        cost_per_serving,
-        breakdown_ratio,
-        store_id
+        unit,
+        stock_quantity,
+        serving_ready_quantity,
+        cost,
+        store_id,
+        is_fractional_supported
       `)
       .eq('is_active', true)
       .order('item');
@@ -83,11 +83,10 @@ export const getDirectInventoryItems = async (storeId?: string) => {
 
     return (data || []).map(item => ({
       ...item,
-      // Use serving unit if available, otherwise fall back to regular unit
-      display_unit: item.serving_unit || 'pieces',
-      available_servings: (item.serving_quantity || 0) + (item.fractional_stock || 0),
-      cost_per_unit: item.cost_per_serving || 0,
-      supports_fractional: supportsFractionalQuantity(item.item)
+      display_unit: item.unit,
+      available_servings: item.serving_ready_quantity || item.stock_quantity || 0,
+      cost_per_unit: item.cost || 0,
+      supports_fractional: item.is_fractional_supported || supportsFractionalQuantity(item.item)
     }));
   } catch (error) {
     console.error('Error fetching direct inventory items:', error);
@@ -124,7 +123,7 @@ export const deductDirectInventoryIngredients = async (
       // Get current inventory stock
       const { data: currentStock, error: fetchError } = await supabase
         .from('inventory_stock')
-        .select('serving_quantity, fractional_stock, item')
+        .select('stock_quantity, serving_ready_quantity, item')
         .eq('id', ingredient.inventory_stock_id)
         .single();
 
@@ -133,26 +132,21 @@ export const deductDirectInventoryIngredients = async (
         continue;
       }
 
-      const currentServingQuantity = currentStock.serving_quantity || 0;
-      const currentFractionalStock = currentStock.fractional_stock || 0;
-      const totalCurrentStock = currentServingQuantity + currentFractionalStock;
+      const totalCurrentStock = currentStock.serving_ready_quantity || currentStock.stock_quantity || 0;
 
       if (totalCurrentStock < quantityToDeduct) {
         toast.error(`Insufficient stock for ${ingredient.ingredient_name}. Available: ${totalCurrentStock}, Required: ${quantityToDeduct}`);
         return false;
       }
 
-      // Calculate new stock levels
+      // Calculate new stock levels  
       const newTotalStock = totalCurrentStock - quantityToDeduct;
-      const newWholeStock = Math.floor(newTotalStock);
-      const newFractionalStock = newTotalStock - newWholeStock;
 
       deductions.push({
         inventory_stock_id: ingredient.inventory_stock_id,
         ingredient_name: ingredient.ingredient_name,
         quantity_deducted: quantityToDeduct,
-        newServingQuantity: newWholeStock,
-        newFractionalStock: newFractionalStock > 0 ? newFractionalStock : 0
+        newStock: Math.max(0, newTotalStock)
       });
     }
 
@@ -161,8 +155,7 @@ export const deductDirectInventoryIngredients = async (
       const { error: updateError } = await supabase
         .from('inventory_stock')
         .update({
-          serving_quantity: deduction.newServingQuantity,
-          fractional_stock: deduction.newFractionalStock,
+          serving_ready_quantity: deduction.newStock,
           updated_at: new Date().toISOString()
         })
         .eq('id', deduction.inventory_stock_id);
@@ -188,8 +181,8 @@ export const deductDirectInventoryIngredients = async (
             product_id: deduction.inventory_stock_id,
             transaction_type: 'recipe_usage',
             quantity: deduction.quantity_deducted,
-            previous_quantity: (deduction.newServingQuantity + deduction.newFractionalStock) + deduction.quantity_deducted,
-            new_quantity: deduction.newServingQuantity + deduction.newFractionalStock,
+            previous_quantity: deduction.newStock + deduction.quantity_deducted,
+            new_quantity: deduction.newStock,
             notes: `Recipe usage for recipe ${recipeId} - Direct inventory deduction`,
             reference_id: recipeId,
             created_by: 'system' // TODO: Get actual user ID from auth context
@@ -229,7 +222,7 @@ export const checkDirectIngredientAvailability = async (
 
       const { data: stock, error } = await supabase
         .from('inventory_stock')
-        .select('serving_quantity, fractional_stock')
+        .select('serving_ready_quantity, stock_quantity')
         .eq('id', ingredient.inventory_stock_id)
         .eq('store_id', storeId)
         .single();
@@ -243,7 +236,7 @@ export const checkDirectIngredientAvailability = async (
         continue;
       }
 
-      const totalAvailable = (stock.serving_quantity || 0) + (stock.fractional_stock || 0);
+      const totalAvailable = stock.serving_ready_quantity || stock.stock_quantity || 0;
       
       if (totalAvailable < requiredQuantity) {
         unavailableItems.push({

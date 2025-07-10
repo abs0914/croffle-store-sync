@@ -614,129 +614,6 @@ export type Database = {
           },
         ]
       }
-      conversion_ingredients: {
-        Row: {
-          commissary_item_id: string
-          created_at: string
-          id: string
-          inventory_conversion_id: string
-          quantity_used: number
-          unit_cost: number | null
-        }
-        Insert: {
-          commissary_item_id: string
-          created_at?: string
-          id?: string
-          inventory_conversion_id: string
-          quantity_used: number
-          unit_cost?: number | null
-        }
-        Update: {
-          commissary_item_id?: string
-          created_at?: string
-          id?: string
-          inventory_conversion_id?: string
-          quantity_used?: number
-          unit_cost?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversion_ingredients_commissary_item_id_fkey"
-            columns: ["commissary_item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversion_ingredients_inventory_conversion_id_fkey"
-            columns: ["inventory_conversion_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_conversions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      conversion_recipe_ingredients: {
-        Row: {
-          commissary_item_id: string
-          conversion_recipe_id: string
-          created_at: string
-          id: string
-          quantity: number
-        }
-        Insert: {
-          commissary_item_id: string
-          conversion_recipe_id: string
-          created_at?: string
-          id?: string
-          quantity: number
-        }
-        Update: {
-          commissary_item_id?: string
-          conversion_recipe_id?: string
-          created_at?: string
-          id?: string
-          quantity?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversion_recipe_ingredients_commissary_item_id_fkey"
-            columns: ["commissary_item_id"]
-            isOneToOne: false
-            referencedRelation: "commissary_inventory"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversion_recipe_ingredients_conversion_recipe_id_fkey"
-            columns: ["conversion_recipe_id"]
-            isOneToOne: false
-            referencedRelation: "conversion_recipes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      conversion_recipes: {
-        Row: {
-          created_at: string
-          created_by: string
-          description: string | null
-          finished_item_name: string
-          finished_item_unit: string
-          id: string
-          instructions: string | null
-          is_active: boolean
-          name: string
-          updated_at: string
-          yield_quantity: number
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          description?: string | null
-          finished_item_name: string
-          finished_item_unit: string
-          id?: string
-          instructions?: string | null
-          is_active?: boolean
-          name: string
-          updated_at?: string
-          yield_quantity?: number
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          finished_item_name?: string
-          finished_item_unit?: string
-          id?: string
-          instructions?: string | null
-          is_active?: boolean
-          name?: string
-          updated_at?: string
-          yield_quantity?: number
-        }
-        Relationships: []
-      }
       customers: {
         Row: {
           created_at: string | null
@@ -1413,73 +1290,6 @@ export type Database = {
         }
         Relationships: []
       }
-      inventory_conversion_mappings: {
-        Row: {
-          bundle_id: string | null
-          component_ratio: number | null
-          conversion_factor: number
-          created_at: string | null
-          id: string
-          inventory_stock_id: string
-          is_active: boolean
-          is_bundle_component: boolean | null
-          notes: string | null
-          recipe_ingredient_name: string
-          recipe_ingredient_unit: string
-          updated_at: string | null
-        }
-        Insert: {
-          bundle_id?: string | null
-          component_ratio?: number | null
-          conversion_factor: number
-          created_at?: string | null
-          id?: string
-          inventory_stock_id: string
-          is_active?: boolean
-          is_bundle_component?: boolean | null
-          notes?: string | null
-          recipe_ingredient_name: string
-          recipe_ingredient_unit: string
-          updated_at?: string | null
-        }
-        Update: {
-          bundle_id?: string | null
-          component_ratio?: number | null
-          conversion_factor?: number
-          created_at?: string | null
-          id?: string
-          inventory_stock_id?: string
-          is_active?: boolean
-          is_bundle_component?: boolean | null
-          notes?: string | null
-          recipe_ingredient_name?: string
-          recipe_ingredient_unit?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_conversion_mappings_bundle_id_fkey"
-            columns: ["bundle_id"]
-            isOneToOne: false
-            referencedRelation: "product_bundles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_conversion_mappings_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_conversion_mappings_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       inventory_conversions: {
         Row: {
           commissary_item_id: string | null
@@ -1526,24 +1336,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "inventory_conversions_conversion_recipe_id_fkey"
-            columns: ["conversion_recipe_id"]
-            isOneToOne: false
-            referencedRelation: "conversion_recipes"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "inventory_conversions_inventory_stock_id_fkey"
             columns: ["inventory_stock_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_conversions_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
             referencedColumns: ["id"]
           },
         ]
@@ -1668,32 +1464,18 @@ export type Database = {
             referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "inventory_movements_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
-            referencedColumns: ["id"]
-          },
         ]
       }
       inventory_stock: {
         Row: {
-          breakdown_ratio: number | null
-          bulk_quantity: number | null
-          bulk_unit: string | null
           cost: number | null
-          cost_per_serving: number | null
           created_at: string | null
-          fractional_stock: number | null
           id: string
           is_active: boolean | null
+          is_fractional_supported: boolean | null
           item: string
-          last_restocked: string | null
-          maximum_capacity: number | null
           minimum_threshold: number | null
-          serving_quantity: number | null
-          serving_unit: string | null
+          serving_ready_quantity: number | null
           sku: string | null
           stock_quantity: number
           store_id: string
@@ -1701,21 +1483,14 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          breakdown_ratio?: number | null
-          bulk_quantity?: number | null
-          bulk_unit?: string | null
           cost?: number | null
-          cost_per_serving?: number | null
           created_at?: string | null
-          fractional_stock?: number | null
           id?: string
           is_active?: boolean | null
+          is_fractional_supported?: boolean | null
           item: string
-          last_restocked?: string | null
-          maximum_capacity?: number | null
           minimum_threshold?: number | null
-          serving_quantity?: number | null
-          serving_unit?: string | null
+          serving_ready_quantity?: number | null
           sku?: string | null
           stock_quantity?: number
           store_id: string
@@ -1723,21 +1498,14 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          breakdown_ratio?: number | null
-          bulk_quantity?: number | null
-          bulk_unit?: string | null
           cost?: number | null
-          cost_per_serving?: number | null
           created_at?: string | null
-          fractional_stock?: number | null
           id?: string
           is_active?: boolean | null
+          is_fractional_supported?: boolean | null
           item?: string
-          last_restocked?: string | null
-          maximum_capacity?: number | null
           minimum_threshold?: number | null
-          serving_quantity?: number | null
-          serving_unit?: string | null
+          serving_ready_quantity?: number | null
           sku?: string | null
           stock_quantity?: number
           store_id?: string
@@ -1803,13 +1571,6 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_transactions_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
             referencedColumns: ["id"]
           },
           {
@@ -2354,13 +2115,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "product_ingredients_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "product_ingredients_product_catalog_id_fkey"
             columns: ["product_catalog_id"]
             isOneToOne: false
@@ -2493,13 +2247,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "products_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "products_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
@@ -2542,13 +2289,6 @@ export type Database = {
             columns: ["inventory_stock_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_order_items_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
             referencedColumns: ["id"]
           },
           {
@@ -2673,8 +2413,6 @@ export type Database = {
       recipe_ingredients: {
         Row: {
           commissary_item_id: string | null
-          conversion_factor: number | null
-          cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string
           display_order: number | null
@@ -2693,8 +2431,6 @@ export type Database = {
         }
         Insert: {
           commissary_item_id?: string | null
-          conversion_factor?: number | null
-          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string
           display_order?: number | null
@@ -2713,8 +2449,6 @@ export type Database = {
         }
         Update: {
           commissary_item_id?: string | null
-          conversion_factor?: number | null
-          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string
           display_order?: number | null
@@ -2747,13 +2481,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "recipe_ingredients_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "recipe_ingredients_recipe_id_fkey"
             columns: ["recipe_id"]
             isOneToOne: false
@@ -2773,8 +2500,6 @@ export type Database = {
         Row: {
           commissary_item_id: string | null
           commissary_item_name: string | null
-          conversion_factor: number | null
-          cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string | null
           display_order: number | null
@@ -2801,8 +2526,6 @@ export type Database = {
         Insert: {
           commissary_item_id?: string | null
           commissary_item_name?: string | null
-          conversion_factor?: number | null
-          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
           display_order?: number | null
@@ -2829,8 +2552,6 @@ export type Database = {
         Update: {
           commissary_item_id?: string | null
           commissary_item_name?: string | null
-          conversion_factor?: number | null
-          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
           display_order?: number | null
@@ -2867,13 +2588,6 @@ export type Database = {
             columns: ["inventory_stock_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recipe_template_ingredients_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
             referencedColumns: ["id"]
           },
           {
@@ -3246,13 +2960,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_order_items_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "stock_order_items_stock_order_id_fkey"
             columns: ["stock_order_id"]
             isOneToOne: false
@@ -3421,13 +3128,6 @@ export type Database = {
             columns: ["inventory_stock_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "store_inventory_alerts_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "serving_ready_inventory"
             referencedColumns: ["id"]
           },
           {
@@ -3882,62 +3582,8 @@ export type Database = {
           },
         ]
       }
-      serving_ready_inventory: {
-        Row: {
-          available_servings: number | null
-          created_at: string | null
-          id: string | null
-          is_active: boolean | null
-          item: string | null
-          maximum_capacity: number | null
-          minimum_threshold: number | null
-          store_id: string | null
-          unit: string | null
-          unit_cost: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          available_servings?: never
-          created_at?: string | null
-          id?: string | null
-          is_active?: boolean | null
-          item?: string | null
-          maximum_capacity?: number | null
-          minimum_threshold?: number | null
-          store_id?: string | null
-          unit?: string | null
-          unit_cost?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          available_servings?: never
-          created_at?: string | null
-          id?: string | null
-          is_active?: boolean | null
-          item?: string | null
-          maximum_capacity?: number | null
-          minimum_threshold?: number | null
-          store_id?: string | null
-          unit?: string | null
-          unit_cost?: number | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_stock_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Functions: {
-      calculate_cost_per_recipe_unit: {
-        Args: { purchase_cost: number; conversion_factor: number }
-        Returns: number
-      }
       calculate_recipe_cost: {
         Args: { recipe_id: number }
         Returns: number
@@ -4127,6 +3773,15 @@ export type Database = {
       user_has_store_access: {
         Args: { user_id: string; store_id: string }
         Returns: boolean
+      }
+      validate_clean_slate_migration: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          check_name: string
+          status: string
+          count_items: number
+          details: string
+        }[]
       }
     }
     Enums: {
