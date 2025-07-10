@@ -38,6 +38,9 @@ export interface RecipeTemplateIngredientInput {
   cost_per_unit: number;
   location_type: LocationType;
   inventory_stock_id?: string;
+  commissary_item_id?: string | null;
+  supports_fractional?: boolean;
+  notes?: string;
   store_unit?: string;
   recipe_to_store_conversion_factor?: number;
 }

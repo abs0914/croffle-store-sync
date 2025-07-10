@@ -197,6 +197,7 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
       <RecipeTemplateIngredients
         ingredients={ingredients}
         setIngredients={setIngredients}
+        storeId={undefined} // Recipe templates are store-agnostic, use commissary inventory
       />
 
       <RecipeTemplateInstructions
