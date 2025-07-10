@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createCommissaryInventoryItem } from "@/services/inventoryManagement/commissaryInventoryService";
 import { CommissaryInventoryItem } from "@/types/inventoryManagement";
+import { UOMSelect } from "@/components/shared/UOMSelect";
 import { toast } from "sonner";
 
 interface AddCommissaryItemDialogProps {
@@ -121,11 +122,10 @@ export function AddCommissaryItemDialog({ open, onOpenChange, onSuccess }: AddCo
           </div>
           <div>
             <Label htmlFor="uom">Unit of Measure</Label>
-            <Input
-              id="uom"
+            <UOMSelect
               value={formData.uom}
-              onChange={(e) => setFormData(prev => ({ ...prev, uom: e.target.value }))}
-              required
+              onChange={(value) => setFormData(prev => ({ ...prev, uom: value }))}
+              placeholder="Select UOM"
             />
           </div>
           <div className="flex gap-2">
