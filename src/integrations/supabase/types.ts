@@ -398,6 +398,7 @@ export type Database = {
           average_cost: number | null
           barcode: string | null
           category: string
+          conversion_ratio: number | null
           created_at: string
           current_stock: number
           expiry_date: string | null
@@ -410,6 +411,10 @@ export type Database = {
           last_purchase_date: string | null
           minimum_threshold: number
           name: string
+          normalized_unit: string | null
+          order_quantity: number | null
+          order_unit: string | null
+          serving_quantity: number | null
           sku: string | null
           storage_location: string | null
           supplier_id: string | null
@@ -421,6 +426,7 @@ export type Database = {
           average_cost?: number | null
           barcode?: string | null
           category: string
+          conversion_ratio?: number | null
           created_at?: string
           current_stock?: number
           expiry_date?: string | null
@@ -433,6 +439,10 @@ export type Database = {
           last_purchase_date?: string | null
           minimum_threshold?: number
           name: string
+          normalized_unit?: string | null
+          order_quantity?: number | null
+          order_unit?: string | null
+          serving_quantity?: number | null
           sku?: string | null
           storage_location?: string | null
           supplier_id?: string | null
@@ -444,6 +454,7 @@ export type Database = {
           average_cost?: number | null
           barcode?: string | null
           category?: string
+          conversion_ratio?: number | null
           created_at?: string
           current_stock?: number
           expiry_date?: string | null
@@ -456,6 +467,10 @@ export type Database = {
           last_purchase_date?: string | null
           minimum_threshold?: number
           name?: string
+          normalized_unit?: string | null
+          order_quantity?: number | null
+          order_unit?: string | null
+          serving_quantity?: number | null
           sku?: string | null
           storage_location?: string | null
           supplier_id?: string | null
@@ -1540,6 +1555,7 @@ export type Database = {
       }
       inventory_stock: {
         Row: {
+          conversion_ratio: number | null
           cost: number | null
           created_at: string | null
           id: string
@@ -1547,6 +1563,9 @@ export type Database = {
           is_fractional_supported: boolean | null
           item: string
           minimum_threshold: number | null
+          normalized_unit: string | null
+          order_quantity: number | null
+          order_unit: string | null
           serving_ready_quantity: number | null
           sku: string | null
           stock_quantity: number
@@ -1555,6 +1574,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          conversion_ratio?: number | null
           cost?: number | null
           created_at?: string | null
           id?: string
@@ -1562,6 +1582,9 @@ export type Database = {
           is_fractional_supported?: boolean | null
           item: string
           minimum_threshold?: number | null
+          normalized_unit?: string | null
+          order_quantity?: number | null
+          order_unit?: string | null
           serving_ready_quantity?: number | null
           sku?: string | null
           stock_quantity?: number
@@ -1570,6 +1593,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          conversion_ratio?: number | null
           cost?: number | null
           created_at?: string | null
           id?: string
@@ -1577,6 +1601,9 @@ export type Database = {
           is_fractional_supported?: boolean | null
           item?: string
           minimum_threshold?: number | null
+          normalized_unit?: string | null
+          order_quantity?: number | null
+          order_unit?: string | null
           serving_ready_quantity?: number | null
           sku?: string | null
           stock_quantity?: number
@@ -4252,6 +4279,10 @@ export type Database = {
         }
         Returns: string
       }
+      extract_pack_quantity: {
+        Args: { order_description: string }
+        Returns: number
+      }
       generate_recipe_sku: {
         Args: { recipe_name: string; recipe_type?: string }
         Returns: string
@@ -4384,6 +4415,10 @@ export type Database = {
           p_transaction_id?: string
           p_receipt_number?: string
         }
+        Returns: string
+      }
+      normalize_unit_name: {
+        Args: { unit_text: string }
         Returns: string
       }
       sync_auth_user_to_app_users: {
