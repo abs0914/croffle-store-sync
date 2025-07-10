@@ -40,7 +40,8 @@ export const STANDARD_UOM_OPTIONS = [
   'serving',
   'portion',
   'scoop',
-  'pair'
+  'pair',
+  'tub'
 ] as const;
 
 // Commissary inventory item interface
