@@ -24,6 +24,7 @@ export interface DirectInventoryIngredient {
   quantity: number; // Can be fractional (0.5, 1.5, etc.)
   unit: string; // Direct inventory unit
   inventory_stock_id?: string;
+  commissary_item_id?: string;
   estimated_cost_per_unit?: number;
   location_type: 'all' | 'inside_cebu' | 'outside_cebu';
   supports_fractional: boolean; // Auto-determined based on ingredient name
@@ -90,6 +91,42 @@ export const getDirectInventoryItems = async (storeId?: string) => {
     }));
   } catch (error) {
     console.error('Error fetching direct inventory items:', error);
+    return [];
+  }
+};
+
+/**
+ * Get available commissary inventory items for recipe templates
+ */
+export const getCommissaryInventoryItems = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('commissary_inventory')
+      .select(`
+        id,
+        name,
+        unit,
+        current_stock,
+        unit_cost,
+        is_active
+      `)
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) throw error;
+
+    return (data || []).map(item => ({
+      id: item.id,
+      item: item.name,
+      display_unit: item.unit,
+      available_servings: item.current_stock || 0,
+      cost_per_unit: item.unit_cost || 0,
+      supports_fractional: supportsFractionalQuantity(item.name),
+      commissary_item_id: item.id,
+      unit: item.unit
+    }));
+  } catch (error) {
+    console.error('Error fetching commissary inventory items:', error);
     return [];
   }
 };

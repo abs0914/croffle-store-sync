@@ -119,6 +119,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
             ingredient={ingredient}
             index={index}
             storeId={storeId}
+            useCommissaryInventory={true}
             onUpdate={updateIngredient}
             onRemove={removeIngredient}
           />

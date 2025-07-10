@@ -9,7 +9,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Trash2, Package, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { 
   DirectInventoryIngredient, 
-  getDirectInventoryItems, 
+  getDirectInventoryItems,
+  getCommissaryInventoryItems,
   validateIngredientQuantity,
   DIRECT_INVENTORY_UNITS,
   MINI_CROFFLE_INGREDIENTS 
@@ -19,6 +20,7 @@ interface DirectInventoryIngredientFormProps {
   ingredient: DirectInventoryIngredient;
   index: number;
   storeId?: string;
+  useCommissaryInventory?: boolean; // New prop to indicate if we should use commissary inventory
   onUpdate: (index: number, field: keyof DirectInventoryIngredient, value: any) => void;
   onRemove: (index: number) => void;
 }
@@ -27,6 +29,7 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
   ingredient,
   index,
   storeId,
+  useCommissaryInventory = false,
   onUpdate,
   onRemove
 }) => {
@@ -36,7 +39,7 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
 
   useEffect(() => {
     loadInventoryItems();
-  }, [storeId]);
+  }, [storeId, useCommissaryInventory]);
 
   useEffect(() => {
     // Auto-detect fractional support when ingredient name changes
@@ -69,7 +72,9 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
   const loadInventoryItems = async () => {
     setLoading(true);
     try {
-      const items = await getDirectInventoryItems(storeId);
+      const items = useCommissaryInventory 
+        ? await getCommissaryInventoryItems()
+        : await getDirectInventoryItems(storeId);
       setInventoryItems(items);
     } catch (error) {
       console.error('Error loading inventory items:', error);
@@ -81,7 +86,13 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
   const handleInventoryItemSelect = (itemId: string) => {
     const selectedItem = inventoryItems.find(item => item.id === itemId);
     if (selectedItem) {
-      onUpdate(index, 'inventory_stock_id', itemId);
+      if (useCommissaryInventory) {
+        onUpdate(index, 'commissary_item_id', itemId);
+        onUpdate(index, 'inventory_stock_id', undefined);
+      } else {
+        onUpdate(index, 'inventory_stock_id', itemId);
+        onUpdate(index, 'commissary_item_id', undefined);
+      }
       onUpdate(index, 'ingredient_name', selectedItem.item);
       onUpdate(index, 'unit', selectedItem.display_unit);
       onUpdate(index, 'estimated_cost_per_unit', selectedItem.cost_per_unit);
@@ -127,14 +138,14 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
         <div className="space-y-4">
           {/* Inventory Item Selection */}
           <div>
-            <Label>Select Inventory Item</Label>
+            <Label>{useCommissaryInventory ? 'Select Commissary Item' : 'Select Inventory Item'}</Label>
             <Select
-              value={ingredient.inventory_stock_id || ''}
+              value={useCommissaryInventory ? (ingredient.commissary_item_id || '') : (ingredient.inventory_stock_id || '')}
               onValueChange={handleInventoryItemSelect}
               disabled={loading}
             >
               <SelectTrigger className="mt-2">
-                <SelectValue placeholder={loading ? "Loading..." : "Choose inventory item"} />
+                <SelectValue placeholder={loading ? "Loading..." : useCommissaryInventory ? "Choose commissary item" : "Choose inventory item"} />
               </SelectTrigger>
               <SelectContent>
                 {inventoryItems.map(item => (
@@ -158,7 +169,7 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
           </div>
 
           {/* Manual Ingredient Name (if no inventory item selected) */}
-          {!ingredient.inventory_stock_id && (
+          {!ingredient.inventory_stock_id && !ingredient.commissary_item_id && (
             <div>
               <Label>Ingredient Name</Label>
               <Input
