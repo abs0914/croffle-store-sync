@@ -194,44 +194,189 @@ export const RecipeTemplateUpload: React.FC = () => {
     const template = {
       recipes: [
         {
-          name: "Sample Croffle",
-          description: "Delicious croffle with toppings",
-          category_name: "croffles",
-          instructions: "1. Prepare waffle batter\n2. Cook in croffle maker\n3. Add toppings",
+          name: "Classic Tiramisu Croffle",
+          description: "Classic tiramisu flavored croffle with standard toppings",
+          category_name: "Classic",
+          instructions: "1. Prepare croissant base\n2. Add toppings as specified\n3. Serve in takeout container",
           yield_quantity: 1,
           serving_size: 1,
-          recipe_type: "food",
           image_url: "",
           ingredients: [
             {
-              ingredient_name: "Waffle Mix",
-              quantity: 100,
-              unit: "g",
-              cost_per_unit: 0.02,
-              location_type: "all",
-              uses_store_inventory: true
+              ingredient_name: "Croissant",
+              quantity: 1,
+              unit: "piece",
+              cost_per_unit: 30
+            },
+            {
+              ingredient_name: "Whipped Cream",
+              quantity: 1,
+              unit: "serving",
+              cost_per_unit: 8
+            },
+            {
+              ingredient_name: "Tiramisu Sauce",
+              quantity: 1,
+              unit: "portion",
+              cost_per_unit: 3.5
+            }
+          ]
+        },
+        {
+          name: "Mini Croffle - Mix & Match",
+          description: "Customizable mini croffle with choice of sauce and topping",
+          category_name: "Mini",
+          instructions: "1. Prepare mini croissant base\n2. Customer selects 1 sauce and 1 topping\n3. Apply selections and serve",
+          yield_quantity: 1,
+          serving_size: 1,
+          base_price_includes: "Mini croissant base + choice of 1 sauce + choice of 1 topping",
+          has_choice_groups: true,
+          choice_groups: [
+            {
+              group_name: "sauce_selection",
+              group_type: "required",
+              selection_min: 1,
+              selection_max: 1,
+              description: "Choose your sauce",
+              ingredients: [
+                {
+                  ingredient_name: "Chocolate Sauce",
+                  quantity: 1,
+                  unit: "portion",
+                  cost_per_unit: 1.25,
+                  is_default_selection: true,
+                  choice_order: 1
+                },
+                {
+                  ingredient_name: "Caramel Sauce",
+                  quantity: 1,
+                  unit: "portion", 
+                  cost_per_unit: 1.25,
+                  choice_order: 2
+                },
+                {
+                  ingredient_name: "Strawberry Sauce",
+                  quantity: 1,
+                  unit: "portion",
+                  cost_per_unit: 1.25,
+                  choice_order: 3
+                }
+              ]
+            },
+            {
+              group_name: "topping_selection",
+              group_type: "required",
+              selection_min: 1,
+              selection_max: 1,
+              description: "Choose your topping",
+              ingredients: [
+                {
+                  ingredient_name: "Colored Sprinkles",
+                  quantity: 1,
+                  unit: "portion",
+                  cost_per_unit: 1.25,
+                  is_default_selection: true,
+                  choice_order: 1
+                },
+                {
+                  ingredient_name: "Peanuts",
+                  quantity: 1,
+                  unit: "portion",
+                  cost_per_unit: 1.25,
+                  choice_order: 2
+                },
+                {
+                  ingredient_name: "Choco Flakes",
+                  quantity: 1,
+                  unit: "portion",
+                  cost_per_unit: 1.25,
+                  choice_order: 3
+                }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Croffle Overload",
+          description: "Premium croffle with base ingredients plus customizable premium toppings",
+          category_name: "Overload",
+          instructions: "1. Prepare croissant base with ice cream\n2. Add all base ingredients\n3. Customer selects 1 premium topping\n4. Serve in overload cup",
+          yield_quantity: 1,
+          serving_size: 1,
+          base_price_includes: "Half croissant + vanilla ice cream + all base toppings + choice of 1 premium topping",
+          has_choice_groups: true,
+          choice_groups: [
+            {
+              group_name: "premium_topping_selection",
+              group_type: "required",
+              selection_min: 1,
+              selection_max: 1,
+              description: "Choose your premium topping",
+              ingredients: [
+                {
+                  ingredient_name: "Peanuts",
+                  quantity: 1,
+                  unit: "portion",
+                  cost_per_unit: 2.5,
+                  is_default_selection: true,
+                  choice_order: 1
+                },
+                {
+                  ingredient_name: "Choco Flakes",
+                  quantity: 1,
+                  unit: "portion",
+                  cost_per_unit: 2.5,
+                  choice_order: 2
+                },
+                {
+                  ingredient_name: "Marshmallow",
+                  quantity: 1,
+                  unit: "portion",
+                  cost_per_unit: 2.5,
+                  choice_order: 3
+                }
+              ]
             }
           ]
         }
       ],
       addons: [
         {
-          name: "Extra Cheese",
-          category: "toppings",
+          name: "Extra Chocolate Sauce",
+          category: "Sauces",
           price: 15,
-          description: "Additional cheese topping",
-          is_premium: false,
+          description: "Additional chocolate sauce portion",
+          is_available: true,
           display_order: 1
+        },
+        {
+          name: "Extra Ice Cream Scoop",
+          category: "Premium",
+          price: 25,
+          description: "Additional vanilla ice cream scoop",
+          is_available: true,
+          is_premium: true,
+          display_order: 2
         }
       ],
       combos: [
         {
-          name: "Croffle + Drink Combo",
-          base_category: "croffles",
-          combo_category: "beverages",
-          combo_price: 120,
-          discount_amount: 20,
+          name: "Mini Croffle + Drink Combo",
+          base_category: "Mini",
+          combo_category: "Beverages",
+          combo_price: 85,
+          discount_amount: 15,
+          is_active: true,
           priority: 1
+        },
+        {
+          name: "Overload + Drink Combo",
+          base_category: "Overload", 
+          combo_category: "Beverages",
+          combo_price: 120,
+          discount_amount: 25,
+          is_active: true,
+          priority: 2
         }
       ]
     };

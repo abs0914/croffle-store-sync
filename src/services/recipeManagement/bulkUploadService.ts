@@ -14,6 +14,22 @@ interface UploadResult {
   errors: string[];
 }
 
+interface ChoiceGroup {
+  group_name: string;
+  group_type: 'required' | 'optional' | 'multiple';
+  selection_min: number;
+  selection_max: number;
+  description?: string;
+  ingredients: {
+    ingredient_name: string;
+    quantity: number;
+    unit: string;
+    cost_per_unit?: number;
+    is_default_selection?: boolean;
+    choice_order?: number;
+  }[];
+}
+
 interface BulkUploadData {
   recipes?: any[];
   addons?: any[];
@@ -149,23 +165,98 @@ const uploadRecipeTemplate = async (recipe: any, userId: string): Promise<void> 
     image_url: recipe.image_url || '',
     created_by: userId,
     is_active: true,
-    version: 1
+    version: 1,
+    has_choice_groups: !!(recipe.choice_groups && recipe.choice_groups.length > 0),
+    base_price_includes: recipe.base_price_includes || '',
+    choice_configuration: recipe.choice_configuration || {}
   };
 
-  // Process ingredients
-  const ingredients = (recipe.ingredients || []).map((ingredient: any) => ({
-    ingredient_name: ingredient.ingredient_name || ingredient.name,
-    quantity: Number(ingredient.quantity) || 0,
-    unit: ingredient.unit || 'pieces',
-    cost_per_unit: Number(ingredient.cost_per_unit) || 0,
-    location_type: ingredient.location_type || 'all',
-    inventory_stock_id: ingredient.inventory_stock_id || null,
-    store_unit: ingredient.store_unit || ingredient.unit || 'pieces',
-    recipe_to_store_conversion_factor: Number(ingredient.recipe_to_store_conversion_factor) || 1,
-    uses_store_inventory: ingredient.uses_store_inventory !== false
-  }));
+  // Check if this is a choice-based recipe
+  if (recipe.choice_groups && recipe.choice_groups.length > 0) {
+    await createChoiceBasedTemplate(templateData, recipe.choice_groups, userId);
+  } else {
+    // Process regular ingredients
+    const ingredients = (recipe.ingredients || []).map((ingredient: any) => ({
+      ingredient_name: ingredient.ingredient_name || ingredient.name,
+      quantity: Number(ingredient.quantity) || 0,
+      unit: ingredient.unit || 'pieces',
+      cost_per_unit: Number(ingredient.cost_per_unit) || 0,
+      location_type: ingredient.location_type || 'all',
+      inventory_stock_id: ingredient.inventory_stock_id || null,
+      store_unit: ingredient.store_unit || ingredient.unit || 'pieces',
+      recipe_to_store_conversion_factor: Number(ingredient.recipe_to_store_conversion_factor) || 1,
+      uses_store_inventory: ingredient.uses_store_inventory !== false
+    }));
 
-  await createRecipeTemplate(templateData, ingredients);
+    await createRecipeTemplate(templateData, ingredients);
+  }
+};
+
+const createChoiceBasedTemplate = async (
+  templateData: any,
+  choiceGroups: ChoiceGroup[],
+  userId: string
+): Promise<void> => {
+  // Create the recipe template
+  const { data: template, error: templateError } = await supabase
+    .from('recipe_templates')
+    .insert(templateData)
+    .select()
+    .single();
+
+  if (templateError) {
+    throw new Error(`Failed to create recipe template: ${templateError.message}`);
+  }
+
+  // Create choice groups and their ingredients
+  for (const group of choiceGroups) {
+    // Create the choice group
+    const { data: choiceGroup, error: groupError } = await supabase
+      .from('recipe_choice_groups')
+      .insert({
+        recipe_template_id: template.id,
+        group_name: group.group_name,
+        group_type: group.group_type,
+        selection_min: group.selection_min,
+        selection_max: group.selection_max,
+        description: group.description || '',
+        display_order: 0
+      })
+      .select()
+      .single();
+
+    if (groupError) {
+      throw new Error(`Failed to create choice group "${group.group_name}": ${groupError.message}`);
+    }
+
+    // Create ingredients for this choice group
+    const ingredientInserts = group.ingredients.map((ingredient, index) => ({
+      recipe_template_id: template.id,
+      ingredient_name: ingredient.ingredient_name,
+      commissary_item_name: ingredient.ingredient_name,
+      quantity: Number(ingredient.quantity),
+      unit: ingredient.unit,
+      cost_per_unit: Number(ingredient.cost_per_unit) || 0,
+      recipe_unit: ingredient.unit,
+      purchase_unit: ingredient.unit,
+      conversion_factor: 1,
+      location_type: 'all',
+      choice_group_name: group.group_name,
+      choice_group_type: group.group_type,
+      selection_min: group.selection_min,
+      selection_max: group.selection_max,
+      is_default_selection: ingredient.is_default_selection || false,
+      choice_order: ingredient.choice_order || index
+    }));
+
+    const { error: ingredientsError } = await supabase
+      .from('recipe_template_ingredients')
+      .insert(ingredientInserts);
+
+    if (ingredientsError) {
+      throw new Error(`Failed to create ingredients for choice group "${group.group_name}": ${ingredientsError.message}`);
+    }
+  }
 };
 
 const uploadAddon = async (addon: any): Promise<void> => {

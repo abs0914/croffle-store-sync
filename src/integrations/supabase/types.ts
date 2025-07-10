@@ -2454,6 +2454,50 @@ export type Database = {
           },
         ]
       }
+      recipe_choice_groups: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          group_name: string
+          group_type: string
+          id: string
+          recipe_template_id: string
+          selection_max: number | null
+          selection_min: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          group_name: string
+          group_type?: string
+          id?: string
+          recipe_template_id: string
+          selection_max?: number | null
+          selection_min?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          group_name?: string
+          group_type?: string
+          id?: string
+          recipe_template_id?: string
+          selection_max?: number | null
+          selection_min?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_choice_groups_recipe_template_id_fkey"
+            columns: ["recipe_template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_components: {
         Row: {
           component_recipe_id: string | null
@@ -2911,6 +2955,9 @@ export type Database = {
       }
       recipe_template_ingredients: {
         Row: {
+          choice_group_name: string | null
+          choice_group_type: string | null
+          choice_order: number | null
           commissary_item_id: string | null
           commissary_item_name: string | null
           cost_per_unit: number | null
@@ -2925,6 +2972,7 @@ export type Database = {
           ingredient_name: string
           ingredient_type: string | null
           inventory_stock_id: string | null
+          is_default_selection: boolean | null
           is_optional: boolean | null
           location_type: string | null
           purchase_unit: string | null
@@ -2932,11 +2980,16 @@ export type Database = {
           recipe_template_id: string
           recipe_to_store_conversion_factor: number | null
           recipe_unit: string | null
+          selection_max: number | null
+          selection_min: number | null
           store_unit: string | null
           unit: string
           uses_store_inventory: boolean
         }
         Insert: {
+          choice_group_name?: string | null
+          choice_group_type?: string | null
+          choice_order?: number | null
           commissary_item_id?: string | null
           commissary_item_name?: string | null
           cost_per_unit?: number | null
@@ -2951,6 +3004,7 @@ export type Database = {
           ingredient_name: string
           ingredient_type?: string | null
           inventory_stock_id?: string | null
+          is_default_selection?: boolean | null
           is_optional?: boolean | null
           location_type?: string | null
           purchase_unit?: string | null
@@ -2958,11 +3012,16 @@ export type Database = {
           recipe_template_id: string
           recipe_to_store_conversion_factor?: number | null
           recipe_unit?: string | null
+          selection_max?: number | null
+          selection_min?: number | null
           store_unit?: string | null
           unit: string
           uses_store_inventory?: boolean
         }
         Update: {
+          choice_group_name?: string | null
+          choice_group_type?: string | null
+          choice_order?: number | null
           commissary_item_id?: string | null
           commissary_item_name?: string | null
           cost_per_unit?: number | null
@@ -2977,6 +3036,7 @@ export type Database = {
           ingredient_name?: string
           ingredient_type?: string | null
           inventory_stock_id?: string | null
+          is_default_selection?: boolean | null
           is_optional?: boolean | null
           location_type?: string | null
           purchase_unit?: string | null
@@ -2984,6 +3044,8 @@ export type Database = {
           recipe_template_id?: string
           recipe_to_store_conversion_factor?: number | null
           recipe_unit?: string | null
+          selection_max?: number | null
+          selection_min?: number | null
           store_unit?: string | null
           unit?: string
           uses_store_inventory?: boolean
@@ -3014,11 +3076,14 @@ export type Database = {
       }
       recipe_templates: {
         Row: {
+          base_price_includes: string | null
           category_name: string | null
+          choice_configuration: Json | null
           combo_rules: Json | null
           created_at: string | null
           created_by: string | null
           description: string | null
+          has_choice_groups: boolean | null
           id: string
           image_url: string | null
           images: Json | null
@@ -3032,11 +3097,14 @@ export type Database = {
           yield_quantity: number
         }
         Insert: {
+          base_price_includes?: string | null
           category_name?: string | null
+          choice_configuration?: Json | null
           combo_rules?: Json | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          has_choice_groups?: boolean | null
           id?: string
           image_url?: string | null
           images?: Json | null
@@ -3050,11 +3118,14 @@ export type Database = {
           yield_quantity?: number
         }
         Update: {
+          base_price_includes?: string | null
           category_name?: string | null
+          choice_configuration?: Json | null
           combo_rules?: Json | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          has_choice_groups?: boolean | null
           id?: string
           image_url?: string | null
           images?: Json | null
