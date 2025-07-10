@@ -1,6 +1,41 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Helper function to normalize units to match database enum values
+const normalizeUnit = (unit: string): string => {
+  const unitLower = unit.toLowerCase().trim();
+  
+  // Map common variations to enum values
+  const unitMap: Record<string, string> = {
+    'piece': 'pieces',
+    'pieces': 'pieces',
+    'pcs': 'pieces',
+    'pc': 'pieces',
+    'serving': 'pieces', // Default serving to pieces for recipes
+    'servings': 'pieces',
+    'portion': 'pieces', // Default portion to pieces for recipes  
+    'portions': 'pieces',
+    'box': 'boxes',
+    'boxes': 'boxes',
+    'pack': 'packs',
+    'packs': 'packs',
+    'gram': 'g',
+    'grams': 'g',
+    'g': 'g',
+    'kilogram': 'kg',
+    'kilograms': 'kg',
+    'kg': 'kg',
+    'liter': 'liters',
+    'liters': 'liters',
+    'l': 'liters',
+    'milliliter': 'ml',
+    'milliliters': 'ml',
+    'ml': 'ml'
+  };
+  
+  return unitMap[unitLower] || 'pieces'; // Default to pieces if unknown
+};
+
 /**
  * Log deployment errors for monitoring and debugging
  */
@@ -259,11 +294,14 @@ const deployToSingleStore = async (
           inventoryStockId = storeItem?.id || null;
         }
 
+        // Normalize unit to match inventory_unit enum values
+        const normalizedUnit = normalizeUnit(ingredient.unit || 'pieces');
+        
         return {
           recipe_id: recipe.id,
           ingredient_name: ingredient.ingredient_name,
           quantity: ingredient.quantity || 1,
-          unit: ingredient.unit || 'piece',
+          unit: normalizedUnit,
           cost_per_unit: ingredient.cost_per_unit || 0,
           inventory_stock_id: inventoryStockId,
           commissary_item_id: ingredient.commissary_item_id,
