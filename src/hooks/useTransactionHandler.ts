@@ -6,7 +6,7 @@ import { CartItem } from "@/contexts/cart/types";
 import { Store } from "@/types";
 import { ShiftType } from "@/types";
 import { Customer } from "@/types";
-import { usePOSInventoryValidation } from "@/hooks/pos/usePOSInventoryValidation";
+import { useEnhancedPOSInventory } from "@/hooks/pos/useEnhancedPOSInventory";
 import { useCart } from "@/contexts/cart/CartContext";
 
 export interface SeniorDiscount {
@@ -48,7 +48,7 @@ export const useTransactionHandler = (storeId: string) => {
   const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | ''>('');
   const [discountIdNumber, setDiscountIdNumber] = useState<string>('');
 
-  const { validateCartItems, processCartInventoryDeduction } = usePOSInventoryValidation(storeId);
+  const { validateCartInventory, processTransactionInventory } = useEnhancedPOSInventory(storeId);
   const { applyDiscounts } = useCart();
 
   const handleApplyMultipleDiscounts = useCallback((
@@ -127,11 +127,11 @@ export const useTransactionHandler = (storeId: string) => {
     }
   ) => {
     try {
-      console.log("Starting transaction processing with inventory validation...");
+      console.log("Starting enhanced transaction processing with fractional inventory support...");
       
-      // Step 1: Validate inventory availability
-      const inventoryValid = await validateCartItems(items);
-      if (!inventoryValid) {
+      // Step 1: Validate inventory availability using enhanced service
+      const inventoryResult = await validateCartInventory(items);
+      if (!inventoryResult.available) {
         toast.error("Transaction cancelled due to insufficient inventory");
         return false;
       }
@@ -194,8 +194,8 @@ export const useTransactionHandler = (storeId: string) => {
 
       console.log("Transaction created:", transaction);
 
-      // Step 3: Process inventory deductions
-      const inventorySuccess = await processCartInventoryDeduction(items, transaction.id);
+      // Step 3: Process enhanced inventory deductions with fractional support
+      const inventorySuccess = await processTransactionInventory(items, transaction.id);
       if (!inventorySuccess) {
         // Rollback transaction if inventory update fails
         await supabase
@@ -254,7 +254,7 @@ export const useTransactionHandler = (storeId: string) => {
       toast.error(`Failed to complete transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
-  }, [selectedCustomer, discount, discountType, discountIdNumber, seniorDiscounts, otherDiscount, validateCartItems, processCartInventoryDeduction]);
+  }, [selectedCustomer, discount, discountType, discountIdNumber, seniorDiscounts, otherDiscount, validateCartInventory, processTransactionInventory]);
 
   const startNewSale = useCallback(() => {
     setCompletedTransaction(null);

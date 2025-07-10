@@ -19,7 +19,7 @@ export default function POS() {
   const { currentShift } = useShift();
   const { items, subtotal, tax, total, addItem } = useCart();
   
-  // Transaction handler hook with store ID for inventory integration
+  // Enhanced transaction handler with direct inventory integration
   const {
     completedTransaction,
     selectedCustomer,
@@ -127,7 +127,7 @@ export default function POS() {
     }
     
     try {
-      console.log("POS: Processing payment with inventory validation...");
+      console.log("POS: Processing payment with enhanced inventory validation...");
       
       // Convert cart items to the format expected by the transaction handler
       const cartItemsForTransaction = items.map(item => ({
