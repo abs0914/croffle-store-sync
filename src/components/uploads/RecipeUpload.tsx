@@ -126,6 +126,7 @@ Hot Chocolate,Beverage,Cup Sleeve,pieces,1,0.5,`;
           description: "A delightful combination of crispy croffle with tiramisu flavoring",
           preparation_time: 15,
           serving_size: 1,
+          has_choice_groups: false,
           ingredients: [
             {
               ingredient_name: "Croissant",
@@ -161,6 +162,20 @@ Hot Chocolate,Beverage,Cup Sleeve,pieces,1,0.5,`;
               quantity: 1,
               cost_per_unit: 6,
               notes: "Packaging"
+            },
+            {
+              ingredient_name: "Chopstick",
+              unit: "pair",
+              quantity: 1,
+              cost_per_unit: 0.6,
+              notes: "Utensils"
+            },
+            {
+              ingredient_name: "Waxpaper",
+              unit: "pieces",
+              quantity: 1,
+              cost_per_unit: 0.7,
+              notes: "Food wrapping"
             }
           ]
         };
@@ -174,6 +189,7 @@ Hot Chocolate,Beverage,Cup Sleeve,pieces,1,0.5,`;
           description: "Additional whipped cream topping",
           preparation_time: 1,
           serving_size: 1,
+          has_choice_groups: false,
           ingredients: [
             {
               ingredient_name: "Whipped Cream",
@@ -191,9 +207,10 @@ Hot Chocolate,Beverage,Cup Sleeve,pieces,1,0.5,`;
           name: "Croffle Overload Combo",
           recipe_type: "combo", 
           category: "Combo",
-          description: "Ultimate croffle experience with ice cream and toppings",
+          description: "Ultimate croffle experience with ice cream and multiple toppings",
           preparation_time: 20,
           serving_size: 1,
+          has_choice_groups: false,
           ingredients: [
             {
               ingredient_name: "Croissant",
@@ -224,11 +241,229 @@ Hot Chocolate,Beverage,Cup Sleeve,pieces,1,0.5,`;
               notes: "Crushed peanuts"
             },
             {
+              ingredient_name: "Choco Flakes",
+              unit: "portion",
+              quantity: 1,
+              cost_per_unit: 2.5,
+              notes: "Chocolate flakes"
+            },
+            {
+              ingredient_name: "Marshmallow",
+              unit: "portion",
+              quantity: 1,
+              cost_per_unit: 2.5,
+              notes: "Mini marshmallows"
+            },
+            {
               ingredient_name: "Overload Cup",
               unit: "pieces",
               quantity: 1,
               cost_per_unit: 4,
               notes: "Special combo cup"
+            },
+            {
+              ingredient_name: "Popsicle",
+              unit: "pieces",
+              quantity: 1,
+              cost_per_unit: 0.3,
+              notes: "Wooden stick"
+            },
+            {
+              ingredient_name: "Spoon",
+              unit: "pieces",
+              quantity: 1,
+              cost_per_unit: 0.5,
+              notes: "Plastic spoon"
+            }
+          ]
+        };
+        break;
+        
+      case 'mini_croffle':
+        template = {
+          name: "Mini Croffle with Choice",
+          recipe_type: "regular",
+          category: "Regular",
+          description: "Mini-sized croffle with choice of sauce and topping",
+          preparation_time: 10,
+          serving_size: 1,
+          has_choice_groups: true,
+          choice_configuration: {
+            sauce_choice: {
+              name: "Choose Your Sauce",
+              required: true,
+              min_selections: 1,
+              max_selections: 1,
+              options: [
+                {
+                  name: "Chocolate Sauce",
+                  cost: 1.25,
+                  ingredient_name: "Chocolate Sauce",
+                  unit: "portion",
+                  quantity: 1
+                },
+                {
+                  name: "Caramel Sauce", 
+                  cost: 1.25,
+                  ingredient_name: "Caramel Sauce",
+                  unit: "portion",
+                  quantity: 1
+                }
+              ]
+            },
+            topping_choice: {
+              name: "Choose Your Topping",
+              required: true,
+              min_selections: 1,
+              max_selections: 1,
+              options: [
+                {
+                  name: "Colored Sprinkles",
+                  cost: 1.25,
+                  ingredient_name: "Colored Sprinkle",
+                  unit: "portion", 
+                  quantity: 1
+                },
+                {
+                  name: "Peanuts",
+                  cost: 1.25,
+                  ingredient_name: "Peanut",
+                  unit: "portion",
+                  quantity: 1
+                }
+              ]
+            }
+          },
+          ingredients: [
+            {
+              ingredient_name: "Croissant",
+              unit: "pieces",
+              quantity: 0.5,
+              cost_per_unit: 15,
+              notes: "Half croissant for mini size"
+            },
+            {
+              ingredient_name: "Whipped Cream",
+              unit: "serving",
+              quantity: 0.5,
+              cost_per_unit: 4,
+              notes: "Half portion whipped cream"
+            },
+            {
+              ingredient_name: "Mini Take out Box",
+              unit: "pieces",
+              quantity: 1,
+              cost_per_unit: 2.4,
+              notes: "Mini packaging"
+            },
+            {
+              ingredient_name: "Popsicle",
+              unit: "pieces",
+              quantity: 1,
+              cost_per_unit: 0.3,
+              notes: "Wooden stick"
+            }
+          ]
+        };
+        break;
+
+      case 'croffle_overload':
+        template = {
+          name: "Croffle Overload with Choices",
+          recipe_type: "combo",
+          category: "Combo", 
+          description: "Premium combo with ice cream and choice of multiple toppings",
+          preparation_time: 20,
+          serving_size: 1,
+          has_choice_groups: true,
+          choice_configuration: {
+            primary_topping: {
+              name: "Choose Primary Topping",
+              required: true,
+              min_selections: 1,
+              max_selections: 1,
+              options: [
+                {
+                  name: "Colored Sprinkles",
+                  cost: 2.5,
+                  ingredient_name: "Colored Sprinkle",
+                  unit: "portion",
+                  quantity: 1
+                },
+                {
+                  name: "Crushed Peanuts",
+                  cost: 2.5,
+                  ingredient_name: "Peanut", 
+                  unit: "portion",
+                  quantity: 1
+                },
+                {
+                  name: "Chocolate Flakes",
+                  cost: 2.5,
+                  ingredient_name: "Choco Flakes",
+                  unit: "portion",
+                  quantity: 1
+                }
+              ]
+            },
+            extra_toppings: {
+              name: "Extra Toppings (Optional)",
+              required: false,
+              min_selections: 0,
+              max_selections: 2,
+              options: [
+                {
+                  name: "Mini Marshmallows",
+                  cost: 2.5,
+                  ingredient_name: "Marshmallow",
+                  unit: "portion",
+                  quantity: 1
+                },
+                {
+                  name: "Extra Chocolate Flakes",
+                  cost: 2.5,
+                  ingredient_name: "Choco Flakes",
+                  unit: "portion",
+                  quantity: 0.5
+                }
+              ]
+            }
+          },
+          ingredients: [
+            {
+              ingredient_name: "Croissant",
+              unit: "pieces",
+              quantity: 0.5,
+              cost_per_unit: 15,
+              notes: "Half croissant base"
+            },
+            {
+              ingredient_name: "Vanilla Ice Cream",
+              unit: "scoop",
+              quantity: 1,
+              cost_per_unit: 15.44,
+              notes: "Premium vanilla ice cream"
+            },
+            {
+              ingredient_name: "Overload Cup",
+              unit: "pieces",
+              quantity: 1,
+              cost_per_unit: 4,
+              notes: "Special overload presentation cup"
+            },
+            {
+              ingredient_name: "Popsicle",
+              unit: "pieces",
+              quantity: 1,
+              cost_per_unit: 0.3,
+              notes: "Wooden stick"
+            },
+            {
+              ingredient_name: "Spoon",
+              unit: "pieces",
+              quantity: 1,
+              cost_per_unit: 0.5,
+              notes: "Plastic spoon for ice cream"
             }
           ]
         };
@@ -242,6 +477,7 @@ Hot Chocolate,Beverage,Cup Sleeve,pieces,1,0.5,`;
           description: "Refreshing iced coffee with premium beans",
           preparation_time: 5,
           serving_size: 1,
+          has_choice_groups: false,
           ingredients: [
             {
               ingredient_name: "Coffee Beans",
@@ -391,15 +627,33 @@ Hot Chocolate,Beverage,Cup Sleeve,pieces,1,0.5,`;
                 <Download className="h-3 w-3 mr-1" />
                 Beverage
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => downloadJSONTemplate('mini_croffle')}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Mini Croffle (Choice)
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => downloadJSONTemplate('croffle_overload')}
+              >
+                <Download className="h-3 w-3 mr-1" />
+                Overload (Choice)
+              </Button>
             </div>
             
             <div className="text-sm text-muted-foreground">
               <p className="font-medium mb-2">JSON Templates provide structured examples with:</p>
               <ul className="list-disc list-inside space-y-1">
-                <li>Proper recipe type classification</li>
-                <li>Detailed ingredient specifications</li>
-                <li>Cost calculations and serving sizes</li>
-                <li>Preparation times and notes</li>
+                <li>Proper recipe type classification and choice configurations</li>
+                <li>Detailed ingredient specifications with cost breakdowns</li>
+                <li>Choice-based options for Mini Croffle and Overload items</li>
+                <li>Cost calculations, serving sizes, and preparation times</li>
+                <li>POS-ready choice configurations for customer selections</li>
+                <li>Comprehensive packaging and utensil specifications</li>
               </ul>
             </div>
           </TabsContent>
