@@ -100,6 +100,7 @@ export const getDirectInventoryItems = async (storeId?: string) => {
  */
 export const getCommissaryInventoryItems = async () => {
   try {
+    console.log('🔍 Fetching commissary inventory items...');
     const { data, error } = await supabase
       .from('commissary_inventory')
       .select(`
@@ -113,9 +114,13 @@ export const getCommissaryInventoryItems = async () => {
       .eq('is_active', true)
       .order('name');
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Error fetching commissary inventory:', error);
+      throw error;
+    }
 
-    return (data || []).map(item => ({
+    console.log('✅ Commissary inventory data:', data);
+    const mappedData = (data || []).map(item => ({
       id: item.id,
       item: item.name,
       display_unit: item.unit,
@@ -125,6 +130,9 @@ export const getCommissaryInventoryItems = async () => {
       commissary_item_id: item.id,
       unit: item.unit
     }));
+    
+    console.log('🔄 Mapped commissary items:', mappedData);
+    return mappedData;
   } catch (error) {
     console.error('Error fetching commissary inventory items:', error);
     return [];

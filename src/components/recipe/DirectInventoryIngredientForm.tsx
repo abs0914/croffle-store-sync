@@ -38,6 +38,8 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
   const [quantityError, setQuantityError] = useState<string>('');
 
   useEffect(() => {
+    console.log('DirectInventoryIngredientForm - Loading inventory items, useCommissaryInventory:', useCommissaryInventory);
+    console.log('DirectInventoryIngredientForm - Current ingredient:', ingredient);
     loadInventoryItems();
   }, [storeId, useCommissaryInventory]);
 
@@ -72,9 +74,11 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
   const loadInventoryItems = async () => {
     setLoading(true);
     try {
+      console.log('🔄 Loading inventory items, useCommissaryInventory:', useCommissaryInventory);
       const items = useCommissaryInventory 
         ? await getCommissaryInventoryItems()
         : await getDirectInventoryItems(storeId);
+      console.log('✅ Loaded inventory items:', items);
       setInventoryItems(items);
     } catch (error) {
       console.error('Error loading inventory items:', error);
@@ -84,7 +88,9 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
   };
 
   const handleInventoryItemSelect = (itemId: string) => {
+    console.log('🔄 Item selected:', itemId);
     const selectedItem = inventoryItems.find(item => item.id === itemId);
+    console.log('📦 Selected item details:', selectedItem);
     if (selectedItem) {
       if (useCommissaryInventory) {
         onUpdate(index, 'commissary_item_id', itemId);
