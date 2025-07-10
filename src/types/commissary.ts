@@ -22,6 +22,7 @@ export const STANDARD_UOM_OPTIONS = [
   '630 grams',
   'Piece',
   'Pack of 10',
+  'Pack of 12',
   'Pack of 20',
   'Pack of 24',
   'Pack of 25',
