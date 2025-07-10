@@ -305,8 +305,7 @@ const deployToSingleStoreEnhanced = async (
         template_id: template.id,
         product_id: null,
         is_active: options.isActive !== false,
-        approval_status: 'approved', // Auto-approve admin deployments
-        created_by: template.created_by
+        approval_status: 'approved' // Auto-approve admin deployments
       })
       .select()
       .single();
