@@ -28,6 +28,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       quantity: ing.quantity || 1,
       unit: ing.unit || 'pieces',
       inventory_stock_id: ing.inventory_stock_id,
+      commissary_item_id: ing.commissary_item_id,
       estimated_cost_per_unit: ing.cost_per_unit || 0,
       location_type: ing.location_type || 'all' as const,
       supports_fractional: ing.supports_fractional || false
@@ -48,7 +49,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       unit: ing.unit,
       cost_per_unit: ing.estimated_cost_per_unit || 0,
       inventory_stock_id: ing.inventory_stock_id,
-      commissary_item_id: null,
+      commissary_item_id: ing.commissary_item_id,
       location_type: ing.location_type,
       supports_fractional: ing.supports_fractional,
       notes: ''
