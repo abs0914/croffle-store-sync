@@ -11,7 +11,7 @@ export interface DeploymentResult {
 }
 
 export interface DeploymentOptions {
-  priceMarkup?: number;
+  actualPrice?: number;
   customName?: string;
   customDescription?: string;
   isActive?: boolean;

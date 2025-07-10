@@ -57,7 +57,7 @@ export function EnhancedRecipeDeploymentDialog({
   const [activeTab, setActiveTab] = useState('stores');
   const [selectedStores, setSelectedStores] = useState<Array<{ id: string; name: string }>>([]);
   const [deploymentOptions, setDeploymentOptions] = useState({
-    priceMarkup: 50,
+    actualPrice: 0,
     customName: '',
     customDescription: '',
     isActive: true,
@@ -70,10 +70,16 @@ export function EnhancedRecipeDeploymentDialog({
 
   useEffect(() => {
     if (template && isOpen) {
+      // Calculate base cost from template ingredients
+      const baseCost = template.ingredients?.reduce((sum: number, ingredient: any) => 
+        sum + ((ingredient.quantity || 0) * (ingredient.cost_per_unit || 0)), 0
+      ) || 0;
+      
       setDeploymentOptions(prev => ({
         ...prev,
         customName: template.name,
-        customDescription: template.description || ''
+        customDescription: template.description || '',
+        actualPrice: baseCost > 0 ? Math.round(baseCost * 1.5 * 100) / 100 : 0 // 50% markup as default
       }));
     }
   }, [template, isOpen]);
@@ -283,14 +289,15 @@ export function EnhancedRecipeDeploymentDialog({
                       />
                     </div>
                     <div>
-                      <Label htmlFor="priceMarkup">Price Markup (%)</Label>
+                      <Label htmlFor="actualPrice">Price Amount (₱)</Label>
                       <Input
-                        id="priceMarkup"
+                        id="actualPrice"
                         type="number"
-                        value={deploymentOptions.priceMarkup}
-                        onChange={(e) => setDeploymentOptions(prev => ({ ...prev, priceMarkup: Number(e.target.value) }))}
+                        value={deploymentOptions.actualPrice}
+                        onChange={(e) => setDeploymentOptions(prev => ({ ...prev, actualPrice: Number(e.target.value) }))}
                         min="0"
-                        max="1000"
+                        step="0.01"
+                        placeholder="Enter price amount"
                       />
                     </div>
                   </div>

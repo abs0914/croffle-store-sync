@@ -137,8 +137,7 @@ export function useRecipeDeployment() {
         try {
           // Calculate pricing
           const profile = pricingProfiles.find(p => p.store_id === store.id && p.is_default);
-          const markup = config.deploymentOptions.priceMarkup || profile?.base_markup_percentage || 50;
-
+          
           // Apply ingredient substitutions
           const processedIngredients = template.ingredients?.map((ingredient: any) => {
             const substitution = config.ingredientSubstitutions.find(
@@ -158,7 +157,7 @@ export function useRecipeDeployment() {
           }, 0) || 0;
 
           const costPerServing = template.yield_quantity > 0 ? totalCost / template.yield_quantity : 0;
-          const suggestedPrice = costPerServing * (1 + markup / 100);
+          const suggestedPrice = config.deploymentOptions.actualPrice || costPerServing;
 
           // Update progress
           setDeploymentProgress(prev => prev.map(p => 
