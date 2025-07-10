@@ -436,7 +436,7 @@ export const RecipeTemplateManager: React.FC = () => {
                         <Card>
                           <CardContent className="pt-6 text-center">
                             <div className="text-2xl font-bold">
-                              {formatCurrency(costBreakdown.profitability.suggestedPrice)}
+                              {formatCurrency(costBreakdown.suggestedPrice)}
                             </div>
                             <p className="text-xs text-muted-foreground">Suggested Price</p>
                           </CardContent>
@@ -453,17 +453,17 @@ export const RecipeTemplateManager: React.FC = () => {
                             {costBreakdown.ingredients.map((ingredient, index) => (
                               <div key={index} className="flex justify-between items-center">
                                 <div>
-                                  <span className="font-medium">{ingredient.name}</span>
-                                  <span className="text-muted-foreground ml-2">
-                                    ({ingredient.quantity} {ingredient.unit})
+                                   <span className="font-medium">{ingredient.ingredient_name}</span>
+                                   <span className="text-muted-foreground ml-2">
+                                     ({ingredient.quantity} pieces)
                                   </span>
                                 </div>
                                 <div className="text-right">
                                   <div className="font-medium">
-                                    {formatCurrency(ingredient.totalCost)}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {ingredient.percentageOfTotal.toFixed(1)}%
+                                     {formatCurrency(ingredient.total_cost)}
+                                   </div>
+                                   <div className="text-xs text-muted-foreground">
+                                     {ingredient.percentage_of_total.toFixed(1)}%
                                   </div>
                                 </div>
                               </div>

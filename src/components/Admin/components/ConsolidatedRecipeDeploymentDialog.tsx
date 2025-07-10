@@ -128,7 +128,7 @@ export const ConsolidatedRecipeDeploymentDialog: React.FC<ConsolidatedRecipeDepl
 
     setIsDeploying(true);
     try {
-      const results = await deployRecipeToMultipleStores(template, selectedStoreIds);
+      const results = await deployRecipeToMultipleStores(template.id, selectedStoreIds);
       setDeploymentResults(results);
       setShowResults(true);
       

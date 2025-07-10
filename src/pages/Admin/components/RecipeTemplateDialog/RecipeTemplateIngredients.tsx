@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { RecipeTemplateIngredientInput } from '@/services/recipeManagement/types';
-import { LocationBasedIngredients } from './LocationBasedIngredients';
+// import { LocationBasedIngredients } from './LocationBasedIngredients';
 
 interface RecipeTemplateIngredientsProps {
   ingredients: RecipeTemplateIngredientInput[];
@@ -13,9 +13,8 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
   setIngredients
 }) => {
   return (
-    <LocationBasedIngredients
-      ingredients={ingredients}
-      setIngredients={setIngredients}
-    />
+    <div className="text-center py-8 text-muted-foreground">
+      Recipe template ingredients management will be available in a future update.
+    </div>
   );
 };

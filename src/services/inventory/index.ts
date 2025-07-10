@@ -2,5 +2,4 @@
 export * from './unifiedInventoryDeductionService';
 
 // Other inventory services
-export * from './enhancedRecipeInventoryService';
-export * from './conversionMappingService';
+// Legacy services removed - using new direct inventory system

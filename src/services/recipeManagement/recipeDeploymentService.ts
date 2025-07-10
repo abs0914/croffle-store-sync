@@ -7,6 +7,8 @@ export interface DeploymentResult {
   storeName: string;
   error?: string;
   recipeId?: string;
+  warnings?: string[];
+  missingIngredients?: string[];
 }
 
 export interface DeploymentOptions {

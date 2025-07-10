@@ -4,6 +4,7 @@ export interface RecipeCostBreakdown {
   templateId: string;
   totalCost: number;
   costPerServing: number;
+  suggestedPrice: number;
   profitability: number; // For backward compatibility
   ingredients: Array<{ // For backward compatibility
     ingredient_name: string;
@@ -13,11 +14,15 @@ export interface RecipeCostBreakdown {
     percentage_of_total: number;
   }>;
   ingredientCosts: Array<{
+    name: string;
+    unit: string;
     ingredient_name: string;
     cost_per_unit: number;
     quantity: number;
     total_cost: number;
+    totalCost: number; // For backwards compatibility
     percentage_of_total: number;
+    percentageOfTotal: number; // For backwards compatibility
   }>;
   laborCost?: number;
   overheadCost?: number;
@@ -67,11 +72,15 @@ export const getRecipeCostBreakdown = async (templateId: string): Promise<Recipe
     const ingredientCosts = template.ingredients.map((ingredient: any) => {
       const totalCost = ingredient.quantity * (ingredient.cost_per_unit || 0);
       return {
+        name: ingredient.ingredient_name,
+        unit: ingredient.unit || 'piece',
         ingredient_name: ingredient.ingredient_name,
         cost_per_unit: ingredient.cost_per_unit || 0,
         quantity: ingredient.quantity,
         total_cost: totalCost,
-        percentage_of_total: 0 // Will be calculated after total
+        totalCost, // For backwards compatibility
+        percentage_of_total: 0, // Will be calculated after total
+        percentageOfTotal: 0 // For backwards compatibility
       };
     });
 
@@ -80,6 +89,7 @@ export const getRecipeCostBreakdown = async (templateId: string): Promise<Recipe
     // Calculate percentages
     ingredientCosts.forEach(ingredient => {
       ingredient.percentage_of_total = totalCost > 0 ? (ingredient.total_cost / totalCost) * 100 : 0;
+      ingredient.percentageOfTotal = ingredient.percentage_of_total; // For backwards compatibility
     });
 
     const costPerServing = template.yield_quantity > 0 ? totalCost / template.yield_quantity : 0;
@@ -88,6 +98,7 @@ export const getRecipeCostBreakdown = async (templateId: string): Promise<Recipe
       templateId,
       totalCost,
       costPerServing,
+      suggestedPrice: costPerServing * 1.5, // 50% markup
       profitability: totalCost > 0 ? ((100 - totalCost) / totalCost) * 100 : 0,
       ingredients: ingredientCosts,
       ingredientCosts,
@@ -100,6 +111,7 @@ export const getRecipeCostBreakdown = async (templateId: string): Promise<Recipe
       templateId,
       totalCost: 0,
       costPerServing: 0,
+      suggestedPrice: 0,
       ingredientCosts: [],
       laborCost: 0,
       overheadCost: 0
