@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -194,9 +194,9 @@ export function EnhancedRecipeDeploymentDialog({
             <Rocket className="h-5 w-5" />
             Enhanced Recipe Deployment
           </DialogTitle>
-          <p className="text-sm text-muted-foreground">
+          <DialogDescription>
             Deploy "{template?.name}" to multiple stores with advanced options
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
