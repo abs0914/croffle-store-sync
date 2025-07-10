@@ -30,7 +30,7 @@ export const RecipeTemplateDialogContent: React.FC<RecipeTemplateDialogContentPr
         </DialogDescription>
       </DialogHeader>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto p-6">
         <RecipeTemplateForm
           template={template}
           onClose={onClose}
