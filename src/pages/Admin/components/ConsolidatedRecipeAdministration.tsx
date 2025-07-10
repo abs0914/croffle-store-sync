@@ -154,8 +154,10 @@ export function ConsolidatedRecipeAdministration() {
   };
 
   const handleDeployTemplate = (template: any) => {
+    console.log('🚀 Deploy template clicked:', template.name);
     setTemplateToDeployment(template);
     setIsDeploymentDialogOpen(true);
+    console.log('📋 Dialog state set to open');
   };
 
   const renderItemCard = (item: UnifiedRecipeItem) => (
@@ -516,6 +518,24 @@ export function ConsolidatedRecipeAdministration() {
         onSuccess={() => {
           setIsCreateTemplateOpen(false);
           toast.success('Template created successfully');
+        }}
+      />
+
+      {/* Enhanced Deployment Dialog */}
+      <EnhancedRecipeDeploymentDialog
+        isOpen={isDeploymentDialogOpen}
+        onClose={() => {
+          setIsDeploymentDialogOpen(false);
+          setTemplateToDeployment(null);
+        }}
+        template={templateToDeploy}
+        stores={stores}
+        onSuccess={() => {
+          setIsDeploymentDialogOpen(false);
+          setTemplateToDeployment(null);
+          toast.success('Recipe deployed successfully');
+          // Refresh data to show new deployed recipes
+          window.location.reload();
         }}
       />
     </div>
