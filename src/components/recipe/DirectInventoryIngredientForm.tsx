@@ -40,6 +40,8 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
   useEffect(() => {
     console.log('DirectInventoryIngredientForm - Loading inventory items, useCommissaryInventory:', useCommissaryInventory);
     console.log('DirectInventoryIngredientForm - Current ingredient:', ingredient);
+    console.log('DirectInventoryIngredientForm - Current commissary_item_id:', ingredient.commissary_item_id);
+    console.log('DirectInventoryIngredientForm - Current inventory_stock_id:', ingredient.inventory_stock_id);
     loadInventoryItems();
   }, [storeId, useCommissaryInventory]);
 
@@ -147,7 +149,11 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
             <Label>{useCommissaryInventory ? 'Select Commissary Item' : 'Select Inventory Item'}</Label>
             <Select
               value={useCommissaryInventory ? (ingredient.commissary_item_id || '') : (ingredient.inventory_stock_id || '')}
-              onValueChange={handleInventoryItemSelect}
+              onValueChange={(value) => {
+                console.log('🎯 Select onValueChange called with value:', value);
+                console.log('🎯 Current ingredient before update:', ingredient);
+                handleInventoryItemSelect(value);
+              }}
               disabled={loading}
             >
               <SelectTrigger className="mt-2">
