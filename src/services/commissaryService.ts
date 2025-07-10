@@ -17,7 +17,7 @@ export const fetchCommissaryInventory = async (): Promise<CommissaryInventoryIte
     return (data || []).map(item => ({
       ...item,
       uom: item.unit || 'units', // Map unit to uom with fallback
-      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
       item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
     }));
   } catch (error) {
@@ -134,10 +134,10 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
 
     const processedIngredients = ingredients.map(ingredient => {
       // Validate category values
-      const validCategories = ['raw_materials', 'packaging_materials', 'supplies'];
+      const validCategories = ['raw_materials', 'packaging_materials', 'supplies', 'finished_goods'];
       if (!validCategories.includes(ingredient.category)) {
         console.warn(`Invalid category "${ingredient.category}" for ingredient "${ingredient.name}". Defaulting to "raw_materials".`);
-        ingredient.category = 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies';
+        ingredient.category = 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
       }
 
       // Normalize the unit value to match database constraints
@@ -148,14 +148,16 @@ export const bulkUploadRawIngredients = async (ingredients: RawIngredientUpload[
       const calculatedUnitCost = ingredient.unit_cost || 0;
 
       // Determine item_type based on category
-      let item_type: 'raw_material' | 'supply' = 'raw_material';
+      let item_type: 'raw_material' | 'supply' | 'orderable_item' = 'raw_material';
       if (ingredient.category === 'packaging_materials' || ingredient.category === 'supplies') {
         item_type = 'supply';
+      } else if (ingredient.category === 'finished_goods') {
+        item_type = 'orderable_item';
       }
 
       return {
         name: ingredient.name,
-        category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+        category: ingredient.category as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
         item_type: item_type,
         unit: normalizedUnit, // Use normalized unit value
         unit_cost: calculatedUnitCost, // Use unit cost directly
