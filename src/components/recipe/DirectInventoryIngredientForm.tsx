@@ -40,10 +40,13 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
 
   useEffect(() => {
     // Auto-detect fractional support when ingredient name changes
-    onUpdate(index, 'supports_fractional', MINI_CROFFLE_INGREDIENTS.some(miniIngredient => 
+    const shouldSupportFractional = MINI_CROFFLE_INGREDIENTS.some(miniIngredient => 
       ingredient.ingredient_name.toLowerCase().includes(miniIngredient.toLowerCase())
-    ));
-  }, [ingredient.ingredient_name]);
+    );
+    if (ingredient.supports_fractional !== shouldSupportFractional) {
+      onUpdate(index, 'supports_fractional', shouldSupportFractional);
+    }
+  }, [ingredient.ingredient_name, ingredient.supports_fractional, index, onUpdate]);
 
   useEffect(() => {
     // Validate quantity when it changes

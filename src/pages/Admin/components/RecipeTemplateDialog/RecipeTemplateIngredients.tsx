@@ -1,11 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { DirectInventoryIngredientForm } from '@/components/recipe/DirectInventoryIngredientForm';
-import { useDirectInventoryRecipe } from '@/hooks/recipe/useDirectInventoryRecipe';
 import { RecipeTemplateIngredientInput } from '@/services/recipeManagement/types';
 import { DirectInventoryIngredient, calculateDirectRecipeCost } from '@/services/recipeManagement/directInventoryService';
 
@@ -20,12 +19,11 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
   setIngredients,
   storeId
 }) => {
-  const [directIngredients, setDirectIngredients] = useState<DirectInventoryIngredient[]>([]);
-  const [totalCost, setTotalCost] = useState(0);
+  const [isInternalUpdate, setIsInternalUpdate] = useState(false);
 
-  // Convert between legacy and direct inventory formats
-  useEffect(() => {
-    const converted = ingredients.map(ing => ({
+  // Convert ingredients to direct inventory format, but only when NOT from internal updates
+  const directIngredients = useMemo(() => {
+    return ingredients.map(ing => ({
       ingredient_name: ing.ingredient_name || '',
       quantity: ing.quantity || 1,
       unit: ing.unit || 'pieces',
@@ -34,18 +32,17 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       location_type: ing.location_type || 'all' as const,
       supports_fractional: ing.supports_fractional || false
     }));
-    setDirectIngredients(converted);
   }, [ingredients]);
 
-  // Update cost when ingredients change
-  useEffect(() => {
-    const cost = calculateDirectRecipeCost(directIngredients);
-    setTotalCost(cost);
+  // Calculate total cost
+  const totalCost = useMemo(() => {
+    return calculateDirectRecipeCost(directIngredients);
   }, [directIngredients]);
 
-  // Sync back to parent component
-  useEffect(() => {
-    const converted = directIngredients.map(ing => ({
+  // Sync changes back to parent, but prevent circular updates
+  const syncToParent = useCallback((updatedDirectIngredients: DirectInventoryIngredient[]) => {
+    setIsInternalUpdate(true);
+    const converted = updatedDirectIngredients.map(ing => ({
       ingredient_name: ing.ingredient_name,
       quantity: ing.quantity,
       unit: ing.unit,
@@ -57,9 +54,11 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       notes: ''
     }));
     setIngredients(converted);
-  }, [directIngredients, setIngredients]);
+    // Reset flag after sync
+    setTimeout(() => setIsInternalUpdate(false), 0);
+  }, [setIngredients]);
 
-  const addIngredient = () => {
+  const addIngredient = useCallback(() => {
     const newIngredient: DirectInventoryIngredient = {
       ingredient_name: '',
       quantity: 1,
@@ -67,20 +66,20 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       location_type: 'all',
       supports_fractional: false
     };
-    setDirectIngredients(prev => [...prev, newIngredient]);
-  };
+    const updatedIngredients = [...directIngredients, newIngredient];
+    syncToParent(updatedIngredients);
+  }, [directIngredients, syncToParent]);
 
-  const updateIngredient = (index: number, field: keyof DirectInventoryIngredient, value: any) => {
-    setDirectIngredients(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
-  };
+  const updateIngredient = useCallback((index: number, field: keyof DirectInventoryIngredient, value: any) => {
+    const updated = [...directIngredients];
+    updated[index] = { ...updated[index], [field]: value };
+    syncToParent(updated);
+  }, [directIngredients, syncToParent]);
 
-  const removeIngredient = (index: number) => {
-    setDirectIngredients(prev => prev.filter((_, i) => i !== index));
-  };
+  const removeIngredient = useCallback((index: number) => {
+    const updated = directIngredients.filter((_, i) => i !== index);
+    syncToParent(updated);
+  }, [directIngredients, syncToParent]);
 
   return (
     <div className="space-y-6">
