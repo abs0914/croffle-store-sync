@@ -31,6 +31,7 @@ import { RecipeCleanupTools } from '@/components/admin/recipe/RecipeCleanupTools
 import { toast } from 'sonner';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { EnhancedRecipeDeploymentDialog } from '@/components/admin/recipe/EnhancedRecipeDeploymentDialog';
+import { RecipeTemplateUpload } from '@/components/Admin/components/RecipeTemplateUpload';
 
 export function ConsolidatedRecipeAdministration() {
   const {
@@ -389,7 +390,7 @@ export function ConsolidatedRecipeAdministration() {
 
       {/* Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <Layers className="h-4 w-4" />
             Templates ({templateItems.length})
@@ -397,6 +398,10 @@ export function ConsolidatedRecipeAdministration() {
           <TabsTrigger value="recipes" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Recipes ({recipeItems.length})
+          </TabsTrigger>
+          <TabsTrigger value="upload" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Bulk Upload
           </TabsTrigger>
           <TabsTrigger value="unified" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
@@ -442,6 +447,10 @@ export function ConsolidatedRecipeAdministration() {
               <p className="text-muted-foreground">Deploy templates to stores to create recipes.</p>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="upload" className="space-y-4">
+          <RecipeTemplateUpload />
         </TabsContent>
 
         <TabsContent value="unified" className="space-y-4">
