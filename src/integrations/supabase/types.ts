@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      addon_categories: {
+        Row: {
+          category_type: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category_type?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category_type?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_users: {
         Row: {
           contact_number: string | null
@@ -320,6 +353,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      combo_pricing_rules: {
+        Row: {
+          base_category: string
+          combo_category: string
+          combo_price: number
+          created_at: string
+          discount_amount: number | null
+          id: string
+          is_active: boolean
+          name: string
+          priority: number | null
+          updated_at: string
+        }
+        Insert: {
+          base_category: string
+          combo_category: string
+          combo_price: number
+          created_at?: string
+          discount_amount?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          priority?: number | null
+          updated_at?: string
+        }
+        Update: {
+          base_category?: string
+          combo_category?: string
+          combo_price?: number
+          created_at?: string
+          discount_amount?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          priority?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       commissary_inventory: {
         Row: {
@@ -1815,36 +1887,53 @@ export type Database = {
       }
       product_addon_items: {
         Row: {
+          addon_category_id: string | null
           category: string
           created_at: string
+          description: string | null
           display_order: number | null
           id: string
           is_available: boolean
+          is_premium: boolean | null
           name: string
           price: number
           updated_at: string
         }
         Insert: {
+          addon_category_id?: string | null
           category: string
           created_at?: string
+          description?: string | null
           display_order?: number | null
           id?: string
           is_available?: boolean
+          is_premium?: boolean | null
           name: string
           price?: number
           updated_at?: string
         }
         Update: {
+          addon_category_id?: string | null
           category?: string
           created_at?: string
+          description?: string | null
           display_order?: number | null
           id?: string
           is_available?: boolean
+          is_premium?: boolean | null
           name?: string
           price?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "product_addon_items_addon_category_id_fkey"
+            columns: ["addon_category_id"]
+            isOneToOne: false
+            referencedRelation: "addon_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_bundle_components: {
         Row: {
@@ -2455,6 +2544,56 @@ export type Database = {
         }
         Relationships: []
       }
+      recipe_ingredient_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean
+          max_selections: number | null
+          min_selections: number | null
+          name: string
+          recipe_template_id: string
+          selection_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          max_selections?: number | null
+          min_selections?: number | null
+          name: string
+          recipe_template_id: string
+          selection_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          max_selections?: number | null
+          min_selections?: number | null
+          name?: string
+          recipe_template_id?: string
+          selection_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredient_groups_recipe_template_id_fkey"
+            columns: ["recipe_template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_ingredients: {
         Row: {
           commissary_item_id: string | null
@@ -2537,6 +2676,50 @@ export type Database = {
             columns: ["recipe_id"]
             isOneToOne: false
             referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_pricing_matrix: {
+        Row: {
+          base_price: number
+          created_at: string
+          id: string
+          is_active: boolean
+          price_modifier: number | null
+          recipe_template_id: string
+          size_category: string | null
+          temperature_category: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_price?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_modifier?: number | null
+          recipe_template_id: string
+          size_category?: string | null
+          temperature_category?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_modifier?: number | null
+          recipe_template_id?: string
+          size_category?: string | null
+          temperature_category?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_pricing_matrix_recipe_template_id_fkey"
+            columns: ["recipe_template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
             referencedColumns: ["id"]
           },
         ]
