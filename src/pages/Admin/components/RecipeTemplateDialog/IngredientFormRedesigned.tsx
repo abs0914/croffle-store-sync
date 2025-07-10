@@ -29,10 +29,15 @@ const COMMON_INGREDIENTS = [
   'Baking powder', 'Baking soda', 'Yeast', 'Cocoa powder', 'Chocolate chips'
 ];
 
-const UNIT_OPTIONS = [
-  'kg', 'g', 'mg', 'liters', 'ml', 'cups', 'tbsp', 'tsp',
-  'piece', 'pieces', 'serving', 'portion', 'pair', 'scoop',
-  'boxes', 'packs', 'bottles', 'cans'
+// Direct inventory units - no conversion needed
+const DIRECT_UNIT_OPTIONS = [
+  'pieces', 'piece', 'serving', 'portion', 'scoop', 'cup', 'tbsp', 'tsp'
+];
+
+// Mini Croffle ingredients that support fractional quantities
+const MINI_CROFFLE_INGREDIENTS = [
+  'Croissant', 'Whipped Cream', 'Chocolate Sauce', 'Caramel Sauce', 
+  'Tiramisu Sauce', 'Colored Sprinkle', 'Peanut', 'Choco Flakes', 'Marshmallow'
 ];
 
 export const IngredientFormRedesigned: React.FC<IngredientFormRedesignedProps> = ({
@@ -45,13 +50,14 @@ export const IngredientFormRedesigned: React.FC<IngredientFormRedesignedProps> =
   onCreateGroup,
   availableGroups = []
 }) => {
-  console.log('🔥 IngredientFormRedesigned RENDERING - NEW COMPONENT ACTIVE');
+  console.log('🔥 IngredientFormRedesigned RENDERING - DIRECT INVENTORY MODE');
   const [isLoading, setIsLoading] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupType, setNewGroupType] = useState<'required_one' | 'optional_one' | 'multiple'>('required_one');
   const [ingredientSuggestions, setIngredientSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [supportsFractional, setSupportsFractional] = useState(false);
 
   // Load ingredient suggestions from existing inventory items
   useEffect(() => {
@@ -126,6 +132,13 @@ export const IngredientFormRedesigned: React.FC<IngredientFormRedesignedProps> =
   const handleIngredientNameChange = (value: string) => {
     onUpdate(index, 'ingredient_name', value);
     setShowSuggestions(value.length > 0);
+    
+    // Check if this ingredient supports fractional quantities
+    const fractionalSupport = MINI_CROFFLE_INGREDIENTS.some(miniIngredient => 
+      value.toLowerCase().includes(miniIngredient.toLowerCase())
+    );
+    setSupportsFractional(fractionalSupport);
+    onUpdate(index, 'supports_fractional', fractionalSupport);
   };
 
   const selectSuggestion = (suggestion: string) => {
@@ -267,22 +280,38 @@ export const IngredientFormRedesigned: React.FC<IngredientFormRedesignedProps> =
             )}
           </div>
 
+          {/* Fractional Support Notice */}
+          {supportsFractional && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 text-green-800">
+                <Badge variant="secondary" className="bg-green-100">Mini Croffle</Badge>
+                <span className="text-sm font-medium">Supports fractional quantities (0.5, 1.5, etc.)</span>
+              </div>
+            </div>
+          )}
+
           {/* Quantity and Unit Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-sm font-medium">Quantity</Label>
               <Input
                 type="number"
-                min="0"
-                step="0.1"
+                min={supportsFractional ? "0.1" : "1"}
+                step={supportsFractional ? "0.1" : "1"}
                 value={ingredient.quantity}
                 onChange={(e) => onUpdate(index, 'quantity', parseFloat(e.target.value) || 0)}
+                placeholder={supportsFractional ? "e.g., 0.5, 1.5" : "e.g., 1, 2, 3"}
                 className="mt-2"
               />
+              {supportsFractional && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Fractional quantities allowed for Mini Croffle ingredients
+                </p>
+              )}
             </div>
             
             <div>
-              <Label className="text-sm font-medium">Unit</Label>
+              <Label className="text-sm font-medium">Direct Inventory Unit</Label>
               <Select
                 value={ingredient.unit}
                 onValueChange={(value) => onUpdate(index, 'unit', value)}
@@ -291,11 +320,14 @@ export const IngredientFormRedesigned: React.FC<IngredientFormRedesignedProps> =
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {UNIT_OPTIONS.map(unit => (
+                  {DIRECT_UNIT_OPTIONS.map(unit => (
                     <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Uses serving-ready inventory units (no conversion needed)
+              </p>
             </div>
           </div>
 

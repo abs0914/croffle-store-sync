@@ -42,10 +42,13 @@ export interface RecipeTemplateIngredient {
 
 export interface RecipeTemplateIngredientInput {
   ingredient_name: string;
-  quantity: number;
-  unit: string;
+  quantity: number; // Supports fractional (0.5, 1.5) for Mini Croffle ingredients
+  unit: string; // Direct inventory units (pieces, serving, portion, scoop)
   estimated_cost_per_unit?: number;
   location_type: LocationType;
+  // Direct inventory integration
+  inventory_stock_id?: string;
+  supports_fractional?: boolean; // Auto-determined for Mini Croffle ingredients
   // Ingredient Group fields
   ingredient_group_id?: string;
   ingredient_group_name?: string;
