@@ -324,9 +324,7 @@ const deployToSingleStoreEnhanced = async (
           unit: normalizedUnit,
           cost_per_unit: ingredient.cost_per_unit || 0,
           inventory_stock_id: ingredient.inventory_stock_id,
-          commissary_item_id: ingredient.commissary_item_id,
-          uses_store_inventory: true,
-          location_type: ingredient.location_type || 'all'
+          commissary_item_id: ingredient.commissary_item_id
         };
       })
     );
