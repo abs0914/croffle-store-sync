@@ -2607,6 +2607,85 @@ export type Database = {
           },
         ]
       }
+      recipe_deployment_logs: {
+        Row: {
+          created_at: string | null
+          deployed_by: string | null
+          deployment_status: string
+          id: string
+          product_id: string | null
+          recipe_id: string | null
+          step_details: Json | null
+          store_id: string | null
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deployed_by?: string | null
+          deployment_status: string
+          id?: string
+          product_id?: string | null
+          recipe_id?: string | null
+          step_details?: Json | null
+          store_id?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deployed_by?: string | null
+          deployment_status?: string
+          id?: string
+          product_id?: string | null
+          recipe_id?: string | null
+          step_details?: Json | null
+          store_id?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_deployment_logs_deployed_by_fkey"
+            columns: ["deployed_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_usage_analytics"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_deployments: {
         Row: {
           cost_snapshot: number | null
@@ -2836,6 +2915,7 @@ export type Database = {
           ingredient_name: string | null
           inventory_stock_id: string
           is_optional: boolean | null
+          notes: string | null
           purchase_unit: string | null
           quantity: number
           recipe_id: string
@@ -2854,6 +2934,7 @@ export type Database = {
           ingredient_name?: string | null
           inventory_stock_id: string
           is_optional?: boolean | null
+          notes?: string | null
           purchase_unit?: string | null
           quantity: number
           recipe_id: string
@@ -2872,6 +2953,7 @@ export type Database = {
           ingredient_name?: string | null
           inventory_stock_id?: string
           is_optional?: boolean | null
+          notes?: string | null
           purchase_unit?: string | null
           quantity?: number
           recipe_id?: string
@@ -2975,6 +3057,7 @@ export type Database = {
           is_default_selection: boolean | null
           is_optional: boolean | null
           location_type: string | null
+          notes: string | null
           purchase_unit: string | null
           quantity: number
           recipe_template_id: string
@@ -3007,6 +3090,7 @@ export type Database = {
           is_default_selection?: boolean | null
           is_optional?: boolean | null
           location_type?: string | null
+          notes?: string | null
           purchase_unit?: string | null
           quantity: number
           recipe_template_id: string
@@ -3039,6 +3123,7 @@ export type Database = {
           is_default_selection?: boolean | null
           is_optional?: boolean | null
           location_type?: string | null
+          notes?: string | null
           purchase_unit?: string | null
           quantity?: number
           recipe_template_id?: string
@@ -3090,8 +3175,11 @@ export type Database = {
           instructions: string | null
           is_active: boolean | null
           name: string
+          preparation_time: number | null
           recipe_type: string | null
           serving_size: number | null
+          sku: string | null
+          suggested_price: number | null
           updated_at: string | null
           version: number | null
           yield_quantity: number
@@ -3111,8 +3199,11 @@ export type Database = {
           instructions?: string | null
           is_active?: boolean | null
           name: string
+          preparation_time?: number | null
           recipe_type?: string | null
           serving_size?: number | null
+          sku?: string | null
+          suggested_price?: number | null
           updated_at?: string | null
           version?: number | null
           yield_quantity?: number
@@ -3132,8 +3223,11 @@ export type Database = {
           instructions?: string | null
           is_active?: boolean | null
           name?: string
+          preparation_time?: number | null
           recipe_type?: string | null
           serving_size?: number | null
+          sku?: string | null
+          suggested_price?: number | null
           updated_at?: string | null
           version?: number | null
           yield_quantity?: number
@@ -3212,10 +3306,12 @@ export type Database = {
           is_active: boolean | null
           last_cost_update: string | null
           name: string
+          preparation_time: number | null
           product_id: string | null
           recipe_type: string | null
           rejection_reason: string | null
           serving_size: number | null
+          sku: string | null
           store_id: string
           suggested_price: number | null
           template_id: string | null
@@ -3241,10 +3337,12 @@ export type Database = {
           is_active?: boolean | null
           last_cost_update?: string | null
           name: string
+          preparation_time?: number | null
           product_id?: string | null
           recipe_type?: string | null
           rejection_reason?: string | null
           serving_size?: number | null
+          sku?: string | null
           store_id: string
           suggested_price?: number | null
           template_id?: string | null
@@ -3270,10 +3368,12 @@ export type Database = {
           is_active?: boolean | null
           last_cost_update?: string | null
           name?: string
+          preparation_time?: number | null
           product_id?: string | null
           recipe_type?: string | null
           rejection_reason?: string | null
           serving_size?: number | null
+          sku?: string | null
           store_id?: string
           suggested_price?: number | null
           template_id?: string | null
@@ -4132,6 +4232,10 @@ export type Database = {
         Args: { recipe_id_param: string; store_id_param?: string }
         Returns: number
       }
+      calculate_template_cost: {
+        Args: { template_id_param: string }
+        Returns: number
+      }
       can_access_user_record: {
         Args: { target_user_id: string; target_store_ids: string[] }
         Returns: boolean
@@ -4146,6 +4250,10 @@ export type Database = {
           p_store_ids: string[]
           p_is_active: boolean
         }
+        Returns: string
+      }
+      generate_recipe_sku: {
+        Args: { recipe_name: string; recipe_type?: string }
         Returns: string
       }
       generate_stock_order_number: {
@@ -4325,6 +4433,14 @@ export type Database = {
           status: string
           count_items: number
           details: string
+        }[]
+      }
+      validate_recipe_deployment: {
+        Args: { template_id_param: string; store_id_param: string }
+        Returns: {
+          is_valid: boolean
+          error_message: string
+          missing_ingredients: string[]
         }[]
       }
     }

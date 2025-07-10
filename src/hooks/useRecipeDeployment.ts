@@ -1,100 +1,72 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { 
-  DeploymentResult, 
-  DeploymentProgress, 
-  EnhancedDeploymentConfig,
-  PricingProfile,
-  IngredientSubstitution 
-} from '@/types/recipeManagement';
+import { validateRecipeDeployment } from '@/services/recipeUploadService';
 
-export function useRecipeDeployment() {
-  const [isDeploying, setIsDeploying] = useState(false);
+export interface DeploymentProgress {
+  storeId: string;
+  storeName: string;
+  status: 'pending' | 'validating' | 'deploying' | 'success' | 'error';
+  progress: number;
+  error?: string;
+  warnings?: string[];
+  recipeId?: string;
+  productId?: string;
+}
+
+export interface DeploymentResult {
+  success: boolean;
+  storeId: string;
+  storeName: string;
+  recipeId?: string;
+  productId?: string;
+  error?: string;
+  warnings?: string[];
+  missingIngredients?: string[];
+}
+
+export const useRecipeDeployment = () => {
   const [deploymentProgress, setDeploymentProgress] = useState<DeploymentProgress[]>([]);
-  const [pricingProfiles, setPricingProfiles] = useState<PricingProfile[]>([]);
+  const [isDeploying, setIsDeploying] = useState(false);
 
-  // Fetch pricing profiles for stores
-  const fetchPricingProfiles = useCallback(async (storeIds: string[]) => {
-    try {
-      const { data, error } = await supabase
-        .from('store_pricing_profiles')
-        .select('*')
-        .in('store_id', storeIds)
-        .eq('is_active', true)
-        .order('is_default', { ascending: false });
-
-      if (error) throw error;
-      setPricingProfiles(data || []);
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching pricing profiles:', error);
-      toast.error('Failed to load pricing profiles');
-      return [];
-    }
-  }, []);
-
-  // Check ingredient availability across stores
-  const checkIngredientAvailability = useCallback(async (
-    templateId: string, 
-    storeIds: string[]
+  const logDeploymentStep = async (
+    templateId: string,
+    storeId: string,
+    status: string,
+    details: any = {},
+    recipeId?: string,
+    productId?: string
   ) => {
     try {
-      const { data: template, error: templateError } = await supabase
-        .from('recipe_templates')
-        .select(`
-          *,
-          ingredients:recipe_template_ingredients(*)
-        `)
-        .eq('id', templateId)
-        .single();
-
-      if (templateError) throw templateError;
-
-      const availabilityByStore: Record<string, { available: string[]; missing: string[] }> = {};
-
-      for (const storeId of storeIds) {
-        const { data: inventory, error: inventoryError } = await supabase
-          .from('inventory_stock')
-          .select('item')
-          .eq('store_id', storeId)
-          .eq('is_active', true);
-
-        if (inventoryError) throw inventoryError;
-
-        const availableItems = new Set(inventory?.map(i => i.item.toLowerCase()) || []);
-        const available: string[] = [];
-        const missing: string[] = [];
-
-        template.ingredients?.forEach((ingredient: any) => {
-          const ingredientName = ingredient.ingredient_name.toLowerCase();
-          if (availableItems.has(ingredientName)) {
-            available.push(ingredient.ingredient_name);
-          } else {
-            missing.push(ingredient.ingredient_name);
-          }
-        });
-
-        availabilityByStore[storeId] = { available, missing };
-      }
-
-      return availabilityByStore;
+      await supabase.from('recipe_deployment_logs').insert({
+        template_id: templateId,
+        store_id: storeId,
+        recipe_id: recipeId || null,
+        product_id: productId || null,
+        deployment_status: status,
+        step_details: details
+      });
     } catch (error) {
-      console.error('Error checking ingredient availability:', error);
-      toast.error('Failed to check ingredient availability');
-      return {};
+      console.error('Failed to log deployment step:', error);
     }
-  }, []);
+  };
 
-  // Enhanced deployment with progress tracking
-  const deployRecipeEnhanced = useCallback(async (config: EnhancedDeploymentConfig) => {
+  const deployRecipeToStores = async (
+    templateId: string,
+    stores: Array<{ id: string; name: string }>,
+    options: {
+      checkDuplicates?: boolean;
+      createProducts?: boolean;
+      validateIngredients?: boolean;
+    } = {}
+  ): Promise<DeploymentResult[]> => {
     setIsDeploying(true);
     
     // Initialize progress tracking
-    const initialProgress = config.selectedStores.map(store => ({
+    const initialProgress: DeploymentProgress[] = stores.map(store => ({
       storeId: store.id,
       storeName: store.name,
-      status: 'pending' as const,
+      status: 'pending',
       progress: 0
     }));
     setDeploymentProgress(initialProgress);
@@ -102,236 +74,285 @@ export function useRecipeDeployment() {
     const results: DeploymentResult[] = [];
 
     try {
-      // Get template with ingredients
+      // Get template data
       const { data: template, error: templateError } = await supabase
         .from('recipe_templates')
         .select(`
           *,
-          ingredients:recipe_template_ingredients(*)
+          recipe_template_ingredients (*)
         `)
-        .eq('id', config.templateId)
+        .eq('id', templateId)
         .single();
 
-      if (templateError) throw templateError;
-
-      // Check ingredient availability if required
-      let ingredientAvailability: Record<string, { available: string[]; missing: string[] }> = {};
-      if (config.validateIngredients) {
-        ingredientAvailability = await checkIngredientAvailability(
-          config.templateId, 
-          config.selectedStores.map(s => s.id)
-        );
+      if (templateError || !template) {
+        throw new Error('Recipe template not found');
       }
 
-      // Deploy to each store
-      for (let i = 0; i < config.selectedStores.length; i++) {
-        const store = config.selectedStores[i];
+      // Process each store
+      for (const store of stores) {
+        await logDeploymentStep(templateId, store.id, 'started');
         
-        // Update progress to in-progress
         setDeploymentProgress(prev => prev.map(p => 
           p.storeId === store.id 
-            ? { ...p, status: 'in-progress', progress: 25 }
+            ? { ...p, status: 'validating', progress: 10 }
             : p
         ));
 
         try {
-          // Calculate pricing
-          const profile = pricingProfiles.find(p => p.store_id === store.id && p.is_default);
-          
-          // Apply ingredient substitutions
-          const processedIngredients = template.ingredients?.map((ingredient: any) => {
-            const substitution = config.ingredientSubstitutions.find(
-              sub => sub.originalIngredientName === ingredient.ingredient_name
-            );
-            
-            return substitution ? {
-              ...ingredient,
-              ingredient_name: substitution.substituteIngredientName,
-              cost_per_unit: substitution.substituteCostPerUnit
-            } : ingredient;
-          });
+          // Check for existing deployment
+          if (options.checkDuplicates !== false) {
+            const { data: existingRecipe } = await supabase
+              .from('recipes')
+              .select('id, product_id')
+              .eq('template_id', templateId)
+              .eq('store_id', store.id)
+              .maybeSingle();
 
-          // Calculate total cost
-          const totalCost = processedIngredients?.reduce((sum: number, ingredient: any) => {
-            return sum + (ingredient.quantity * (ingredient.cost_per_unit || 0));
-          }, 0) || 0;
+            if (existingRecipe) {
+              const result: DeploymentResult = {
+                success: true,
+                storeId: store.id,
+                storeName: store.name,
+                recipeId: existingRecipe.id,
+                productId: existingRecipe.product_id,
+                warnings: ['Recipe already deployed to this store']
+              };
+              results.push(result);
+              
+              setDeploymentProgress(prev => prev.map(p => 
+                p.storeId === store.id 
+                  ? { ...p, status: 'success', progress: 100, warnings: result.warnings }
+                  : p
+              ));
+              continue;
+            }
+          }
 
-          const costPerServing = template.yield_quantity > 0 ? totalCost / template.yield_quantity : 0;
-          const suggestedPrice = config.deploymentOptions.actualPrice || costPerServing;
+          // Validate deployment if requested
+          if (options.validateIngredients !== false) {
+            const validation = await validateRecipeDeployment(templateId, store.id);
+            if (!validation.isValid) {
+              throw new Error(validation.errorMessage || 'Validation failed');
+            }
+          }
 
-          // Update progress
           setDeploymentProgress(prev => prev.map(p => 
             p.storeId === store.id 
-              ? { ...p, progress: 50 }
+              ? { ...p, status: 'deploying', progress: 30 }
               : p
           ));
 
-          // Create the recipe
+          // Generate unique SKU for this deployment
+          const { data: skuData, error: skuError } = await supabase
+            .rpc('generate_recipe_sku', {
+              recipe_name: template.name,
+              recipe_type: template.recipe_type || 'regular'
+            });
+
+          if (skuError) {
+            throw new Error(`Failed to generate SKU: ${skuError.message}`);
+          }
+
+          // Create deployed recipe
           const { data: recipe, error: recipeError } = await supabase
             .from('recipes')
             .insert({
-              name: config.deploymentOptions.customName || template.name,
+              template_id: templateId,
               store_id: store.id,
-              template_id: config.templateId,
-              product_id: null, // Required field, set to null initially
-              total_cost: totalCost,
-              cost_per_serving: costPerServing,
-              yield_quantity: template.yield_quantity,
-              instructions: template.instructions,
-              is_active: config.deploymentOptions.isActive !== false
+              name: template.name,
+              recipe_type: template.recipe_type,
+              description: template.description,
+              instructions: template.instructions || 'Follow template instructions',
+              sku: skuData,
+              total_cost: (template as any).total_cost || 0,
+              suggested_price: (template as any).suggested_price || 0,
+              cost_per_serving: ((template as any).total_cost || 0) / Math.max((template as any).serving_size || 1, 1),
+              preparation_time: template.preparation_time,
+              serving_size: template.serving_size,
+              is_active: true
             })
             .select()
             .single();
 
-          if (recipeError) throw recipeError;
+          if (recipeError) {
+            throw new Error(`Failed to create recipe: ${recipeError.message}`);
+          }
 
-          // Update progress
+          await logDeploymentStep(templateId, store.id, 'recipe_created', { recipeId: recipe.id }, recipe.id);
+
           setDeploymentProgress(prev => prev.map(p => 
             p.storeId === store.id 
-              ? { ...p, progress: 75 }
+              ? { ...p, progress: 50, recipeId: recipe.id }
               : p
           ));
 
-          // Create recipe ingredients
-          if (processedIngredients && processedIngredients.length > 0) {
-            const ingredientInserts = processedIngredients.map((ingredient: any) => ({
-              recipe_id: recipe.id,
-              ingredient_name: ingredient.ingredient_name,
-              quantity: ingredient.quantity,
-              unit: ingredient.unit,
-              cost_per_unit: ingredient.cost_per_unit || 0,
-              inventory_stock_id: ingredient.inventory_stock_id || null
-            }));
+          // Add recipe ingredients
+          const ingredientInserts = template.recipe_template_ingredients.map((ingredient: any) => ({
+            recipe_id: recipe.id,
+            ingredient_name: ingredient.ingredient_name,
+            quantity: ingredient.quantity,
+            unit: ingredient.unit,
+            cost_per_unit: ingredient.cost_per_unit || 0,
+            commissary_item_id: ingredient.commissary_item_id,
+            inventory_stock_id: null,
+            notes: ingredient.notes
+          }));
 
-            const { error: ingredientsError } = await supabase
-              .from('recipe_ingredients')
-              .insert(ingredientInserts);
+          const { error: ingredientsError } = await supabase
+            .from('recipe_ingredients')
+            .insert(ingredientInserts);
 
-            if (ingredientsError) throw ingredientsError;
+          if (ingredientsError) {
+            throw new Error(`Failed to add ingredients: ${ingredientsError.message}`);
           }
 
-          // Create deployment record
-          const { error: deploymentError } = await supabase
-            .from('recipe_deployments')
-            .insert({
-              template_id: config.templateId,
-              store_id: store.id,
-              recipe_id: recipe.id,
-              deployed_by: (await supabase.auth.getUser()).data.user?.id,
-              cost_snapshot: totalCost,
-              price_snapshot: suggestedPrice,
-              deployment_notes: `Enhanced deployment with ${config.ingredientSubstitutions.length} substitutions`
-            });
+          await logDeploymentStep(templateId, store.id, 'ingredients_added', { 
+            ingredientCount: ingredientInserts.length 
+          }, recipe.id);
 
-          if (deploymentError) throw deploymentError;
+          setDeploymentProgress(prev => prev.map(p => 
+            p.storeId === store.id 
+              ? { ...p, progress: 70 }
+              : p
+          ));
+
+          let productId: string | undefined;
 
           // Create product if requested
-          if (config.createProducts) {
-            await supabase
-              .from('products')
-              .insert({
-                name: recipe.name,
-                description: recipe.description,
-                sku: `RCP-${recipe.name.toUpperCase().replace(/\s+/g, '-')}-${Date.now()}`,
-                price: suggestedPrice,
-                cost: costPerServing,
-                store_id: store.id,
-                is_active: true,
-                stock_quantity: 0
-              });
+          if (options.createProducts !== false) {
+            try {
+              const { data: product, error: productError } = await supabase
+                .from('products')
+                .insert({
+                  name: template.name,
+                  description: template.description,
+                  sku: recipe.sku,
+                  price: (template as any).suggested_price || ((template as any).total_cost * 1.5) || 50,
+                  cost: (template as any).total_cost || 0,
+                  category_id: null, // Will need to be mapped from template category
+                  store_id: store.id,
+                  stock_quantity: 0,
+                  is_active: true
+                })
+                .select()
+                .single();
+
+              if (productError) {
+                console.warn(`Failed to create product: ${productError.message}`);
+              } else {
+                productId = product.id;
+                
+                // Link recipe to product
+                await supabase
+                  .from('recipes')
+                  .update({ product_id: productId })
+                  .eq('id', recipe.id);
+
+                await logDeploymentStep(templateId, store.id, 'product_created', { 
+                  productId 
+                }, recipe.id, productId);
+              }
+            } catch (productError) {
+              console.warn('Product creation failed but recipe deployment continues:', productError);
+            }
           }
 
-          // Success
-          setDeploymentProgress(prev => prev.map(p => 
-            p.storeId === store.id 
-              ? { ...p, status: 'success', progress: 100 }
-              : p
-          ));
+          await logDeploymentStep(templateId, store.id, 'completed', {
+            recipeId: recipe.id,
+            productId,
+            totalCost: template.total_cost,
+            suggestedPrice: template.suggested_price
+          }, recipe.id, productId);
 
-          const warnings = [];
-          if (ingredientAvailability[store.id]?.missing.length > 0) {
-            warnings.push(`Missing ingredients: ${ingredientAvailability[store.id].missing.join(', ')}`);
-          }
-
-          results.push({
+          const result: DeploymentResult = {
             success: true,
             storeId: store.id,
             storeName: store.name,
             recipeId: recipe.id,
-            warnings,
-            missingIngredients: ingredientAvailability[store.id]?.missing || []
-          });
-
-        } catch (error) {
-          console.error(`Error deploying to store ${store.name}:`, error);
+            productId
+          };
           
-          // Log error to database
-          await supabase
-            .from('recipe_deployment_errors')
-            .insert({
-              template_id: config.templateId,
-              store_id: store.id,
-              error_type: 'deployment_failure',
-              error_message: error instanceof Error ? error.message : 'Unknown error',
-              error_details: {
-                suggestion: 'Check ingredient availability and store configuration',
-                timestamp: new Date().toISOString()
-              }
-            });
+          results.push(result);
 
           setDeploymentProgress(prev => prev.map(p => 
             p.storeId === store.id 
-              ? { ...p, status: 'error', progress: 100, error: error instanceof Error ? error.message : 'Unknown error' }
+              ? { 
+                  ...p, 
+                  status: 'success', 
+                  progress: 100, 
+                  recipeId: recipe.id,
+                  productId 
+                }
               : p
           ));
 
-          results.push({
+        } catch (error) {
+          console.error(`Deployment failed for store ${store.name}:`, error);
+          
+          await logDeploymentStep(templateId, store.id, 'failed', {
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+
+          const result: DeploymentResult = {
             success: false,
             storeId: store.id,
             storeName: store.name,
             error: error instanceof Error ? error.message : 'Unknown error'
-          });
+          };
+          
+          results.push(result);
+
+          setDeploymentProgress(prev => prev.map(p => 
+            p.storeId === store.id 
+              ? { ...p, status: 'error', error: result.error }
+              : p
+          ));
         }
       }
 
+      // Show summary
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+
+      if (successCount > 0 && failCount === 0) {
+        toast.success(`Successfully deployed recipe to ${successCount} store(s)`);
+      } else if (successCount > 0 && failCount > 0) {
+        toast.warning(`Deployed to ${successCount} store(s), ${failCount} failed`);
+      } else {
+        toast.error(`Deployment failed for all ${failCount} store(s)`);
+      }
+
       return results;
+
     } catch (error) {
-      console.error('Error in enhanced deployment:', error);
-      toast.error('Deployment failed');
-      return [];
+      console.error('Deployment error:', error);
+      toast.error('Recipe deployment failed');
+      
+      setDeploymentProgress(prev => prev.map(p => ({ 
+        ...p, 
+        status: 'error', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })));
+
+      return stores.map(store => ({
+        success: false,
+        storeId: store.id,
+        storeName: store.name,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }));
     } finally {
       setIsDeploying(false);
     }
-  }, [pricingProfiles, checkIngredientAvailability]);
+  };
 
-  // Get deployment history for a template
-  const getDeploymentHistory = useCallback(async (templateId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('recipe_deployments')
-        .select(`
-          *,
-          recipe:recipes(name, is_active),
-          store:stores(name)
-        `)
-        .eq('template_id', templateId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching deployment history:', error);
-      return [];
-    }
-  }, []);
+  const clearProgress = () => {
+    setDeploymentProgress([]);
+  };
 
   return {
-    isDeploying,
+    deployRecipeToStores,
     deploymentProgress,
-    pricingProfiles,
-    deployRecipeEnhanced,
-    fetchPricingProfiles,
-    checkIngredientAvailability,
-    getDeploymentHistory
+    isDeploying,
+    clearProgress
   };
-}
+};
