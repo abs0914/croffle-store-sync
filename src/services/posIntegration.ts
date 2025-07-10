@@ -277,12 +277,14 @@ export class POSIntegrationService {
         .insert({
           customer_id: customerId,
           store_id: storeId,
-          cashier_id: cashierId,
+          user_id: cashierId,
+          shift_id: storeId, // Using storeId as fallback for shift_id
           total: processedCart.final_total,
           subtotal: processedCart.subtotal,
-          discount_amount: processedCart.total_combos_savings,
+          discount: processedCart.total_combos_savings,
           payment_method: paymentMethod,
           status: 'completed',
+          receipt_number: `RCP-${Date.now()}`,
           items: processedCart.items.map(item => ({
             item_id: item.item.id,
             name: item.item.name,
@@ -335,13 +337,20 @@ export class POSIntegrationService {
         if (ingredient.inventory_stock_id) {
           const requiredQuantity = ingredient.quantity * quantity;
 
-          // Update inventory stock directly
-          await supabase
+          // Get current stock and update
+          const { data: currentStock } = await supabase
             .from('inventory_stock')
-            .update({ 
-              stock_quantity: supabase.sql`stock_quantity - ${requiredQuantity}` 
-            })
-            .eq('id', ingredient.inventory_stock_id);
+            .select('stock_quantity')
+            .eq('id', ingredient.inventory_stock_id)
+            .single();
+          
+          if (currentStock) {
+            const newQuantity = Math.max(0, currentStock.stock_quantity - requiredQuantity);
+            await supabase
+              .from('inventory_stock')
+              .update({ stock_quantity: newQuantity })
+              .eq('id', ingredient.inventory_stock_id);
+          }
         }
       }
     } catch (error) {
