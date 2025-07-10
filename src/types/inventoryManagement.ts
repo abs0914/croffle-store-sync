@@ -153,7 +153,7 @@ export interface InventoryFilters {
 export interface CommissaryInventoryItem {
   id: string;
   name: string;
-  category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  category: 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
   item_type: 'raw_material' | 'supply' | 'orderable_item';
   current_stock: number;
   minimum_threshold: number;

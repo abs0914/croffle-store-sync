@@ -18,7 +18,7 @@ interface AddCommissaryItemDialogProps {
 export function AddCommissaryItemDialog({ open, onOpenChange, onSuccess }: AddCommissaryItemDialogProps) {
   const [formData, setFormData] = useState({
     name: '',
-    category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies',
+    category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
     item_type: 'raw_material' as 'raw_material' | 'supply' | 'orderable_item',
     current_stock: 0,
     minimum_threshold: 0,
@@ -95,6 +95,7 @@ export function AddCommissaryItemDialog({ open, onOpenChange, onSuccess }: AddCo
                 <SelectItem value="raw_materials">Raw Materials</SelectItem>
                 <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
                 <SelectItem value="supplies">Supplies</SelectItem>
+                <SelectItem value="finished_goods">Finished Goods</SelectItem>
               </SelectContent>
             </Select>
           </div>
