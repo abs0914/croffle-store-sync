@@ -30,6 +30,7 @@ import { RecipeInventoryMappings } from '@/components/admin/recipe/RecipeInvento
 import { RecipeCleanupTools } from '@/components/admin/recipe/RecipeCleanupTools';
 import { toast } from 'sonner';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
+import { EnhancedRecipeDeploymentDialog } from '@/components/admin/recipe/EnhancedRecipeDeploymentDialog';
 
 export function ConsolidatedRecipeAdministration() {
   const {
@@ -65,6 +66,10 @@ export function ConsolidatedRecipeAdministration() {
   // State for template dialog (for editing templates)
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  
+  // State for enhanced deployment dialog
+  const [isDeploymentDialogOpen, setIsDeploymentDialogOpen] = useState(false);
+  const [templateToDeploy, setTemplateToDeployment] = useState<any>(null);
 
   // Combine and filter data
   const allItems = [...templates, ...recipes];
@@ -147,6 +152,11 @@ export function ConsolidatedRecipeAdministration() {
     }
   };
 
+  const handleDeployTemplate = (template: any) => {
+    setTemplateToDeployment(template);
+    setIsDeploymentDialogOpen(true);
+  };
+
   const renderItemCard = (item: UnifiedRecipeItem) => (
     <Card key={item.id} className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -173,10 +183,16 @@ export function ConsolidatedRecipeAdministration() {
                 Edit
               </DropdownMenuItem>
               {item.item_type === 'template' && (
-                <DropdownMenuItem onClick={() => handleDeleteTemplate(item.id)}>
-                  <Package className="h-4 w-4 mr-2" />
-                  Delete Template
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem onClick={() => handleDeployTemplate(item)}>
+                    <Rocket className="h-4 w-4 mr-2" />
+                    Deploy Template
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleDeleteTemplate(item.id)}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Template
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
