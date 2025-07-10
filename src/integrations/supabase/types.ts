@@ -2499,6 +2499,144 @@ export type Database = {
           },
         ]
       }
+      recipe_deployment_errors: {
+        Row: {
+          created_at: string | null
+          deployment_id: string | null
+          error_details: Json | null
+          error_message: string
+          error_type: string
+          id: string
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          store_id: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deployment_id?: string | null
+          error_details?: Json | null
+          error_message: string
+          error_type: string
+          id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          store_id: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deployment_id?: string | null
+          error_details?: Json | null
+          error_message?: string
+          error_type?: string
+          id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          store_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_deployment_errors_deployment_id_fkey"
+            columns: ["deployment_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_deployments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_errors_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_errors_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_deployments: {
+        Row: {
+          cost_snapshot: number | null
+          created_at: string | null
+          deployed_by: string
+          deployment_notes: string | null
+          deployment_options: Json | null
+          deployment_status: string
+          id: string
+          price_snapshot: number | null
+          recipe_id: string
+          store_id: string
+          template_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          cost_snapshot?: number | null
+          created_at?: string | null
+          deployed_by: string
+          deployment_notes?: string | null
+          deployment_options?: Json | null
+          deployment_status?: string
+          id?: string
+          price_snapshot?: number | null
+          recipe_id: string
+          store_id: string
+          template_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          cost_snapshot?: number | null
+          created_at?: string | null
+          deployed_by?: string
+          deployment_notes?: string | null
+          deployment_options?: Json | null
+          deployment_status?: string
+          id?: string
+          price_snapshot?: number | null
+          recipe_id?: string
+          store_id?: string
+          template_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_deployments_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_usage_analytics"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "recipe_deployments_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_executions: {
         Row: {
           created_at: string
@@ -2588,6 +2726,53 @@ export type Database = {
           {
             foreignKeyName: "recipe_ingredient_groups_recipe_template_id_fkey"
             columns: ["recipe_template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_ingredient_substitutions: {
+        Row: {
+          conversion_factor: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          original_ingredient_name: string
+          store_ids: string[] | null
+          substitute_ingredient_name: string
+          template_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversion_factor?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          original_ingredient_name: string
+          store_ids?: string[] | null
+          substitute_ingredient_name: string
+          template_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversion_factor?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          original_ingredient_name?: string
+          store_ids?: string[] | null
+          substitute_ingredient_name?: string
+          template_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredient_substitutions_template_id_fkey"
+            columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "recipe_templates"
             referencedColumns: ["id"]
@@ -2948,17 +3133,20 @@ export type Database = {
           combo_rules: Json | null
           cost_per_serving: number | null
           created_at: string
+          deployment_notes: string | null
           description: string | null
           id: string
           images: Json | null
           instructions: string | null
           is_active: boolean | null
+          last_cost_update: string | null
           name: string
           product_id: string
           recipe_type: string | null
           rejection_reason: string | null
           serving_size: number | null
           store_id: string
+          suggested_price: number | null
           template_id: string | null
           total_cost: number | null
           updated_at: string
@@ -2974,17 +3162,20 @@ export type Database = {
           combo_rules?: Json | null
           cost_per_serving?: number | null
           created_at?: string
+          deployment_notes?: string | null
           description?: string | null
           id?: string
           images?: Json | null
           instructions?: string | null
           is_active?: boolean | null
+          last_cost_update?: string | null
           name: string
           product_id: string
           recipe_type?: string | null
           rejection_reason?: string | null
           serving_size?: number | null
           store_id: string
+          suggested_price?: number | null
           template_id?: string | null
           total_cost?: number | null
           updated_at?: string
@@ -3000,17 +3191,20 @@ export type Database = {
           combo_rules?: Json | null
           cost_per_serving?: number | null
           created_at?: string
+          deployment_notes?: string | null
           description?: string | null
           id?: string
           images?: Json | null
           instructions?: string | null
           is_active?: boolean | null
+          last_cost_update?: string | null
           name?: string
           product_id?: string
           recipe_type?: string | null
           rejection_reason?: string | null
           serving_size?: number | null
           store_id?: string
+          suggested_price?: number | null
           template_id?: string | null
           total_cost?: number | null
           updated_at?: string
@@ -3417,6 +3611,53 @@ export type Database = {
           },
         ]
       }
+      store_pricing_profiles: {
+        Row: {
+          base_markup_percentage: number | null
+          category_markups: Json | null
+          created_at: string | null
+          id: string
+          ingredient_cost_adjustments: Json | null
+          is_active: boolean | null
+          is_default: boolean | null
+          profile_name: string
+          store_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          base_markup_percentage?: number | null
+          category_markups?: Json | null
+          created_at?: string | null
+          id?: string
+          ingredient_cost_adjustments?: Json | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          profile_name: string
+          store_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          base_markup_percentage?: number | null
+          category_markups?: Json | null
+          created_at?: string | null
+          id?: string
+          ingredient_cost_adjustments?: Json | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          profile_name?: string
+          store_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_pricing_profiles_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_settings: {
         Row: {
           bir_compliance_config: Json | null
@@ -3814,6 +4055,10 @@ export type Database = {
     Functions: {
       calculate_recipe_cost: {
         Args: { recipe_id: number }
+        Returns: number
+      }
+      calculate_recipe_suggested_price: {
+        Args: { recipe_id_param: string; store_id_param?: string }
         Returns: number
       }
       can_access_user_record: {
