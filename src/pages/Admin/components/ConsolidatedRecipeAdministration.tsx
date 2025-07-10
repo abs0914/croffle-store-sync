@@ -220,6 +220,9 @@ export function ConsolidatedRecipeAdministration() {
           {item.item_type === 'template' && (
             <>
               <div>
+                <span className="font-medium">Cost:</span> ₱{item.total_cost?.toFixed(2) || '0.00'}
+              </div>
+              <div>
                 <span className="font-medium">Deployments:</span> {item.deployment_count || 0}
               </div>
               <div>
