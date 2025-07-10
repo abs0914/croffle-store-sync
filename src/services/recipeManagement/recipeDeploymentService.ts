@@ -96,10 +96,22 @@ const deployToSingleStore = async (
     const validIngredients = template.ingredients.filter((ingredient: any) => {
       // Clean up malformed ingredient names
       if (ingredient.ingredient_name && typeof ingredient.ingredient_name === 'string') {
-        // Remove JSON artifacts and quotes
-        const cleanName = ingredient.ingredient_name
+        let cleanName = ingredient.ingredient_name;
+        
+        // Handle severely malformed JSON strings like "[{\"ingredient_name\": \"REGULAR CROISSANT\""
+        if (cleanName.includes('ingredient_name')) {
+          // Extract the actual ingredient name from malformed JSON
+          const match = cleanName.match(/ingredient_name[""'\s]*:\s*[""']\s*([^""']+)/);
+          if (match) {
+            cleanName = match[1].trim();
+          }
+        }
+        
+        // Clean up any remaining JSON artifacts and quotes
+        cleanName = cleanName
           .replace(/^"?\[?\{?"?ingredient_name"?: ?"?/, '')
           .replace(/["'}].*$/, '')
+          .replace(/[{}\[\]"']/g, '')
           .trim();
         
         ingredient.ingredient_name = cleanName;
