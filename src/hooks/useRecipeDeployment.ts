@@ -172,18 +172,14 @@ export function useRecipeDeployment() {
             .from('recipes')
             .insert({
               name: config.deploymentOptions.customName || template.name,
-              description: config.deploymentOptions.customDescription || template.description,
-              instructions: template.instructions,
-              yield_quantity: template.yield_quantity,
-              serving_size: template.serving_size,
-              total_cost: totalCost,
-              cost_per_serving: costPerServing,
-              suggested_price: suggestedPrice,
               store_id: store.id,
               template_id: config.templateId,
-              is_active: config.deploymentOptions.isActive !== false,
-              recipe_type: template.recipe_type || 'recipe',
-              category_name: template.category_name
+              product_id: null, // Required field, set to null initially
+              total_cost: totalCost,
+              cost_per_serving: costPerServing,
+              yield_quantity: template.yield_quantity,
+              instructions: template.instructions,
+              is_active: config.deploymentOptions.isActive !== false
             })
             .select()
             .single();
