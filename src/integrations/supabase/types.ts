@@ -2410,6 +2410,51 @@ export type Database = {
           },
         ]
       }
+      recipe_executions: {
+        Row: {
+          created_at: string
+          executed_at: string
+          executed_by: string
+          id: string
+          notes: string | null
+          quantity_produced: number
+          recipe_name: string
+          recipe_template_id: string
+          status: string
+          store_id: string | null
+          total_cost: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          executed_at?: string
+          executed_by: string
+          id?: string
+          notes?: string | null
+          quantity_produced?: number
+          recipe_name: string
+          recipe_template_id: string
+          status?: string
+          store_id?: string | null
+          total_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          executed_at?: string
+          executed_by?: string
+          id?: string
+          notes?: string | null
+          quantity_produced?: number
+          recipe_name?: string
+          recipe_template_id?: string
+          status?: string
+          store_id?: string | null
+          total_cost?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       recipe_ingredients: {
         Row: {
           commissary_item_id: string | null

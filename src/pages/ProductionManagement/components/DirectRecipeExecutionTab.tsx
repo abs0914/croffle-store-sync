@@ -80,7 +80,7 @@ export const DirectRecipeExecutionTab: React.FC = () => {
     if (!currentStore) return;
     
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('recipe_executions')
         .select(`
           *,
@@ -91,7 +91,7 @@ export const DirectRecipeExecutionTab: React.FC = () => {
         .limit(20);
 
       if (error) throw error;
-      setProductionHistory(data || []);
+      setProductionHistory((data || []) as ProductionExecution[]);
     } catch (error) {
       console.error('Error loading production history:', error);
     }
@@ -144,7 +144,7 @@ export const DirectRecipeExecutionTab: React.FC = () => {
       setExecutionProgress(25);
       const { data: user } = await supabase.auth.getUser();
       
-      const { data: executionRecord, error: executionError } = await supabase
+      const { data: executionRecord, error: executionError } = await (supabase as any)
         .from('recipe_executions')
         .insert({
           recipe_template_id: selectedTemplate.id,
@@ -174,7 +174,7 @@ export const DirectRecipeExecutionTab: React.FC = () => {
 
       // Step 4: Complete production record (100%)
       setExecutionProgress(100);
-      await supabase
+      await (supabase as any)
         .from('recipe_executions')
         .update({ status: 'completed' })
         .eq('id', executionRecord.id);
