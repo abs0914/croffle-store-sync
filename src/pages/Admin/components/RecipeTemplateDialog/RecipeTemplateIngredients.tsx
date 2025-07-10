@@ -119,8 +119,8 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
             key={index}
             ingredient={ingredient}
             index={index}
-            storeId={storeId}
-            useCommissaryInventory={true}
+            storeId={undefined} // Templates don't use store inventory
+            useCommissaryInventory={true} // Always use commissary for templates
             onUpdate={updateIngredient}
             onRemove={removeIngredient}
           />

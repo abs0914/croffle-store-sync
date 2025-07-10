@@ -242,16 +242,36 @@ const deployToSingleStore = async (
 
     if (recipeError) throw recipeError;
 
-    // Create recipe ingredients using cleaned ingredient data
-    const ingredientInserts = validIngredients.map((ingredient: any) => ({
-      recipe_id: recipe.id,
-      ingredient_name: ingredient.ingredient_name,
-      quantity: ingredient.quantity || 1,
-      unit: ingredient.unit || 'piece',
-      cost_per_unit: ingredient.cost_per_unit || 0,
-      uses_store_inventory: true,
-      location_type: 'store'
-    }));
+    // Create recipe ingredients with proper store inventory mapping
+    const ingredientInserts = await Promise.all(
+      validIngredients.map(async (ingredient: any) => {
+        // Try to find matching store inventory item by name
+        let inventoryStockId = null;
+        if (ingredient.commissary_item_id) {
+          const { data: storeItem } = await supabase
+            .from('inventory_stock')
+            .select('id')
+            .eq('store_id', store.id)
+            .eq('item', ingredient.ingredient_name)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          inventoryStockId = storeItem?.id || null;
+        }
+
+        return {
+          recipe_id: recipe.id,
+          ingredient_name: ingredient.ingredient_name,
+          quantity: ingredient.quantity || 1,
+          unit: ingredient.unit || 'piece',
+          cost_per_unit: ingredient.cost_per_unit || 0,
+          inventory_stock_id: inventoryStockId,
+          commissary_item_id: ingredient.commissary_item_id,
+          uses_store_inventory: true,
+          location_type: ingredient.location_type || 'all'
+        };
+      })
+    );
 
     const { error: ingredientsError } = await supabase
       .from('recipe_ingredients')
