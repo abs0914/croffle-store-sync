@@ -87,13 +87,60 @@ const deployToSingleStore = async (
   options: DeploymentOptions
 ): Promise<DeploymentResult> => {
   try {
-    // Calculate recipe cost using direct inventory
-    const totalCost = template.ingredients.reduce((sum: number, ingredient: any) => {
-      return sum + (ingredient.quantity * (ingredient.cost_per_unit || 0));
+    // Validate template has valid ingredients
+    if (!template.ingredients || template.ingredients.length === 0) {
+      throw new Error('Template has no valid ingredients');
+    }
+
+    // Filter out invalid ingredients and clean ingredient names
+    const validIngredients = template.ingredients.filter((ingredient: any) => {
+      // Clean up malformed ingredient names
+      if (ingredient.ingredient_name && typeof ingredient.ingredient_name === 'string') {
+        // Remove JSON artifacts and quotes
+        const cleanName = ingredient.ingredient_name
+          .replace(/^"?\[?\{?"?ingredient_name"?: ?"?/, '')
+          .replace(/["'}].*$/, '')
+          .trim();
+        
+        ingredient.ingredient_name = cleanName;
+        return cleanName.length > 0 && !cleanName.includes('{') && !cleanName.includes('"');
+      }
+      return false;
+    });
+
+    if (validIngredients.length === 0) {
+      throw new Error('No valid ingredients found after cleaning');
+    }
+
+    // Calculate recipe cost using valid ingredients only
+    const totalCost = validIngredients.reduce((sum: number, ingredient: any) => {
+      const cost = ingredient.quantity * (ingredient.cost_per_unit || 0);
+      return sum + cost;
     }, 0);
 
     const costPerServing = template.yield_quantity > 0 ? totalCost / template.yield_quantity : 0;
     const suggestedPrice = costPerServing * (1 + (options.priceMarkup || 0.5)); // 50% markup by default
+
+    // Check if recipe already exists in this store
+    const { data: existingRecipe, error: checkError } = await supabase
+      .from('recipes')
+      .select('id')
+      .eq('name', options.customName || template.name)
+      .eq('store_id', store.id)
+      .maybeSingle();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    if (existingRecipe) {
+      return {
+        success: false,
+        storeId: store.id,
+        storeName: store.name,
+        error: 'Recipe already exists in this store'
+      };
+    }
 
     // Create the recipe in the store
     const { data: recipe, error: recipeError } = await supabase
@@ -101,28 +148,31 @@ const deployToSingleStore = async (
       .insert({
         name: options.customName || template.name,
         description: options.customDescription || template.description,
-        instructions: template.instructions,
-        yield_quantity: template.yield_quantity,
+        instructions: template.instructions || 'No instructions provided',
+        yield_quantity: template.yield_quantity || 1,
         total_cost: totalCost,
         cost_per_serving: costPerServing,
         store_id: store.id,
+        template_id: template.id,
         product_id: null,
-        is_active: options.isActive !== false
+        is_active: options.isActive !== false,
+        approval_status: 'approved', // Auto-approve admin deployments
+        created_by: template.created_by
       })
       .select()
       .single();
 
     if (recipeError) throw recipeError;
 
-    // Create recipe ingredients using direct inventory mapping
-    const ingredientInserts = template.ingredients.map((ingredient: any) => ({
+    // Create recipe ingredients using cleaned ingredient data
+    const ingredientInserts = validIngredients.map((ingredient: any) => ({
       recipe_id: recipe.id,
       ingredient_name: ingredient.ingredient_name,
-      quantity: ingredient.quantity,
-      unit: ingredient.unit,
+      quantity: ingredient.quantity || 1,
+      unit: ingredient.unit || 'piece',
       cost_per_unit: ingredient.cost_per_unit || 0,
-      inventory_stock_id: ingredient.inventory_stock_id,
-      uses_direct_inventory: true
+      uses_store_inventory: true,
+      location_type: 'store'
     }));
 
     const { error: ingredientsError } = await supabase
@@ -131,11 +181,35 @@ const deployToSingleStore = async (
 
     if (ingredientsError) throw ingredientsError;
 
+    // Create deployment record if table exists
+    try {
+      const { error: deploymentError } = await supabase
+        .from('recipe_deployments')
+        .insert({
+          template_id: template.id,
+          store_id: store.id,
+          recipe_id: recipe.id,
+          deployed_by: template.created_by,
+          cost_snapshot: totalCost,
+          price_snapshot: suggestedPrice,
+          deployment_notes: 'Admin deployment'
+        });
+
+      if (deploymentError) {
+        console.warn('Failed to create deployment record:', deploymentError);
+        // Don't fail the whole deployment for this
+      }
+    } catch (error) {
+      console.warn('Deployment record table may not exist:', error);
+    }
+
     return {
       success: true,
       storeId: store.id,
       storeName: store.name,
-      recipeId: recipe.id
+      recipeId: recipe.id,
+      warnings: validIngredients.length < template.ingredients.length ? 
+        [`${template.ingredients.length - validIngredients.length} invalid ingredients were skipped`] : undefined
     };
   } catch (error) {
     console.error(`Error deploying to store ${store.name}:`, error);
