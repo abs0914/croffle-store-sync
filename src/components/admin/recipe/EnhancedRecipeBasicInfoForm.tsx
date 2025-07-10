@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Upload, X, Plus, ImageIcon, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { uploadRecipeImage, validateImage } from '@/services/recipeManagement/imageUploadService';
 
 interface RecipeImage {
   url: string;
@@ -46,50 +46,39 @@ export function EnhancedRecipeBasicInfoForm({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should be less than 5MB');
+    // Validate image using the enhanced service
+    const validation = validateImage(file);
+    if (!validation.isValid) {
+      toast.error(validation.error);
       return;
     }
 
     setUploadingImage(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `recipe-${Date.now()}.${fileExt}`;
-      const filePath = `templates/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('recipe-images')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('recipe-images')
-        .getPublicUrl(filePath);
-
-      const newImage: RecipeImage = {
-        url: publicUrl,
-        type: 'upload',
-        id: Date.now().toString()
-      };
-
-      const currentImages: RecipeImage[] = formData.images || [];
-      handleFieldChange('images', [...currentImages, newImage]);
+      const result = await uploadRecipeImage(file, { folder: 'templates' });
       
-      // Also set as primary image URL for backward compatibility
-      if (!formData.image_url) {
-        handleFieldChange('image_url', publicUrl);
+      if (result.success && result.url) {
+        const newImage: RecipeImage = {
+          url: result.url,
+          type: 'upload',
+          id: Date.now().toString()
+        };
+
+        const currentImages: RecipeImage[] = formData.images || [];
+        handleFieldChange('images', [...currentImages, newImage]);
+        
+        // Also set as primary image URL for backward compatibility
+        if (!formData.image_url) {
+          handleFieldChange('image_url', result.url);
+        }
+        
+        toast.success('Image uploaded successfully');
+      } else {
+        throw new Error(result.error || 'Upload failed');
       }
-      
-      toast.success('Image uploaded successfully');
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      toast.error('Failed to upload image');
+      toast.error(error.message || 'Failed to upload image');
     } finally {
       setUploadingImage(false);
     }
