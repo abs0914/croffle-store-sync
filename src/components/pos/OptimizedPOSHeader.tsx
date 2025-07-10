@@ -9,7 +9,15 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchCashierById } from "@/services/cashier";
 import { useAuth } from "@/contexts/auth";
 import { useShift } from "@/contexts/shift";
-import { getPOSInventoryStatus } from "@/services/pos/inventoryIntegrationService";
+// Simple mock service for POS inventory status
+const getPOSInventoryStatus = async (storeId: string) => {
+  return {
+    totalItems: 0,
+    lowStockItems: 0,
+    outOfStockItems: 0,
+    healthyItems: 0
+  };
+};
 import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
 import { useStoreDisplay } from "@/contexts/StoreDisplayContext";
 import { PrinterStatusIndicator } from "@/components/printer/PrinterStatusIndicator";

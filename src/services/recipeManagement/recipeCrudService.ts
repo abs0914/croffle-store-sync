@@ -36,10 +36,9 @@ export const createRecipeTemplate = async (
             ingredient_name: ing.ingredient_name,
             quantity: ing.quantity,
             unit: ing.unit,
-            commissary_item_id: ing.commissary_item_id,
-            commissary_item_name: ing.commissary_item_name,
-            cost_per_unit: ing.cost_per_unit,
-            location_type: ing.location_type || 'all'
+            location_type: ing.location_type || 'all',
+            uses_store_inventory: ing.uses_store_inventory || false,
+            cost_per_unit: ing.cost_per_unit
           }))
         );
 

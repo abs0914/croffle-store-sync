@@ -115,6 +115,60 @@ export interface CostBreakdown {
   totalCost: number;
 }
 
+// Recipe cost breakdown interface for analytics
+export interface RecipeCostBreakdown {
+  templateId: string;
+  totalCost: number;
+  costPerServing: number;
+  suggestedPrice: number;
+  ingredientCosts: Array<{
+    ingredient_name: string;
+    cost_per_unit: number;
+    quantity: number;
+    total_cost: number;
+    percentage_of_total: number;
+  }>;
+  laborCost: number;
+  overheadCost: number;
+  profitability: {
+    margin: number;
+    breakEvenPoint: number;
+    profitPerServing: number;
+  };
+  ingredients: Array<{
+    ingredient_name: string;
+    cost_per_unit: number;
+    quantity: number;
+    total_cost: number;
+    percentage_of_total: number;
+  }>;
+}
+
+// Ingredient cost alert interface
+export interface IngredientCostAlert {
+  templateId: string;
+  templateName: string;
+  ingredientName: string;
+  ingredient_name: string;
+  current_cost: number;
+  average_cost: number;
+  variance_percentage: number;
+  percentageIncrease: number;
+  alert_type: 'low' | 'high' | 'missing';
+  severity: 'low' | 'medium' | 'high';
+  recommendation: string;
+}
+
+// Deployment result interface
+export interface DeploymentResult {
+  success: boolean;
+  recipeId?: string;
+  productId?: string;
+  message: string;
+  warnings?: string[];
+  missingIngredients?: string[];
+}
+
 // Validation types
 export interface ValidationResult {
   isValid: boolean;

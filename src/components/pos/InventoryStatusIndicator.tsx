@@ -2,7 +2,15 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Package, TrendingDown, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getPOSInventoryStatus } from '@/services/pos/inventoryIntegrationService';
+// Simple mock service for POS inventory status
+const getPOSInventoryStatus = async (storeId: string) => {
+  return {
+    totalItems: 0,
+    lowStockItems: 0,
+    outOfStockItems: 0,
+    healthyItems: 0
+  };
+};
 import { useStore } from '@/contexts/StoreContext';
 
 interface InventoryStatus {

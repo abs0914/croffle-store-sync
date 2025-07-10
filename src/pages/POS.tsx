@@ -129,12 +129,12 @@ export default function POS() {
     try {
       console.log("POS: Processing payment with enhanced inventory validation...");
       
-      // Convert cart items to the format expected by the transaction handler
-      const cartItemsForTransaction = items.map(item => ({
-        ...item,
-        id: item.productId,
-        name: item.product.name
-      }));
+    // Convert cart items to the format expected by the transaction handler
+    const cartItemsForTransaction = items.map(item => ({
+      ...item,
+      id: item.productId,
+      name: item.product?.name || 'Unknown Product'
+    }));
 
       await processPayment(
         currentStore, 
@@ -159,10 +159,10 @@ export default function POS() {
     const transactionItems: TransactionItem[] = completedTransaction.items.map(item => ({
       productId: item.productId,
       variationId: item.variationId,
-      name: item.product?.name || item.name,
+      name: item.name,
       quantity: item.quantity,
-      unitPrice: item.price,
-      totalPrice: item.price * item.quantity
+      unitPrice: item.unitPrice,
+      totalPrice: item.totalPrice
     }));
 
     // Convert CompletedTransaction to Transaction format for compatibility
@@ -171,10 +171,10 @@ export default function POS() {
       shiftId: currentShift?.id || '',
       storeId: currentStore?.id || '',
       userId: '',
-      paymentMethod: completedTransaction.payment_method as 'cash' | 'card' | 'e-wallet',
+      paymentMethod: completedTransaction.paymentMethod,
       status: 'completed' as const,
-      createdAt: completedTransaction.created_at,
-      receiptNumber: completedTransaction.receipt_number,
+      createdAt: completedTransaction.createdAt,
+      receiptNumber: completedTransaction.receiptNumber,
       items: transactionItems
     };
 

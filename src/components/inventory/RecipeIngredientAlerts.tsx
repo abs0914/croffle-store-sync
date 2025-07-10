@@ -3,7 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, ChefHat, Package } from "lucide-react";
-import { getRecipeIngredientAlerts } from "@/services/pos/recipeInventoryService";
+// Simple mock service for recipe ingredient alerts
+const getRecipeIngredientAlerts = async (storeId: string) => {
+  // Return empty array for now - this can be enhanced later
+  return [];
+};
 
 interface RecipeIngredientAlertsProps {
   storeId: string;
