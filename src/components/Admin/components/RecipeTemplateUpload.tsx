@@ -125,29 +125,95 @@ export const RecipeTemplateUpload: React.FC = () => {
   };
 
   const parseCSV = (csvText: string): any => {
-    const lines = csvText.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim());
+    const lines = csvText.split('\n').filter(line => line.trim());
+    if (lines.length === 0) return { recipes: [], addons: [], combos: [] };
     
+    // Parse CSV with proper quoted field handling
+    const parseCSVLine = (line: string): string[] => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      let i = 0;
+      
+      while (i < line.length) {
+        const char = line[i];
+        
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            // Escaped quote
+            current += '"';
+            i += 2;
+          } else {
+            // Toggle quote state
+            inQuotes = !inQuotes;
+            i++;
+          }
+        } else if (char === ',' && !inQuotes) {
+          // Field separator
+          result.push(current.trim());
+          current = '';
+          i++;
+        } else {
+          current += char;
+          i++;
+        }
+      }
+      
+      // Add the last field
+      result.push(current.trim());
+      return result;
+    };
+    
+    const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim());
     const recipes = [];
     const addons = [];
     const combos = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
+      const values = parseCSVLine(lines[i]);
       if (values.length < headers.length) continue;
 
       const row: any = {};
       headers.forEach((header, index) => {
-        row[header] = values[index];
+        let value = values[index] || '';
+        // Remove surrounding quotes if present
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.slice(1, -1);
+        }
+        row[header] = value;
       });
+
+      // Skip empty rows
+      if (!row.name || row.name.trim() === '') continue;
 
       // Determine record type based on content
       if (row.type === 'recipe' || (!row.type && row.name && row.ingredients)) {
-        recipes.push(parseRecipeRow(row));
+        try {
+          const recipe = parseRecipeRow(row);
+          if (recipe.name) {
+            recipes.push(recipe);
+          }
+        } catch (error) {
+          console.error('Failed to parse recipe row:', row.name, error);
+        }
       } else if (row.type === 'addon') {
-        addons.push(parseAddonRow(row));
+        try {
+          const addon = parseAddonRow(row);
+          if (addon.name) {
+            addons.push(addon);
+          }
+        } catch (error) {
+          console.error('Failed to parse addon row:', row.name, error);
+        }
       } else if (row.type === 'combo') {
-        combos.push(parseComboRow(row));
+        try {
+          const combo = parseComboRow(row);
+          if (combo.name) {
+            combos.push(combo);
+          }
+        } catch (error) {
+          console.error('Failed to parse combo row:', row.name, error);
+        }
       }
     }
 
