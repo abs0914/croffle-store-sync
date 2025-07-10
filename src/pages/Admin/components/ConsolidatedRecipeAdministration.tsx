@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { EnhancedRecipeDeploymentDialog } from '@/components/admin/recipe/EnhancedRecipeDeploymentDialog';
 import { RecipeTemplateUpload } from '@/components/Admin/components/RecipeTemplateUpload';
+import { TableRecipeUpload } from '@/components/admin/recipe/TableRecipeUpload';
 
 export function ConsolidatedRecipeAdministration() {
   const {
@@ -452,7 +453,10 @@ export function ConsolidatedRecipeAdministration() {
         </TabsContent>
 
         <TabsContent value="upload" className="space-y-4">
-          <RecipeTemplateUpload />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RecipeTemplateUpload />
+            <TableRecipeUpload />
+          </div>
         </TabsContent>
 
         <TabsContent value="unified" className="space-y-4">
