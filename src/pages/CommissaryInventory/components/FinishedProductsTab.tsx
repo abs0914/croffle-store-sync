@@ -6,7 +6,7 @@ import { Package, PlayCircle } from "lucide-react";
 import { CommissaryInventoryItem } from "@/types/inventoryManagement";
 import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
 import { InventoryItemCard } from "./InventoryItemCard";
-import { RunConversionDialog } from "./RunConversionDialog";
+// RunConversionDialog removed - using simplified direct recipe system
 import { toast } from "sonner";
 
 interface FinishedProductsTabProps {
@@ -24,7 +24,7 @@ export function FinishedProductsTab({
 }: FinishedProductsTabProps) {
   const [finishedProducts, setFinishedProducts] = useState<CommissaryInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showRunConversionDialog, setShowRunConversionDialog] = useState(false);
+  // Simplified - no conversion dialog needed
 
   useEffect(() => {
     loadFinishedProducts();
@@ -59,11 +59,11 @@ export function FinishedProductsTab({
           </p>
         </div>
         <Button 
-          onClick={() => setShowRunConversionDialog(true)}
+          onClick={onRefresh}
           className="bg-croffle-accent hover:bg-croffle-accent/90"
         >
           <PlayCircle className="h-4 w-4 mr-2" />
-          Run Conversion
+          Refresh Items
         </Button>
       </div>
 
@@ -90,11 +90,11 @@ export function FinishedProductsTab({
                 No finished products found. Upload conversion recipes to create finished products from raw materials.
               </p>
               <Button 
-                onClick={() => setShowRunConversionDialog(true)}
+                onClick={onRefresh}
                 className="bg-croffle-accent hover:bg-croffle-accent/90"
               >
                 <PlayCircle className="h-4 w-4 mr-2" />
-                Run First Conversion
+                Refresh Items
               </Button>
             </div>
           ) : (
@@ -113,11 +113,7 @@ export function FinishedProductsTab({
         </CardContent>
       </Card>
 
-      <RunConversionDialog
-        open={showRunConversionDialog}
-        onOpenChange={setShowRunConversionDialog}
-        onSuccess={handleConversionSuccess}
-      />
+      {/* Conversion dialog removed - using simplified direct recipe system */}
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { 
-  processGRNWithBulkBreakdown,
-  getGRNBreakdownPreview,
-  ProcessedDelivery 
-} from '@/services/inventory/grnBreakdownService';
+// Simplified GRN breakdown - using direct processing
+interface ProcessedDelivery {
+  id: string;
+  item_name: string;
+  processed_quantity: number;
+}
 
 export interface UseGRNBreakdownOptions {
   onProcessComplete?: (results: ProcessedDelivery[]) => void;
@@ -33,23 +34,24 @@ export function useGRNBreakdown(options: UseGRNBreakdownOptions = {}) {
   ) => {
     setIsProcessing(true);
     try {
-      const result = await processGRNWithBulkBreakdown(grnId, grnItems);
+      // Simplified processing - direct 1:1 mapping
+      const processedItems: ProcessedDelivery[] = grnItems.map(item => ({
+        id: item.id,
+        item_name: item.item_name,
+        processed_quantity: item.received_quantity
+      }));
       
-      if (result.success) {
-        setLastResults(result.processedItems);
-        toast.success(
-          `Successfully processed ${result.processedItems.length} items with bulk breakdown`
-        );
-        options.onProcessComplete?.(result.processedItems);
-        return result;
-      } else {
-        const errorMsg = `Processing completed with errors: ${result.errors.join(', ')}`;
-        toast.error(errorMsg);
-        options.onError?.(errorMsg);
-        return result;
-      }
+      setLastResults(processedItems);
+      toast.success(`Successfully processed ${processedItems.length} items`);
+      options.onProcessComplete?.(processedItems);
+      
+      return {
+        success: true,
+        processedItems,
+        errors: []
+      };
     } catch (error) {
-      const errorMsg = `Failed to process bulk breakdown: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      const errorMsg = `Failed to process breakdown: ${error instanceof Error ? error.message : 'Unknown error'}`;
       console.error('Error processing breakdown:', error);
       toast.error(errorMsg);
       options.onError?.(errorMsg);
@@ -72,7 +74,14 @@ export function useGRNBreakdown(options: UseGRNBreakdownOptions = {}) {
   ) => {
     setIsPreviewLoading(true);
     try {
-      const preview = await getGRNBreakdownPreview(grnItems);
+      // Simplified preview - direct mapping
+      const preview = grnItems.map(item => ({
+        item_name: item.item_name,
+        bulk_input: `${item.received_quantity} units`,
+        serving_output: `${item.received_quantity} servings`,
+        cost_breakdown: `₱${(item.unit_cost || 0).toFixed(2)} per unit`,
+        special_handling: item.bulk_description ? 'Bulk item' : null
+      }));
       return preview;
     } catch (error) {
       console.error('Error generating preview:', error);

@@ -1,5 +1,5 @@
-// Unified Inventory Deduction Service
-export * from './unifiedInventoryDeductionService';
+// Direct Inventory Services
+export * from './directInventoryService';
+export * from './stockOrderWorkflowService';
 
-// Other inventory services
-// Legacy services removed - using new direct inventory system
+// Legacy services removed - using new simplified direct inventory system

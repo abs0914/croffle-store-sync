@@ -11,7 +11,7 @@ import InventoryManagement from "@/pages/Inventory/InventoryManagement";
 import Ingredients from "@/pages/Inventory/Ingredients";
 import InventoryHistory from "@/pages/Inventory/InventoryHistory";
 import CommissaryInventory from "@/pages/CommissaryInventory";
-import InventoryConversion from "@/pages/InventoryConversion";
+// InventoryConversion removed in favor of direct recipe management
 
 export function AdminInventoryRoutes() {
   return (
@@ -91,20 +91,7 @@ export function AdminInventoryRoutes() {
           </AdminLayout>
         </AdminProtectedRoute>
       } />
-      <Route path="/admin/inventory-conversion" element={
-        <AdminProtectedRoute>
-          <AdminLayout>
-            <InventoryConversion />
-          </AdminLayout>
-        </AdminProtectedRoute>
-      } />
-      <Route path="/admin/conversion-mappings" element={
-        <AdminProtectedRoute>
-          <AdminLayout>
-            <InventoryConversion />
-          </AdminLayout>
-        </AdminProtectedRoute>
-      } />
+      {/* Admin conversion routes removed in favor of direct recipe management */}
     </>
   );
 }

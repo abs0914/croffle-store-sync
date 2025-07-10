@@ -13,7 +13,7 @@ const ProductForm = React.lazy(() => import('@/pages/Inventory/ProductForm'));
 const Inventory = React.lazy(() => import('@/pages/Inventory'));
 const ProductionManagement = React.lazy(() => import('@/pages/ProductionManagement'));
 const CommissaryInventory = React.lazy(() => import('@/pages/CommissaryInventory'));
-const InventoryConversion = React.lazy(() => import('@/pages/InventoryConversion'));
+// InventoryConversion removed in favor of direct recipe management
 const OrderManagement = React.lazy(() => import('@/pages/OrderManagement/index'));
 const Expenses = React.lazy(() => import('@/pages/Expenses'));
 const Reports = React.lazy(() => import('@/pages/Reports'));
@@ -44,7 +44,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/stock-orders" element={<ProtectedRoute><StockOrders /></ProtectedRoute>} />
         <Route path="/production-management" element={<ProtectedRoute><ProductionManagement /></ProtectedRoute>} />
         <Route path="/commissary-inventory" element={<ProtectedRoute><CommissaryInventory /></ProtectedRoute>} />
-        <Route path="/inventory-conversion" element={<ProtectedRoute><InventoryConversion /></ProtectedRoute>} />
+        {/* inventory-conversion route removed in favor of direct recipe management */}
         <Route path="/order-management/*" element={<ProtectedRoute><OrderManagement /></ProtectedRoute>} />
         <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
         <Route path="/reports/*" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
