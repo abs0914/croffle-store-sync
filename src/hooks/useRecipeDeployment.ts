@@ -75,14 +75,14 @@ export const useRecipeDeployment = () => {
 
     try {
       // Get template data
-      const { data: template, error: templateError } = await supabase
-        .from('recipe_templates')
-        .select(`
-          *,
-          recipe_template_ingredients (*)
-        `)
-        .eq('id', templateId)
-        .single();
+  const { data: template, error: templateError } = await supabase
+    .from('recipe_templates')
+    .select(`
+      *,
+      recipe_template_ingredients (*)
+    `)
+    .eq('id', templateId)
+    .single();
 
       if (templateError || !template) {
         throw new Error('Recipe template not found');
@@ -260,8 +260,8 @@ export const useRecipeDeployment = () => {
           await logDeploymentStep(templateId, store.id, 'completed', {
             recipeId: recipe.id,
             productId,
-            totalCost: template.total_cost,
-            suggestedPrice: template.suggested_price
+            totalCost: (template as any).total_cost,
+            suggestedPrice: (template as any).suggested_price
           }, recipe.id, productId);
 
           const result: DeploymentResult = {

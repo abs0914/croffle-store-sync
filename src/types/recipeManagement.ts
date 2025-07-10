@@ -42,10 +42,12 @@ export interface PricingProfile {
 export interface DeploymentProgress {
   storeId: string;
   storeName: string;
-  status: 'pending' | 'in-progress' | 'success' | 'error';
+  status: 'pending' | 'validating' | 'deploying' | 'success' | 'error';
   progress: number;
   error?: string;
   warnings?: string[];
+  recipeId?: string;
+  productId?: string;
 }
 
 export interface RecipeDeploymentError {
