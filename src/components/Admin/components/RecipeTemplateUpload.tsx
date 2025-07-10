@@ -155,6 +155,35 @@ export const RecipeTemplateUpload: React.FC = () => {
   };
 
   const parseRecipeRow = (row: any) => {
+    let ingredients = [];
+    
+    if (row.ingredients) {
+      try {
+        // Clean up the ingredients string - remove extra quotes and escape characters
+        let ingredientsStr = row.ingredients.trim();
+        
+        // If it starts and ends with quotes, remove them
+        if (ingredientsStr.startsWith('"') && ingredientsStr.endsWith('"')) {
+          ingredientsStr = ingredientsStr.slice(1, -1);
+        }
+        
+        // Replace escaped quotes
+        ingredientsStr = ingredientsStr.replace(/""/g, '"');
+        
+        ingredients = JSON.parse(ingredientsStr);
+      } catch (error) {
+        console.error('Failed to parse ingredients JSON for row:', row.name, 'Error:', error);
+        console.error('Ingredients string was:', row.ingredients);
+        // Try to parse as a simple ingredient name if JSON parsing fails
+        ingredients = [{
+          ingredient_name: row.ingredients,
+          quantity: 1,
+          unit: 'piece',
+          cost_per_unit: 0
+        }];
+      }
+    }
+    
     return {
       name: row.name,
       description: row.description || '',
@@ -163,7 +192,7 @@ export const RecipeTemplateUpload: React.FC = () => {
       yield_quantity: parseFloat(row.yield_quantity) || 1,
       serving_size: parseFloat(row.serving_size) || 1,
       recipe_type: row.recipe_type || 'food',
-      ingredients: row.ingredients ? JSON.parse(row.ingredients) : [],
+      ingredients: ingredients,
       image_url: row.image_url || ''
     };
   };
