@@ -29,7 +29,11 @@ export function RecipeIngredientsForm({ ingredients, onChange, storeId }: Recipe
     try {
       const { data } = await supabase
         .from('inventory_stock')
-        .select('*')
+        .select(`
+          *, 
+          bulk_unit, bulk_quantity, serving_unit, serving_quantity,
+          breakdown_ratio, cost_per_serving, fractional_stock
+        `)
         .eq('store_id', storeId)
         .eq('is_active', true)
         .order('item');
@@ -64,8 +68,10 @@ export function RecipeIngredientsForm({ ingredients, onChange, storeId }: Recipe
       const stockItem = inventoryStock.find(item => item.id === value);
       if (stockItem) {
         updated[index].ingredient_name = stockItem.item;
-        updated[index].cost_per_unit = stockItem.cost || 0;
-        updated[index].unit = stockItem.unit || 'kg';
+        // Use serving cost if available, otherwise bulk cost
+        updated[index].cost_per_unit = stockItem.cost_per_serving || stockItem.cost || 0;
+        // Use serving unit if available, otherwise regular unit
+        updated[index].unit = stockItem.serving_unit || stockItem.unit || 'kg';
       }
     }
 
@@ -104,7 +110,8 @@ export function RecipeIngredientsForm({ ingredients, onChange, storeId }: Recipe
                     .filter(stock => stock.id && stock.id.trim() !== '' && stock.item && stock.item.trim() !== '')
                     .map((stock) => (
                       <SelectItem key={stock.id} value={stock.id}>
-                        {stock.item} ({stock.unit})
+                        {stock.item} ({stock.serving_unit || stock.unit}
+                        {stock.breakdown_ratio && stock.breakdown_ratio !== 1 && ` - ${stock.breakdown_ratio}x`})
                       </SelectItem>
                     ))}
                 </SelectContent>

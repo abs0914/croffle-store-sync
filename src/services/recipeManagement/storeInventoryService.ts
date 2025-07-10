@@ -8,6 +8,14 @@ export interface StoreInventoryItem {
   cost: number;
   store_id: string;
   stock_quantity: number;
+  // New bulk-to-serving fields
+  bulk_unit?: string;
+  bulk_quantity?: number;
+  serving_unit?: string;
+  serving_quantity?: number;
+  breakdown_ratio?: number;
+  cost_per_serving?: number;
+  fractional_stock?: number;
 }
 
 /**
@@ -17,7 +25,11 @@ export const getStoreInventoryItems = async (storeId?: string): Promise<StoreInv
   try {
     let query = supabase
       .from('inventory_stock')
-      .select('id, item, unit, cost, store_id, stock_quantity')
+      .select(`
+        id, item, unit, cost, store_id, stock_quantity,
+        bulk_unit, bulk_quantity, serving_unit, serving_quantity,
+        breakdown_ratio, cost_per_serving, fractional_stock
+      `)
       .eq('is_active', true)
       .order('item');
 

@@ -1471,6 +1471,13 @@ export type Database = {
             referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inventory_conversion_mappings_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
+            referencedColumns: ["id"]
+          },
         ]
       }
       inventory_conversions: {
@@ -1530,6 +1537,13 @@ export type Database = {
             columns: ["inventory_stock_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_conversions_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
             referencedColumns: ["id"]
           },
         ]
@@ -1654,11 +1668,22 @@ export type Database = {
             referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "inventory_movements_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
+            referencedColumns: ["id"]
+          },
         ]
       }
       inventory_stock: {
         Row: {
+          breakdown_ratio: number | null
+          bulk_quantity: number | null
+          bulk_unit: string | null
           cost: number | null
+          cost_per_serving: number | null
           created_at: string | null
           fractional_stock: number | null
           id: string
@@ -1667,6 +1692,8 @@ export type Database = {
           last_restocked: string | null
           maximum_capacity: number | null
           minimum_threshold: number | null
+          serving_quantity: number | null
+          serving_unit: string | null
           sku: string | null
           stock_quantity: number
           store_id: string
@@ -1674,7 +1701,11 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          breakdown_ratio?: number | null
+          bulk_quantity?: number | null
+          bulk_unit?: string | null
           cost?: number | null
+          cost_per_serving?: number | null
           created_at?: string | null
           fractional_stock?: number | null
           id?: string
@@ -1683,6 +1714,8 @@ export type Database = {
           last_restocked?: string | null
           maximum_capacity?: number | null
           minimum_threshold?: number | null
+          serving_quantity?: number | null
+          serving_unit?: string | null
           sku?: string | null
           stock_quantity?: number
           store_id: string
@@ -1690,7 +1723,11 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          breakdown_ratio?: number | null
+          bulk_quantity?: number | null
+          bulk_unit?: string | null
           cost?: number | null
+          cost_per_serving?: number | null
           created_at?: string | null
           fractional_stock?: number | null
           id?: string
@@ -1699,6 +1736,8 @@ export type Database = {
           last_restocked?: string | null
           maximum_capacity?: number | null
           minimum_threshold?: number | null
+          serving_quantity?: number | null
+          serving_unit?: string | null
           sku?: string | null
           stock_quantity?: number
           store_id?: string
@@ -1764,6 +1803,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
             referencedColumns: ["id"]
           },
           {
@@ -2308,6 +2354,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "product_ingredients_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "product_ingredients_product_catalog_id_fkey"
             columns: ["product_catalog_id"]
             isOneToOne: false
@@ -2440,6 +2493,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "products_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "products_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
@@ -2482,6 +2542,13 @@ export type Database = {
             columns: ["inventory_stock_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
             referencedColumns: ["id"]
           },
           {
@@ -2680,6 +2747,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "recipe_ingredients_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "recipe_ingredients_recipe_id_fkey"
             columns: ["recipe_id"]
             isOneToOne: false
@@ -2793,6 +2867,13 @@ export type Database = {
             columns: ["inventory_stock_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_template_ingredients_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
             referencedColumns: ["id"]
           },
           {
@@ -3165,6 +3246,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_order_items_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_order_items_stock_order_id_fkey"
             columns: ["stock_order_id"]
             isOneToOne: false
@@ -3333,6 +3421,13 @@ export type Database = {
             columns: ["inventory_stock_id"]
             isOneToOne: false
             referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_inventory_alerts_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "serving_ready_inventory"
             referencedColumns: ["id"]
           },
           {
@@ -3780,6 +3875,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "recipes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      serving_ready_inventory: {
+        Row: {
+          available_servings: number | null
+          created_at: string | null
+          id: string | null
+          is_active: boolean | null
+          item: string | null
+          maximum_capacity: number | null
+          minimum_threshold: number | null
+          store_id: string | null
+          unit: string | null
+          unit_cost: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          available_servings?: never
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          item?: string | null
+          maximum_capacity?: number | null
+          minimum_threshold?: number | null
+          store_id?: string | null
+          unit?: string | null
+          unit_cost?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          available_servings?: never
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          item?: string | null
+          maximum_capacity?: number | null
+          minimum_threshold?: number | null
+          store_id?: string | null
+          unit?: string | null
+          unit_cost?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_stock_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"

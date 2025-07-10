@@ -85,6 +85,14 @@ export interface InventoryStock {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // New bulk-to-serving fields
+  bulk_unit?: string;
+  bulk_quantity?: number;
+  serving_unit?: string;
+  serving_quantity?: number;
+  breakdown_ratio?: number;
+  cost_per_serving?: number;
+  fractional_stock?: number;
 }
 
 export interface StockTransaction {
