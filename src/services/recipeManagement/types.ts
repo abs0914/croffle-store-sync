@@ -94,7 +94,7 @@ export interface RecipeIngredient {
   unit: string;
   cost_per_unit: number;
   inventory_stock_id?: string;
-  uses_direct_inventory: boolean;
+  commissary_item_id?: string;
 }
 
 // Analytics and metrics types

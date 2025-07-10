@@ -200,8 +200,7 @@ export function useRecipeDeployment() {
               quantity: ingredient.quantity,
               unit: ingredient.unit,
               cost_per_unit: ingredient.cost_per_unit || 0,
-              inventory_stock_id: ingredient.inventory_stock_id || null,
-              uses_direct_inventory: true
+              inventory_stock_id: ingredient.inventory_stock_id || null
             }));
 
             const { error: ingredientsError } = await supabase
@@ -274,7 +273,10 @@ export function useRecipeDeployment() {
               store_id: store.id,
               error_type: 'deployment_failure',
               error_message: error instanceof Error ? error.message : 'Unknown error',
-              suggested_solution: 'Check ingredient availability and store configuration'
+              error_details: {
+                suggestion: 'Check ingredient availability and store configuration',
+                timestamp: new Date().toISOString()
+              }
             });
 
           setDeploymentProgress(prev => prev.map(p => 
