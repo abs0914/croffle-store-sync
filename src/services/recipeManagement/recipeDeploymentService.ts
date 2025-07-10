@@ -1,6 +1,50 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+/**
+ * Log deployment errors for monitoring and debugging
+ */
+const logDeploymentError = async (
+  templateId: string,
+  storeId: string,
+  errorType: string,
+  errorMessage: string,
+  ingredientName?: string | null
+) => {
+  try {
+    await supabase
+      .from('recipe_deployment_errors')
+      .insert({
+        template_id: templateId,
+        store_id: storeId,
+        error_type: errorType,
+        error_message: errorMessage,
+        ingredient_name: ingredientName,
+        suggested_solution: getSuggestedSolution(errorType)
+      });
+  } catch (error) {
+    console.warn('Failed to log deployment error:', error);
+  }
+};
+
+/**
+ * Get suggested solution based on error type
+ */
+const getSuggestedSolution = (errorType: string): string => {
+  switch (errorType) {
+    case 'missing_ingredients':
+      return 'Add at least one ingredient to the recipe template before deployment';
+    case 'malformed_data':
+      return 'Clean up ingredient data and ensure proper formatting';
+    case 'duplicate_recipe':
+      return 'Recipe already exists in this store. Use a different name or update existing recipe';
+    case 'permission_denied':
+      return 'Check user permissions and store access rights';
+    default:
+      return 'Review deployment configuration and try again';
+  }
+};
+
 export interface DeploymentResult {
   success: boolean;
   storeId: string;
@@ -29,6 +73,8 @@ export const deployRecipeToMultipleStores = async (
   const results: DeploymentResult[] = [];
 
   try {
+    console.log('🚀 Starting deployment for template:', templateId, 'to stores:', storeIds);
+    
     // Get the template with ingredients
     const { data: template, error: templateError } = await supabase
       .from('recipe_templates')
@@ -39,7 +85,12 @@ export const deployRecipeToMultipleStores = async (
       .eq('id', templateId)
       .single();
 
-    if (templateError) throw templateError;
+    if (templateError) {
+      console.error('❌ Failed to fetch template:', templateError);
+      throw templateError;
+    }
+
+    console.log('✅ Template fetched:', template.name, 'with', template.ingredients?.length || 0, 'ingredients');
 
     // Get store information
     const { data: stores, error: storesError } = await supabase
@@ -87,9 +138,16 @@ const deployToSingleStore = async (
   options: DeploymentOptions
 ): Promise<DeploymentResult> => {
   try {
+    console.log(`🏪 Deploying "${template.name}" to store: ${store.name}`);
+    
     // Validate template has valid ingredients
     if (!template.ingredients || template.ingredients.length === 0) {
-      throw new Error('Template has no valid ingredients');
+      const error = 'Template has no valid ingredients';
+      console.error('❌', error);
+      
+      // Log deployment error
+      await logDeploymentError(template.id, store.id, 'missing_ingredients', error, null);
+      throw new Error(error);
     }
 
     // Filter out invalid ingredients and clean ingredient names
@@ -121,8 +179,13 @@ const deployToSingleStore = async (
     });
 
     if (validIngredients.length === 0) {
-      throw new Error('No valid ingredients found after cleaning');
+      const error = 'No valid ingredients found after cleaning';
+      console.error('❌', error);
+      await logDeploymentError(template.id, store.id, 'malformed_data', error, null);
+      throw new Error(error);
     }
+
+    console.log(`✅ Cleaned ingredients for ${template.name}:`, validIngredients.map(i => i.ingredient_name));
 
     // Calculate recipe cost using valid ingredients only
     const totalCost = validIngredients.reduce((sum: number, ingredient: any) => {
@@ -146,11 +209,14 @@ const deployToSingleStore = async (
     }
 
     if (existingRecipe) {
+      const error = 'Recipe already exists in this store';
+      console.warn('⚠️', error, `- Recipe "${template.name}" in store "${store.name}"`);
+      await logDeploymentError(template.id, store.id, 'duplicate_recipe', error, null);
       return {
         success: false,
         storeId: store.id,
         storeName: store.name,
-        error: 'Recipe already exists in this store'
+        error
       };
     }
 
@@ -192,6 +258,8 @@ const deployToSingleStore = async (
       .insert(ingredientInserts);
 
     if (ingredientsError) throw ingredientsError;
+
+    console.log(`✅ Successfully deployed "${template.name}" to "${store.name}" with ${validIngredients.length} ingredients`);
 
     // Create deployment record if table exists
     try {
