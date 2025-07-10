@@ -59,6 +59,10 @@ export function ConsolidatedRecipeAdministration() {
   const [activeTab, setActiveTab] = useState('templates');
   const [showRelationshipView, setShowRelationshipView] = useState(false);
   const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
+  
+  // State for template dialog (for editing templates)
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
 
   // Combine and filter data
   const allItems = [...templates, ...recipes];
@@ -104,8 +108,15 @@ export function ConsolidatedRecipeAdministration() {
   };
 
   const handleEditItem = (item: UnifiedRecipeItem) => {
-    setSelectedItem(item);
-    setIsEditDialogOpen(true);
+    if (item.item_type === 'template') {
+      // Use new RecipeTemplateDialog for templates
+      setSelectedTemplate(item);
+      setIsTemplateDialogOpen(true);
+    } else {
+      // Use old UnifiedRecipeEditDialog for recipes
+      setSelectedItem(item);
+      setIsEditDialogOpen(true);
+    }
   };
 
   const handleSaveItem = (id: string, updates: Partial<UnifiedRecipeItem>) => {
@@ -444,7 +455,9 @@ export function ConsolidatedRecipeAdministration() {
         </TabsContent>
       </Tabs>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialogs */}
+      
+      {/* Recipe Edit Dialog (old UI for recipes) */}
       <UnifiedRecipeEditDialog
         isOpen={isEditDialogOpen}
         onClose={() => {
@@ -456,6 +469,21 @@ export function ConsolidatedRecipeAdministration() {
         onSyncToRecipes={handleSyncToRecipes}
         stores={stores}
         isLoading={isUpdatingTemplate || isUpdatingRecipe || isSyncing}
+      />
+
+      {/* Template Edit Dialog (new UI for templates) */}
+      <RecipeTemplateDialog
+        isOpen={isTemplateDialogOpen}
+        onClose={() => {
+          setIsTemplateDialogOpen(false);
+          setSelectedTemplate(null);
+        }}
+        template={selectedTemplate}
+        onSuccess={() => {
+          setIsTemplateDialogOpen(false);
+          setSelectedTemplate(null);
+          toast.success('Template updated successfully');
+        }}
       />
 
       {/* Create Template Dialog */}
