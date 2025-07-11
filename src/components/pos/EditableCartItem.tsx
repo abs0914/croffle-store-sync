@@ -71,11 +71,20 @@ export function EditableCartItem({
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h4 className="font-medium text-sm">
-              {item.product.name}
-              {item.variation && (
+              {item.customization ? item.customization.display_name : item.product.name}
+              {item.variation && !item.customization && (
                 <span className="text-muted-foreground"> ({item.variation.name})</span>
               )}
             </h4>
+            {item.customization && (
+              <div className="mt-1">
+                <p className="text-xs text-muted-foreground">
+                  Customized: {item.customization.selected_choices.map(choice =>
+                    choice.selected_ingredient.ingredient_name
+                  ).join(', ')}
+                </p>
+              </div>
+            )}
             {hasStockIssue && validation && (
               <p className="text-xs text-amber-600 mt-1">
                 Insufficient stock: {validation.insufficientItems.join(', ')}

@@ -7,6 +7,21 @@ export interface CartItem {
   quantity: number;
   notes?: string;
   price: number;
+  customization?: {
+    recipe_id: string;
+    selected_choices: Array<{
+      choice_group_name: string;
+      selected_ingredient: {
+        id: string;
+        ingredient_name: string;
+        quantity: number;
+        unit: string;
+        cost_per_unit: number;
+      };
+    }>;
+    display_name: string;
+    final_price: number;
+  };
 }
 
 export interface Customer {

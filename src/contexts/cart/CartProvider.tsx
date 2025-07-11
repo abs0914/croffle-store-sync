@@ -50,12 +50,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const calculations = getCartCalculations();
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  const addItem = (product: Product, quantity = 1, variation?: ProductVariation) => {
+  const addItem = (product: Product, quantity = 1, variation?: ProductVariation, customization?: any) => {
     console.log("CartContext: addItem function called! Arguments:", {
       product: product ? product.name : "NULL",
       productId: product ? product.id : "NULL",
       quantity,
       variation: variation ? variation.name : "none",
+      customization: customization ? "present" : "none",
       currentStoreId: currentStore?.id,
       functionType: typeof addItem
     });
@@ -72,14 +73,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const itemPrice = variation ? variation.price : product.price;
+    const itemPrice = customization ? customization.final_price : (variation ? variation.price : product.price);
     console.log("CartContext: Item price determined:", itemPrice);
 
     const existingItemIndex = items.findIndex(item => {
+      if (customization) {
+        // For customized items, check if it's the same customization
+        return item.productId === product.id &&
+               item.customization &&
+               JSON.stringify(item.customization.selected_choices) === JSON.stringify(customization.selected_choices);
+      }
       if (variation) {
         return item.productId === product.id && item.variationId === variation.id;
       }
-      return item.productId === product.id && !item.variationId;
+      return item.productId === product.id && !item.variationId && !item.customization;
     });
 
     console.log("CartContext: Existing item index:", existingItemIndex);
@@ -91,9 +98,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       newItems[existingItemIndex].quantity += quantity;
       setItems(newItems);
 
-      const displayName = variation ?
-        `${product.name} (${variation.name})` :
-        product.name;
+      const displayName = customization ? customization.display_name :
+        (variation ? `${product.name} (${variation.name})` : product.name);
 
       toast.success(`Updated quantity for ${displayName}`);
       console.log("CartContext: Updated existing item in cart", displayName);
@@ -108,6 +114,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         },
         quantity,
         price: itemPrice,
+        customization: customization || undefined,
       };
 
       if (variation) {

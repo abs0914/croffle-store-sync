@@ -11,11 +11,11 @@ interface ProductSearchProps {
 export default function ProductSearch({ searchTerm, setSearchTerm }: ProductSearchProps) {
   return (
     <div className="relative flex-1">
-      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
       <Input
         type="search"
-        placeholder="Search products..."
-        className="pl-8 border-croffle-primary/30 focus-visible:ring-croffle-accent"
+        placeholder="Search for products..."
+        className="pl-10 pr-4 py-3 border-gray-200 focus-visible:ring-green-500 focus-visible:border-green-500 rounded-lg bg-white shadow-sm"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
