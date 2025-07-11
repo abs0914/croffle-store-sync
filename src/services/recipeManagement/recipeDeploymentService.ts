@@ -148,6 +148,7 @@ export interface DeploymentResult {
 }
 
 export interface DeploymentOptions {
+  actualPrice?: number;
   priceMarkup?: number;
   customName?: string;
   customDescription?: string;
@@ -261,7 +262,8 @@ const deployToSingleStoreEnhanced = async (
     }, 0);
 
     const costPerServing = template.yield_quantity > 0 ? totalCost / template.yield_quantity : 0;
-    const suggestedPrice = costPerServing * (1 + (options.priceMarkup || 0.5)); // 50% markup by default
+    // Use actualPrice from options if provided, otherwise calculate suggested price
+    const finalPrice = options.actualPrice || (costPerServing * (1 + (options.priceMarkup || 0.5))); // 50% markup by default
 
     // Check for existing recipe
     const { data: existingRecipe, error: checkError } = await supabase
@@ -300,7 +302,7 @@ const deployToSingleStoreEnhanced = async (
         yield_quantity: template.yield_quantity || 1,
         total_cost: totalCost,
         cost_per_serving: costPerServing,
-        suggested_price: suggestedPrice,
+        suggested_price: finalPrice,
         store_id: store.id,
         template_id: template.id,
         product_id: null,
@@ -376,7 +378,7 @@ const deployToSingleStoreEnhanced = async (
           recipe_id: recipe.id,
           deployed_by: template.created_by,
           cost_snapshot: totalCost,
-          price_snapshot: suggestedPrice,
+          price_snapshot: finalPrice,
           deployment_notes: 'Enhanced admin deployment with product creation'
         });
     } catch (error) {
@@ -473,7 +475,7 @@ const createProductFromRecipe = async (
         name: recipe.name,
         sku,
         description: recipe.description || template.description,
-        price: recipe.suggested_price || (recipe.total_cost * 1.5),
+        price: options.actualPrice || recipe.suggested_price || (recipe.total_cost * 1.5),
         cost: recipe.total_cost,
         category_id: options.categoryId || null,
         image_url: template.image_url || null,
@@ -501,9 +503,10 @@ const createProductFromRecipe = async (
         store_id: recipe.store_id,
         product_name: recipe.name,
         description: recipe.description || template.description,
-        price: recipe.suggested_price || (recipe.total_cost * 1.5),
+        price: options.actualPrice || recipe.suggested_price || (recipe.total_cost * 1.5),
         is_available: true,
         recipe_id: recipe.id,
+        image_url: template.image_url || null,
         display_order: 0
       })
       .select()
