@@ -21,7 +21,6 @@ import { toast } from 'sonner';
 import { useUnifiedRecipeState } from '@/hooks/admin/useUnifiedRecipeState';
 import { RecipeTemplateDialog } from '@/pages/Admin/components/RecipeTemplateDialog';
 import { EnhancedRecipeDeploymentDialog } from '@/components/admin/recipe/EnhancedRecipeDeploymentDialog';
-import { BulkRecipeUpload } from '@/components/admin/recipe/BulkRecipeUpload';
 
 interface TableRecipeInput {
   name: string;
@@ -157,9 +156,6 @@ export function SimplifiedRecipeManagement() {
           Create Template
         </Button>
       </div>
-
-      {/* Bulk Recipe Upload */}
-      <BulkRecipeUpload />
 
       {/* Create Template Form */}
       {showCreateForm && (
