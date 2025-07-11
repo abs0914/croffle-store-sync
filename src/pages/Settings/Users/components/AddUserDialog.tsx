@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { AppUserFormData } from "@/types/appUser";
 import { UserRole } from "@/types/user";
+import { useRolePermissions } from "@/contexts/RolePermissionsContext";
 import { useAuth } from "@/contexts/auth";
 import UserFormFields from "./UserFormFields";
 import {
@@ -27,12 +28,11 @@ interface AddUserDialogProps {
 
 export default function AddUserDialog({ isOpen, onOpenChange, stores }: AddUserDialogProps) {
   const queryClient = useQueryClient();
-  const { hasPermission } = useAuth();
+  const { hasPermission } = useRolePermissions();
+  const { user } = useAuth();
 
-  // Permission check - only admin and owner can create users
-  const canManageUsers = hasPermission('admin') || hasPermission('owner');
-
-
+  // TEMPORARY FIX: Force admin users to have user management permissions
+  const canManageUsers = user?.role === 'admin' || user?.role === 'owner' || hasPermission('user_management');
 
   // Security check: Close dialog and show error if user doesn't have permission
   if (isOpen && !canManageUsers) {
@@ -102,7 +102,7 @@ export default function AddUserDialog({ isOpen, onOpenChange, stores }: AddUserD
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>
@@ -115,6 +115,7 @@ export default function AddUserDialog({ isOpen, onOpenChange, stores }: AddUserD
             onChange={handleChange}
             stores={stores}
             includePassword={true}
+            showPermissionOverrides={true}
           />
           <DialogFooter className="pt-4">
             <Button

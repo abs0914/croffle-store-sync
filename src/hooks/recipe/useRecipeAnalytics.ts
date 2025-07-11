@@ -95,7 +95,7 @@ export function useRecipeCostAnalysis(recipeId: string | null) {
       try {
         const [breakdown, trends] = await Promise.all([
           getRecipeCostBreakdown(recipeId),
-          getRecipeCostTrends(recipeId, 30)
+          getRecipeCostTrends(recipeId)
         ]);
 
         setCostBreakdown(breakdown);

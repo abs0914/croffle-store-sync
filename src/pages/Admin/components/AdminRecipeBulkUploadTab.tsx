@@ -92,7 +92,12 @@ export const AdminRecipeBulkUploadTab: React.FC = () => {
       const recipeUploadData: RecipeUploadData[] = recipes.map(recipe => ({
         name: recipe.name,
         category: recipe.category || 'General',
-        ingredients: recipe.ingredients
+        ingredients: recipe.ingredients.map(ing => ({
+          ingredient_name: ing.commissary_item_name,
+          unit: ing.uom,
+          quantity: ing.quantity,
+          cost_per_unit: ing.cost_per_unit || 0
+        }))
       }));
 
       console.log(`Uploading ${recipeUploadData.length} recipe templates...`);

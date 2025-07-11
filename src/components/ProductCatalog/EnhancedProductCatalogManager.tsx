@@ -1,410 +1,332 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { 
-  Plus, 
   Package, 
-  Coffee,
-  Utensils,
-  Gift,
-  Star,
+  Search, 
   DollarSign,
-  Settings
+  AlertCircle,
+  Edit3,
+  Check,
+  X,
+  RefreshCw
 } from 'lucide-react';
-import { toast } from 'sonner';
-import { 
-  ProductCatalogItem,
-  ProductVariation,
-  SIZE_VARIATIONS,
-  TEMPERATURE_VARIATIONS,
-  deployRecipeToProductCatalog,
-  createAddOnCatalog,
-  calculateVariationPrice
-} from '@/services/productCatalog/productCatalogIntegrationService';
 import { useAuth } from '@/contexts/auth';
+import { useProductCatalogState } from '@/hooks/product/useProductCatalogState';
+import { ProductStatusManager } from './ProductStatusManager';
+import { ProductStatus } from '@/services/productCatalog/types';
+import { formatCurrency } from '@/utils/format';
+import { toast } from 'sonner';
 
-export const EnhancedProductCatalogManager: React.FC = () => {
+export default function EnhancedProductCatalogManager() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('croffles');
-  const [products, setProducts] = useState<ProductCatalogItem[]>([]);
-  const [isVariationDialogOpen, setIsVariationDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<ProductCatalogItem | null>(null);
-  const [selectedVariations, setSelectedVariations] = useState<ProductVariation[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
+  const [editingPrice, setEditingPrice] = useState<string | null>(null);
+  const [tempPrice, setTempPrice] = useState<string>('');
 
   const storeId = user?.storeIds?.[0] || '';
 
-  const productCategories = [
-    { id: 'croffles', name: 'Croffles', icon: Package, color: 'bg-orange-500' },
-    { id: 'drinks', name: 'Drinks', icon: Coffee, color: 'bg-blue-500' },
-    { id: 'add-ons', name: 'Add-ons', icon: Plus, color: 'bg-green-500' },
-    { id: 'combos', name: 'Combos', icon: Gift, color: 'bg-purple-500' }
-  ];
+  // Use unified state management
+  const {
+    products,
+    isLoading: loading,
+    error,
+    updateProduct,
+    updateStatus,
+    isUpdating,
+    isUpdatingStatus,
+    refetch
+  } = useProductCatalogState(storeId);
 
-  const handleVariationSelection = (variation: ProductVariation) => {
-    setSelectedVariations(prev => {
-      const exists = prev.find(v => v.name === variation.name && v.type === variation.type);
-      if (exists) {
-        return prev.filter(v => !(v.name === variation.name && v.type === variation.type));
-      } else {
-        return [...prev, variation];
-      }
-    });
+  const handleEditPrice = (productId: string, currentPrice: number) => {
+    setEditingPrice(productId);
+    setTempPrice(currentPrice.toString());
   };
 
-  const calculateTotalPrice = () => {
-    if (!selectedProduct) return 0;
-    return calculateVariationPrice(selectedProduct.price, selectedVariations);
-  };
-
-  const handleCreateAddOns = async () => {
-    if (!storeId) {
-      toast.error('Please select a store first');
+  const handleSavePrice = (productId: string) => {
+    const newPrice = parseFloat(tempPrice);
+    if (isNaN(newPrice) || newPrice < 0) {
+      toast.error('Please enter a valid price');
       return;
     }
 
-    await createAddOnCatalog(storeId);
+    console.log(`🔄 Updating price for product ${productId} to:`, newPrice);
+    updateProduct({ 
+      id: productId, 
+      updates: { price: newPrice } 
+    });
+
+    setEditingPrice(null);
+    setTempPrice('');
   };
+
+  const handleCancelEdit = () => {
+    setEditingPrice(null);
+    setTempPrice('');
+  };
+
+  const handleStatusChange = (productId: string, status: ProductStatus, isAvailable: boolean) => {
+    console.log(`🔄 Updating status for product ${productId} to:`, status, 'available:', isAvailable);
+    updateStatus({ id: productId, status, isAvailable });
+  };
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesAvailability = !showUnavailableOnly || !product.is_available;
+    return matchesSearch && matchesAvailability;
+  });
+
+  const availableCount = products.filter(p => p.is_available).length;
+  const unavailableCount = products.filter(p => !p.is_available).length;
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Package className="h-8 w-8 text-croffle-accent" />
+          <div>
+            <h1 className="text-3xl font-bold">Product Catalog Manager</h1>
+            <p className="text-muted-foreground">Loading products...</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-32 bg-muted rounded"></div>
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Package className="h-8 w-8 text-croffle-accent" />
         <div>
-          <h2 className="text-2xl font-bold">Enhanced Product Catalog</h2>
+          <h1 className="text-3xl font-bold">Product Catalog Manager</h1>
           <p className="text-muted-foreground">
-            Manage menu items with variations, pricing, and add-ons
+            Manage product availability, pricing, and status for your store's POS system
           </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={handleCreateAddOns} variant="outline">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Add-ons
-          </Button>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          {productCategories.map((category) => (
-            <TabsTrigger key={category.id} value={category.id} className="flex items-center gap-2">
-              <category.icon className="h-4 w-4" />
-              {category.name}
-            </TabsTrigger>
+      {/* Info Banner */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-900">Enhanced Product Management</h3>
+              <p className="text-sm text-blue-700 mt-1">
+                Unified product catalog management with real-time updates, optimistic UI, and comprehensive status tracking.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-blue-600" />
+              <div className="text-sm text-muted-foreground">Total Products</div>
+            </div>
+            <div className="text-2xl font-bold">{products.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-green-600" />
+              <div className="text-sm text-muted-foreground">Available</div>
+            </div>
+            <div className="text-2xl font-bold">{availableCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-orange-600" />
+              <div className="text-sm text-muted-foreground">Unavailable</div>
+            </div>
+            <div className="text-2xl font-bold">{unavailableCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-purple-600" />
+              <div className="text-sm text-muted-foreground">Avg Price</div>
+            </div>
+            <div className="text-2xl font-bold">
+              {products.length > 0 
+                ? formatCurrency(products.reduce((sum, p) => sum + p.price, 0) / products.length)
+                : formatCurrency(0)
+              }
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex gap-4 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button
+              variant={showUnavailableOnly ? "default" : "outline"}
+              onClick={() => setShowUnavailableOnly(!showUnavailableOnly)}
+              className="flex items-center gap-2"
+            >
+              Show Unavailable Only
+            </Button>
+            <Button onClick={() => refetch()} variant="outline" disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Products Grid */}
+      {filteredProducts.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">
+              {products.length === 0 ? 'No products available' : 'No products found'}
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {products.length === 0 
+                ? 'Products will appear here when recipes are deployed from the admin panel.'
+                : 'Try adjusting your search terms or filters.'
+              }
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredProducts.map((product) => (
+            <Card key={product.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-base line-clamp-2">
+                    {product.product_name}
+                  </CardTitle>
+                  <ProductStatusManager
+                    currentStatus={product.product_status || 'available'}
+                    isAvailable={product.is_available}
+                    onStatusChange={(status, isAvailable) => 
+                      handleStatusChange(product.id, status, isAvailable)
+                    }
+                    disabled={isUpdatingStatus}
+                  />
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {/* Product Image Placeholder */}
+                <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                  {product.image_url ? (
+                    <img 
+                      src={product.image_url} 
+                      alt={product.product_name}
+                      className="w-full h-full object-cover rounded-lg"
+                    />
+                  ) : (
+                    <Package className="h-12 w-12 text-gray-400" />
+                  )}
+                </div>
+
+                {/* Product Details */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    {editingPrice === product.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <Input
+                          type="number"
+                          value={tempPrice}
+                          onChange={(e) => setTempPrice(e.target.value)}
+                          className="h-8 text-sm"
+                          min="0"
+                          step="0.01"
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleSavePrice(product.id)}
+                          className="h-8 w-8 p-0"
+                          disabled={isUpdating}
+                        >
+                          <Check className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleCancelEdit}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-semibold text-green-600">
+                          {formatCurrency(product.price)}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditPrice(product.id, product.price)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {product.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {product.description}
+                    </p>
+                  )}
+
+                  {product.recipe_id && (
+                    <div className="text-xs text-muted-foreground">
+                      Recipe ID: {product.recipe_id.slice(0, 8)}...
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           ))}
-        </TabsList>
-
-        {productCategories.map((category) => (
-          <TabsContent key={category.id} value={category.id} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              
-              {/* Croffle Products */}
-              {category.id === 'croffles' && (
-                <>
-                  <Card className="border-2 border-orange-200">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        Regular Croffles
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">14 flavors available</p>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Base Price:</span>
-                        <Badge variant="secondary">₱125</Badge>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium">Size Variations:</Label>
-                        <div className="flex flex-wrap gap-1">
-                          <Badge variant="outline" className="text-xs">Mini ₱65</Badge>
-                          <Badge variant="default" className="text-xs">Regular ₱125</Badge>
-                          <Badge variant="outline" className="text-xs">Overload ₱99</Badge>
-                        </div>
-                      </div>
-                      <Button 
-                        size="sm" 
-                        className="w-full"
-                        onClick={() => {
-                          setSelectedProduct({
-                            product_name: 'Regular Croffle',
-                            price: 125,
-                            category: 'croffles',
-                            store_id: storeId,
-                            is_available: true
-                          });
-                          setIsVariationDialogOpen(true);
-                        }}
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Configure Variations
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-2 border-amber-200">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
-                        Other Varieties
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm">Classic Glaze</span>
-                          <Badge variant="secondary">₱79</Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm">Mini Croffle</span>
-                          <Badge variant="secondary">₱65</Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm">Croffle Overload</span>
-                          <Badge variant="secondary">₱99</Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-
-              {/* Drink Products */}
-              {category.id === 'drinks' && (
-                <Card className="border-2 border-blue-200">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Coffee className="h-4 w-4 text-blue-500" />
-                      Espresso Drinks
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Americano</span>
-                        <div className="flex gap-1">
-                          <Badge variant="outline" className="text-xs">Hot ₱65</Badge>
-                          <Badge variant="outline" className="text-xs">Iced ₱70</Badge>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Cappuccino</span>
-                        <div className="flex gap-1">
-                          <Badge variant="outline" className="text-xs">Hot ₱75</Badge>
-                          <Badge variant="outline" className="text-xs">Iced ₱80</Badge>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Cafe Latte</span>
-                        <div className="flex gap-1">
-                          <Badge variant="outline" className="text-xs">Hot ₱75</Badge>
-                          <Badge variant="outline" className="text-xs">Iced ₱80</Badge>
-                        </div>
-                      </div>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => {
-                        setSelectedProduct({
-                          product_name: 'Espresso Drink',
-                          price: 75,
-                          category: 'drinks',
-                          store_id: storeId,
-                          is_available: true
-                        });
-                        setIsVariationDialogOpen(true);
-                      }}
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Configure Temperature
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Add-ons */}
-              {category.id === 'add-ons' && (
-                <>
-                  <Card className="border-2 border-green-200">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Star className="h-4 w-4 text-green-500" />
-                        Toppings & Sauces
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <Label className="text-xs font-medium">Classic (₱6)</Label>
-                          <div className="text-xs text-muted-foreground">
-                            Sprinkles, Marshmallow, Chocolate Flakes, Peanuts
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-xs font-medium">Premium (₱8-10)</Label>
-                          <div className="text-xs text-muted-foreground">
-                            Biscoff, Oreo, Nutella, Fruits
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-2 border-yellow-200">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Utensils className="h-4 w-4 text-yellow-500" />
-                        Biscuits
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm">Biscoff Biscuit</span>
-                          <Badge variant="secondary">₱10</Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm">Oreo Biscuit</span>
-                          <Badge variant="secondary">₱10</Badge>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm">Kitkat Biscuit</span>
-                          <Badge variant="secondary">₱10</Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-
-              {/* Combos */}
-              {category.id === 'combos' && (
-                <Card className="border-2 border-purple-200">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Gift className="h-4 w-4 text-purple-500" />
-                      Croffle + Coffee Combos
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Mini + Hot Espresso</span>
-                        <Badge variant="secondary">₱110</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Mini + Iced Espresso</span>
-                        <Badge variant="secondary">₱115</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Regular + Hot Espresso</span>
-                        <Badge variant="secondary">₱170</Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Regular + Iced Espresso</span>
-                        <Badge variant="secondary">₱175</Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
-
-      {/* Variation Configuration Dialog */}
-      <Dialog open={isVariationDialogOpen} onOpenChange={setIsVariationDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Configure Product Variations</DialogTitle>
-          </DialogHeader>
-          
-          {selectedProduct && (
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium">Product: {selectedProduct.product_name}</Label>
-                <div className="text-sm text-muted-foreground">Base Price: ₱{selectedProduct.price}</div>
-              </div>
-
-              {selectedProduct.category === 'croffles' && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Size Variations</Label>
-                  <div className="space-y-2">
-                    {SIZE_VARIATIONS.map((variation) => (
-                      <div key={variation.name} className="flex items-center justify-between">
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedVariations.some(v => v.name === variation.name)}
-                            onChange={() => handleVariationSelection(variation)}
-                            className="rounded"
-                          />
-                          <span className="text-sm">{variation.name}</span>
-                        </label>
-                        <span className="text-sm text-muted-foreground">
-                          ₱{selectedProduct.price + variation.price_modifier}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedProduct.category === 'drinks' && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Temperature Variations</Label>
-                  <div className="space-y-2">
-                    {TEMPERATURE_VARIATIONS.map((variation) => (
-                      <div key={variation.name} className="flex items-center justify-between">
-                        <label className="flex items-center space-x-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedVariations.some(v => v.name === variation.name)}
-                            onChange={() => handleVariationSelection(variation)}
-                            className="rounded"
-                          />
-                          <span className="text-sm">{variation.name}</span>
-                        </label>
-                        <span className="text-sm text-muted-foreground">
-                          ₱{selectedProduct.price + variation.price_modifier}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="border-t pt-3">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Total Price:</span>
-                  <span className="text-lg font-bold text-green-600">
-                    ₱{calculateTotalPrice()}
-                  </span>
-                </div>
-              </div>
-
-              <Button 
-                className="w-full" 
-                onClick={() => {
-                  toast.success('Variations configured successfully');
-                  setIsVariationDialogOpen(false);
-                  setSelectedVariations([]);
-                }}
-              >
-                Save Configuration
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
-};
+}

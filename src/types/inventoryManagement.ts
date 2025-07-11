@@ -85,6 +85,14 @@ export interface InventoryStock {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // New bulk-to-serving fields
+  bulk_unit?: string;
+  bulk_quantity?: number;
+  serving_unit?: string;
+  serving_quantity?: number;
+  breakdown_ratio?: number;
+  cost_per_serving?: number;
+  fractional_stock?: number;
 }
 
 export interface StockTransaction {
@@ -145,7 +153,7 @@ export interface InventoryFilters {
 export interface CommissaryInventoryItem {
   id: string;
   name: string;
-  category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  category: 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
   item_type: 'raw_material' | 'supply' | 'orderable_item';
   current_stock: number;
   minimum_threshold: number;

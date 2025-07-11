@@ -7,11 +7,10 @@ import { useProductCatalogData } from "@/hooks/useProductCatalogData";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import { useAutomaticAvailability } from "@/hooks/useAutomaticAvailability";
 import { realTimeNotificationService } from "@/services/notifications/realTimeNotificationService";
+
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
-import ActiveCashierDisplay from "@/components/pos/ActiveCashierDisplay";
-import RealTimeSyncStatus from "@/components/pos/RealTimeSyncStatus";
-import AvailabilityStatusBar from "@/components/pos/AvailabilityStatusBar";
+import OptimizedPOSHeader from "@/components/pos/OptimizedPOSHeader";
 import { toast } from "sonner";
 import { TransactionItem } from "@/types/transaction";
 
@@ -20,7 +19,7 @@ export default function POS() {
   const { currentShift } = useShift();
   const { items, subtotal, tax, total, addItem } = useCart();
   
-  // Transaction handler hook with store ID for inventory integration
+  // Enhanced transaction handler with direct inventory integration
   const {
     completedTransaction,
     selectedCustomer,
@@ -57,6 +56,7 @@ export default function POS() {
     const cleanup = realTimeNotificationService.setupRealTimeListeners(currentStore.id);
     return cleanup;
   }, [currentStore?.id]);
+
   
   // Check the product activation status - for debugging
   const activeProductsCount = products.filter(p => p.is_active).length;
@@ -111,14 +111,14 @@ export default function POS() {
     }
     
     try {
-      console.log("POS: Processing payment with inventory validation...");
+      console.log("POS: Processing payment with enhanced inventory validation...");
       
-      // Convert cart items to the format expected by the transaction handler
-      const cartItemsForTransaction = items.map(item => ({
-        ...item,
-        id: item.productId,
-        name: item.product.name
-      }));
+    // Convert cart items to the format expected by the transaction handler
+    const cartItemsForTransaction = items.map(item => ({
+      ...item,
+      id: item.productId,
+      name: item.product?.name || 'Unknown Product'
+    }));
 
       await processPayment(
         currentStore, 
@@ -143,10 +143,10 @@ export default function POS() {
     const transactionItems: TransactionItem[] = completedTransaction.items.map(item => ({
       productId: item.productId,
       variationId: item.variationId,
-      name: item.product?.name || item.name,
+      name: item.name,
       quantity: item.quantity,
-      unitPrice: item.price,
-      totalPrice: item.price * item.quantity
+      unitPrice: item.unitPrice,
+      totalPrice: item.totalPrice
     }));
 
     // Convert CompletedTransaction to Transaction format for compatibility
@@ -155,10 +155,10 @@ export default function POS() {
       shiftId: currentShift?.id || '',
       storeId: currentStore?.id || '',
       userId: '',
-      paymentMethod: completedTransaction.payment_method as 'cash' | 'card' | 'e-wallet',
+      paymentMethod: completedTransaction.paymentMethod,
       status: 'completed' as const,
-      createdAt: completedTransaction.created_at,
-      receiptNumber: completedTransaction.receipt_number,
+      createdAt: completedTransaction.createdAt,
+      receiptNumber: completedTransaction.receiptNumber,
       items: transactionItems
     };
 
@@ -173,42 +173,18 @@ export default function POS() {
 
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden">
-      {/* Store and Cashier Info Header */}
-      {(currentStore || currentShift?.cashier_id) && (
-        <div className="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            {currentStore && (
-              <div className="flex items-center space-x-3">
-                <div>
-                  <h2 className="font-semibold text-gray-900">{currentStore.name}</h2>
-                  <p className="text-xs text-gray-500">{currentStore.address}</p>
-                </div>
-              </div>
-            )}
-            {currentShift?.cashier_id && (
-              <ActiveCashierDisplay cashierId={currentShift.cashier_id} />
-            )}
-            {lastSync && (
-              <RealTimeSyncStatus
-                isConnected={isConnected}
-                lastSync={lastSync}
-                className="ml-4"
-              />
-            )}
-          </div>
-        </div>
-      )}
-      
-      {/* Availability Status Bar */}
-      {currentStore?.id && (
-        <AvailabilityStatusBar
-          storeId={currentStore.id}
-          className="mx-4 mb-4"
-        />
-      )}
+      {/* Optimized Consolidated Header */}
+      <OptimizedPOSHeader
+        currentStore={currentStore}
+        currentShift={currentShift}
+        selectedCustomer={selectedCustomer}
+        isConnected={isConnected}
+        lastSync={lastSync}
+        storeId={currentStore?.id}
+      />
 
       {/* Main POS Content */}
-      <div className="flex-1 min-h-0 p-4">
+      <div className="flex-1 min-h-0 p-2 sm:p-4">
         <POSContent
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}

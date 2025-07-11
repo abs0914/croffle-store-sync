@@ -2,7 +2,8 @@ import React, { createContext, useContext, ReactNode, useEffect, useRef } from "
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session, AuthState } from "./types";
 import { useAuthState } from "./useAuthState";
-import { checkPermission, checkStoreAccess, mapSupabaseUser } from "./utils";
+import { checkPermission, checkStoreAccess } from "./utils";
+import { mapSupabaseUser } from "./user-mapping-utils";
 import { UserRole } from "@/types";
 
 // Helper function to control logging based on environment
@@ -108,12 +109,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (newSession?.user) {
           // Use setTimeout to avoid recursive auth state changes
           setTimeout(async () => {
-            const mappedUser = await mapSupabaseUser(newSession.user);
-            setUser(mappedUser);
-            setIsLoading(false);
-            
-            // Setup token refresh for the new session
-            setupTokenRefresh(newSession);
+            try {
+              authLog('🔐 Mapping user in auth state change...');
+              const mappedUser = await mapSupabaseUser(newSession.user);
+              authLog('🔐 Mapped user result:', mappedUser);
+              authLog('🔐 Setting user in auth context...');
+              setUser(mappedUser);
+              authLog('🔐 User set in auth context successfully. User role:', mappedUser.role);
+              setIsLoading(false);
+              
+              // Setup token refresh for the new session
+              setupTokenRefresh(newSession);
+            } catch (error) {
+              authError('Error mapping user in auth state change:', error);
+              setIsLoading(false);
+            }
           }, 0);
         } else {
           setUser(null);
@@ -125,13 +135,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       if (currentSession?.user) {
-        authLog('Existing session found');
-        const mappedUser = await mapSupabaseUser(currentSession.user);
-        setSession(currentSession);
-        setUser(mappedUser);
-        
-        // Setup token refresh
-        setupTokenRefresh(currentSession);
+        try {
+          authLog('Existing session found');
+          authLog('🔐 Mapping user from existing session...');
+          const mappedUser = await mapSupabaseUser(currentSession.user);
+          authLog('🔐 Mapped user from existing session:', mappedUser);
+          setSession(currentSession);
+          authLog('🔐 Setting user from existing session...');
+          setUser(mappedUser);
+          authLog('🔐 User set from existing session successfully. Role:', mappedUser.role);
+          
+          // Setup token refresh
+          setupTokenRefresh(currentSession);
+        } catch (error) {
+          authError("Error mapping user from existing session:", error);
+        }
       } else {
         authLog('No existing session found');
       }

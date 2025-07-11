@@ -323,11 +323,10 @@ export const deployRecipeWithMapping = async (
         await supabase.from('product_ingredients').insert(productIngredients);
       }
 
-      // Update pricing based on total cost
-      const markupPrice = totalCost * 1.5; // 50% markup
+      // Update pricing based on total cost without markup
       await Promise.all([
-        supabase.from('products').update({ cost: totalCost, price: markupPrice }).eq('id', product.id),
-        supabase.from('product_catalog').update({ price: markupPrice }).eq('id', catalogProduct.id),
+        supabase.from('products').update({ cost: totalCost, price: totalCost }).eq('id', product.id),
+        supabase.from('product_catalog').update({ price: totalCost }).eq('id', catalogProduct.id),
         supabase.from('recipes').update({ total_cost: totalCost, cost_per_serving: totalCost / (template.serving_size || 1) }).eq('id', recipe.id)
       ]);
     }
@@ -399,7 +398,7 @@ export const getDeploymentPreview = async (
       }
     }
 
-    const estimatedPrice = estimatedCost * 1.5; // 50% markup
+    const estimatedPrice = estimatedCost; // Use cost as price without markup
 
     return {
       template: template.data,

@@ -1,6 +1,6 @@
 
 import { Route } from "react-router-dom";
-import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
+import { RoleBasedRouteGuard } from "@/components/auth/RoleBasedRouteGuard";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import UsersPage from "@/pages/Settings/Users/UsersPage";
 
@@ -9,11 +9,11 @@ export function AdminUserRoutes() {
     <>
       {/* Admin User Management Routes */}
       <Route path="/admin/users" element={
-        <AdminProtectedRoute>
+        <RoleBasedRouteGuard requiredPermission="user_management">
           <AdminLayout>
             <UsersPage />
           </AdminLayout>
-        </AdminProtectedRoute>
+        </RoleBasedRouteGuard>
       } />
     </>
   );

@@ -30,11 +30,14 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   // Check if this is a special cashier report that doesn't need data fetching
   const isSpecialCashierReport = reportType === 'daily_shift' || reportType === 'inventory_status';
 
+  // Use selectedStoreId if available, fallback to storeId for data fetching
+  const effectiveStoreId = selectedStoreId || storeId;
+  
   // Fetch data based on report type (but only for non-special reports)
   const { data, dataSource, generatedAt, debugInfo, isLoading, error, refetch } = useReportData({
     reportType,
-    storeId: selectedStoreId,
-    isAllStores: selectedStoreId === 'all',
+    storeId: effectiveStoreId,
+    isAllStores: effectiveStoreId === 'all',
     from,
     to
   });
@@ -44,11 +47,12 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
     console.log('📊 ReportContent props:', {
       reportType,
       storeId: storeId.slice(0, 8),
-      selectedStoreId: selectedStoreId === 'all' ? 'ALL_STORES' : selectedStoreId.slice(0, 8),
-      isAllStores: selectedStoreId === 'all',
+      selectedStoreId: selectedStoreId === 'all' ? 'ALL_STORES' : selectedStoreId?.slice(0, 8) || 'EMPTY',
+      effectiveStoreId: effectiveStoreId === 'all' ? 'ALL_STORES' : effectiveStoreId?.slice(0, 8),
+      isAllStores: effectiveStoreId === 'all',
       dateRange: { from, to }
     });
-  }, [reportType, storeId, selectedStoreId, from, to]);
+  }, [reportType, storeId, selectedStoreId, effectiveStoreId, from, to]);
 
   // Display toast notifications for success/failure (only for regular reports)
   useEffect(() => {
@@ -84,8 +88,8 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
             reportType={reportType}
             data={null}
             storeId={storeId}
-            selectedStoreId={selectedStoreId}
-            isAllStores={selectedStoreId === 'all'}
+            selectedStoreId={effectiveStoreId}
+            isAllStores={effectiveStoreId === 'all'}
             dateRange={dateRange}
           />
         </CashierReportGuard>
@@ -116,7 +120,7 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
             <div>
               <p className="font-medium text-lg">No data available</p>
               <p className="text-muted-foreground text-sm mt-2">
-                No {reportType} data found for {selectedStoreId === 'all' ? 'all stores' : 'the selected store'} in the date range {from} to {to}
+                No {reportType} data found for {effectiveStoreId === 'all' ? 'all stores' : 'the selected store'} in the date range {from} to {to}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Try adjusting your date range or selected store
@@ -143,8 +147,8 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
           reportType={reportType}
           data={data}
           storeId={storeId}
-          selectedStoreId={selectedStoreId}
-          isAllStores={selectedStoreId === 'all'}
+          selectedStoreId={effectiveStoreId}
+          isAllStores={effectiveStoreId === 'all'}
           dateRange={dateRange}
         />
       </CashierReportGuard>

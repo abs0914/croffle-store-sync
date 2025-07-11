@@ -21,29 +21,34 @@ export const STANDARD_UOM_OPTIONS = [
   '6000 grams',
   '630 grams',
   'Piece',
+  'Pack of 10',
+  'Pack of 12',
+  'Pack of 20',
+  'Pack of 24',
   'Pack of 25',
+  'Pack of 27',
+  'Pack of 32',
   'Pack of 50', 
   'Pack of 100',
-  'Pack of 20',
-  'Pack of 32',
-  'Pack of 24',
-  'Pack of 27',
   'Box',
   'Piping Bag',
+  'Pack of 7 Piping bags',
+  'Pack of 12 Piping bags',
   'liter',
   'pack',
   'piece',
   'serving',
   'portion',
   'scoop',
-  'pair'
+  'pair',
+  'tub'
 ] as const;
 
 // Commissary inventory item interface
 export interface CommissaryInventoryItem {
   id: string;
   name: string;
-  category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  category: 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
   item_type: 'raw_material' | 'supply' | 'orderable_item';
   current_stock: number;
   minimum_threshold: number;
@@ -92,7 +97,7 @@ export interface RecipeIngredientUpload {
 // Raw ingredient upload interface
 export interface RawIngredientUpload {
   name: string;
-  category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  category: 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
   uom: string;
   unit_cost?: number;
   current_stock?: number;

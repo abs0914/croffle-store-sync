@@ -44,16 +44,11 @@ export function AdminRecipesList({
     setIsCleaningUp(true);
     try {
       const result = await cleanupDuplicateRecipes();
-      if (result.cleaned > 0) {
-        toast.success(`Cleaned up ${result.cleaned} duplicate recipes`);
+      if (result > 0) {
+        toast.success(`Cleaned up ${result} duplicate recipes`);
         onRefresh();
       } else {
         toast.info('No duplicate recipes found');
-      }
-      
-      if (result.errors.length > 0) {
-        toast.warning(`Cleanup completed with ${result.errors.length} errors`);
-        console.error('Cleanup errors:', result.errors);
       }
     } catch (error) {
       console.error('Error cleaning up duplicates:', error);

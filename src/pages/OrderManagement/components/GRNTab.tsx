@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Eye, AlertTriangle, Layers } from 'lucide-react';
+import { Plus, Search, Eye, AlertTriangle, Layers, Package } from 'lucide-react';
 import { GoodsReceivedNote, PurchaseOrder } from '@/types/orderManagement';
 import { fetchGRNs, fetchAvailableOrdersForGRN } from '@/services/orderManagement/grnService';
 import { useAuth } from '@/contexts/auth';
@@ -69,8 +69,8 @@ export function GRNTab() {
               Basic GRN
             </Button>
             <Button onClick={() => setShowEnhancedDialog(true)}>
-              <Layers className="h-4 w-4 mr-2" />
-              Enhanced GRN
+              <Package className="h-4 w-4 mr-2" />
+              Bulk Breakdown GRN
             </Button>
           </div>
         </div>

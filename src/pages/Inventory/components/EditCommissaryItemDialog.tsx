@@ -27,7 +27,7 @@ export function EditCommissaryItemDialog({
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: '',
-    category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies',
+    category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
     minimum_threshold: 0,
     uom: '', // Changed from unit to uom
     unit_cost: 0,
@@ -120,6 +120,7 @@ export function EditCommissaryItemDialog({
                   <SelectItem value="raw_materials">Raw Materials</SelectItem>
                   <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
                   <SelectItem value="supplies">Supplies</SelectItem>
+                  <SelectItem value="finished_goods">Finished Goods</SelectItem>
                 </SelectContent>
               </Select>
             </div>

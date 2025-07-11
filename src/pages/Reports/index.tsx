@@ -35,13 +35,13 @@ export default function Reports() {
   // Set initial store selection
   useEffect(() => {
     if (currentStore && !selectedStoreId) {
-      console.log('🏪 Setting initial store selection:', { 
+      console.log('🏪 Reports: Setting initial store selection:', { 
         storeId: currentStore.id.slice(0, 8), 
         storeName: currentStore.name 
       });
       setSelectedStoreId(currentStore.id);
     }
-  }, [currentStore, selectedStoreId]);
+  }, [currentStore]); // Remove selectedStoreId dependency to prevent re-initialization issues
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(prev => !prev);

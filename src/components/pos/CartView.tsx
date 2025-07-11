@@ -1,35 +1,25 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import { CartItem, Customer } from '@/types';
 import { PaymentDialog } from './PaymentDialog';
 import { CustomerSelector } from './CustomerSelector';
-import { DiscountDialog } from './DiscountDialog';
 import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
-import { Trash2, Plus, Minus, AlertTriangle } from 'lucide-react';
+import { OrderTypeSelector } from './OrderTypeSelector';
+import { Separator } from '@/components/ui/separator';
 import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
 import { useStore } from '@/contexts/StoreContext';
 import { useCart } from '@/contexts/cart/CartContext';
 import { toast } from 'sonner';
 import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
+import {
+  CartHeader,
+  CartValidationMessage,
+  CartItemsList,
+  CartSummary,
+  CartActions
+} from './cart';
 
 interface CartViewProps {
-  items: CartItem[];
-  subtotal: number;
-  tax: number;
-  total: number;
-  discount: number;
-  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
-  discountIdNumber?: string;
-  seniorDiscounts: SeniorDiscount[];
-  otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | null;
-  removeItem: (index: number) => void;
-  updateQuantity: (index: number, quantity: number) => void;
-  clearCart: () => void;
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
@@ -39,18 +29,6 @@ interface CartViewProps {
 }
 
 export default function CartView({
-  items,
-  subtotal,
-  tax,
-  total,
-  discount,
-  discountType,
-  discountIdNumber,
-  seniorDiscounts,
-  otherDiscount,
-  removeItem,
-  updateQuantity,
-  clearCart,
   selectedCustomer,
   setSelectedCustomer,
   handleApplyDiscount,
@@ -62,7 +40,59 @@ export default function CartView({
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string>('');
+  const [isOrderTypeTransitioning, setIsOrderTypeTransitioning] = useState(false);
   
+  // Use centralized cart calculations from context
+  const { 
+    calculations, 
+    items: cartItems, 
+    seniorDiscounts, 
+    otherDiscount,
+    orderType,
+    setOrderType,
+    deliveryPlatform,
+    setDeliveryPlatform,
+    deliveryOrderNumber,
+    setDeliveryOrderNumber,
+    updateItemPrice,
+    removeItem,
+    updateQuantity,
+    clearCart
+  } = useCart();
+
+  // Debug logging to track cart data
+  console.log('CartView: Cart data from context', {
+    itemCount: cartItems?.length || 0,
+    orderType,
+    calculations: calculations.finalTotal,
+    seniorDiscountsCount: seniorDiscounts?.length || 0,
+    cartItemsRaw: cartItems,
+    isOrderTypeTransitioning
+  });
+
+  // Debug logging for cart items
+  useEffect(() => {
+    console.log('CartView: Cart items changed', {
+      itemCount: cartItems?.length || 0,
+      orderType,
+      isTransitioning: isOrderTypeTransitioning,
+      items: cartItems?.map(item => ({ id: item.productId, name: item.product.name }))
+    });
+  }, [cartItems, orderType, isOrderTypeTransitioning]);
+
+  // Handle order type transitions with loading state
+  const handleOrderTypeChange = (newOrderType: any) => {
+    console.log('CartView: Order type changing', { from: orderType, to: newOrderType });
+    setIsOrderTypeTransitioning(true);
+    setOrderType(newOrderType);
+    
+    // Small delay to ensure context stability
+    setTimeout(() => {
+      setIsOrderTypeTransitioning(false);
+      console.log('CartView: Order type transition complete');
+    }, 100);
+  };
+
   const { 
     isValidating, 
     validateCartItems, 
@@ -73,12 +103,12 @@ export default function CartView({
   // Validate cart items when they change
   useEffect(() => {
     const validateCart = async () => {
-      if (items.length === 0) {
+      if (cartItems.length === 0) {
         setValidationMessage('');
         return;
       }
 
-      const isValid = await validateCartItems(items);
+      const isValid = await validateCartItems(cartItems);
       if (!isValid) {
         setValidationMessage('Some items have insufficient stock');
       } else {
@@ -87,7 +117,7 @@ export default function CartView({
     };
 
     validateCart();
-  }, [items, validateCartItems]);
+  }, [cartItems, validateCartItems]);
 
   const handlePaymentCompleteWithDeduction = async (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
@@ -104,7 +134,7 @@ export default function CartView({
     
     try {
       // Process inventory deductions first
-      const deductionSuccess = await processCartSale(items, tempTransactionId);
+      const deductionSuccess = await processCartSale(cartItems, tempTransactionId);
       if (!deductionSuccess) {
         toast.error('Failed to process inventory deductions');
         return;
@@ -118,115 +148,51 @@ export default function CartView({
       toast.error('Payment processing failed');
     }
   };
-
-  // Use centralized cart calculations from context
-  const { calculations, items: cartItems, seniorDiscounts: contextSeniorDiscounts, otherDiscount: contextOtherDiscount } = useCart();
   
   // Calculate the actual total with proper BIR-compliant calculations
   const actualTotal = calculations.finalTotal;
   const adjustedVAT = calculations.adjustedVAT;
   
-  const canCheckout = items.length > 0 && isShiftActive && !isValidating && !validationMessage;
+  // Validation for online delivery orders
+  const isDeliveryOrderValid = orderType === 'dine_in' || 
+    (orderType === 'online_delivery' && deliveryPlatform && deliveryOrderNumber.trim());
+  
+  const canCheckout = cartItems.length > 0 && isShiftActive && !isValidating && !Boolean(validationMessage) && isDeliveryOrderValid;
 
   return (
     <div className="flex flex-col h-full space-y-4 max-h-screen overflow-hidden">
-      <div className="flex items-center justify-between flex-shrink-0">
-        <h3 className="text-lg font-semibold">Cart</h3>
-        {items.length > 0 && (
-          <Button variant="outline" size="sm" onClick={clearCart}>
-            Clear Cart
-          </Button>
-        )}
+      <CartHeader 
+        itemCount={cartItems?.length || 0}
+        onClearCart={clearCart}
+      />
+
+      <CartValidationMessage message={validationMessage} />
+
+      {/* Order Type Selector */}
+      <div className="flex-shrink-0">
+        <OrderTypeSelector
+          orderType={orderType}
+          onOrderTypeChange={handleOrderTypeChange}
+          deliveryPlatform={deliveryPlatform}
+          onDeliveryPlatformChange={setDeliveryPlatform}
+          deliveryOrderNumber={deliveryOrderNumber}
+          onDeliveryOrderNumberChange={setDeliveryOrderNumber}
+        />
       </div>
 
-      {/* Validation Message */}
-      {validationMessage && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-2 flex-shrink-0">
-          <AlertTriangle className="h-4 w-4 text-amber-500" />
-          <span className="text-sm text-amber-800">{validationMessage}</span>
-        </div>
-      )}
-
-      {/* Cart Items - Scrollable */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="space-y-2 h-full overflow-y-auto">
-        {items.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">Your cart is empty</p>
-        ) : (
-          items.map((item, index) => {
-            const validation = getItemValidation(item.productId, item.variationId);
-            const hasStockIssue = validation && !validation.isValid;
-            
-            return (
-              <Card key={`${item.productId}-${item.variationId || 'default'}-${index}`} 
-                    className={hasStockIssue ? 'border-amber-200 bg-amber-50' : ''}>
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-sm">
-                        {item.product.name}
-                        {item.variation && (
-                          <span className="text-muted-foreground"> ({item.variation.name})</span>
-                        )}
-                      </h4>
-                      {hasStockIssue && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          Insufficient stock: {validation.insufficientItems.join(', ')}
-                        </p>
-                      )}
-                      <p className="text-sm text-muted-foreground">
-                        ₱{item.price.toFixed(2)} each
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(index, Math.max(1, item.quantity - 1))}
-                          disabled={item.quantity <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-8 text-center text-sm">{item.quantity}</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateQuantity(index, item.quantity + 1)}
-                          disabled={hasStockIssue}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => removeItem(index)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-sm font-medium">
-                      ₱{(item.price * item.quantity).toFixed(2)}
-                    </span>
-                    {hasStockIssue && (
-                      <Badge variant="secondary" className="text-xs">
-                        Stock Issue
-                      </Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-        </div>
-      </div>
+      {/* Cart Items */}
+      <CartItemsList
+        items={cartItems || []}
+        isTransitioning={isOrderTypeTransitioning}
+        orderType={orderType}
+        updateQuantity={updateQuantity}
+        updateItemPrice={updateItemPrice}
+        removeItem={removeItem}
+        getItemValidation={getItemValidation}
+      />
 
       {/* Bottom Section - Fixed with better spacing */}
-      {items.length > 0 && (
+      {(cartItems?.length || 0) > 0 && (
         <div className="flex-shrink-0 space-y-3 pb-4">
           <Separator />
           
@@ -239,59 +205,11 @@ export default function CartView({
           </div>
 
           {/* Order Summary */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal</span>
-              <span>₱{calculations.grossSubtotal.toFixed(2)}</span>
-            </div>
-            
-            {/* VAT Exemption Display */}
-            {calculations.vatExemption > 0 && (
-              <div className="flex justify-between text-sm text-blue-600">
-                <span>VAT Exemption (Senior)</span>
-                <span>-₱{calculations.vatExemption.toFixed(2)}</span>
-              </div>
-            )}
-            
-            {/* Multiple Senior Citizens Discount Display */}
-            {calculations.numberOfSeniors > 0 && (
-              <div className="space-y-1">
-                {seniorDiscounts.map((senior, index) => (
-                  <div key={senior.id} className="flex justify-between text-sm text-green-600">
-                    <span>Senior {index + 1} ({senior.idNumber})</span>
-                    <span>-₱{senior.discountAmount.toFixed(2)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between text-sm text-green-600 font-medium border-t border-green-200 pt-1">
-                  <span>Total Senior Discount</span>
-                  <span>-₱{calculations.seniorDiscountAmount.toFixed(2)}</span>
-                </div>
-              </div>
-            )}
-            
-            {/* Other Discount Display */}
-            {calculations.otherDiscountAmount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>
-                  {otherDiscount?.type.toUpperCase()} Discount
-                  {otherDiscount?.idNumber && ` - ${otherDiscount.idNumber}`}
-                </span>
-                <span>-₱{calculations.otherDiscountAmount.toFixed(2)}</span>
-              </div>
-            )}
-            
-            <div className="flex justify-between text-sm">
-              <span>VAT (12%)</span>
-              <span>₱{calculations.adjustedVAT.toFixed(2)}</span>
-            </div>
-            
-            <Separator />
-            
-            <div className="flex justify-between font-semibold">
-              <span>Total</span>
-              <span>₱{calculations.finalTotal.toFixed(2)}</span>
-            </div>
-          </div>
+          <CartSummary
+            calculations={calculations}
+            seniorDiscounts={seniorDiscounts}
+            otherDiscount={otherDiscount}
+          />
 
           {/* Multiple Discount Selector */}
           <MultipleSeniorDiscountSelector
@@ -303,19 +221,16 @@ export default function CartView({
           />
 
           {/* Action Buttons */}
-          <div className="space-y-2 pt-2">
-            <Button
-              onClick={() => setIsPaymentDialogOpen(true)}
-              className="w-full"
-              disabled={!canCheckout}
-              size="lg"
-            >
-              {!isShiftActive ? 'Start Shift to Checkout' : 
-               isValidating ? 'Validating Stock...' :
-               validationMessage ? 'Fix Stock Issues' :
-               'Proceed to Payment'}
-            </Button>
-          </div>
+          <CartActions
+            canCheckout={Boolean(canCheckout)}
+            isShiftActive={isShiftActive}
+            isValidating={isValidating}
+            validationMessage={validationMessage}
+            orderType={orderType}
+            deliveryPlatform={deliveryPlatform}
+            deliveryOrderNumber={deliveryOrderNumber}
+            onCheckout={() => setIsPaymentDialogOpen(true)}
+          />
         </div>
       )}
 
@@ -326,7 +241,6 @@ export default function CartView({
         total={calculations.finalTotal}
         onPaymentComplete={handlePaymentCompleteWithDeduction}
       />
-
     </div>
   );
 }

@@ -9,12 +9,14 @@ import { RefreshCw, Download, Calendar, TrendingUp } from 'lucide-react';
 import { Store } from '@/types';
 
 interface AdminReportsHeaderProps {
-  reportType: 'sales' | 'inventory' | 'customers' | 'performance';
-  setReportType: (type: 'sales' | 'inventory' | 'customers' | 'performance') => void;
+  reportType: 'sales' | 'profit-loss' | 'expenses';
+  setReportType: (type: 'sales' | 'profit-loss' | 'expenses') => void;
   dateRange: { from: string; to: string };
   setDateRange: (range: { from: string; to: string }) => void;
   storeFilter: string;
   setStoreFilter: (storeId: string) => void;
+  ownershipFilter: 'all' | 'company_owned' | 'franchise';
+  setOwnershipFilter: (filter: 'all' | 'company_owned' | 'franchise') => void;
   stores: Store[];
   onRefresh: () => void;
 }
@@ -26,6 +28,8 @@ export const AdminReportsHeader: React.FC<AdminReportsHeaderProps> = ({
   setDateRange,
   storeFilter,
   setStoreFilter,
+  ownershipFilter,
+  setOwnershipFilter,
   stores,
   onRefresh
 }) => {
@@ -62,11 +66,10 @@ export const AdminReportsHeader: React.FC<AdminReportsHeaderProps> = ({
       
       <CardContent className="space-y-4">
         <Tabs value={reportType} onValueChange={(value) => setReportType(value as any)}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="sales">Sales Analytics</TabsTrigger>
-            <TabsTrigger value="inventory">Inventory Analytics</TabsTrigger>
-            <TabsTrigger value="customers">Customer Analytics</TabsTrigger>
-            <TabsTrigger value="performance">Performance Analytics</TabsTrigger>
+            <TabsTrigger value="profit-loss">Profit & Loss</TabsTrigger>
+            <TabsTrigger value="expenses">Expense Analytics</TabsTrigger>
           </TabsList>
         </Tabs>
         
@@ -102,6 +105,20 @@ export const AdminReportsHeader: React.FC<AdminReportsHeaderProps> = ({
                     {store.name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Type:</span>
+            <Select value={ownershipFilter} onValueChange={setOwnershipFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="company_owned">Company Owned</SelectItem>
+                <SelectItem value="franchise">Franchise</SelectItem>
               </SelectContent>
             </Select>
           </div>

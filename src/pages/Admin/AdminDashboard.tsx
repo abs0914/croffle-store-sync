@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Users, 
@@ -12,11 +12,99 @@ import {
   BarChart3,
   TrendingUp,
   TrendingDown,
-  AlertTriangle
+  AlertTriangle,
+  Building2,
+  Handshake
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { formatCurrency } from '@/utils/format';
+
+interface StoreMetrics {
+  totalStores: number;
+  companyOwnedStores: number;
+  franchiseStores: number;
+  companyOwnedSales: number;
+  franchiseSales: number;
+  companyOwnedOrders: number;
+  franchiseOrders: number;
+}
 
 export default function AdminDashboard() {
+  const [storeMetrics, setStoreMetrics] = useState<StoreMetrics>({
+    totalStores: 0,
+    companyOwnedStores: 0,
+    franchiseStores: 0,
+    companyOwnedSales: 0,
+    franchiseSales: 0,
+    companyOwnedOrders: 0,
+    franchiseOrders: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStoreMetrics();
+  }, []);
+
+  const fetchStoreMetrics = async () => {
+    try {
+      // Get store counts by ownership type
+      const { data: stores, error: storesError } = await supabase
+        .from('stores')
+        .select('id, ownership_type, is_active');
+
+      if (storesError) throw storesError;
+
+      const activeStores = stores?.filter(store => store.is_active) || [];
+      const companyOwned = activeStores.filter(store => store.ownership_type === 'company_owned');
+      const franchise = activeStores.filter(store => store.ownership_type === 'franchisee');
+
+      // Get sales data for the last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: transactions, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('store_id, total, status')
+        .eq('status', 'completed')
+        .gte('created_at', thirtyDaysAgo.toISOString());
+
+      if (transactionsError) throw transactionsError;
+
+      // Calculate metrics
+      const companyOwnedStoreIds = companyOwned.map(store => store.id);
+      const franchiseStoreIds = franchise.map(store => store.id);
+
+      const companyOwnedTransactions = transactions?.filter(tx => 
+        companyOwnedStoreIds.includes(tx.store_id)
+      ) || [];
+      
+      const franchiseTransactions = transactions?.filter(tx => 
+        franchiseStoreIds.includes(tx.store_id)
+      ) || [];
+
+      const companyOwnedSales = companyOwnedTransactions.reduce((sum, tx) => sum + tx.total, 0);
+      const franchiseSales = franchiseTransactions.reduce((sum, tx) => sum + tx.total, 0);
+
+      setStoreMetrics({
+        totalStores: activeStores.length,
+        companyOwnedStores: companyOwned.length,
+        franchiseStores: franchise.length,
+        companyOwnedSales,
+        franchiseSales,
+        companyOwnedOrders: companyOwnedTransactions.length,
+        franchiseOrders: franchiseTransactions.length
+      });
+    } catch (error) {
+      console.error('Error fetching store metrics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalSales = storeMetrics.companyOwnedSales + storeMetrics.franchiseSales;
+  const totalOrders = storeMetrics.companyOwnedOrders + storeMetrics.franchiseOrders;
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -37,10 +125,10 @@ export default function AdminDashboard() {
             <Store className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{storeMetrics.totalStores}</div>
             <div className="flex items-center text-xs text-muted-foreground">
-              <TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-              +2 from last month
+              <Building2 className="h-3 w-3 text-blue-500 mr-1" />
+              {storeMetrics.companyOwnedStores} Company • {storeMetrics.franchiseStores} Franchise
             </div>
           </CardContent>
         </Card>
@@ -87,6 +175,137 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Company Owned vs Franchise Comparison */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Company Owned vs Franchise Performance
+          </CardTitle>
+          <CardDescription>Sales and order comparison for the last 30 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Company Owned Sales */}
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-3 mb-2">
+                <Building2 className="h-6 w-6 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-900">Company Owned Sales</p>
+                  <p className="text-sm text-blue-700">{storeMetrics.companyOwnedStores} stores</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-blue-900">
+                  {formatCurrency(storeMetrics.companyOwnedSales)}
+                </div>
+                <div className="text-sm text-blue-700">
+                  {totalSales > 0 ? ((storeMetrics.companyOwnedSales / totalSales) * 100).toFixed(1) : 0}% of total sales
+                </div>
+              </div>
+            </div>
+
+            {/* Franchise Sales */}
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="flex items-center gap-3 mb-2">
+                <Handshake className="h-6 w-6 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-900">Franchise Sales</p>
+                  <p className="text-sm text-green-700">{storeMetrics.franchiseStores} stores</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-green-900">
+                  {formatCurrency(storeMetrics.franchiseSales)}
+                </div>
+                <div className="text-sm text-green-700">
+                  {totalSales > 0 ? ((storeMetrics.franchiseSales / totalSales) * 100).toFixed(1) : 0}% of total sales
+                </div>
+              </div>
+            </div>
+
+            {/* Company Owned Orders */}
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <div className="flex items-center gap-3 mb-2">
+                <ClipboardList className="h-6 w-6 text-purple-600" />
+                <div>
+                  <p className="font-medium text-purple-900">Company Orders</p>
+                  <p className="text-sm text-purple-700">Last 30 days</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-purple-900">
+                  {storeMetrics.companyOwnedOrders.toLocaleString()}
+                </div>
+                <div className="text-sm text-purple-700">
+                  Avg: {storeMetrics.companyOwnedStores > 0 ? 
+                    (storeMetrics.companyOwnedOrders / storeMetrics.companyOwnedStores).toFixed(1) : 0} per store
+                </div>
+              </div>
+            </div>
+
+            {/* Franchise Orders */}
+            <div className="p-4 bg-orange-50 rounded-lg">
+              <div className="flex items-center gap-3 mb-2">
+                <ClipboardList className="h-6 w-6 text-orange-600" />
+                <div>
+                  <p className="font-medium text-orange-900">Franchise Orders</p>
+                  <p className="text-sm text-orange-700">Last 30 days</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-2xl font-bold text-orange-900">
+                  {storeMetrics.franchiseOrders.toLocaleString()}
+                </div>
+                <div className="text-sm text-orange-700">
+                  Avg: {storeMetrics.franchiseStores > 0 ? 
+                    (storeMetrics.franchiseOrders / storeMetrics.franchiseStores).toFixed(1) : 0} per store
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Performance Summary */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold mb-3">Performance Summary</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Average Sales per Company Store:</span>
+                <span className="font-medium ml-2">
+                  {storeMetrics.companyOwnedStores > 0 ? 
+                    formatCurrency(storeMetrics.companyOwnedSales / storeMetrics.companyOwnedStores) : 
+                    formatCurrency(0)}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Average Sales per Franchise:</span>
+                <span className="font-medium ml-2">
+                  {storeMetrics.franchiseStores > 0 ? 
+                    formatCurrency(storeMetrics.franchiseSales / storeMetrics.franchiseStores) : 
+                    formatCurrency(0)}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Company Order Value:</span>
+                <span className="font-medium ml-2">
+                  {storeMetrics.companyOwnedOrders > 0 ? 
+                    formatCurrency(storeMetrics.companyOwnedSales / storeMetrics.companyOwnedOrders) : 
+                    formatCurrency(0)}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Franchise Order Value:</span>
+                <span className="font-medium ml-2">
+                  {storeMetrics.franchiseOrders > 0 ? 
+                    formatCurrency(storeMetrics.franchiseSales / storeMetrics.franchiseOrders) : 
+                    formatCurrency(0)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* System Health & Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

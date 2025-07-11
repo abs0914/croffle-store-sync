@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,18 +13,16 @@ import {
   AlertCircle,
   Edit3,
   Check,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
-import { fetchProductCatalog, toggleProductAvailability } from '@/services/productCatalog/productCatalogService';
-import { ProductCatalog } from '@/services/productCatalog/types';
+import { useProductCatalogState } from '@/hooks/product/useProductCatalogState';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
 export default function StoreProductAvailability() {
   const { user } = useAuth();
-  const [products, setProducts] = useState<ProductCatalog[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
@@ -32,38 +30,21 @@ export default function StoreProductAvailability() {
 
   const storeId = user?.storeIds?.[0] || '';
 
-  useEffect(() => {
-    if (storeId) {
-      loadProducts();
-    }
-  }, [storeId]);
+  // Use unified state management
+  const {
+    products,
+    isLoading: loading,
+    error,
+    updateProduct,
+    toggleAvailability,
+    isUpdating,
+    isTogglingAvailability,
+    refetch
+  } = useProductCatalogState(storeId);
 
-  const loadProducts = async () => {
-    setLoading(true);
-    try {
-      const productsData = await fetchProductCatalog(storeId);
-      setProducts(productsData);
-    } catch (error) {
-      console.error('Error loading products:', error);
-      toast.error('Failed to load products');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleToggleAvailability = async (productId: string, currentAvailability: boolean) => {
-    try {
-      const success = await toggleProductAvailability(productId, !currentAvailability);
-      if (success) {
-        setProducts(prev => prev.map(product => 
-          product.id === productId 
-            ? { ...product, is_available: !currentAvailability }
-            : product
-        ));
-      }
-    } catch (error) {
-      console.error('Error toggling product availability:', error);
-    }
+  const handleToggleAvailability = (productId: string, currentAvailability: boolean) => {
+    console.log(`🔄 Toggle availability for product ${productId} from ${currentAvailability} to ${!currentAvailability}`);
+    toggleAvailability({ id: productId, isAvailable: !currentAvailability });
   };
 
   const handleEditPrice = (productId: string, currentPrice: number) => {
@@ -71,45 +52,21 @@ export default function StoreProductAvailability() {
     setTempPrice(currentPrice.toString());
   };
 
-  const handleSavePrice = async (productId: string) => {
+  const handleSavePrice = (productId: string) => {
     const newPrice = parseFloat(tempPrice);
     if (isNaN(newPrice) || newPrice < 0) {
       toast.error('Please enter a valid price');
       return;
     }
 
-    try {
-      const response = await fetch(`https://bwmkqscqkfoezcuzgpwq.supabase.co/rest/v1/product_catalog?id=eq.${productId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3bWtxc2Nxa2ZvZXpjdXpncHdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY1Mzg1NzEsImV4cCI6MjA2MjExNDU3MX0.Iv2rmTZIMIXQPdk8slgyhQMxiz1YXRvZGe3hoBPVImc',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3bWtxc2Nxa2ZvZXpjdXpncHdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY1Mzg1NzEsImV4cCI6MjA2MjExNDU3MX0.Iv2rmTZIMIXQPdk8slgyhQMxiz1YXRvZGe3hoBPVImc`
-        },
-        body: JSON.stringify({
-          price: newPrice,
-          updated_at: new Date().toISOString()
-        })
-      });
+    console.log(`🔄 Updating price for product ${productId} to:`, newPrice);
+    updateProduct({ 
+      id: productId, 
+      updates: { price: newPrice } 
+    });
 
-      if (!response.ok) {
-        throw new Error('Failed to update price');
-      }
-
-      // Update local state
-      setProducts(prev => prev.map(product => 
-        product.id === productId 
-          ? { ...product, price: newPrice }
-          : product
-      ));
-
-      setEditingPrice(null);
-      setTempPrice('');
-      toast.success('Price updated successfully');
-    } catch (error) {
-      console.error('Error updating price:', error);
-      toast.error('Failed to update price');
-    }
+    setEditingPrice(null);
+    setTempPrice('');
   };
 
   const handleCancelEdit = () => {
@@ -249,7 +206,8 @@ export default function StoreProductAvailability() {
               <EyeOff className="h-4 w-4" />
               Show Unavailable Only
             </Button>
-            <Button onClick={loadProducts} variant="outline">
+            <Button onClick={() => refetch()} variant="outline" disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>
@@ -286,6 +244,7 @@ export default function StoreProductAvailability() {
                     size="sm"
                     onClick={() => handleToggleAvailability(product.id, product.is_available)}
                     className="ml-2"
+                    disabled={isTogglingAvailability}
                   >
                     {product.is_available ? (
                       <Eye className="h-4 w-4 text-green-600" />
@@ -328,6 +287,7 @@ export default function StoreProductAvailability() {
                           variant="ghost"
                           onClick={() => handleSavePrice(product.id)}
                           className="h-8 w-8 p-0"
+                          disabled={isUpdating}
                         >
                           <Check className="h-4 w-4 text-green-600" />
                         </Button>
@@ -382,8 +342,9 @@ export default function StoreProductAvailability() {
                     size="sm"
                     onClick={() => handleToggleAvailability(product.id, product.is_available)}
                     className="w-full"
+                    disabled={isTogglingAvailability}
                   >
-                    {product.is_available ? 'Make Unavailable' : 'Make Available'}
+                    {isTogglingAvailability ? 'Updating...' : (product.is_available ? 'Make Unavailable' : 'Make Available')}
                   </Button>
                 </div>
               </CardContent>

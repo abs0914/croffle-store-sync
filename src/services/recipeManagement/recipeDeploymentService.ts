@@ -1,449 +1,862 @@
-import { supabase } from "@/integrations/supabase/client";
-import { RecipeTemplate } from "./types";
-import { toast } from "sonner";
-import type { LocationType } from "./types";
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+// Helper function to normalize units to match database enum values
+const normalizeUnit = (unit: string): string => {
+  const unitLower = unit.toLowerCase().trim();
+  
+  // Map common variations to enum values
+  const unitMap: Record<string, string> = {
+    'piece': 'pieces',
+    'pieces': 'pieces',
+    'pcs': 'pieces',
+    'pc': 'pieces',
+    'serving': 'pieces', // Default serving to pieces for recipes
+    'servings': 'pieces',
+    'portion': 'pieces', // Default portion to pieces for recipes  
+    'portions': 'pieces',
+    'box': 'boxes',
+    'boxes': 'boxes',
+    'pack': 'packs',
+    'packs': 'packs',
+    'gram': 'g',
+    'grams': 'g',
+    'g': 'g',
+    'kilogram': 'kg',
+    'kilograms': 'kg',
+    'kg': 'kg',
+    'liter': 'liters',
+    'liters': 'liters',
+    'l': 'liters',
+    'milliliter': 'ml',
+    'milliliters': 'ml',
+    'ml': 'ml'
+  };
+  
+  return unitMap[unitLower] || 'pieces'; // Default to pieces if unknown
+};
+
+/**
+ * Enhanced ingredient name matching with fuzzy logic
+ */
+const findMatchingInventoryItem = async (ingredientName: string, storeId: string): Promise<any> => {
+  const cleanIngredientName = ingredientName.toLowerCase().trim();
+  
+  // Try exact match first
+  let { data: exactMatch } = await supabase
+    .from('inventory_stock')
+    .select('*')
+    .eq('store_id', storeId)
+    .eq('is_active', true)
+    .ilike('item', cleanIngredientName)
+    .maybeSingle();
+
+  if (exactMatch) return exactMatch;
+
+  // Try fuzzy matching with common variations
+  const { data: allStoreItems } = await supabase
+    .from('inventory_stock')
+    .select('*')
+    .eq('store_id', storeId)
+    .eq('is_active', true);
+
+  if (!allStoreItems) return null;
+
+  // Fuzzy matching logic
+  for (const item of allStoreItems) {
+    const itemName = item.item.toLowerCase().trim();
+    
+    // Remove common prefixes/suffixes for matching
+    const cleanItemName = itemName
+      .replace(/^(regular|mini|small|large|jumbo)\s+/i, '')
+      .replace(/\s+(sauce|syrup|powder|mix)$/i, '');
+    
+    const cleanIngredient = cleanIngredientName
+      .replace(/^(regular|mini|small|large|jumbo)\s+/i, '')
+      .replace(/\s+(sauce|syrup|powder|mix)$/i, '');
+
+    // Check for partial matches
+    if (
+      cleanItemName.includes(cleanIngredient) ||
+      cleanIngredient.includes(cleanItemName) ||
+      // Handle word variations
+      cleanItemName.replace(/s$/, '') === cleanIngredient.replace(/s$/, '')
+    ) {
+      console.log(`🔍 Fuzzy match found: "${ingredientName}" -> "${item.item}"`);
+      return item;
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Log deployment errors for monitoring and debugging
+ */
+const logDeploymentError = async (
+  templateId: string,
+  storeId: string,
+  errorType: string,
+  errorMessage: string,
+  ingredientName?: string | null
+) => {
+  try {
+    await supabase
+      .from('recipe_deployment_errors')
+      .insert({
+        template_id: templateId,
+        store_id: storeId,
+        error_type: errorType,
+        error_message: errorMessage,
+        ingredient_name: ingredientName,
+        suggested_solution: getSuggestedSolution(errorType)
+      });
+  } catch (error) {
+    console.warn('Failed to log deployment error:', error);
+  }
+};
+
+/**
+ * Get suggested solution based on error type
+ */
+const getSuggestedSolution = (errorType: string): string => {
+  switch (errorType) {
+    case 'missing_ingredients':
+      return 'Add the missing ingredients to store inventory before deployment';
+    case 'malformed_data':
+      return 'Clean up ingredient data and ensure proper formatting';
+    case 'duplicate_recipe':
+      return 'Recipe already exists in this store. Use a different name or update existing recipe';
+    case 'permission_denied':
+      return 'Check user permissions and store access rights';
+    case 'product_creation_failed':
+      return 'Recipe deployed but product creation failed. Create product manually from recipe';
+    default:
+      return 'Review deployment configuration and try again';
+  }
+};
 
 export interface DeploymentResult {
-  storeId: string;
-  storeName?: string;
   success: boolean;
+  storeId: string;
+  storeName: string;
   error?: string;
   recipeId?: string;
+  productId?: string;
   warnings?: string[];
   missingIngredients?: string[];
 }
 
-// Get ingredients for specific store location
-const getIngredientsForStore = async (template: RecipeTemplate, storeId: string) => {
-  // Get store's location type
-  const { data: store, error: storeError } = await supabase
-    .from('stores')
-    .select('location_type')
-    .eq('id', storeId)
-    .single();
+export interface DeploymentOptions {
+  actualPrice?: number;
+  priceMarkup?: number;
+  customName?: string;
+  customDescription?: string;
+  isActive?: boolean;
+  createProduct?: boolean;
+  categoryId?: string;
+}
 
-  if (storeError) {
-    console.error('Error fetching store location:', storeError);
-    // Default to all ingredients if we can't determine location
-    return template.ingredients.filter(ing => !ing.location_type || ing.location_type === 'all');
+/**
+ * Deploy a recipe template to multiple stores with enhanced validation
+ */
+export const deployRecipeToMultipleStores = async (
+  templateId: string,
+  storeIds: string[],
+  options: DeploymentOptions = {}
+): Promise<DeploymentResult[]> => {
+  const results: DeploymentResult[] = [];
+
+  try {
+    console.log('🚀 Starting enhanced deployment for template:', templateId, 'to stores:', storeIds, 'with options:', options);
+    
+    // Get the template with ingredients and image
+    const { data: template, error: templateError } = await supabase
+      .from('recipe_templates')
+      .select(`
+        *,
+        ingredients:recipe_template_ingredients(*)
+      `)
+      .eq('id', templateId)
+      .single();
+
+    if (templateError) {
+      console.error('❌ Failed to fetch template:', templateError);
+      throw templateError;
+    }
+
+    console.log('✅ Template fetched:', template.name, 'with', template.ingredients?.length || 0, 'ingredients', 'and image:', template.image_url);
+
+    // Validate template has valid ingredients
+    if (!template.ingredients || template.ingredients.length === 0) {
+      throw new Error('Template has no valid ingredients');
+    }
+
+    // Get store information
+    const { data: stores, error: storesError } = await supabase
+      .from('stores')
+      .select('id, name')
+      .in('id', storeIds);
+
+    if (storesError) throw storesError;
+
+    // Process each store deployment with enhanced error handling
+    for (const store of stores) {
+      try {
+        console.log(`🏪 Processing deployment for store: ${store.name}`);
+        const result = await deployToSingleStoreWithTransaction(template, store, options);
+        results.push(result);
+        console.log(`✅ Deployment result for ${store.name}:`, result.success ? 'Success' : `Failed: ${result.error}`);
+      } catch (error) {
+        console.error(`❌ Deployment failed for store ${store.name}:`, error);
+        await logDeploymentError(templateId, store.id, 'deployment_error', 
+          error instanceof Error ? error.message : 'Unknown error');
+        
+        results.push({
+          success: false,
+          storeId: store.id,
+          storeName: store.name,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Log deployment summary
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.length - successCount;
+    console.log(`📊 Deployment Summary: ${successCount} successful, ${failCount} failed out of ${results.length} stores`);
+
+    return results;
+  } catch (error) {
+    console.error('❌ Critical error in bulk deployment:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Log critical error
+    await logDeploymentError(templateId, '', 'critical_error', errorMessage);
+    
+    // Return failed results for all stores
+    return storeIds.map(storeId => ({
+      success: false,
+      storeId,
+      storeName: 'Unknown',
+      error: errorMessage
+    }));
   }
-
-  const storeLocationType = store?.location_type as LocationType || 'all';
-  
-  console.log(`Store ${storeId} location type: ${storeLocationType}`);
-
-  // Filter ingredients based on store location
-  const applicableIngredients = template.ingredients.filter(ingredient => {
-    const ingLocation = ingredient.location_type || 'all';
-    return ingLocation === 'all' || ingLocation === storeLocationType;
-  });
-
-  console.log(`Filtered ${applicableIngredients.length} ingredients for location ${storeLocationType}`);
-  
-  return applicableIngredients;
 };
 
-export const deployRecipeToProductCatalog = async (
-  template: RecipeTemplate,
-  storeId: string
+/**
+ * Enhanced deployment to a single store with transaction handling
+ */
+const deployToSingleStoreWithTransaction = async (
+  template: any,
+  store: any,
+  options: DeploymentOptions
 ): Promise<DeploymentResult> => {
   try {
-    console.log(`Deploying recipe template "${template.name}" to store ${storeId}`);
+    console.log(`🏪 Starting transactional deployment of "${template.name}" to store: ${store.name}`);
+    console.log(`📋 Template data:`, {
+      id: template.id,
+      name: template.name,
+      image_url: template.image_url,
+      ingredients_count: template.ingredients?.length || 0,
+      actualPrice: options.actualPrice
+    });
+    
+    // Validate template has valid ingredients
+    if (!template.ingredients || template.ingredients.length === 0) {
+      const error = 'Template has no valid ingredients';
+      console.error('❌', error);
+      
+      await logDeploymentError(template.id, store.id, 'missing_ingredients', error, null);
+      throw new Error(error);
+    }
 
-    // CRITICAL: Check if recipe already exists in this store using both name AND store_id
+    // Clean and validate ingredients
+    const validIngredients = await validateAndCleanIngredients(template.ingredients, store.id);
+    
+    if (validIngredients.length === 0) {
+      const error = 'No valid ingredients found after cleaning and validation';
+      console.error('❌', error);
+      await logDeploymentError(template.id, store.id, 'malformed_data', error, null);
+      throw new Error(error);
+    }
+
+    console.log(`✅ Validated ingredients for ${template.name}:`, validIngredients.map(i => i.ingredient_name));
+
+    // Calculate recipe cost
+    const totalCost = validIngredients.reduce((sum: number, ingredient: any) => {
+      return sum + (ingredient.quantity * (ingredient.cost_per_unit || 0));
+    }, 0);
+
+    const costPerServing = template.yield_quantity > 0 ? totalCost / template.yield_quantity : 0;
+    
+    // Use actualPrice from options if provided, otherwise calculate suggested price
+    const finalPrice = options.actualPrice || (costPerServing * (1 + (options.priceMarkup || 0.5))); // 50% markup by default
+    
+    console.log(`💰 Pricing calculation:`, {
+      totalCost,
+      costPerServing,
+      actualPrice: options.actualPrice,
+      finalPrice,
+      priceMarkup: options.priceMarkup
+    });
+
+    // Check for existing recipe
     const { data: existingRecipe, error: checkError } = await supabase
       .from('recipes')
-      .select('id, name, store_id, created_at')
-      .eq('name', template.name)
-      .eq('store_id', storeId)
+      .select('id, product_id')
+      .eq('name', options.customName || template.name)
+      .eq('store_id', store.id)
       .maybeSingle();
 
-    if (checkError) {
-      console.error('Error checking for existing recipe:', checkError);
+    if (checkError && checkError.code !== 'PGRST116') {
       throw checkError;
     }
 
     if (existingRecipe) {
-      console.log(`Recipe "${template.name}" already exists in store ${storeId} (ID: ${existingRecipe.id})`);
+      const error = 'Recipe already exists in this store';
+      console.warn('⚠️', error, `- Recipe "${template.name}" in store "${store.name}"`);
+      await logDeploymentError(template.id, store.id, 'duplicate_recipe', error, null);
+      
       return {
-        storeId,
-        success: false,
-        error: `Recipe "${template.name}" already exists in this store (deployed on ${new Date(existingRecipe.created_at).toLocaleDateString()})`
+        success: true, // Consider existing as success
+        storeId: store.id,
+        storeName: store.name,
+        recipeId: existingRecipe.id,
+        productId: existingRecipe.product_id,
+        warnings: ['Recipe already exists in this store']
       };
     }
 
-    // Get location-specific ingredients
-    const storeIngredients = await getIngredientsForStore(template, storeId);
-    
-    // Calculate recipe cost based on location-specific ingredients
-    const totalCost = storeIngredients.reduce((sum, ingredient) => 
-      sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
-    );
-
-    // Get current user for approval tracking
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      throw new Error('User authentication required');
-    }
-
-    // Generate unique SKU to prevent conflicts
-    const timestamp = Date.now();
-    const uniqueSku = `RCP-${template.name.replace(/\s+/g, '-').toUpperCase()}-${storeId.substring(0, 8)}-${timestamp}`;
-
-    // Create the product in products table first
-    const { data: product, error: productError } = await supabase
-      .from('products')
+    // Create the recipe
+    const { data: recipe, error: recipeError } = await supabase
+      .from('recipes')
       .insert({
-        name: template.name,
-        description: template.description,
-        sku: uniqueSku,
-        price: totalCost * 1.5, // 50% markup as default
-        cost: totalCost,
-        stock_quantity: 0,
-        store_id: storeId,
-        is_active: true,
-        image_url: template.image_url
+        name: options.customName || template.name,
+        description: options.customDescription || template.description,
+        instructions: template.instructions || 'Follow template instructions',
+        yield_quantity: template.yield_quantity || 1,
+        total_cost: totalCost,
+        cost_per_serving: costPerServing,
+        suggested_price: finalPrice,
+        store_id: store.id,
+        template_id: template.id,
+        product_id: null,
+        is_active: options.isActive !== false,
+        approval_status: 'approved' // Auto-approve admin deployments
       })
       .select()
       .single();
 
-    if (productError) {
-      console.error('Error creating product:', productError);
-      throw productError;
+    if (recipeError) throw recipeError;
+
+    // Create recipe ingredients with enhanced store mapping
+    const ingredientInserts = await Promise.all(
+      validIngredients.map(async (ingredient: any) => {
+        const normalizedUnit = normalizeUnit(ingredient.unit || 'pieces') as 'pieces' | 'g' | 'kg' | 'liters' | 'ml' | 'boxes' | 'packs';
+        
+        return {
+          recipe_id: recipe.id,
+          ingredient_name: ingredient.ingredient_name,
+          quantity: ingredient.quantity || 1,
+          unit: normalizedUnit,
+          cost_per_unit: ingredient.cost_per_unit || 0,
+          inventory_stock_id: ingredient.inventory_stock_id,
+          commissary_item_id: ingredient.commissary_item_id
+        };
+      })
+    );
+
+    const { error: ingredientsError } = await supabase
+      .from('recipe_ingredients')
+      .insert(ingredientInserts);
+
+    if (ingredientsError) throw ingredientsError;
+
+    console.log(`✅ Successfully deployed recipe "${template.name}" to "${store.name}"`);
+
+    // Create product catalog entry with enhanced options (default: true)
+    let productId: string | undefined;
+    let productWarnings: string[] = [];
+
+    if (options.createProduct !== false) {
+      try {
+        console.log(`🛍️ Creating product catalog entry with enhanced options...`);
+        const productResult = await createProductCatalogWithTransaction(recipe, template, {
+          ...options,
+          actualPrice: finalPrice // Ensure we pass the calculated price
+        });
+        
+        if (productResult.success) {
+          productId = productResult.productId;
+          
+          // Update recipe with product reference in a separate transaction
+          const { error: updateError } = await supabase
+            .from('recipes')
+            .update({ product_id: productId })
+            .eq('id', recipe.id);
+            
+          if (updateError) {
+            console.warn('⚠️ Failed to update recipe with product_id:', updateError);
+          } else {
+            console.log(`✅ Recipe updated with product_id: ${productId}`);
+          }
+          
+          console.log(`✅ Product catalog entry created successfully: ${productId}`);
+        } else {
+          const errorMsg = productResult.error || 'Failed to create product catalog entry';
+          productWarnings.push(errorMsg);
+          console.error('❌ Product catalog creation failed:', errorMsg);
+          await logDeploymentError(template.id, store.id, 'product_creation_failed', errorMsg, null);
+        }
+      } catch (productError) {
+        const errorMsg = productError instanceof Error ? productError.message : 'Product creation failed';
+        productWarnings.push(errorMsg);
+        console.error('❌ Product creation error:', errorMsg);
+        await logDeploymentError(template.id, store.id, 'product_creation_failed', errorMsg, null);
+      }
     }
 
-    console.log(`Created product with ID: ${product.id}`);
+    // Create deployment record
+    try {
+      await supabase
+        .from('recipe_deployments')
+        .insert({
+          template_id: template.id,
+          store_id: store.id,
+          recipe_id: recipe.id,
+          deployed_by: template.created_by,
+          cost_snapshot: totalCost,
+          price_snapshot: finalPrice,
+          deployment_notes: 'Enhanced admin deployment with product creation'
+        });
+    } catch (error) {
+      console.warn('Failed to create deployment record:', error);
+    }
 
-    // Create the product catalog entry
+    const allWarnings = [
+      ...(validIngredients.length < template.ingredients.length ? 
+        [`${template.ingredients.length - validIngredients.length} invalid ingredients were skipped`] : []),
+      ...productWarnings
+    ];
+
+    return {
+      success: true,
+      storeId: store.id,
+      storeName: store.name,
+      recipeId: recipe.id,
+      productId,
+      warnings: allWarnings.length > 0 ? allWarnings : undefined
+    };
+  } catch (error) {
+    console.error(`Error deploying to store ${store.name}:`, error);
+    return {
+      success: false,
+      storeId: store.id,
+      storeName: store.name,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+};
+
+/**
+ * Validate and clean ingredients with enhanced store mapping
+ */
+const validateAndCleanIngredients = async (ingredients: any[], storeId: string): Promise<any[]> => {
+  const validIngredients = [];
+
+  console.log(`🔍 Validating ${ingredients.length} ingredients for store: ${storeId}`);
+
+  for (const ingredient of ingredients) {
+    console.log(`📋 Processing ingredient:`, ingredient);
+
+    // Clean up malformed ingredient names
+    if (ingredient.ingredient_name && typeof ingredient.ingredient_name === 'string') {
+      let cleanName = ingredient.ingredient_name;
+      
+      // Handle severely malformed JSON strings
+      if (cleanName.includes('ingredient_name')) {
+        const match = cleanName.match(/ingredient_name[""'\s]*:\s*[""']\s*([^""']+)/);
+        if (match) {
+          cleanName = match[1].trim();
+        }
+      }
+      
+      // Clean up JSON artifacts
+      cleanName = cleanName
+        .replace(/^"?\[?\{?"?ingredient_name"?: ?"?/, '')
+        .replace(/["'}].*$/, '')
+        .replace(/[{}\[\]"']/g, '')
+        .trim();
+      
+      // Less strict validation - accept any non-empty ingredient name
+      if (cleanName.length > 0) {
+        console.log(`✅ Processing valid ingredient: ${cleanName}`);
+        
+        // Try to find matching store inventory item (optional)
+        const storeItem = await findMatchingInventoryItem(cleanName, storeId);
+        
+        if (storeItem) {
+          console.log(`🔗 Found store inventory match for "${cleanName}": ${storeItem.item}`);
+        } else {
+          console.log(`⚠️ No store inventory match for "${cleanName}" - proceeding anyway`);
+        }
+        
+        const validIngredient = {
+          ...ingredient,
+          ingredient_name: cleanName,
+          inventory_stock_id: storeItem?.id || null,
+          commissary_item_id: ingredient.commissary_item_id || null,
+          uses_store_inventory: !!storeItem,
+          // Ensure we have essential fields with defaults
+          quantity: ingredient.quantity || 1,
+          unit: ingredient.unit || 'pieces',
+          cost_per_unit: ingredient.cost_per_unit || 0
+        };
+        
+        validIngredients.push(validIngredient);
+        console.log(`✅ Added valid ingredient: ${cleanName} (${validIngredient.quantity} ${validIngredient.unit})`);
+      } else {
+        console.warn(`❌ Skipping ingredient with empty name:`, ingredient);
+      }
+    } else {
+      console.warn(`❌ Skipping ingredient with invalid name:`, ingredient);
+    }
+  }
+
+  console.log(`✅ Validation complete: ${validIngredients.length}/${ingredients.length} ingredients validated`);
+  return validIngredients;
+};
+
+/**
+ * Create product catalog entry with enhanced transaction handling
+ */
+const createProductCatalogWithTransaction = async (
+  recipe: any, 
+  template: any, 
+  options: DeploymentOptions & { actualPrice?: number }
+): Promise<{ success: boolean; productId?: string; error?: string }> => {
+  try {
+    console.log(`🛍️ Creating product catalog entry for: ${recipe.name}`);
+    console.log(`📊 Product details:`, {
+      recipeName: recipe.name,
+      templateImageUrl: template.image_url,
+      actualPrice: options.actualPrice,
+      suggestedPrice: recipe.suggested_price,
+      totalCost: recipe.total_cost
+    });
+    
+    // Calculate final price - prioritize actualPrice from options
+    const finalPrice = options.actualPrice || recipe.suggested_price || (recipe.total_cost * 1.5);
+    
+    console.log(`💰 Using final price: ₱${finalPrice}`);
+    
+    // Create product catalog entry for POS system (main entry)
     const { data: catalogProduct, error: catalogError } = await supabase
       .from('product_catalog')
       .insert({
-        product_name: template.name,
-        description: template.description,
-        price: totalCost * 1.5,
-        store_id: storeId,
+        store_id: recipe.store_id,
+        product_name: recipe.name,
+        description: recipe.description || template.description || '',
+        price: finalPrice,
         is_available: true,
-        display_order: 0,
-        image_url: template.image_url
+        recipe_id: recipe.id,
+        image_url: template.image_url || null,
+        display_order: 0
       })
       .select()
       .single();
 
     if (catalogError) {
-      console.error('Error creating product catalog entry:', catalogError);
-      // Don't throw here, continue with recipe creation
-      console.warn('Product catalog entry failed but continuing with recipe creation');
-    } else {
-      console.log(`Created product catalog entry with ID: ${catalogProduct.id}`);
+      console.error('❌ Product catalog creation error:', catalogError);
+      return { 
+        success: false, 
+        error: `Failed to create product catalog entry: ${catalogError.message}` 
+      };
     }
 
-    // Create the recipe with location-appropriate ingredients
-    const { data: recipe, error: recipeError } = await supabase
-      .from('recipes')
-      .insert({
-        name: template.name,
-        description: template.description,
-        instructions: template.instructions,
-        yield_quantity: template.yield_quantity,
-        serving_size: template.serving_size || 1,
-        store_id: storeId,
-        product_id: product.id,
-        category_name: template.category_name,
-        approval_status: 'approved',
-        approved_by: user.id,
-        approved_at: new Date().toISOString(),
-        is_active: true,
-        version: template.version || 1
-      })
-      .select()
-      .single();
+    console.log(`✅ Created product catalog entry:`, {
+      id: catalogProduct.id,
+      name: catalogProduct.product_name,
+      price: catalogProduct.price,
+      image_url: catalogProduct.image_url,
+      store_id: catalogProduct.store_id
+    });
 
-    if (recipeError) {
-      console.error('Error creating recipe:', recipeError);
-      
-      // Clean up the product if recipe creation fails
-      await supabase.from('products').delete().eq('id', product.id);
-      if (catalogProduct?.id) {
-        await supabase.from('product_catalog').delete().eq('id', catalogProduct.id);
-      }
-      
-      throw recipeError;
-    }
+    // Get recipe ingredients to create product ingredients
+    const { data: recipeIngredients, error: ingredientsError } = await supabase
+      .from('recipe_ingredients')
+      .select('*')
+      .eq('recipe_id', recipe.id);
 
-    console.log(`Created recipe with ID: ${recipe.id}`);
+    if (ingredientsError) {
+      console.warn('Failed to fetch recipe ingredients for product catalog:', ingredientsError);
+    } else if (recipeIngredients && recipeIngredients.length > 0) {
+      // Create product ingredients for inventory tracking
+      const productIngredients = recipeIngredients.map((ingredient: any) => ({
+        product_catalog_id: catalogProduct.id,
+        inventory_stock_id: ingredient.inventory_stock_id,
+        commissary_item_id: ingredient.commissary_item_id,
+        required_quantity: ingredient.quantity,
+        unit: ingredient.unit
+      })).filter((ing: any) => ing.inventory_stock_id || ing.commissary_item_id);
 
-    // Update the product catalog with the recipe_id if it was created
-    if (catalogProduct?.id) {
-      const { error: updateCatalogError } = await supabase
-        .from('product_catalog')
-        .update({ recipe_id: recipe.id })
-        .eq('id', catalogProduct.id);
-
-      if (updateCatalogError) {
-        console.error('Error linking recipe to product catalog:', updateCatalogError);
-        // Don't fail deployment for this
-      }
-    }
-
-    // Process location-specific ingredients
-    const warnings: string[] = [];
-    const missingIngredients: string[] = [];
-    
-    if (storeIngredients && storeIngredients.length > 0) {
-      const ingredientInserts = [];
-      const productIngredientInserts = [];
-
-      for (const ingredient of storeIngredients) {
-        // Try to find the corresponding inventory stock item in the target store
-        const { data: inventoryStock, error: stockError } = await supabase
-          .from('inventory_stock')
-          .select('id')
-          .eq('store_id', storeId)
-          .eq('item', ingredient.ingredient_name)
-          .maybeSingle();
-
-        if (stockError) {
-          console.warn(`Error checking inventory for "${ingredient.ingredient_name}":`, stockError);
-          continue;
-        }
-
-        if (!inventoryStock) {
-          console.warn(`Inventory item "${ingredient.ingredient_name}" not found in store ${storeId}`);
-          missingIngredients.push(ingredient.ingredient_name);
-          continue;
-        }
-
-        // Create recipe ingredient entry
-        ingredientInserts.push({
-          recipe_id: recipe.id,
-          inventory_stock_id: inventoryStock.id,
-          commissary_item_id: ingredient.commissary_item_id,
-          quantity: ingredient.quantity,
-          unit: ingredient.unit,
-          cost_per_unit: ingredient.cost_per_unit || 0
-        });
-
-        // Create product catalog ingredient entry if catalog was created
-        if (catalogProduct?.id) {
-          productIngredientInserts.push({
-            product_catalog_id: catalogProduct.id,
-            inventory_stock_id: inventoryStock.id,
-            commissary_item_id: ingredient.commissary_item_id,
-            required_quantity: ingredient.quantity,
-            unit: ingredient.unit
-          });
-        }
-      }
-
-      // Insert recipe ingredients
-      if (ingredientInserts.length > 0) {
-        const { error: ingredientsError } = await supabase
-          .from('recipe_ingredients')
-          .insert(ingredientInserts);
-
-        if (ingredientsError) {
-          console.error('Error creating recipe ingredients:', ingredientsError);
-          warnings.push(`Some recipe ingredients could not be linked: ${ingredientsError.message}`);
-        } else {
-          console.log(`Successfully linked ${ingredientInserts.length} recipe ingredients`);
-        }
-      }
-
-      // Insert product catalog ingredients if catalog exists
-      if (productIngredientInserts.length > 0 && catalogProduct?.id) {
+      if (productIngredients.length > 0) {
         const { error: productIngredientsError } = await supabase
           .from('product_ingredients')
-          .insert(productIngredientInserts);
+          .insert(productIngredients);
 
         if (productIngredientsError) {
-          console.error('Error creating product ingredients:', productIngredientsError);
-          warnings.push(`Some product ingredients could not be linked: ${productIngredientsError.message}`);
+          console.warn('Failed to create product ingredients:', productIngredientsError);
         }
       }
-
-      // Add location-specific warnings
-      if (missingIngredients.length > 0) {
-        warnings.push(`Missing inventory items: ${missingIngredients.join(', ')}`);
-      }
-
-      // Add location-specific deployment info
-      const { data: store } = await supabase
-        .from('stores')
-        .select('location_type')
-        .eq('id', storeId)
-        .single();
-        
-      if (store?.location_type) {
-        warnings.push(`Deployed with ${store.location_type.replace('_', ' ')} specific ingredients`);
-      }
     }
 
-    const successMessage = `Successfully deployed recipe template to store ${storeId}`;
-    if (warnings.length > 0) {
-      console.warn(`${successMessage} with warnings:`, warnings);
-    } else {
-      console.log(successMessage);
+    // Broadcast cache invalidation to POS system
+    try {
+      const channel = supabase.channel('recipe_deployment_cache_invalidation');
+      await channel.send({
+        type: 'broadcast',
+        event: 'product_catalog_changed',
+        payload: {
+          productId: catalogProduct.id,
+          storeId: recipe.store_id,
+          eventType: 'INSERT',
+          timestamp: new Date().toISOString()
+        }
+      });
+      await supabase.removeChannel(channel);
+    } catch (error) {
+      console.warn('Failed to broadcast cache invalidation:', error);
     }
-    
-    return {
-      storeId,
-      success: true,
-      recipeId: recipe.id,
-      warnings: warnings.length > 0 ? warnings : undefined,
-      missingIngredients: missingIngredients.length > 0 ? missingIngredients : undefined
-    };
 
-  } catch (error: any) {
-    console.error(`Error deploying recipe to store ${storeId}:`, error);
-    return {
-      storeId,
-      success: false,
-      error: error.message || 'Unknown error occurred'
+    console.log(`✅ Successfully created product catalog entry for "${recipe.name}" with ID: ${catalogProduct.id}`);
+    return { success: true, productId: catalogProduct.id };
+  } catch (error) {
+    console.error('Unexpected error creating product:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown product creation error' 
     };
   }
 };
 
-export const deployRecipeToMultipleStores = async (
-  template: RecipeTemplate,
-  storeIds: string[]
-): Promise<DeploymentResult[]> => {
-  console.log(`Deploying recipe template "${template.name}" to ${storeIds.length} stores`);
-  
-  const results: DeploymentResult[] = [];
-  
-  // Get store names for better error reporting
-  const { data: stores } = await supabase
-    .from('stores')
-    .select('id, name')
-    .in('id', storeIds);
-
-  const storeMap = new Map(stores?.map(s => [s.id, s.name]) || []);
-
-  // Deploy to each store sequentially to avoid overwhelming the database
-  for (const storeId of storeIds) {
-    const result = await deployRecipeToProductCatalog(template, storeId);
-    result.storeName = storeMap.get(storeId);
-    results.push(result);
-    
-    // Add a small delay between deployments to prevent race conditions
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-
-  // Log summary with warnings
-  const successCount = results.filter(r => r.success).length;
-  const failCount = results.filter(r => !r.success).length;
-  const warningCount = results.filter(r => r.success && r.warnings && r.warnings.length > 0).length;
-  
-  console.log(`Deployment complete: ${successCount} successful, ${failCount} failed, ${warningCount} with warnings`);
-  
-  // Show toast notifications for deployment results
-  if (successCount > 0) {
-    if (warningCount > 0) {
-      toast.success(`Deployed to ${successCount} stores with ${warningCount} warnings`, {
-        description: "Check deployment results for location-specific ingredient details"
-      });
-    } else {
-      toast.success(`Successfully deployed to ${successCount} stores`);
-    }
-  }
-  
-  if (failCount > 0) {
-    const duplicateErrors = results.filter(r => !r.success && r.error?.includes('already exists')).length;
-    if (duplicateErrors === failCount) {
-      toast.warning(`Recipe already exists in ${failCount} store(s)`, {
-        description: "No new deployments were made"
-      });
-    } else {
-      toast.error(`Failed to deploy to ${failCount} stores`, {
-        description: "Check deployment results for error details"
-      });
-    }
-  }
-  
-  return results;
-};
-
-// New function to clean up duplicate recipes
-export const cleanupDuplicateRecipes = async (storeId?: string): Promise<{ cleaned: number; errors: string[] }> => {
+/**
+ * Clean up duplicate recipes (utility function)
+ */
+export const cleanupDuplicateRecipes = async (storeId?: string): Promise<number> => {
   try {
-    console.log('Starting cleanup of duplicate recipes...');
-    
     let query = supabase
       .from('recipes')
       .select('id, name, store_id, created_at')
       .order('created_at', { ascending: true });
-    
+
     if (storeId) {
       query = query.eq('store_id', storeId);
     }
-    
+
     const { data: recipes, error } = await query;
-    
-    if (error) {
-      throw error;
-    }
-    
-    if (!recipes || recipes.length === 0) {
-      return { cleaned: 0, errors: [] };
-    }
-    
-    // Group recipes by name and store
-    const duplicateGroups = recipes.reduce((acc: any, recipe: any) => {
+
+    if (error) throw error;
+
+    // Group by name and store
+    const groups = new Map<string, any[]>();
+    recipes?.forEach(recipe => {
       const key = `${recipe.name}-${recipe.store_id}`;
-      if (!acc[key]) {
-        acc[key] = [];
+      if (!groups.has(key)) {
+        groups.set(key, []);
       }
-      acc[key].push(recipe);
-      return acc;
-    }, {});
-    
-    // Find groups with duplicates (keep the oldest, remove the rest)
-    const toDelete: string[] = [];
-    const errors: string[] = [];
-    
-    for (const [key, group] of Object.entries(duplicateGroups)) {
-      const typedGroup = group as any[];
-      if (typedGroup.length > 1) {
-        // Keep the first (oldest) and mark the rest for deletion
-        const [keep, ...duplicates] = typedGroup;
-        console.log(`Found ${duplicates.length} duplicates for "${keep.name}" in store ${keep.store_id}`);
-        toDelete.push(...duplicates.map(d => d.id));
+      groups.get(key)?.push(recipe);
+    });
+
+    let deletedCount = 0;
+
+    // For each group, keep the newest and delete the rest
+    for (const [, recipeGroup] of groups) {
+      if (recipeGroup.length > 1) {
+        recipeGroup.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const toDelete = recipeGroup.slice(1);
+
+        for (const recipe of toDelete) {
+          const { error: deleteError } = await supabase
+            .from('recipes')
+            .delete()
+            .eq('id', recipe.id);
+
+          if (!deleteError) {
+            deletedCount++;
+          }
+        }
       }
     }
-    
-    if (toDelete.length === 0) {
-      console.log('No duplicates found');
-      return { cleaned: 0, errors: [] };
-    }
-    
-    console.log(`Cleaning up ${toDelete.length} duplicate recipes...`);
-    
-    // Delete recipe ingredients first
-    const { error: ingredientsError } = await supabase
-      .from('recipe_ingredients')
-      .delete()
-      .in('recipe_id', toDelete);
-    
-    if (ingredientsError) {
-      errors.push(`Error deleting recipe ingredients: ${ingredientsError.message}`);
-    }
-    
-    // Delete the duplicate recipes
-    const { error: recipesError } = await supabase
+
+    return deletedCount;
+  } catch (error) {
+    console.error('Error cleaning up duplicate recipes:', error);
+    return 0;
+  }
+};
+
+/**
+ * Get deployment history for a template
+ */
+export const getTemplateDeploymentHistory = async (templateId: string) => {
+  try {
+    const { data, error } = await supabase
       .from('recipes')
-      .delete()
-      .in('id', toDelete);
-    
-    if (recipesError) {
-      errors.push(`Error deleting recipes: ${recipesError.message}`);
-      return { cleaned: 0, errors };
+      .select(`
+        id,
+        name,
+        store_id,
+        product_id,
+        created_at,
+        is_active,
+        total_cost,
+        suggested_price,
+        stores:store_id (name)
+      `)
+      .eq('template_id', templateId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching deployment history:', error);
+    return [];
+  }
+};
+
+/**
+ * Validate recipe deployment before executing
+ */
+export const validateRecipeDeployment = async (
+  templateId: string,
+  storeId: string
+): Promise<{ 
+  isValid: boolean; 
+  errorMessage?: string; 
+  missingIngredients?: string[];
+  warnings?: string[];
+}> => {
+  try {
+    // Get template with ingredients
+    const { data: template, error: templateError } = await supabase
+      .from('recipe_templates')
+      .select(`
+        *,
+        ingredients:recipe_template_ingredients(*)
+      `)
+      .eq('id', templateId)
+      .single();
+
+    if (templateError || !template) {
+      return { isValid: false, errorMessage: 'Recipe template not found' };
     }
-    
-    console.log(`Successfully cleaned up ${toDelete.length} duplicate recipes`);
-    return { cleaned: toDelete.length, errors };
-    
-  } catch (error: any) {
-    console.error('Error cleaning up duplicates:', error);
-    return { cleaned: 0, errors: [error.message] };
+
+    if (!template.ingredients || template.ingredients.length === 0) {
+      return { isValid: false, errorMessage: 'Recipe template has no ingredients' };
+    }
+
+    // Check store exists
+    const { data: store, error: storeError } = await supabase
+      .from('stores')
+      .select('id, name')
+      .eq('id', storeId)
+      .single();
+
+    if (storeError || !store) {
+      return { isValid: false, errorMessage: 'Store not found' };
+    }
+
+    // Validate ingredients availability
+    const missingIngredients: string[] = [];
+    const warnings: string[] = [];
+
+    for (const ingredient of template.ingredients) {
+      const cleanName = ingredient.ingredient_name?.trim();
+      if (!cleanName) continue;
+
+      const storeItem = await findMatchingInventoryItem(cleanName, storeId);
+      if (!storeItem) {
+        missingIngredients.push(cleanName);
+      }
+    }
+
+    if (missingIngredients.length > 0) {
+      return {
+        isValid: false,
+        errorMessage: `Missing ingredients in store inventory: ${missingIngredients.join(', ')}`,
+        missingIngredients
+      };
+    }
+
+    // Check for existing recipe
+    const { data: existingRecipe } = await supabase
+      .from('recipes')
+      .select('id')
+      .eq('template_id', templateId)
+      .eq('store_id', storeId)
+      .maybeSingle();
+
+    if (existingRecipe) {
+      warnings.push('Recipe already deployed to this store');
+    }
+
+    return { 
+      isValid: true, 
+      warnings: warnings.length > 0 ? warnings : undefined 
+    };
+  } catch (error) {
+    console.error('Error validating recipe deployment:', error);
+    return { 
+      isValid: false, 
+      errorMessage: error instanceof Error ? error.message : 'Validation failed' 
+    };
+  }
+};
+
+/**
+ * Deploy recipe to product catalog (legacy function for backwards compatibility)
+ */
+export const deployRecipeToProductCatalog = async (
+  recipeId: string,
+  productData: {
+    name: string;
+    description?: string;
+    price: number;
+    category_id?: string;
+    image_url?: string;
+  }
+): Promise<boolean> => {
+  try {
+    const { data: recipe, error: recipeError } = await supabase
+      .from('recipes')
+      .select('*, store_id, cost_per_serving')
+      .eq('id', recipeId)
+      .single();
+
+    if (recipeError) throw recipeError;
+
+    const result = await createProductCatalogWithTransaction(recipe, { image_url: productData.image_url }, {
+      categoryId: productData.category_id
+    });
+
+    if (result.success) {
+      await supabase
+        .from('recipes')
+        .update({ product_id: result.productId })
+        .eq('id', recipeId);
+
+      toast.success(`Product "${productData.name}" created successfully`);
+      return true;
+    } else {
+      toast.error(result.error || 'Failed to create product from recipe');
+      return false;
+    }
+  } catch (error) {
+    console.error('Error deploying recipe to product catalog:', error);
+    toast.error('Failed to create product from recipe');
+    return false;
   }
 };

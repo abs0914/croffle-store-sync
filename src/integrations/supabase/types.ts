@@ -14,10 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      addon_categories: {
+        Row: {
+          category_type: string
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category_type?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category_type?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_users: {
         Row: {
           contact_number: string | null
           created_at: string | null
+          custom_permissions: Json | null
           email: string | null
           first_name: string
           id: string
@@ -31,6 +65,7 @@ export type Database = {
         Insert: {
           contact_number?: string | null
           created_at?: string | null
+          custom_permissions?: Json | null
           email?: string | null
           first_name: string
           id?: string
@@ -44,6 +79,7 @@ export type Database = {
         Update: {
           contact_number?: string | null
           created_at?: string | null
+          custom_permissions?: Json | null
           email?: string | null
           first_name?: string
           id?: string
@@ -318,11 +354,51 @@ export type Database = {
           },
         ]
       }
+      combo_pricing_rules: {
+        Row: {
+          base_category: string
+          combo_category: string
+          combo_price: number
+          created_at: string
+          discount_amount: number | null
+          id: string
+          is_active: boolean
+          name: string
+          priority: number | null
+          updated_at: string
+        }
+        Insert: {
+          base_category: string
+          combo_category: string
+          combo_price: number
+          created_at?: string
+          discount_amount?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          priority?: number | null
+          updated_at?: string
+        }
+        Update: {
+          base_category?: string
+          combo_category?: string
+          combo_price?: number
+          created_at?: string
+          discount_amount?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          priority?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       commissary_inventory: {
         Row: {
           average_cost: number | null
           barcode: string | null
           category: string
+          conversion_ratio: number | null
           created_at: string
           current_stock: number
           expiry_date: string | null
@@ -335,6 +411,10 @@ export type Database = {
           last_purchase_date: string | null
           minimum_threshold: number
           name: string
+          normalized_unit: string | null
+          order_quantity: number | null
+          order_unit: string | null
+          serving_quantity: number | null
           sku: string | null
           storage_location: string | null
           supplier_id: string | null
@@ -346,6 +426,7 @@ export type Database = {
           average_cost?: number | null
           barcode?: string | null
           category: string
+          conversion_ratio?: number | null
           created_at?: string
           current_stock?: number
           expiry_date?: string | null
@@ -358,6 +439,10 @@ export type Database = {
           last_purchase_date?: string | null
           minimum_threshold?: number
           name: string
+          normalized_unit?: string | null
+          order_quantity?: number | null
+          order_unit?: string | null
+          serving_quantity?: number | null
           sku?: string | null
           storage_location?: string | null
           supplier_id?: string | null
@@ -369,6 +454,7 @@ export type Database = {
           average_cost?: number | null
           barcode?: string | null
           category?: string
+          conversion_ratio?: number | null
           created_at?: string
           current_stock?: number
           expiry_date?: string | null
@@ -381,6 +467,10 @@ export type Database = {
           last_purchase_date?: string | null
           minimum_threshold?: number
           name?: string
+          normalized_unit?: string | null
+          order_quantity?: number | null
+          order_unit?: string | null
+          serving_quantity?: number | null
           sku?: string | null
           storage_location?: string | null
           supplier_id?: string | null
@@ -610,129 +700,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      conversion_ingredients: {
-        Row: {
-          commissary_item_id: string
-          created_at: string
-          id: string
-          inventory_conversion_id: string
-          quantity_used: number
-          unit_cost: number | null
-        }
-        Insert: {
-          commissary_item_id: string
-          created_at?: string
-          id?: string
-          inventory_conversion_id: string
-          quantity_used: number
-          unit_cost?: number | null
-        }
-        Update: {
-          commissary_item_id?: string
-          created_at?: string
-          id?: string
-          inventory_conversion_id?: string
-          quantity_used?: number
-          unit_cost?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversion_ingredients_commissary_item_id_fkey"
-            columns: ["commissary_item_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversion_ingredients_inventory_conversion_id_fkey"
-            columns: ["inventory_conversion_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_conversions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      conversion_recipe_ingredients: {
-        Row: {
-          commissary_item_id: string
-          conversion_recipe_id: string
-          created_at: string
-          id: string
-          quantity: number
-        }
-        Insert: {
-          commissary_item_id: string
-          conversion_recipe_id: string
-          created_at?: string
-          id?: string
-          quantity: number
-        }
-        Update: {
-          commissary_item_id?: string
-          conversion_recipe_id?: string
-          created_at?: string
-          id?: string
-          quantity?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversion_recipe_ingredients_commissary_item_id_fkey"
-            columns: ["commissary_item_id"]
-            isOneToOne: false
-            referencedRelation: "commissary_inventory"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversion_recipe_ingredients_conversion_recipe_id_fkey"
-            columns: ["conversion_recipe_id"]
-            isOneToOne: false
-            referencedRelation: "conversion_recipes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      conversion_recipes: {
-        Row: {
-          created_at: string
-          created_by: string
-          description: string | null
-          finished_item_name: string
-          finished_item_unit: string
-          id: string
-          instructions: string | null
-          is_active: boolean
-          name: string
-          updated_at: string
-          yield_quantity: number
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          description?: string | null
-          finished_item_name: string
-          finished_item_unit: string
-          id?: string
-          instructions?: string | null
-          is_active?: boolean
-          name: string
-          updated_at?: string
-          yield_quantity?: number
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          finished_item_name?: string
-          finished_item_unit?: string
-          id?: string
-          instructions?: string | null
-          is_active?: boolean
-          name?: string
-          updated_at?: string
-          yield_quantity?: number
-        }
-        Relationships: []
       }
       customers: {
         Row: {
@@ -1410,66 +1377,6 @@ export type Database = {
         }
         Relationships: []
       }
-      inventory_conversion_mappings: {
-        Row: {
-          bundle_id: string | null
-          component_ratio: number | null
-          conversion_factor: number
-          created_at: string | null
-          id: string
-          inventory_stock_id: string
-          is_active: boolean
-          is_bundle_component: boolean | null
-          notes: string | null
-          recipe_ingredient_name: string
-          recipe_ingredient_unit: string
-          updated_at: string | null
-        }
-        Insert: {
-          bundle_id?: string | null
-          component_ratio?: number | null
-          conversion_factor: number
-          created_at?: string | null
-          id?: string
-          inventory_stock_id: string
-          is_active?: boolean
-          is_bundle_component?: boolean | null
-          notes?: string | null
-          recipe_ingredient_name: string
-          recipe_ingredient_unit: string
-          updated_at?: string | null
-        }
-        Update: {
-          bundle_id?: string | null
-          component_ratio?: number | null
-          conversion_factor?: number
-          created_at?: string | null
-          id?: string
-          inventory_stock_id?: string
-          is_active?: boolean
-          is_bundle_component?: boolean | null
-          notes?: string | null
-          recipe_ingredient_name?: string
-          recipe_ingredient_unit?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_conversion_mappings_bundle_id_fkey"
-            columns: ["bundle_id"]
-            isOneToOne: false
-            referencedRelation: "product_bundles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_conversion_mappings_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       inventory_conversions: {
         Row: {
           commissary_item_id: string | null
@@ -1513,13 +1420,6 @@ export type Database = {
             columns: ["commissary_item_id"]
             isOneToOne: false
             referencedRelation: "commissary_inventory"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_conversions_conversion_recipe_id_fkey"
-            columns: ["conversion_recipe_id"]
-            isOneToOne: false
-            referencedRelation: "conversion_recipes"
             referencedColumns: ["id"]
           },
           {
@@ -1655,15 +1555,18 @@ export type Database = {
       }
       inventory_stock: {
         Row: {
+          conversion_ratio: number | null
           cost: number | null
           created_at: string | null
-          fractional_stock: number | null
           id: string
           is_active: boolean | null
+          is_fractional_supported: boolean | null
           item: string
-          last_restocked: string | null
-          maximum_capacity: number | null
           minimum_threshold: number | null
+          normalized_unit: string | null
+          order_quantity: number | null
+          order_unit: string | null
+          serving_ready_quantity: number | null
           sku: string | null
           stock_quantity: number
           store_id: string
@@ -1671,15 +1574,18 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          conversion_ratio?: number | null
           cost?: number | null
           created_at?: string | null
-          fractional_stock?: number | null
           id?: string
           is_active?: boolean | null
+          is_fractional_supported?: boolean | null
           item: string
-          last_restocked?: string | null
-          maximum_capacity?: number | null
           minimum_threshold?: number | null
+          normalized_unit?: string | null
+          order_quantity?: number | null
+          order_unit?: string | null
+          serving_ready_quantity?: number | null
           sku?: string | null
           stock_quantity?: number
           store_id: string
@@ -1687,15 +1593,18 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          conversion_ratio?: number | null
           cost?: number | null
           created_at?: string | null
-          fractional_stock?: number | null
           id?: string
           is_active?: boolean | null
+          is_fractional_supported?: boolean | null
           item?: string
-          last_restocked?: string | null
-          maximum_capacity?: number | null
           minimum_threshold?: number | null
+          normalized_unit?: string | null
+          order_quantity?: number | null
+          order_unit?: string | null
+          serving_ready_quantity?: number | null
           sku?: string | null
           stock_quantity?: number
           store_id?: string
@@ -2005,36 +1914,53 @@ export type Database = {
       }
       product_addon_items: {
         Row: {
+          addon_category_id: string | null
           category: string
           created_at: string
+          description: string | null
           display_order: number | null
           id: string
           is_available: boolean
+          is_premium: boolean | null
           name: string
           price: number
           updated_at: string
         }
         Insert: {
+          addon_category_id?: string | null
           category: string
           created_at?: string
+          description?: string | null
           display_order?: number | null
           id?: string
           is_available?: boolean
+          is_premium?: boolean | null
           name: string
           price?: number
           updated_at?: string
         }
         Update: {
+          addon_category_id?: string | null
           category?: string
           created_at?: string
+          description?: string | null
           display_order?: number | null
           id?: string
           is_available?: boolean
+          is_premium?: boolean | null
           name?: string
           price?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "product_addon_items_addon_category_id_fkey"
+            columns: ["addon_category_id"]
+            isOneToOne: false
+            referencedRelation: "addon_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_bundle_components: {
         Row: {
@@ -2555,16 +2481,468 @@ export type Database = {
           },
         ]
       }
+      recipe_choice_groups: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          group_name: string
+          group_type: string
+          id: string
+          recipe_template_id: string
+          selection_max: number | null
+          selection_min: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          group_name: string
+          group_type?: string
+          id?: string
+          recipe_template_id: string
+          selection_max?: number | null
+          selection_min?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          group_name?: string
+          group_type?: string
+          id?: string
+          recipe_template_id?: string
+          selection_max?: number | null
+          selection_min?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_choice_groups_recipe_template_id_fkey"
+            columns: ["recipe_template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_components: {
+        Row: {
+          component_recipe_id: string | null
+          component_type: string | null
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          parent_recipe_id: string | null
+          quantity: number | null
+        }
+        Insert: {
+          component_recipe_id?: string | null
+          component_type?: string | null
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          parent_recipe_id?: string | null
+          quantity?: number | null
+        }
+        Update: {
+          component_recipe_id?: string | null
+          component_type?: string | null
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          parent_recipe_id?: string | null
+          quantity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_components_component_recipe_id_fkey"
+            columns: ["component_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_components_parent_recipe_id_fkey"
+            columns: ["parent_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_deployment_errors: {
+        Row: {
+          created_at: string | null
+          deployment_id: string | null
+          error_details: Json | null
+          error_message: string
+          error_type: string
+          id: string
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          store_id: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deployment_id?: string | null
+          error_details?: Json | null
+          error_message: string
+          error_type: string
+          id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          store_id: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deployment_id?: string | null
+          error_details?: Json | null
+          error_message?: string
+          error_type?: string
+          id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          store_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_deployment_errors_deployment_id_fkey"
+            columns: ["deployment_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_deployments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_errors_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_errors_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_deployment_logs: {
+        Row: {
+          created_at: string | null
+          deployed_by: string | null
+          deployment_status: string
+          id: string
+          product_id: string | null
+          recipe_id: string | null
+          step_details: Json | null
+          store_id: string | null
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deployed_by?: string | null
+          deployment_status: string
+          id?: string
+          product_id?: string | null
+          recipe_id?: string | null
+          step_details?: Json | null
+          store_id?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deployed_by?: string | null
+          deployment_status?: string
+          id?: string
+          product_id?: string | null
+          recipe_id?: string | null
+          step_details?: Json | null
+          store_id?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_deployment_logs_deployed_by_fkey"
+            columns: ["deployed_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_usage_analytics"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_deployments: {
+        Row: {
+          cost_snapshot: number | null
+          created_at: string | null
+          deployed_by: string
+          deployment_notes: string | null
+          deployment_options: Json | null
+          deployment_status: string
+          id: string
+          price_snapshot: number | null
+          recipe_id: string
+          store_id: string
+          template_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          cost_snapshot?: number | null
+          created_at?: string | null
+          deployed_by: string
+          deployment_notes?: string | null
+          deployment_options?: Json | null
+          deployment_status?: string
+          id?: string
+          price_snapshot?: number | null
+          recipe_id: string
+          store_id: string
+          template_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          cost_snapshot?: number | null
+          created_at?: string | null
+          deployed_by?: string
+          deployment_notes?: string | null
+          deployment_options?: Json | null
+          deployment_status?: string
+          id?: string
+          price_snapshot?: number | null
+          recipe_id?: string
+          store_id?: string
+          template_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_deployments_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_usage_analytics"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "recipe_deployments_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_executions: {
+        Row: {
+          created_at: string
+          executed_at: string
+          executed_by: string
+          id: string
+          notes: string | null
+          quantity_produced: number
+          recipe_name: string
+          recipe_template_id: string
+          status: string
+          store_id: string | null
+          total_cost: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          executed_at?: string
+          executed_by: string
+          id?: string
+          notes?: string | null
+          quantity_produced?: number
+          recipe_name: string
+          recipe_template_id: string
+          status?: string
+          store_id?: string | null
+          total_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          executed_at?: string
+          executed_by?: string
+          id?: string
+          notes?: string | null
+          quantity_produced?: number
+          recipe_name?: string
+          recipe_template_id?: string
+          status?: string
+          store_id?: string | null
+          total_cost?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      recipe_ingredient_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean
+          max_selections: number | null
+          min_selections: number | null
+          name: string
+          recipe_template_id: string
+          selection_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          max_selections?: number | null
+          min_selections?: number | null
+          name: string
+          recipe_template_id: string
+          selection_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean
+          max_selections?: number | null
+          min_selections?: number | null
+          name?: string
+          recipe_template_id?: string
+          selection_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredient_groups_recipe_template_id_fkey"
+            columns: ["recipe_template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_ingredient_substitutions: {
+        Row: {
+          conversion_factor: number | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          original_ingredient_name: string
+          store_ids: string[] | null
+          substitute_ingredient_name: string
+          template_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversion_factor?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          original_ingredient_name: string
+          store_ids?: string[] | null
+          substitute_ingredient_name: string
+          template_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversion_factor?: number | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          original_ingredient_name?: string
+          store_ids?: string[] | null
+          substitute_ingredient_name?: string
+          template_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredient_substitutions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_ingredients: {
         Row: {
           commissary_item_id: string | null
-          conversion_factor: number | null
-          cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string
+          display_order: number | null
+          group_selection_type: string | null
           id: string
+          ingredient_group_id: string | null
+          ingredient_group_name: string | null
           ingredient_name: string | null
           inventory_stock_id: string
+          is_optional: boolean | null
+          notes: string | null
           purchase_unit: string | null
           quantity: number
           recipe_id: string
@@ -2573,13 +2951,17 @@ export type Database = {
         }
         Insert: {
           commissary_item_id?: string | null
-          conversion_factor?: number | null
-          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string
+          display_order?: number | null
+          group_selection_type?: string | null
           id?: string
+          ingredient_group_id?: string | null
+          ingredient_group_name?: string | null
           ingredient_name?: string | null
           inventory_stock_id: string
+          is_optional?: boolean | null
+          notes?: string | null
           purchase_unit?: string | null
           quantity: number
           recipe_id: string
@@ -2588,13 +2970,17 @@ export type Database = {
         }
         Update: {
           commissary_item_id?: string | null
-          conversion_factor?: number | null
-          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string
+          display_order?: number | null
+          group_selection_type?: string | null
           id?: string
+          ingredient_group_id?: string | null
+          ingredient_group_name?: string | null
           ingredient_name?: string | null
           inventory_stock_id?: string
+          is_optional?: boolean | null
+          notes?: string | null
           purchase_unit?: string | null
           quantity?: number
           recipe_id?: string
@@ -2632,14 +3018,60 @@ export type Database = {
           },
         ]
       }
+      recipe_pricing_matrix: {
+        Row: {
+          base_price: number
+          created_at: string
+          id: string
+          is_active: boolean
+          price_modifier: number | null
+          recipe_template_id: string
+          size_category: string | null
+          temperature_category: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_price?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_modifier?: number | null
+          recipe_template_id: string
+          size_category?: string | null
+          temperature_category?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_modifier?: number | null
+          recipe_template_id?: string
+          size_category?: string | null
+          temperature_category?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_pricing_matrix_recipe_template_id_fkey"
+            columns: ["recipe_template_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_template_ingredients: {
         Row: {
+          choice_group_name: string | null
+          choice_group_type: string | null
+          choice_order: number | null
           commissary_item_id: string | null
           commissary_item_name: string | null
-          conversion_factor: number | null
-          cost_per_recipe_unit: number | null
           cost_per_unit: number | null
           created_at: string | null
+          display_order: number | null
           group_selection_type:
             | Database["public"]["Enums"]["ingredient_group_selection_type"]
             | null
@@ -2648,21 +3080,31 @@ export type Database = {
           ingredient_group_name: string | null
           ingredient_name: string
           ingredient_type: string | null
+          inventory_stock_id: string | null
+          is_default_selection: boolean | null
           is_optional: boolean | null
           location_type: string | null
+          notes: string | null
           purchase_unit: string | null
           quantity: number
           recipe_template_id: string
+          recipe_to_store_conversion_factor: number | null
           recipe_unit: string | null
+          selection_max: number | null
+          selection_min: number | null
+          store_unit: string | null
           unit: string
+          uses_store_inventory: boolean
         }
         Insert: {
+          choice_group_name?: string | null
+          choice_group_type?: string | null
+          choice_order?: number | null
           commissary_item_id?: string | null
           commissary_item_name?: string | null
-          conversion_factor?: number | null
-          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
+          display_order?: number | null
           group_selection_type?:
             | Database["public"]["Enums"]["ingredient_group_selection_type"]
             | null
@@ -2671,21 +3113,31 @@ export type Database = {
           ingredient_group_name?: string | null
           ingredient_name: string
           ingredient_type?: string | null
+          inventory_stock_id?: string | null
+          is_default_selection?: boolean | null
           is_optional?: boolean | null
           location_type?: string | null
+          notes?: string | null
           purchase_unit?: string | null
           quantity: number
           recipe_template_id: string
+          recipe_to_store_conversion_factor?: number | null
           recipe_unit?: string | null
+          selection_max?: number | null
+          selection_min?: number | null
+          store_unit?: string | null
           unit: string
+          uses_store_inventory?: boolean
         }
         Update: {
+          choice_group_name?: string | null
+          choice_group_type?: string | null
+          choice_order?: number | null
           commissary_item_id?: string | null
           commissary_item_name?: string | null
-          conversion_factor?: number | null
-          cost_per_recipe_unit?: number | null
           cost_per_unit?: number | null
           created_at?: string | null
+          display_order?: number | null
           group_selection_type?:
             | Database["public"]["Enums"]["ingredient_group_selection_type"]
             | null
@@ -2694,13 +3146,21 @@ export type Database = {
           ingredient_group_name?: string | null
           ingredient_name?: string
           ingredient_type?: string | null
+          inventory_stock_id?: string | null
+          is_default_selection?: boolean | null
           is_optional?: boolean | null
           location_type?: string | null
+          notes?: string | null
           purchase_unit?: string | null
           quantity?: number
           recipe_template_id?: string
+          recipe_to_store_conversion_factor?: number | null
           recipe_unit?: string | null
+          selection_max?: number | null
+          selection_min?: number | null
+          store_unit?: string | null
           unit?: string
+          uses_store_inventory?: boolean
         }
         Relationships: [
           {
@@ -2708,6 +3168,13 @@ export type Database = {
             columns: ["commissary_item_id"]
             isOneToOne: false
             referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_template_ingredients_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
           {
@@ -2721,46 +3188,73 @@ export type Database = {
       }
       recipe_templates: {
         Row: {
+          base_price_includes: string | null
           category_name: string | null
+          choice_configuration: Json | null
+          combo_rules: Json | null
           created_at: string | null
           created_by: string | null
           description: string | null
+          has_choice_groups: boolean | null
           id: string
           image_url: string | null
+          images: Json | null
           instructions: string | null
           is_active: boolean | null
           name: string
+          preparation_time: number | null
+          recipe_type: string | null
           serving_size: number | null
+          sku: string | null
+          suggested_price: number | null
           updated_at: string | null
           version: number | null
           yield_quantity: number
         }
         Insert: {
+          base_price_includes?: string | null
           category_name?: string | null
+          choice_configuration?: Json | null
+          combo_rules?: Json | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          has_choice_groups?: boolean | null
           id?: string
           image_url?: string | null
+          images?: Json | null
           instructions?: string | null
           is_active?: boolean | null
           name: string
+          preparation_time?: number | null
+          recipe_type?: string | null
           serving_size?: number | null
+          sku?: string | null
+          suggested_price?: number | null
           updated_at?: string | null
           version?: number | null
           yield_quantity?: number
         }
         Update: {
+          base_price_includes?: string | null
           category_name?: string | null
+          choice_configuration?: Json | null
+          combo_rules?: Json | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          has_choice_groups?: boolean | null
           id?: string
           image_url?: string | null
+          images?: Json | null
           instructions?: string | null
           is_active?: boolean | null
           name?: string
+          preparation_time?: number | null
+          recipe_type?: string | null
           serving_size?: number | null
+          sku?: string | null
+          suggested_price?: number | null
           updated_at?: string | null
           version?: number | null
           yield_quantity?: number
@@ -2828,17 +3322,25 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           category_name: string | null
+          combo_rules: Json | null
           cost_per_serving: number | null
           created_at: string
+          deployment_notes: string | null
           description: string | null
           id: string
+          images: Json | null
           instructions: string | null
           is_active: boolean | null
+          last_cost_update: string | null
           name: string
-          product_id: string
+          preparation_time: number | null
+          product_id: string | null
+          recipe_type: string | null
           rejection_reason: string | null
           serving_size: number | null
+          sku: string | null
           store_id: string
+          suggested_price: number | null
           template_id: string | null
           total_cost: number | null
           updated_at: string
@@ -2851,17 +3353,25 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           category_name?: string | null
+          combo_rules?: Json | null
           cost_per_serving?: number | null
           created_at?: string
+          deployment_notes?: string | null
           description?: string | null
           id?: string
+          images?: Json | null
           instructions?: string | null
           is_active?: boolean | null
+          last_cost_update?: string | null
           name: string
-          product_id: string
+          preparation_time?: number | null
+          product_id?: string | null
+          recipe_type?: string | null
           rejection_reason?: string | null
           serving_size?: number | null
+          sku?: string | null
           store_id: string
+          suggested_price?: number | null
           template_id?: string | null
           total_cost?: number | null
           updated_at?: string
@@ -2874,17 +3384,25 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           category_name?: string | null
+          combo_rules?: Json | null
           cost_per_serving?: number | null
           created_at?: string
+          deployment_notes?: string | null
           description?: string | null
           id?: string
+          images?: Json | null
           instructions?: string | null
           is_active?: boolean | null
+          last_cost_update?: string | null
           name?: string
-          product_id?: string
+          preparation_time?: number | null
+          product_id?: string | null
+          recipe_type?: string | null
           rejection_reason?: string | null
           serving_size?: number | null
+          sku?: string | null
           store_id?: string
+          suggested_price?: number | null
           template_id?: string | null
           total_cost?: number | null
           updated_at?: string
@@ -3291,6 +3809,53 @@ export type Database = {
           },
         ]
       }
+      store_pricing_profiles: {
+        Row: {
+          base_markup_percentage: number | null
+          category_markups: Json | null
+          created_at: string | null
+          id: string
+          ingredient_cost_adjustments: Json | null
+          is_active: boolean | null
+          is_default: boolean | null
+          profile_name: string
+          store_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          base_markup_percentage?: number | null
+          category_markups?: Json | null
+          created_at?: string | null
+          id?: string
+          ingredient_cost_adjustments?: Json | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          profile_name: string
+          store_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          base_markup_percentage?: number | null
+          category_markups?: Json | null
+          created_at?: string | null
+          id?: string
+          ingredient_cost_adjustments?: Json | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          profile_name?: string
+          store_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_pricing_profiles_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_settings: {
         Row: {
           bir_compliance_config: Json | null
@@ -3686,12 +4251,16 @@ export type Database = {
       }
     }
     Functions: {
-      calculate_cost_per_recipe_unit: {
-        Args: { purchase_cost: number; conversion_factor: number }
-        Returns: number
-      }
       calculate_recipe_cost: {
         Args: { recipe_id: number }
+        Returns: number
+      }
+      calculate_recipe_suggested_price: {
+        Args: { recipe_id_param: string; store_id_param?: string }
+        Returns: number
+      }
+      calculate_template_cost: {
+        Args: { template_id_param: string }
         Returns: number
       }
       can_access_user_record: {
@@ -3700,14 +4269,22 @@ export type Database = {
       }
       create_app_user: {
         Args: {
-          user_id: string
-          user_email: string
-          first_name: string
-          last_name: string
-          user_role: string
-          store_ids: string[]
-          is_active: boolean
+          p_user_id: string
+          p_user_email: string
+          p_first_name: string
+          p_last_name: string
+          p_user_role: string
+          p_store_ids: string[]
+          p_is_active: boolean
         }
+        Returns: string
+      }
+      extract_pack_quantity: {
+        Args: { order_description: string }
+        Returns: number
+      }
+      generate_recipe_sku: {
+        Args: { recipe_name: string; recipe_type?: string }
         Returns: string
       }
       generate_stock_order_number: {
@@ -3795,6 +4372,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_user_role_permissions: {
+        Args: { user_role: Database["public"]["Enums"]["app_role"] }
+        Returns: string[]
+      }
       get_users_needing_sync: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3802,6 +4383,13 @@ export type Database = {
           email: string
           user_metadata: Json
         }[]
+      }
+      has_route_access: {
+        Args: {
+          user_role: Database["public"]["Enums"]["app_role"]
+          required_access: string
+        }
+        Returns: boolean
       }
       is_admin_or_owner: {
         Args: Record<PropertyKey, never>
@@ -3828,6 +4416,25 @@ export type Database = {
           p_receipt_number?: string
         }
         Returns: string
+      }
+      migrate_recipes_to_product_catalog: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          migrated_count: number
+          error_count: number
+          details: string[]
+        }[]
+      }
+      normalize_unit_name: {
+        Args: { unit_text: string }
+        Returns: string
+      }
+      repair_missing_product_catalog_entries: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          repaired_count: number
+          errors: string[]
+        }[]
       }
       sync_auth_user_to_app_users: {
         Args: {
@@ -3869,9 +4476,32 @@ export type Database = {
         Args: { user_id: string; store_id: string }
         Returns: boolean
       }
+      validate_clean_slate_migration: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          check_name: string
+          status: string
+          count_items: number
+          details: string
+        }[]
+      }
+      validate_recipe_deployment: {
+        Args: { template_id_param: string; store_id_param: string }
+        Returns: {
+          is_valid: boolean
+          error_message: string
+          missing_ingredients: string[]
+        }[]
+      }
     }
     Enums: {
-      app_role: "admin" | "owner" | "manager" | "cashier"
+      app_role:
+        | "admin"
+        | "owner"
+        | "manager"
+        | "cashier"
+        | "stock_user"
+        | "production_user"
       delivery_order_status:
         | "for_delivery"
         | "partial_delivery"
@@ -4036,7 +4666,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "owner", "manager", "cashier"],
+      app_role: [
+        "admin",
+        "owner",
+        "manager",
+        "cashier",
+        "stock_user",
+        "production_user",
+      ],
       delivery_order_status: [
         "for_delivery",
         "partial_delivery",

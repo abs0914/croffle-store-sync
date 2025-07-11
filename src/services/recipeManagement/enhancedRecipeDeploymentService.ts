@@ -213,7 +213,7 @@ export class EnhancedRecipeDeploymentService {
           sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
         );
         preview.estimatedCost = totalCost;
-        preview.estimatedPrice = totalCost * 1.5; // 50% markup
+        preview.estimatedPrice = totalCost; // Use cost as estimated price
       }
 
       previews.push(preview);

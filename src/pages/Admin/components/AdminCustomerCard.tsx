@@ -13,13 +13,19 @@ interface AdminCustomerCardProps {
   isSelected: boolean;
   onSelect: () => void;
   stores: Store[];
+  onViewDetails?: (customer: CustomerWithStats) => void;
+  onEditCustomer?: (customer: CustomerWithStats) => void;
+  onDeleteCustomer?: (customer: CustomerWithStats) => void;
 }
 
 export const AdminCustomerCard: React.FC<AdminCustomerCardProps> = ({
   customer,
   isSelected,
   onSelect,
-  stores
+  stores,
+  onViewDetails,
+  onEditCustomer,
+  onDeleteCustomer
 }) => {
   const store = stores.find(s => s.id === customer.storeId);
   const isActive = customer.lastOrderDate && 
@@ -47,10 +53,9 @@ export const AdminCustomerCard: React.FC<AdminCustomerCardProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>View Details</DropdownMenuItem>
-              <DropdownMenuItem>Edit Customer</DropdownMenuItem>
-              <DropdownMenuItem>View Orders</DropdownMenuItem>
-              <DropdownMenuItem>Send Message</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onViewDetails?.(customer)}>View Details</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onEditCustomer?.(customer)}>Edit Customer</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onDeleteCustomer?.(customer)}>Delete Customer</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

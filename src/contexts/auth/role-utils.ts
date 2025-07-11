@@ -7,8 +7,17 @@ import { UserRole } from "@/types";
 export const mapUserRole = (email: string): UserRole => {
   if (email === 'admin@example.com') return 'admin';
   if (email === 'owner@example.com') return 'owner';
+  
+  // Enhanced pattern matching for admin users
+  if (email.includes('admin') || email.match(/\.admin@/)) return 'admin';
+  if (email.includes('owner') || email.match(/\.owner@/)) return 'owner';
   if (email.includes('manager') || email === 'rbsons.north.manager@croffle.com') return 'manager';
+  if (email.includes('stock') || email.match(/\.stock@/)) return 'stock_user';
+  if (email.includes('production') || email.match(/\.production@/)) return 'production_user';
+  
+  // Specific user mappings
   if (email === 'marasabaras@croffle.com' || email === 'robinsons.north@croffle.com') return 'cashier';
+  
   return 'cashier'; // Default role
 };
 
@@ -19,9 +28,11 @@ export const checkPermission = (userRole: UserRole | undefined, requiredRole: Us
   if (!userRole) return false;
   
   const roleHierarchy: Record<UserRole, number> = {
-    admin: 4,
-    owner: 3,
-    manager: 2,
+    admin: 6,
+    owner: 5,
+    stock_user: 4,
+    manager: 3,
+    production_user: 2,
     cashier: 1
   };
   
@@ -119,6 +130,16 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
   const roleRoutes: Record<UserRole, string[]> = {
     admin: [...STORE_ROUTES, ...ADMIN_ROUTES], // Admin gets everything
     owner: [...STORE_ROUTES, ...ADMIN_ROUTES], // Owner gets everything
+    stock_user: [
+      ROUTE_PATHS.DASHBOARD,
+      ROUTE_PATHS.INVENTORY,
+      ROUTE_PATHS.ORDER_MANAGEMENT,
+      ROUTE_PATHS.EXPENSES,
+      ROUTE_PATHS.STOCK_ORDERS
+    ],
+    production_user: [
+      ROUTE_PATHS.DASHBOARD
+    ],
     manager: [
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,

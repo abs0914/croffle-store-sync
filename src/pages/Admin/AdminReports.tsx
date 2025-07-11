@@ -6,12 +6,13 @@ import { AdminReportsContent } from './components/AdminReportsContent';
 import { useAdminReportsData } from './hooks/useAdminReportsData';
 
 export default function AdminReports() {
-  const [reportType, setReportType] = useState<'sales' | 'inventory' | 'customers' | 'performance'>('sales');
+  const [reportType, setReportType] = useState<'sales' | 'profit-loss' | 'expenses'>('sales');
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
     to: new Date().toISOString().split('T')[0]
   });
   const [storeFilter, setStoreFilter] = useState('all');
+  const [ownershipFilter, setOwnershipFilter] = useState<'all' | 'company_owned' | 'franchise'>('all');
   
   const {
     reportData,
@@ -19,7 +20,7 @@ export default function AdminReports() {
     stores,
     isLoading,
     refreshReports
-  } = useAdminReportsData(reportType, dateRange, storeFilter);
+  } = useAdminReportsData(reportType, dateRange, storeFilter, ownershipFilter);
 
   return (
     <div className="space-y-6">
@@ -30,6 +31,8 @@ export default function AdminReports() {
         setDateRange={setDateRange}
         storeFilter={storeFilter}
         setStoreFilter={setStoreFilter}
+        ownershipFilter={ownershipFilter}
+        setOwnershipFilter={setOwnershipFilter}
         stores={stores}
         onRefresh={refreshReports}
       />

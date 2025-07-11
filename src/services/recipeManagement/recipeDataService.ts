@@ -38,12 +38,15 @@ export const getRecipeTemplates = async (): Promise<RecipeTemplate[]> => {
       ingredients: (template.recipe_template_ingredients || []).map((ing: any) => ({
         id: ing.id,
         recipe_template_id: template.id,
-        commissary_item_id: ing.commissary_item_id,
-        commissary_item_name: ing.commissary_item_name,
+        ingredient_name: ing.commissary_item_name || ing.ingredient_name || 'Unknown',
         quantity: ing.quantity,
         unit: ing.unit,
         cost_per_unit: ing.cost_per_unit,
-        created_at: ing.created_at
+        location_type: ing.location_type || 'all',
+        uses_store_inventory: ing.uses_store_inventory || false,
+        inventory_stock_id: ing.inventory_stock_id,
+        store_unit: ing.store_unit,
+        recipe_to_store_conversion_factor: ing.recipe_to_store_conversion_factor
       }))
     })) as RecipeTemplate[];
   } catch (error: any) {

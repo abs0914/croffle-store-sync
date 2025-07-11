@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShoppingCart } from "lucide-react";
@@ -9,18 +11,6 @@ import { SeniorDiscount } from "@/hooks/useTransactionHandler";
 import { useCart } from "@/contexts/cart/CartContext";
 
 interface MobileCartDrawerProps {
-  items: CartItem[];
-  subtotal: number;
-  tax: number;
-  total: number;
-  discount: number;
-  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
-  discountIdNumber?: string;
-  seniorDiscounts: SeniorDiscount[];
-  otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | null;
-  removeItem: (index: number) => void;
-  updateQuantity: (index: number, quantity: number) => void;
-  clearCart: () => void;
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
@@ -32,10 +22,10 @@ interface MobileCartDrawerProps {
 }
 
 export default function MobileCartDrawer(props: MobileCartDrawerProps) {
-  const { items, seniorDiscounts, otherDiscount, discount, total, open, onOpenChange } = props;
+  const { open, onOpenChange } = props;
 
-  // Use the cart context to get the correct calculations
-  const { calculations } = useCart();
+  // Use the cart context to get all cart data
+  const { items, calculations } = useCart();
 
   // Use the final total from calculations which already includes all discounts
   const actualTotal = calculations.finalTotal;
@@ -65,17 +55,19 @@ export default function MobileCartDrawer(props: MobileCartDrawerProps) {
           </SheetTrigger>
           <SheetContent 
             side="bottom" 
-            className="h-[85vh] rounded-t-xl"
+            className="h-[85vh] rounded-t-xl overflow-hidden flex flex-col"
           >
-            <SheetHeader className="pb-4">
+            <SheetHeader className="pb-4 flex-shrink-0">
               <SheetTitle className="flex items-center justify-between">
                 <span>Cart ({items.length} items)</span>
                 <span className="text-lg font-bold">₱{actualTotal.toFixed(2)}</span>
               </SheetTitle>
             </SheetHeader>
-            <div className="h-full overflow-hidden">
-              <CartView {...props} />
-            </div>
+            <ScrollArea className="flex-1">
+              <div className="px-1">
+                <CartView {...props} />
+              </div>
+            </ScrollArea>
           </SheetContent>
         </Sheet>
       </div>

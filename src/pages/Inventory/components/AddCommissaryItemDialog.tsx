@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createCommissaryInventoryItem } from "@/services/inventoryManagement/commissaryInventoryService";
 import { fetchSuppliers } from "@/services/inventoryManagement/supplierService";
+import { UOMSelect } from "@/components/shared/UOMSelect";
 import { toast } from "sonner";
 
 interface AddCommissaryItemDialogProps {
@@ -29,7 +30,7 @@ export function AddCommissaryItemDialog({
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [formData, setFormData] = useState({
     name: '',
-    category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies',
+    category: 'raw_materials' as 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods',
     item_type: 'raw_material' as 'raw_material' | 'supply' | 'orderable_item',
     current_stock: 0,
     minimum_threshold: 0,
@@ -142,6 +143,7 @@ export function AddCommissaryItemDialog({
                   <SelectItem value="raw_materials">Raw Materials</SelectItem>
                   <SelectItem value="packaging_materials">Packaging Materials</SelectItem>
                   <SelectItem value="supplies">Supplies</SelectItem>
+                  <SelectItem value="finished_goods">Finished Goods</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -176,23 +178,11 @@ export function AddCommissaryItemDialog({
             
             <div className="space-y-2">
               <Label htmlFor="uom">Unit of Measure *</Label>
-              <Select
+              <UOMSelect
                 value={formData.uom}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, uom: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pieces">Pieces</SelectItem>
-                  <SelectItem value="kg">Kilograms</SelectItem>
-                  <SelectItem value="g">Grams</SelectItem>
-                  <SelectItem value="liters">Liters</SelectItem>
-                  <SelectItem value="ml">Milliliters</SelectItem>
-                  <SelectItem value="boxes">Boxes</SelectItem>
-                  <SelectItem value="packs">Packs</SelectItem>
-                </SelectContent>
-              </Select>
+                onChange={(value) => setFormData(prev => ({ ...prev, uom: value }))}
+                placeholder="Select UOM"
+              />
             </div>
           </div>
 

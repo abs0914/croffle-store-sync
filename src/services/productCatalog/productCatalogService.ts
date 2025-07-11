@@ -3,24 +3,32 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProductCatalog, ProductIngredient, ProductStatus } from "./types";
 import { toast } from "sonner";
 
-// Cache invalidation helper
+// Cache invalidation helper - now using proper broadcast method
 const broadcastCacheInvalidation = async (productId: string, storeId: string, eventType: 'UPDATE' | 'INSERT' | 'DELETE') => {
   try {
-    // Broadcast cache invalidation to all connected clients
-    await supabase
-      .channel('cache_invalidation')
-      .send({
-        type: 'broadcast',
-        event: 'product_catalog_changed',
-        payload: {
-          productId,
-          storeId,
-          eventType,
-          timestamp: new Date().toISOString()
-        }
-      });
+    console.log(`Broadcasting cache invalidation for product ${productId} in store ${storeId}`);
+    
+    // Create a temporary channel for broadcasting
+    const channel = supabase.channel('cache_invalidation_temp');
+    
+    // Send the broadcast message
+    const result = await channel.send({
+      type: 'broadcast',
+      event: 'product_catalog_changed',
+      payload: {
+        productId,
+        storeId,
+        eventType,
+        timestamp: new Date().toISOString()
+      }
+    });
 
-    console.log(`Cache invalidation broadcasted for product ${productId} in store ${storeId}`);
+    console.log(`Cache invalidation broadcast result:`, result);
+    
+    // Clean up the temporary channel
+    await supabase.removeChannel(channel);
+    
+    console.log(`Cache invalidation broadcasted successfully for product ${productId} in store ${storeId}`);
   } catch (error) {
     console.warn('Failed to broadcast cache invalidation:', error);
     // Don't throw error as this is not critical for the main operation
@@ -93,31 +101,83 @@ export const updateProduct = async (
   updates: Partial<ProductCatalog>
 ): Promise<boolean> => {
   try {
-    // First get the store_id for cache invalidation
+    console.log('🔄 Product Catalog: Starting price update for product:', id);
+    console.log('📝 Product Catalog: Update data:', updates);
+
+    // First get the existing product data including recipe_id
     const { data: existingProduct } = await supabase
       .from('product_catalog')
-      .select('store_id')
+      .select('store_id, recipe_id, product_name, price')
       .eq('id', id)
       .single();
 
+    if (!existingProduct) {
+      console.error('❌ Product Catalog: Product not found:', id);
+      throw new Error('Product not found');
+    }
+
+    console.log('📊 Product Catalog: Current product data:', existingProduct);
+
+    // Check if price is being updated
+    if (updates.price !== undefined && updates.price !== existingProduct.price) {
+      console.log(`💰 Product Catalog: Price change detected - FROM: ₱${existingProduct.price} TO: ₱${updates.price}`);
+    }
+
+    // Update the product catalog
     const { error } = await supabase
       .from('product_catalog')
       .update(updates)
       .eq('id', id);
 
-    if (error) throw error;
-
-    // Broadcast cache invalidation for updated product
-    if (existingProduct?.store_id) {
-      await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
+    if (error) {
+      console.error('❌ Product Catalog: Update failed:', error);
+      throw error;
     }
 
-    toast.success('Product updated successfully');
+    console.log('✅ Product Catalog: Successfully updated product catalog entry');
+
+    // If price was updated, also update related product table if it exists
+    if (updates.price !== undefined && existingProduct.product_name) {
+      console.log('🔗 Product Catalog: Syncing price to products table...');
+      
+      // Find and update corresponding product in products table
+      const { data: productTableEntry } = await supabase
+        .from('products')
+        .select('id, price')
+        .eq('name', existingProduct.product_name)
+        .eq('store_id', existingProduct.store_id)
+        .maybeSingle();
+
+      if (productTableEntry) {
+        console.log(`📦 Product Catalog: Found matching product in products table - Current price: ₱${productTableEntry.price}`);
+        
+        const { error: productUpdateError } = await supabase
+          .from('products')
+          .update({ price: updates.price })
+          .eq('id', productTableEntry.id);
+
+        if (productUpdateError) {
+          console.warn('⚠️ Product Catalog: Failed to sync price to products table:', productUpdateError);
+        } else {
+          console.log(`✅ Product Catalog: Successfully synced price to products table - New price: ₱${updates.price}`);
+        }
+      } else {
+        console.log('ℹ️ Product Catalog: No matching product found in products table to sync');
+      }
+    }
+
+    // Broadcast cache invalidation for updated product
+    console.log('📡 Product Catalog: Broadcasting cache invalidation...');
+    await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
+    console.log('✅ Product Catalog: Cache invalidation broadcasted successfully');
+
+    // Don't show toast here - let the component handle it
+    console.log('✅ Product Catalog: Product updated successfully');
     return true;
   } catch (error) {
-    console.error('Error updating product:', error);
-    toast.error('Failed to update product');
-    return false;
+    console.error('❌ Product Catalog: Error updating product:', error);
+    // Don't show toast here - let the component handle it with rollback
+    throw error;
   }
 };
 
@@ -163,12 +223,13 @@ export const toggleProductAvailability = async (
       await broadcastCacheInvalidation(id, existingProduct.store_id, 'UPDATE');
     }
 
-    toast.success(`Product ${isAvailable ? 'enabled' : 'disabled'} successfully`);
+    // Don't show toast here - let the component handle it
+    console.log(`✅ Product Catalog: Product ${isAvailable ? 'enabled' : 'disabled'} successfully`);
     return true;
   } catch (error) {
     console.error('Error updating product availability:', error);
-    toast.error('Failed to update product availability');
-    return false;
+    // Don't show toast here - let the component handle it with rollback
+    throw error;
   }
 };
 
@@ -207,11 +268,12 @@ export const updateProductStatus = async (
       discontinued: 'discontinued'
     };
 
-    toast.success(`Product marked as ${statusLabels[status]}`);
+    // Don't show toast here - let the component handle it
+    console.log(`✅ Product Catalog: Product marked as ${statusLabels[status]}`);
     return true;
   } catch (error) {
     console.error('Error updating product status:', error);
-    toast.error('Failed to update product status');
-    return false;
+    // Don't show toast here - let the component handle it with rollback
+    throw error;
   }
 };

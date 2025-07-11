@@ -30,8 +30,8 @@ export async function fetchTransactionsWithFallback(
     status 
   });
 
-  // Strategy 1: Use PostgreSQL DATE() function for exact date matching
-  console.log('📅 Strategy 1: Using DATE() function for exact date matching');
+  // Strategy 1: Use timestamp range filtering (Supabase compatible)
+  console.log('📅 Strategy 1: Using timestamp range filtering');
   
   let query = supabase
     .from("transactions")
@@ -48,17 +48,21 @@ export async function fetchTransactionsWithFallback(
     queryAttempts.push('Store filter: ALL_STORES');
   }
 
-  // Use DATE() function for precise date matching
+  // Use timestamp range for date filtering
   if (from === to) {
-    // Single date query using PostgreSQL DATE() function
-    const dateFilter = `DATE(created_at) = '${from}'`;
-    queryAttempts.push(`Single date with DATE(): ${dateFilter}`);
-    console.log(`🎯 Single date filter: ${dateFilter}`);
+    // Single date query using timestamp range
+    const startTime = `${from}T00:00:00.000Z`;
+    const endTime = `${from}T23:59:59.999Z`;
+    query = query.gte("created_at", startTime).lte("created_at", endTime);
+    queryAttempts.push(`Single date: ${startTime} to ${endTime}`);
+    console.log(`🎯 Single date filter: ${startTime} to ${endTime}`);
   } else {
-    // Date range query using DATE() function
-    const dateRangeFilter = `DATE(created_at) >= '${from}' AND DATE(created_at) <= '${to}'`;
-    queryAttempts.push(`Date range with DATE(): ${dateRangeFilter}`);
-    console.log(`🎯 Date range filter: ${dateRangeFilter}`);
+    // Date range query using timestamp range
+    const startTime = `${from}T00:00:00.000Z`;
+    const endTime = `${to}T23:59:59.999Z`;
+    query = query.gte("created_at", startTime).lte("created_at", endTime);
+    queryAttempts.push(`Date range: ${startTime} to ${endTime}`);
+    console.log(`🎯 Date range filter: ${startTime} to ${endTime}`);
   }
 
   // Apply ordering

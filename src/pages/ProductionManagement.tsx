@@ -2,9 +2,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BulkUploadTab } from "./ProductionManagement/components/BulkUploadTab";
 import { ConversionProcessTab } from "./ProductionManagement/components/ConversionProcessTab";
-import InventoryConversion from "./InventoryConversion";
+// BulkUploadTab and InventoryConversion removed - using simplified direct recipe system
 import { useStore } from "@/contexts/StoreContext";
 import { Upload, Package, History, ArrowRightLeft } from "lucide-react";
 
@@ -25,18 +24,10 @@ export default function ProductionManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="conversion" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Conversion Management
-          </TabsTrigger>
-          <TabsTrigger value="inventory-conversion" className="flex items-center gap-2">
-            <ArrowRightLeft className="h-4 w-4" />
-            Inventory Conversion
-          </TabsTrigger>
-          <TabsTrigger value="bulk-upload" className="flex items-center gap-2">
-            <Upload className="h-4 w-4" />
-            Recipe & Material Upload
+            Recipe Management
           </TabsTrigger>
         </TabsList>
 
@@ -58,41 +49,7 @@ export default function ProductionManagement() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="inventory-conversion">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ArrowRightLeft className="h-5 w-5" />
-                Inventory Conversion
-              </CardTitle>
-              <CardDescription>
-                Manage conversion mappings between bulk inventory items and recipe ingredients, including bundled products.
-                Set up product bundles and enhanced conversion mappings for complex inventory management.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <InventoryConversion />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="bulk-upload">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Recipe & Material Upload
-              </CardTitle>
-              <CardDescription>
-                Upload conversion recipes and raw materials in bulk to streamline production management.
-                Recipes uploaded here can be used in the conversion process.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BulkUploadTab storeId={currentStore?.id || ''} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* Other tabs removed - using simplified direct recipe system */}
       </Tabs>
     </div>
   );

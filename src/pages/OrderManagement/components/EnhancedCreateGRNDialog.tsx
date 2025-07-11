@@ -14,6 +14,7 @@ import { PurchaseOrder } from '@/types/orderManagement';
 import { createGRNWithItems } from '@/services/orderManagement/grnService';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
+import { BulkBreakdownProcessor } from '@/components/GRN/BulkBreakdownProcessor';
 
 interface EnhancedCreateGRNDialogProps {
   open: boolean;
@@ -29,6 +30,9 @@ interface GRNItemData {
   received_quantity: number;
   quality_status: 'good' | 'damaged' | 'missing' | 'partial';
   item_remarks: string;
+  bulk_description?: string;
+  inventory_stock_id?: string;
+  unit_cost?: number;
 }
 
 export function EnhancedCreateGRNDialog({ 
@@ -43,6 +47,8 @@ export function EnhancedCreateGRNDialog({
   const [overallRemarks, setOverallRemarks] = useState('');
   const [digitalSignature, setDigitalSignature] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showBulkBreakdown, setShowBulkBreakdown] = useState(false);
+  const [createdGRNId, setCreatedGRNId] = useState<string | null>(null);
 
   const selectedOrder = availableOrders.find(order => order.id === selectedOrderId);
 
@@ -130,9 +136,10 @@ export function EnhancedCreateGRNDialog({
         digitalSignature || undefined
       );
 
-      if (result) {
-        onSuccess();
-        resetForm();
+      if (result?.id) {
+        setCreatedGRNId(result.id);
+        setShowBulkBreakdown(true);
+        toast.success('GRN created successfully! Now process bulk breakdown...');
       }
     } catch (error) {
       console.error('Error creating GRN:', error);
@@ -146,7 +153,44 @@ export function EnhancedCreateGRNDialog({
     setGrnItems([]);
     setOverallRemarks('');
     setDigitalSignature('');
+    setShowBulkBreakdown(false);
+    setCreatedGRNId(null);
   };
+
+  const handleBulkBreakdownComplete = () => {
+    onSuccess();
+    resetForm();
+    onOpenChange(false);
+  };
+
+  // Show bulk breakdown processor if GRN was created successfully
+  if (showBulkBreakdown && createdGRNId) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package2 className="h-5 w-5" />
+              Bulk Delivery Breakdown Processing
+            </DialogTitle>
+          </DialogHeader>
+          <BulkBreakdownProcessor
+            grnId={createdGRNId}
+            grnItems={grnItems.map(item => ({
+              id: item.purchase_order_item_id,
+              inventory_stock_id: item.inventory_stock_id,
+              item_name: item.item_name,
+              received_quantity: item.received_quantity,
+              ordered_quantity: item.ordered_quantity,
+              unit_cost: item.unit_cost,
+              bulk_description: item.bulk_description
+            }))}
+            onProcessComplete={handleBulkBreakdownComplete}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -154,7 +198,7 @@ export function EnhancedCreateGRNDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package2 className="h-5 w-5" />
-            Create Enhanced Goods Received Note
+            Create Bulk Breakdown GRN
           </DialogTitle>
         </DialogHeader>
         
@@ -211,6 +255,7 @@ export function EnhancedCreateGRNDialog({
                       <TableHead>Ordered</TableHead>
                       <TableHead>Received</TableHead>
                       <TableHead>Quality Status</TableHead>
+                      <TableHead>Bulk Description</TableHead>
                       <TableHead>Remarks</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -252,10 +297,18 @@ export function EnhancedCreateGRNDialog({
                         </TableCell>
                         <TableCell>
                           <Input
+                            placeholder="e.g., 1 box/70pcs"
+                            value={item.bulk_description || ''}
+                            onChange={(e) => updateGRNItem(index, 'bulk_description', e.target.value)}
+                            className="w-32"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
                             placeholder="Item-specific remarks..."
                             value={item.item_remarks}
                             onChange={(e) => updateGRNItem(index, 'item_remarks', e.target.value)}
-                            className="w-48"
+                            className="w-32"
                           />
                         </TableCell>
                       </TableRow>
@@ -304,7 +357,7 @@ export function EnhancedCreateGRNDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={loading || !selectedOrderId}>
-            {loading ? 'Creating...' : 'Create Enhanced GRN'}
+            {loading ? 'Creating...' : 'Create GRN & Process Breakdown'}
           </Button>
         </DialogFooter>
       </DialogContent>

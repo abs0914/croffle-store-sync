@@ -3,9 +3,9 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { uploadRecipeImage, validateImage } from '@/services/recipeManagement/imageUploadService';
 
 interface RecipeTemplateImageUploadProps {
   imageUrl: string;
@@ -24,37 +24,26 @@ export const RecipeTemplateImageUpload: React.FC<RecipeTemplateImageUploadProps>
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should be less than 5MB');
+    // Validate image using the enhanced service
+    const validation = validateImage(file);
+    if (!validation.isValid) {
+      toast.error(validation.error);
       return;
     }
 
     setUploadingImage(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `recipe-template-${Date.now()}.${fileExt}`;
-      const filePath = `templates/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('recipe-images')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('recipe-images')
-        .getPublicUrl(filePath);
-
-      onImageChange(publicUrl);
-      toast.success('Image uploaded successfully');
+      const result = await uploadRecipeImage(file, { folder: 'templates' });
+      
+      if (result.success && result.url) {
+        onImageChange(result.url);
+        toast.success('Image uploaded successfully');
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      toast.error('Failed to upload image');
+      toast.error(error.message || 'Failed to upload image');
     } finally {
       setUploadingImage(false);
     }
@@ -102,7 +91,10 @@ export const RecipeTemplateImageUpload: React.FC<RecipeTemplateImageUploadProps>
               </Label>
             </div>
             {uploadingImage && (
-              <p className="text-sm text-blue-600 mt-2">Uploading...</p>
+              <div className="flex items-center justify-center mt-2">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <p className="text-sm text-blue-600">Uploading image...</p>
+              </div>
             )}
           </div>
         )}

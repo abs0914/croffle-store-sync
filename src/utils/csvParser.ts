@@ -15,7 +15,7 @@ export interface RecipeUpload {
 
 export interface RawIngredientUpload {
   name: string;
-  category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  category: 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
   uom: string;
   unit_cost?: number;
   current_stock?: number;
@@ -70,11 +70,11 @@ const normalizeHeader = (header: string): string => {
 };
 
 // Helper function to map category variations to valid database categories
-const mapCategoryToValidValue = (category: string): 'raw_materials' | 'packaging_materials' | 'supplies' | null => {
+const mapCategoryToValidValue = (category: string): 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods' | null => {
   const normalizedCategory = category.toLowerCase().trim();
   
   // Map common category variations
-  const categoryMapping: Record<string, 'raw_materials' | 'packaging_materials' | 'supplies'> = {
+  const categoryMapping: Record<string, 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods'> = {
     // Raw materials variations
     'raw_materials': 'raw_materials',
     'raw_ingredients': 'raw_materials',
@@ -94,7 +94,13 @@ const mapCategoryToValidValue = (category: string): 'raw_materials' | 'packaging
     'tools': 'supplies',
     'store_supplies': 'supplies',
     'misc': 'supplies',
-    'miscellaneous': 'supplies'
+    'miscellaneous': 'supplies',
+    
+    // Finished goods variations
+    'finished_goods': 'finished_goods',
+    'finished': 'finished_goods',
+    'products': 'finished_goods',
+    'final_products': 'finished_goods'
   };
   
   return categoryMapping[normalizedCategory] || null;

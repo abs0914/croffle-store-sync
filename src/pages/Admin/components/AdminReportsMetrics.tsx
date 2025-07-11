@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +16,7 @@ interface ReportMetrics {
 
 interface AdminReportsMetricsProps {
   metrics: ReportMetrics;
-  reportType: 'sales' | 'inventory' | 'customers' | 'performance';
+  reportType: 'sales' | 'profit-loss' | 'expenses';
 }
 
 export const AdminReportsMetrics: React.FC<AdminReportsMetricsProps> = ({
@@ -54,84 +53,56 @@ export const AdminReportsMetrics: React.FC<AdminReportsMetricsProps> = ({
           }
         ];
 
-      case 'inventory':
+      case 'profit-loss':
         return [
           {
-            title: 'Total Inventory Value',
+            title: 'Total Profit',
             value: `₱${metrics.totalRevenue.toFixed(2)}`,
             icon: DollarSign,
             color: 'text-green-600'
           },
           {
-            title: 'Total Products',
-            value: (metrics.totalProducts || 0).toLocaleString(),
-            icon: Package,
+            title: 'Profit Margin',
+            value: `${metrics.averageOrderValue.toFixed(1)}%`,
+            icon: TrendingUp,
             color: 'text-blue-600'
           },
           {
-            title: 'Low Stock Items',
-            value: (metrics.lowStockItems || 0).toLocaleString(),
-            icon: AlertTriangle,
+            title: 'Top Performing Store',
+            value: metrics.topPerformingStore || 'N/A',
+            icon: Users,
+            color: 'text-purple-600'
+          },
+          {
+            title: 'Profitability Status',
+            value: metrics.totalRevenue > 0 ? 'Profitable' : 'Loss',
+            icon: metrics.totalRevenue > 0 ? TrendingUp : AlertTriangle,
+            color: metrics.totalRevenue > 0 ? 'text-green-600' : 'text-red-600'
+          }
+        ];
+
+      case 'expenses':
+        return [
+          {
+            title: 'Total Expenses',
+            value: `₱${metrics.totalRevenue.toFixed(2)}`,
+            icon: DollarSign,
             color: 'text-red-600'
           },
           {
-            title: 'Top Store by Value',
-            value: metrics.topPerformingStore || 'N/A',
-            icon: Users,
-            color: 'text-purple-600'
-          }
-        ];
-
-      case 'customers':
-        return [
-          {
-            title: 'Total Customers',
-            value: (metrics.totalCustomers || 0).toLocaleString(),
-            icon: Users,
-            color: 'text-blue-600'
-          },
-          {
-            title: 'Total Lifetime Value',
-            value: `₱${metrics.totalRevenue.toFixed(2)}`,
-            icon: DollarSign,
-            color: 'text-green-600'
-          },
-          {
-            title: 'Average Customer Value',
-            value: `₱${metrics.averageOrderValue.toFixed(2)}`,
-            icon: TrendingUp,
-            color: 'text-purple-600'
-          },
-          {
-            title: 'Top Store by Customers',
-            value: metrics.topPerformingStore || 'N/A',
-            icon: Users,
-            color: 'text-orange-600'
-          }
-        ];
-
-      case 'performance':
-        return [
-          {
-            title: 'Total Revenue',
-            value: `₱${metrics.totalRevenue.toFixed(2)}`,
-            icon: DollarSign,
-            color: 'text-green-600'
-          },
-          {
-            title: 'Total Transactions',
+            title: 'Total Expense Items',
             value: metrics.totalTransactions.toLocaleString(),
             icon: ShoppingCart,
             color: 'text-blue-600'
           },
           {
-            title: 'Performance Efficiency',
-            value: `${metrics.growthRate.toFixed(1)}%`,
+            title: 'Average Expense',
+            value: `₱${(metrics.totalRevenue / Math.max(metrics.totalTransactions, 1)).toFixed(2)}`,
             icon: TrendingUp,
             color: 'text-purple-600'
           },
           {
-            title: 'Best Performing Store',
+            title: 'Top Store by Expenses',
             value: metrics.topPerformingStore || 'N/A',
             icon: Users,
             color: 'text-orange-600'

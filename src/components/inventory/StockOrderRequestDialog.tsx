@@ -25,7 +25,6 @@ interface InventoryItem {
   unit: string;
   stock_quantity: number;
   minimum_threshold: number;
-  maximum_capacity: number;
   cost?: number;
 }
 
@@ -71,7 +70,7 @@ export const StockOrderRequestDialog: React.FC<StockOrderRequestDialogProps> = (
         .filter(item => item.stock_quantity <= item.minimum_threshold)
         .map(item => ({
           inventory_stock_id: item.id,
-          requested_quantity: (item.maximum_capacity || 100) - item.stock_quantity,
+          requested_quantity: Math.max(0, 100 - item.stock_quantity), // Default capacity of 100
           notes: `Low stock: ${item.stock_quantity}/${item.minimum_threshold}`
         }));
       
