@@ -22,18 +22,18 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 import { useUnifiedRecipeState, UnifiedRecipeFilters, UnifiedRecipeItem } from '@/hooks/admin/useUnifiedRecipeState';
-import { UnifiedRecipeEditDialog } from '@/components/admin/recipe/UnifiedRecipeEditDialog';
-import { EnhancedRecipeFilters } from '@/components/admin/recipe/EnhancedRecipeFilters';
-import { RecipeTypeIndicator, RecipeComplexityIndicator } from '@/components/admin/recipe/RecipeTypeIndicator';
-import { ComponentRelationshipVisualization } from '@/components/admin/recipe/ComponentRelationshipVisualization';
-import { RecipeInventoryMappings } from '@/components/admin/recipe/RecipeInventoryMappings';
-import { RecipeCleanupTools } from '@/components/admin/recipe/RecipeCleanupTools';
-import { RecipeRepairTools } from '@/components/admin/recipe/RecipeRepairTools';
+import { UnifiedRecipeEditDialog } from '@/components/Admin/recipe/UnifiedRecipeEditDialog';
+import { EnhancedRecipeFilters } from '@/components/Admin/recipe/EnhancedRecipeFilters';
+import { RecipeTypeIndicator, RecipeComplexityIndicator } from '@/components/Admin/recipe/RecipeTypeIndicator';
+import { ComponentRelationshipVisualization } from '@/components/Admin/recipe/ComponentRelationshipVisualization';
+import { RecipeInventoryMappings } from '@/components/Admin/recipe/RecipeInventoryMappings';
+import { RecipeCleanupTools } from '@/components/Admin/recipe/RecipeCleanupTools';
+import { RecipeRepairTools } from '@/components/Admin/recipe/RecipeRepairTools';
 import { toast } from 'sonner';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
-import { EnhancedRecipeDeploymentDialog } from '@/components/admin/recipe/EnhancedRecipeDeploymentDialog';
+import { EnhancedRecipeDeploymentDialog } from '@/components/Admin/recipe/EnhancedRecipeDeploymentDialog';
 import { RecipeTemplateUpload } from '@/components/Admin/components/RecipeTemplateUpload';
-import { TableRecipeUpload } from '@/components/admin/recipe/TableRecipeUpload';
+import { TableRecipeUpload } from '@/components/Admin/recipe/TableRecipeUpload';
 
 export function ConsolidatedRecipeAdministration() {
   const {

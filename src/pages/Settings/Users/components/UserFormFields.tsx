@@ -1,8 +1,8 @@
 
 import { Store } from "@/types/store";
 import { AppUserFormData } from "@/types/appUser";
-import { EnhancedRoleSelectionInterface } from "@/components/admin/EnhancedRoleSelectionInterface";
-import { PermissionOverrideCheckboxes } from "@/components/admin/PermissionOverrideCheckboxes";
+import { EnhancedRoleSelectionInterface } from "@/components/Admin/EnhancedRoleSelectionInterface";
+import { PermissionOverrideCheckboxes } from "@/components/Admin/PermissionOverrideCheckboxes";
 import BasicInfoFields from "./form/BasicInfoFields";
 import StoreSelectionList from "./form/StoreSelectionList";
 import StatusToggle from "./form/StatusToggle";
