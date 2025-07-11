@@ -1,6 +1,6 @@
 import React from "react";
 import { UnifiedProduct } from "@/services/product/unifiedProductService";
-import { AddonItem } from "@/services/pos/addonService";
+
 import ProductCard from "./ProductCard";
 
 interface CategorySectionProps {
@@ -9,10 +9,6 @@ interface CategorySectionProps {
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
   onClick: (product: UnifiedProduct) => void;
-  getRecommendedAddons: (productName: string, addonItems: AddonItem[]) => AddonItem[];
-  addonItems: AddonItem[];
-  addItemToCart: (product: UnifiedProduct, quantity?: number) => void;
-  shouldShowAddonSelection: (product: UnifiedProduct) => boolean;
 }
 
 export default function CategorySection({
@@ -20,11 +16,7 @@ export default function CategorySection({
   products,
   isShiftActive,
   getCategoryName,
-  onClick,
-  getRecommendedAddons,
-  addonItems,
-  addItemToCart,
-  shouldShowAddonSelection
+  onClick
 }: CategorySectionProps) {
   if (products.length === 0) return null;
 
@@ -45,16 +37,6 @@ export default function CategorySection({
             isShiftActive={isShiftActive}
             getCategoryName={getCategoryName}
             onClick={onClick}
-            recommendedAddons={getRecommendedAddons(product.name, addonItems)}
-            onAddonQuickAdd={(addonItems) => {
-              // Add the main product first
-              addItemToCart(product);
-              // Then add each addon
-              addonItems.forEach(addonItem => {
-                addItemToCart(addonItem.product, addonItem.quantity);
-              });
-            }}
-            showAddonQuickSelect={shouldShowAddonSelection(product)}
           />
         ))}
       </div>

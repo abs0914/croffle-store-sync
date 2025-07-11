@@ -141,7 +141,7 @@ export default function ProductGrid({
         setProductVariations(variations);
         setIsDialogOpen(true);
       } else {
-        // If no variations, check if we should show addon selection
+        // Always check if we should show addon selection for products without variations
         if (shouldShowAddonSelection(product)) {
           console.log("ProductGrid: Showing addon selection for product:", product.name);
           setSelectedProductForAddons(product);
@@ -174,7 +174,7 @@ export default function ProductGrid({
         price: variation.price
       });
 
-      // Check if we should show addon selection for this variation
+      // Always check if we should show addon selection after variation selection
       if (shouldShowAddonSelection(selectedProduct)) {
         // Close variation dialog and open addon dialog
         setIsDialogOpen(false);
@@ -210,9 +210,17 @@ export default function ProductGrid({
 
   const handleRegularProductSelect = () => {
     if (selectedProduct) {
-      console.log("ProductGrid: Adding regular product to cart:", selectedProduct.name);
-      addItemToCart(selectedProduct);
-      setIsDialogOpen(false);
+      // Always check if we should show addon selection for regular product
+      if (shouldShowAddonSelection(selectedProduct)) {
+        // Close variation dialog and open addon dialog
+        setIsDialogOpen(false);
+        setSelectedProductForAddons(selectedProduct);
+        setIsAddonDialogOpen(true);
+      } else {
+        console.log("ProductGrid: Adding regular product to cart:", selectedProduct.name);
+        addItemToCart(selectedProduct);
+        setIsDialogOpen(false);
+      }
     }
   };
 
@@ -322,20 +330,16 @@ export default function ProductGrid({
                       product.category_id === category.id
                     );
 
-                    return (
-                      <CategorySection
-                        key={category.id}
-                        title={category.name}
-                        products={categoryProducts}
-                        isShiftActive={isShiftActive}
-                        getCategoryName={getCategoryName}
-                        onClick={handleProductClick}
-                        getRecommendedAddons={getRecommendedAddons}
-                        addonItems={addonItems}
-                        addItemToCart={addItemToCart}
-                        shouldShowAddonSelection={shouldShowAddonSelection}
-                      />
-                    );
+                     return (
+                       <CategorySection
+                         key={category.id}
+                         title={category.name}
+                         products={categoryProducts}
+                         isShiftActive={isShiftActive}
+                         getCategoryName={getCategoryName}
+                         onClick={handleProductClick}
+                       />
+                     );
                   })}
 
                   {/* Uncategorized products */}
@@ -345,47 +349,33 @@ export default function ProductGrid({
                     );
 
                     if (uncategorizedProducts.length > 0) {
-                      return (
-                        <CategorySection
-                          key="uncategorized"
-                          title="Other Items"
-                          products={uncategorizedProducts}
-                          isShiftActive={isShiftActive}
-                          getCategoryName={getCategoryName}
-                          onClick={handleProductClick}
-                          getRecommendedAddons={getRecommendedAddons}
-                          addonItems={addonItems}
-                          addItemToCart={addItemToCart}
-                          shouldShowAddonSelection={shouldShowAddonSelection}
-                        />
-                      );
+                       return (
+                         <CategorySection
+                           key="uncategorized"
+                           title="Other Items"
+                           products={uncategorizedProducts}
+                           isShiftActive={isShiftActive}
+                           getCategoryName={getCategoryName}
+                           onClick={handleProductClick}
+                         />
+                       );
                     }
                     return null;
                   })()}
                 </div>
               ) : (
                 // Single category grid view
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 p-1">
-                  {filteredProducts.map(product => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      isShiftActive={isShiftActive}
-                      getCategoryName={getCategoryName}
-                      onClick={handleProductClick}
-                      recommendedAddons={getRecommendedAddons(product.name, addonItems)}
-                      onAddonQuickAdd={(addonItems) => {
-                        // Add the main product first
-                        addItemToCart(product);
-                        // Then add each addon
-                        addonItems.forEach(addonItem => {
-                          addItemToCart(addonItem.product, addonItem.quantity);
-                        });
-                      }}
-                      showAddonQuickSelect={shouldShowAddonSelection(product)}
-                    />
-                  ))}
-                </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 p-1">
+                   {filteredProducts.map(product => (
+                     <ProductCard
+                       key={product.id}
+                       product={product}
+                       isShiftActive={isShiftActive}
+                       getCategoryName={getCategoryName}
+                       onClick={handleProductClick}
+                     />
+                   ))}
+                 </div>
               )
             ) : (
               <div className="flex justify-center items-center h-64">

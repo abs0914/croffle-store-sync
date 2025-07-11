@@ -5,8 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UnifiedProduct } from "@/services/product/unifiedProductService";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AddonQuickSelect } from "../addons/AddonQuickSelect";
-import { AddonItem } from "@/services/pos/addonService";
 import { Plus, Info } from "lucide-react";
 
 interface ProductCardProps {
@@ -14,19 +12,13 @@ interface ProductCardProps {
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
   onClick: (product: UnifiedProduct) => void;
-  recommendedAddons?: AddonItem[];
-  onAddonQuickAdd?: (addonItems: any[]) => void;
-  showAddonQuickSelect?: boolean;
 }
 
 export default function ProductCard({
   product,
   isShiftActive,
   getCategoryName,
-  onClick,
-  recommendedAddons = [],
-  onAddonQuickAdd,
-  showAddonQuickSelect = false
+  onClick
 }: ProductCardProps) {
   const isActive = product.is_active || product.isActive;
   const stockQuantity = product.stock_quantity || product.stockQuantity || 0;
@@ -156,17 +148,6 @@ export default function ProductCard({
           </div>
         </div>
 
-        {/* Addon Quick Select */}
-        {showAddonQuickSelect && isShiftActive && isActive && recommendedAddons.length > 0 && onAddonQuickAdd && (
-          <div className="px-3 pb-3 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
-            <AddonQuickSelect
-              recommendedAddons={recommendedAddons}
-              onAddToCart={onAddonQuickAdd}
-              productName={product.name}
-              disabled={!isShiftActive || !isActive}
-            />
-          </div>
-        )}
       </CardContent>
     </Card>
   );
