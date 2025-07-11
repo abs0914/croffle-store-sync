@@ -20,22 +20,30 @@ export default function ProductCategoryTabs({
   );
   
   return (
-    <TabsList className="mb-6 bg-white border border-gray-200 overflow-x-auto flex w-full h-auto p-1 rounded-lg shadow-sm">
-      <TabsTrigger
-        value="all"
-        className="data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all duration-200 font-medium text-sm"
+    <div className="flex items-center gap-2 mb-6 overflow-x-auto scrollbar-hide">
+      <button
+        onClick={() => setActiveCategory("all")}
+        className={`px-5 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 ${
+          activeCategory === "all"
+            ? "bg-blue-100 text-blue-700 shadow-sm"
+            : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+        }`}
       >
         All Items
-      </TabsTrigger>
+      </button>
       {filteredCategories.map(category => (
-        <TabsTrigger
+        <button
           key={category.id}
-          value={category.id}
-          className="data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-sm px-4 py-2 rounded-md transition-all duration-200 font-medium text-sm whitespace-nowrap"
+          onClick={() => setActiveCategory(category.id)}
+          className={`px-5 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 ${
+            activeCategory === category.id
+              ? "bg-blue-100 text-blue-700 shadow-sm"
+              : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          }`}
         >
           {category.name}
-        </TabsTrigger>
+        </button>
       ))}
-    </TabsList>
+    </div>
   );
 }

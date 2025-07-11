@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
 import { Category, ProductVariation } from "@/types";
 import { UnifiedProduct } from "@/services/product/unifiedProductService";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -298,92 +298,118 @@ export default function ProductGrid({
   return (
     <>
       <div className="flex flex-col h-full">
-        <div className="mb-4 flex gap-2 flex-shrink-0">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 flex-shrink-0">
           <ProductSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </div>
         
-        <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory} className="flex flex-col h-full">
+        {/* Category Tabs */}
+        <div className="flex-shrink-0">
           <ProductCategoryTabs 
             categories={categories} 
             activeCategory={activeCategory} 
             setActiveCategory={setActiveCategory} 
           />
+        </div>
+        
+        {/* Products Content */}
+        <div className="flex-1 overflow-y-auto">
+          {!isShiftActive && (
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl mb-6 flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <span className="text-sm text-amber-800 font-medium">You need to start a shift before adding items to cart</span>
+            </div>
+          )}
           
-          <TabsContent value={activeCategory} className="mt-0 flex-1 overflow-y-auto">
-            {!isShiftActive && (
-              <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mb-4 flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-amber-500" />
-                <span className="text-sm text-amber-800">You need to start a shift before adding items to cart</span>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="text-center">
+                <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading products...</p>
               </div>
-            )}
-            
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <p>Loading products...</p>
-              </div>
-            ) : filteredProducts.length > 0 ? (
-              activeCategory === "all" ? (
-                // Group products by category when showing all
-                <div className="space-y-8">
-                  {categories.map(category => {
-                    const categoryProducts = filteredProducts.filter(product =>
-                      product.category_id === category.id
-                    );
+            </div>
+          ) : filteredProducts.length > 0 ? (
+            activeCategory === "all" ? (
+              // Group products by category when showing all
+              <div className="space-y-8">
+                {categories.map(category => {
+                  const categoryProducts = filteredProducts.filter(product =>
+                    product.category_id === category.id
+                  );
 
+                  if (categoryProducts.length === 0) return null;
+
+                   return (
+                     <div key={category.id} className="space-y-4">
+                       <h2 className="text-lg font-semibold text-gray-900">{category.name}</h2>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                         {categoryProducts.map(product => (
+                           <ProductCard
+                             key={product.id}
+                             product={product}
+                             isShiftActive={isShiftActive}
+                             getCategoryName={getCategoryName}
+                             onClick={handleProductClick}
+                           />
+                         ))}
+                       </div>
+                     </div>
+                   );
+                })}
+
+                {/* Uncategorized products */}
+                {(() => {
+                  const uncategorizedProducts = filteredProducts.filter(product =>
+                    !product.category_id || !categories.find(cat => cat.id === product.category_id)
+                  );
+
+                  if (uncategorizedProducts.length > 0) {
                      return (
-                       <CategorySection
-                         key={category.id}
-                         title={category.name}
-                         products={categoryProducts}
-                         isShiftActive={isShiftActive}
-                         getCategoryName={getCategoryName}
-                         onClick={handleProductClick}
-                       />
+                       <div key="uncategorized" className="space-y-4">
+                         <h2 className="text-lg font-semibold text-gray-900">Other Items</h2>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                           {uncategorizedProducts.map(product => (
+                             <ProductCard
+                               key={product.id}
+                               product={product}
+                               isShiftActive={isShiftActive}
+                               getCategoryName={getCategoryName}
+                               onClick={handleProductClick}
+                             />
+                           ))}
+                         </div>
+                       </div>
                      );
-                  })}
-
-                  {/* Uncategorized products */}
-                  {(() => {
-                    const uncategorizedProducts = filteredProducts.filter(product =>
-                      !product.category_id || !categories.find(cat => cat.id === product.category_id)
-                    );
-
-                    if (uncategorizedProducts.length > 0) {
-                       return (
-                         <CategorySection
-                           key="uncategorized"
-                           title="Other Items"
-                           products={uncategorizedProducts}
-                           isShiftActive={isShiftActive}
-                           getCategoryName={getCategoryName}
-                           onClick={handleProductClick}
-                         />
-                       );
-                    }
-                    return null;
-                  })()}
-                </div>
-              ) : (
-                // Single category grid view
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 p-1">
-                   {filteredProducts.map(product => (
-                     <ProductCard
-                       key={product.id}
-                       product={product}
-                       isShiftActive={isShiftActive}
-                       getCategoryName={getCategoryName}
-                       onClick={handleProductClick}
-                     />
-                   ))}
-                 </div>
-              )
-            ) : (
-              <div className="flex justify-center items-center h-64">
-                <p>No products found in this category</p>
+                  }
+                  return null;
+                })()}
               </div>
-            )}
-          </TabsContent>
-        </Tabs>
+            ) : (
+              // Single category grid view
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                 {filteredProducts.map(product => (
+                   <ProductCard
+                     key={product.id}
+                     product={product}
+                     isShiftActive={isShiftActive}
+                     getCategoryName={getCategoryName}
+                     onClick={handleProductClick}
+                   />
+                 ))}
+               </div>
+            )
+          ) : (
+            <div className="flex justify-center items-center h-64">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Info className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-gray-600 font-medium">No products found</p>
+                <p className="text-gray-500 text-sm mt-1">Try adjusting your search or category filter</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Product Variations Dialog */}

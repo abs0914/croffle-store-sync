@@ -41,114 +41,107 @@ export default function ProductCard({
   };
 
   return (
-    <Card className={`
-      relative overflow-hidden transition-all duration-200 hover:shadow-md group
-      ${isShiftActive && isActive
-        ? 'cursor-pointer hover:shadow-lg border-green-200 hover:border-green-300'
-        : isShiftActive
-          ? 'opacity-50 cursor-not-allowed'
-          : 'cursor-default'
-      }
-      ${!isActive ? 'opacity-60' : ''}
-    `}>
-      <CardContent className="p-0">
-        <div onClick={handleClick} className="relative">
-          {/* Product Image */}
-          <div className="relative w-full h-32 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
-            {product.image_url || product.image ? (
-              <img
-                src={product.image_url || product.image}
-                alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="text-gray-400 text-xs text-center">
-                  <div className="w-8 h-8 mx-auto mb-1 bg-gray-200 rounded-full flex items-center justify-center">
-                    <Info className="w-4 h-4" />
-                  </div>
-                  No Image
-                </div>
+    <div 
+      onClick={handleClick}
+      className={`
+        relative overflow-hidden transition-all duration-200 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md group cursor-pointer
+        ${isShiftActive && isActive
+          ? 'hover:shadow-lg hover:border-blue-300'
+          : isShiftActive
+            ? 'opacity-50 cursor-not-allowed'
+            : 'cursor-default'
+        }
+        ${!isActive ? 'opacity-60' : ''}
+      `}
+    >
+      {/* Product Image */}
+      <div className="relative w-full h-48 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+        {product.image_url || product.image ? (
+          <img
+            src={product.image_url || product.image}
+            alt={product.name}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-gray-400 text-center">
+              <div className="w-12 h-12 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                <Info className="w-6 h-6" />
               </div>
-            )}
-
-            {/* Status Badges */}
-            <div className="absolute top-2 left-2 flex gap-1">
-              {!isActive && (
-                <Badge variant="secondary" className="text-xs">
-                  Inactive
-                </Badge>
-              )}
-              {stockQuantity <= 5 && stockQuantity > 0 && (
-                <Badge variant="destructive" className="text-xs">
-                  Low Stock
-                </Badge>
-              )}
-              {stockQuantity === 0 && (
-                <Badge variant="destructive" className="text-xs">
-                  Out of Stock
-                </Badge>
-              )}
+              <span className="text-sm">No Image</span>
             </div>
-
-            {/* Add Button */}
-            {isShiftActive && isActive && (
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <Button
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-full bg-green-500 hover:bg-green-600 shadow-lg"
-                  onClick={handleAddClick}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
           </div>
+        )}
 
-          {/* Product Info */}
-          <div className="p-3">
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-sm text-gray-900 truncate">
-                  {product.name}
-                </h3>
-                <p className="text-xs text-gray-500 truncate">
-                  {categoryName}
-                </p>
-              </div>
-            </div>
+        {/* Status Badges */}
+        <div className="absolute top-3 left-3 flex gap-2">
+          {!isActive && (
+            <Badge variant="secondary" className="text-xs font-medium">
+              Inactive
+            </Badge>
+          )}
+          {stockQuantity <= 5 && stockQuantity > 0 && (
+            <Badge variant="destructive" className="text-xs font-medium">
+              Low Stock
+            </Badge>
+          )}
+          {stockQuantity === 0 && (
+            <Badge variant="destructive" className="text-xs font-medium">
+              Out of Stock
+            </Badge>
+          )}
+        </div>
 
-            {/* Price */}
-            <div className="flex justify-between items-center">
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg font-bold text-green-600">
-                  ₱{Math.floor(product.price || 0)}
-                </span>
-                {(product.price || 0) % 1 !== 0 && (
-                  <span className="text-sm text-green-600">
-                    .{((product.price || 0) % 1).toFixed(2).slice(2)}
-                  </span>
-                )}
-              </div>
+        {/* Add Button */}
+        {isShiftActive && isActive && (
+          <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+            <Button
+              size="sm"
+              className="h-10 w-10 p-0 rounded-full bg-green-500 hover:bg-green-600 shadow-lg border-2 border-white"
+              onClick={handleAddClick}
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
+      </div>
 
-              {/* Stock Indicator */}
-              {stockQuantity > 0 && (
-                <div className="text-xs text-gray-500">
-                  {stockQuantity} left
-                </div>
-              )}
-            </div>
-
-            {/* Product Description (if available) */}
+      {/* Product Info */}
+      <div className="p-4">
+        <div className="space-y-2">
+          <div>
+            <h3 className="font-semibold text-gray-900 text-base leading-tight">
+              {product.name}
+            </h3>
             {product.description && (
-              <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+              <p className="text-sm text-gray-600 mt-1 line-clamp-2 leading-relaxed">
                 {product.description}
               </p>
             )}
           </div>
-        </div>
 
-      </CardContent>
-    </Card>
+          {/* Price and Stock */}
+          <div className="flex justify-between items-end pt-2">
+            <div className="flex items-baseline">
+              <span className="text-xl font-bold text-gray-900">
+                ₱{Math.floor(product.price || 0)}
+              </span>
+              {(product.price || 0) % 1 !== 0 && (
+                <span className="text-base text-gray-900 ml-0.5">
+                  .{((product.price || 0) % 1).toFixed(2).slice(2)}
+                </span>
+              )}
+            </div>
+
+            {/* Stock Indicator */}
+            {stockQuantity > 0 && (
+              <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                {stockQuantity} left
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

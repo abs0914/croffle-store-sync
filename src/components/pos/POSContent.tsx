@@ -69,12 +69,12 @@ export default function POSContent({
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
 
   return (
-    <div className="flex flex-col min-h-0 h-full">
-      
-      {/* Mobile Layout: Full-screen products with sliding cart */}
-      <div className="flex-1 overflow-hidden tablet:hidden pb-20">
-        <Card className="h-full border-primary/20">
-          <CardContent className="p-2 sm:p-4 h-full flex flex-col overflow-hidden">
+    <div className="flex h-full bg-gray-50/50">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-h-0 lg:pr-6">
+        {/* Products Section */}
+        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-6 h-full flex flex-col">
             <ProductGrid
               products={products} 
               categories={categories} 
@@ -85,10 +85,28 @@ export default function POSContent({
               isLoading={isLoading}
               storeId={storeId}
             />
-          </CardContent>
-        </Card>
-        
-        {/* Mobile Cart Drawer */}
+          </div>
+        </div>
+      </div>
+
+      {/* Cart Sidebar - Desktop */}
+      <div className="hidden lg:flex lg:w-96 lg:flex-shrink-0">
+        <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-6 h-full">
+            <CartView 
+              selectedCustomer={selectedCustomer} 
+              setSelectedCustomer={setSelectedCustomer} 
+              handleApplyDiscount={handleApplyDiscount} 
+              handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
+              handlePaymentComplete={handlePaymentComplete} 
+              isShiftActive={!!currentShift} 
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Cart Drawer */}
+      <div className="lg:hidden">
         <MobileCartDrawer
           selectedCustomer={selectedCustomer}
           setSelectedCustomer={setSelectedCustomer}
@@ -99,80 +117,6 @@ export default function POSContent({
           open={isMobileCartOpen}
           onOpenChange={setIsMobileCartOpen}
         />
-      </div>
-
-      {/* Tablet Layout: 60/40 Split */}
-      <div className="flex-1 flex-row gap-4 overflow-hidden hidden tablet:flex desktop:hidden">
-        {/* Product Selection Area - 60% */}
-        <div className="flex-[3] min-h-0">
-          <Card className="h-full border-primary/20">
-            <CardContent className="p-4 h-full flex flex-col overflow-hidden">
-              <ProductGrid
-                products={products} 
-                categories={categories} 
-                activeCategory={activeCategory} 
-                setActiveCategory={setActiveCategory} 
-                addItemToCart={addItemToCart} 
-                isShiftActive={!!currentShift} 
-                isLoading={isLoading}
-                storeId={storeId}
-              />
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Cart Area - 40% */}
-        <div className="flex-[2] flex-shrink-0">
-          <Card className="border-primary/20 h-full">
-            <CardContent className="p-4 h-full">
-              <CartView 
-                selectedCustomer={selectedCustomer} 
-                setSelectedCustomer={setSelectedCustomer} 
-                handleApplyDiscount={handleApplyDiscount} 
-                handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
-                handlePaymentComplete={handlePaymentComplete} 
-                isShiftActive={!!currentShift} 
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Desktop Layout: Traditional side by side */}
-      <div className="flex-1 flex-row gap-4 overflow-hidden hidden desktop:flex">
-        {/* Product Selection Area - Desktop */}
-        <div className="flex-1 min-h-0">
-          <Card className="h-full border-primary/20">
-            <CardContent className="p-4 h-full flex flex-col overflow-hidden">
-              <ProductGrid
-                products={products} 
-                categories={categories} 
-                activeCategory={activeCategory} 
-                setActiveCategory={setActiveCategory} 
-                addItemToCart={addItemToCart} 
-                isShiftActive={!!currentShift} 
-                isLoading={isLoading}
-                storeId={storeId}
-              />
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Cart Area - Desktop */}
-        <div className="w-96 flex-shrink-0">
-          <Card className="border-primary/20 h-full">
-            <CardContent className="p-4 h-full">
-              <CartView 
-                selectedCustomer={selectedCustomer} 
-                setSelectedCustomer={setSelectedCustomer} 
-                handleApplyDiscount={handleApplyDiscount} 
-                handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
-                handlePaymentComplete={handlePaymentComplete} 
-                isShiftActive={!!currentShift} 
-              />
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );

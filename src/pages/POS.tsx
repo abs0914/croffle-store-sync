@@ -172,19 +172,21 @@ export default function POS() {
   }
 
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden">
-      {/* Optimized Consolidated Header */}
-      <OptimizedPOSHeader
-        currentStore={currentStore}
-        currentShift={currentShift}
-        selectedCustomer={selectedCustomer}
-        isConnected={isConnected}
-        lastSync={lastSync}
-        storeId={currentStore?.id}
-      />
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-gray-50">
+      {/* Header */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
+        <OptimizedPOSHeader
+          currentStore={currentStore}
+          currentShift={currentShift}
+          selectedCustomer={selectedCustomer}
+          isConnected={isConnected}
+          lastSync={lastSync}
+          storeId={currentStore?.id}
+        />
+      </div>
 
       {/* Main POS Content */}
-      <div className="flex-1 min-h-0 p-2 sm:p-4">
+      <div className="flex-1 min-h-0 p-6">
         <POSContent
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}
