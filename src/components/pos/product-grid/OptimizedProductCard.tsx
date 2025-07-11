@@ -1,11 +1,12 @@
 
-import React, { memo } from "react";
+import React, { memo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertTriangle, Package, ExternalLink } from "lucide-react";
+import { AlertTriangle, Package, ExternalLink, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ProductEditDialog } from "./ProductEditDialog";
 
 interface OptimizedProductCardProps {
   product: Product;
@@ -27,6 +28,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
   inventoryStatus
 }: OptimizedProductCardProps) {
   const navigate = useNavigate();
+  const [showEditDialog, setShowEditDialog] = useState(false);
   
   // Check if product is active, handling both is_active and isActive properties
   const isActive = product.is_active || product.isActive;
@@ -39,16 +41,21 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
   // Auto-disable if out of stock
   const isDisabled = !isShiftActive || !isActive || isOutOfStock;
   
-  const handleClick = React.useCallback(() => {
+  const handleClick = useCallback(() => {
     if (!isDisabled) {
       onClick(product);
     }
   }, [onClick, product, isDisabled]);
 
-  const handleQuickRestock = React.useCallback((e: React.MouseEvent) => {
+  const handleQuickRestock = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     navigate('/inventory');
   }, [navigate]);
+
+  const handleEditProduct = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowEditDialog(true);
+  }, []);
 
   const categoryName = React.useMemo(() => {
     if (product.category) {
@@ -93,6 +100,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
   };
 
   return (
+    <>
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -157,7 +165,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                 <p className="font-medium text-sm truncate">{product.name}</p>
                 <p className="text-xs text-muted-foreground mb-2">{categoryName}</p>
                 
-                {/* Stock Status */}
+                {/* Stock Status and Action Buttons */}
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1">
                     {!isActive && (
@@ -166,18 +174,29 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                     {getStockBadge()}
                   </div>
                   
-                  {/* Quick Restock Button */}
-                  {isOutOfStock && isDirectProduct && (
+                  <div className="flex gap-1">
+                    {/* Edit Button */}
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-6 px-2 text-xs hover:bg-primary hover:text-primary-foreground"
-                      onClick={handleQuickRestock}
+                      onClick={handleEditProduct}
                     >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Restock
+                      <Edit className="h-3 w-3" />
                     </Button>
-                  )}
+                    
+                    {/* Quick Restock Button */}
+                    {isOutOfStock && isDirectProduct && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs hover:bg-primary hover:text-primary-foreground"
+                        onClick={handleQuickRestock}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -188,6 +207,13 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+    
+    <ProductEditDialog 
+      product={product}
+      isOpen={showEditDialog}
+      onClose={() => setShowEditDialog(false)}
+    />
+  </>
   );
 });
 
