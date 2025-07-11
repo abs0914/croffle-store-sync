@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Menu } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
+import { ProductMigrationButton } from '@/components/products/ProductMigrationButton';
 
 // Import existing components
 import { StoreCatalogTab } from '@/components/Products/StoreCatalogTab';
@@ -10,6 +11,11 @@ import { StoreCatalogTab } from '@/components/Products/StoreCatalogTab';
 export default function Products() {
   const { user } = useAuth();
   const storeId = user?.storeIds?.[0] || '';
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleMigrationComplete = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
     <div className="space-y-6">
@@ -22,8 +28,11 @@ export default function Products() {
           </p>
         </div>
         
-        <div className="text-sm text-muted-foreground">
-          Products are deployed by admin from central recipe management
+        <div className="flex items-center gap-2">
+          <ProductMigrationButton onMigrationComplete={handleMigrationComplete} />
+          <div className="text-sm text-muted-foreground">
+            Products are deployed by admin from central recipe management
+          </div>
         </div>
       </div>
 
@@ -38,7 +47,7 @@ export default function Products() {
           </p>
         </CardHeader>
         <CardContent>
-          <StoreCatalogTab storeId={storeId} />
+          <StoreCatalogTab storeId={storeId} key={refreshKey} />
         </CardContent>
       </Card>
     </div>

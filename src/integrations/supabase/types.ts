@@ -4289,6 +4289,14 @@ export type Database = {
         }
         Returns: string
       }
+      deploy_products_to_all_stores: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          deployed_count: number
+          error_count: number
+          details: string[]
+        }[]
+      }
       extract_pack_quantity: {
         Args: { order_description: string }
         Returns: number
@@ -4426,6 +4434,15 @@ export type Database = {
           p_receipt_number?: string
         }
         Returns: string
+      }
+      migrate_product_catalog_to_products: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          migrated_count: number
+          skipped_count: number
+          error_count: number
+          details: string[]
+        }[]
       }
       migrate_recipes_to_product_catalog: {
         Args: Record<PropertyKey, never>
