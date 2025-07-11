@@ -5,11 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Settings, User, Wifi, WifiOff, Clock, AlertTriangle, CheckCircle, AlertCircle, Menu } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useShift } from "@/contexts/shift";
+import StartShiftDialog from "./dialogs/StartShiftDialog";
+import { useState } from "react";
 import { formatDistanceToNow } from 'date-fns';
 import { useQuery } from "@tanstack/react-query";
 import { fetchCashierById } from "@/services/cashier";
 import { useAuth } from "@/contexts/auth";
-import { useShift } from "@/contexts/shift";
 // Simple mock service for POS inventory status
 const getPOSInventoryStatus = async (storeId: string) => {
   return {
@@ -36,7 +38,7 @@ interface OptimizedPOSHeaderProps {
 
 export default function OptimizedPOSHeader({
   currentStore,
-  currentShift,
+  currentShift: propsCurrentShift,
   selectedCustomer,
   isConnected,
   lastSync,
@@ -44,15 +46,35 @@ export default function OptimizedPOSHeader({
 }: OptimizedPOSHeaderProps) {
   const { user } = useAuth();
   const { config } = useStoreDisplay();
+  const { currentShift, startShift } = useShift();
+  const [isStartShiftOpen, setIsStartShiftOpen] = useState(false);
+
+  // Use the shift from context, not props
+  const activeShift = currentShift || propsCurrentShift;
 
   // Cashier data
   const { data: cashier } = useQuery({
-    queryKey: ["cashier", currentShift?.cashier_id],
-    queryFn: () => currentShift?.cashier_id ? fetchCashierById(currentShift.cashier_id) : Promise.resolve(null),
-    enabled: !!currentShift?.cashier_id
+    queryKey: ["cashier", activeShift?.cashier_id],
+    queryFn: () => activeShift?.cashier_id ? fetchCashierById(activeShift.cashier_id) : Promise.resolve(null),
+    enabled: !!activeShift?.cashier_id
   });
 
   // Inventory status
+  const handleStartShift = async (
+    startingCash: number,
+    photo?: string,
+    cashierId?: string
+  ) => {
+    try {
+      const success = await startShift(startingCash, photo, cashierId);
+      if (success) {
+        setIsStartShiftOpen(false);
+      }
+    } catch (error) {
+      console.error("Error starting shift:", error);
+    }
+  };
+  
   const { data: inventoryStatus } = useQuery({
     queryKey: ["pos-inventory-status", storeId],
     queryFn: () => storeId ? getPOSInventoryStatus(storeId) : Promise.resolve(null),
@@ -71,7 +93,7 @@ export default function OptimizedPOSHeader({
       );
     }
     
-    if (currentShift && user) {
+    if (activeShift && user) {
       return (
         <div className="flex items-center gap-1.5">
           <User className="h-3.5 w-3.5 text-green-600" />
@@ -173,6 +195,21 @@ export default function OptimizedPOSHeader({
 
           {/* Right Section: Status & Settings */}
           <div className="flex items-center gap-2">
+            {/* Shift Status - Show if no active shift */}
+            {!activeShift && (
+              <>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  className="h-6 text-xs px-2"
+                  onClick={() => setIsStartShiftOpen(true)}
+                >
+                  Start Shift
+                </Button>
+                <Separator orientation="vertical" className="h-4" />
+              </>
+            )}
+            
             <div className="hidden md:flex items-center gap-2">
               {getInventoryStatus()}
               <Separator orientation="vertical" className="h-4" />
@@ -197,6 +234,14 @@ export default function OptimizedPOSHeader({
           </div>
         </div>
       </div>
+      
+      {/* Start Shift Dialog */}
+      <StartShiftDialog
+        isOpen={isStartShiftOpen}
+        onOpenChange={setIsStartShiftOpen}
+        onStartShift={handleStartShift}
+        storeId={currentStore?.id || null}
+      />
     </Card>
   );
 }
