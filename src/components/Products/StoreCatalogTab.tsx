@@ -18,7 +18,7 @@ import {
   Pen
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/format';
-import { fetchUnifiedProducts, toggleProductAvailability, UnifiedProduct } from '@/services/product/unifiedProductService';
+import { fetchProductCatalog, updateProductCatalog, ProductCatalog } from '@/services/productCatalog/productCatalogService';
 import { EditProductDialog } from '@/pages/ProductCatalog/components/EditProductDialog';
 import { updateProduct } from '@/services/productCatalog/productCatalogService';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,10 +36,10 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<UnifiedProduct | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ProductCatalog | null>(null);
   const [editPrice, setEditPrice] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<UnifiedProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductCatalog | null>(null);
   
   const canEditPrices = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
 
@@ -48,9 +48,9 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
     data: products = [],
     isLoading: loading,
     error: productsError
-  } = useOptimizedDataFetch<UnifiedProduct[]>(
-    ['unified-products', storeId],
-    () => fetchUnifiedProducts(storeId),
+  } = useOptimizedDataFetch<ProductCatalog[]>(
+    ['product-catalog', storeId],
+    () => fetchProductCatalog(storeId),
     {
       enabled: !!storeId,
       cacheConfig: {
@@ -71,12 +71,12 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'products',
+          table: 'product_catalog',
           filter: `store_id=eq.${storeId}`
         },
         () => {
           // Invalidate cache when products are updated
-          queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] });
+          queryClient.invalidateQueries({ queryKey: ['product-catalog', storeId] });
         }
       )
       .subscribe();
@@ -89,9 +89,9 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   // Optimized mutation for toggling product availability
   const { mutate: toggleAvailability } = useOptimizedMutation(
     async ({ productId, newStatus }: { productId: string; newStatus: boolean }) => {
-      const success = await toggleProductAvailability(productId, newStatus);
-      if (!success) throw new Error('Failed to toggle product availability');
-      return success;
+      const result = await updateProductCatalog(productId, { is_available: newStatus });
+      if (!result) throw new Error('Failed to toggle product availability');
+      return result;
     },
     {
       onSuccess: () => {
@@ -101,7 +101,7 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
         console.error('Error toggling product availability:', error);
         toast.error('Failed to update product availability');
       },
-      invalidateQueries: [['unified-products', storeId]]
+      invalidateQueries: [['product-catalog', storeId]]
     }
   );
 
@@ -109,32 +109,17 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
     toggleAvailability({ productId, newStatus: !currentStatus });
   };
 
-  const handleEditPrice = (product: UnifiedProduct) => {
+  const handleEditPrice = (product: ProductCatalog) => {
     setEditingProduct(product);
     setEditPrice(product.price?.toString() || '0');
   };
 
-  const handleEditProduct = (product: UnifiedProduct) => {
+  const handleEditProduct = (product: ProductCatalog) => {
     setSelectedProduct(product);
     setShowEditDialog(true);
   };
 
-  // Convert UnifiedProduct to ProductCatalog format for the EditProductDialog
-  const convertToProductCatalog = (product: UnifiedProduct) => {
-    return {
-      id: product.id,
-      store_id: product.store_id || storeId,
-      product_name: product.name || '',
-      description: product.description || '',
-      price: product.price || 0,
-      is_available: product.is_active || false,
-      display_order: 0,
-      created_at: product.created_at || new Date().toISOString(),
-      updated_at: product.updated_at || new Date().toISOString(),
-      recipe_id: product.recipe_id || null,
-      ingredients: []
-    };
-  };
+
 
   const handleEditDialogClose = () => {
     setShowEditDialog(false);
@@ -142,20 +127,16 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   };
 
   const handleProductUpdated = () => {
-    queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] });
+    queryClient.invalidateQueries({ queryKey: ['product-catalog', storeId] });
     handleEditDialogClose();
   };
 
   // Optimized mutation for updating product price
   const { mutate: updatePrice } = useOptimizedMutation(
     async ({ productId, newPrice }: { productId: string; newPrice: number }) => {
-      const { error } = await supabase
-        .from('products')
-        .update({ price: newPrice })
-        .eq('id', productId);
-
-      if (error) throw error;
-      return true;
+      const result = await updateProductCatalog(productId, { price: newPrice });
+      if (!result) throw new Error('Failed to update price');
+      return result;
     },
     {
       onSuccess: () => {
@@ -166,7 +147,7 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
         console.error('Error updating price:', error);
         toast.error('Failed to update price');
       },
-      invalidateQueries: [['unified-products', storeId]]
+      invalidateQueries: [['product-catalog', storeId]]
     }
   );
 
@@ -183,42 +164,28 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   };
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = product.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAvailability = !showUnavailableOnly || !product.is_active;
+    const matchesAvailability = !showUnavailableOnly || !product.is_available;
     return matchesSearch && matchesAvailability;
   });
 
-  const getStatusIcon = (status: 'in_stock' | 'low_stock' | 'out_of_stock') => {
-    switch (status) {
-      case 'in_stock':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'low_stock':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'out_of_stock':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
-    }
+  const getAvailabilityIcon = (isAvailable: boolean) => {
+    return isAvailable ?
+      <CheckCircle className="h-4 w-4 text-green-600" /> :
+      <AlertCircle className="h-4 w-4 text-red-600" />;
   };
 
-  const getStatusBadge = (status: 'in_stock' | 'low_stock' | 'out_of_stock') => {
-    const variants = {
-      'in_stock': 'default',
-      'low_stock': 'secondary',
-      'out_of_stock': 'destructive'
-    } as const;
-    
-    const labels = {
-      'in_stock': 'Available',
-      'low_stock': 'Low Stock',
-      'out_of_stock': 'Unavailable'
+  // Convert ProductCatalog to the format expected by EditProductDialog
+  const convertToProductCatalog = (product: ProductCatalog) => {
+    return {
+      ...product,
+      name: product.product_name, // Map product_name to name for compatibility
+      is_active: product.is_available // Map is_available to is_active for compatibility
     };
-
-    return (
-      <Badge variant={variants[status]}>
-        {labels[status]}
-      </Badge>
-    );
   };
+
+
 
   const availableCount = products.filter(p => p.inventory_status === 'in_stock').length;
   const lowStockCount = products.filter(p => p.inventory_status === 'low_stock').length;
@@ -307,7 +274,7 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
         >
           Unavailable Only
         </Button>
-        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] })} variant="outline" size="sm">
+        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['product-catalog', storeId] })} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -319,9 +286,9 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
           <Card key={product.id} className="overflow-hidden">
             <div className="aspect-video bg-muted relative">
               {product.image_url ? (
-                <img 
-                  src={product.image_url} 
-                  alt={product.name} 
+                <img
+                  src={product.image_url}
+                  alt={product.product_name}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -330,16 +297,16 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
                 </div>
               )}
               <div className="absolute top-2 right-2">
-                {product.inventory_status && getStatusBadge(product.inventory_status)}
+                {getAvailabilityIcon(product.is_available)}
               </div>
             </div>
             
             <CardContent className="p-4">
               <div className="space-y-2">
                 <div className="flex items-start justify-between">
-                  <h3 className="font-semibold line-clamp-2">{product.name}</h3>
+                  <h3 className="font-semibold line-clamp-2">{product.product_name}</h3>
                   <div className="flex items-center gap-1 ml-2">
-                    {product.inventory_status && getStatusIcon(product.inventory_status)}
+                    {getAvailabilityIcon(product.is_available)}
                   </div>
                 </div>
                 
@@ -363,14 +330,14 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
                       </Button>
                     )}
                   </div>
-                  <Badge variant={product.product_type === 'recipe' ? 'secondary' : 'outline'}>
-                    {product.product_type === 'recipe' ? 'Recipe' : 'Direct'}
+                  <Badge variant={product.recipe_id ? 'secondary' : 'outline'}>
+                    {product.recipe_id ? 'Recipe' : 'Direct'}
                   </Badge>
                 </div>
 
-                {product.recipe_ingredients && product.recipe_ingredients.length > 0 && (
+                {product.ingredients && product.ingredients.length > 0 && (
                   <div className="text-xs text-muted-foreground">
-                    Ingredients: {product.recipe_ingredients.length}
+                    Ingredients: {product.ingredients.length}
                   </div>
                 )}
                 
@@ -385,12 +352,12 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
                     Edit
                   </Button>
                   <Button
-                    onClick={() => handleToggleAvailability(product.id, product.is_active || false)}
-                    variant={product.is_active ? "outline" : "default"}
+                    onClick={() => handleToggleAvailability(product.id, product.is_available || false)}
+                    variant={product.is_available ? "outline" : "default"}
                     size="sm"
                     className="flex-1"
                   >
-                    {product.is_active ? (
+                    {product.is_available ? (
                       <>
                         <EyeOff className="h-4 w-4 mr-2" />
                         Hide
@@ -432,7 +399,7 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
               <Label htmlFor="product-name">Product</Label>
               <Input
                 id="product-name"
-                value={editingProduct?.name || ''}
+                value={editingProduct?.product_name || ''}
                 disabled
                 className="mt-1"
               />

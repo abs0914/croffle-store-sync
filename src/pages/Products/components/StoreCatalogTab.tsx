@@ -16,11 +16,11 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { 
-  fetchUnifiedProducts, 
-  toggleProductAvailability,
-  UnifiedProduct 
-} from '@/services/product/unifiedProductService';
+import {
+  fetchProductCatalog,
+  updateProductCatalog,
+  ProductCatalog
+} from '@/services/productCatalog/productCatalogService';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 import { useOptimizedMutation } from '@/hooks/useOptimizedDataFetch';
@@ -37,8 +37,8 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
   const queryClient = useQueryClient();
 
   const { data: products = [], isLoading, refetch } = useQuery({
-    queryKey: ['unified-products', storeId],
-    queryFn: () => fetchUnifiedProducts(storeId),
+    queryKey: ['product-catalog', storeId],
+    queryFn: () => fetchProductCatalog(storeId),
     enabled: !!storeId,
     staleTime: 30 * 1000, // 30 seconds for fresh data
     gcTime: 2 * 60 * 1000, // 2 minutes cache
@@ -56,12 +56,12 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'products',
+          table: 'product_catalog',
           filter: `store_id=eq.${storeId}`
         },
         () => {
           // Invalidate cache when products are updated
-          queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] });
+          queryClient.invalidateQueries({ queryKey: ['product-catalog', storeId] });
         }
       )
       .subscribe();
@@ -74,9 +74,9 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
   // Optimized mutation for toggling product availability
   const { mutate: toggleAvailability } = useOptimizedMutation(
     async ({ productId, newStatus }: { productId: string; newStatus: boolean }) => {
-      const success = await toggleProductAvailability(productId, newStatus);
-      if (!success) throw new Error('Failed to toggle product availability');
-      return success;
+      const result = await updateProductCatalog(productId, { is_available: newStatus });
+      if (!result) throw new Error('Failed to toggle product availability');
+      return result;
     },
     {
       onSuccess: () => {
@@ -86,7 +86,7 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
         console.error('Error toggling product availability:', error);
         toast.error('Failed to update product availability');
       },
-      invalidateQueries: [['unified-products', storeId]]
+      invalidateQueries: [['product-catalog', storeId]]
     }
   );
 
@@ -95,17 +95,18 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
   };
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAvailability = !showUnavailableOnly || !product.is_active;
+    const matchesAvailability = !showUnavailableOnly || !product.is_available;
     return matchesSearch && matchesAvailability;
   });
 
-  const availableCount = products.filter(p => p.is_active).length;
-  const unavailableCount = products.filter(p => !p.is_active).length;
-  const inStockCount = products.filter(p => p.inventory_status === 'in_stock').length;
-  const lowStockCount = products.filter(p => p.inventory_status === 'low_stock').length;
-  const outOfStockCount = products.filter(p => p.inventory_status === 'out_of_stock').length;
+  const availableCount = products.filter(p => p.is_available).length;
+  const unavailableCount = products.filter(p => !p.is_available).length;
+  const totalProducts = products.length;
+  const averagePrice = totalProducts > 0
+    ? products.reduce((sum, p) => sum + p.price, 0) / totalProducts
+    : 0;
 
   if (isLoading) {
     return (
@@ -128,14 +129,14 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <Package className="h-4 w-4 text-blue-600" />
               <div className="text-sm text-muted-foreground">Total Products</div>
             </div>
-            <div className="text-2xl font-bold">{products.length}</div>
+            <div className="text-2xl font-bold">{totalProducts}</div>
           </CardContent>
         </Card>
         <Card>
@@ -150,28 +151,19 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-green-500" />
-              <div className="text-sm text-muted-foreground">In Stock</div>
-            </div>
-            <div className="text-2xl font-bold">{inStockCount}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-              <div className="text-sm text-muted-foreground">Low Stock</div>
-            </div>
-            <div className="text-2xl font-bold">{lowStockCount}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
               <EyeOff className="h-4 w-4 text-red-600" />
-              <div className="text-sm text-muted-foreground">Out of Stock</div>
+              <div className="text-sm text-muted-foreground">Unavailable</div>
             </div>
-            <div className="text-2xl font-bold">{outOfStockCount}</div>
+            <div className="text-2xl font-bold">{unavailableCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-orange-600" />
+              <div className="text-sm text-muted-foreground">Avg Price</div>
+            </div>
+            <div className="text-2xl font-bold">{formatCurrency(averagePrice)}</div>
           </CardContent>
         </Card>
       </div>
@@ -197,7 +189,7 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
               <EyeOff className="h-4 w-4" />
               Unavailable Only
             </Button>
-            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] })} variant="outline" className="flex items-center gap-2">
+            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['product-catalog', storeId] })} variant="outline" className="flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
               Refresh
             </Button>
@@ -229,39 +221,30 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      {product.product_type === 'recipe' ? 
-                        <ChefHat className="h-4 w-4 text-orange-600" /> : 
+                      {product.recipe_id ?
+                        <ChefHat className="h-4 w-4 text-orange-600" /> :
                         <Package className="h-4 w-4 text-blue-600" />
                       }
                       <CardTitle className="text-base line-clamp-2">
-                        {product.name}
+                        {product.product_name}
                       </CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={product.product_type === 'recipe' ? "default" : "secondary"} className="text-xs">
-                        {product.product_type === 'recipe' ? 'Recipe' : 'Direct'}
+                      <Badge variant={product.recipe_id ? "default" : "secondary"} className="text-xs">
+                        {product.recipe_id ? 'Recipe' : 'Direct'}
                       </Badge>
-                      {(() => {
-                        switch (product.inventory_status) {
-                          case 'out_of_stock':
-                            return <Badge variant="destructive" className="text-xs">Out of Stock</Badge>;
-                          case 'low_stock':
-                            return <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-700">Low Stock</Badge>;
-                          case 'in_stock':
-                            return <Badge variant="default" className="text-xs bg-green-100 text-green-800">In Stock</Badge>;
-                          default:
-                            return <Badge variant="secondary" className="text-xs">Unknown</Badge>;
-                        }
-                      })()}
+                      <Badge variant={product.is_available ? "default" : "secondary"} className="text-xs">
+                        {product.is_available ? 'Available' : 'Unavailable'}
+                      </Badge>
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleToggleAvailability(product.id, product.is_active)}
+                    onClick={() => handleToggleAvailability(product.id, product.is_available)}
                     className="ml-2"
                   >
-                    {product.is_active ? (
+                    {product.is_available ? (
                       <Eye className="h-4 w-4 text-green-600" />
                     ) : (
                       <EyeOff className="h-4 w-4 text-gray-400" />
@@ -274,9 +257,9 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
                 {/* Product Image */}
                 <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
                   {product.image_url ? (
-                    <img 
-                      src={product.image_url} 
-                      alt={product.name}
+                    <img
+                      src={product.image_url}
+                      alt={product.product_name}
                       className="w-full h-full object-cover rounded-lg"
                     />
                   ) : (
@@ -290,10 +273,10 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
                     <span className="text-lg font-semibold text-success">
                       {formatCurrency(product.price)}
                     </span>
-                    <Badge 
-                      variant={product.is_active ? "default" : "secondary"}
+                    <Badge
+                      variant={product.is_available ? "default" : "secondary"}
                     >
-                      {product.is_active ? 'Available' : 'Unavailable'}
+                      {product.is_available ? 'Available' : 'Unavailable'}
                     </Badge>
                   </div>
 
@@ -304,14 +287,14 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
                   )}
 
                   <div className="text-xs text-muted-foreground">
-                    SKU: {product.sku}
+                    ID: {product.id.substring(0, 8)}...
                   </div>
 
-                  {product.recipe_ingredients && product.recipe_ingredients.length > 0 && (
+                  {product.ingredients && product.ingredients.length > 0 && (
                     <div className="flex items-center gap-2">
                       <ChefHat className="h-4 w-4 text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">
-                        {product.recipe_ingredients.length} ingredient{product.recipe_ingredients.length !== 1 ? 's' : ''}
+                        {product.ingredients.length} ingredient{product.ingredients.length !== 1 ? 's' : ''}
                       </span>
                     </div>
                   )}
@@ -322,10 +305,10 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleToggleAvailability(product.id, product.is_active)}
+                    onClick={() => handleToggleAvailability(product.id, product.is_available)}
                     className="w-full"
                   >
-                    {product.is_active ? 'Make Unavailable' : 'Make Available'}
+                    {product.is_available ? 'Make Unavailable' : 'Make Available'}
                   </Button>
                 </div>
               </CardContent>
