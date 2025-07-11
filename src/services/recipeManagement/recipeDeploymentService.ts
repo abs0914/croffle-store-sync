@@ -466,6 +466,7 @@ const createProductFromRecipe = async (
     const timestamp = Date.now();
     const sku = `RCP-${recipe.name.toUpperCase().replace(/[^A-Z0-9]/g, '-').substring(0, 10)}-${timestamp}`;
     
+    // Create product in products table
     const { data: product, error: productError } = await supabase
       .from('products')
       .insert({
@@ -493,6 +494,59 @@ const createProductFromRecipe = async (
       };
     }
 
+    // Create product catalog entry for POS system
+    const { data: catalogProduct, error: catalogError } = await supabase
+      .from('product_catalog')
+      .insert({
+        store_id: recipe.store_id,
+        product_name: recipe.name,
+        description: recipe.description || template.description,
+        price: recipe.suggested_price || (recipe.total_cost * 1.5),
+        is_available: true,
+        recipe_id: recipe.id,
+        display_order: 0
+      })
+      .select()
+      .single();
+
+    if (catalogError) {
+      console.error('Product catalog creation error:', catalogError);
+      return { 
+        success: false, 
+        error: `Failed to create product catalog entry: ${catalogError.message}` 
+      };
+    }
+
+    // Get recipe ingredients to create product ingredients
+    const { data: recipeIngredients, error: ingredientsError } = await supabase
+      .from('recipe_ingredients')
+      .select('*')
+      .eq('recipe_id', recipe.id);
+
+    if (ingredientsError) {
+      console.warn('Failed to fetch recipe ingredients for product catalog:', ingredientsError);
+    } else if (recipeIngredients && recipeIngredients.length > 0) {
+      // Create product ingredients for inventory tracking
+      const productIngredients = recipeIngredients.map((ingredient: any) => ({
+        product_catalog_id: catalogProduct.id,
+        inventory_stock_id: ingredient.inventory_stock_id,
+        commissary_item_id: ingredient.commissary_item_id,
+        required_quantity: ingredient.quantity,
+        unit: ingredient.unit
+      })).filter((ing: any) => ing.inventory_stock_id || ing.commissary_item_id);
+
+      if (productIngredients.length > 0) {
+        const { error: productIngredientsError } = await supabase
+          .from('product_ingredients')
+          .insert(productIngredients);
+
+        if (productIngredientsError) {
+          console.warn('Failed to create product ingredients:', productIngredientsError);
+        }
+      }
+    }
+
+    console.log(`✅ Created product and catalog entry for "${recipe.name}"`);
     return { success: true, productId: product.id };
   } catch (error) {
     console.error('Unexpected error creating product:', error);
