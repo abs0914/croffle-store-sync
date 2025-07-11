@@ -18,9 +18,9 @@ import {
   Pen
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/format';
-import { fetchProductCatalog, updateProductCatalog, ProductCatalog } from '@/services/productCatalog/productCatalogService';
+import { fetchProductCatalog, updateProduct } from '@/services/productCatalog/productCatalogService';
+import { ProductCatalog } from '@/services/productCatalog/types';
 import { EditProductDialog } from '@/pages/ProductCatalog/components/EditProductDialog';
-import { updateProduct } from '@/services/productCatalog/productCatalogService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -89,7 +89,7 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   // Optimized mutation for toggling product availability
   const { mutate: toggleAvailability } = useOptimizedMutation(
     async ({ productId, newStatus }: { productId: string; newStatus: boolean }) => {
-      const result = await updateProductCatalog(productId, { is_available: newStatus });
+      const result = await updateProduct(productId, { is_available: newStatus });
       if (!result) throw new Error('Failed to toggle product availability');
       return result;
     },
@@ -134,7 +134,7 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   // Optimized mutation for updating product price
   const { mutate: updatePrice } = useOptimizedMutation(
     async ({ productId, newPrice }: { productId: string; newPrice: number }) => {
-      const result = await updateProductCatalog(productId, { price: newPrice });
+      const result = await updateProduct(productId, { price: newPrice });
       if (!result) throw new Error('Failed to update price');
       return result;
     },
@@ -187,9 +187,9 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
 
 
 
-  const availableCount = products.filter(p => p.inventory_status === 'in_stock').length;
-  const lowStockCount = products.filter(p => p.inventory_status === 'low_stock').length;
-  const unavailableCount = products.filter(p => p.inventory_status === 'out_of_stock').length;
+  const availableCount = products.filter(p => p.is_available).length;
+  const lowStockCount = 0; // Not applicable for product catalog
+  const unavailableCount = products.filter(p => !p.is_available).length;
   const avgPrice = products.length > 0 
     ? products.reduce((sum, p) => sum + (p.price || 0), 0) / products.length 
     : 0;

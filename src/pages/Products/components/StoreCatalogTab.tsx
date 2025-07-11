@@ -18,9 +18,9 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchProductCatalog,
-  updateProductCatalog,
-  ProductCatalog
+  updateProduct
 } from '@/services/productCatalog/productCatalogService';
+import { ProductCatalog } from '@/services/productCatalog/types';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 import { useOptimizedMutation } from '@/hooks/useOptimizedDataFetch';
@@ -74,7 +74,7 @@ export const StoreCatalogTab: React.FC<StoreCatalogTabProps> = ({ storeId }) => 
   // Optimized mutation for toggling product availability
   const { mutate: toggleAvailability } = useOptimizedMutation(
     async ({ productId, newStatus }: { productId: string; newStatus: boolean }) => {
-      const result = await updateProductCatalog(productId, { is_available: newStatus });
+      const result = await updateProduct(productId, { is_available: newStatus });
       if (!result) throw new Error('Failed to toggle product availability');
       return result;
     },
