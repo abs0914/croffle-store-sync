@@ -320,7 +320,6 @@ export class MarkdownBulkUploadService {
       }
 
       result.success = true;
-      result.recipeId = templateId;
       
       return result;
 

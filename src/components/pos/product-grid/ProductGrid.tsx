@@ -69,7 +69,7 @@ export default function ProductGrid({
   const [addonItems, setAddonItems] = useState<AddonItem[]>([]);
   const [addonCategories, setAddonCategories] = useState<AddonCategory[]>([]);
   const [isAddonDialogOpen, setIsAddonDialogOpen] = useState(false);
-  const [selectedProductForAddons, setSelectedProductForAddons] = useState<UnifiedProduct | null>(null);
+  const [selectedProductForAddons, setSelectedProductForAddons] = useState<UnifiedProduct & { selectedVariation?: ProductVariation } | null>(null);
   
   // Load customizable recipes and addons on component mount
   useEffect(() => {
@@ -178,10 +178,8 @@ export default function ProductGrid({
       if (shouldShowAddonSelection(selectedProduct)) {
         // Close variation dialog and open addon dialog
         setIsDialogOpen(false);
-        setSelectedProductForAddons(selectedProduct);
+        setSelectedProductForAddons({ ...selectedProduct, selectedVariation: variation });
         setIsAddonDialogOpen(true);
-        // Store the selected variation for later use
-        setSelectedProduct({ ...selectedProduct, selectedVariation: variation });
       } else {
         // Add variation directly without addons
         addItemToCart(selectedProduct, 1, variation);
@@ -220,7 +218,7 @@ export default function ProductGrid({
 
   const handleCustomizedAddToCart = (customizedItem: any) => {
     console.log("ProductGrid: Adding customized item to cart:", customizedItem);
-    addItemToCart(customizedItem.product, customizedItem.quantity, null, customizedItem);
+    addItemToCart(customizedItem.product, customizedItem.quantity);
     setIsCustomizationDialogOpen(false);
   };
 

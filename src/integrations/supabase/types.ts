@@ -2039,6 +2039,7 @@ export type Database = {
       }
       product_catalog: {
         Row: {
+          category_id: string | null
           created_at: string
           description: string | null
           display_order: number | null
@@ -2053,6 +2054,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number | null
@@ -2067,6 +2069,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number | null
@@ -2081,6 +2084,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "product_catalog_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_catalog_recipe_id_fkey"
             columns: ["recipe_id"]
@@ -4279,6 +4289,14 @@ export type Database = {
         }
         Returns: string
       }
+      deploy_products_to_all_stores: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          deployed_count: number
+          error_count: number
+          details: string[]
+        }[]
+      }
       extract_pack_quantity: {
         Args: { order_description: string }
         Returns: number
@@ -4416,6 +4434,15 @@ export type Database = {
           p_receipt_number?: string
         }
         Returns: string
+      }
+      migrate_product_catalog_to_products: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          migrated_count: number
+          skipped_count: number
+          error_count: number
+          details: string[]
+        }[]
       }
       migrate_recipes_to_product_catalog: {
         Args: Record<PropertyKey, never>

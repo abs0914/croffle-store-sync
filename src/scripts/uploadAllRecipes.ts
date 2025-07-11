@@ -356,6 +356,139 @@ async function createAdminUser() {
   return true;
 }
 
+async function deployRecipesToStores(authData: any) {
+  console.log('🏪 Deploying recipes to all stores...');
+  
+  // Get all stores
+  const { data: stores, error: storesError } = await supabase
+    .from('stores')
+    .select('*')
+    .eq('is_active', true);
+
+  if (storesError) {
+    console.error('❌ Error fetching stores:', storesError);
+    return false;
+  }
+
+  console.log(`📍 Found ${stores.length} active stores`);
+
+  // Get all recipe templates
+  const { data: templates, error: templatesError } = await supabase
+    .from('recipe_templates')
+    .select('*')
+    .eq('is_active', true);
+
+  if (templatesError) {
+    console.error('❌ Error fetching templates:', templatesError);
+    return false;
+  }
+
+  console.log(`📋 Found ${templates.length} recipe templates`);
+
+  let deployedCount = 0;
+  let catalogCount = 0;
+
+  for (const store of stores) {
+    console.log(`\n🏪 Deploying to store: ${store.name}`);
+    
+    for (const template of templates) {
+      try {
+        // Check if recipe already exists for this store
+        const { data: existingRecipe } = await supabase
+          .from('recipes')
+          .select('id')
+          .eq('template_id', template.id)
+          .eq('store_id', store.id)
+          .maybeSingle();
+
+        if (existingRecipe) {
+          console.log(`  ⏭️  Recipe "${template.name}" already exists for ${store.name}`);
+          continue;
+        }
+
+        // Deploy recipe to store
+        const { data: recipe, error: recipeError } = await supabase
+          .from('recipes')
+          .insert({
+            template_id: template.id,
+            name: template.name,
+            description: template.description,
+            instructions: template.instructions,
+            store_id: store.id,
+            serving_size: template.serving_size,
+            yield_quantity: template.yield_quantity,
+            total_cost: 0, // Will be calculated by triggers
+            cost_per_serving: 0,
+            suggested_price: template.base_price || 0,
+            sku: `${template.id.slice(0, 8)}-${store.id.slice(0, 8)}`,
+            is_active: true,
+            approval_status: 'approved'
+          })
+          .select()
+          .single();
+
+        if (recipeError) {
+          console.error(`  ❌ Error deploying "${template.name}" to ${store.name}:`, recipeError);
+          continue;
+        }
+
+        deployedCount++;
+        console.log(`  ✅ Deployed "${template.name}" to ${store.name}`);
+
+        // Get category for this recipe based on template category
+        const categoryMapping = {
+          'croffles': 'Classic',
+          'drinks': 'Beverages', 
+          'add-ons': 'Add-ons',
+          'combos': 'Combo'
+        };
+
+        const categoryName = categoryMapping[template.category_name as keyof typeof categoryMapping] || 'Classic';
+        
+        const { data: category } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('store_id', store.id)
+          .eq('name', categoryName)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        // Create product catalog entry with category
+        const { data: catalogEntry, error: catalogError } = await supabase
+          .from('product_catalog')
+          .insert({
+            store_id: store.id,
+            recipe_id: recipe.id,
+            product_name: template.name,
+            description: template.description,
+            price: template.base_price || 0,
+            category_id: category?.id || null,
+            is_available: true,
+            display_order: 0
+          })
+          .select()
+          .single();
+
+        if (catalogError) {
+          console.error(`  ❌ Error creating catalog entry for "${template.name}":`, catalogError);
+        } else {
+          catalogCount++;
+          console.log(`  ✅ Created catalog entry for "${template.name}" (Category: ${categoryName})`);
+        }
+
+      } catch (error) {
+        console.error(`  ❌ Error processing "${template.name}" for ${store.name}:`, error);
+      }
+    }
+  }
+
+  console.log(`\n📊 Deployment Summary:`);
+  console.log(`✅ Recipes deployed: ${deployedCount}`);
+  console.log(`✅ Catalog entries created: ${catalogCount}`);
+  
+  return true;
+}
+
 async function uploadAllRecipes() {
   try {
     console.log('🚀 Starting recipe upload process...');
@@ -396,7 +529,7 @@ async function uploadAllRecipes() {
     let successCount = 0;
     let failCount = 0;
 
-    // Upload each recipe
+    // Upload each recipe template
     for (const recipe of allRecipes) {
       const success = await uploadRecipeTemplate(recipe, authData.user.id);
       if (success) {
@@ -406,13 +539,22 @@ async function uploadAllRecipes() {
       }
     }
 
-    console.log('\n📈 Upload Summary:');
-    console.log(`✅ Successfully uploaded: ${successCount} recipes`);
-    console.log(`❌ Failed uploads: ${failCount} recipes`);
-    console.log(`📊 Total processed: ${successCount + failCount} recipes`);
+    console.log('\n📈 Template Upload Summary:');
+    console.log(`✅ Successfully uploaded: ${successCount} templates`);
+    console.log(`❌ Failed uploads: ${failCount} templates`);
+    console.log(`📊 Total processed: ${successCount + failCount} templates`);
 
     if (failCount === 0) {
-      console.log('\n🎉 All recipes uploaded successfully!');
+      console.log('\n🎉 All recipe templates uploaded successfully!');
+      
+      // Now deploy to stores
+      const deploymentSuccess = await deployRecipesToStores(authData);
+      
+      if (deploymentSuccess) {
+        console.log('\n🎊 All recipes deployed to stores and product catalog entries created!');
+      } else {
+        console.log('\n⚠️  Template upload completed but deployment had issues.');
+      }
     } else {
       console.log('\n⚠️  Some recipes failed to upload. Check the logs above for details.');
     }

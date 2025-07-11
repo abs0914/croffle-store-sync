@@ -1,0 +1,51 @@
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Database, Loader2 } from "lucide-react";
+import { runProductMigration } from "@/scripts/runProductMigration";
+import { toast } from "sonner";
+
+interface ProductMigrationButtonProps {
+  onMigrationComplete?: () => void;
+}
+
+export const ProductMigrationButton: React.FC<ProductMigrationButtonProps> = ({ 
+  onMigrationComplete 
+}) => {
+  const [isRunning, setIsRunning] = useState(false);
+
+  const handleMigration = async () => {
+    if (isRunning) return;
+    
+    setIsRunning(true);
+    try {
+      const result = await runProductMigration();
+      
+      if (result.success && onMigrationComplete) {
+        // Refresh the page data
+        onMigrationComplete();
+      }
+    } catch (error) {
+      console.error("Migration error:", error);
+      toast.error("Migration failed with unexpected error");
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleMigration}
+      disabled={isRunning}
+      variant="outline"
+      size="sm"
+      className="gap-2"
+    >
+      {isRunning ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Database className="h-4 w-4" />
+      )}
+      {isRunning ? "Migrating..." : "Migrate Products"}
+    </Button>
+  );
+};
