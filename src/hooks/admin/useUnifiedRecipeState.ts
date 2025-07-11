@@ -290,38 +290,39 @@ export function useUnifiedRecipeState() {
   // Delete operations
   const deleteTemplateMutation = useMutation({
     mutationFn: async (templateId: string) => {
-      // Check for deployed recipes first
-      const { data: deployedRecipes } = await supabase
+      // First, delete all deployed recipes that use this template
+      const { error: recipesError } = await supabase
         .from('recipes')
-        .select('id')
+        .delete()
         .eq('template_id', templateId);
 
-      if (deployedRecipes && deployedRecipes.length > 0) {
-        throw new Error(`Cannot delete template with ${deployedRecipes.length} deployed recipes`);
-      }
+      if (recipesError) throw recipesError;
 
-      // Delete template ingredients first
-      await supabase
+      // Delete template ingredients
+      const { error: ingredientsError } = await supabase
         .from('recipe_template_ingredients')
         .delete()
         .eq('recipe_template_id', templateId);
 
-      // Delete template
-      const { error } = await supabase
+      if (ingredientsError) throw ingredientsError;
+
+      // Finally, delete the template
+      const { error: templateError } = await supabase
         .from('recipe_templates')
         .delete()
         .eq('id', templateId);
 
-      if (error) throw error;
+      if (templateError) throw templateError;
       return templateId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recipe-templates'] });
-      toast.success('Template deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['deployed-recipes'] });
+      toast.success('Template and all deployed recipes deleted successfully');
     },
     onError: (error) => {
       console.error('Template deletion failed:', error);
-      toast.error(error.message);
+      toast.error('Failed to delete template: ' + error.message);
     }
   });
 
