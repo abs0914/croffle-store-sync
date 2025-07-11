@@ -2039,6 +2039,7 @@ export type Database = {
       }
       product_catalog: {
         Row: {
+          category_id: string | null
           created_at: string
           description: string | null
           display_order: number | null
@@ -2053,6 +2054,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number | null
@@ -2067,6 +2069,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category_id?: string | null
           created_at?: string
           description?: string | null
           display_order?: number | null
@@ -2081,6 +2084,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "product_catalog_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_catalog_recipe_id_fkey"
             columns: ["recipe_id"]
