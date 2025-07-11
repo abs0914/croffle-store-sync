@@ -71,10 +71,10 @@ export default function POSContent({
   return (
     <div className="flex h-full bg-gray-50/50">
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-0 lg:pr-6">
+      <div className="flex-1 flex flex-col min-h-0 md:pr-4 lg:pr-6">
         {/* Products Section */}
-        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 h-full flex flex-col">
+        <div className="flex-1 bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-3 sm:p-4 md:p-6 h-full flex flex-col">
             <ProductGrid
               products={products} 
               categories={categories} 
@@ -89,10 +89,10 @@ export default function POSContent({
         </div>
       </div>
 
-      {/* Cart Sidebar - Desktop */}
-      <div className="hidden lg:flex lg:w-96 lg:flex-shrink-0">
-        <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 h-full">
+      {/* Cart Sidebar - Tablet and Desktop */}
+      <div className="hidden md:flex md:w-80 lg:w-96 md:flex-shrink-0">
+        <div className="w-full bg-white rounded-lg md:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 md:p-6 h-full">
             <CartView 
               selectedCustomer={selectedCustomer} 
               setSelectedCustomer={setSelectedCustomer} 
@@ -106,7 +106,7 @@ export default function POSContent({
       </div>
 
       {/* Mobile Cart Drawer */}
-      <div className="lg:hidden">
+      <div className="md:hidden">
         <MobileCartDrawer
           selectedCustomer={selectedCustomer}
           setSelectedCustomer={setSelectedCustomer}

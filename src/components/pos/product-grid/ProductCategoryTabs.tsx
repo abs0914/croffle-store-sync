@@ -20,10 +20,10 @@ export default function ProductCategoryTabs({
   );
   
   return (
-    <div className="flex items-center gap-2 mb-6 overflow-x-auto scrollbar-hide">
+    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
       <button
         onClick={() => setActiveCategory("all")}
-        className={`px-5 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 ${
+        className={`px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 touch-manipulation min-w-[80px] ${
           activeCategory === "all"
             ? "bg-blue-100 text-blue-700 shadow-sm"
             : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -35,7 +35,7 @@ export default function ProductCategoryTabs({
         <button
           key={category.id}
           onClick={() => setActiveCategory(category.id)}
-          className={`px-5 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 ${
+          className={`px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 touch-manipulation min-w-[80px] ${
             activeCategory === category.id
               ? "bg-blue-100 text-blue-700 shadow-sm"
               : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"

@@ -299,12 +299,12 @@ export default function ProductGrid({
     <>
       <div className="flex flex-col h-full">
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 flex-shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 mb-4 md:mb-6 flex-shrink-0">
           <ProductSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </div>
         
         {/* Category Tabs */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 mb-4 md:mb-6">
           <ProductCategoryTabs 
             categories={categories} 
             activeCategory={activeCategory} 
@@ -342,17 +342,17 @@ export default function ProductGrid({
                    return (
                      <div key={category.id} className="space-y-4">
                        <h2 className="text-lg font-semibold text-gray-900">{category.name}</h2>
-                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                         {categoryProducts.map(product => (
-                           <ProductCard
-                             key={product.id}
-                             product={product}
-                             isShiftActive={isShiftActive}
-                             getCategoryName={getCategoryName}
-                             onClick={handleProductClick}
-                           />
-                         ))}
-                       </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
+                          {categoryProducts.map(product => (
+                            <ProductCard
+                              key={product.id}
+                              product={product}
+                              isShiftActive={isShiftActive}
+                              getCategoryName={getCategoryName}
+                              onClick={handleProductClick}
+                            />
+                          ))}
+                        </div>
                      </div>
                    );
                 })}
@@ -367,17 +367,17 @@ export default function ProductGrid({
                      return (
                        <div key="uncategorized" className="space-y-4">
                          <h2 className="text-lg font-semibold text-gray-900">Other Items</h2>
-                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                           {uncategorizedProducts.map(product => (
-                             <ProductCard
-                               key={product.id}
-                               product={product}
-                               isShiftActive={isShiftActive}
-                               getCategoryName={getCategoryName}
-                               onClick={handleProductClick}
-                             />
-                           ))}
-                         </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
+                            {uncategorizedProducts.map(product => (
+                              <ProductCard
+                                key={product.id}
+                                product={product}
+                                isShiftActive={isShiftActive}
+                                getCategoryName={getCategoryName}
+                                onClick={handleProductClick}
+                              />
+                            ))}
+                          </div>
                        </div>
                      );
                   }
@@ -386,7 +386,7 @@ export default function ProductGrid({
               </div>
             ) : (
               // Single category grid view
-               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
                  {filteredProducts.map(product => (
                    <ProductCard
                      key={product.id}
