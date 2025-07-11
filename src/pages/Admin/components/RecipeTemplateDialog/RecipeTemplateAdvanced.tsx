@@ -25,7 +25,7 @@ import type {
 } from '@/types/advancedRecipe';
 import { RecipeTemplateIngredientGroups } from './RecipeTemplateIngredientGroups';
 import { RecipeTemplatePricingMatrix } from './RecipeTemplatePricingMatrix';
-import { AddOnManagement } from '@/components/admin/recipe/AddOnManagement';
+import { AddOnManagement } from '@/components/Admin/recipe/AddOnManagement';
 
 interface RecipeTemplateAdvancedProps {
   templateId?: string;

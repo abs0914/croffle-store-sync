@@ -20,7 +20,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from 'sonner';
 import { useUnifiedRecipeState } from '@/hooks/admin/useUnifiedRecipeState';
 import { RecipeTemplateDialog } from '@/pages/Admin/components/RecipeTemplateDialog';
-import { EnhancedRecipeDeploymentDialog } from '@/components/admin/recipe/EnhancedRecipeDeploymentDialog';
+import { EnhancedRecipeDeploymentDialog } from '@/components/Admin/recipe/EnhancedRecipeDeploymentDialog';
 
 interface TableRecipeInput {
   name: string;

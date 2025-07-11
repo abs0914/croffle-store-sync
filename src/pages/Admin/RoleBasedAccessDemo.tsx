@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserRoleIndicator } from '@/components/auth/UserRoleIndicator';
-import { RoleSelectionInterface } from '@/components/admin/RoleSelectionInterface';
+import { RoleSelectionInterface } from '@/components/Admin/RoleSelectionInterface';
 import { USER_ROLE_DEFINITIONS, getUserRoleDefinition, hasPermission } from '@/types/rolePermissions';
 import { useAuth } from '@/contexts/auth';
 import { useRolePermissions } from '@/contexts/RolePermissionsContext';
