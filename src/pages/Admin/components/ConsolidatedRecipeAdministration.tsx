@@ -28,6 +28,7 @@ import { RecipeTypeIndicator, RecipeComplexityIndicator } from '@/components/adm
 import { ComponentRelationshipVisualization } from '@/components/admin/recipe/ComponentRelationshipVisualization';
 import { RecipeInventoryMappings } from '@/components/admin/recipe/RecipeInventoryMappings';
 import { RecipeCleanupTools } from '@/components/admin/recipe/RecipeCleanupTools';
+import { RecipeRepairTools } from '@/components/admin/recipe/RecipeRepairTools';
 import { toast } from 'sonner';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { EnhancedRecipeDeploymentDialog } from '@/components/admin/recipe/EnhancedRecipeDeploymentDialog';
@@ -483,7 +484,10 @@ export function ConsolidatedRecipeAdministration() {
         </TabsContent>
 
         <TabsContent value="cleanup" className="space-y-4">
-          <RecipeCleanupTools />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RecipeCleanupTools />
+            <RecipeRepairTools />
+          </div>
         </TabsContent>
       </Tabs>
 

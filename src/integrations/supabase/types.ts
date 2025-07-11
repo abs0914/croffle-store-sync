@@ -4429,6 +4429,13 @@ export type Database = {
         Args: { unit_text: string }
         Returns: string
       }
+      repair_missing_product_catalog_entries: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          repaired_count: number
+          errors: string[]
+        }[]
+      }
       sync_auth_user_to_app_users: {
         Args: {
           user_email: string

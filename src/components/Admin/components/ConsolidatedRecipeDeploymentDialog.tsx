@@ -126,41 +126,39 @@ export const ConsolidatedRecipeDeploymentDialog: React.FC<ConsolidatedRecipeDepl
       return;
     }
 
+    if (price <= 0) {
+      toast.error('Please set a valid price greater than 0');
+      return;
+    }
+
     setIsDeploying(true);
     try {
-      const results = await deployRecipeToMultipleStores(template.id, selectedStoreIds);
+      console.log('🚀 Starting deployment with price:', price);
+      
+      // Deploy with the specified price and enhanced options
+      const results = await deployRecipeToMultipleStores(template.id, selectedStoreIds, {
+        actualPrice: price,
+        createProduct: true,
+        isActive: true
+      });
+      
       setDeploymentResults(results);
       setShowResults(true);
       
-      // After successful deployment, update prices if they were customized
-      if (price !== template.ingredients.reduce((sum, ing) => sum + (ing.quantity * (ing.cost_per_unit || 0)), 0)) {
-        for (const result of results) {
-          if (result.success && result.storeId) {
-            // Update the product catalog price if it differs from cost
-            const { data: catalogProduct } = await supabase
-              .from('product_catalog')
-              .select('id')
-              .eq('product_name', template.name)
-              .eq('store_id', result.storeId)
-              .single();
-
-            if (catalogProduct) {
-              await supabase
-                .from('product_catalog')
-                .update({ price })
-                .eq('id', catalogProduct.id);
-            }
-          }
-        }
-      }
+      // Check deployment results and show appropriate feedback
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
       
-      // Check if all deployments were successful
-      const allSuccessful = results.every(r => r.success);
-      if (allSuccessful) {
+      if (successCount > 0 && failCount === 0) {
+        toast.success(`Successfully deployed recipe to ${successCount} store(s) with product catalog entries`);
         onSuccess();
+      } else if (successCount > 0 && failCount > 0) {
+        toast.warning(`Deployed to ${successCount} store(s), ${failCount} failed. Check results below.`);
+      } else {
+        toast.error(`Deployment failed for all ${failCount} store(s). Check results below.`);
       }
     } catch (error) {
-      console.error('Error deploying recipe:', error);
+      console.error('❌ Error deploying recipe:', error);
       toast.error('Failed to deploy recipe');
     } finally {
       setIsDeploying(false);
