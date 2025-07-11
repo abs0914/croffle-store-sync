@@ -98,9 +98,18 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
         onUpdate(index, 'commissary_item_id', itemId);
         onUpdate(index, 'inventory_stock_id', undefined);
         // For commissary items, use the correct field names
-        onUpdate(index, 'ingredient_name', selectedItem.name || selectedItem.item);
-        onUpdate(index, 'unit', selectedItem.unit || selectedItem.uom || selectedItem.display_unit);
-        onUpdate(index, 'estimated_cost_per_unit', selectedItem.unit_cost || selectedItem.cost_per_unit || 0);
+        const itemName = selectedItem.name || selectedItem.item;
+        const itemUnit = selectedItem.unit || selectedItem.uom || selectedItem.display_unit;
+        const itemCost = selectedItem.unit_cost || selectedItem.cost_per_unit || 0;
+
+        console.log('🏷️ Setting commissary item fields:');
+        console.log('   - Name:', itemName);
+        console.log('   - Unit:', itemUnit);
+        console.log('   - Cost:', itemCost);
+
+        onUpdate(index, 'ingredient_name', itemName);
+        onUpdate(index, 'unit', itemUnit);
+        onUpdate(index, 'estimated_cost_per_unit', itemCost);
       } else {
         onUpdate(index, 'inventory_stock_id', itemId);
         onUpdate(index, 'commissary_item_id', undefined);
@@ -241,8 +250,12 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
               type="number"
               min="0"
               step="0.01"
-              value={ingredient.estimated_cost_per_unit || ''}
-              onChange={(e) => onUpdate(index, 'estimated_cost_per_unit', parseFloat(e.target.value) || 0)}
+              value={ingredient.estimated_cost_per_unit?.toString() || ''}
+              onChange={(e) => {
+                const newValue = parseFloat(e.target.value) || 0;
+                console.log('💰 Cost field changed to:', newValue);
+                onUpdate(index, 'estimated_cost_per_unit', newValue);
+              }}
               placeholder="0.00"
               className="mt-2"
             />

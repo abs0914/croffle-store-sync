@@ -42,6 +42,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
 
   // Sync changes back to parent, but prevent circular updates
   const syncToParent = useCallback((updatedDirectIngredients: DirectInventoryIngredient[]) => {
+    console.log('🔄 Syncing to parent, direct ingredients:', updatedDirectIngredients);
     setIsInternalUpdate(true);
     const converted = updatedDirectIngredients.map(ing => ({
       ingredient_name: ing.ingredient_name,
@@ -54,6 +55,7 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       supports_fractional: ing.supports_fractional,
       notes: ''
     }));
+    console.log('📤 Converted ingredients for parent:', converted);
     setIngredients(converted);
     // Reset flag after sync
     setTimeout(() => setIsInternalUpdate(false), 0);
@@ -72,8 +74,10 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
   }, [directIngredients, syncToParent]);
 
   const updateIngredient = useCallback((index: number, field: keyof DirectInventoryIngredient, value: any) => {
+    console.log(`🔄 Updating ingredient ${index}, field: ${field}, value:`, value);
     const updated = [...directIngredients];
     updated[index] = { ...updated[index], [field]: value };
+    console.log(`📝 Updated ingredient ${index}:`, updated[index]);
     syncToParent(updated);
   }, [directIngredients, syncToParent]);
 
