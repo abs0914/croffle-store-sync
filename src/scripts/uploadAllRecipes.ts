@@ -6,76 +6,276 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Recipe templates from menuRecipeService.ts
+// Recipe templates with ingredients from individual scripts
 const CROFFLE_RECIPES = [
-  { name: 'Mini Croffle', category: 'croffles', base_price: 45 },
-  { name: 'Glaze Croffle', category: 'croffles', base_price: 60 },
-  { name: 'Regular Croffle', category: 'croffles', base_price: 105 },
-  { name: 'Nutella Croffle', category: 'croffles', base_price: 125 },
-  { name: 'Biscoff Croffle', category: 'croffles', base_price: 125 },
-  { name: 'Peanut Butter Croffle', category: 'croffles', base_price: 125 },
-  { name: 'Strawberry Croffle', category: 'croffles', base_price: 125 },
-  { name: 'Blueberry Croffle', category: 'croffles', base_price: 125 },
-  { name: 'Chocolate Croffle', category: 'croffles', base_price: 125 },
-  { name: 'Caramel Croffle', category: 'croffles', base_price: 125 },
-  { name: 'Matcha Croffle', category: 'croffles', base_price: 125 },
-  { name: 'Ube Croffle', category: 'croffles', base_price: 125 },
+  {
+    name: 'Mini Croffle',
+    category: 'croffles',
+    base_price: 45,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 0.5, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 0.5, unit: 'serving', cost_per_unit: 4 }
+    ]
+  },
+  {
+    name: 'Glaze Croffle',
+    category: 'croffles',
+    base_price: 60,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 0.5, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 0.5, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Glaze', quantity: 1, unit: 'portion', cost_per_unit: 2 }
+    ]
+  },
+  {
+    name: 'Regular Croffle',
+    category: 'croffles',
+    base_price: 105,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 }
+    ]
+  },
+  {
+    name: 'Nutella Croffle',
+    category: 'croffles',
+    base_price: 125,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Nutella', quantity: 1, unit: 'portion', cost_per_unit: 4.5 }
+    ]
+  },
+  {
+    name: 'Biscoff Croffle',
+    category: 'croffles',
+    base_price: 125,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Biscoff', quantity: 1, unit: 'portion', cost_per_unit: 2.5 }
+    ]
+  },
+  {
+    name: 'Peanut Butter Croffle',
+    category: 'croffles',
+    base_price: 125,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Peanut Butter', quantity: 1, unit: 'portion', cost_per_unit: 3 }
+    ]
+  },
+  {
+    name: 'Strawberry Croffle',
+    category: 'croffles',
+    base_price: 125,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Strawberry Jam', quantity: 1, unit: 'portion', cost_per_unit: 5 }
+    ]
+  },
+  {
+    name: 'Blueberry Croffle',
+    category: 'croffles',
+    base_price: 125,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Blueberry Jam', quantity: 1, unit: 'portion', cost_per_unit: 7.5 }
+    ]
+  },
+  {
+    name: 'Chocolate Croffle',
+    category: 'croffles',
+    base_price: 125,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Chocolate', quantity: 1, unit: 'portion', cost_per_unit: 2.5 }
+    ]
+  },
+  {
+    name: 'Caramel Croffle',
+    category: 'croffles',
+    base_price: 125,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Caramel', quantity: 1, unit: 'portion', cost_per_unit: 2.5 }
+    ]
+  },
+  {
+    name: 'Matcha Croffle',
+    category: 'croffles',
+    base_price: 125,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Matcha Powder', quantity: 1, unit: 'portion', cost_per_unit: 3 }
+    ]
+  },
+  {
+    name: 'Ube Croffle',
+    category: 'croffles',
+    base_price: 125,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Ube Flavor', quantity: 1, unit: 'portion', cost_per_unit: 3 }
+    ]
+  }
 ];
 
 const DRINK_RECIPES = [
-  { name: 'Americano', category: 'drinks', base_price: 65 },
-  { name: 'Cappuccino', category: 'drinks', base_price: 75 },
-  { name: 'Latte', category: 'drinks', base_price: 75 },
-  { name: 'Macchiato', category: 'drinks', base_price: 80 },
-  { name: 'Mocha', category: 'drinks', base_price: 85 },
-  { name: 'Flat White', category: 'drinks', base_price: 80 },
-  { name: 'Cortado', category: 'drinks', base_price: 75 },
-  { name: 'Gibraltar', category: 'drinks', base_price: 75 },
-  { name: 'Espresso Romano', category: 'drinks', base_price: 70 },
-  { name: 'Affogato', category: 'drinks', base_price: 95 },
-  { name: 'Hot Chocolate', category: 'drinks', base_price: 75 },
-  { name: 'Chai Latte', category: 'drinks', base_price: 80 },
-  { name: 'Matcha Latte', category: 'drinks', base_price: 85 },
-  { name: 'Iced Coffee', category: 'drinks', base_price: 65 },
-  { name: 'Cold Brew', category: 'drinks', base_price: 70 },
-  { name: 'Frappuccino', category: 'drinks', base_price: 95 },
+  {
+    name: 'Coke',
+    category: 'drinks',
+    base_price: 15,
+    ingredients: [
+      { ingredient_name: 'Softdrinks', quantity: 1, unit: 'piece', cost_per_unit: 11.3 }
+    ]
+  },
+  {
+    name: 'Sprite',
+    category: 'drinks',
+    base_price: 15,
+    ingredients: [
+      { ingredient_name: 'Softdrinks', quantity: 1, unit: 'piece', cost_per_unit: 11.3 }
+    ]
+  },
+  {
+    name: 'Bottled Water',
+    category: 'drinks',
+    base_price: 20,
+    ingredients: [
+      { ingredient_name: 'Water', quantity: 1, unit: 'piece', cost_per_unit: 0 }
+    ]
+  },
+  {
+    name: 'Americano',
+    category: 'drinks',
+    base_price: 65,
+    ingredients: [
+      { ingredient_name: 'Coffee Beans', quantity: 1, unit: 'serving', cost_per_unit: 15 },
+      { ingredient_name: 'Hot Water', quantity: 150, unit: 'ml', cost_per_unit: 0.01 }
+    ]
+  },
+  {
+    name: 'Cappuccino',
+    category: 'drinks',
+    base_price: 75,
+    ingredients: [
+      { ingredient_name: 'Coffee Beans', quantity: 1, unit: 'serving', cost_per_unit: 15 },
+      { ingredient_name: 'Milk', quantity: 100, unit: 'ml', cost_per_unit: 0.05 }
+    ]
+  },
+  {
+    name: 'Latte',
+    category: 'drinks',
+    base_price: 75,
+    ingredients: [
+      { ingredient_name: 'Coffee Beans', quantity: 1, unit: 'serving', cost_per_unit: 15 },
+      { ingredient_name: 'Milk', quantity: 150, unit: 'ml', cost_per_unit: 0.05 }
+    ]
+  }
 ];
 
 const ADD_ON_RECIPES = [
-  { name: 'Extra Shot', category: 'add-ons', base_price: 15 },
-  { name: 'Decaf Shot', category: 'add-ons', base_price: 0 },
-  { name: 'Extra Hot', category: 'add-ons', base_price: 0 },
-  { name: 'Extra Foam', category: 'add-ons', base_price: 0 },
-  { name: 'No Foam', category: 'add-ons', base_price: 0 },
-  { name: 'Oat Milk', category: 'add-ons', base_price: 20 },
-  { name: 'Almond Milk', category: 'add-ons', base_price: 20 },
-  { name: 'Soy Milk', category: 'add-ons', base_price: 20 },
-  { name: 'Coconut Milk', category: 'add-ons', base_price: 20 },
-  { name: 'Vanilla Syrup', category: 'add-ons', base_price: 15 },
-  { name: 'Caramel Syrup', category: 'add-ons', base_price: 15 },
-  { name: 'Hazelnut Syrup', category: 'add-ons', base_price: 15 },
-  { name: 'Sugar-Free Vanilla', category: 'add-ons', base_price: 15 },
-  { name: 'Whipped Cream', category: 'add-ons', base_price: 10 },
+  {
+    name: 'Colored Sprinkles',
+    category: 'add-ons',
+    base_price: 6,
+    ingredients: [
+      { ingredient_name: 'Colored Sprinkles', quantity: 1, unit: 'portion', cost_per_unit: 2.5 }
+    ]
+  },
+  {
+    name: 'Marshmallow',
+    category: 'add-ons',
+    base_price: 6,
+    ingredients: [
+      { ingredient_name: 'Marshmallow', quantity: 1, unit: 'portion', cost_per_unit: 2.5 }
+    ]
+  },
+  {
+    name: 'Choco Flakes',
+    category: 'add-ons',
+    base_price: 6,
+    ingredients: [
+      { ingredient_name: 'Choco Flakes', quantity: 1, unit: 'portion', cost_per_unit: 2.5 }
+    ]
+  },
+  {
+    name: 'Peanut',
+    category: 'add-ons',
+    base_price: 6,
+    ingredients: [
+      { ingredient_name: 'Peanut', quantity: 1, unit: 'portion', cost_per_unit: 2.5 }
+    ]
+  },
+  {
+    name: 'Nutella',
+    category: 'add-ons',
+    base_price: 8,
+    ingredients: [
+      { ingredient_name: 'Nutella', quantity: 1, unit: 'portion', cost_per_unit: 4.5 }
+    ]
+  },
+  {
+    name: 'Whipped Cream',
+    category: 'add-ons',
+    base_price: 10,
+    ingredients: [
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 }
+    ]
+  }
 ];
 
 const COMBO_RECIPES = [
-  { name: 'Mini Croffle + Any Hot Espresso', category: 'combos', base_price: 110 },
-  { name: 'Mini Croffle + Any Iced Espresso', category: 'combos', base_price: 115 },
-  { name: 'Glaze Croffle + Any Hot Espresso', category: 'combos', base_price: 125 },
-  { name: 'Glaze Croffle + Any Iced Espresso', category: 'combos', base_price: 130 },
-  { name: 'Regular Croffle + Any Hot Espresso', category: 'combos', base_price: 170 },
-  { name: 'Regular Croffle + Any Iced Espresso', category: 'combos', base_price: 175 },
+  {
+    name: 'Mini Croffle + Any Hot Espresso',
+    category: 'combos',
+    base_price: 110,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 0.5, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 0.5, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Coffee Beans', quantity: 1, unit: 'serving', cost_per_unit: 15 }
+    ]
+  },
+  {
+    name: 'Regular Croffle + Any Hot Espresso',
+    category: 'combos',
+    base_price: 170,
+    ingredients: [
+      { ingredient_name: 'REGULAR CROISSANT', quantity: 1, unit: 'piece', cost_per_unit: 15 },
+      { ingredient_name: 'WHIPPED CREAM', quantity: 1, unit: 'serving', cost_per_unit: 4 },
+      { ingredient_name: 'Coffee Beans', quantity: 1, unit: 'serving', cost_per_unit: 15 }
+    ]
+  }
 ];
 
 interface RecipeTemplate {
   name: string;
   category: string;
   base_price: number;
+  ingredients: Array<{
+    ingredient_name: string;
+    quantity: number;
+    unit: string;
+    cost_per_unit: number;
+  }>;
 }
 
 async function uploadRecipeTemplate(recipe: RecipeTemplate, userId: string): Promise<boolean> {
   try {
     console.log(`Creating recipe template: ${recipe.name}`);
+    
+    // Calculate total cost from ingredients
+    const totalCost = recipe.ingredients.reduce((sum, ingredient) => {
+      return sum + (ingredient.quantity * ingredient.cost_per_unit);
+    }, 0);
     
     const { data, error } = await supabase
       .from('recipe_templates')
@@ -98,7 +298,29 @@ async function uploadRecipeTemplate(recipe: RecipeTemplate, userId: string): Pro
       return false;
     }
 
-    console.log(`✅ Created recipe template: ${recipe.name} (ID: ${data.id})`);
+    console.log(`Template created for ${recipe.name}: ${data.id}`);
+
+    // Add ingredients
+    const ingredientData = recipe.ingredients.map(ingredient => ({
+      recipe_template_id: data.id,
+      ingredient_name: ingredient.ingredient_name,
+      quantity: ingredient.quantity,
+      unit: ingredient.unit,
+      cost_per_unit: ingredient.cost_per_unit,
+      location_type: 'all',
+      supports_fractional: ingredient.quantity < 1
+    }));
+
+    const { error: ingredientError } = await supabase
+      .from('recipe_template_ingredients')
+      .insert(ingredientData);
+
+    if (ingredientError) {
+      console.error(`Error adding ingredients for ${recipe.name}:`, ingredientError);
+      return false;
+    }
+
+    console.log(`✅ Created recipe template: ${recipe.name} with ${recipe.ingredients.length} ingredients`);
     return true;
   } catch (error) {
     console.error(`Error processing ${recipe.name}:`, error);
