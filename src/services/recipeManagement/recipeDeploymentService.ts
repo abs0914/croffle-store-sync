@@ -465,7 +465,11 @@ const deployToSingleStoreWithTransaction = async (
 const validateAndCleanIngredients = async (ingredients: any[], storeId: string): Promise<any[]> => {
   const validIngredients = [];
 
+  console.log(`🔍 Validating ${ingredients.length} ingredients for store: ${storeId}`);
+
   for (const ingredient of ingredients) {
+    console.log(`📋 Processing ingredient:`, ingredient);
+
     // Clean up malformed ingredient names
     if (ingredient.ingredient_name && typeof ingredient.ingredient_name === 'string') {
       let cleanName = ingredient.ingredient_name;
@@ -485,22 +489,42 @@ const validateAndCleanIngredients = async (ingredients: any[], storeId: string):
         .replace(/[{}\[\]"']/g, '')
         .trim();
       
-      if (cleanName.length > 0 && !cleanName.includes('{') && !cleanName.includes('"')) {
-        // Try to find matching store inventory item
+      // Less strict validation - accept any non-empty ingredient name
+      if (cleanName.length > 0) {
+        console.log(`✅ Processing valid ingredient: ${cleanName}`);
+        
+        // Try to find matching store inventory item (optional)
         const storeItem = await findMatchingInventoryItem(cleanName, storeId);
+        
+        if (storeItem) {
+          console.log(`🔗 Found store inventory match for "${cleanName}": ${storeItem.item}`);
+        } else {
+          console.log(`⚠️ No store inventory match for "${cleanName}" - proceeding anyway`);
+        }
         
         const validIngredient = {
           ...ingredient,
           ingredient_name: cleanName,
           inventory_stock_id: storeItem?.id || null,
-          uses_store_inventory: !!storeItem
+          commissary_item_id: ingredient.commissary_item_id || null,
+          uses_store_inventory: !!storeItem,
+          // Ensure we have essential fields with defaults
+          quantity: ingredient.quantity || 1,
+          unit: ingredient.unit || 'pieces',
+          cost_per_unit: ingredient.cost_per_unit || 0
         };
         
         validIngredients.push(validIngredient);
+        console.log(`✅ Added valid ingredient: ${cleanName} (${validIngredient.quantity} ${validIngredient.unit})`);
+      } else {
+        console.warn(`❌ Skipping ingredient with empty name:`, ingredient);
       }
+    } else {
+      console.warn(`❌ Skipping ingredient with invalid name:`, ingredient);
     }
   }
 
+  console.log(`✅ Validation complete: ${validIngredients.length}/${ingredients.length} ingredients validated`);
   return validIngredients;
 };
 
