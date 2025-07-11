@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertTriangle, Package, ExternalLink, Edit } from "lucide-react";
+import { AlertTriangle, Package, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ProductEditDialog } from "./ProductEditDialog";
 
 interface OptimizedProductCardProps {
   product: Product;
@@ -28,7 +27,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
   inventoryStatus
 }: OptimizedProductCardProps) {
   const navigate = useNavigate();
-  const [showEditDialog, setShowEditDialog] = useState(false);
+  
   
   // Check if product is active, handling both is_active and isActive properties
   const isActive = product.is_active || product.isActive;
@@ -52,10 +51,6 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
     navigate('/inventory');
   }, [navigate]);
 
-  const handleEditProduct = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowEditDialog(true);
-  }, []);
 
   const categoryName = React.useMemo(() => {
     if (product.category) {
@@ -174,29 +169,17 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                     {getStockBadge()}
                   </div>
                   
-                  <div className="flex gap-1">
-                    {/* Edit Button */}
+                  {/* Quick Restock Button */}
+                  {isOutOfStock && isDirectProduct && (
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-6 px-2 text-xs hover:bg-primary hover:text-primary-foreground"
-                      onClick={handleEditProduct}
+                      onClick={handleQuickRestock}
                     >
-                      <Edit className="h-3 w-3" />
+                      <ExternalLink className="h-3 w-3" />
                     </Button>
-                    
-                    {/* Quick Restock Button */}
-                    {isOutOfStock && isDirectProduct && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-xs hover:bg-primary hover:text-primary-foreground"
-                        onClick={handleQuickRestock}
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -207,12 +190,6 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-    
-    <ProductEditDialog 
-      product={product}
-      isOpen={showEditDialog}
-      onClose={() => setShowEditDialog(false)}
-    />
   </>
   );
 });

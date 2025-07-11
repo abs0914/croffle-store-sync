@@ -14,10 +14,13 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Edit3
+  Edit3,
+  Pen
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/format';
 import { fetchUnifiedProducts, toggleProductAvailability, UnifiedProduct } from '@/services/product/unifiedProductService';
+import { EditProductDialog } from '@/pages/ProductCatalog/components/EditProductDialog';
+import { updateProduct } from '@/services/productCatalog/productCatalogService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -35,6 +38,8 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
   const [editingProduct, setEditingProduct] = useState<UnifiedProduct | null>(null);
   const [editPrice, setEditPrice] = useState('');
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<UnifiedProduct | null>(null);
   
   const canEditPrices = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
 
@@ -107,6 +112,38 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   const handleEditPrice = (product: UnifiedProduct) => {
     setEditingProduct(product);
     setEditPrice(product.price?.toString() || '0');
+  };
+
+  const handleEditProduct = (product: UnifiedProduct) => {
+    setSelectedProduct(product);
+    setShowEditDialog(true);
+  };
+
+  // Convert UnifiedProduct to ProductCatalog format for the EditProductDialog
+  const convertToProductCatalog = (product: UnifiedProduct) => {
+    return {
+      id: product.id,
+      store_id: product.store_id || storeId,
+      product_name: product.name || '',
+      description: product.description || '',
+      price: product.price || 0,
+      is_available: product.is_active || false,
+      display_order: 0,
+      created_at: product.created_at || new Date().toISOString(),
+      updated_at: product.updated_at || new Date().toISOString(),
+      recipe_id: product.recipe_id || null,
+      ingredients: []
+    };
+  };
+
+  const handleEditDialogClose = () => {
+    setShowEditDialog(false);
+    setSelectedProduct(null);
+  };
+
+  const handleProductUpdated = () => {
+    queryClient.invalidateQueries({ queryKey: ['unified-products', storeId] });
+    handleEditDialogClose();
   };
 
   // Optimized mutation for updating product price
@@ -337,24 +374,35 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
                   </div>
                 )}
                 
-                <Button
-                  onClick={() => handleToggleAvailability(product.id, product.is_active || false)}
-                  variant={product.is_active ? "outline" : "default"}
-                  size="sm"
-                  className="w-full"
-                >
-                  {product.is_active ? (
-                    <>
-                      <EyeOff className="h-4 w-4 mr-2" />
-                      Make Unavailable
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Make Available
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleEditProduct(product)}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  >
+                    <Pen className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    onClick={() => handleToggleAvailability(product.id, product.is_active || false)}
+                    variant={product.is_active ? "outline" : "default"}
+                    size="sm"
+                    className="flex-1"
+                  >
+                    {product.is_active ? (
+                      <>
+                        <EyeOff className="h-4 w-4 mr-2" />
+                        Hide
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Show
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -412,6 +460,16 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Product Edit Dialog */}
+      {selectedProduct && (
+        <EditProductDialog
+          isOpen={showEditDialog}
+          onClose={handleEditDialogClose}
+          onProductUpdated={handleProductUpdated}
+          product={convertToProductCatalog(selectedProduct)}
+        />
+      )}
     </div>
   );
 }
