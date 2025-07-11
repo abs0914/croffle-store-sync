@@ -4417,6 +4417,14 @@ export type Database = {
         }
         Returns: string
       }
+      migrate_recipes_to_product_catalog: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          migrated_count: number
+          error_count: number
+          details: string[]
+        }[]
+      }
       normalize_unit_name: {
         Args: { unit_text: string }
         Returns: string

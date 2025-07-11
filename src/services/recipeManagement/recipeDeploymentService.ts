@@ -546,6 +546,24 @@ const createProductFromRecipe = async (
       }
     }
 
+    // Broadcast cache invalidation to POS system
+    try {
+      const channel = supabase.channel('recipe_deployment_cache_invalidation');
+      await channel.send({
+        type: 'broadcast',
+        event: 'product_catalog_changed',
+        payload: {
+          productId: catalogProduct.id,
+          storeId: recipe.store_id,
+          eventType: 'INSERT',
+          timestamp: new Date().toISOString()
+        }
+      });
+      await supabase.removeChannel(channel);
+    } catch (error) {
+      console.warn('Failed to broadcast cache invalidation:', error);
+    }
+
     console.log(`✅ Created product and catalog entry for "${recipe.name}"`);
     return { success: true, productId: product.id };
   } catch (error) {
