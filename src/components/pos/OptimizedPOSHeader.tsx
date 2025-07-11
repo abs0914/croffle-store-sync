@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Settings, User, Wifi, WifiOff, Clock, AlertTriangle, CheckCircle, AlertCircle } from "lucide-react";
+import { Settings, User, Wifi, WifiOff, Clock, AlertTriangle, CheckCircle, AlertCircle, Menu } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { formatDistanceToNow } from 'date-fns';
 import { useQuery } from "@tanstack/react-query";
 import { fetchCashierById } from "@/services/cashier";
@@ -143,22 +144,27 @@ export default function OptimizedPOSHeader({
 
   return (
     <Card className="border-b border-border/50 rounded-none shadow-sm">
-      <div className="px-4 py-2.5">
+      <div className="px-3 py-2">
         <div className="flex items-center justify-between">
-          {/* Left Section: Store & Cashier */}
-          <div className="flex items-center gap-4">
+          {/* Left Section: Sidebar Toggle, Store & Cashier */}
+          <div className="flex items-center gap-2 md:gap-3">
+            <SidebarTrigger className="h-6 w-6 p-0" />
+            
             {currentStore && config.contentMode !== "hidden" && (
-              <StoreNameDisplay variant="badge" size="sm" showLogo={true} />
+              <>
+                <Separator orientation="vertical" className="h-4" />
+                <StoreNameDisplay variant="badge" size="sm" showLogo={true} />
+              </>
             )}
             
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-4" />
             
             {getCashierDisplay()}
 
             {selectedCustomer && (
               <>
-                <Separator orientation="vertical" className="h-6" />
-                <Badge variant="outline" className="text-xs">
+                <Separator orientation="vertical" className="h-4 hidden sm:block" />
+                <Badge variant="outline" className="text-xs hidden sm:inline-flex">
                   Customer: {selectedCustomer.name}
                 </Badge>
               </>
@@ -166,24 +172,25 @@ export default function OptimizedPOSHeader({
           </div>
 
           {/* Right Section: Status & Settings */}
-          <div className="flex items-center gap-3">
-            {getInventoryStatus()}
-            
-            <Separator orientation="vertical" className="h-6" />
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
+              {getInventoryStatus()}
+              <Separator orientation="vertical" className="h-4" />
+            </div>
             
             {getSyncStatus()}
             
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground hidden lg:inline">
               {formatDistanceToNow(lastSync, { addSuffix: true })}
             </span>
             
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-4 hidden lg:block" />
             
             <div className="flex items-center gap-1">
               <PrinterStatusIndicator />
               <ThermalPrinterSettings>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                  <Settings className="h-3.5 w-3.5" />
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  <Settings className="h-3 w-3" />
                 </Button>
               </ThermalPrinterSettings>
             </div>

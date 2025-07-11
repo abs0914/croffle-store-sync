@@ -12,6 +12,13 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  
+  /* Custom tablet breakpoint utilities */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .tablet-optimized {
+      @apply text-sm;
+    }
+  }
 }
 
 @layer base {

@@ -342,17 +342,17 @@ export default function ProductGrid({
                    return (
                      <div key={category.id} className="space-y-4">
                        <h2 className="text-lg font-semibold text-gray-900">{category.name}</h2>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
-                          {categoryProducts.map(product => (
-                            <ProductCard
-                              key={product.id}
-                              product={product}
-                              isShiftActive={isShiftActive}
-                              getCategoryName={getCategoryName}
-                              onClick={handleProductClick}
-                            />
-                          ))}
-                        </div>
+                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                           {categoryProducts.map(product => (
+                             <ProductCard
+                               key={product.id}
+                               product={product}
+                               isShiftActive={isShiftActive}
+                               getCategoryName={getCategoryName}
+                               onClick={handleProductClick}
+                             />
+                           ))}
+                         </div>
                      </div>
                    );
                 })}
@@ -367,17 +367,17 @@ export default function ProductGrid({
                      return (
                        <div key="uncategorized" className="space-y-4">
                          <h2 className="text-lg font-semibold text-gray-900">Other Items</h2>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
-                            {uncategorizedProducts.map(product => (
-                              <ProductCard
-                                key={product.id}
-                                product={product}
-                                isShiftActive={isShiftActive}
-                                getCategoryName={getCategoryName}
-                                onClick={handleProductClick}
-                              />
-                            ))}
-                          </div>
+                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                             {uncategorizedProducts.map(product => (
+                               <ProductCard
+                                 key={product.id}
+                                 product={product}
+                                 isShiftActive={isShiftActive}
+                                 getCategoryName={getCategoryName}
+                                 onClick={handleProductClick}
+                               />
+                             ))}
+                           </div>
                        </div>
                      );
                   }
@@ -386,17 +386,17 @@ export default function ProductGrid({
               </div>
             ) : (
               // Single category grid view
-               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
-                 {filteredProducts.map(product => (
-                   <ProductCard
-                     key={product.id}
-                     product={product}
-                     isShiftActive={isShiftActive}
-                     getCategoryName={getCategoryName}
-                     onClick={handleProductClick}
-                   />
-                 ))}
-               </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                  {filteredProducts.map(product => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      isShiftActive={isShiftActive}
+                      getCategoryName={getCategoryName}
+                      onClick={handleProductClick}
+                    />
+                  ))}
+                </div>
             )
           ) : (
             <div className="flex justify-center items-center h-64">

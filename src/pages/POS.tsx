@@ -172,9 +172,9 @@ export default function POS() {
   }
 
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-gray-50">
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background">
       {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm">
+      <div className="flex-shrink-0 bg-card border-b border-border shadow-sm">
         <OptimizedPOSHeader
           currentStore={currentStore}
           currentShift={currentShift}
@@ -186,7 +186,7 @@ export default function POS() {
       </div>
 
       {/* Main POS Content */}
-      <div className="flex-1 min-h-0 p-3 sm:p-4 md:p-6">
+      <div className="flex-1 min-h-0 p-3 md:p-4">
         <POSContent
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}

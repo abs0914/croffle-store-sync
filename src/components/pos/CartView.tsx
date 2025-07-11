@@ -160,7 +160,7 @@ export default function CartView({
   const canCheckout = cartItems.length > 0 && isShiftActive && !isValidating && !Boolean(validationMessage) && isDeliveryOrderValid;
 
   return (
-    <div className="flex flex-col h-full space-y-4 max-h-screen overflow-hidden">
+    <div className="flex flex-col h-full space-y-3 max-h-screen overflow-hidden">
       <CartHeader 
         itemCount={cartItems?.length || 0}
         onClearCart={clearCart}
@@ -193,7 +193,7 @@ export default function CartView({
 
       {/* Bottom Section - Fixed with better spacing */}
       {(cartItems?.length || 0) > 0 && (
-        <div className="flex-shrink-0 space-y-3 pb-4">
+        <div className="flex-shrink-0 space-y-2 pb-3">
           <Separator />
           
           {/* Customer Selection */}
