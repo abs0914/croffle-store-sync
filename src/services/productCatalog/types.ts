@@ -16,6 +16,7 @@ export interface ProductCatalog {
   display_order?: number;
   image_url?: string;
   recipe_id?: string;
+  category_id?: string;
   created_at: string;
   updated_at: string;
   ingredients?: ProductIngredient[];

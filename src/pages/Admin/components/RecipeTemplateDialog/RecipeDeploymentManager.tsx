@@ -119,10 +119,11 @@ export const RecipeDeploymentManager: React.FC<RecipeDeploymentManagerProps> = (
     const totalCost = template.ingredients?.reduce((sum: number, ing: any) => {
       return sum + (ing.quantity * (ing.cost_per_unit || 0));
     }, 0) || 0;
-    
+
     const costPerServing = template.yield_quantity > 0 ? totalCost / template.yield_quantity : 0;
-    const suggestedPrice = costPerServing * (1 + (deploymentOptions.priceMarkup || 0));
-    
+    // Use template's suggested_price if available, otherwise calculate with markup
+    const suggestedPrice = template.suggested_price || (costPerServing * (1 + (deploymentOptions.priceMarkup || 0)));
+
     return { totalCost, costPerServing, suggestedPrice };
   };
 

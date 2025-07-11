@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Product, Category } from "@/types";
 import { fetchProductCatalogForPOS } from "@/services/productCatalog/productCatalogFetch";
 import { fetchCategories } from "@/services/category/categoryFetch";
+import { getOrCreatePOSCategories } from "@/services/pos/categoryMappingService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -24,10 +25,10 @@ export function useProductCatalogFetch(storeId: string | null) {
       setIsLoading(true);
       setError(null);
 
-      // Fetch products from product_catalog and categories in parallel
+      // Fetch products from product_catalog and enhanced categories in parallel
       const [productsData, categoriesData] = await Promise.all([
         fetchProductCatalogForPOS(storeId),
-        fetchCategories(storeId)
+        getOrCreatePOSCategories(storeId) // Use enhanced category mapping
       ]);
 
       setProducts(productsData);

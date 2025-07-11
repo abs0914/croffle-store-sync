@@ -52,11 +52,11 @@ export const ConsolidatedRecipeDeploymentDialog: React.FC<ConsolidatedRecipeDepl
       setDeploymentResults([]);
       setShowResults(false);
       
-      // Calculate suggested price based on ingredients
-      const totalCost = template.ingredients.reduce((sum, ingredient) => 
+      // Use template's suggested price if available, otherwise calculate from ingredients
+      const totalCost = template.ingredients.reduce((sum, ingredient) =>
         sum + (ingredient.quantity * (ingredient.cost_per_unit || 0)), 0
       );
-      setPrice(totalCost); // Use cost as base price without markup
+      setPrice(template.suggested_price || totalCost); // Use template price or cost as fallback
     }
   }, [isOpen, template]);
 

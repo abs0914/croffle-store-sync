@@ -7,6 +7,8 @@ export interface RecipeTemplate {
   instructions?: string;
   yield_quantity: number;
   serving_size?: number;
+  total_cost?: number;
+  suggested_price?: number;
   image_url?: string;
   created_by: string;
   created_at: string;

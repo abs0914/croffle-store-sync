@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types";
 import { toast } from "sonner";
+import { enhanceProductsWithCategories } from "@/services/pos/categoryMappingService";
 
 export const fetchProductCatalogForPOS = async (storeId: string): Promise<Product[]> => {
   try {
@@ -12,6 +13,10 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
         ingredients:product_ingredients(
           *,
           inventory_item:inventory_stock(*)
+        ),
+        category:categories(
+          id,
+          name
         )
       `)
       .eq("store_id", storeId)
@@ -23,14 +28,14 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
     }
     
     // Map product_catalog data to Product interface for POS compatibility
-    return data?.map(item => ({
+    const mappedProducts = data?.map(item => ({
       id: item.id,
       name: item.product_name,
       description: item.description || undefined,
       price: item.price,
-      category_id: undefined, // Product catalog doesn't use categories yet
-      categoryId: undefined,
-      category: undefined,
+      category_id: item.category_id || undefined,
+      categoryId: item.category_id || undefined,
+      category: (item as any).category || undefined,
       image_url: item.image_url || undefined, // Include image_url from product_catalog
       image: item.image_url || undefined, // Map to frontend compatibility field
       is_active: item.is_available,
@@ -43,8 +48,16 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
       cost: undefined,
       stock_quantity: 100, // Default stock for now since product_catalog doesn't track stock
       stockQuantity: 100,
-      variations: [] // Product catalog doesn't have variations yet
+      variations: [], // Product catalog doesn't have variations yet
+      recipe_id: item.recipe_id || null,
+      product_type: item.recipe_id ? 'recipe' : 'direct'
     })) || [];
+
+    // Enhance products with category information based on recipe templates
+    const enhancedProducts = await enhanceProductsWithCategories(mappedProducts, storeId);
+
+    console.log('Enhanced products with categories:', enhancedProducts);
+    return enhancedProducts;
   } catch (error) {
     console.error("Error fetching product catalog for POS:", error);
     toast.error("Failed to load products");

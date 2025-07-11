@@ -76,7 +76,7 @@ export function EnhancedRecipeDeploymentDialog({
         ...prev,
         customName: template.name,
         customDescription: template.description || '',
-        actualPrice: baseCost > 0 ? Math.round(baseCost * 1.5 * 100) / 100 : 0 // 50% markup as default
+        actualPrice: template.suggested_price || (baseCost > 0 ? Math.round(baseCost * 1.5 * 100) / 100 : 0) // Use template price or 50% markup
       }));
     }
   }, [template, isOpen]);

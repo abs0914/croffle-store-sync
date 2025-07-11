@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getOrCreatePOSCategory } from './categoryMappingService';
 
 // Helper function to normalize units to match database enum values
 const normalizeUnit = (unit: string): string => {
@@ -290,12 +291,14 @@ const deployToSingleStoreWithTransaction = async (
 
     const costPerServing = template.yield_quantity > 0 ? totalCost / template.yield_quantity : 0;
     
-    // Use actualPrice from options if provided, otherwise calculate suggested price
-    const finalPrice = options.actualPrice || (costPerServing * (1 + (options.priceMarkup || 0.5))); // 50% markup by default
+    // Use actualPrice from options if provided, otherwise use template's suggested_price,
+    // and only fall back to calculated price if neither is available
+    const finalPrice = options.actualPrice || template.suggested_price || (costPerServing * (1 + (options.priceMarkup || 0.5))); // 50% markup by default
     
     console.log(`💰 Pricing calculation:`, {
       totalCost,
       costPerServing,
+      templateSuggestedPrice: template.suggested_price,
       actualPrice: options.actualPrice,
       finalPrice,
       priceMarkup: options.priceMarkup
@@ -550,7 +553,11 @@ const createProductCatalogWithTransaction = async (
     const finalPrice = options.actualPrice || recipe.suggested_price || (recipe.total_cost * 1.5);
     
     console.log(`💰 Using final price: ₱${finalPrice}`);
-    
+
+    // Get or create the appropriate POS category
+    const categoryId = await getOrCreatePOSCategory(template.category_name || 'Other', recipe.store_id);
+    console.log(`🏷️ Using category ID: ${categoryId} for template category: ${template.category_name}`);
+
     // Create product catalog entry for POS system (main entry)
     const { data: catalogProduct, error: catalogError } = await supabase
       .from('product_catalog')
@@ -562,6 +569,7 @@ const createProductCatalogWithTransaction = async (
         is_available: true,
         recipe_id: recipe.id,
         image_url: template.image_url || null,
+        category_id: categoryId,
         display_order: 0
       })
       .select()
