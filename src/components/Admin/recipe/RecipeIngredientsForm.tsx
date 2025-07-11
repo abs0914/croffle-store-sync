@@ -99,7 +99,7 @@ export function RecipeIngredientsForm({
       if (commissaryItem) {
         updated[index].ingredient_name = commissaryItem.name;
         updated[index].cost_per_unit = commissaryItem.unit_cost || 0;
-        updated[index].unit = commissaryItem.unit || 'g';
+        updated[index].unit = commissaryItem.unit || commissaryItem.uom || 'pieces';
       }
     }
 

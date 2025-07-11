@@ -123,12 +123,14 @@ export const getCommissaryInventoryItems = async () => {
     const mappedData = (data || []).map(item => ({
       id: item.id,
       item: item.name,
+      name: item.name, // Add name field for commissary items
       display_unit: item.unit,
+      unit: item.unit, // Add unit field for commissary items
       available_servings: item.current_stock || 0,
       cost_per_unit: item.unit_cost || 0,
+      unit_cost: item.unit_cost || 0, // Add unit_cost field for commissary items
       supports_fractional: supportsFractionalQuantity(item.name),
-      commissary_item_id: item.id,
-      unit: item.unit
+      commissary_item_id: item.id
     }));
     
     console.log('🔄 Mapped commissary items:', mappedData);

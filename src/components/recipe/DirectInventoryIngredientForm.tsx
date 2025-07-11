@@ -97,13 +97,18 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
       if (useCommissaryInventory) {
         onUpdate(index, 'commissary_item_id', itemId);
         onUpdate(index, 'inventory_stock_id', undefined);
+        // For commissary items, use the correct field names
+        onUpdate(index, 'ingredient_name', selectedItem.name || selectedItem.item);
+        onUpdate(index, 'unit', selectedItem.unit || selectedItem.uom || selectedItem.display_unit);
+        onUpdate(index, 'estimated_cost_per_unit', selectedItem.unit_cost || selectedItem.cost_per_unit || 0);
       } else {
         onUpdate(index, 'inventory_stock_id', itemId);
         onUpdate(index, 'commissary_item_id', undefined);
+        // For inventory stock items, use the existing field names
+        onUpdate(index, 'ingredient_name', selectedItem.item);
+        onUpdate(index, 'unit', selectedItem.display_unit);
+        onUpdate(index, 'estimated_cost_per_unit', selectedItem.cost_per_unit);
       }
-      onUpdate(index, 'ingredient_name', selectedItem.item);
-      onUpdate(index, 'unit', selectedItem.display_unit);
-      onUpdate(index, 'estimated_cost_per_unit', selectedItem.cost_per_unit);
       onUpdate(index, 'supports_fractional', selectedItem.supports_fractional);
     }
   };
@@ -163,9 +168,9 @@ export const DirectInventoryIngredientForm: React.FC<DirectInventoryIngredientFo
                 {inventoryItems.map(item => (
                   <SelectItem key={item.id} value={item.id}>
                     <div className="flex items-center justify-between w-full">
-                      <span>{item.item}</span>
+                      <span>{item.item || item.name}</span>
                       <div className="flex items-center gap-2 ml-4">
-                        <Badge variant="outline">{item.display_unit}</Badge>
+                        <Badge variant="outline">{item.display_unit || item.unit}</Badge>
                         {item.supports_fractional && (
                           <Badge variant="secondary" className="text-xs">0.5×</Badge>
                         )}
