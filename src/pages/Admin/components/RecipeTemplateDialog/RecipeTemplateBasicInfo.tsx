@@ -23,9 +23,7 @@ interface RecipeTemplateBasicInfoProps {
     name: string;
     description: string;
     category_name: string;
-    base_price: number;
-    suggested_markup_percentage: number;
-    pos_price: number;
+    price: number;
   };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
 }
@@ -89,67 +87,22 @@ export const RecipeTemplateBasicInfo: React.FC<RecipeTemplateBasicInfoProps> = (
       {/* Pricing Section */}
       <div className="space-y-4">
         <h3 className="font-medium text-foreground">Pricing Information</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="base_price">Base Price (₱)</Label>
-            <Input
-              id="base_price"
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.base_price}
-              onChange={(e) => {
-                const basePrice = Number(e.target.value);
-                const posPrice = basePrice * (1 + formData.suggested_markup_percentage / 100);
-                setFormData(prev => ({ 
-                  ...prev, 
-                  base_price: basePrice,
-                  pos_price: Number(posPrice.toFixed(2))
-                }));
-              }}
-              placeholder="0.00"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="suggested_markup_percentage">Markup %</Label>
-            <Input
-              id="suggested_markup_percentage"
-              type="number"
-              min="0"
-              max="1000"
-              step="1"
-              value={formData.suggested_markup_percentage}
-              onChange={(e) => {
-                const markup = Number(e.target.value);
-                const posPrice = formData.base_price * (1 + markup / 100);
-                setFormData(prev => ({ 
-                  ...prev, 
-                  suggested_markup_percentage: markup,
-                  pos_price: Number(posPrice.toFixed(2))
-                }));
-              }}
-              placeholder="50"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="pos_price">POS Price (₱)</Label>
-            <Input
-              id="pos_price"
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.pos_price}
-              onChange={(e) => setFormData(prev => ({ ...prev, pos_price: Number(e.target.value) }))}
-              placeholder="0.00"
-              className="font-medium text-primary"
-            />
-          </div>
+        <div>
+          <Label htmlFor="price">Price (₱)</Label>
+          <Input
+            id="price"
+            type="number"
+            min="0"
+            step="0.01"
+            value={formData.price}
+            onChange={(e) => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))}
+            placeholder="0.00"
+            className="font-medium"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            This price will be used in POS and store catalogs.
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          POS Price is automatically calculated from Base Price + Markup %, but can be manually adjusted.
-        </p>
       </div>
     </>
   );

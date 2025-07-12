@@ -3198,7 +3198,6 @@ export type Database = {
       }
       recipe_templates: {
         Row: {
-          base_price: number | null
           base_price_includes: string | null
           category_name: string | null
           choice_configuration: Json | null
@@ -3213,19 +3212,17 @@ export type Database = {
           instructions: string | null
           is_active: boolean | null
           name: string
-          pos_price: number | null
           preparation_time: number | null
+          price: number | null
           recipe_type: string | null
           serving_size: number | null
           sku: string | null
-          suggested_markup_percentage: number | null
           suggested_price: number | null
           updated_at: string | null
           version: number | null
           yield_quantity: number
         }
         Insert: {
-          base_price?: number | null
           base_price_includes?: string | null
           category_name?: string | null
           choice_configuration?: Json | null
@@ -3240,19 +3237,17 @@ export type Database = {
           instructions?: string | null
           is_active?: boolean | null
           name: string
-          pos_price?: number | null
           preparation_time?: number | null
+          price?: number | null
           recipe_type?: string | null
           serving_size?: number | null
           sku?: string | null
-          suggested_markup_percentage?: number | null
           suggested_price?: number | null
           updated_at?: string | null
           version?: number | null
           yield_quantity?: number
         }
         Update: {
-          base_price?: number | null
           base_price_includes?: string | null
           category_name?: string | null
           choice_configuration?: Json | null
@@ -3267,12 +3262,11 @@ export type Database = {
           instructions?: string | null
           is_active?: boolean | null
           name?: string
-          pos_price?: number | null
           preparation_time?: number | null
+          price?: number | null
           recipe_type?: string | null
           serving_size?: number | null
           sku?: string | null
-          suggested_markup_percentage?: number | null
           suggested_price?: number | null
           updated_at?: string | null
           version?: number | null

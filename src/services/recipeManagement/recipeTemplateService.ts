@@ -13,9 +13,7 @@ export interface RecipeTemplateData {
   yield_quantity: number;
   serving_size?: number;
   image_url?: string;
-  base_price?: number;
-  suggested_markup_percentage?: number;
-  pos_price?: number;
+  price?: number;
   created_by: string;
   is_active: boolean;
   version: number;
@@ -269,9 +267,7 @@ export const cloneRecipeTemplate = async (templateId: string, newName: string): 
       yield_quantity: originalTemplate.yield_quantity,
       serving_size: originalTemplate.serving_size,
       image_url: originalTemplate.image_url,
-      base_price: originalTemplate.base_price,
-      suggested_markup_percentage: originalTemplate.suggested_markup_percentage,
-      pos_price: originalTemplate.pos_price,
+      price: originalTemplate.price,
       created_by: user.id,
       is_active: true,
       version: 1

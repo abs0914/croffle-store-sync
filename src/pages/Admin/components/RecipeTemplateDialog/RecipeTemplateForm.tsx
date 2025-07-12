@@ -34,9 +34,7 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
     yield_quantity: 1,
     serving_size: 1,
     image_url: '',
-    base_price: 0,
-    suggested_markup_percentage: 50,
-    pos_price: 0
+    price: 0
   });
 
   const [ingredients, setIngredients] = useState<RecipeTemplateIngredientInput[]>([]);
@@ -60,9 +58,7 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
         yield_quantity: Number(template.yield_quantity) || 1,
         serving_size: Number(template.serving_size) || 1,
         image_url: template.image_url || '',
-        base_price: Number(template.base_price) || 0,
-        suggested_markup_percentage: Number(template.suggested_markup_percentage) || 50,
-        pos_price: Number(template.pos_price) || 0
+        price: Number(template.price) || 0
       };
       
       console.log('Setting form data:', templateFormData);
