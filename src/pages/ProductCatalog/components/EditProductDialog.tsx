@@ -7,10 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Spinner } from '@/components/ui/spinner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Image } from 'lucide-react';
 import { updateProduct } from '@/services/productCatalog/productCatalogService';
 import { uploadProductImage, deleteProductImage } from '@/services/productCatalog/productImageService';
 import { ProductCatalog } from '@/services/productCatalog/types';
+import { fetchCategories } from '@/services/category/categoryFetch';
+import { Category } from '@/types';
+import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 
 interface EditProductDialogProps {
@@ -26,17 +30,41 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
   onProductUpdated,
   product
 }) => {
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [formData, setFormData] = useState({
     product_name: '',
     description: '',
     price: 0,
     is_available: true,
-    display_order: 0
+    display_order: 0,
+    category_id: '' as string | null
   });
+
+  // Load categories when dialog opens
+  useEffect(() => {
+    const loadCategories = async () => {
+      if (!user?.storeIds?.[0] || !isOpen) return;
+      
+      setCategoriesLoading(true);
+      try {
+        const categoriesData = await fetchCategories(user.storeIds[0]);
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        toast.error('Failed to load categories');
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, [user?.storeIds, isOpen]);
 
   useEffect(() => {
     if (product) {
@@ -45,7 +73,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         description: product.description || '',
         price: product.price,
         is_available: product.is_available,
-        display_order: product.display_order
+        display_order: product.display_order,
+        category_id: product.category_id || null
       });
       setCurrentImageUrl(null); // Products don't have image_url in the current schema
       setImagePreview(null);
@@ -103,7 +132,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         description: formData.description || undefined,
         price: formData.price,
         is_available: formData.is_available,
-        display_order: formData.display_order
+        display_order: formData.display_order,
+        category_id: formData.category_id
       };
 
       const success = await updateProduct(product.id, updates);
@@ -174,6 +204,29 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                   value={formData.display_order}
                   onChange={handleInputChange}
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={formData.category_id || 'none'}
+                  onValueChange={(value) => 
+                    setFormData(prev => ({ ...prev, category_id: value === 'none' ? null : value }))
+                  }
+                  disabled={categoriesLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Category</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex items-center space-x-2">

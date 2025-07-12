@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Search, 
   Package, 
@@ -15,7 +16,8 @@ import {
   CheckCircle,
   Clock,
   Edit3,
-  Pen
+  Pen,
+  Filter
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/format';
 import { fetchProductCatalog, updateProduct } from '@/services/productCatalog/productCatalogService';
@@ -26,6 +28,8 @@ import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import { useOptimizedDataFetch, useOptimizedMutation } from '@/hooks/useOptimizedDataFetch';
 import { useQueryClient } from '@tanstack/react-query';
+import { fetchCategories } from '@/services/category/categoryFetch';
+import { Category } from '@/types';
 
 interface StoreCatalogTabProps {
   storeId: string;
@@ -36,6 +40,7 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [editingProduct, setEditingProduct] = useState<ProductCatalog | null>(null);
   const [editPrice, setEditPrice] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -56,6 +61,22 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
       cacheConfig: {
         staleTime: 30 * 1000, // 30 seconds for fresh data
         cacheTime: 2 * 60 * 1000, // 2 minutes
+      }
+    }
+  );
+
+  // Fetch categories for filtering
+  const {
+    data: categories = [],
+    isLoading: categoriesLoading
+  } = useOptimizedDataFetch<Category[]>(
+    ['categories', storeId],
+    () => fetchCategories(storeId),
+    {
+      enabled: !!storeId,
+      cacheConfig: {
+        staleTime: 5 * 60 * 1000, // 5 minutes for categories
+        cacheTime: 10 * 60 * 1000, // 10 minutes
       }
     }
   );
@@ -167,13 +188,21 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
     const matchesSearch = product.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesAvailability = !showUnavailableOnly || !product.is_available;
-    return matchesSearch && matchesAvailability;
+    const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
+    return matchesSearch && matchesAvailability && matchesCategory;
   });
 
   const getAvailabilityIcon = (isAvailable: boolean) => {
     return isAvailable ?
       <CheckCircle className="h-4 w-4 text-green-600" /> :
       <AlertCircle className="h-4 w-4 text-red-600" />;
+  };
+
+  // Helper function to get category name
+  const getCategoryName = (categoryId: string | null) => {
+    if (!categoryId) return 'Uncategorized';
+    const category = categories.find(cat => cat.id === categoryId);
+    return category?.name || 'Unknown Category';
   };
 
   // Convert ProductCatalog to the format expected by EditProductDialog
@@ -257,7 +286,7 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
       </div>
 
       {/* Search and Filters */}
-      <div className="flex gap-4 items-center">
+      <div className="flex gap-4 items-center flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
@@ -267,6 +296,24 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
             className="pl-10"
           />
         </div>
+        
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-[180px]">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              <SelectValue placeholder="All Categories" />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
         <Button
           variant={showUnavailableOnly ? "default" : "outline"}
           onClick={() => setShowUnavailableOnly(!showUnavailableOnly)}
@@ -313,6 +360,12 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
                 <p className="text-sm text-muted-foreground line-clamp-2">
                   {product.description}
                 </p>
+                
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="text-xs">
+                    {getCategoryName(product.category_id)}
+                  </Badge>
+                </div>
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
