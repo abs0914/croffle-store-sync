@@ -2,6 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { InventoryStock } from "@/types/orderManagement";
 import { Recipe } from "@/types/inventoryManagement";
 import { toast } from "sonner";
+import { unifiedProductService } from "@/services/productManagement/unifiedProductService";
+import { syncMonitoringService } from "@/services/productManagement/syncMonitoringService";
 
 export const fetchInventoryStock = async (storeId: string): Promise<InventoryStock[]> => {
   try {
@@ -83,6 +85,22 @@ export const updateRecipe = async (recipeId: string, updates: Partial<Recipe>): 
       .single();
 
     if (error) throw error;
+    
+    // Validate sync after recipe update
+    if (data.store_id && (updates.total_cost !== undefined || (updates as any).suggested_price !== undefined)) {
+      try {
+        // Check if product sync is maintained
+        const validation = await syncMonitoringService.validateRecipeCostPropagation(recipeId);
+        if (!validation.isValid) {
+          console.warn('Recipe cost sync issues detected:', validation.issues);
+          // Attempt auto-repair
+          await unifiedProductService.repairSync(data.store_id, recipeId);
+        }
+      } catch (syncError) {
+        console.warn('Sync validation failed:', syncError);
+      }
+    }
+    
     toast.success('Recipe updated successfully');
     
     return {
