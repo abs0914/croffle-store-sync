@@ -14,10 +14,11 @@ export default function ProductCategoryTabs({
   activeCategory, 
   setActiveCategory 
 }: ProductCategoryTabsProps) {
-  // Filter out any "Desserts" category from the tabs
-  const filteredCategories = categories.filter(
-    category => category.name.toLowerCase() !== "desserts"
-  );
+  // Filter out addon categories and other categories that shouldn't appear in main menu
+  const filteredCategories = categories.filter(category => {
+    const categoryName = category.name.toLowerCase();
+    return !["desserts", "addon", "add-ons"].includes(categoryName);
+  });
   
   return (
     <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">

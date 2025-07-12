@@ -282,13 +282,14 @@ export default function ProductGrid({
     // Don't show addons for addon products themselves
     if (isAddonProduct) return false;
 
-    // Show addons for coffee drinks and other main products
-    return productName.includes('coffee') ||
-           productName.includes('latte') ||
-           productName.includes('americano') ||
-           productName.includes('cappuccino') ||
-           productName.includes('mocha') ||
-           addonItems.length > 0; // Show for any product if addons are available
+    // Check if product is from addon category (by category name)
+    const categoryName = getCategoryName(product.category_id)?.toLowerCase() || '';
+    if (categoryName === 'addon' || categoryName === 'add-ons') {
+      return false;
+    }
+
+    // Show addon selection for ALL other products if addons are available
+    return addonItems.length > 0;
   };
 
   const handleAddonAddToCart = (addonCartItems: any[]) => {
@@ -383,9 +384,14 @@ export default function ProductGrid({
             </div>
           ) : filteredProducts.length > 0 ? (
             activeCategory === "all" ? (
-              // Group products by category when showing all
+              // Group products by category when showing all (excluding addon categories)
               <div className="space-y-8">
-                {categories.map(category => {
+                {categories
+                  .filter(category => {
+                    const categoryName = category.name.toLowerCase();
+                    return !["addon", "add-ons"].includes(categoryName);
+                  })
+                  .map(category => {
                   const categoryProducts = filteredProducts.filter(product =>
                     product.category_id === category.id
                   );
