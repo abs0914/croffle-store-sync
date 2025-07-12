@@ -385,13 +385,9 @@ export default function ProductGrid({
           ) : filteredProducts.length > 0 ? (
             activeCategory === "all" ? (
               // Group products by category when showing all (excluding addon categories)
+              // Note: Categories are already sorted and filtered by the categoryFetch service
               <div className="space-y-8">
-                {categories
-                  .filter(category => {
-                    const categoryName = category.name.toLowerCase();
-                    return !["addon", "add-ons"].includes(categoryName);
-                  })
-                  .map(category => {
+                {categories.map(category => {
                   const categoryProducts = filteredProducts.filter(product =>
                     product.category_id === category.id
                   );

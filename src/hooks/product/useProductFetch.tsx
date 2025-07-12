@@ -37,12 +37,11 @@ export function useProductFetch(storeId: string | null) {
         
         setProducts(productsData);
         
-        // Filter out the "Desserts" category
-        const filteredCategories = categoriesData.filter(
-          category => category.name.toLowerCase() !== "desserts"
-        );
-        
-        setCategories(filteredCategories);
+        // Filter and sort categories for POS display
+        const { prepareCategoriesForPOS } = await import('@/utils/categoryOrdering');
+        const preparedCategories = prepareCategoriesForPOS(categoriesData);
+
+        setCategories(preparedCategories);
         
         if (productsData.length === 0) {
           console.warn("useProductFetch: No products found for store:", storeId);

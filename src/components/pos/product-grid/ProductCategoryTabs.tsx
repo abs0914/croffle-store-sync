@@ -2,6 +2,7 @@
 import React from "react";
 import { Category } from "@/types";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
 
 interface ProductCategoryTabsProps {
   categories: Category[];
@@ -14,11 +15,11 @@ export default function ProductCategoryTabs({
   activeCategory, 
   setActiveCategory 
 }: ProductCategoryTabsProps) {
-  // Filter out addon categories and other categories that shouldn't appear in main menu
-  const filteredCategories = categories.filter(category => {
-    const categoryName = category.name.toLowerCase();
-    return !["desserts", "addon", "add-ons"].includes(categoryName);
-  });
+  // Filter out categories that shouldn't appear in main menu
+  // Note: Categories are already sorted by the categoryFetch service
+  const filteredCategories = categories.filter(category =>
+    shouldDisplayCategoryInPOS(category.name)
+  );
   
   return (
     <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">

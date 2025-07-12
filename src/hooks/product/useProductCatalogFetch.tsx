@@ -6,6 +6,7 @@ import { fetchCategories } from "@/services/category/categoryFetch";
 import { getOrCreatePOSCategories } from "@/services/pos/categoryMappingService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { prepareCategoriesForPOS } from "@/utils/categoryOrdering";
 
 export function useProductCatalogFetch(storeId: string | null) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,12 +34,10 @@ export function useProductCatalogFetch(storeId: string | null) {
 
       setProducts(productsData);
 
-      // Filter out the "Desserts" category
-      const filteredCategories = categoriesData.filter(
-        category => category.name.toLowerCase() !== "desserts"
-      );
+      // Filter and sort categories for POS display
+      const preparedCategories = prepareCategoriesForPOS(categoriesData);
 
-      setCategories(filteredCategories);
+      setCategories(preparedCategories);
       setLastSync(new Date());
       setIsConnected(true);
     } catch (error) {

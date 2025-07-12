@@ -117,15 +117,16 @@ export const getOrCreatePOSCategories = async (storeId: string): Promise<Categor
       .from('categories')
       .select('*')
       .eq('store_id', storeId)
-      .eq('is_active', true)
-      .order('name');
+      .eq('is_active', true);
 
     if (finalError) {
       console.error('Error fetching final categories:', finalError);
       return [];
     }
 
-    return allCategories || [];
+    // Apply custom POS ordering
+    const { sortCategoriesForPOS } = await import('@/utils/categoryOrdering');
+    return sortCategoriesForPOS(allCategories || []);
 
   } catch (error) {
     console.error('Error in getOrCreatePOSCategories:', error);
