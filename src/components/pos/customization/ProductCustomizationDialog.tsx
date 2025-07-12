@@ -475,12 +475,36 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
               )}
               
               {croffleType !== 'regular' && (
-                <div className="flex justify-between text-sm">
-                  <span>Combo Selection</span>
-                  <span>₱{getComboPrice().toFixed(2)}</span>
-                </div>
-              )}
-            </div>
+                <>
+                  {comboSelection.toppings.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-muted-foreground">Selected Toppings:</div>
+                      {comboSelection.toppings.map(({ addon }) => (
+                        <div key={addon.id} className="flex justify-between text-sm pl-2">
+                          <span>• {addon.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {comboSelection.sauces.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium text-muted-foreground">Selected Sauces:</div>
+                      {comboSelection.sauces.map(({ addon }) => (
+                        <div key={addon.id} className="flex justify-between text-sm pl-2">
+                          <span>• {addon.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                   <div className="flex justify-between text-sm">
+                     <span>Combo Pricing</span>
+                     <span>₱{getComboPrice().toFixed(2)}</span>
+                   </div>
+                 </>
+               )}
+             </div>
             
             <Separator />
             

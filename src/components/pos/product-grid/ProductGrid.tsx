@@ -128,7 +128,15 @@ export default function ProductGrid({
       return;
     }
 
-    // Check if this product has a customizable recipe
+    // Check for enhanced customization first (croffles) - prioritize over recipe customization
+    if (shouldShowEnhancedCustomization(product)) {
+      console.log("ProductGrid: Showing enhanced customization for croffle:", product.name);
+      setSelectedProductForCustomization(product);
+      setIsEnhancedCustomizationOpen(true);
+      return;
+    }
+
+    // Check if this product has a customizable recipe (for non-croffle products)
     const customizableRecipe = customizableRecipes.find(recipe =>
       recipe.name.toLowerCase() === product.name.toLowerCase() ||
       recipe.name.toLowerCase().includes(product.name.toLowerCase()) ||
@@ -154,12 +162,8 @@ export default function ProductGrid({
         setProductVariations(variations);
         setIsDialogOpen(true);
       } else {
-        // Check for enhanced customization first (croffles)
-        if (shouldShowEnhancedCustomization(product)) {
-          console.log("ProductGrid: Showing enhanced customization for croffle:", product.name);
-          setSelectedProductForCustomization(product);
-          setIsEnhancedCustomizationOpen(true);
-        } else if (shouldShowAddonSelection(product)) {
+        // Check for addon selection (already handled enhanced customization above)
+        if (shouldShowAddonSelection(product)) {
           console.log("ProductGrid: Showing addon selection for product:", product.name);
           setSelectedProductForAddons(product);
           setIsAddonDialogOpen(true);
