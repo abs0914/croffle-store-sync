@@ -143,7 +143,7 @@ async function deployProductsToAllStores() {
                 yield_quantity: template.yield_quantity,
                 total_cost: 0, // Will be calculated by triggers
                 cost_per_serving: 0,
-                suggested_price: template.base_price || 0,
+                suggested_price: template.pos_price || template.base_price || 0,
                 sku: `${template.id.slice(0, 8)}-${store.id.slice(0, 8)}`,
                 is_active: true,
                 approval_status: 'approved'
@@ -194,7 +194,7 @@ async function deployProductsToAllStores() {
                 .update({
                   image_url: template.image_url,
                   description: template.description,
-                  price: template.base_price || 0,
+                  price: template.pos_price || template.base_price || 0,
                   category_id: category?.id || null
                 })
                 .eq('id', existingCatalog.id);
@@ -220,7 +220,7 @@ async function deployProductsToAllStores() {
                 recipe_id: recipeId,
                 product_name: template.name,
                 description: template.description,
-                price: template.base_price || 0,
+                price: template.pos_price || template.base_price || 0,
                 category_id: category?.id || null,
                 image_url: template.image_url, // ✅ Copy image from template
                 is_available: true,
