@@ -133,7 +133,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         price: formData.price,
         is_available: formData.is_available,
         display_order: formData.display_order,
-        category_id: formData.category_id
+        category_id: formData.category_id || null
       };
 
       const success = await updateProduct(product.id, updates);
