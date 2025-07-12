@@ -35,6 +35,7 @@ import {
 } from "@/services/pos/addonService";
 import { fetchComboRules } from "@/services/pos/comboRulesService";
 import { ComboRule } from "@/types/productVariations";
+import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
 
 interface ProductGridProps {
   products: UnifiedProduct[];
@@ -89,7 +90,7 @@ export default function ProductGrid({
         console.log('Loaded customizable recipes:', recipes);
 
         // Load addon items
-        const addons = await fetchAddonRecipes();
+        const addons = await fetchAddonRecipes(storeId);
         setAddonItems(addons);
 
         // Group addons by category
@@ -107,7 +108,7 @@ export default function ProductGrid({
     };
 
     loadData();
-  }, []);
+  }, [storeId]);
 
   // Handle product selection
   const handleProductClick = async (product: UnifiedProduct) => {
@@ -213,19 +214,6 @@ export default function ProductGrid({
       }
     }
   };
-  
-  // Filter products based on category and search term
-  const filteredProducts = products.filter(product => {
-    const isActive = product.is_active || product.isActive;
-    const matchesCategory = activeCategory === "all" || 
-                           (product.category_id === activeCategory);
-    
-    const matchesSearch = !searchTerm || 
-                          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    return matchesCategory && matchesSearch;
-  });
 
   // Get category name by id for display purposes
   const getCategoryName = (categoryId: string | undefined): string => {
@@ -233,6 +221,24 @@ export default function ProductGrid({
     const category = categories.find(cat => cat.id === categoryId);
     return category ? category.name : "Uncategorized";
   };
+
+  // Filter products based on category and search term
+  const filteredProducts = products.filter(product => {
+    const isActive = product.is_active || product.isActive;
+
+    // Exclude products from hidden categories (like Add-ons)
+    const categoryName = getCategoryName(product.category_id);
+    const shouldDisplayCategory = shouldDisplayCategoryInPOS(categoryName);
+
+    const matchesCategory = activeCategory === "all" ||
+                           (product.category_id === activeCategory);
+
+    const matchesSearch = !searchTerm ||
+                          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return isActive && shouldDisplayCategory && matchesCategory && matchesSearch;
+  });
 
   const handleRegularProductSelect = () => {
     if (selectedProduct) {

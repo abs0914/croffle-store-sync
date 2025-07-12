@@ -23,62 +23,59 @@ export interface AddonCategory {
 }
 
 /**
- * Fetch all available addon recipes from the database
+ * Fetch all available addon items from the database
  */
-export const fetchAddonRecipes = async (): Promise<AddonItem[]> => {
+export const fetchAddonRecipes = async (storeId?: string): Promise<AddonItem[]> => {
   try {
-    console.log('Fetching addon recipes...');
-    
-    const { data, error } = await supabase
-      .from('recipe_templates')
+    console.log('Fetching addon items from product_catalog for store:', storeId);
+
+    // Build query to fetch products from addon categories
+    let query = supabase
+      .from('product_catalog')
       .select(`
         id,
-        name,
-        description,
-        category_name,
-        is_active,
-        recipe_template_ingredients (
-          id,
-          ingredient_name,
-          quantity,
-          unit,
-          cost_per_unit
-        )
+        product_name,
+        price,
+        is_available,
+        category_id,
+        store_id,
+        categories!inner(name)
       `)
-      .eq('is_active', true)
-      .eq('category_name', 'addon');
+      .eq('is_available', true)
+      .order('product_name');
+
+    // Filter by store if provided
+    if (storeId) {
+      query = query.eq('store_id', storeId);
+    }
+
+    const { data: allProducts, error } = await query;
 
     if (error) {
-      console.error('Error fetching addon recipes:', error);
+      console.error('Error fetching products:', error);
       throw error;
     }
 
-    console.log('Raw addon recipes data:', data);
+    console.log('Raw products data:', allProducts?.length || 0, 'products');
+
+    // Filter products that are in addon categories
+    const addonProducts = (allProducts || []).filter(product => {
+      const categoryName = product.categories?.name?.toLowerCase() || '';
+      return categoryName.includes('addon') || categoryName.includes('add-on');
+    });
+
+    console.log('Filtered addon products:', addonProducts.length, 'addon products');
 
     // Transform the data into AddonItem format
-    const addonItems: AddonItem[] = (data || []).map(template => {
-      // Calculate price based on cost with markup
-      const ingredient = template.recipe_template_ingredients?.[0];
-      const costPerUnit = ingredient?.cost_per_unit || 0;
-      
-      // Determine price based on cost (matching our uploaded data)
-      let price = 6; // Default basic topping price
-      if (costPerUnit >= 7) {
-        price = 10; // Premium jams
-      } else if (costPerUnit >= 4.5) {
-        price = 8; // Premium spreads
-      } else if (costPerUnit >= 3.5) {
-        price = 10; // Premium toppings
-      }
-
+    const addonItems: AddonItem[] = addonProducts.map(product => {
       return {
-        id: template.id,
-        name: template.name,
-        description: template.description,
-        price: price,
-        cost_per_unit: costPerUnit,
-        category: template.category_name,
-        is_active: template.is_active,
+        id: product.id,
+        name: product.product_name,
+        description: undefined,
+        price: product.price || 6, // Default price if not set
+        cost_per_unit: (product.price || 6) * 0.6, // Estimate cost as 60% of price
+        category: product.categories?.name || 'addon',
+        is_active: product.is_available,
         image_url: undefined
       };
     });
@@ -117,14 +114,20 @@ export const groupAddonsByCategory = (addons: AddonItem[]): AddonCategory[] => {
  * Get category key based on addon properties
  */
 function getCategoryKey(addon: AddonItem): string {
-  if (addon.price === 6) {
-    return 'basic_toppings';
-  } else if (addon.price === 8) {
-    return 'premium_spreads';
-  } else if (addon.name.toLowerCase().includes('jam')) {
-    return 'fruit_jams';
+  // Use the actual category from the database
+  const categoryName = addon.category.toLowerCase();
+
+  // Normalize category names
+  if (categoryName.includes('add-on') || categoryName.includes('addon')) {
+    return 'addons';
+  } else if (categoryName.includes('topping')) {
+    return 'toppings';
+  } else if (categoryName.includes('sauce')) {
+    return 'sauces';
+  } else if (categoryName.includes('biscuit')) {
+    return 'biscuits';
   } else {
-    return 'premium_toppings';
+    return 'other';
   }
 }
 
@@ -133,12 +136,13 @@ function getCategoryKey(addon: AddonItem): string {
  */
 function getCategoryDisplayName(categoryKey: string): string {
   const displayNames: Record<string, string> = {
-    'basic_toppings': 'Basic Toppings (₱6)',
-    'premium_spreads': 'Premium Spreads (₱8)',
-    'premium_toppings': 'Premium Toppings (₱10)',
-    'fruit_jams': 'Fruit Jams (₱10)'
+    'addons': 'Add-ons',
+    'toppings': 'Toppings',
+    'sauces': 'Sauces',
+    'biscuits': 'Biscuits',
+    'other': 'Other'
   };
-  
+
   return displayNames[categoryKey] || categoryKey;
 }
 
