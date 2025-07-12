@@ -112,3 +112,30 @@
     @apply bg-background text-foreground font-sans;
   }
 }
+
+/* Custom sidebar improvements */
+@layer components {
+  /* Ensure smooth transitions for sidebar elements */
+  [data-sidebar="sidebar"] {
+    transition: width 200ms ease-in-out;
+  }
+
+  /* Prevent text overflow in collapsed state */
+  [data-state="collapsed"] .sidebar-text {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    transition: opacity 150ms ease-in-out;
+  }
+
+  [data-state="expanded"] .sidebar-text {
+    opacity: 1;
+    width: auto;
+    transition: opacity 150ms ease-in-out 50ms;
+  }
+
+  /* Improve tooltip positioning for collapsed sidebar */
+  [data-state="collapsed"] [data-sidebar="menu-button"] {
+    justify-content: center;
+  }
+}
