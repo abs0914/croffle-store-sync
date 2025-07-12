@@ -37,20 +37,12 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
   });
 
   const [ingredients, setIngredients] = useState<RecipeTemplateIngredientInput[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
 
-  // Initialize categories only once
-  useEffect(() => {
-    const initializeData = async () => {
-      await fetchCategories();
-    };
-    
-    initializeData();
-  }, []);
+  // Template categories are now predefined in RecipeTemplateBasicInfo component
 
   // Handle template data population - separate from basic data initialization
   useEffect(() => {
@@ -97,21 +89,6 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
     }
   }, [template, isInitialized]);
 
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('name')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      const uniqueCategories = [...new Set(data?.map(cat => cat.name) || [])];
-      setCategories(uniqueCategories);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,7 +205,6 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
               <RecipeTemplateBasicInfo
                 formData={formData}
                 setFormData={setFormData}
-                categories={categories}
               />
 
               <RecipeTemplateImageUpload
