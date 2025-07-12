@@ -4261,6 +4261,18 @@ export type Database = {
       }
     }
     Functions: {
+      analyze_store_deployment_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          store_name: string
+          store_id: string
+          total_products: number
+          products_with_images: number
+          products_without_images: number
+          expected_products: number
+          missing_products: number
+        }[]
+      }
       calculate_recipe_cost: {
         Args: { recipe_id: number }
         Returns: number
@@ -4473,6 +4485,14 @@ export type Database = {
           contact_number?: string
         }
         Returns: string
+      }
+      sync_template_images_to_products: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          updated_count: number
+          error_count: number
+          details: string[]
+        }[]
       }
       transfer_commissary_to_store: {
         Args: {

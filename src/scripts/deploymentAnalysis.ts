@@ -21,110 +21,57 @@ async function analyzeDeploymentStatus() {
       process.exit(1);
     }
 
-    // Get store statistics
-    const { data: storeStats } = await supabase.rpc('analyze_store_deployment_status');
+    // Get store deployment statistics using the database function
+    const { data: storeStats, error: statsError } = await supabase
+      .rpc('analyze_store_deployment_status');
     
-    if (!storeStats) {
-      // Manual analysis if RPC doesn't exist
-      const { data: stores } = await supabase
-        .from('stores')
-        .select('id, name')
-        .eq('is_active', true);
+    if (statsError) {
+      console.error('❌ Error getting deployment stats:', statsError);
+      process.exit(1);
+    }
 
-      const { data: templates } = await supabase
-        .from('recipe_templates')
-        .select('id, name, image_url')
-        .eq('is_active', true);
-
-      console.log(`📋 Analysis Summary:`);
-      console.log(`   Active Stores: ${stores?.length || 0}`);
-      console.log(`   Active Templates: ${templates?.length || 0}`);
-      console.log(`   Templates with Images: ${templates?.filter(t => t.image_url).length || 0}\n`);
-
-      // Analyze each store
-      for (const store of stores || []) {
-        const { data: products } = await supabase
-          .from('product_catalog')
-          .select('id, product_name, image_url')
-          .eq('store_id', store.id);
-
-        const productsWithImages = products?.filter(p => p.image_url).length || 0;
-        const totalProducts = products?.length || 0;
-        const missingProducts = (templates?.length || 0) - totalProducts;
-
-        console.log(`🏪 ${store.name}`);
-        console.log(`   Products: ${totalProducts}/${templates?.length || 0} deployed`);
-        console.log(`   Images: ${productsWithImages}/${totalProducts} have images`);
-        
-        if (missingProducts > 0) {
-          console.log(`   ⚠️  Missing ${missingProducts} products`);
-        }
-        
-        if (totalProducts > 0 && productsWithImages < totalProducts) {
-          console.log(`   ⚠️  ${totalProducts - productsWithImages} products missing images`);
-        }
-        
-        console.log('');
+    console.log(`📋 Deployment Analysis Summary:\n`);
+    
+    let totalMissingProducts = 0;
+    let totalProductsWithoutImages = 0;
+    
+    for (const store of storeStats || []) {
+      console.log(`🏪 ${store.store_name}`);
+      console.log(`   Products: ${store.total_products}/${store.expected_products} deployed`);
+      console.log(`   Images: ${store.products_with_images}/${store.total_products} have images`);
+      
+      if (store.missing_products > 0) {
+        console.log(`   ⚠️  Missing ${store.missing_products} products`);
+        totalMissingProducts += store.missing_products;
       }
+      
+      if (store.products_without_images > 0) {
+        console.log(`   ⚠️  ${store.products_without_images} products missing images`);
+        totalProductsWithoutImages += store.products_without_images;
+      }
+      
+      if (store.missing_products === 0 && store.products_without_images === 0) {
+        console.log(`   ✅ Fully deployed with images`);
+      }
+      
+      console.log('');
     }
 
-    // Check for deployment issues
-    console.log('🔍 Deployment Issues Found:');
-    
-    // Issue 1: Stores with missing products
-    const { data: storesWithMissingProducts } = await supabase
-      .from('stores')
-      .select(`
-        id,
-        name,
-        product_catalog(count)
-      `)
-      .eq('is_active', true);
+    console.log(`📊 Overall Summary:`);
+    console.log(`   Total missing products across all stores: ${totalMissingProducts}`);
+    console.log(`   Total products without images: ${totalProductsWithoutImages}`);
 
-    const { data: templateCount } = await supabase
-      .from('recipe_templates')
-      .select('id')
-      .eq('is_active', true);
-
-    const expectedCount = templateCount?.length || 0;
-    const storesNeedingProducts = storesWithMissingProducts?.filter(
-      store => (store.product_catalog as any)[0]?.count < expectedCount
-    );
-
-    if (storesNeedingProducts?.length) {
-      console.log(`   📦 ${storesNeedingProducts.length} stores missing products:`);
-      storesNeedingProducts.forEach(store => {
-        const currentCount = (store.product_catalog as any)[0]?.count || 0;
-        console.log(`      - ${store.name}: ${currentCount}/${expectedCount} products`);
-      });
-    }
-
-    // Issue 2: Products missing images
-    const { data: productsWithoutImages } = await supabase
-      .from('product_catalog')
-      .select(`
-        id,
-        product_name,
-        store_id,
-        stores(name),
-        recipes(
-          recipe_templates(image_url)
-        )
-      `)
-      .is('image_url', null);
-
-    const productsWithTemplateImages = productsWithoutImages?.filter(
-      product => (product.recipes as any)?.recipe_templates?.image_url
-    );
-
-    if (productsWithTemplateImages?.length) {
-      console.log(`   🖼️  ${productsWithTemplateImages.length} products missing images (but templates have them)`);
-    }
-
-    console.log('\n✅ Analysis completed!');
     console.log('\n💡 Recommendations:');
-    console.log('   1. Run deployProductsToAllStores.ts to fix missing products');
-    console.log('   2. Run syncTemplateImagesToProducts.ts to fix missing images');
+    if (totalMissingProducts > 0) {
+      console.log('   1. ✅ Run: node deployProductsToAllStores.ts (to deploy missing products)');
+    }
+    if (totalProductsWithoutImages > 0) {
+      console.log('   2. ✅ Run: node syncTemplateImagesToProducts.ts (to sync missing images)');
+      console.log('      Or use SQL: SELECT * FROM sync_template_images_to_products();');
+    }
+    if (totalMissingProducts === 0 && totalProductsWithoutImages === 0) {
+      console.log('   🎉 All stores are fully deployed with images!');
+    }
 
   } catch (error) {
     console.error('❌ Fatal error during analysis:', error);
