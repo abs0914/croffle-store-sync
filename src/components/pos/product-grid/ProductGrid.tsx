@@ -20,6 +20,7 @@ import CategorySection from "./CategorySection";
 import { useProductFilters } from "@/hooks/product/useProductFilters";
 import { RecipeCustomizationDialog } from "../customization/RecipeCustomizationDialog";
 import { AddonSelectionDialog } from "../addons/AddonSelectionDialog";
+import { ProductCustomizationDialog } from "../customization/ProductCustomizationDialog";
 import {
   fetchCustomizableRecipes,
   CustomizableRecipe,
@@ -32,6 +33,8 @@ import {
   AddonItem,
   AddonCategory
 } from "@/services/pos/addonService";
+import { fetchComboRules } from "@/services/pos/comboRulesService";
+import { ComboRule } from "@/types/productVariations";
 
 interface ProductGridProps {
   products: UnifiedProduct[];
@@ -71,6 +74,11 @@ export default function ProductGrid({
   const [isAddonDialogOpen, setIsAddonDialogOpen] = useState(false);
   const [selectedProductForAddons, setSelectedProductForAddons] = useState<UnifiedProduct & { selectedVariation?: ProductVariation } | null>(null);
   
+  // Enhanced customization states
+  const [isEnhancedCustomizationOpen, setIsEnhancedCustomizationOpen] = useState(false);
+  const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<UnifiedProduct & { selectedVariation?: ProductVariation } | null>(null);
+  const [comboRules, setComboRules] = useState<ComboRule[]>([]);
+  
   // Load customizable recipes and addons on component mount
   useEffect(() => {
     const loadData = async () => {
@@ -88,6 +96,11 @@ export default function ProductGrid({
         const categories = groupAddonsByCategory(addons);
         setAddonCategories(categories);
         console.log('Loaded addon categories:', categories);
+
+        // Load combo rules
+        const rules = await fetchComboRules();
+        setComboRules(rules);
+        console.log('Loaded combo rules:', rules);
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -141,8 +154,12 @@ export default function ProductGrid({
         setProductVariations(variations);
         setIsDialogOpen(true);
       } else {
-        // Always check if we should show addon selection for products without variations
-        if (shouldShowAddonSelection(product)) {
+        // Check for enhanced customization first (croffles)
+        if (shouldShowEnhancedCustomization(product)) {
+          console.log("ProductGrid: Showing enhanced customization for croffle:", product.name);
+          setSelectedProductForCustomization(product);
+          setIsEnhancedCustomizationOpen(true);
+        } else if (shouldShowAddonSelection(product)) {
           console.log("ProductGrid: Showing addon selection for product:", product.name);
           setSelectedProductForAddons(product);
           setIsAddonDialogOpen(true);
@@ -174,8 +191,13 @@ export default function ProductGrid({
         price: variation.price
       });
 
-      // Always check if we should show addon selection after variation selection
-      if (shouldShowAddonSelection(selectedProduct)) {
+      // Check for enhanced customization first (croffles), then addon selection
+      if (shouldShowEnhancedCustomization(selectedProduct)) {
+        // Close variation dialog and open enhanced customization dialog
+        setIsDialogOpen(false);
+        setSelectedProductForCustomization({ ...selectedProduct, selectedVariation: variation });
+        setIsEnhancedCustomizationOpen(true);
+      } else if (shouldShowAddonSelection(selectedProduct)) {
         // Close variation dialog and open addon dialog
         setIsDialogOpen(false);
         setSelectedProductForAddons({ ...selectedProduct, selectedVariation: variation });
@@ -210,8 +232,13 @@ export default function ProductGrid({
 
   const handleRegularProductSelect = () => {
     if (selectedProduct) {
-      // Always check if we should show addon selection for regular product
-      if (shouldShowAddonSelection(selectedProduct)) {
+      // Check for enhanced customization first (croffles), then addon selection
+      if (shouldShowEnhancedCustomization(selectedProduct)) {
+        // Close variation dialog and open enhanced customization dialog
+        setIsDialogOpen(false);
+        setSelectedProductForCustomization(selectedProduct);
+        setIsEnhancedCustomizationOpen(true);
+      } else if (shouldShowAddonSelection(selectedProduct)) {
         // Close variation dialog and open addon dialog
         setIsDialogOpen(false);
         setSelectedProductForAddons(selectedProduct);
@@ -230,7 +257,18 @@ export default function ProductGrid({
     setIsCustomizationDialogOpen(false);
   };
 
+  const shouldShowEnhancedCustomization = (product: UnifiedProduct): boolean => {
+    const productName = product.name.toLowerCase();
+    // Show enhanced customization for croffle products
+    return productName.includes('croffle');
+  };
+
   const shouldShowAddonSelection = (product: UnifiedProduct): boolean => {
+    // If it's a croffle, use enhanced customization instead
+    if (shouldShowEnhancedCustomization(product)) {
+      return false;
+    }
+
     // Show addon selection for main products (not for addons themselves)
     const productName = product.name.toLowerCase();
     const isAddonProduct = addonItems.some(addon =>
@@ -240,9 +278,8 @@ export default function ProductGrid({
     // Don't show addons for addon products themselves
     if (isAddonProduct) return false;
 
-    // Show addons for croffles, coffee drinks, and other main products
-    return productName.includes('croffle') ||
-           productName.includes('coffee') ||
+    // Show addons for coffee drinks and other main products
+    return productName.includes('coffee') ||
            productName.includes('latte') ||
            productName.includes('americano') ||
            productName.includes('cappuccino') ||
@@ -285,6 +322,18 @@ export default function ProductGrid({
     }
     setIsAddonDialogOpen(false);
     setSelectedProductForAddons(null);
+  };
+
+  const handleEnhancedCustomizationAddToCart = (customizedItems: any[]) => {
+    console.log("ProductGrid: Adding enhanced customized items to cart:", customizedItems);
+    
+    // Add each customized item to cart
+    customizedItems.forEach(item => {
+      addItemToCart(item.product, item.quantity);
+    });
+
+    setIsEnhancedCustomizationOpen(false);
+    setSelectedProductForCustomization(null);
   };
 
   console.log("ProductGrid: Render state", {
@@ -452,6 +501,19 @@ export default function ProductGrid({
             ? getRecommendedAddons(selectedProductForAddons.name, addonItems)
             : []
         }
+      />
+
+      {/* Enhanced Product Customization Dialog */}
+      <ProductCustomizationDialog
+        isOpen={isEnhancedCustomizationOpen}
+        onClose={() => {
+          setIsEnhancedCustomizationOpen(false);
+          setSelectedProductForCustomization(null);
+        }}
+        product={selectedProductForCustomization}
+        addonCategories={addonCategories}
+        comboRules={comboRules}
+        onAddToCart={handleEnhancedCustomizationAddToCart}
       />
     </>
   );
