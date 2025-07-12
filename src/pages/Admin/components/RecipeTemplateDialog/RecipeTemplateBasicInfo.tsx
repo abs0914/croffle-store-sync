@@ -5,21 +5,38 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+// Predefined template categories with display names
+const TEMPLATE_CATEGORIES = [
+  { value: 'premium', label: 'Premium' },
+  { value: 'fruity', label: 'Fruity' },
+  { value: 'classic', label: 'Classic' },
+  { value: 'combo', label: 'Combo' },
+  { value: 'mini_croffle', label: 'Mini Croffle' },
+  { value: 'croffle_overload', label: 'Croffle Overload' },
+  { value: 'addon', label: 'Add-ons' },
+  { value: 'espresso', label: 'Espresso' },
+  { value: 'beverages', label: 'Beverages' },
+];
+
 interface RecipeTemplateBasicInfoProps {
   formData: {
     name: string;
     description: string;
     category_name: string;
+    price: number;
   };
   setFormData: React.Dispatch<React.SetStateAction<any>>;
-  categories: string[];
 }
 
 export const RecipeTemplateBasicInfo: React.FC<RecipeTemplateBasicInfoProps> = ({
   formData,
-  setFormData,
-  categories
+  setFormData
 }) => {
+  // Find the display label for the current category value
+  const getCurrentLabel = () => {
+    const category = TEMPLATE_CATEGORIES.find(cat => cat.value === formData.category_name);
+    return category?.label || formData.category_name;
+  };
   return (
     <>
       <div className="grid grid-cols-2 gap-4">
@@ -41,12 +58,14 @@ export const RecipeTemplateBasicInfo: React.FC<RecipeTemplateBasicInfoProps> = (
             onValueChange={(value) => setFormData(prev => ({ ...prev, category_name: value }))}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select category" />
+              <SelectValue placeholder="Select category">
+                {formData.category_name && getCurrentLabel()}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {categories.filter(category => category && category.trim() !== '').map(category => (
-                <SelectItem key={category} value={category}>
-                  {category}
+              {TEMPLATE_CATEGORIES.map(category => (
+                <SelectItem key={category.value} value={category.value}>
+                  {category.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -63,6 +82,27 @@ export const RecipeTemplateBasicInfo: React.FC<RecipeTemplateBasicInfoProps> = (
           placeholder="Recipe description"
           rows={3}
         />
+      </div>
+
+      {/* Pricing Section */}
+      <div className="space-y-4">
+        <h3 className="font-medium text-foreground">Pricing Information</h3>
+        <div>
+          <Label htmlFor="price">Price (₱)</Label>
+          <Input
+            id="price"
+            type="number"
+            min="0"
+            step="0.01"
+            value={formData.price}
+            onChange={(e) => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))}
+            placeholder="0.00"
+            className="font-medium"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            This price will be used in POS and store catalogs.
+          </p>
+        </div>
       </div>
     </>
   );
