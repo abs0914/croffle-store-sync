@@ -51,6 +51,16 @@ async function deployProductsToAllStores() {
 
     // Category mapping from template categories to POS categories
     const categoryMapping = {
+      'premium': 'Premium',
+      'fruity': 'Fruity',
+      'classic': 'Classic',
+      'combo': 'Combo',
+      'mini_croffle': 'Mini Croffle',
+      'croffle_overload': 'Croffle Overload',
+      'addon': 'Add-ons',
+      'espresso': 'Espresso',
+      'beverages': 'Beverages',
+      // Legacy mappings for backward compatibility
       'croffles': 'Classic',
       'drinks': 'Beverages', 
       'add-ons': 'Add-ons',
