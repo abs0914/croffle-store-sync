@@ -267,20 +267,53 @@ export default function ProductGrid({
     setIsCustomizationDialogOpen(false);
   };
 
+  // Helper function to get category name for a product based on classification
+  const getProductCategoryByName = (productName: string): string => {
+    const name = productName.toLowerCase();
+    
+    // Premium croffles
+    if (name.includes('biscoff') || name.includes('choco overload') || 
+        name.includes('cookies & cream') || name.includes('dark chocolate') ||
+        name.includes('kitkat') || name.includes('matcha') || name.includes('nutella')) {
+      return 'premium';
+    }
+    
+    // Fruity croffles  
+    if (name.includes('blueberry') || name.includes('mango') || name.includes('strawberry')) {
+      return 'fruity';
+    }
+    
+    // Classic croffles
+    if (name.includes('caramel delight') || name.includes('choco marshmallow') ||
+        name.includes('choco nut') || name.includes('tiramisu')) {
+      return 'classic';
+    }
+    
+    return 'unknown';
+  };
+
   const shouldShowEnhancedCustomization = (product: UnifiedProduct): boolean => {
     const productName = product.name.toLowerCase();
-    // Show enhanced customization for croffle products
-    return productName.includes('croffle');
+    
+    // Only show enhanced customization for Mini Croffle and Croffle Overload
+    return productName === 'mini croffle' || productName === 'croffle overload';
   };
 
   const shouldShowAddonSelection = (product: UnifiedProduct): boolean => {
-    // If it's a croffle, use enhanced customization instead
+    const productName = product.name.toLowerCase();
+    
+    // Don't show addons for products that use enhanced customization
     if (shouldShowEnhancedCustomization(product)) {
       return false;
     }
 
+    // Show addon selection for Classic, Fruity, and Premium croffles
+    if (productName.includes('croffle')) {
+      const productCategory = getProductCategoryByName(productName);
+      return productCategory === 'classic' || productCategory === 'fruity' || productCategory === 'premium';
+    }
+
     // Show addon selection for main products (not for addons themselves)
-    const productName = product.name.toLowerCase();
     const isAddonProduct = addonItems.some(addon =>
       addon.name.toLowerCase() === productName
     );
