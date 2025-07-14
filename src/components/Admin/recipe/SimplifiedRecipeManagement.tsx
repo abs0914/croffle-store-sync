@@ -134,7 +134,9 @@ export function SimplifiedRecipeManagement() {
 
   const handleCreateTemplate = async () => {
     try {
+      console.log('Starting template creation...');
       const parsed = parseTableData(newTemplate.tableData);
+      console.log('Parsed data:', parsed);
       
       if (parsed.ingredients.length === 0) {
         toast.error('Please add ingredients in table format');
@@ -145,10 +147,22 @@ export function SimplifiedRecipeManagement() {
       const templateName = newTemplate.name.trim() || parsed.productName;
       const categoryName = newTemplate.category?.trim() || parsed.categoryName;
 
+      console.log('Template name:', templateName);
+      console.log('Category name:', categoryName);
+
       if (!templateName) {
         toast.error('Please enter a template name or provide product name in table data');
         return;
       }
+
+      console.log('Creating template with data:', {
+        name: templateName,
+        description: newTemplate.description?.trim() || undefined,
+        category_name: categoryName || undefined,
+        yield_quantity: newTemplate.yieldQuantity,
+        serving_size: newTemplate.servingSize,
+        ingredients: parsed.ingredients
+      });
 
       // Call the actual template creation function
       createTemplate({
