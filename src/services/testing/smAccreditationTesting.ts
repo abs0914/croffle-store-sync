@@ -398,7 +398,7 @@ export class SMAccreditationTesting {
   async createTestData(scenario: TestScenario, storeId: string): Promise<void> {
     try {
       // Delete existing test data for this scenario
-      await this.cleanupTestData(scenario.id, storeId);
+      await this.cleanupTestData(storeId);
 
       for (const transaction of scenario.transactions) {
         // Calculate transaction totals
@@ -429,7 +429,7 @@ export class SMAccreditationTesting {
         // Format promo details
         const promoDetails = SMAccreditationService.formatPromoDetails(transaction.promos);
 
-        // Insert transaction
+        // Insert transaction with proper UUIDs
         const { data: transactionData, error: transactionError } = await supabase
           .from('transactions')
           .insert({
@@ -448,8 +448,8 @@ export class SMAccreditationTesting {
             discount_type: transaction.discounts[0]?.type || null,
             discount_id_number: transaction.discounts[0]?.id || null,
             items: JSON.parse(JSON.stringify(transaction.items)),
-            user_id: 'test-user',
-            shift_id: 'test-shift'
+            user_id: crypto.randomUUID(), // Generate proper UUID
+            shift_id: crypto.randomUUID() // Generate proper UUID
           })
           .select()
           .single();
@@ -473,12 +473,12 @@ export class SMAccreditationTesting {
   /**
    * Clean up test data for a scenario
    */
-  async cleanupTestData(scenarioId: string, storeId: string): Promise<void> {
+  async cleanupTestData(storeId: string): Promise<void> {
     const { error } = await supabase
       .from('transactions')
       .delete()
       .eq('store_id', storeId)
-      .like('id', `test-${scenarioId}-%`);
+      .ilike('receipt_number', 'RC%'); // Clean up test receipts
 
     if (error) {
       console.error('Error cleaning up test data:', error);
@@ -667,7 +667,7 @@ export class SMAccreditationTesting {
         });
 
         // Clean up test data
-        await this.cleanupTestData(scenario.id, storeId);
+        await this.cleanupTestData(storeId);
 
       } catch (error) {
         console.error(`Error running test scenario ${scenario.name}:`, error);
