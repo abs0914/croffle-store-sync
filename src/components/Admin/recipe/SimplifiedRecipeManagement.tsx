@@ -84,6 +84,9 @@ export function SimplifiedRecipeManagement() {
   const parseTableData = (tableData: string) => {
     const lines = tableData.trim().split('\n');
     const ingredients = [];
+    let productName = '';
+    let categoryName = '';
+    let priceValue = 0;
     
     for (const line of lines) {
       // Skip header lines or empty lines
@@ -99,6 +102,17 @@ export function SimplifiedRecipeManagement() {
       
       // For your format: Product, Category, Ingredient Name, Unit of Measure, Quantity, Cost per Unit, Price
       if (parts.length >= 6) {
+        // Extract product name and category from first ingredient row
+        if (!productName && parts[0]) {
+          productName = parts[0]; // Product name
+        }
+        if (!categoryName && parts[1]) {
+          categoryName = parts[1]; // Category
+        }
+        if (!priceValue && parts[6]) {
+          priceValue = parseFloat(parts[6]) || 0; // Price
+        }
+        
         const ingredientName = parts[2]; // Ingredient Name
         const unit = parts[3]; // Unit of Measure  
         const quantity = parseFloat(parts[4]) || 1; // Quantity
@@ -115,31 +129,35 @@ export function SimplifiedRecipeManagement() {
       }
     }
     
-    return ingredients;
+    return { ingredients, productName, categoryName, priceValue };
   };
 
   const handleCreateTemplate = async () => {
     try {
-      if (!newTemplate.name.trim()) {
-        toast.error('Please enter a template name');
+      const parsed = parseTableData(newTemplate.tableData);
+      
+      if (parsed.ingredients.length === 0) {
+        toast.error('Please add ingredients in table format');
         return;
       }
 
-      const ingredients = parseTableData(newTemplate.tableData);
-      
-      if (ingredients.length === 0) {
-        toast.error('Please add ingredients in table format');
+      // Use parsed data for template name and category, preferring form inputs if provided
+      const templateName = newTemplate.name.trim() || parsed.productName;
+      const categoryName = newTemplate.category?.trim() || parsed.categoryName;
+
+      if (!templateName) {
+        toast.error('Please enter a template name or provide product name in table data');
         return;
       }
 
       // Call the actual template creation function
       createTemplate({
-        name: newTemplate.name.trim(),
+        name: templateName,
         description: newTemplate.description?.trim() || undefined,
-        category_name: newTemplate.category?.trim() || undefined,
+        category_name: categoryName || undefined,
         yield_quantity: newTemplate.yieldQuantity,
         serving_size: newTemplate.servingSize,
-        ingredients: ingredients
+        ingredients: parsed.ingredients
       });
       
       // Reset form
