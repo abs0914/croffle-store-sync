@@ -39,11 +39,14 @@ const validateComboProductAvailability = async (
     const croffleValidation = await validateProductAvailability(croffleId, quantity);
     const espressoValidation = await validateProductAvailability(espressoId, quantity);
 
-    // Combine validation results
-    const combinedInsufficientItems = [
+    // Combine validation results and deduplicate error messages
+    const allInsufficientItems = [
       ...croffleValidation.insufficientItems,
       ...espressoValidation.insufficientItems
     ];
+    
+    // Remove duplicate error messages
+    const combinedInsufficientItems = [...new Set(allInsufficientItems)];
 
     const isValid = croffleValidation.isValid && espressoValidation.isValid;
     const availableQuantity = Math.min(
