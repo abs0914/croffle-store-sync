@@ -21,6 +21,7 @@ import { useProductFilters } from "@/hooks/product/useProductFilters";
 import { RecipeCustomizationDialog } from "../customization/RecipeCustomizationDialog";
 import { AddonSelectionDialog } from "../addons/AddonSelectionDialog";
 import { ProductCustomizationDialog } from "../customization/ProductCustomizationDialog";
+import { ComboSelectionDialog } from "../ComboSelectionDialog";
 import {
   fetchCustomizableRecipes,
   CustomizableRecipe,
@@ -79,6 +80,9 @@ export default function ProductGrid({
   const [isEnhancedCustomizationOpen, setIsEnhancedCustomizationOpen] = useState(false);
   const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<UnifiedProduct & { selectedVariation?: ProductVariation } | null>(null);
   const [comboRules, setComboRules] = useState<MixMatchRule[]>([]);
+
+  // Combo selection states
+  const [isComboDialogOpen, setIsComboDialogOpen] = useState(false);
   
   // Load customizable recipes and addons on component mount
   useEffect(() => {
@@ -109,6 +113,21 @@ export default function ProductGrid({
 
     loadData();
   }, [storeId]);
+
+  // Handle category selection for Combo
+  const handleCategorySelect = (categoryId: string) => {
+    const categoryName = getCategoryName(categoryId);
+    
+    if (categoryName === "Combo") {
+      // Open combo selection dialog instead of showing products
+      if (isShiftActive) {
+        setIsComboDialogOpen(true);
+      }
+    } else {
+      // Normal category selection
+      setActiveCategory(categoryId);
+    }
+  };
 
   // Handle product selection
   const handleProductClick = async (product: UnifiedProduct) => {
@@ -246,9 +265,9 @@ export default function ProductGrid({
   const filteredProducts = products.filter(product => {
     const isActive = product.is_active || product.isActive;
 
-    // Exclude products from hidden categories (like Add-ons)
+    // Exclude products from hidden categories (like Add-ons and Combo)
     const categoryName = getCategoryName(product.category_id);
-    const shouldDisplayCategory = shouldDisplayCategoryInPOS(categoryName);
+    const shouldDisplayCategory = shouldDisplayCategoryInPOS(categoryName) && categoryName !== "Combo";
 
     const matchesCategory = activeCategory === "all" ||
                            (product.category_id === activeCategory);
@@ -411,6 +430,28 @@ export default function ProductGrid({
     setSelectedProductForCustomization(null);
   };
 
+  const handleComboAddToCart = (comboData: {
+    croffle: UnifiedProduct;
+    espresso: UnifiedProduct;
+    comboPrice: number;
+    comboName: string;
+  }) => {
+    console.log("ProductGrid: Adding combo to cart:", comboData);
+    
+    // Create a combo product for the cart
+    const comboProduct: UnifiedProduct = {
+      ...comboData.croffle,
+      id: `combo-${comboData.croffle.id}-${comboData.espresso.id}`,
+      name: comboData.comboName,
+      price: comboData.comboPrice,
+      description: `${comboData.croffle.name} with ${comboData.espresso.name}`,
+      product_type: 'direct' // Use existing type for compatibility
+    };
+
+    addItemToCart(comboProduct);
+    setIsComboDialogOpen(false);
+  };
+
   console.log("ProductGrid: Render state", {
     productsCount: products.length,
     filteredProductsCount: filteredProducts.length,
@@ -432,7 +473,8 @@ export default function ProductGrid({
           <ProductCategoryTabs 
             categories={categories} 
             activeCategory={activeCategory} 
-            setActiveCategory={setActiveCategory} 
+            setActiveCategory={setActiveCategory}
+            onCategorySelect={handleCategorySelect}
           />
         </div>
         
@@ -590,6 +632,15 @@ export default function ProductGrid({
         addonCategories={addonCategories}
         comboRules={comboRules}
         onAddToCart={handleEnhancedCustomizationAddToCart}
+      />
+
+      {/* Combo Selection Dialog */}
+      <ComboSelectionDialog
+        open={isComboDialogOpen}
+        onOpenChange={setIsComboDialogOpen}
+        products={products}
+        categories={categories}
+        onAddToCart={handleComboAddToCart}
       />
     </>
   );

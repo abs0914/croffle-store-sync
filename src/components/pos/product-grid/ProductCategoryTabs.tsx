@@ -8,18 +8,28 @@ interface ProductCategoryTabsProps {
   categories: Category[];
   activeCategory: string;
   setActiveCategory: (category: string) => void;
+  onCategorySelect?: (categoryId: string) => void;
 }
 
 export default function ProductCategoryTabs({ 
   categories, 
   activeCategory, 
-  setActiveCategory 
+  setActiveCategory,
+  onCategorySelect
 }: ProductCategoryTabsProps) {
-  // Filter out categories that shouldn't appear in main menu
+  // Filter out categories that shouldn't appear in main menu, but include Combo
   // Note: Categories are already sorted by the categoryFetch service
   const filteredCategories = categories.filter(category =>
-    shouldDisplayCategoryInPOS(category.name)
+    shouldDisplayCategoryInPOS(category.name) || category.name === "Combo"
   );
+
+  const handleCategoryClick = (categoryId: string) => {
+    if (onCategorySelect) {
+      onCategorySelect(categoryId);
+    } else {
+      setActiveCategory(categoryId);
+    }
+  };
   
   return (
     <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
@@ -36,7 +46,7 @@ export default function ProductCategoryTabs({
       {filteredCategories.map(category => (
         <button
           key={category.id}
-          onClick={() => setActiveCategory(category.id)}
+          onClick={() => handleCategoryClick(category.id)}
           className={`px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 touch-manipulation min-w-[80px] ${
             activeCategory === category.id
               ? "bg-blue-100 text-blue-700 shadow-sm"
