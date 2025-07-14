@@ -287,6 +287,73 @@ export function useUnifiedRecipeState() {
     }
   });
 
+  // Create template mutation
+  const createTemplateMutation = useMutation({
+    mutationFn: async (templateData: {
+      name: string;
+      description?: string;
+      category_name?: string;
+      yield_quantity: number;
+      serving_size: number;
+      ingredients: Array<{
+        ingredient_name: string;
+        quantity: number;
+        unit: string;
+        cost_per_unit: number;
+      }>;
+    }) => {
+      // Calculate total cost
+      const total_cost = templateData.ingredients.reduce((sum, ing) => 
+        sum + (ing.quantity * ing.cost_per_unit), 0);
+      
+      // Create the template
+      const { data: template, error: templateError } = await supabase
+        .from('recipe_templates')
+        .insert({
+          name: templateData.name,
+          description: templateData.description,
+          category_name: templateData.category_name,
+          yield_quantity: templateData.yield_quantity,
+          serving_size: templateData.serving_size,
+          total_cost,
+          cost_per_serving: total_cost / Math.max(templateData.serving_size, 1),
+          is_active: true,
+          recipe_type: 'single'
+        })
+        .select()
+        .single();
+
+      if (templateError) throw templateError;
+
+      // Create the ingredients
+      if (templateData.ingredients.length > 0) {
+        const { error: ingredientsError } = await supabase
+          .from('recipe_template_ingredients')
+          .insert(
+            templateData.ingredients.map(ing => ({
+              recipe_template_id: template.id,
+              ingredient_name: ing.ingredient_name,
+              quantity: ing.quantity,
+              unit: ing.unit,
+              cost_per_unit: ing.cost_per_unit
+            }))
+          );
+
+        if (ingredientsError) throw ingredientsError;
+      }
+
+      return template;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recipe-templates'] });
+      toast.success('Template created successfully');
+    },
+    onError: (error) => {
+      console.error('Template creation failed:', error);
+      toast.error('Failed to create template: ' + error.message);
+    }
+  });
+
   // Delete operations
   const deleteTemplateMutation = useMutation({
     mutationFn: async (templateId: string) => {
@@ -393,12 +460,14 @@ export function useUnifiedRecipeState() {
     recipesError: recipesQuery.error,
     
     // Actions
+    createTemplate: createTemplateMutation.mutate,
     updateTemplate: updateTemplateMutation.mutate,
     updateRecipe: updateRecipeMutation.mutate,
     syncTemplateToRecipes: syncTemplateToRecipesMutation.mutate,
     deleteTemplate: deleteTemplateMutation.mutate,
     
     // Action states
+    isCreatingTemplate: createTemplateMutation.isPending,
     isUpdatingTemplate: updateTemplateMutation.isPending,
     isUpdatingRecipe: updateRecipeMutation.isPending,
     isSyncing: syncTemplateToRecipesMutation.isPending,

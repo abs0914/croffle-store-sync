@@ -36,6 +36,8 @@ export function SimplifiedRecipeManagement() {
     templates,
     stores,
     isLoadingTemplates,
+    createTemplate,
+    isCreatingTemplate,
     updateTemplate,
     deleteTemplate
   } = useUnifiedRecipeState();
@@ -85,20 +87,31 @@ export function SimplifiedRecipeManagement() {
     
     for (const line of lines) {
       // Skip header lines or empty lines
-      if (!line.trim() || line.includes('---') || line.toLowerCase().includes('ingredient')) {
+      if (!line.trim() || line.includes('---') || 
+          line.toLowerCase().includes('product') ||
+          line.toLowerCase().includes('ingredient name') ||
+          line.toLowerCase().includes('category')) {
         continue;
       }
       
-      // Parse table format: | Ingredient | Quantity | Unit | Cost |
+      // Parse table format: | Product | Category | Ingredient Name | Unit of Measure | Quantity | Cost per Unit | Price |
       const parts = line.split('|').map(p => p.trim()).filter(p => p);
       
-      if (parts.length >= 3) {
-        ingredients.push({
-          ingredient_name: parts[0],
-          quantity: parseFloat(parts[1]) || 1,
-          unit: parts[2],
-          cost_per_unit: parseFloat(parts[3]) || 0
-        });
+      // For your format: Product, Category, Ingredient Name, Unit of Measure, Quantity, Cost per Unit, Price
+      if (parts.length >= 6) {
+        const ingredientName = parts[2]; // Ingredient Name
+        const unit = parts[3]; // Unit of Measure  
+        const quantity = parseFloat(parts[4]) || 1; // Quantity
+        const costPerUnit = parseFloat(parts[5]) || 0; // Cost per Unit
+        
+        if (ingredientName && unit) {
+          ingredients.push({
+            ingredient_name: ingredientName,
+            quantity: quantity,
+            unit: unit,
+            cost_per_unit: costPerUnit
+          });
+        }
       }
     }
     
@@ -107,6 +120,11 @@ export function SimplifiedRecipeManagement() {
 
   const handleCreateTemplate = async () => {
     try {
+      if (!newTemplate.name.trim()) {
+        toast.error('Please enter a template name');
+        return;
+      }
+
       const ingredients = parseTableData(newTemplate.tableData);
       
       if (ingredients.length === 0) {
@@ -114,9 +132,15 @@ export function SimplifiedRecipeManagement() {
         return;
       }
 
-      // Here you would call your template creation service
-      // For now, just show success message
-      toast.success(`Template "${newTemplate.name}" created with ${ingredients.length} ingredients`);
+      // Call the actual template creation function
+      createTemplate({
+        name: newTemplate.name.trim(),
+        description: newTemplate.description?.trim() || undefined,
+        category_name: newTemplate.category?.trim() || undefined,
+        yield_quantity: newTemplate.yieldQuantity,
+        serving_size: newTemplate.servingSize,
+        ingredients: ingredients
+      });
       
       // Reset form
       setNewTemplate({
@@ -129,6 +153,7 @@ export function SimplifiedRecipeManagement() {
       });
       setShowCreateForm(false);
     } catch (error) {
+      console.error('Error creating template:', error);
       toast.error('Failed to create template');
     }
   };
@@ -219,10 +244,10 @@ export function SimplifiedRecipeManagement() {
                 value={newTemplate.tableData}
                 onChange={(e) => setNewTemplate(prev => ({ ...prev, tableData: e.target.value }))}
                 placeholder={`Enter ingredients in table format:
-| Ingredient | Quantity | Unit | Cost |
-| Coffee Beans | 20 | g | 0.50 |
-| Milk | 150 | ml | 0.25 |
-| Sugar | 10 | g | 0.05 |`}
+| Product | Category | Ingredient Name | Unit of Measure | Quantity | Cost per Unit | Price |
+| Glazed Croffle | Glazed | Regular Croissant | Piece | 1 | 30 | 79 |
+| Glazed Croffle | Glazed | Glaze Powder | Gram | 10 | 8 | 79 |
+| Glazed Croffle | Glazed | Wax Paper | Piece | 1 | 0.9 | 79 |`}
                 rows={8}
                 className="font-mono text-sm"
               />
