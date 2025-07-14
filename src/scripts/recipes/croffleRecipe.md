@@ -81,3 +81,6 @@
 | Dark Chocolate Croffle | Classic  | Chocolate Crumble   | Portion         | 1        | 2.5           | 125   |
 | Dark Chocolate Croffle | Classic  | Chopstick           | Pair            | 1        | 0.6           | 125   |
 | Dark Chocolate Croffle | Classic  | Wax Paper           | Piece           | 1        | 0.7           | 125   |
+| Glaze Croffle          | Glazed   | Regular Croissant   | Piece           | 1        | 30            | 79   | 
+| Glaze Croffle          | Glazed   | Glaze Powder        | Gram            | 10       | 8             | 79   | 
+| Glaze Croffle          | Glazed   | Wax Paper           | Piece           | 1        | 0.9           | 79   | 
