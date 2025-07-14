@@ -53,11 +53,23 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
       product_type: item.recipe_id ? 'recipe' : 'direct'
     })) || [];
 
-    // Enhance products with category information based on recipe templates
-    const enhancedProducts = await enhanceProductsWithCategories(mappedProducts, storeId);
+    // Only enhance products that don't already have a category_id from database
+    const productsNeedingEnhancement = mappedProducts.filter(p => !p.category_id);
+    const productsWithCategories = mappedProducts.filter(p => p.category_id);
 
-    console.log('Enhanced products with categories:', enhancedProducts);
-    return enhancedProducts;
+    console.log(`Using database categories for ${productsWithCategories.length} products`);
+    console.log(`Enhancing ${productsNeedingEnhancement.length} products without categories`);
+
+    // Enhance only products without category_id
+    const enhancedProducts = productsNeedingEnhancement.length > 0 
+      ? await enhanceProductsWithCategories(productsNeedingEnhancement, storeId)
+      : [];
+
+    // Combine products with database categories and enhanced products
+    const allProducts = [...productsWithCategories, ...enhancedProducts];
+
+    console.log('Final products with categories:', allProducts.map(p => ({ name: p.name, category_id: p.category_id, category_name: p.category?.name })));
+    return allProducts;
   } catch (error) {
     console.error("Error fetching product catalog for POS:", error);
     toast.error("Failed to load products");
