@@ -195,7 +195,7 @@ const items = [
   },
   {
     title: "Order Management",
-    url: "/orders",
+    url: "/order-management",
     icon: ShoppingBag,
   },
   {
