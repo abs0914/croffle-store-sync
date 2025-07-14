@@ -9,7 +9,7 @@ import { BIREJournalView } from "./reports/BIREJournalView";
 import { BIRDataBackupView } from "./reports/BIRDataBackupView";
 import { DailySummaryView } from "./reports/DailySummaryView";
 import { VATReportView } from "./reports/VATReportView";
-import { SMAccreditationPanel } from "../SMAccreditationPanel";
+import { SMAccreditationPanel } from "./SMAccreditationPanel";
 import { CashierReportView } from "./reports/CashierReportView";
 import { StockReportView } from "./reports/StockReportView";
 import CashierShiftReportView from "./reports/CashierShiftReportView";
