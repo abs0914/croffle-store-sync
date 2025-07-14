@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Category } from "@/types";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
 
 interface ProductCategoryTabsProps {
@@ -32,29 +32,25 @@ export default function ProductCategoryTabs({
   };
   
   return (
-    <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
-      <button
+    <div className="flex items-center gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-2 px-1">
+      <Button
         onClick={() => setActiveCategory("all")}
-        className={`px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 touch-manipulation min-w-[80px] ${
-          activeCategory === "all"
-            ? "bg-blue-100 text-blue-700 shadow-sm"
-            : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-        }`}
+        variant={activeCategory === "all" ? "default" : "outline"}
+        size="lg"
+        className="min-h-12 min-w-[100px] px-6 whitespace-nowrap font-medium text-sm md:text-base shrink-0 touch-manipulation"
       >
         All Items
-      </button>
+      </Button>
       {filteredCategories.map(category => (
-        <button
+        <Button
           key={category.id}
           onClick={() => handleCategoryClick(category.id)}
-          className={`px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 touch-manipulation min-w-[80px] ${
-            activeCategory === category.id
-              ? "bg-blue-100 text-blue-700 shadow-sm"
-              : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-          }`}
+          variant={activeCategory === category.id ? "default" : "outline"}
+          size="lg"
+          className="min-h-12 min-w-[100px] px-6 whitespace-nowrap font-medium text-sm md:text-base shrink-0 touch-manipulation"
         >
           {category.name}
-        </button>
+        </Button>
       ))}
     </div>
   );
