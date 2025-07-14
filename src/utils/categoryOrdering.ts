@@ -8,7 +8,8 @@ export const CATEGORY_ORDER = [
   'Classic',
   'Combo', 
   'Espresso',
-  'Beverages'
+  'Beverages',
+  'Add-ons'
 ];
 
 /**
@@ -57,7 +58,7 @@ export const getCategoryOrderIndex = (categoryName: string): number => {
  * @returns True if category should be displayed
  */
 export const shouldDisplayCategoryInPOS = (categoryName: string): boolean => {
-  const hiddenCategories = ['add-on', 'addon', 'add-ons', 'desserts'];
+  const hiddenCategories = ['desserts']; // Removed add-on variants since "Add-ons" should now be displayed
   return !hiddenCategories.includes(categoryName.toLowerCase());
 };
 
