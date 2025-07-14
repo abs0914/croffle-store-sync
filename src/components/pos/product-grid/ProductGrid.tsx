@@ -446,7 +446,7 @@ export default function ProductGrid({
                    return (
                      <div key={category.id} className="space-y-4">
                        <h2 className="text-lg font-semibold text-gray-900">{category.name}</h2>
-                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
                            {categoryProducts.map(product => (
                              <ProductCard
                                key={product.id}
@@ -471,7 +471,7 @@ export default function ProductGrid({
                      return (
                        <div key="uncategorized" className="space-y-4">
                          <h2 className="text-lg font-semibold text-gray-900">Other Items</h2>
-                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
                              {uncategorizedProducts.map(product => (
                                <ProductCard
                                  key={product.id}
@@ -490,7 +490,7 @@ export default function ProductGrid({
               </div>
             ) : (
               // Single category grid view
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
                   {filteredProducts.map(product => (
                     <ProductCard
                       key={product.id}

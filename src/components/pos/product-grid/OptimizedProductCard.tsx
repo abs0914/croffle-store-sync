@@ -73,23 +73,23 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
     
     if (isOutOfStock) {
       return (
-        <Badge variant="destructive" className="text-xs bg-red-100 text-red-800">
-          Out of Stock
+        <Badge variant="destructive" className="text-xs px-1 py-0 bg-red-100 text-red-800">
+          Out
         </Badge>
       );
     }
     
     if (isLowStock) {
       return (
-        <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-500">
-          Low Stock ({inventoryStatus?.availableQuantity})
+        <Badge variant="outline" className="text-xs px-1 py-0 bg-yellow-100 text-yellow-800 border-yellow-500">
+          Low ({inventoryStatus?.availableQuantity})
         </Badge>
       );
     }
     
     return (
-      <Badge variant="default" className="text-xs bg-green-100 text-green-800">
-        In Stock ({inventoryStatus?.availableQuantity})
+      <Badge variant="default" className="text-xs px-1 py-0 bg-green-100 text-green-800">
+        In Stock
       </Badge>
     );
   };
@@ -142,7 +142,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
               )}
               
               {product.image_url || product.image ? (
-                <div className="w-full h-36 overflow-hidden bg-white">
+                <div className="w-full aspect-square overflow-hidden bg-white">
                   <img 
                     src={product.image_url || product.image} 
                     alt={product.name} 
@@ -151,20 +151,20 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                   />
                 </div>
               ) : (
-                <div className="w-full h-36 bg-croffle-background flex items-center justify-center">
-                  <span className="text-croffle-primary">No image</span>
+                <div className="w-full aspect-square bg-croffle-background flex items-center justify-center">
+                  <span className="text-croffle-primary text-xs">No image</span>
                 </div>
               )}
               
-              <div className="w-full p-3 bg-white">
-                <p className="font-medium text-sm truncate">{product.name}</p>
-                <p className="text-xs text-muted-foreground mb-2">{categoryName}</p>
+              <div className="w-full p-2 bg-white">
+                <p className="font-medium text-xs truncate">{product.name}</p>
+                <p className="text-xs text-muted-foreground mb-1 line-clamp-1">{categoryName}</p>
                 
                 {/* Stock Status and Action Buttons */}
                 <div className="flex items-center justify-between">
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-0.5">
                     {!isActive && (
-                      <Badge variant="secondary" className="text-xs">Inactive</Badge>
+                      <Badge variant="secondary" className="text-xs px-1 py-0">Inactive</Badge>
                     )}
                     {getStockBadge()}
                   </div>
@@ -174,10 +174,10 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-2 text-xs hover:bg-primary hover:text-primary-foreground"
+                      className="h-5 px-1 text-xs hover:bg-primary hover:text-primary-foreground"
                       onClick={handleQuickRestock}
                     >
-                      <ExternalLink className="h-3 w-3" />
+                      <ExternalLink className="h-2.5 w-2.5" />
                     </Button>
                   )}
                 </div>
