@@ -302,7 +302,7 @@ export function useUnifiedRecipeState() {
         cost_per_unit: number;
       }>;
     }) => {
-      // Calculate total cost
+      // Calculate total cost for reference
       const total_cost = templateData.ingredients.reduce((sum, ing) => 
         sum + (ing.quantity * ing.cost_per_unit), 0);
       
@@ -315,7 +315,6 @@ export function useUnifiedRecipeState() {
           category_name: templateData.category_name,
           yield_quantity: templateData.yield_quantity,
           serving_size: templateData.serving_size,
-          total_cost,
           is_active: true,
           recipe_type: 'single'
         })
