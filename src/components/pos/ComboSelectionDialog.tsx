@@ -43,12 +43,19 @@ export function ComboSelectionDialog({
     // Find the first category that has products
     const firstCategoryWithProducts = CROFFLE_CATEGORIES.find(catName => {
       if (catName === "Mini Croffle") {
-        return products.some(p => p.name.toLowerCase().includes("mini") && p.is_active);
+        // Check for Mini products by name first
+        const hasMiniByName = products.some(p => p.name.toLowerCase().includes("mini") && p.is_active);
+        if (hasMiniByName) return true;
+        
+        // Check in Mix & Match category
+        const mixMatchCategory = categories.find(c => c.name === "Mix & Match");
+        return mixMatchCategory && products.some(p => p.category_id === mixMatchCategory.id && p.is_active);
       }
       const category = categories.find(c => c.name === catName);
       return category && products.some(p => p.category_id === category.id && p.is_active);
     });
-    return firstCategoryWithProducts || "Classic";
+    console.log('Initial category selection:', firstCategoryWithProducts);
+    return firstCategoryWithProducts || "Premium"; // Default to Premium since that's where products are
   });
   const [selectedCroffle, setSelectedCroffle] = useState<UnifiedProduct | null>(null);
   const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
@@ -65,16 +72,32 @@ export function ComboSelectionDialog({
   });
 
   const getCategoryProducts = (categoryName: string) => {
-    // Special case for Mini Croffle - filter products by name containing "Mini"
+    console.log(`Getting products for category: "${categoryName}"`);
+    
+    // Special case for Mini Croffle - look for products with "Mini" in name OR in "Mix & Match" category
     if (categoryName === "Mini Croffle") {
-      const miniProducts = products.filter(p => 
+      // First try to find by name
+      let miniProducts = products.filter(p => 
         p.name.toLowerCase().includes("mini") && 
         p.is_active
       );
-      console.log(`Mini Croffle products found:`, miniProducts.length, miniProducts);
+      
+      // If no products found by name, try "Mix & Match" category
+      if (miniProducts.length === 0) {
+        const mixMatchCategory = categories.find(c => c.name === "Mix & Match");
+        if (mixMatchCategory) {
+          miniProducts = products.filter(p => 
+            p.category_id === mixMatchCategory.id && 
+            p.is_active
+          );
+        }
+      }
+      
+      console.log(`Mini Croffle products found:`, miniProducts.length, miniProducts.map(p => p.name));
       return miniProducts;
     }
     
+    // For other categories, find exact category match
     const category = categories.find(c => c.name === categoryName);
     console.log(`Category "${categoryName}" search:`, {
       found: !!category,
@@ -82,10 +105,13 @@ export function ComboSelectionDialog({
       allCategories: categories.map(c => c.name)
     });
     
-    if (!category) return [];
+    if (!category) {
+      console.log(`No category found for "${categoryName}"`);
+      return [];
+    }
     
     const categoryProducts = products.filter(p => p.category_id === category.id && p.is_active);
-    console.log(`Products in "${categoryName}" category:`, categoryProducts.length, categoryProducts);
+    console.log(`Products in "${categoryName}" category:`, categoryProducts.length, categoryProducts.map(p => p.name));
     return categoryProducts;
   };
 
