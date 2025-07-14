@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Product } from "@/types/product";
+import { Product, Category } from "@/types/product";
 
 export function useComboService() {
   // Combo pricing rules based on the provided table
@@ -30,9 +30,12 @@ export function useComboService() {
     return comboPricing[croffleCategory as keyof typeof comboPricing]?.[espressoType as "Hot Espresso" | "Iced Espresso"] || 0;
   };
 
-  const getEspressoProducts = (products: Product[]): Product[] => {
+  const getEspressoProducts = (products: Product[], categories: Category[]): Product[] => {
+    const espressoCategory = categories.find(c => c.name === "Espresso");
+    if (!espressoCategory) return [];
+    
     return products.filter(p => 
-      (p.name === "Hot Espresso" || p.name === "Iced Espresso") && p.is_active
+      p.category_id === espressoCategory.id && p.is_active
     );
   };
 

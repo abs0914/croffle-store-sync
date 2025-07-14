@@ -35,13 +35,21 @@ export function ComboSelectionDialog({
   const { getComboPrice, getEspressoProducts } = useComboService();
 
   const getCategoryProducts = (categoryName: string) => {
+    // Special case for Mini Croffle - filter products by name containing "Mini"
+    if (categoryName === "Mini Croffle") {
+      return products.filter(p => 
+        p.name.toLowerCase().includes("mini") && 
+        p.is_active
+      );
+    }
+    
     const category = categories.find(c => c.name === categoryName);
     if (!category) return [];
     
     return products.filter(p => p.category_id === category.id && p.is_active);
   };
 
-  const espressoProducts = getEspressoProducts(products);
+  const espressoProducts = getEspressoProducts(products, categories);
 
   const handleCroffleSelect = (croffle: Product) => {
     setSelectedCroffle(croffle);
