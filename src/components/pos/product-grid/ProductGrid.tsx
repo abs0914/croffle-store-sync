@@ -308,6 +308,16 @@ export default function ProductGrid({
     }
 
     // Show addon selection for Classic, Fruity, and Premium croffles
+    // First check by category_id (preferred), then fallback to name-based classification
+    if (product.category) {
+      const categoryName = typeof product.category === 'string' ? product.category : product.category.name;
+      const categoryLower = categoryName?.toLowerCase();
+      if (categoryLower === 'classic' || categoryLower === 'fruity' || categoryLower === 'premium') {
+        return true;
+      }
+    }
+    
+    // Fallback to name-based classification for croffle products
     if (productName.includes('croffle')) {
       const productCategory = getProductCategoryByName(productName);
       return productCategory === 'classic' || productCategory === 'fruity' || productCategory === 'premium';
