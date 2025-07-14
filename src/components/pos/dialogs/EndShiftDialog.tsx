@@ -17,12 +17,13 @@ import { formatCurrency } from "@/utils/format";
 import ShiftPhotoSection from "./shift/ShiftPhotoSection";
 import EndingCashSection from "./shift/EndingCashSection";
 import ShiftTransactionReport from "./shift/ShiftTransactionReport";
+import EndShiftInventoryVerification from "./shift/EndShiftInventoryVerification";
 
 interface EndShiftDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   currentShift: Shift | null;
-  onEndShift: (endingCash: number, photo?: string) => Promise<void>;
+  onEndShift: (endingCash: number, photo?: string, inventoryCounts?: Record<string, number>) => Promise<void>;
 }
 
 export default function EndShiftDialog({
@@ -36,6 +37,7 @@ export default function EndShiftDialog({
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
   const [cashError, setCashError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [inventoryCounts, setInventoryCounts] = useState<Record<string, number>>({});
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -45,6 +47,7 @@ export default function EndShiftDialog({
       setShowCameraView(false);
       setCashError(null);
       setIsSubmitting(false);
+      setInventoryCounts({});
     }
   }, [isOpen]);
 
@@ -82,7 +85,7 @@ export default function EndShiftDialog({
     
     try {
       setIsSubmitting(true);
-      await onEndShift(endingCash, photo);
+      await onEndShift(endingCash, photo, inventoryCounts);
       setShowCameraView(false);
     } catch (error) {
       console.error('Error ending shift:', error);
@@ -118,6 +121,13 @@ export default function EndShiftDialog({
             setEndingCash={setEndingCash}
             currentShift={currentShift}
             cashError={cashError}
+          />
+
+          {/* Inventory Verification Section */}
+          <EndShiftInventoryVerification 
+            storeId={currentShift?.storeId || null}
+            currentShift={currentShift}
+            onInventoryCountChange={setInventoryCounts}
           />
           
           {/* Required Photo Section */}

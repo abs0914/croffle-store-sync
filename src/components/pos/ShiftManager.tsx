@@ -63,7 +63,8 @@ export default function ShiftManager() {
 
   const handleEndShift = async (
     endingCash: number,
-    photo?: string
+    photo?: string,
+    inventoryCounts?: Record<string, number>
   ) => {
     if (!currentShift) return;
     
