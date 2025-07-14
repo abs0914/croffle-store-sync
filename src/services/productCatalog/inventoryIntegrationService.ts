@@ -15,12 +15,67 @@ export interface AutoReorderResult {
   message: string;
 }
 
+const validateComboProductAvailability = async (
+  productId: string,
+  quantity: number = 1
+): Promise<InventoryValidationResult> => {
+  try {
+    console.log('Validating combo product availability:', { productId, quantity });
+    
+    // Extract croffle and espresso component IDs from combo product ID
+    // Format: combo-${croffleId}-${espressoId}
+    const comboMatch = productId.match(/^combo-(.+)-(.+)$/);
+    if (!comboMatch) {
+      return {
+        isValid: false,
+        insufficientItems: ['Invalid combo product format']
+      };
+    }
+
+    const [, croffleId, espressoId] = comboMatch;
+    console.log('Combo components:', { croffleId, espressoId });
+
+    // Validate each component individually
+    const croffleValidation = await validateProductAvailability(croffleId, quantity);
+    const espressoValidation = await validateProductAvailability(espressoId, quantity);
+
+    // Combine validation results
+    const combinedInsufficientItems = [
+      ...croffleValidation.insufficientItems,
+      ...espressoValidation.insufficientItems
+    ];
+
+    const isValid = croffleValidation.isValid && espressoValidation.isValid;
+    const availableQuantity = Math.min(
+      croffleValidation.availableQuantity || 0,
+      espressoValidation.availableQuantity || 0
+    );
+
+    return {
+      isValid,
+      insufficientItems: combinedInsufficientItems,
+      availableQuantity
+    };
+  } catch (error) {
+    console.error('Error validating combo product availability:', error);
+    return {
+      isValid: false,
+      insufficientItems: ['Combo validation error occurred']
+    };
+  }
+};
+
 export const validateProductAvailability = async (
   productId: string,
   quantity: number = 1
 ): Promise<InventoryValidationResult> => {
   try {
     console.log('Validating product availability:', { productId, quantity });
+    
+    // Check if this is a combo item
+    if (productId.startsWith('combo-')) {
+      return validateComboProductAvailability(productId, quantity);
+    }
     
     // Get product ingredients
     const { data: ingredients, error } = await supabase
@@ -62,6 +117,48 @@ export const validateProductAvailability = async (
   }
 };
 
+const processComboProductSale = async (
+  productId: string,
+  quantity: number,
+  transactionId: string,
+  storeId: string
+): Promise<boolean> => {
+  try {
+    console.log('Processing combo product sale:', { productId, quantity, transactionId, storeId });
+    
+    // Extract croffle and espresso component IDs from combo product ID
+    // Format: combo-${croffleId}-${espressoId}
+    const comboMatch = productId.match(/^combo-(.+)-(.+)$/);
+    if (!comboMatch) {
+      toast.error('Invalid combo product format');
+      return false;
+    }
+
+    const [, croffleId, espressoId] = comboMatch;
+    console.log('Processing combo components:', { croffleId, espressoId });
+
+    // Process each component individually
+    const croffleSuccess = await deductIngredientsForProduct(croffleId, quantity, transactionId);
+    if (!croffleSuccess) {
+      toast.error('Failed to process croffle component');
+      return false;
+    }
+
+    const espressoSuccess = await deductIngredientsForProduct(espressoId, quantity, transactionId);
+    if (!espressoSuccess) {
+      toast.error('Failed to process espresso component');
+      return false;
+    }
+
+    console.log('Combo product sale processed successfully');
+    return true;
+  } catch (error) {
+    console.error('Error processing combo product sale:', error);
+    toast.error('Failed to process combo product sale');
+    return false;
+  }
+};
+
 export const processProductSale = async (
   productId: string,
   quantity: number,
@@ -78,7 +175,12 @@ export const processProductSale = async (
       return false;
     }
 
-    // Deduct ingredients
+    // Check if this is a combo item
+    if (productId.startsWith('combo-')) {
+      return processComboProductSale(productId, quantity, transactionId, storeId);
+    }
+
+    // Deduct ingredients for regular products
     const deductionSuccess = await deductIngredientsForProduct(productId, quantity, transactionId);
     if (!deductionSuccess) {
       return false;
