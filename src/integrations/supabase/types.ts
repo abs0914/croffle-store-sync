@@ -4319,7 +4319,9 @@ export type Database = {
         }[]
       }
       export_transaction_details_csv: {
-        Args: { start_date?: string; end_date?: string }
+        Args:
+          | { start_date?: string; end_date?: string }
+          | { store_id_param?: string; days_back?: number }
         Returns: {
           receipt_number: string
           item_sequence: number
@@ -4332,7 +4334,9 @@ export type Database = {
         }[]
       }
       export_transactions_csv: {
-        Args: { start_date?: string; end_date?: string }
+        Args:
+          | { start_date?: string; end_date?: string }
+          | { store_id_param?: string; days_back?: number }
         Returns: {
           receipt_number: string
           business_date: string

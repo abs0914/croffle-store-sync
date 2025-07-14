@@ -82,9 +82,26 @@ export function SMAccreditationPanel() {
   const handleManualDownload = async () => {
     setIsLoading(true);
     try {
-      // Generate CSV files for manual download
-      const { data: transactions, error: transError } = await supabase.rpc('export_transactions_csv');
-      const { data: details, error: detailError } = await supabase.rpc('export_transaction_details_csv');
+      // Get SM City Cebu store ID first
+      const { data: stores, error: storeError } = await supabase
+        .from('stores')
+        .select('id')
+        .ilike('name', '%SM City Cebu%')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (storeError) throw storeError;
+      if (!stores?.[0]?.id) throw new Error('SM City Cebu store not found');
+
+      const storeId = stores[0].id;
+
+      // Generate CSV files for manual download (SM City Cebu only)
+      const { data: transactions, error: transError } = await supabase.rpc('export_transactions_csv', {
+        store_id_param: storeId
+      });
+      const { data: details, error: detailError } = await supabase.rpc('export_transaction_details_csv', {
+        store_id_param: storeId
+      });
 
       if (transError) throw transError;
       if (detailError) throw detailError;
@@ -176,10 +193,10 @@ export function SMAccreditationPanel() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Server className="h-5 w-5" />
-            SM Accreditation Export System
+            SM Accreditation Export System - SM City Cebu
           </CardTitle>
           <CardDescription>
-            Automated CSV export system for SM Mall accreditation compliance. 
+            Automated CSV export system for SM City Cebu accreditation compliance. 
             Generates transaction and detail reports for the last 30 days in BIR-compliant format.
           </CardDescription>
         </CardHeader>
@@ -326,7 +343,7 @@ export function SMAccreditationPanel() {
 
           {/* Requirements Summary */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">SM Accreditation Requirements</h3>
+            <h3 className="text-lg font-semibold">SM City Cebu Accreditation Requirements</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div className="space-y-2">
@@ -334,7 +351,7 @@ export function SMAccreditationPanel() {
                 <ul className="space-y-1 text-muted-foreground">
                   <li>• Filename: MM_YYYY_transactions.csv</li>
                   <li>• Filename: MM_YYYY_transactiondetails.csv</li>
-                  <li>• Content: Last 30 rolling days</li>
+                  <li>• Content: Last 30 rolling days (SM City Cebu only)</li>
                   <li>• Directory: C:\SIA (production)</li>
                 </ul>
               </div>
@@ -345,7 +362,7 @@ export function SMAccreditationPanel() {
                   <li>• Scheduler: Run hourly as Administrator</li>
                   <li>• Email: Auto-send to sia_staging@sm.com.ph</li>
                   <li>• SFTP: Upload to SM staging server</li>
-                  <li>• Credentials: Generic email for auto-send</li>
+                  <li>• Store: SM City Cebu transactions only</li>
                 </ul>
               </div>
             </div>

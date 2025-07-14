@@ -81,11 +81,18 @@ export class SMAccreditationService {
   }
 
   /**
-   * Export transaction details for the last 30 days in SM Accreditation format
+   * Export transaction details for the last 30 days in SM Accreditation format (SM City Cebu only)
    */
   async exportTransactionDetailsCSV(): Promise<string> {
     try {
-      const { data, error } = await supabase.rpc('export_transaction_details_csv');
+      const storeId = await this.getSMStoreId();
+      if (!storeId) {
+        throw new Error('SM City Cebu store not found');
+      }
+
+      const { data, error } = await supabase.rpc('export_transaction_details_csv', { 
+        store_id_param: storeId 
+      });
       
       if (error) {
         console.error('Error exporting transaction details:', error);

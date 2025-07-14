@@ -9,8 +9,10 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// SM City Cebu specific configuration
+const SM_STORE_NAME = "SM City Cebu";
 
 interface SchedulerRequest {
   action: 'run' | 'test' | 'status';
@@ -74,13 +76,32 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 async function executeScheduledExport(config: any) {
-  console.log("Executing scheduled SM Accreditation export...");
+  console.log(`Executing scheduled SM Accreditation export for ${SM_STORE_NAME}...`);
   
   try {
-    // Generate CSV data using the database functions
+    // Get SM City Cebu store ID
+    const { data: stores, error: storeError } = await supabase
+      .from('stores')
+      .select('id')
+      .ilike('name', `%${SM_STORE_NAME}%`)
+      .eq('is_active', true)
+      .limit(1);
+
+    if (storeError) {
+      throw new Error(`Failed to find ${SM_STORE_NAME}: ${storeError.message}`);
+    }
+
+    if (!stores?.[0]?.id) {
+      throw new Error(`${SM_STORE_NAME} store not found`);
+    }
+
+    const storeId = stores[0].id;
+    console.log(`Found ${SM_STORE_NAME} store ID: ${storeId}`);
+
+    // Generate CSV data using the database functions (SM City Cebu only)
     const [transactionsResult, detailsResult] = await Promise.all([
-      supabase.rpc('export_transactions_csv'),
-      supabase.rpc('export_transaction_details_csv')
+      supabase.rpc('export_transactions_csv', { store_id_param: storeId }),
+      supabase.rpc('export_transaction_details_csv', { store_id_param: storeId })
     ]);
 
     if (transactionsResult.error) {
@@ -182,26 +203,56 @@ async function executeScheduledExport(config: any) {
 }
 
 async function testExportProcess(config: any) {
-  console.log("Testing SM Accreditation export process...");
+  console.log(`Testing SM Accreditation export process for ${SM_STORE_NAME}...`);
   
-  const [transactionsResult, detailsResult] = await Promise.all([
-    supabase.rpc('export_transactions_csv'),
-    supabase.rpc('export_transaction_details_csv')
-  ]);
+  try {
+    // Get SM City Cebu store ID
+    const { data: stores, error: storeError } = await supabase
+      .from('stores')
+      .select('id')
+      .ilike('name', `%${SM_STORE_NAME}%`)
+      .eq('is_active', true)
+      .limit(1);
 
-  return {
-    success: true,
-    message: "Test completed successfully",
-    testResults: {
-      transactionRecords: transactionsResult.data?.length || 0,
-      detailRecords: detailsResult.data?.length || 0,
-      sampleTransaction: transactionsResult.data?.[0] || null,
-      sampleDetail: detailsResult.data?.[0] || null,
-      configValid: !!(config?.emailTo),
-      sftpConfigured: !!(config?.sftpHost)
-    },
-    timestamp: new Date().toISOString()
-  };
+    if (storeError) {
+      throw new Error(`Failed to find ${SM_STORE_NAME}: ${storeError.message}`);
+    }
+
+    if (!stores?.[0]?.id) {
+      throw new Error(`${SM_STORE_NAME} store not found`);
+    }
+
+    const storeId = stores[0].id;
+    console.log(`Testing export for ${SM_STORE_NAME} store ID: ${storeId}`);
+
+    const [transactionsResult, detailsResult] = await Promise.all([
+      supabase.rpc('export_transactions_csv', { store_id_param: storeId }),
+      supabase.rpc('export_transaction_details_csv', { store_id_param: storeId })
+    ]);
+
+    return {
+      success: true,
+      message: `Test completed successfully for ${SM_STORE_NAME}`,
+      testResults: {
+        storeId,
+        storeName: SM_STORE_NAME,
+        transactionRecords: transactionsResult.data?.length || 0,
+        detailRecords: detailsResult.data?.length || 0,
+        sampleTransaction: transactionsResult.data?.[0] || null,
+        sampleDetail: detailsResult.data?.[0] || null,
+        configValid: !!(config?.emailTo),
+        sftpConfigured: !!(config?.sftpHost)
+      },
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Test failed for ${SM_STORE_NAME}`,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    };
+  }
 }
 
 async function getSchedulerStatus() {
