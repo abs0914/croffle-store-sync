@@ -11,9 +11,6 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// SM City Cebu specific configuration
-const SM_STORE_NAME = "SM City Cebu";
-
 interface SchedulerRequest {
   action: 'run' | 'test' | 'status';
   config?: {
@@ -22,6 +19,8 @@ interface SchedulerRequest {
     sftpHost?: string;
     sftpUsername?: string;
     staging: boolean;
+    storeId: string;
+    storeName?: string;
   };
 }
 
@@ -76,32 +75,36 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 async function executeScheduledExport(config: any) {
-  console.log(`Executing scheduled SM Accreditation export for ${SM_STORE_NAME}...`);
+  if (!config?.storeId) {
+    throw new Error('Store ID is required for SM Accreditation export');
+  }
+
+  console.log(`Executing scheduled SM Accreditation export for store: ${config.storeName || config.storeId}...`);
   
   try {
-    // Get SM City Cebu store ID
-    const { data: stores, error: storeError } = await supabase
+    // Validate the store is an SM store
+    const { data: store, error: storeError } = await supabase
       .from('stores')
-      .select('id')
-      .ilike('name', `%${SM_STORE_NAME}%`)
+      .select('id, name')
+      .eq('id', config.storeId)
+      .or('name.ilike.%SM%,name.ilike.%Savemore%')
       .eq('is_active', true)
-      .limit(1);
+      .single();
 
     if (storeError) {
-      throw new Error(`Failed to find ${SM_STORE_NAME}: ${storeError.message}`);
+      throw new Error(`Failed to find SM store: ${storeError.message}`);
     }
 
-    if (!stores?.[0]?.id) {
-      throw new Error(`${SM_STORE_NAME} store not found`);
+    if (!store) {
+      throw new Error('Store not found or is not an SM store');
     }
 
-    const storeId = stores[0].id;
-    console.log(`Found ${SM_STORE_NAME} store ID: ${storeId}`);
+    console.log(`Found SM store: ${store.name} (${store.id})`);
 
-    // Generate CSV data using the database functions (SM City Cebu only)
+    // Generate CSV data using the database functions for the specified store
     const [transactionsResult, detailsResult] = await Promise.all([
-      supabase.rpc('export_transactions_csv', { store_id_param: storeId }),
-      supabase.rpc('export_transaction_details_csv', { store_id_param: storeId })
+      supabase.rpc('export_transactions_csv', { store_id_param: config.storeId }),
+      supabase.rpc('export_transaction_details_csv', { store_id_param: config.storeId })
     ]);
 
     if (transactionsResult.error) {
@@ -182,8 +185,10 @@ async function executeScheduledExport(config: any) {
 
     return {
       success: true,
-      message: "SM Accreditation export completed",
+      message: `SM Accreditation export completed for ${store.name}`,
       stats: {
+        storeName: store.name,
+        storeId: store.id,
         transactionCount: transactionsResult.data?.length || 0,
         detailCount: detailsResult.data?.length || 0,
         emailSent: emailResult?.success || false,
@@ -203,39 +208,43 @@ async function executeScheduledExport(config: any) {
 }
 
 async function testExportProcess(config: any) {
-  console.log(`Testing SM Accreditation export process for ${SM_STORE_NAME}...`);
+  if (!config?.storeId) {
+    throw new Error('Store ID is required for SM Accreditation test');
+  }
+
+  console.log(`Testing SM Accreditation export process for store: ${config.storeName || config.storeId}...`);
   
   try {
-    // Get SM City Cebu store ID
-    const { data: stores, error: storeError } = await supabase
+    // Validate the store is an SM store
+    const { data: store, error: storeError } = await supabase
       .from('stores')
-      .select('id')
-      .ilike('name', `%${SM_STORE_NAME}%`)
+      .select('id, name')
+      .eq('id', config.storeId)
+      .or('name.ilike.%SM%,name.ilike.%Savemore%')
       .eq('is_active', true)
-      .limit(1);
+      .single();
 
     if (storeError) {
-      throw new Error(`Failed to find ${SM_STORE_NAME}: ${storeError.message}`);
+      throw new Error(`Failed to find SM store: ${storeError.message}`);
     }
 
-    if (!stores?.[0]?.id) {
-      throw new Error(`${SM_STORE_NAME} store not found`);
+    if (!store) {
+      throw new Error('Store not found or is not an SM store');
     }
 
-    const storeId = stores[0].id;
-    console.log(`Testing export for ${SM_STORE_NAME} store ID: ${storeId}`);
+    console.log(`Testing export for SM store: ${store.name} (${store.id})`);
 
     const [transactionsResult, detailsResult] = await Promise.all([
-      supabase.rpc('export_transactions_csv', { store_id_param: storeId }),
-      supabase.rpc('export_transaction_details_csv', { store_id_param: storeId })
+      supabase.rpc('export_transactions_csv', { store_id_param: config.storeId }),
+      supabase.rpc('export_transaction_details_csv', { store_id_param: config.storeId })
     ]);
 
     return {
       success: true,
-      message: `Test completed successfully for ${SM_STORE_NAME}`,
+      message: `Test completed successfully for ${store.name}`,
       testResults: {
-        storeId,
-        storeName: SM_STORE_NAME,
+        storeId: store.id,
+        storeName: store.name,
         transactionRecords: transactionsResult.data?.length || 0,
         detailRecords: detailsResult.data?.length || 0,
         sampleTransaction: transactionsResult.data?.[0] || null,
@@ -248,7 +257,7 @@ async function testExportProcess(config: any) {
   } catch (error) {
     return {
       success: false,
-      message: `Test failed for ${SM_STORE_NAME}`,
+      message: `Test failed for store ${config?.storeName || config?.storeId}`,
       error: error.message,
       timestamp: new Date().toISOString()
     };

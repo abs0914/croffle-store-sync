@@ -8,6 +8,8 @@ export interface SMSchedulerConfig {
   sftpUsername?: string;
   sftpPassword?: string;
   staging: boolean;
+  storeId: string;
+  storeName?: string;
 }
 
 export class SMSchedulerService {
@@ -35,8 +37,8 @@ export class SMSchedulerService {
     try {
       console.log('Starting SM Accreditation hourly export...');
       
-      // Generate CSV files
-      const { transactions, transactionDetails, filename } = await this.smService.generateCSVFiles();
+      // Generate CSV files for the specified store
+      const { transactions, transactionDetails, filename } = await this.smService.generateCSVFiles(this.config.storeId, this.config.storeName);
       
       const results = {
         success: true,
@@ -214,7 +216,7 @@ export class SMSchedulerService {
     sampleData: any;
   }> {
     try {
-      const { transactions, transactionDetails } = await this.smService.generateCSVFiles();
+      const { transactions, transactionDetails } = await this.smService.generateCSVFiles(this.config.storeId, this.config.storeName);
       
       // Parse CSV to count rows (excluding header)
       const transactionRows = transactions.split('\n').length - 1;
@@ -243,22 +245,26 @@ export class SMSchedulerService {
   /**
    * Create default configuration for staging environment
    */
-  static createStagingConfig(): SMSchedulerConfig {
+  static createStagingConfig(storeId: string, storeName?: string): SMSchedulerConfig {
     return {
       enabled: true,
       emailTo: 'sia_staging@sm.com.ph',
-      staging: true
+      staging: true,
+      storeId,
+      storeName
     };
   }
 
   /**
    * Create default configuration for production environment
    */
-  static createProductionConfig(): SMSchedulerConfig {
+  static createProductionConfig(storeId: string, storeName?: string): SMSchedulerConfig {
     return {
       enabled: true,
       emailTo: 'sia_production@sm.com.ph',
-      staging: false
+      staging: false,
+      storeId,
+      storeName
     };
   }
 }

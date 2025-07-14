@@ -29,35 +29,53 @@ export interface TransactionDetailsCSVRow {
 }
 
 export class SMAccreditationService {
-  private static readonly SM_STORE_NAME = "SM City Cebu";
-  
   /**
-   * Get SM City Cebu store ID
+   * Get all SM stores
    */
-  private async getSMStoreId(): Promise<string | null> {
+  async getSMStores(): Promise<Array<{id: string, name: string}>> {
     const { data: stores, error } = await supabase
       .from('stores')
-      .select('id')
-      .ilike('name', '%SM City Cebu%')
+      .select('id, name')
+      .or('name.ilike.%SM%,name.ilike.%Savemore%')
       .eq('is_active', true)
-      .limit(1);
+      .order('name');
     
     if (error) {
-      console.error('Error fetching SM store:', error);
+      console.error('Error fetching SM stores:', error);
+      return [];
+    }
+    
+    return stores || [];
+  }
+
+  /**
+   * Get specific SM store by ID
+   */
+  private async validateSMStore(storeId: string): Promise<{id: string, name: string} | null> {
+    const { data: store, error } = await supabase
+      .from('stores')
+      .select('id, name')
+      .eq('id', storeId)
+      .or('name.ilike.%SM%,name.ilike.%Savemore%')
+      .eq('is_active', true)
+      .single();
+    
+    if (error) {
+      console.error('Error validating SM store:', error);
       return null;
     }
     
-    return stores?.[0]?.id || null;
+    return store;
   }
   
   /**
-   * Export transactions for the last 30 days in SM Accreditation format (SM City Cebu only)
+   * Export transactions for the last 30 days in SM Accreditation format for specified store
    */
-  async exportTransactionsCSV(): Promise<string> {
+  async exportTransactionsCSV(storeId: string): Promise<string> {
     try {
-      const storeId = await this.getSMStoreId();
-      if (!storeId) {
-        throw new Error('SM City Cebu store not found');
+      const store = await this.validateSMStore(storeId);
+      if (!store) {
+        throw new Error('SM store not found or invalid');
       }
 
       const { data, error } = await supabase.rpc('export_transactions_csv', { 
@@ -81,13 +99,13 @@ export class SMAccreditationService {
   }
 
   /**
-   * Export transaction details for the last 30 days in SM Accreditation format (SM City Cebu only)
+   * Export transaction details for the last 30 days in SM Accreditation format for specified store
    */
-  async exportTransactionDetailsCSV(): Promise<string> {
+  async exportTransactionDetailsCSV(storeId: string): Promise<string> {
     try {
-      const storeId = await this.getSMStoreId();
-      if (!storeId) {
-        throw new Error('SM City Cebu store not found');
+      const store = await this.validateSMStore(storeId);
+      if (!store) {
+        throw new Error('SM store not found or invalid');
       }
 
       const { data, error } = await supabase.rpc('export_transaction_details_csv', { 
@@ -111,9 +129,9 @@ export class SMAccreditationService {
   }
 
   /**
-   * Generate both CSV files and return as an object
+   * Generate both CSV files for specified store and return as an object
    */
-  async generateCSVFiles(): Promise<{
+  async generateCSVFiles(storeId: string, storeName?: string): Promise<{
     transactions: string;
     transactionDetails: string;
     filename: string;
@@ -122,8 +140,8 @@ export class SMAccreditationService {
     const filename = format(now, 'MM_yyyy');
     
     const [transactions, transactionDetails] = await Promise.all([
-      this.exportTransactionsCSV(),
-      this.exportTransactionDetailsCSV()
+      this.exportTransactionsCSV(storeId),
+      this.exportTransactionDetailsCSV(storeId)
     ]);
 
     return {
@@ -134,13 +152,13 @@ export class SMAccreditationService {
   }
 
   /**
-   * Save CSV files to specified directory (C:\SIA or /opt/sia)
+   * Save CSV files to specified directory (C:\SIA or /opt/sia) for specified store
    */
-  async saveCSVFiles(): Promise<{
+  async saveCSVFiles(storeId: string, storeName?: string): Promise<{
     transactionsPath: string;
     detailsPath: string;
   }> {
-    const { transactions, transactionDetails, filename } = await this.generateCSVFiles();
+    const { transactions, transactionDetails, filename } = await this.generateCSVFiles(storeId, storeName);
     
     // For web environment, we'll return the CSV content with intended paths
     // In a desktop environment, this would actually save to filesystem
