@@ -57,7 +57,7 @@ export const getCategoryOrderIndex = (categoryName: string): number => {
  * @returns True if category should be displayed
  */
 export const shouldDisplayCategoryInPOS = (categoryName: string): boolean => {
-  const hiddenCategories = ['addon', 'add-ons', 'desserts'];
+  const hiddenCategories = ['add-on', 'addon', 'add-ons', 'desserts'];
   return !hiddenCategories.includes(categoryName.toLowerCase());
 };
 
