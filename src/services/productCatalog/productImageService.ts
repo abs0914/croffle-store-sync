@@ -25,6 +25,22 @@ export const uploadProductImage = async (file: File, productId: string): Promise
       .getPublicUrl(filePath);
 
     console.log('Image uploaded successfully, public URL:', data.publicUrl);
+    
+    // Update the product catalog with the new image URL
+    console.log('🔄 Updating product catalog with image URL...');
+    const { error: updateError } = await supabase
+      .from('product_catalog')
+      .update({ image_url: data.publicUrl })
+      .eq('id', productId);
+
+    if (updateError) {
+      console.error('❌ Failed to update product catalog with image URL:', updateError);
+      // Still return the URL even if update fails
+      toast.warning('Image uploaded but failed to update product catalog');
+      return data.publicUrl;
+    }
+
+    console.log('✅ Product catalog updated with image URL successfully');
     toast.success('Image uploaded successfully');
     return data.publicUrl;
   } catch (error) {

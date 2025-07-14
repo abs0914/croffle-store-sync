@@ -136,30 +136,46 @@ export const updateProduct = async (
 
     console.log('✅ Product Catalog: Successfully updated product catalog entry');
 
-    // If price was updated, also update related product table if it exists
-    if (updates.price !== undefined && existingProduct.product_name) {
-      console.log('🔗 Product Catalog: Syncing price to products table...');
+    // Sync changes to related product table if it exists
+    if ((updates.price !== undefined || updates.image_url !== undefined) && existingProduct.product_name) {
+      console.log('🔗 Product Catalog: Syncing changes to products table...');
       
       // Find and update corresponding product in products table
       const { data: productTableEntry } = await supabase
         .from('products')
-        .select('id, price')
+        .select('id, price, image_url')
         .eq('name', existingProduct.product_name)
         .eq('store_id', existingProduct.store_id)
         .maybeSingle();
 
       if (productTableEntry) {
-        console.log(`📦 Product Catalog: Found matching product in products table - Current price: ₱${productTableEntry.price}`);
+        const productUpdates: any = {};
+        
+        if (updates.price !== undefined) {
+          console.log(`📦 Product Catalog: Found matching product in products table - Current price: ₱${productTableEntry.price}`);
+          productUpdates.price = updates.price;
+        }
+        
+        if (updates.image_url !== undefined) {
+          console.log(`🖼️ Product Catalog: Syncing image URL to products table`);
+          productUpdates.image_url = updates.image_url;
+        }
         
         const { error: productUpdateError } = await supabase
           .from('products')
-          .update({ price: updates.price })
+          .update(productUpdates)
           .eq('id', productTableEntry.id);
 
         if (productUpdateError) {
-          console.warn('⚠️ Product Catalog: Failed to sync price to products table:', productUpdateError);
+          console.warn('⚠️ Product Catalog: Failed to sync changes to products table:', productUpdateError);
         } else {
-          console.log(`✅ Product Catalog: Successfully synced price to products table - New price: ₱${updates.price}`);
+          console.log(`✅ Product Catalog: Successfully synced changes to products table`);
+          if (updates.price !== undefined) {
+            console.log(`   - New price: ₱${updates.price}`);
+          }
+          if (updates.image_url !== undefined) {
+            console.log(`   - New image URL: ${updates.image_url}`);
+          }
         }
       } else {
         console.log('ℹ️ Product Catalog: No matching product found in products table to sync');
