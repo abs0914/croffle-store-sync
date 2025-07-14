@@ -4434,6 +4434,20 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_sm_cron_jobs: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          jobid: number
+          schedule: string
+          command: string
+          nodename: string
+          nodeport: number
+          database: string
+          username: string
+          active: boolean
+          jobname: string
+        }[]
+      }
       get_store_users: {
         Args: { store_id_param: string }
         Returns: {
