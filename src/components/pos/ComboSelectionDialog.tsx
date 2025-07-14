@@ -105,22 +105,31 @@ export function ComboSelectionDialog({
 
     // Debug category mapping
     const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
-    console.log('Debug combo pricing:', {
-      selectedCroffle: selectedCroffle?.name,
-      croffleCategory,
-      productName: selectedCroffle?.name,
-      isMini: selectedCroffle?.name.toLowerCase().includes("mini"),
-      espressoName: espresso.name
-    });
-
+    
     // Fix category mapping for Mini Croffle
     let categoryForPricing = croffleCategory;
     if (selectedCroffle?.name.toLowerCase().includes("mini")) {
       categoryForPricing = "Mini Croffle";
     }
 
-    const comboPrice = getComboPrice(categoryForPricing, espresso.name);
+    // Map espresso product name to espresso type for pricing
+    let espressoType = "Hot Espresso"; // default
+    if (espresso.name.toLowerCase().includes("iced") || espresso.name.toLowerCase().includes("cold")) {
+      espressoType = "Iced Espresso";
+    }
+
+    const comboPrice = getComboPrice(categoryForPricing, espressoType);
     const comboName = `${croffleToUse.product?.name || croffleToUse.name} + ${espresso.name}`;
+
+    console.log('Debug combo pricing:', {
+      selectedCroffle: selectedCroffle?.name,
+      croffleCategory,
+      categoryForPricing,
+      espressoName: espresso.name,
+      espressoType,
+      comboPrice,
+      comboName
+    });
 
     onAddToCart({
       croffle: croffleToUse,
@@ -241,7 +250,20 @@ export function ComboSelectionDialog({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {espressoProducts.map((espresso) => {
                   const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
-                  const comboPrice = getComboPrice(croffleCategory, espresso.name);
+                  
+                  // Fix category mapping for Mini Croffle in display
+                  let categoryForPricing = croffleCategory;
+                  if (selectedCroffle?.name.toLowerCase().includes("mini")) {
+                    categoryForPricing = "Mini Croffle";
+                  }
+                  
+                  // Map espresso product name to espresso type for pricing
+                  let espressoType = "Hot Espresso"; // default
+                  if (espresso.name.toLowerCase().includes("iced") || espresso.name.toLowerCase().includes("cold")) {
+                    espressoType = "Iced Espresso";
+                  }
+                  
+                  const comboPrice = getComboPrice(categoryForPricing, espressoType);
                   
                   return (
                     <div
