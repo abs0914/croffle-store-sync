@@ -130,19 +130,19 @@ export default function ProductGrid({
       return;
     }
 
-    // Get the category name to determine if it's a combo product
+    // Get the category name to determine if it's a Mix & Match product
     const categoryName = getCategoryName(product.category_id);
-    const isComboProduct = categoryName.toLowerCase() === 'combo';
+    const isMixMatchProduct = categoryName.toLowerCase() === 'mix & match';
 
-    // For non-combo products, add directly to cart (skip all customization flows)
-    if (!isComboProduct) {
-      console.log("ProductGrid: Non-combo product - adding directly to cart:", product.name);
+    // For non-Mix & Match products, add directly to cart (skip all customization flows)
+    if (!isMixMatchProduct) {
+      console.log("ProductGrid: Non-Mix & Match product - adding directly to cart:", product.name);
       addItemToCart(product);
       return;
     }
 
-    // For combo products, continue with the existing customization flow
-    console.log("ProductGrid: Combo product - showing customization options:", product.name);
+    // For Mix & Match products, continue with the existing customization flow
+    console.log("ProductGrid: Mix & Match product - showing customization options:", product.name);
 
     // Check for enhanced customization first (croffles) - prioritize over recipe customization
     if (shouldShowEnhancedCustomization(product)) {
@@ -153,11 +153,16 @@ export default function ProductGrid({
     }
 
     // Check if this product has a customizable recipe (for non-croffle products)
-    const customizableRecipe = customizableRecipes.find(recipe =>
-      recipe.name.toLowerCase() === product.name.toLowerCase() ||
-      recipe.name.toLowerCase().includes(product.name.toLowerCase()) ||
-      product.name.toLowerCase().includes(recipe.name.toLowerCase())
-    );
+    const customizableRecipe = customizableRecipes.find(recipe => {
+      const recipeName = recipe.name.toLowerCase().trim();
+      const productName = product.name.toLowerCase().trim();
+      
+      console.log(`Comparing recipe "${recipeName}" with product "${productName}"`);
+      
+      return recipeName === productName ||
+             recipeName.includes(productName) ||
+             productName.includes(recipeName);
+    });
 
     if (customizableRecipe) {
       console.log("ProductGrid: Found customizable recipe for product:", customizableRecipe);
@@ -185,7 +190,7 @@ export default function ProductGrid({
           setIsAddonDialogOpen(true);
         } else {
           // Add the product directly without addons
-          console.log("ProductGrid: Adding regular combo product directly (no variations, no addons)");
+          console.log("ProductGrid: Adding regular Mix & Match product directly (no variations, no addons)");
           console.log("ProductGrid: Calling addItemToCart with:", {
             product: product.name,
             productId: product.id,

@@ -78,7 +78,8 @@ export const fetchCustomizableRecipes = async (): Promise<CustomizableRecipe[]> 
         )
       `)
       .eq('is_active', true)
-      .not('recipe_template_ingredients.choice_group_name', 'is', null);
+      .not('recipe_template_ingredients.choice_group_name', 'is', null)
+      .limit(50); // Add reasonable limit
 
     if (error) {
       console.error('Error fetching customizable recipes:', error);
