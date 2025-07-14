@@ -9,6 +9,7 @@ import android.os.Build;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
 import android.widget.Toast;
 
 public class MainActivity extends BridgeActivity {
@@ -48,6 +49,9 @@ public class MainActivity extends BridgeActivity {
         // Get the WebView from Capacitor
         WebView webView = getBridge().getWebView();
 
+        // Configure WebView settings for optimal rendering
+        configureWebViewSettings(webView);
+
         // Set custom WebViewClient for URL filtering
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -72,6 +76,34 @@ public class MainActivity extends BridgeActivity {
 
         // Load the target URL
         webView.loadUrl(TARGET_URL);
+    }
+
+    private void configureWebViewSettings(WebView webView) {
+        WebSettings settings = webView.getSettings();
+
+        // Enable responsive design and proper scaling
+        settings.setUseWideViewPort(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
+        settings.setSupportZoom(false);
+
+        // Set initial scale using WebView method instead of WebSettings
+        webView.setInitialScale(100);
+
+        // Enable hardware acceleration and performance optimizations
+        settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+
+        // Ensure proper viewport handling
+        settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING);
+
+        // Enable DOM storage and database for web app functionality
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+
+        // Set user agent to match Chrome on Android tablets
+        String userAgent = "Mozilla/5.0 (Linux; Android 12; SM-T870) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+        settings.setUserAgentString(userAgent);
     }
 
     @Override

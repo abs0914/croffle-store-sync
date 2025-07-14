@@ -55,7 +55,7 @@ const config: CapacitorConfig = {
     captureInput: true,
     webContentsDebuggingEnabled: false, // Disable in production
     appendUserAgent: "CroffleStorePOSKiosk/1.0",
-    overrideUserAgent: "Mozilla/5.0 (Linux; Android 12; Kiosk) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 CroffleStorePOSKiosk/1.0",
+    overrideUserAgent: "Mozilla/5.0 (Linux; Android 12; SM-T870) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 CroffleStorePOSKiosk/1.0",
     backgroundColor: "#ffffff",
     loggingBehavior: "none", // Disable logging in production
     mixedContentMode: "always_allow",
@@ -68,6 +68,14 @@ const config: CapacitorConfig = {
     hardwareAccelerated: true,
     // Optimize for kiosk performance
     useLegacyBridge: false,
+    // Viewport and scaling optimizations
+    initialScale: 1.0,
+    minimumScale: 1.0,
+    maximumScale: 1.0,
+    userScalable: false,
+    // WebView performance settings
+    cacheMode: "LOAD_DEFAULT",
+    mixedContentMode: "always_allow",
   },
 };
 
