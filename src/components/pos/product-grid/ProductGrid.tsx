@@ -115,6 +115,7 @@ export default function ProductGrid({
     console.log("ProductGrid: Product clicked", {
       productName: product.name,
       productId: product.id,
+      categoryName: getCategoryName(product.category_id),
       isShiftActive,
       isActive: product.is_active || product.isActive
     });
@@ -128,6 +129,20 @@ export default function ProductGrid({
       console.log("ProductGrid: Product not active, cannot add to cart");
       return;
     }
+
+    // Get the category name to determine if it's a combo product
+    const categoryName = getCategoryName(product.category_id);
+    const isComboProduct = categoryName.toLowerCase() === 'combo';
+
+    // For non-combo products, add directly to cart (skip all customization flows)
+    if (!isComboProduct) {
+      console.log("ProductGrid: Non-combo product - adding directly to cart:", product.name);
+      addItemToCart(product);
+      return;
+    }
+
+    // For combo products, continue with the existing customization flow
+    console.log("ProductGrid: Combo product - showing customization options:", product.name);
 
     // Check for enhanced customization first (croffles) - prioritize over recipe customization
     if (shouldShowEnhancedCustomization(product)) {
@@ -170,7 +185,7 @@ export default function ProductGrid({
           setIsAddonDialogOpen(true);
         } else {
           // Add the product directly without addons
-          console.log("ProductGrid: Adding regular product directly (no variations, no addons)");
+          console.log("ProductGrid: Adding regular combo product directly (no variations, no addons)");
           console.log("ProductGrid: Calling addItemToCart with:", {
             product: product.name,
             productId: product.id,
