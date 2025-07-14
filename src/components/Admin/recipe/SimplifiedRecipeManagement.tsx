@@ -88,9 +88,9 @@ export function SimplifiedRecipeManagement() {
     for (const line of lines) {
       // Skip header lines or empty lines
       if (!line.trim() || line.includes('---') || 
-          line.toLowerCase().includes('product') ||
+          line.toLowerCase().includes('| product') ||
           line.toLowerCase().includes('ingredient name') ||
-          line.toLowerCase().includes('category')) {
+          line.toLowerCase().includes('unit of measure')) {
         continue;
       }
       
