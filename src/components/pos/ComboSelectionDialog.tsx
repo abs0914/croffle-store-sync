@@ -20,7 +20,7 @@ interface ComboSelectionDialogProps {
   }) => void;
 }
 
-const CROFFLE_CATEGORIES = ["Classic", "Glaze", "Fruity", "Premium"];
+const CROFFLE_CATEGORIES = ["Classic", "Glaze", "Fruity", "Premium", "Mini Croffle"];
 
 export function ComboSelectionDialog({
   open,
@@ -117,15 +117,15 @@ export function ComboSelectionDialog({
               <Separator />
 
               {/* Croffle Products */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
                 {getCategoryProducts(selectedCategory).map((product) => (
                   <div
                     key={product.id}
-                    className="border rounded-lg p-4 hover:bg-accent/50 cursor-pointer transition-colors"
+                    className="border rounded-lg p-3 hover:bg-accent/50 cursor-pointer transition-colors"
                     onClick={() => handleCroffleSelect(product)}
                   >
                     {product.image_url && (
-                      <div className="aspect-square bg-muted rounded-md mb-3 overflow-hidden">
+                      <div className="aspect-square bg-muted rounded-md mb-2 overflow-hidden w-16 h-16 mx-auto">
                         <img
                           src={product.image_url}
                           alt={product.name}
@@ -133,10 +133,10 @@ export function ComboSelectionDialog({
                         />
                       </div>
                     )}
-                    <h3 className="font-medium text-sm mb-1">{product.name}</h3>
-                    <p className="text-primary font-semibold">₱{product.price}</p>
+                    <h3 className="font-medium text-xs mb-1 text-center">{product.name}</h3>
+                    <p className="text-primary font-semibold text-xs text-center">₱{product.price}</p>
                     {product.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1 text-center">
                         {product.description}
                       </p>
                     )}

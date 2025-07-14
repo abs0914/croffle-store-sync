@@ -32,7 +32,7 @@ export function useComboService() {
 
   const getEspressoProducts = (products: Product[]): Product[] => {
     return products.filter(p => 
-      p.name === "Hot Espresso" || p.name === "Iced Espresso"
+      (p.name === "Hot Espresso" || p.name === "Iced Espresso") && p.is_active
     );
   };
 
