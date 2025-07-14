@@ -67,7 +67,7 @@ export default function ProductGrid({
   // Customizable recipe states
   const [customizableRecipes, setCustomizableRecipes] = useState<CustomizableRecipe[]>([]);
   const [selectedCustomizableRecipe, setSelectedCustomizableRecipe] = useState<CustomizableRecipe | null>(null);
-  const [isCustomizationDialogOpen, setIsCustomizationDialogOpen] = useState(false);
+  const [isRecipeCustomizationOpen, setIsRecipeCustomizationOpen] = useState(false);
 
   // Addon states
   const [addonItems, setAddonItems] = useState<AddonItem[]>([]);
@@ -165,9 +165,9 @@ export default function ProductGrid({
     });
 
     if (customizableRecipe) {
-      console.log("ProductGrid: Found customizable recipe for product:", customizableRecipe);
+      console.log("ProductGrid: Found customizable recipe for Mix & Match product:", customizableRecipe);
       setSelectedCustomizableRecipe(customizableRecipe);
-      setIsCustomizationDialogOpen(true);
+      setIsRecipeCustomizationOpen(true);
       return;
     }
 
@@ -284,7 +284,7 @@ export default function ProductGrid({
   const handleCustomizedAddToCart = (customizedItem: any) => {
     console.log("ProductGrid: Adding customized item to cart:", customizedItem);
     addItemToCart(customizedItem.product, customizedItem.quantity);
-    setIsCustomizationDialogOpen(false);
+    setIsRecipeCustomizationOpen(false);
   };
 
   // Helper function to get category name for a product based on classification
@@ -315,8 +315,9 @@ export default function ProductGrid({
   const shouldShowEnhancedCustomization = (product: UnifiedProduct): boolean => {
     const productName = product.name.toLowerCase();
     
-    // Only show enhanced customization for Mini Croffle and Croffle Overload
-    return productName === 'mini croffle' || productName === 'croffle overload';
+    // Don't show enhanced customization for Mix & Match products - they use recipe customization
+    // Mini Croffle and Croffle Overload should use the recipe-based customization instead
+    return false; // Disable enhanced customization to allow recipe customization for Mix & Match products
   };
 
   const shouldShowAddonSelection = (product: UnifiedProduct): boolean => {
@@ -558,8 +559,8 @@ export default function ProductGrid({
 
       {/* Recipe Customization Dialog */}
       <RecipeCustomizationDialog
-        isOpen={isCustomizationDialogOpen}
-        onClose={() => setIsCustomizationDialogOpen(false)}
+        isOpen={isRecipeCustomizationOpen}
+        onClose={() => setIsRecipeCustomizationOpen(false)}
         recipe={selectedCustomizableRecipe}
         onAddToCart={handleCustomizedAddToCart}
       />

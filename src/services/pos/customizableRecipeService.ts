@@ -6,11 +6,9 @@ export interface CustomizableIngredient {
   quantity: number;
   unit: string;
   cost_per_unit: number;
-  choice_group_name?: string;
+  ingredient_group_name?: string;
   group_selection_type?: string;
   is_optional: boolean;
-  display_order: number;
-  ingredient_type: string;
 }
 
 export interface CustomizableRecipe {
@@ -70,15 +68,14 @@ export const fetchCustomizableRecipes = async (): Promise<CustomizableRecipe[]> 
           quantity,
           unit,
           cost_per_unit,
-          choice_group_name,
+          ingredient_group_name,
+          ingredient_group_id,
           group_selection_type,
-          is_optional,
-          display_order,
-          ingredient_type
+          is_optional
         )
       `)
       .eq('is_active', true)
-      .not('recipe_template_ingredients.choice_group_name', 'is', null)
+      .not('recipe_template_ingredients.ingredient_group_name', 'is', null)
       .limit(50); // Add reasonable limit
 
     if (error) {
@@ -96,11 +93,9 @@ export const fetchCustomizableRecipes = async (): Promise<CustomizableRecipe[]> 
         quantity: ing.quantity,
         unit: ing.unit,
         cost_per_unit: ing.cost_per_unit,
-        choice_group_name: ing.choice_group_name,
+        ingredient_group_name: ing.ingredient_group_name,
         group_selection_type: ing.group_selection_type,
-        is_optional: ing.is_optional,
-        display_order: ing.display_order,
-        ingredient_type: ing.ingredient_type
+        is_optional: ing.is_optional
       }));
 
       // Group ingredients by choice group
@@ -108,11 +103,11 @@ export const fetchCustomizableRecipes = async (): Promise<CustomizableRecipe[]> 
       const choiceGroupMap = new Map<string, CustomizableIngredient[]>();
 
       ingredients.forEach(ingredient => {
-        if (ingredient.choice_group_name) {
-          if (!choiceGroupMap.has(ingredient.choice_group_name)) {
-            choiceGroupMap.set(ingredient.choice_group_name, []);
+        if (ingredient.ingredient_group_name) {
+          if (!choiceGroupMap.has(ingredient.ingredient_group_name)) {
+            choiceGroupMap.set(ingredient.ingredient_group_name, []);
           }
-          choiceGroupMap.get(ingredient.choice_group_name)!.push(ingredient);
+          choiceGroupMap.get(ingredient.ingredient_group_name)!.push(ingredient);
         }
       });
 
@@ -122,13 +117,13 @@ export const fetchCustomizableRecipes = async (): Promise<CustomizableRecipe[]> 
         choiceGroups.push({
           name: groupName,
           selection_type: firstIngredient.group_selection_type || 'required_one',
-          ingredients: groupIngredients.sort((a, b) => a.display_order - b.display_order),
+          ingredients: groupIngredients,
           display_name: formatChoiceGroupName(groupName)
         });
       });
 
       // Calculate base price (non-choice ingredients)
-      const baseIngredients = ingredients.filter(ing => !ing.choice_group_name);
+      const baseIngredients = ingredients.filter(ing => !ing.ingredient_group_name);
       const basePrice = baseIngredients.reduce((sum, ing) => sum + (ing.quantity * ing.cost_per_unit), 0);
       
       // For pricing, we'll use a markup. In a real system, this would come from the product catalog
@@ -227,14 +222,14 @@ function formatChoiceGroupName(groupName: string): string {
  * Get base ingredients (non-choice) for a recipe
  */
 export const getBaseIngredients = (recipe: CustomizableRecipe): CustomizableIngredient[] => {
-  return recipe.ingredients.filter(ing => !ing.choice_group_name);
+  return recipe.ingredients.filter(ing => !ing.ingredient_group_name);
 };
 
 /**
  * Get packaging ingredients for a recipe
  */
 export const getPackagingIngredients = (recipe: CustomizableRecipe): CustomizableIngredient[] => {
-  return recipe.ingredients.filter(ing => ing.ingredient_type === 'packaging');
+  return recipe.ingredients.filter(ing => ing.ingredient_name.includes('Box') || ing.ingredient_name.includes('Cup'));
 };
 
 /**
