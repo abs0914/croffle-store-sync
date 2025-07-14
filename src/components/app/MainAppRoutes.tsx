@@ -15,6 +15,7 @@ const Reports = React.lazy(() => import('@/pages/Reports'));
 const Expenses = React.lazy(() => import('@/pages/Expenses'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
 const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
+const SMAccreditationTesting = React.lazy(() => import('@/pages/SMAccreditationTesting'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -175,6 +176,20 @@ export const MainAppRoutes = () => {
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <Settings />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* SM Accreditation Testing - Admin only */}
+      <Route
+        path="/sm-accreditation-testing"
+        element={
+          <ProtectedRoute requiredRole="admin">
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <SMAccreditationTesting />
               </React.Suspense>
             </MainLayout>
           </ProtectedRoute>

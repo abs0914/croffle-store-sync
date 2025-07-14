@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse, Database } from "lucide-react";
+import { FileBarChart, FileBox, FileSpreadsheet, FileText, Receipt, UserRound, BarChart, Warehouse, Database, Server } from "lucide-react";
 import { ReportType } from "..";
 import { useAuth } from "@/contexts/auth";
 
@@ -40,6 +40,7 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
     { id: 'bir_backup' as ReportType, name: 'BIR Data Backup', icon: <Database className="h-4 w-4" />, roles: ['admin', 'owner'] },
     { id: 'daily_summary' as ReportType, name: 'Daily Sales Summary', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager', 'cashier'] },
     { id: 'vat' as ReportType, name: 'VAT Report', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
+    { id: 'sm_accreditation' as ReportType, name: 'SM Accreditation', icon: <Server className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
   ];
 
   // Filter navigation items based on user role
