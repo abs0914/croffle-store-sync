@@ -29,13 +29,40 @@ export interface TransactionDetailsCSVRow {
 }
 
 export class SMAccreditationService {
+  private static readonly SM_STORE_NAME = "SM City Cebu";
   
   /**
-   * Export transactions for the last 30 days in SM Accreditation format
+   * Get SM City Cebu store ID
+   */
+  private async getSMStoreId(): Promise<string | null> {
+    const { data: stores, error } = await supabase
+      .from('stores')
+      .select('id')
+      .ilike('name', '%SM City Cebu%')
+      .eq('is_active', true)
+      .limit(1);
+    
+    if (error) {
+      console.error('Error fetching SM store:', error);
+      return null;
+    }
+    
+    return stores?.[0]?.id || null;
+  }
+  
+  /**
+   * Export transactions for the last 30 days in SM Accreditation format (SM City Cebu only)
    */
   async exportTransactionsCSV(): Promise<string> {
     try {
-      const { data, error } = await supabase.rpc('export_transactions_csv');
+      const storeId = await this.getSMStoreId();
+      if (!storeId) {
+        throw new Error('SM City Cebu store not found');
+      }
+
+      const { data, error } = await supabase.rpc('export_transactions_csv', { 
+        store_id_param: storeId 
+      });
       
       if (error) {
         console.error('Error exporting transactions:', error);
