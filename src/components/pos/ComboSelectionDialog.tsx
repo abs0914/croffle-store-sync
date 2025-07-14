@@ -14,13 +14,13 @@ import { MixMatchRule } from "@/types/productVariations";
 interface ComboSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  products: Product[];
+  products: UnifiedProduct[];
   categories: Category[];
   addonCategories?: AddonCategory[];
   comboRules?: MixMatchRule[];
   onAddToCart: (comboData: {
-    croffle: Product;
-    espresso: Product;
+    croffle: UnifiedProduct;
+    espresso: UnifiedProduct;
     comboPrice: number;
     comboName: string;
     customization?: any;
@@ -40,29 +40,48 @@ export function ComboSelectionDialog({
 }: ComboSelectionDialogProps) {
   const [step, setStep] = useState<"croffle" | "customize" | "espresso">("croffle");
   const [selectedCategory, setSelectedCategory] = useState<string>("Classic");
-  const [selectedCroffle, setSelectedCroffle] = useState<Product | null>(null);
+  const [selectedCroffle, setSelectedCroffle] = useState<UnifiedProduct | null>(null);
   const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
   const [miniCroffleCustomization, setMiniCroffleCustomization] = useState<any>(null);
   const { getComboPrice, getEspressoProducts } = useComboService();
 
+  // Debug logging to investigate empty categories
+  console.log('ComboSelectionDialog Debug:', {
+    productsCount: products.length,
+    categoriesCount: categories.length,
+    products: products.map(p => ({ id: p.id, name: p.name, category_id: p.category_id, is_active: p.is_active })),
+    categories: categories.map(c => ({ id: c.id, name: c.name, is_active: c.is_active })),
+    croffleCategories: CROFFLE_CATEGORIES
+  });
+
   const getCategoryProducts = (categoryName: string) => {
     // Special case for Mini Croffle - filter products by name containing "Mini"
     if (categoryName === "Mini Croffle") {
-      return products.filter(p => 
+      const miniProducts = products.filter(p => 
         p.name.toLowerCase().includes("mini") && 
         p.is_active
       );
+      console.log(`Mini Croffle products found:`, miniProducts.length, miniProducts);
+      return miniProducts;
     }
     
     const category = categories.find(c => c.name === categoryName);
+    console.log(`Category "${categoryName}" search:`, {
+      found: !!category,
+      categoryId: category?.id,
+      allCategories: categories.map(c => c.name)
+    });
+    
     if (!category) return [];
     
-    return products.filter(p => p.category_id === category.id && p.is_active);
+    const categoryProducts = products.filter(p => p.category_id === category.id && p.is_active);
+    console.log(`Products in "${categoryName}" category:`, categoryProducts.length, categoryProducts);
+    return categoryProducts;
   };
 
   const espressoProducts = getEspressoProducts(products, categories);
 
-  const handleCroffleSelect = (croffle: Product) => {
+  const handleCroffleSelect = (croffle: UnifiedProduct) => {
     setSelectedCroffle(croffle);
     
     // Check if it's a Mini Croffle that needs customization
@@ -80,7 +99,7 @@ export function ComboSelectionDialog({
     setStep("espresso");
   };
 
-  const handleEspressoSelect = (espresso: Product) => {
+  const handleEspressoSelect = (espresso: UnifiedProduct) => {
     const croffleToUse = customizedCroffle || selectedCroffle;
     if (!croffleToUse) return;
 
