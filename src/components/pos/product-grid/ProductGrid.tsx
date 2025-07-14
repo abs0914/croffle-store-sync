@@ -431,23 +431,32 @@ export default function ProductGrid({
   };
 
   const handleComboAddToCart = (comboData: {
-    croffle: UnifiedProduct;
+    croffle: any;
     espresso: UnifiedProduct;
     comboPrice: number;
     comboName: string;
+    customization?: any;
   }) => {
     console.log("ProductGrid: Adding combo to cart:", comboData);
     
     // Create a combo product for the cart
+    const croffleData = comboData.croffle.product || comboData.croffle;
     const comboProduct: UnifiedProduct = {
-      ...comboData.croffle,
-      id: `combo-${comboData.croffle.id}-${comboData.espresso.id}`,
+      ...croffleData,
+      id: `combo-${croffleData.id}-${comboData.espresso.id}`,
       name: comboData.comboName,
       price: comboData.comboPrice,
-      description: `${comboData.croffle.name} with ${comboData.espresso.name}`,
-      product_type: 'direct' // Use existing type for compatibility
+      description: `${croffleData.name} with ${comboData.espresso.name}`,
+      product_type: 'combo' as const
     };
 
+    // Add the combo product with customization data
+    const cartItem = {
+      product: comboProduct,
+      quantity: 1,
+      customization: comboData.customization
+    };
+    
     addItemToCart(comboProduct);
     setIsComboDialogOpen(false);
   };
@@ -640,6 +649,8 @@ export default function ProductGrid({
         onOpenChange={setIsComboDialogOpen}
         products={products}
         categories={categories}
+        addonCategories={addonCategories}
+        comboRules={comboRules}
         onAddToCart={handleComboAddToCart}
       />
     </>

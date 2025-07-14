@@ -6,17 +6,24 @@ import { Separator } from "@/components/ui/separator";
 import { Coffee, IceCream } from "lucide-react";
 import { Product, Category } from "@/types/product";
 import { useComboService } from "@/hooks/pos/useComboService";
+import { ProductCustomizationDialog } from "./customization/ProductCustomizationDialog";
+import { UnifiedProduct } from "@/services/product/unifiedProductService";
+import { AddonCategory } from "@/services/pos/addonService";
+import { MixMatchRule } from "@/types/productVariations";
 
 interface ComboSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   products: Product[];
   categories: Category[];
+  addonCategories?: AddonCategory[];
+  comboRules?: MixMatchRule[];
   onAddToCart: (comboData: {
     croffle: Product;
     espresso: Product;
     comboPrice: number;
     comboName: string;
+    customization?: any;
   }) => void;
 }
 
@@ -27,11 +34,14 @@ export function ComboSelectionDialog({
   onOpenChange,
   products,
   categories,
+  addonCategories = [],
+  comboRules = [],
   onAddToCart,
 }: ComboSelectionDialogProps) {
-  const [step, setStep] = useState<"croffle" | "espresso">("croffle");
+  const [step, setStep] = useState<"croffle" | "customize" | "espresso">("croffle");
   const [selectedCategory, setSelectedCategory] = useState<string>("Classic");
   const [selectedCroffle, setSelectedCroffle] = useState<Product | null>(null);
+  const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
   const { getComboPrice, getEspressoProducts } = useComboService();
 
   const getCategoryProducts = (categoryName: string) => {
@@ -53,39 +63,82 @@ export function ComboSelectionDialog({
 
   const handleCroffleSelect = (croffle: Product) => {
     setSelectedCroffle(croffle);
-    setStep("espresso");
+    
+    // Check if it's a Mini Croffle that needs customization
+    const isMiniCroffle = croffle.name.toLowerCase().includes("mini");
+    if (isMiniCroffle) {
+      setStep("customize");
+    } else {
+      setStep("espresso");
+    }
+  };
+
+  const handleCustomizationComplete = (customizedItems: any[]) => {
+    if (customizedItems.length > 0) {
+      setCustomizedCroffle(customizedItems[0]);
+      setStep("espresso");
+    }
   };
 
   const handleEspressoSelect = (espresso: Product) => {
-    if (!selectedCroffle) return;
+    const croffleToUse = customizedCroffle || selectedCroffle;
+    if (!croffleToUse) return;
 
-    const croffleCategory = categories.find(c => c.id === selectedCroffle.category_id)?.name || "";
-    const comboPrice = getComboPrice(croffleCategory, espresso.name);
-    const comboName = `${selectedCroffle.name} + ${espresso.name}`;
+    // Debug category mapping
+    const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
+    console.log('Debug combo pricing:', {
+      selectedCroffle: selectedCroffle?.name,
+      croffleCategory,
+      productName: selectedCroffle?.name,
+      isMini: selectedCroffle?.name.toLowerCase().includes("mini"),
+      espressoName: espresso.name
+    });
+
+    // Fix category mapping for Mini Croffle
+    let categoryForPricing = croffleCategory;
+    if (selectedCroffle?.name.toLowerCase().includes("mini")) {
+      categoryForPricing = "Mini Croffle";
+    }
+
+    const comboPrice = getComboPrice(categoryForPricing, espresso.name);
+    const comboName = `${croffleToUse.product?.name || croffleToUse.name} + ${espresso.name}`;
 
     onAddToCart({
-      croffle: selectedCroffle,
+      croffle: croffleToUse,
       espresso,
       comboPrice,
       comboName,
+      customization: customizedCroffle?.customization
     });
 
     // Reset dialog
     setStep("croffle");
     setSelectedCategory("Classic");
     setSelectedCroffle(null);
+    setCustomizedCroffle(null);
     onOpenChange(false);
   };
 
   const handleBack = () => {
-    setStep("croffle");
-    setSelectedCroffle(null);
+    if (step === "espresso") {
+      // If we came from customization, go back to customization
+      const isMiniCroffle = selectedCroffle?.name.toLowerCase().includes("mini");
+      setStep(isMiniCroffle ? "customize" : "croffle");
+    } else if (step === "customize") {
+      setStep("croffle");
+    }
+    
+    if (step === "customize") {
+      setSelectedCroffle(null);
+      setCustomizedCroffle(null);
+    }
   };
 
   const handleClose = () => {
     setStep("croffle");
     setSelectedCategory("Classic");
     setSelectedCroffle(null);
+    setCustomizedCroffle(null);
     onOpenChange(false);
   };
 
@@ -94,12 +147,14 @@ export function ComboSelectionDialog({
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
-            {step === "croffle" ? "Select Your Croffle" : "Select Your Espresso"}
+            {step === "croffle" && "Select Your Croffle"}
+            {step === "customize" && "Customize Your Mini Croffle"}
+            {step === "espresso" && "Select Your Espresso"}
           </DialogTitle>
-          {step === "espresso" && selectedCroffle && (
+          {(step === "espresso" || step === "customize") && selectedCroffle && (
             <div className="flex items-center gap-2">
               <Badge variant="secondary">{selectedCroffle.name}</Badge>
-              <span className="text-sm text-muted-foreground">+ Espresso</span>
+              {step === "espresso" && <span className="text-sm text-muted-foreground">+ Espresso</span>}
             </div>
           )}
         </DialogHeader>
@@ -158,7 +213,7 @@ export function ComboSelectionDialog({
                 </div>
               )}
             </div>
-          ) : (
+          ) : step === "espresso" ? (
             <div className="space-y-6">
               {/* Espresso Selection */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -211,13 +266,23 @@ export function ComboSelectionDialog({
                 </div>
               )}
             </div>
-          )}
+          ) : null}
         </div>
 
+        {/* ProductCustomizationDialog for Mini Croffle */}
+        <ProductCustomizationDialog
+          isOpen={step === "customize"}
+          onClose={() => setStep("croffle")}
+          product={selectedCroffle as UnifiedProduct}
+          addonCategories={addonCategories}
+          comboRules={comboRules}
+          onAddToCart={handleCustomizationComplete}
+        />
+
         <div className="flex justify-between items-center pt-4 border-t">
-          {step === "espresso" ? (
+          {(step === "espresso" || step === "customize") ? (
             <Button variant="outline" onClick={handleBack}>
-              Back to Croffle Selection
+              {step === "espresso" ? "Back to Previous Step" : "Back to Croffle Selection"}
             </Button>
           ) : (
             <div />
