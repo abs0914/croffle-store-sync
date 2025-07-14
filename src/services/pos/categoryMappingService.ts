@@ -27,8 +27,25 @@ export const CATEGORY_MAPPINGS: CategoryMapping[] = [
   { templateCategory: 'croffle_overload', posCategory: 'Croffle Overload', displayName: 'Croffle Overload' },
   { templateCategory: 'mini_croffle', posCategory: 'Mini Croffle', displayName: 'Mini Croffle' },
   { templateCategory: 'combo', posCategory: 'Combo', displayName: 'Combo' },
+  { templateCategory: 'premium', posCategory: 'Premium', displayName: 'Premium' },
+  { templateCategory: 'Premium', posCategory: 'Premium', displayName: 'Premium' },
+  { templateCategory: 'fruity', posCategory: 'Fruity', displayName: 'Fruity' },
+  { templateCategory: 'Fruity', posCategory: 'Fruity', displayName: 'Fruity' },
   { templateCategory: 'others', posCategory: 'Beverages', displayName: 'Beverages' }, // Map 'others' to 'Beverages'
 ];
+
+/**
+ * Create a proper category name from template category
+ */
+const createCategoryName = (templateCategory: string): string => {
+  // Convert snake_case or camelCase to Title Case
+  return templateCategory
+    .replace(/([a-z])([A-Z])/g, '$1 $2') // Handle camelCase
+    .replace(/_/g, ' ') // Handle snake_case
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
 
 /**
  * Get the POS category name for a recipe template category
@@ -38,7 +55,7 @@ export const getPOSCategoryName = (templateCategory: string): string => {
     m => m.templateCategory.toLowerCase() === templateCategory.toLowerCase()
   );
   
-  return mapping?.displayName || 'Other';
+  return mapping?.displayName || createCategoryName(templateCategory);
 };
 
 /**

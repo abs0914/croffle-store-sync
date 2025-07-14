@@ -27,6 +27,10 @@ export const CATEGORY_MAPPINGS: CategoryMapping[] = [
   { templateCategory: 'croffle_overload', posCategory: 'Croffle Overload', displayName: 'Croffle Overload' },
   { templateCategory: 'mini_croffle', posCategory: 'Mini Croffle', displayName: 'Mini Croffle' },
   { templateCategory: 'combo', posCategory: 'Combo', displayName: 'Combo' },
+  { templateCategory: 'premium', posCategory: 'Premium', displayName: 'Premium' },
+  { templateCategory: 'Premium', posCategory: 'Premium', displayName: 'Premium' },
+  { templateCategory: 'fruity', posCategory: 'Fruity', displayName: 'Fruity' },
+  { templateCategory: 'Fruity', posCategory: 'Fruity', displayName: 'Fruity' },
   { templateCategory: 'others', posCategory: 'Beverages', displayName: 'Beverages' }, // Map 'others' to 'Beverages'
 ];
 
@@ -43,7 +47,7 @@ export const getOrCreatePOSCategory = async (
       m => m.templateCategory.toLowerCase() === templateCategory.toLowerCase()
     );
     
-    const categoryName = mapping?.posCategory || templateCategory;
+    const categoryName = mapping?.posCategory || createCategoryName(templateCategory);
     const displayName = mapping?.displayName || categoryName;
     
     console.log(`🏷️ Mapping template category "${templateCategory}" to POS category "${categoryName}"`);
@@ -108,7 +112,9 @@ export const ensureStandardCategories = async (storeId: string): Promise<void> =
       'Espresso',
       'Croffle Overload',
       'Mini Croffle',
-      'Combo'
+      'Combo',
+      'Premium',
+      'Fruity'
     ];
     
     for (const categoryName of standardCategories) {
@@ -126,12 +132,25 @@ export const ensureStandardCategories = async (storeId: string): Promise<void> =
 /**
  * Get the display name for a template category
  */
+/**
+ * Create a proper category name from template category
+ */
+const createCategoryName = (templateCategory: string): string => {
+  // Convert snake_case or camelCase to Title Case
+  return templateCategory
+    .replace(/([a-z])([A-Z])/g, '$1 $2') // Handle camelCase
+    .replace(/_/g, ' ') // Handle snake_case
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 export const getCategoryDisplayName = (templateCategory: string): string => {
   const mapping = CATEGORY_MAPPINGS.find(
     m => m.templateCategory.toLowerCase() === templateCategory.toLowerCase()
   );
   
-  return mapping?.displayName || templateCategory;
+  return mapping?.displayName || createCategoryName(templateCategory);
 };
 
 /**
