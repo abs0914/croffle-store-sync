@@ -76,7 +76,6 @@ export interface Recipe {
   instructions?: string;
   yield_quantity: number;
   total_cost: number;
-  cost_per_serving: number;
   suggested_price?: number;
   recipe_template_id: string;
   store_id: string;
