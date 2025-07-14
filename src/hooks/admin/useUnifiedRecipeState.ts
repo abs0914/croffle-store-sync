@@ -316,7 +316,6 @@ export function useUnifiedRecipeState() {
           yield_quantity: templateData.yield_quantity,
           serving_size: templateData.serving_size,
           total_cost,
-          cost_per_serving: total_cost / Math.max(templateData.serving_size, 1),
           is_active: true,
           recipe_type: 'single'
         })
