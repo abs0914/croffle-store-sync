@@ -32,7 +32,7 @@ export default function ProductCategoryTabs({
   };
   
   return (
-    <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 md:gap-4 pb-2 px-1">
+    <div className="grid grid-cols-5 gap-3 md:gap-4 pb-2 px-1">
       <Button
         onClick={() => setActiveCategory("all")}
         variant={activeCategory === "all" ? "default" : "outline"}
