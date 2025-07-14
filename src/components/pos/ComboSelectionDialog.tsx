@@ -39,7 +39,17 @@ export function ComboSelectionDialog({
   onAddToCart,
 }: ComboSelectionDialogProps) {
   const [step, setStep] = useState<"croffle" | "customize" | "espresso">("croffle");
-  const [selectedCategory, setSelectedCategory] = useState<string>("Classic");
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+    // Find the first category that has products
+    const firstCategoryWithProducts = CROFFLE_CATEGORIES.find(catName => {
+      if (catName === "Mini Croffle") {
+        return products.some(p => p.name.toLowerCase().includes("mini") && p.is_active);
+      }
+      const category = categories.find(c => c.name === catName);
+      return category && products.some(p => p.category_id === category.id && p.is_active);
+    });
+    return firstCategoryWithProducts || "Classic";
+  });
   const [selectedCroffle, setSelectedCroffle] = useState<UnifiedProduct | null>(null);
   const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
   const [miniCroffleCustomization, setMiniCroffleCustomization] = useState<any>(null);
