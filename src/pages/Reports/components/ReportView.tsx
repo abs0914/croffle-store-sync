@@ -9,6 +9,7 @@ import { BIREJournalView } from "./reports/BIREJournalView";
 import { BIRDataBackupView } from "./reports/BIRDataBackupView";
 import { DailySummaryView } from "./reports/DailySummaryView";
 import { VATReportView } from "./reports/VATReportView";
+import { SMAccreditationPanel } from "../SMAccreditationPanel";
 import { CashierReportView } from "./reports/CashierReportView";
 import { StockReportView } from "./reports/StockReportView";
 import CashierShiftReportView from "./reports/CashierShiftReportView";
@@ -60,6 +61,8 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
       return <CashierShiftReportView />;
     case 'inventory_status':
       return <CashierInventoryReportView />;
+    case 'sm_accreditation':
+      return <SMAccreditationPanel />;
     default:
       return null;
   }

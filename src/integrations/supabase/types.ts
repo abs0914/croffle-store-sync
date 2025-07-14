@@ -4099,6 +4099,8 @@ export type Database = {
           order_status: string | null
           payment_details: Json | null
           payment_method: string
+          promo_details: string | null
+          promo_reference: string | null
           pwd_discount: number | null
           receipt_number: string
           senior_citizen_discount: number | null
@@ -4133,6 +4135,8 @@ export type Database = {
           order_status?: string | null
           payment_details?: Json | null
           payment_method: string
+          promo_details?: string | null
+          promo_reference?: string | null
           pwd_discount?: number | null
           receipt_number: string
           senior_citizen_discount?: number | null
@@ -4167,6 +4171,8 @@ export type Database = {
           order_status?: string | null
           payment_details?: Json | null
           payment_method?: string
+          promo_details?: string | null
+          promo_reference?: string | null
           pwd_discount?: number | null
           receipt_number?: string
           senior_citizen_discount?: number | null
@@ -4312,9 +4318,44 @@ export type Database = {
           details: string[]
         }[]
       }
+      export_transaction_details_csv: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          receipt_number: string
+          item_sequence: number
+          item_description: string
+          quantity: number
+          unit_price: number
+          line_total: number
+          item_discount: number
+          vat_exempt_flag: boolean
+        }[]
+      }
+      export_transactions_csv: {
+        Args: { start_date?: string; end_date?: string }
+        Returns: {
+          receipt_number: string
+          business_date: string
+          transaction_time: string
+          gross_amount: number
+          discount_amount: number
+          net_amount: number
+          vat_amount: number
+          payment_method: string
+          discount_type: string
+          discount_id: string
+          promo_details: string
+          senior_discount: number
+          pwd_discount: number
+        }[]
+      }
       extract_pack_quantity: {
         Args: { order_description: string }
         Returns: number
+      }
+      format_promo_details: {
+        Args: { promo_ref: string; promo_name: string }
+        Returns: string
       }
       generate_recipe_sku: {
         Args: { recipe_name: string; recipe_type?: string }

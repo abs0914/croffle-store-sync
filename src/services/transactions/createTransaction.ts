@@ -59,6 +59,16 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
     const seniorDiscount = transaction.discountType === 'senior' ? (transaction.discount || 0) : 0;
     const pwdDiscount = transaction.discountType === 'pwd' ? (transaction.discount || 0) : 0;
     
+    // Handle promo details for SM Accreditation
+    let promoReference = null;
+    let promoDetails = null;
+    
+    // Check if transaction has promo information (can be expanded later)
+    if (transaction.customerId && transaction.discountType === 'loyalty') {
+      promoReference = 'LOYALTY001';
+      promoDetails = 'LOYALTY001=Loyalty Program Discount';
+    }
+    
     const newTransaction = {
       shift_id: transaction.shiftId,
       store_id: transaction.storeId,
@@ -85,7 +95,9 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
       senior_citizen_discount: seniorDiscount,
       pwd_discount: pwdDiscount,
       sequence_number: Number(sequenceNumber),
-      terminal_id: 'TERMINAL-01'
+      terminal_id: 'TERMINAL-01',
+      promo_reference: promoReference,
+      promo_details: promoDetails
     };
     
     // Remove customer object before sending to Supabase
