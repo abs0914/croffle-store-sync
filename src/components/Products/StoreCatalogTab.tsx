@@ -328,10 +328,10 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {filteredProducts.map((product) => (
           <Card key={product.id} className="overflow-hidden">
-            <div className="aspect-video bg-muted relative">
+            <div className="aspect-square bg-muted relative">
               {product.image_url ? (
                 <img
                   src={product.image_url}
@@ -340,36 +340,31 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
-                  <Package className="h-12 w-12 text-muted-foreground" />
+                  <Package className="h-8 w-8 text-muted-foreground" />
                 </div>
               )}
-              <div className="absolute top-2 right-2">
+              <div className="absolute top-1 right-1">
                 {getAvailabilityIcon(product.is_available)}
               </div>
             </div>
             
-            <CardContent className="p-4">
-              <div className="space-y-2">
+            <CardContent className="p-2">
+              <div className="space-y-1">
                 <div className="flex items-start justify-between">
-                  <h3 className="font-semibold line-clamp-2">{product.product_name}</h3>
-                  <div className="flex items-center gap-1 ml-2">
-                    {getAvailabilityIcon(product.is_available)}
-                  </div>
+                  <h3 className="text-sm font-medium line-clamp-1">{product.product_name}</h3>
                 </div>
                 
-                <p className="text-sm text-muted-foreground line-clamp-2">
+                <p className="text-xs text-muted-foreground line-clamp-1">
                   {product.description}
                 </p>
                 
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="text-xs">
-                    {getCategoryName(product.category_id)}
-                  </Badge>
-                </div>
+                <Badge variant="outline" className="text-xs h-5 text-[10px]">
+                  {getCategoryName(product.category_id)}
+                </Badge>
                 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="text-lg font-bold text-green-600">
+                  <div className="flex items-center gap-1">
+                    <div className="text-sm font-bold text-green-600">
                       {formatCurrency(product.price || 0)}
                     </div>
                     {canEditPrices && (
@@ -377,47 +372,47 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditPrice(product)}
-                        className="h-6 w-6 p-0"
+                        className="h-5 w-5 p-0"
                       >
                         <Edit3 className="h-3 w-3" />
                       </Button>
                     )}
                   </div>
-                  <Badge variant={product.recipe_id ? 'secondary' : 'outline'}>
+                  <Badge variant={product.recipe_id ? 'secondary' : 'outline'} className="text-[10px] h-4">
                     {product.recipe_id ? 'Recipe' : 'Direct'}
                   </Badge>
                 </div>
 
                 {product.ingredients && product.ingredients.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-[10px] text-muted-foreground">
                     Ingredients: {product.ingredients.length}
                   </div>
                 )}
                 
-                <div className="flex gap-2">
+                <div className="flex gap-1">
                   <Button
                     onClick={() => handleEditProduct(product)}
                     variant="outline"
                     size="sm"
-                    className="flex-1"
+                    className="flex-1 h-6 text-xs"
                   >
-                    <Pen className="h-4 w-4 mr-2" />
+                    <Pen className="h-3 w-3 mr-1" />
                     Edit
                   </Button>
                   <Button
                     onClick={() => handleToggleAvailability(product.id, product.is_available || false)}
                     variant={product.is_available ? "outline" : "default"}
                     size="sm"
-                    className="flex-1"
+                    className="flex-1 h-6 text-xs"
                   >
                     {product.is_available ? (
                       <>
-                        <EyeOff className="h-4 w-4 mr-2" />
+                        <EyeOff className="h-3 w-3 mr-1" />
                         Hide
                       </>
                     ) : (
                       <>
-                        <Eye className="h-4 w-4 mr-2" />
+                        <Eye className="h-3 w-3 mr-1" />
                         Show
                       </>
                     )}
