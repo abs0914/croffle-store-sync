@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { ProductVariation, AddOnItem, ComboRule, EnhancedProductCatalogItem } from "@/types/productVariations";
+import { ProductVariation, AddOnItem, MixMatchRule, EnhancedProductCatalogItem } from "@/types/productVariations";
 import { toast } from "sonner";
 
 export const fetchProductVariations = async (productCatalogId: string): Promise<ProductVariation[]> => {
@@ -48,7 +48,7 @@ export const fetchAddOnItems = async (): Promise<AddOnItem[]> => {
   }
 };
 
-export const fetchComboRules = async (): Promise<ComboRule[]> => {
+export const fetchMixMatchRules = async (): Promise<MixMatchRule[]> => {
   try {
     const { data, error } = await supabase
       .from('product_combo_rules')
@@ -56,7 +56,19 @@ export const fetchComboRules = async (): Promise<ComboRule[]> => {
       .eq('is_active', true);
 
     if (error) throw error;
-    return data || [];
+    
+    // Transform database data to match our interface
+    return (data || []).map(rule => ({
+      id: rule.id,
+      name: rule.name,
+      base_item_category: rule.base_item_category,
+      mix_match_item_category: rule.combo_item_category,
+      mix_match_price: rule.combo_price,
+      discount_amount: rule.discount_amount,
+      is_active: rule.is_active,
+      created_at: rule.created_at,
+      updated_at: rule.updated_at
+    }));
   } catch (error) {
     console.error('Error fetching combo rules:', error);
     toast.error('Failed to fetch combo rules');
@@ -105,22 +117,22 @@ export const calculateFinalPrice = (
 
 export const findComboDiscount = (
   items: { product: EnhancedProductCatalogItem; variations: ProductVariation[] }[],
-  comboRules: ComboRule[]
-): { rule: ComboRule; discount: number } | null => {
+  mixMatchRules: MixMatchRule[]
+): { rule: MixMatchRule; discount: number } | null => {
   // Check for combo combinations
-  for (const rule of comboRules) {
+  for (const rule of mixMatchRules) {
     const hasBaseItem = items.some(item => 
       item.product.product_name.toLowerCase().includes(rule.base_item_category.toLowerCase())
     );
     
     const hasComboItem = items.some(item => {
-      if (rule.combo_item_category === 'hot_drinks') {
+      if (rule.mix_match_item_category === 'hot_drinks') {
         return item.variations.some(v => v.name === 'Hot') && 
                (item.product.product_name.includes('Coffee') || 
                 item.product.product_name.includes('Latte') || 
                 item.product.product_name.includes('Cappuccino'));
       }
-      if (rule.combo_item_category === 'iced_drinks') {
+      if (rule.mix_match_item_category === 'iced_drinks') {
         return item.variations.some(v => v.name === 'Iced') && 
                (item.product.product_name.includes('Coffee') || 
                 item.product.product_name.includes('Latte') || 

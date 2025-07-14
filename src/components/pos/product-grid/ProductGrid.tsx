@@ -33,8 +33,8 @@ import {
   AddonItem,
   AddonCategory
 } from "@/services/pos/addonService";
-import { fetchComboRules } from "@/services/pos/comboRulesService";
-import { ComboRule } from "@/types/productVariations";
+import { fetchMixMatchRules } from "@/services/pos/mixMatchRulesService";
+import { MixMatchRule } from "@/types/productVariations";
 import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
 
 interface ProductGridProps {
@@ -78,7 +78,7 @@ export default function ProductGrid({
   // Enhanced customization states
   const [isEnhancedCustomizationOpen, setIsEnhancedCustomizationOpen] = useState(false);
   const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<UnifiedProduct & { selectedVariation?: ProductVariation } | null>(null);
-  const [comboRules, setComboRules] = useState<ComboRule[]>([]);
+  const [comboRules, setComboRules] = useState<MixMatchRule[]>([]);
   
   // Load customizable recipes and addons on component mount
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function ProductGrid({
         console.log('Loaded addon categories:', categories);
 
         // Load combo rules
-        const rules = await fetchComboRules();
+        const rules = await fetchMixMatchRules();
         setComboRules(rules);
         console.log('Loaded combo rules:', rules);
       } catch (error) {

@@ -23,12 +23,12 @@ export interface AddOnItem {
   updated_at: string;
 }
 
-export interface ComboRule {
+export interface MixMatchRule {
   id: string;
   name: string;
   base_item_category: string;
-  combo_item_category: string;
-  combo_price: number;
+  mix_match_item_category: string;
+  mix_match_price: number;
   discount_amount: number;
   is_active: boolean;
   created_at: string;

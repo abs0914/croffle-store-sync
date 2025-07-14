@@ -219,7 +219,7 @@ export const MenuStructureTab: React.FC<MenuStructureTabProps> = ({ onCreateReci
                 Croffle + Coffee Combos
                 <Button size="sm" onClick={() => onCreateRecipeTemplate('combos')}>
                   <Plus className="h-4 w-4 mr-1" />
-                  Create Combo Rules
+                  Create Mix & Match Rules
                 </Button>
               </CardTitle>
             </CardHeader>

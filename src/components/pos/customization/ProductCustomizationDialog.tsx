@@ -22,7 +22,7 @@ import {
   validateAddonSelection,
   SelectedAddon
 } from '@/services/pos/addonService';
-import { ComboRule } from '@/types/productVariations';
+import { MixMatchRule } from '@/types/productVariations';
 import { toast } from 'sonner';
 
 export type CroffleType = 'regular' | 'overload' | 'mini_overload';
@@ -32,7 +32,7 @@ interface ProductCustomizationDialogProps {
   onClose: () => void;
   product: UnifiedProduct & { selectedVariation?: ProductVariation } | null;
   addonCategories: AddonCategory[];
-  comboRules: ComboRule[];
+  comboRules: MixMatchRule[];
   onAddToCart: (items: any[]) => void;
 }
 
@@ -79,7 +79,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
   }, [isOpen]);
 
   // Get relevant combo rules for current product
-  const getRelevantComboRules = (): ComboRule[] => {
+  const getRelevantComboRules = (): MixMatchRule[] => {
     return comboRules.filter(rule => 
       rule.is_active && 
       (rule.name.toLowerCase().includes('croffle') || 
@@ -182,7 +182,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     const relevantRules = getRelevantComboRules();
     if (relevantRules.length > 0) {
       // Use the first applicable combo rule
-      return relevantRules[0].combo_price;
+      return relevantRules[0].mix_match_price;
     }
     
     // Fallback to individual pricing with discount

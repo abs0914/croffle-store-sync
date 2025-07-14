@@ -632,12 +632,12 @@ combo,"Croffle + Drink","Combo deal",,,,,,"",,,,"croffles","beverages",120,20,1,
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Zap className="h-4 w-4" />
-              Combo Rules
+              Mix & Match Rules
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Set up combo pricing and discount rules for item combinations.
+              Set up mix & match pricing and discount rules for item combinations.
             </p>
           </CardContent>
         </Card>

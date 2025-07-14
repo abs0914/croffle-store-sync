@@ -25,8 +25,8 @@ export const CATEGORY_MAPPINGS: CategoryMapping[] = [
   { templateCategory: 'Beverages', posCategory: 'Beverages', displayName: 'Beverages' },
   { templateCategory: 'espresso', posCategory: 'Espresso', displayName: 'Espresso' },
   { templateCategory: 'Espresso', posCategory: 'Espresso', displayName: 'Espresso' },
-  { templateCategory: 'combo', posCategory: 'Combo', displayName: 'Combo' },
-  { templateCategory: 'Combo', posCategory: 'Combo', displayName: 'Combo' },
+  { templateCategory: 'combo', posCategory: 'Mix & Match', displayName: 'Mix & Match' },
+  { templateCategory: 'Combo', posCategory: 'Mix & Match', displayName: 'Mix & Match' },
   { templateCategory: 'premium', posCategory: 'Premium', displayName: 'Premium' },
   { templateCategory: 'Premium', posCategory: 'Premium', displayName: 'Premium' },
   { templateCategory: 'fruity', posCategory: 'Fruity', displayName: 'Fruity' },
@@ -112,7 +112,7 @@ export const ensureStandardCategories = async (storeId: string): Promise<void> =
       'Add-on',
       'Espresso',
       'Beverages',
-      'Combo'
+      'Mix & Match'
     ];
     
     for (const categoryName of standardCategories) {

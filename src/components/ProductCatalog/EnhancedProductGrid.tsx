@@ -13,7 +13,7 @@ import {
   fetchProductVariations, 
   fetchAddOnItems,
   findComboDiscount,
-  fetchComboRules
+  fetchMixMatchRules
 } from '@/services/productVariations/productVariationsService';
 import { realTimeAvailabilityService } from '@/services/inventory/realTimeAvailabilityService';
 import { formatCurrency } from '@/utils/format';

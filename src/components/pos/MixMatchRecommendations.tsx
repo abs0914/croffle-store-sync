@@ -6,22 +6,22 @@ import { Zap, Plus, TrendingUp, Coffee, Cookie } from 'lucide-react';
 import { POSIntegrationService } from '@/services/posIntegration';
 import type { POSComboRule, POSAddon } from '@/services/posIntegration';
 
-interface ComboRecommendationsProps {
+interface MixMatchRecommendationsProps {
   baseCategory: string;
   currentAddons: string[];
-  onComboSelect?: (combo: POSComboRule) => void;
+  onMixMatchSelect?: (mixMatch: POSComboRule) => void;
   onAddonSelect?: (addon: POSAddon) => void;
   className?: string;
 }
 
-export const ComboRecommendations: React.FC<ComboRecommendationsProps> = ({
+export const MixMatchRecommendations: React.FC<MixMatchRecommendationsProps> = ({
   baseCategory,
   currentAddons,
-  onComboSelect,
+  onMixMatchSelect,
   onAddonSelect,
   className = ''
 }) => {
-  const [comboRules, setComboRules] = useState<POSComboRule[]>([]);
+  const [mixMatchRules, setMixMatchRules] = useState<POSComboRule[]>([]);
   const [popularAddons, setPopularAddons] = useState<POSAddon[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -36,7 +36,7 @@ export const ComboRecommendations: React.FC<ComboRecommendationsProps> = ({
         POSIntegrationService.getRecommendedCombos(baseCategory),
         POSIntegrationService.getPopularAddons(baseCategory, 6)
       ]);
-      setComboRules(combos);
+      setMixMatchRules(combos);
       setPopularAddons(addons);
     } catch (error) {
       console.error('Error loading recommendations:', error);
@@ -78,16 +78,16 @@ export const ComboRecommendations: React.FC<ComboRecommendationsProps> = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Combo Recommendations */}
-      {comboRules.length > 0 && (
+      {mixMatchRules.length > 0 && (
         <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-orange-800">
               <Zap className="h-5 w-5" />
-              Combo Deals
+              Mix & Match Deals
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {comboRules.map((combo) => (
+            {mixMatchRules.map((combo) => (
               <div
                 key={`${combo.base_category}-${combo.combo_category}`}
                 className="flex items-center justify-between p-3 bg-white/70 rounded-lg border border-orange-200 hover:bg-white/90 transition-colors"
@@ -113,10 +113,10 @@ export const ComboRecommendations: React.FC<ComboRecommendationsProps> = ({
                 </div>
                 <Button
                   size="sm"
-                  onClick={() => onComboSelect?.(combo)}
+                  onClick={() => onMixMatchSelect?.(combo)}
                   className="bg-orange-600 hover:bg-orange-700"
                 >
-                  Add Combo
+                  Add Mix & Match
                 </Button>
               </div>
             ))}
@@ -173,7 +173,7 @@ export const ComboRecommendations: React.FC<ComboRecommendationsProps> = ({
       )}
 
       {/* No Recommendations */}
-      {comboRules.length === 0 && popularAddons.length === 0 && (
+      {mixMatchRules.length === 0 && popularAddons.length === 0 && (
         <Card className={className}>
           <CardContent className="p-6 text-center text-gray-500">
             <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
