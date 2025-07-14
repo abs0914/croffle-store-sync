@@ -6,6 +6,7 @@ import { Category } from "@/types";
  */
 export const CATEGORY_ORDER = [
   'Classic',
+  'Glaze',
   'Combo', 
   'Espresso',
   'Beverages',
