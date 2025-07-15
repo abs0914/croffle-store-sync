@@ -97,7 +97,7 @@ const handler = async (req: Request): Promise<Response> => {
     ` : '';
 
     const emailResponse = await resend.emails.send({
-      from: "SM Accreditation <noreply@yourdomain.com>", // Replace with your verified domain
+      from: "SM Accreditation <noreply@thecrofflestore.com>",
       to: [emailTo],
       subject: `${staging ? '[STAGING] ' : ''}SM Accreditation Complete Export - ${filename}`,
       html: `
