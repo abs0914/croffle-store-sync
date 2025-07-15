@@ -160,7 +160,58 @@ export const deployNewProducts = async (): Promise<{
       }
     }
 
-    // Step 3: Run product migration to ensure products are in products table
+    // Step 3: Create product catalog entries for deployed recipes
+    console.log('Creating product catalog entries...');
+    let catalogEntriesCreated = 0;
+
+    for (const product of NEW_PRODUCTS) {
+      try {
+        // Get all recipes for this product template
+        const { data: recipes } = await supabase
+          .from('recipes')
+          .select('id, store_id, template_id')
+          .eq('name', product.name)
+          .not('template_id', 'is', null);
+
+        if (recipes) {
+          for (const recipe of recipes) {
+            // Check if product catalog entry already exists
+            const { data: existingCatalog } = await supabase
+              .from('product_catalog')
+              .select('id')
+              .eq('recipe_id', recipe.id)
+              .eq('store_id', recipe.store_id)
+              .maybeSingle();
+
+            if (!existingCatalog) {
+              // Create product catalog entry
+              const { error: catalogError } = await supabase
+                .from('product_catalog')
+                .insert({
+                  product_name: product.name,
+                  description: product.description,
+                  price: product.price,
+                  recipe_id: recipe.id,
+                  store_id: recipe.store_id,
+                  is_available: true,
+                  display_order: 1
+                });
+
+              if (!catalogError) {
+                catalogEntriesCreated++;
+                console.log(`Created catalog entry for ${product.name} in store ${recipe.store_id}`);
+              } else {
+                console.error(`Error creating catalog entry for ${product.name}:`, catalogError);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error creating catalog entries for ${product.name}:`, error);
+      }
+    }
+
+    // Step 4: Run product migration to ensure products are in products table
     console.log('Running product migration...');
     const { data: migrationData } = await supabase
       .rpc('migrate_product_catalog_to_products');
@@ -169,7 +220,7 @@ export const deployNewProducts = async (): Promise<{
       .rpc('deploy_products_to_all_stores');
 
     if (templatesCreated > 0) {
-      toast.success(`Successfully created ${templatesCreated} new product templates and ${inventoryItemsCreated} inventory items!`);
+      toast.success(`Successfully created ${templatesCreated} new product templates, ${inventoryItemsCreated} inventory items, and ${catalogEntriesCreated} catalog entries!`);
     } else {
       toast.error('Failed to create any product templates');
     }
