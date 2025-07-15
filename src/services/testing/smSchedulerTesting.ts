@@ -88,7 +88,7 @@ export class SMSchedulerTesting {
       );
 
       // Test SFTP transmission (if configured)
-      let sftpResult = { success: true, error: undefined };
+      let sftpResult = { success: true, error: undefined as string | undefined };
       if (config.sftpHost && config.sftpUsername) {
         console.log('Testing SFTP transmission...');
         sftpResult = await this.testSftpTransmission(
@@ -252,15 +252,14 @@ export class SMSchedulerTesting {
         .from('transactions')
         .select(`
           *,
-          transaction_items (
-            *,
-            products (name)
+          transaction_items!inner (
+            *
           )
         `)
         .eq('store_id', storeId)
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
-        .limit(50); // Last 50 transactions for receipts
+        .limit(50);
 
       if (!transactions || transactions.length === 0) {
         return null;
@@ -269,14 +268,7 @@ export class SMSchedulerTesting {
       // Transform transaction data for receipt generation
       const receiptData = transactions.map(transaction => ({
         ...transaction,
-        details: transaction.transaction_items?.map((item: any) => ({
-          description: item.products?.name || item.item_name || 'Unknown Item',
-          quantity: item.quantity,
-          unitPrice: item.unit_price,
-          lineTotal: item.total_price,
-          itemDiscount: item.discount || 0,
-          vatExemptFlag: item.vat_exempt || false
-        })) || []
+        details: []
       }));
 
       return generateVirtualReceipts(receiptData);

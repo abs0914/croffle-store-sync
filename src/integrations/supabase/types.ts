@@ -3556,6 +3556,65 @@ export type Database = {
           },
         ]
       }
+      sm_export_logs: {
+        Row: {
+          action: string
+          created_at: string
+          detail_count: number | null
+          details: string | null
+          email_sent: boolean
+          error_message: string | null
+          execution_time: number | null
+          filename: string | null
+          id: string
+          store_id: string
+          success: boolean
+          transaction_count: number | null
+          updated_at: string
+          upload_sent: boolean
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          detail_count?: number | null
+          details?: string | null
+          email_sent?: boolean
+          error_message?: string | null
+          execution_time?: number | null
+          filename?: string | null
+          id?: string
+          store_id: string
+          success?: boolean
+          transaction_count?: number | null
+          updated_at?: string
+          upload_sent?: boolean
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          detail_count?: number | null
+          details?: string | null
+          email_sent?: boolean
+          error_message?: string | null
+          execution_time?: number | null
+          filename?: string | null
+          id?: string
+          store_id?: string
+          success?: boolean
+          transaction_count?: number | null
+          updated_at?: string
+          upload_sent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_sm_export_logs_store_id"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_order_items: {
         Row: {
           approved_quantity: number | null
@@ -4509,6 +4568,22 @@ export type Database = {
           p_terminal_id?: string
           p_transaction_id?: string
           p_receipt_number?: string
+        }
+        Returns: string
+      }
+      log_sm_export_activity: {
+        Args: {
+          p_store_id: string
+          p_action?: string
+          p_success?: boolean
+          p_email_sent?: boolean
+          p_upload_sent?: boolean
+          p_transaction_count?: number
+          p_detail_count?: number
+          p_filename?: string
+          p_details?: string
+          p_error_message?: string
+          p_execution_time?: number
         }
         Returns: string
       }

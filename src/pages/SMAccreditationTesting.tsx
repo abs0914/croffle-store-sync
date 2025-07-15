@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { SMAccreditationTestRunner } from '@/components/testing/SMAccreditationTestRunner';
+import { SMSchedulerTest } from '@/components/testing/SMSchedulerTest';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { FileCheck, Store, AlertTriangle, CheckCircle2 } from 'lucide-react';
@@ -211,10 +212,17 @@ export default function SMAccreditationTesting() {
 
       {/* Test Runner */}
       {selectedStoreId && (
-        <SMAccreditationTestRunner 
-          storeId={selectedStoreId}
-          storeName={stores.find(s => s.id === selectedStoreId)?.name}
-        />
+        <>
+          <SMAccreditationTestRunner 
+            storeId={selectedStoreId}
+            storeName={stores.find(s => s.id === selectedStoreId)?.name}
+          />
+          
+          <SMSchedulerTest 
+            storeId={selectedStoreId}
+            storeName={stores.find(s => s.id === selectedStoreId)?.name}
+          />
+        </>
       )}
 
       {/* SM Requirements Reference */}
