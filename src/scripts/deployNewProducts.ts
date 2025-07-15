@@ -114,7 +114,12 @@ export const deployNewProducts = async (): Promise<{
       }
     }
 
-    // Step 2: Create inventory items for each store
+    // Step 2: Deploy recipe templates to all stores
+    console.log('Deploying recipe templates to all stores...');
+    const { data: deploymentData } = await supabase
+      .rpc('deploy_products_to_all_stores');
+
+    // Step 3: Create inventory items for each store
     console.log('Creating inventory items for all stores...');
     let inventoryItemsCreated = 0;
 
@@ -160,7 +165,7 @@ export const deployNewProducts = async (): Promise<{
       }
     }
 
-    // Step 3: Create product catalog entries for deployed recipes
+    // Step 4: Create product catalog entries for deployed recipes
     console.log('Creating product catalog entries...');
     let catalogEntriesCreated = 0;
 
@@ -211,13 +216,10 @@ export const deployNewProducts = async (): Promise<{
       }
     }
 
-    // Step 4: Run product migration to ensure products are in products table
+    // Step 5: Run product migration to ensure products are in products table
     console.log('Running product migration...');
     const { data: migrationData } = await supabase
       .rpc('migrate_product_catalog_to_products');
-
-    const { data: deploymentData } = await supabase
-      .rpc('deploy_products_to_all_stores');
 
     if (templatesCreated > 0) {
       toast.success(`Successfully created ${templatesCreated} new product templates, ${inventoryItemsCreated} inventory items, and ${catalogEntriesCreated} catalog entries!`);
