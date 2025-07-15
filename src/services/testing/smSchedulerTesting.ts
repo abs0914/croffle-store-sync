@@ -88,7 +88,7 @@ export class SMSchedulerTesting {
       );
 
       // Test SFTP transmission (if configured)
-      let sftpResult = { success: true, error: undefined as string | undefined };
+      let sftpResult: { success: boolean; error?: string } = { success: true };
       if (config.sftpHost && config.sftpUsername) {
         console.log('Testing SFTP transmission...');
         sftpResult = await this.testSftpTransmission(
