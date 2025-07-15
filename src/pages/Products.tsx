@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Menu } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { ProductMigrationButton } from '@/components/products/ProductMigrationButton';
+import { NewProductDeploymentButton } from '@/components/products/NewProductDeploymentButton';
 
 // Import existing components
 import { StoreCatalogTab } from '@/components/Products/StoreCatalogTab';
@@ -29,6 +30,7 @@ export default function Products() {
         </div>
         
         <div className="flex items-center gap-2">
+          <NewProductDeploymentButton onDeploymentComplete={handleMigrationComplete} />
           <ProductMigrationButton onMigrationComplete={handleMigrationComplete} />
           <div className="text-sm text-muted-foreground">
             Products are deployed by admin from central recipe management
