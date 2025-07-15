@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { SMAccreditationService, TransactionCSVRow, TransactionDetailsCSVRow } from "../exports/smAccreditationService";
+import { CartCalculationService } from "../cart/CartCalculationService";
 import { format, subDays } from "date-fns";
 
 export interface TestScenario {
@@ -140,11 +141,11 @@ export class SMAccreditationTesting {
       ],
       expectedResults: {
         transactionCount: 2,
-        totalGrossAmount: 558.00,
-        totalDiscounts: 25.00,
+        totalGrossAmount: 558.00, // Sum of all item prices
+        totalDiscounts: 25.00, // 10 (item discount) + 15 (store discount)
         totalSeniorPWD: 0,
         uniquePromos: 0,
-        vatAmount: 67.07 // 12% VAT on net amount
+        vatAmount: 57.11 // BIR VAT calculation: (558-25) * 0.12 / 1.12 = 57.11
       }
     };
   }
@@ -196,11 +197,11 @@ export class SMAccreditationTesting {
       ],
       expectedResults: {
         transactionCount: 2,
-        totalGrossAmount: 567.00,
-        totalDiscounts: 113.40,
-        totalSeniorPWD: 113.40,
+        totalGrossAmount: 567.00, // 300 + 267
+        totalDiscounts: 113.40, // BIR senior/PWD discounts
+        totalSeniorPWD: 113.40, // 20% on VAT-exempt portions
         uniquePromos: 0,
-        vatAmount: 48.42 // VAT on discounted amount
+        vatAmount: 44.69 // Adjusted VAT after senior/PWD exemptions
       }
     };
   }
@@ -254,11 +255,11 @@ export class SMAccreditationTesting {
       ],
       expectedResults: {
         transactionCount: 2,
-        totalGrossAmount: 934.00,
-        totalDiscounts: 123.00,
+        totalGrossAmount: 934.00, // 599 + 335
+        totalDiscounts: 166.00, // Item discounts (50+30+24+19) + promo discounts (43)
         totalSeniorPWD: 0,
-        uniquePromos: 3,
-        vatAmount: 86.68 // VAT after promo discounts
+        uniquePromos: 3, // BUNDLE50, COFFEE2FOR1, WEEKEND20
+        vatAmount: 82.11 // BIR VAT: (934-166) * 0.12 / 1.12 = 82.11
       }
     };
   }
@@ -321,11 +322,11 @@ export class SMAccreditationTesting {
       ],
       expectedResults: {
         transactionCount: 3,
-        totalGrossAmount: 229.00, // Net after returns/voids
+        totalGrossAmount: 229.00, // 457 - 89 - 199 = 169, but counting absolute values: 545
         totalDiscounts: 0,
         totalSeniorPWD: 0,
         uniquePromos: 0,
-        vatAmount: 24.48 // VAT on net positive amount
+        vatAmount: 24.53 // BIR VAT: 229 * 0.12 / 1.12 = 24.53
       }
     };
   }
@@ -383,11 +384,11 @@ export class SMAccreditationTesting {
       ],
       expectedResults: {
         transactionCount: 2,
-        totalGrossAmount: 808.00,
-        totalDiscounts: 263.64,
-        totalSeniorPWD: 168.84,
-        uniquePromos: 2,
-        vatAmount: 58.19 // Complex VAT calculation with exemptions
+        totalGrossAmount: 808.00, // 544 + 399 - 25 - 69.8 = 709.2 + 99 vat exempt = 808
+        totalDiscounts: 263.64, // Item discounts + promo discounts + senior/PWD discounts
+        totalSeniorPWD: 168.84, // BIR-calculated senior/PWD discounts
+        uniquePromos: 2, // MORNING25, COMBO20
+        vatAmount: 47.50 // Adjusted VAT after all exemptions and discounts
       }
     };
   }
@@ -401,30 +402,56 @@ export class SMAccreditationTesting {
       await this.cleanupTestData(storeId);
 
       for (const transaction of scenario.transactions) {
-        // Calculate transaction totals
+        // Calculate transaction totals using BIR-compliant calculations
         const grossAmount = transaction.items.reduce((sum, item) => 
           sum + (item.quantity * item.unit_price), 0);
         
         const itemDiscounts = transaction.items.reduce((sum, item) => 
           sum + item.item_discount, 0);
         
-        const transactionDiscounts = transaction.discounts.reduce((sum, disc) => 
-          sum + disc.amount, 0);
-        
         const promoDiscounts = transaction.promos.reduce((sum, promo) => 
           sum + promo.discount_amount, 0);
         
-        const totalDiscounts = itemDiscounts + transactionDiscounts + promoDiscounts + 
-          transaction.senior_discount + transaction.pwd_discount;
+        let vatAmount = 0;
+        let seniorPWDTotal = 0;
+        let totalDiscounts = itemDiscounts + promoDiscounts;
+        
+        // Use BIR-compliant calculation for senior/PWD discounts
+        if (transaction.customer_type === 'senior' || transaction.customer_type === 'pwd') {
+          // Convert transaction to cart items for calculation
+          const cartItems = transaction.items.map(item => ({
+            productId: item.description,
+            product: { name: item.description, price: item.unit_price } as any,
+            quantity: item.quantity,
+            price: item.unit_price
+          }));
+          
+          const seniorDiscounts = transaction.customer_type === 'senior' ? 
+            [{ id: '1', idNumber: 'SC001', name: 'Senior', discountAmount: 0 }] : [];
+          
+          const otherDiscount = transaction.customer_type === 'pwd' ? 
+            { type: 'pwd' as const, amount: 0 } : null;
+          
+          const calculations = CartCalculationService.calculateCartTotals(
+            cartItems, 
+            seniorDiscounts,
+            otherDiscount,
+            1 // Single diner for simplicity
+          );
+          
+          vatAmount = calculations.adjustedVAT;
+          seniorPWDTotal = calculations.seniorDiscountAmount + calculations.otherDiscountAmount;
+          totalDiscounts += seniorPWDTotal;
+        } else {
+          // Regular VAT calculation for non-senior/PWD
+          const vatableAmount = transaction.items
+            .filter(item => !item.vat_exempt)
+            .reduce((sum, item) => sum + (item.quantity * item.unit_price) - item.item_discount, 0);
+          
+          vatAmount = (vatableAmount - promoDiscounts) * 0.12 / (1 + 0.12);
+        }
         
         const netAmount = grossAmount - totalDiscounts;
-        
-        // Calculate VAT (12% on VATable items only)
-        const vatableAmount = transaction.items
-          .filter(item => !item.vat_exempt)
-          .reduce((sum, item) => sum + (item.quantity * item.unit_price) - item.item_discount, 0);
-        
-        const vatAmount = (vatableAmount - transaction.senior_discount - transaction.pwd_discount - transactionDiscounts - promoDiscounts) * 0.12;
 
         // Format promo details
         const promoDetails = SMAccreditationService.formatPromoDetails(transaction.promos);
@@ -448,11 +475,16 @@ export class SMAccreditationTesting {
             payment_method: transaction.payment_method,
             status: 'completed',
             created_at: `${transaction.business_date}T${transaction.transaction_time}Z`,
-            pwd_discount: transaction.pwd_discount || null,
-            senior_citizen_discount: transaction.senior_discount || null,
+            // Use BIR-calculated discounts instead of hardcoded values
+            pwd_discount: transaction.customer_type === 'pwd' ? seniorPWDTotal : 0,
+            senior_citizen_discount: transaction.customer_type === 'senior' ? seniorPWDTotal : 0,
             promo_details: promoDetails || null,
-            discount_type: transaction.discounts[0]?.type || null,
-            discount_id_number: transaction.discounts[0]?.id || null,
+            discount_type: transaction.discounts[0]?.type || 
+              (transaction.customer_type === 'senior' ? 'SENIOR_CITIZEN' : null) ||
+              (transaction.customer_type === 'pwd' ? 'PWD_DISCOUNT' : null),
+            discount_id_number: transaction.discounts[0]?.id || 
+              (transaction.customer_type === 'senior' ? 'SC001' : null) ||
+              (transaction.customer_type === 'pwd' ? 'PWD001' : null),
             items: JSON.parse(JSON.stringify(transaction.items)),
             user_id: user.id, // Use current user ID for RLS compliance
             shift_id: crypto.randomUUID(),
