@@ -76,6 +76,21 @@ export const deployNewProducts = async (): Promise<{
     console.log('Creating recipe templates...');
     for (const product of NEW_PRODUCTS) {
       try {
+        // Check if recipe template already exists
+        const { data: existingTemplate } = await supabase
+          .from('recipe_templates')
+          .select('id')
+          .eq('name', product.name)
+          .eq('created_by', user.id)
+          .maybeSingle();
+
+        if (existingTemplate) {
+          console.log(`Template for ${product.name} already exists, skipping...`);
+          templatesCreated++;
+          createdTemplateIds.push(existingTemplate.id);
+          continue;
+        }
+
         const templateData = {
           name: product.name,
           description: product.description,
