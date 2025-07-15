@@ -50,7 +50,7 @@ export class SMSchedulerTesting {
       
       // Override email for testing
       if (staging) {
-        config.emailTo = 'test@example.com'; // Replace with actual test email
+        config.emailTo = 'alrsantiago@gmail.com';
       }
 
       const scheduler = new SMSchedulerService(config);
