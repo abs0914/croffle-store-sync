@@ -38,7 +38,7 @@ const NEW_PRODUCTS = [
     ]
   },
   {
-    name: 'Take-out box with cover',
+    name: 'Take -out box w/ cover',
     description: 'Take-out box with cover for food delivery',
     category_name: 'Packaging',
     yield_quantity: 1,
@@ -46,7 +46,7 @@ const NEW_PRODUCTS = [
     price: 12.00,
     ingredients: [
       {
-        ingredient_name: 'Take-out Box with Cover',
+        ingredient_name: 'Take -out box w/ cover',
         quantity: 1,
         unit: 'piece',
         cost_per_unit: 8.00,
@@ -114,10 +114,13 @@ export const deployNewProducts = async (): Promise<{
       }
     }
 
-    // Step 2: Deploy recipe templates to all stores
+    // Step 2: Deploy recipe templates to all stores and wait for completion
     console.log('Deploying recipe templates to all stores...');
     const { data: deploymentData } = await supabase
       .rpc('deploy_products_to_all_stores');
+
+    // Wait a moment for deployment to complete
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Step 3: Create inventory items for each store
     console.log('Creating inventory items for all stores...');
