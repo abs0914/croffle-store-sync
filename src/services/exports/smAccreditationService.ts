@@ -78,8 +78,9 @@ export class SMAccreditationService {
         throw new Error('SM store not found or invalid');
       }
 
-      const { data, error } = await supabase.rpc('export_transactions_csv', { 
-        store_id_param: storeId 
+      const { data, error } = await supabase.rpc('export_transactions_csv_recent', { 
+        store_id_param: storeId,
+        days_back: 30
       });
       
       if (error) {
@@ -87,11 +88,11 @@ export class SMAccreditationService {
         throw error;
       }
 
-      if (!data || data.length === 0) {
+      if (!data || data.length === 0 || !data[0]?.csv_data) {
         return this.createEmptyTransactionsCSV();
       }
 
-      return this.formatTransactionsCSV(data);
+      return data[0].csv_data;
     } catch (error) {
       console.error('SM Accreditation export error:', error);
       throw error;
@@ -108,8 +109,9 @@ export class SMAccreditationService {
         throw new Error('SM store not found or invalid');
       }
 
-      const { data, error } = await supabase.rpc('export_transaction_details_csv', { 
-        store_id_param: storeId 
+      const { data, error } = await supabase.rpc('export_transaction_details_csv_recent', { 
+        store_id_param: storeId,
+        days_back: 30
       });
       
       if (error) {
@@ -117,11 +119,11 @@ export class SMAccreditationService {
         throw error;
       }
 
-      if (!data || data.length === 0) {
+      if (!data || data.length === 0 || !data[0]?.csv_data) {
         return this.createEmptyTransactionDetailsCSV();
       }
 
-      return this.formatTransactionDetailsCSV(data);
+      return data[0].csv_data;
     } catch (error) {
       console.error('SM Accreditation transaction details export error:', error);
       throw error;

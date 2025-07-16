@@ -146,8 +146,8 @@ export class SMSchedulerTesting {
     try {
       // Test the database functions
       const [transactionsResult, detailsResult] = await Promise.all([
-        supabase.rpc('export_transactions_csv', { store_id_param: storeId }),
-        supabase.rpc('export_transaction_details_csv', { store_id_param: storeId })
+        supabase.rpc('export_transactions_csv_recent', { store_id_param: storeId, days_back: 30 }),
+        supabase.rpc('export_transaction_details_csv_recent', { store_id_param: storeId, days_back: 30 })
       ]);
 
       return {

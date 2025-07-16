@@ -155,27 +155,21 @@ export function SMAccreditationPanel() {
       const selectedStoreData = smStores.find(s => s.id === selectedStore);
 
       // Generate CSV files for manual download
-      const { data: transactions, error: transError } = await supabase.rpc('export_transactions_csv', {
-        store_id_param: selectedStore
+      const { data: transactions, error: transError } = await supabase.rpc('export_transactions_csv_recent', {
+        store_id_param: selectedStore,
+        days_back: 30
       });
-      const { data: details, error: detailError } = await supabase.rpc('export_transaction_details_csv', {
-        store_id_param: selectedStore
+      const { data: details, error: detailError } = await supabase.rpc('export_transaction_details_csv_recent', {
+        store_id_param: selectedStore,
+        days_back: 30
       });
 
       if (transError) throw transError;
       if (detailError) throw detailError;
 
-      // Format and download transactions CSV
-      const transactionsCSV = formatCSVForDownload(transactions, [
-        'receipt_number', 'business_date', 'transaction_time', 'gross_amount',
-        'discount_amount', 'net_amount', 'vat_amount', 'payment_method',
-        'discount_type', 'discount_id', 'promo_details', 'senior_discount', 'pwd_discount'
-      ]);
-
-      const detailsCSV = formatCSVForDownload(details, [
-        'receipt_number', 'item_sequence', 'item_description', 'quantity',
-        'unit_price', 'line_total', 'item_discount', 'vat_exempt_flag'
-      ]);
+      // Get the CSV data directly from the database function result
+      const transactionsCSV = transactions?.[0]?.csv_data || 'receipt_number,business_date,transaction_time,gross_amount,discount_amount,net_amount,vat_amount,payment_method,discount_type,discount_id,promo_details,senior_discount,pwd_discount';
+      const detailsCSV = details?.[0]?.csv_data || 'receipt_number,item_sequence,item_description,quantity,unit_price,line_total,item_discount,vat_exempt_flag';
 
       const filename = getFilename();
       

@@ -4381,10 +4381,7 @@ export type Database = {
         }[]
       }
       export_transaction_details_csv: {
-        Args:
-          | { start_date?: string; end_date?: string }
-          | { store_id_param: string }
-          | { store_id_param?: string; days_back?: number }
+        Args: { start_date?: string; end_date?: string }
         Returns: {
           receipt_number: string
           item_sequence: number
@@ -4396,11 +4393,14 @@ export type Database = {
           vat_exempt_flag: boolean
         }[]
       }
+      export_transaction_details_csv_recent: {
+        Args: { store_id_param: string; days_back?: number }
+        Returns: {
+          csv_data: string
+        }[]
+      }
       export_transactions_csv: {
-        Args:
-          | { start_date?: string; end_date?: string }
-          | { store_id_param: string }
-          | { store_id_param?: string; days_back?: number }
+        Args: { start_date?: string; end_date?: string }
         Returns: {
           receipt_number: string
           business_date: string
@@ -4415,6 +4415,12 @@ export type Database = {
           promo_details: string
           senior_discount: number
           pwd_discount: number
+        }[]
+      }
+      export_transactions_csv_recent: {
+        Args: { store_id_param: string; days_back?: number }
+        Returns: {
+          csv_data: string
         }[]
       }
       extract_pack_quantity: {
