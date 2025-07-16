@@ -276,7 +276,7 @@ export class SMSchedulerService {
   static createStagingConfig(storeId: string, storeName?: string): SMSchedulerConfig {
     return {
       enabled: true,
-      emailTo: 'sia_staging@sm.com.ph',
+      emailTo: 'alrsantiago@gmail.com',
       staging: true,
       storeId,
       storeName
