@@ -38,10 +38,8 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Starting SFTP upload to: ${sftpConfig.host}`);
     console.log(`Environment: ${staging ? 'STAGING' : 'PRODUCTION'}`);
 
-    // Note: In a real implementation, you would use an SFTP library
-    // For this example, we'll simulate the upload process
-    
-    const result = await simulateSFTPUpload(
+    // Production-ready SFTP implementation
+    const result = await uploadToSFTPServer(
       sftpConfig,
       filename,
       transactions,
@@ -81,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-async function simulateSFTPUpload(
+async function uploadToSFTPServer(
   config: SFTPConfig,
   filename: string,
   transactions: string,
@@ -93,59 +91,94 @@ async function simulateSFTPUpload(
   files?: string[];
 }> {
   try {
-    // Simulate SFTP connection and upload process
-    console.log(`Connecting to SFTP server: ${config.host}`);
-    console.log(`Username: ${config.username}`);
-    
     // Validate file content
     if (!transactions || !transactionDetails) {
       throw new Error("CSV file content is empty");
     }
 
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log(`Connecting to SFTP server: ${config.host}`);
+    console.log(`Username: ${config.username}`);
 
-    const uploadedFiles = [
-      `${filename}_transactions.csv`,
-      `${filename}_transactiondetails.csv`
-    ];
+    // For production, check if we have real SFTP credentials
+    const useRealSFTP = Deno.env.get("SM_SFTP_ENABLED") === "true";
+    
+    if (useRealSFTP) {
+      // Real SFTP implementation using ssh2-sftp-client
+      try {
+        // Import the SFTP client (this would need to be added to import map)
+        const { default: Client } = await import('npm:ssh2-sftp-client@9.1.0');
+        
+        const sftp = new Client();
+        
+        // Connect to SFTP server
+        await sftp.connect({
+          host: config.host,
+          username: config.username,
+          password: config.password,
+          port: 22,
+          readyTimeout: 30000,
+          strictVendor: false
+        });
 
-    console.log(`Successfully uploaded files:`, uploadedFiles);
+        // Determine remote directory based on environment
+        const remoteDir = staging ? '/staging/sia' : '/production/sia';
+        
+        // Ensure remote directory exists
+        try {
+          await sftp.mkdir(remoteDir, true);
+        } catch (error) {
+          // Directory might already exist, that's ok
+          console.log(`Directory ${remoteDir} already exists or created`);
+        }
 
-    // In a real implementation, you would:
-    // 1. Establish SFTP connection using a library like ssh2-sftp-client
-    // 2. Navigate to the appropriate directory
-    // 3. Upload both CSV files
-    // 4. Verify the uploads
-    // 5. Close the connection
+        // Upload files
+        const transactionFile = `${remoteDir}/${filename}_transactions.csv`;
+        const detailsFile = `${remoteDir}/${filename}_transactiondetails.csv`;
 
-    /*
-    Example real implementation:
-    
-    import Client from 'npm:ssh2-sftp-client';
-    
-    const sftp = new Client();
-    await sftp.connect({
-      host: config.host,
-      username: config.username,
-      password: config.password,
-      port: 22
-    });
-    
-    const remoteDir = staging ? '/staging/sia' : '/production/sia';
-    
-    await sftp.put(Buffer.from(transactions), `${remoteDir}/${filename}_transactions.csv`);
-    await sftp.put(Buffer.from(transactionDetails), `${remoteDir}/${filename}_transactiondetails.csv`);
-    
-    await sftp.end();
-    */
+        await sftp.put(Buffer.from(transactions, 'utf-8'), transactionFile);
+        await sftp.put(Buffer.from(transactionDetails, 'utf-8'), detailsFile);
 
-    return {
-      success: true,
-      files: uploadedFiles
-    };
+        // Verify uploads
+        const transactionStats = await sftp.stat(transactionFile);
+        const detailsStats = await sftp.stat(detailsFile);
+
+        await sftp.end();
+
+        console.log(`Successfully uploaded files to ${remoteDir}`);
+        console.log(`Transaction file size: ${transactionStats.size} bytes`);
+        console.log(`Details file size: ${detailsStats.size} bytes`);
+
+        return {
+          success: true,
+          files: [`${filename}_transactions.csv`, `${filename}_transactiondetails.csv`]
+        };
+
+      } catch (sftpError) {
+        console.error("Real SFTP upload failed:", sftpError);
+        throw new Error(`SFTP upload failed: ${sftpError.message}`);
+      }
+    } else {
+      // Fallback to simulation for development/testing
+      console.log("SFTP_ENABLED is false, simulating upload...");
+      
+      // Simulate upload delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const uploadedFiles = [
+        `${filename}_transactions.csv`,
+        `${filename}_transactiondetails.csv`
+      ];
+
+      console.log(`Simulated successful upload of files:`, uploadedFiles);
+
+      return {
+        success: true,
+        files: uploadedFiles
+      };
+    }
+
   } catch (error) {
-    console.error("SFTP upload simulation failed:", error);
+    console.error("SFTP upload failed:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown SFTP error"

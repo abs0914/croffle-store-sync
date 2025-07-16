@@ -181,9 +181,29 @@ export class SMSchedulerService {
    */
   private async logExportActivity(result: any): Promise<void> {
     try {
-      // Use the BIR audit logging function
-      const { error } = await supabase.rpc('log_bir_audit', {
-        p_store_id: '00000000-0000-0000-0000-000000000000',
+      // Use the new sm_export_logs table for better tracking
+      const { error } = await supabase
+        .from('sm_export_logs')
+        .insert({
+          store_id: this.config.storeId,
+          export_type: 'scheduled',
+          filename: result.filename || this.getFilename(),
+          transaction_count: result.files ? this.countCSVRows(result.files.transactions) : 0,
+          detail_count: result.files ? this.countCSVRows(result.files.details) : 0,
+          email_sent: result.emailSent || false,
+          sftp_uploaded: result.uploadSent || false,
+          staging: this.config.staging,
+          error_message: result.success ? null : result.message,
+          completed_at: new Date().toISOString()
+        });
+      
+      if (error) {
+        console.error('Failed to log export activity:', error);
+      }
+
+      // Also log to BIR audit for compliance
+      await supabase.rpc('log_bir_audit', {
+        p_store_id: this.config.storeId,
         p_log_type: 'sm_accreditation',
         p_event_name: 'hourly_export',
         p_event_data: {
@@ -197,13 +217,21 @@ export class SMSchedulerService {
         p_terminal_id: 'SYSTEM',
         p_cashier_name: 'SM_SCHEDULER'
       });
-      
-      if (error) {
-        console.error('Failed to log export activity:', error);
-      }
     } catch (error) {
       console.error('Failed to log export activity:', error);
     }
+  }
+
+  private countCSVRows(csvContent: string): number {
+    if (!csvContent) return 0;
+    return Math.max(0, csvContent.split('\n').length - 1); // Exclude header
+  }
+
+  private getFilename(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = String(now.getFullYear());
+    return `${month}_${year}`;
   }
 
   /**

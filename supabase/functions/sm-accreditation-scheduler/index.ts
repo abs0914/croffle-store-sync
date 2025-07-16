@@ -12,7 +12,7 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 interface SchedulerRequest {
-  action: 'run' | 'test' | 'status';
+  action: 'run' | 'test' | 'status' | 'execute_hourly_export';
   config?: {
     enabled: boolean;
     emailTo: string;
@@ -39,6 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     switch (action) {
       case 'run':
+      case 'execute_hourly_export':
         result = await executeScheduledExport(config);
         break;
       case 'test':

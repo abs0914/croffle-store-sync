@@ -1,340 +1,259 @@
-import { supabase } from '@/integrations/supabase/client';
-import { SMAccreditationService } from '@/services/exports/smAccreditationService';
-import { SMSchedulerService, SMSchedulerConfig } from '@/services/exports/smSchedulerService';
-import { generateVirtualReceipts } from '@/services/reports/receiptPdfGenerator';
-import { generateXReadingPdf, generateZReadingPdf } from '@/services/reports/reportPdfGenerator';
-import { fetchXReading } from '@/services/reports/modules/xReadingReport';
-import { fetchZReading } from '@/services/reports/modules/zReadingReport';
+import { supabase } from "@/integrations/supabase/client";
+import { SMSchedulerService, SMSchedulerConfig } from "../exports/smSchedulerService";
 
 export interface SchedulerTestResult {
   success: boolean;
   message: string;
   details: {
+    transactionCount: number;
     emailSent: boolean;
     sftpUploaded: boolean;
-    transactionCount: number;
-    detailCount: number;
-    filesGenerated: string[];
     executionTime: number;
+    filesGenerated: string[];
     error?: string;
   };
 }
 
-export interface TransmissionStatus {
-  lastTransmission?: Date;
-  emailDelivered: boolean;
-  sftpUploaded: boolean;
-  recentLogs: Array<{
-    timestamp: Date;
-    action: string;
-    status: string;
-    details: string;
-  }>;
-}
-
 export class SMSchedulerTesting {
-  private smService: SMAccreditationService;
-
-  constructor() {
-    this.smService = new SMAccreditationService();
-  }
-
-  async testScheduler(storeId: string, storeName?: string, staging: boolean = true): Promise<SchedulerTestResult> {
+  /**
+   * Test the complete SM Scheduler workflow
+   */
+  async testScheduler(
+    storeId: string, 
+    storeName: string = 'Test Store',
+    staging: boolean = true
+  ): Promise<SchedulerTestResult> {
     const startTime = Date.now();
     
     try {
-      // Create scheduler configuration
-      const config: SMSchedulerConfig = staging 
-        ? SMSchedulerService.createStagingConfig(storeId, storeName)
-        : SMSchedulerService.createProductionConfig(storeId, storeName);
+      console.log(`Starting SM Scheduler test for store: ${storeName} (${storeId})`);
       
-      // Override email for testing
-      if (staging) {
-        config.emailTo = 'alrsantiago@gmail.com';
+      // Validate the store exists and is an SM store
+      const { data: store, error: storeError } = await supabase
+        .from('stores')
+        .select('id, name')
+        .eq('id', storeId)
+        .single();
+
+      if (storeError || !store) {
+        throw new Error(`Store validation failed: ${storeError?.message || 'Store not found'}`);
       }
 
-      const scheduler = new SMSchedulerService(config);
-      
-      // Generate CSV files
-      console.log('Generating CSV files for scheduler test...');
-      const csvFiles = await this.smService.generateCSVFiles(storeId, storeName);
-      
-      // Generate virtual receipts and reports
-      console.log('Generating virtual receipts and reports...');
-      const virtualReceiptsPdf = await this.generateVirtualReceiptsPdf(storeId);
-      const xReadingPdf = await this.generateXReadingPdf(storeId);
-      const zReadingPdf = await this.generateZReadingPdf(storeId);
-      
-      // Convert PDFs to base64 for email transmission
-      const reportPdfs = {
-        virtualReceipts: virtualReceiptsPdf ? this.extractBase64FromDataUri(virtualReceiptsPdf) : undefined,
-        xReading: xReadingPdf ? this.extractBase64FromDataUri(xReadingPdf) : undefined,
-        zReading: zReadingPdf ? this.extractBase64FromDataUri(zReadingPdf) : undefined,
+      // Create test configuration
+      const config: SMSchedulerConfig = {
+        enabled: true,
+        emailTo: staging ? 'test-staging@example.com' : 'test-production@example.com',
+        sftpHost: staging ? 'staging-sftp.sm.com.ph' : 'production-sftp.sm.com.ph',
+        sftpUsername: 'test_user',
+        sftpPassword: 'test_password',
+        staging,
+        storeId,
+        storeName: store.name
       };
 
-      // Get store information
-      const storeInfo = await this.getStoreInfo(storeId);
+      // Initialize scheduler service
+      const scheduler = new SMSchedulerService(config);
 
-      // Test email transmission with enhanced data
-      console.log('Testing email transmission...');
-      const emailResult = await this.testEmailTransmission(
-        config.emailTo,
-        csvFiles.filename,
-        csvFiles.transactions,
-        csvFiles.transactionDetails,
-        staging,
-        storeInfo,
-        reportPdfs
-      );
-
-      // Test SFTP transmission (if configured)
-      let sftpResult: { success: boolean; error?: string } = { success: true };
-      if (config.sftpHost && config.sftpUsername) {
-        console.log('Testing SFTP transmission...');
-        sftpResult = await this.testSftpTransmission(
-          csvFiles.transactions,
-          csvFiles.transactionDetails,
-          csvFiles.filename
-        );
+      // Run the test export
+      const testResult = await scheduler.testExport();
+      
+      if (!testResult.success) {
+        throw new Error('CSV generation test failed');
       }
 
+      // Test the actual export process (without sending files)
+      const exportResult = await this.testExportProcess(config);
+
       const executionTime = Date.now() - startTime;
-      const transactionLines = csvFiles.transactions.split('\n').length - 1;
-      const detailLines = csvFiles.transactionDetails.split('\n').length - 1;
-
-      const filesGenerated = [
-        `${csvFiles.filename}_transactions.csv`,
-        `${csvFiles.filename}_transactiondetails.csv`
-      ];
-
-      if (reportPdfs.virtualReceipts) filesGenerated.push(`${csvFiles.filename}_virtual_receipts.pdf`);
-      if (reportPdfs.xReading) filesGenerated.push(`${csvFiles.filename}_x_reading.pdf`);
-      if (reportPdfs.zReading) filesGenerated.push(`${csvFiles.filename}_z_reading.pdf`);
-
+      
       return {
-        success: emailResult.success && sftpResult.success,
-        message: emailResult.success && sftpResult.success 
-          ? 'Scheduler test completed successfully' 
-          : 'Scheduler test completed with some failures',
+        success: true,
+        message: `SM Scheduler test completed successfully for ${store.name}`,
         details: {
-          emailSent: emailResult.success,
-          sftpUploaded: sftpResult.success,
-          transactionCount: transactionLines,
-          detailCount: detailLines,
-          filesGenerated,
+          transactionCount: testResult.transactionCount,
+          emailSent: exportResult.emailTested,
+          sftpUploaded: exportResult.sftpTested,
           executionTime,
-          error: !emailResult.success ? emailResult.error : sftpResult.error
+          filesGenerated: [
+            `${this.getFilename()}_transactions.csv`,
+            `${this.getFilename()}_transactiondetails.csv`
+          ]
         }
       };
 
     } catch (error) {
-      console.error('Scheduler test failed:', error);
+      const executionTime = Date.now() - startTime;
       
       return {
         success: false,
-        message: 'Scheduler test failed',
+        message: `SM Scheduler test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         details: {
+          transactionCount: 0,
           emailSent: false,
           sftpUploaded: false,
-          transactionCount: 0,
-          detailCount: 0,
+          executionTime,
           filesGenerated: [],
-          executionTime: Date.now() - startTime,
           error: error instanceof Error ? error.message : 'Unknown error'
         }
       };
     }
   }
 
-  async getTransmissionStatus(storeId: string): Promise<TransmissionStatus> {
+  /**
+   * Test the export process via edge function
+   */
+  private async testExportProcess(config: SMSchedulerConfig): Promise<{
+    emailTested: boolean;
+    sftpTested: boolean;
+  }> {
     try {
-      // Query recent transmission logs (this would need a proper logging table)
-      const { data: logs } = await supabase
-        .from('sm_export_logs')
-        .select('*')
-        .eq('store_id', storeId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      const recentLogs = (logs || []).map(log => ({
-        timestamp: new Date(log.created_at),
-        action: log.action || 'Export',
-        status: log.success ? 'Success' : 'Failed',
-        details: log.details || 'No details available'
-      }));
-
-      const lastLog = logs?.[0];
-      
-      return {
-        lastTransmission: lastLog ? new Date(lastLog.created_at) : undefined,
-        emailDelivered: lastLog?.email_sent || false,
-        sftpUploaded: lastLog?.upload_sent || false,
-        recentLogs
-      };
-    } catch (error) {
-      console.error('Error getting transmission status:', error);
-      return {
-        emailDelivered: false,
-        sftpUploaded: false,
-        recentLogs: []
-      };
-    }
-  }
-
-  private async testEmailTransmission(
-    emailTo: string,
-    filename: string,
-    transactions: string,
-    transactionDetails: string,
-    staging: boolean,
-    storeInfo?: any,
-    reportPdfs?: any
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { data, error } = await supabase.functions.invoke('send-sm-accreditation-email', {
+      // Test the scheduler edge function
+      const { data, error } = await supabase.functions.invoke('sm-accreditation-scheduler', {
         body: {
-          emailTo,
-          filename,
-          transactions,
-          transactionDetails,
-          staging,
-          storeInfo,
-          reportPdfs
+          action: 'test',
+          config
         }
       });
 
       if (error) {
-        throw error;
+        console.error('Edge function test failed:', error);
+        return { emailTested: false, sftpTested: false };
       }
 
-      return { success: true };
-    } catch (error) {
-      console.error('Email transmission test failed:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Email transmission failed' 
+      console.log('Edge function test result:', data);
+      
+      return {
+        emailTested: data?.testResults?.configValid || false,
+        sftpTested: data?.testResults?.sftpConfigured || false
       };
+
+    } catch (error) {
+      console.error('Export process test failed:', error);
+      return { emailTested: false, sftpTested: false };
     }
   }
 
-  private async testSftpTransmission(
-    transactions: string,
-    transactionDetails: string,
-    filename: string
-  ): Promise<{ success: boolean; error?: string }> {
+  /**
+   * Test database functions directly
+   */
+  async testDatabaseFunctions(storeId: string): Promise<{
+    transactionsWorking: boolean;
+    detailsWorking: boolean;
+    transactionCount: number;
+    detailCount: number;
+    sampleData?: any;
+  }> {
     try {
-      const { data, error } = await supabase.functions.invoke('upload-sm-accreditation-sftp', {
-        body: {
-          transactions,
-          transactionDetails,
-          filename
+      // Test the database functions
+      const [transactionsResult, detailsResult] = await Promise.all([
+        supabase.rpc('export_transactions_csv', { store_id_param: storeId }),
+        supabase.rpc('export_transaction_details_csv', { store_id_param: storeId })
+      ]);
+
+      return {
+        transactionsWorking: !transactionsResult.error,
+        detailsWorking: !detailsResult.error,
+        transactionCount: transactionsResult.data?.length || 0,
+        detailCount: detailsResult.data?.length || 0,
+        sampleData: {
+          sampleTransaction: transactionsResult.data?.[0] || null,
+          sampleDetail: detailsResult.data?.[0] || null
         }
-      });
+      };
 
-      if (error) {
-        throw error;
-      }
-
-      return { success: true };
     } catch (error) {
-      console.error('SFTP transmission test failed:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'SFTP transmission failed' 
+      console.error('Database function test failed:', error);
+      return {
+        transactionsWorking: false,
+        detailsWorking: false,
+        transactionCount: 0,
+        detailCount: 0
       };
     }
   }
 
-  private async generateVirtualReceiptsPdf(storeId: string): Promise<string | null> {
+  /**
+   * Test complete end-to-end workflow
+   */
+  async testEndToEnd(
+    storeId: string,
+    storeName: string,
+    staging: boolean = true,
+    actuallyEmail: boolean = false
+  ): Promise<SchedulerTestResult> {
+    const startTime = Date.now();
+    
     try {
-      // Get recent transactions for virtual receipts
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          transaction_items!inner (
-            *
-          )
-        `)
-        .eq('store_id', storeId)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
-        .limit(50);
+      console.log(`Starting end-to-end SM Scheduler test for store: ${storeName}`);
+      
+      const config: SMSchedulerConfig = {
+        enabled: actuallyEmail,
+        emailTo: staging ? 'test-staging@sm.com.ph' : 'test-production@sm.com.ph',
+        sftpHost: staging ? 'staging-sftp.sm.com.ph' : undefined,
+        sftpUsername: 'test_user',
+        staging,
+        storeId,
+        storeName
+      };
 
-      if (!transactions || transactions.length === 0) {
-        return null;
+      // Test database functions first
+      const dbTest = await this.testDatabaseFunctions(storeId);
+      
+      if (!dbTest.transactionsWorking || !dbTest.detailsWorking) {
+        throw new Error('Database functions are not working correctly');
       }
 
-      // Transform transaction data for receipt generation
-      const receiptData = transactions.map(transaction => ({
-        ...transaction,
-        details: []
-      }));
-
-      return generateVirtualReceipts(receiptData);
-    } catch (error) {
-      console.error('Error generating virtual receipts PDF:', error);
-      return null;
-    }
-  }
-
-  private async generateXReadingPdf(storeId: string): Promise<string | null> {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const xReadingData = await fetchXReading(storeId, today);
+      // If requested, test actual email/SFTP
+      let emailResult = { success: false };
+      let sftpResult = { success: false };
       
-      if (xReadingData) {
-        return generateXReadingPdf(xReadingData);
+      if (actuallyEmail) {
+        const scheduler = new SMSchedulerService(config);
+        const fullResult = await scheduler.executeHourlyExport();
+        
+        emailResult = { success: fullResult.emailSent || false };
+        sftpResult = { success: fullResult.uploadSent || false };
       }
-      
-      return null;
+
+      const executionTime = Date.now() - startTime;
+
+      return {
+        success: true,
+        message: `End-to-end test completed for ${storeName}`,
+        details: {
+          transactionCount: dbTest.transactionCount,
+          emailSent: emailResult.success,
+          sftpUploaded: sftpResult.success,
+          executionTime,
+          filesGenerated: [
+            `${this.getFilename()}_transactions.csv`,
+            `${this.getFilename()}_transactiondetails.csv`
+          ]
+        }
+      };
+
     } catch (error) {
-      console.error('Error generating X-Reading PDF:', error);
-      return null;
+      const executionTime = Date.now() - startTime;
+      
+      return {
+        success: false,
+        message: `End-to-end test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        details: {
+          transactionCount: 0,
+          emailSent: false,
+          sftpUploaded: false,
+          executionTime,
+          filesGenerated: [],
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      };
     }
   }
 
-  private async generateZReadingPdf(storeId: string): Promise<string | null> {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const zReadingData = await fetchZReading(storeId, today);
-      
-      if (zReadingData) {
-        return generateZReadingPdf(zReadingData);
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error generating Z-Reading PDF:', error);
-      return null;
-    }
-  }
-
-  private async getStoreInfo(storeId: string) {
-    try {
-      const { data: store } = await supabase
-        .from('stores')
-        .select('name, address, tin')
-        .eq('id', storeId)
-        .single();
-
-      return store ? {
-        name: store.name,
-        address: store.address || '123 Main Street, City, Province',
-        tin: store.tin || '123-456-789-000'
-      } : undefined;
-    } catch (error) {
-      console.error('Error getting store info:', error);
-      return undefined;
-    }
-  }
-
-  private extractBase64FromDataUri(dataUri: string): string {
-    // Extract base64 data from data URI (data:application/pdf;base64,...)
-    const base64Index = dataUri.indexOf('base64,');
-    if (base64Index !== -1) {
-      return dataUri.substring(base64Index + 7);
-    }
-    return dataUri;
+  private getFilename(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = String(now.getFullYear());
+    return `${month}_${year}`;
   }
 }

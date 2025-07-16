@@ -51,11 +51,11 @@ const handler = async (req: Request): Promise<Response> => {
     const attachments: any[] = [
       {
         filename: `${filename}_transactions.csv`,
-        content: new TextEncoder().encode(transactions),
+        content: Buffer.from(transactions, 'utf-8'),
       },
       {
         filename: `${filename}_transactiondetails.csv`,
-        content: new TextEncoder().encode(transactionDetails),
+        content: Buffer.from(transactionDetails, 'utf-8'),
       }
     ];
 
