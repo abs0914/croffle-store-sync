@@ -289,7 +289,7 @@ export class SMSchedulerService {
   static createProductionConfig(storeId: string, storeName?: string): SMSchedulerConfig {
     return {
       enabled: true,
-      emailTo: 'sia_production@sm.com.ph',
+      emailTo: 'alrsantiago@gmail.com',
       staging: false,
       storeId,
       storeName
