@@ -4375,6 +4375,10 @@ export type Database = {
         Args: { target_user_id: string; target_store_ids: string[] }
         Returns: boolean
       }
+      cleanup_test_data: {
+        Args: { p_store_id: string; p_user_id?: string }
+        Returns: boolean
+      }
       create_app_user: {
         Args: {
           p_user_id: string
@@ -4385,6 +4389,10 @@ export type Database = {
           p_store_ids: string[]
           p_is_active: boolean
         }
+        Returns: string
+      }
+      create_test_shift: {
+        Args: { p_store_id: string; p_user_id?: string }
         Returns: string
       }
       deploy_products_to_all_stores: {

@@ -19,7 +19,7 @@ interface TestResult {
   validation: ValidationResult;
   csvFiles: {
     transactions: string;
-    details: string;
+    transactionDetails: string;
     filename: string;
   };
 }
@@ -216,7 +216,7 @@ export const SMAccreditationTestRunner: React.FC<TestRunnerProps> = ({
                             variant="outline"
                             size="sm"
                             onClick={() => downloadCSV(
-                              result.csvFiles.details, 
+                              result.csvFiles.transactionDetails, 
                               result.csvFiles.filename, 
                               'details'
                             )}
