@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Menu } from 'lucide-react';
@@ -8,18 +7,16 @@ import { NewProductDeploymentButton } from '@/components/products/NewProductDepl
 
 // Import existing components
 import { StoreCatalogTab } from '@/components/Products/StoreCatalogTab';
-
 export default function Products() {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const storeId = user?.storeIds?.[0] || '';
   const [refreshKey, setRefreshKey] = useState(0);
-
   const handleMigrationComplete = () => {
     setRefreshKey(prev => prev + 1);
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -32,26 +29,15 @@ export default function Products() {
         <div className="flex items-center gap-2">
           <NewProductDeploymentButton onDeploymentComplete={handleMigrationComplete} />
           <ProductMigrationButton onMigrationComplete={handleMigrationComplete} />
-          <div className="text-sm text-muted-foreground">
-            Products are deployed by admin from central recipe management
-          </div>
+          
         </div>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Menu className="h-5 w-5" />
-            Deployed Product Catalog
-          </CardTitle>
-          <p className="text-muted-foreground">
-            Manage availability and settings for products deployed by admin
-          </p>
-        </CardHeader>
+        
         <CardContent>
           <StoreCatalogTab storeId={storeId} key={refreshKey} />
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
