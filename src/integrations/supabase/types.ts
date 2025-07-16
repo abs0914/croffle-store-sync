@@ -4147,11 +4147,14 @@ export type Database = {
         Row: {
           amount_tendered: number | null
           assigned_to: string | null
+          cashier_name: string | null
           change: number | null
           created_at: string | null
           customer_id: string | null
           discount: number
+          discount_amount: number | null
           discount_details: Json | null
+          discount_id: string | null
           discount_id_number: string | null
           discount_type: string | null
           estimated_completion_time: string | null
@@ -4166,6 +4169,7 @@ export type Database = {
           pwd_discount: number | null
           receipt_number: string
           senior_citizen_discount: number | null
+          senior_discount: number | null
           senior_discounts: Json | null
           sequence_number: number | null
           shift_id: string
@@ -4176,6 +4180,7 @@ export type Database = {
           terminal_id: string | null
           total: number
           user_id: string
+          vat_amount: number | null
           vat_exempt_sales: number | null
           vat_sales: number | null
           zero_rated_sales: number | null
@@ -4183,11 +4188,14 @@ export type Database = {
         Insert: {
           amount_tendered?: number | null
           assigned_to?: string | null
+          cashier_name?: string | null
           change?: number | null
           created_at?: string | null
           customer_id?: string | null
           discount?: number
+          discount_amount?: number | null
           discount_details?: Json | null
+          discount_id?: string | null
           discount_id_number?: string | null
           discount_type?: string | null
           estimated_completion_time?: string | null
@@ -4202,6 +4210,7 @@ export type Database = {
           pwd_discount?: number | null
           receipt_number: string
           senior_citizen_discount?: number | null
+          senior_discount?: number | null
           senior_discounts?: Json | null
           sequence_number?: number | null
           shift_id: string
@@ -4212,6 +4221,7 @@ export type Database = {
           terminal_id?: string | null
           total?: number
           user_id: string
+          vat_amount?: number | null
           vat_exempt_sales?: number | null
           vat_sales?: number | null
           zero_rated_sales?: number | null
@@ -4219,11 +4229,14 @@ export type Database = {
         Update: {
           amount_tendered?: number | null
           assigned_to?: string | null
+          cashier_name?: string | null
           change?: number | null
           created_at?: string | null
           customer_id?: string | null
           discount?: number
+          discount_amount?: number | null
           discount_details?: Json | null
+          discount_id?: string | null
           discount_id_number?: string | null
           discount_type?: string | null
           estimated_completion_time?: string | null
@@ -4238,6 +4251,7 @@ export type Database = {
           pwd_discount?: number | null
           receipt_number?: string
           senior_citizen_discount?: number | null
+          senior_discount?: number | null
           senior_discounts?: Json | null
           sequence_number?: number | null
           shift_id?: string
@@ -4248,6 +4262,7 @@ export type Database = {
           terminal_id?: string | null
           total?: number
           user_id?: string
+          vat_amount?: number | null
           vat_exempt_sales?: number | null
           vat_sales?: number | null
           zero_rated_sales?: number | null
