@@ -26,5 +26,23 @@ export const ProductMigrationButton: React.FC<ProductMigrationButtonProps> = ({
       setIsRunning(false);
     }
   };
-  return;
+  return (
+    <Button 
+      onClick={handleMigration}
+      disabled={isRunning}
+      variant="outline"
+    >
+      {isRunning ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Running Migration...
+        </>
+      ) : (
+        <>
+          <Database className="mr-2 h-4 w-4" />
+          Run Migration
+        </>
+      )}
+    </Button>
+  );
 };

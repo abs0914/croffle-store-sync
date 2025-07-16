@@ -25,5 +25,23 @@ export const NewProductDeploymentButton: React.FC<NewProductDeploymentButtonProp
       setIsDeploying(false);
     }
   };
-  return;
+  return (
+    <Button 
+      onClick={handleDeployment}
+      disabled={isDeploying}
+      variant="default"
+    >
+      {isDeploying ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Deploying...
+        </>
+      ) : (
+        <>
+          <Plus className="mr-2 h-4 w-4" />
+          Deploy New Products
+        </>
+      )}
+    </Button>
+  );
 };
