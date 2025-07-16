@@ -35,7 +35,7 @@ export default function Products() {
 
       <Card>
         
-        <CardContent>
+        <CardContent className="py-[20px]">
           <StoreCatalogTab storeId={storeId} key={refreshKey} />
         </CardContent>
       </Card>
