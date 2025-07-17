@@ -93,7 +93,7 @@ export default function StoreExpensesDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-5'}`}>
+          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2' : 'grid-cols-4'}`}>
             <TabsTrigger value="overview" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
               <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
               {isMobile ? 'Overview' : 'Overview'}
@@ -109,16 +109,10 @@ export default function StoreExpensesDashboard() {
               Reports
             </TabsTrigger>
             {!isMobile && (
-              <>
-                <TabsTrigger value="integrations" className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  Integrations
-                </TabsTrigger>
-                <TabsTrigger value="mobile" className="flex items-center gap-2">
-                  <Smartphone className="h-4 w-4" />
-                  Mobile
-                </TabsTrigger>
-              </>
+              <TabsTrigger value="integrations" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Integrations
+              </TabsTrigger>
             )}
           </TabsList>
 
@@ -277,95 +271,9 @@ export default function StoreExpensesDashboard() {
           </TabsContent>
 
           {!isMobile && (
-            <>
-              <TabsContent value="integrations">
-                <ExpenseIntegrations />
-              </TabsContent>
-
-              <TabsContent value="mobile">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Smartphone className="h-5 w-5" />
-                      Mobile Features
-                    </CardTitle>
-                    <CardDescription>
-                      Mobile-optimized expense management features
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Card>
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Receipt className="h-8 w-8 text-blue-500" />
-                            <div>
-                              <h3 className="font-medium">Quick Entry</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Add expenses with floating action button
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Camera className="h-8 w-8 text-green-500" />
-                            <div>
-                              <h3 className="font-medium">Camera Capture</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Take photos of receipts directly
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <TrendingUp className="h-8 w-8 text-purple-500" />
-                            <div>
-                              <h3 className="font-medium">Touch Charts</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Interactive charts optimized for touch
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <Settings className="h-8 w-8 text-orange-500" />
-                            <div>
-                              <h3 className="font-medium">Offline Support</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Work without internet connection
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <h4 className="font-medium text-blue-900 mb-2">Mobile App Features</h4>
-                      <ul className="text-sm text-blue-800 space-y-1">
-                        <li>• Floating action button for quick expense entry</li>
-                        <li>• Camera integration for receipt capture</li>
-                        <li>• Touch-optimized interface</li>
-                        <li>• Offline data storage and sync</li>
-                        <li>• Push notifications for approvals</li>
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </>
+            <TabsContent value="integrations">
+              <ExpenseIntegrations />
+            </TabsContent>
           )}
         </Tabs>
       </div>
