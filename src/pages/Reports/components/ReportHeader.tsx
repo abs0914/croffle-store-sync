@@ -14,8 +14,8 @@ export function ReportHeader({ storeId, reportType, isAllStores }: ReportHeaderP
     switch (type) {
       case 'sales':
         return 'Sales Report';
-      case 'inventory':
-        return 'Inventory Report';
+      case 'expense':
+        return 'Expense Report';
       case 'profit_loss':
         return 'Profit & Loss Analysis';
       case 'x_reading':

@@ -12,7 +12,6 @@ interface CashierReportGuardProps {
 // Define which reports cashiers can access
 const CASHIER_ALLOWED_REPORTS: ReportType[] = [
   'sales',           // Sales Report
-  'inventory',       // Inventory Report  
   'daily_shift',     // My Daily Shift Report
   'inventory_status' // Inventory Status
 ];
@@ -46,7 +45,6 @@ export function CashierReportGuard({ children, reportType }: CashierReportGuardP
           </p>
           <ul className="mt-2 text-sm text-muted-foreground">
             <li>• Sales Report</li>
-            <li>• Inventory Report</li>
             <li>• My Daily Shift Report</li>
             <li>• Inventory Status</li>
           </ul>

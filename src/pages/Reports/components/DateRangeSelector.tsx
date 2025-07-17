@@ -40,7 +40,7 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
         });
         break;
       case 'sales':
-      case 'inventory':
+      case 'expense':
       case 'profit_loss':
       case 'vat':
       case 'cashier':

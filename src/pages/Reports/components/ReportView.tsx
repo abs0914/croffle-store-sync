@@ -1,7 +1,7 @@
 
 import { ReportType } from "..";
 import { SalesReportView } from "./reports/SalesReportView";
-import { InventoryReportView } from "./reports/InventoryReportView";
+import { ExpenseReportView } from "./reports/ExpenseReportView";
 import { ProfitLossReportView } from "./reports/ProfitLossReportView";
 import { XReadingView } from "./reports/XReadingView";
 import { ZReadingView } from "./reports/ZReadingView";
@@ -28,8 +28,8 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
   switch (reportType) {
     case 'sales':
       return <SalesReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
-    case 'inventory':
-      return <InventoryReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
+    case 'expense':
+      return <ExpenseReportView data={data} dateRange={dateRange} isAllStores={isAllStores} storeId={storeId} selectedStoreId={selectedStoreId} />;
     case 'profit_loss':
       return <ProfitLossReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
     case 'x_reading':

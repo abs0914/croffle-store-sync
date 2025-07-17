@@ -16,7 +16,7 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
 
   const allNavItems = [
     { id: 'sales' as ReportType, name: 'Sales Report', icon: <FileBarChart className="h-4 w-4" />, roles: ['admin', 'owner', 'manager', 'cashier'] },
-    { id: 'inventory' as ReportType, name: 'Inventory Report', icon: <FileBox className="h-4 w-4" />, roles: ['admin', 'owner', 'manager', 'cashier'] },
+    { id: 'expense' as ReportType, name: 'Expense Report', icon: <Receipt className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'profit_loss' as ReportType, name: 'Profit & Loss', icon: <FileSpreadsheet className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'cashier' as ReportType, name: 'Cashier Performance', icon: <UserRound className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
 

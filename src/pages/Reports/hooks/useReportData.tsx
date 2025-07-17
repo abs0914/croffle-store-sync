@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ReportType } from "..";
 import {
   fetchSalesReport,
-  fetchInventoryReport,
   fetchProfitLossReport,
   fetchCashierReport
 } from "@/services/reports";
@@ -38,12 +37,9 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
               to
             );
             break;
-          case 'inventory':
-            result = await fetchInventoryReport(
-              isAllStores ? 'all' : storeId,
-              from,
-              to
-            );
+          case 'expense':
+            // Expense report data will be handled directly in the component
+            result = { data: null, dataSource: 'real' };
             break;
           case 'profit_loss':
             result = await fetchProfitLossReport(
@@ -71,7 +67,7 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
       }
     },
     enabled: !!storeId && !!from && !!to &&
-            ['sales', 'inventory', 'profit_loss', 'cashier'].includes(reportType),
+            ['sales', 'expense', 'profit_loss', 'cashier'].includes(reportType),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     refetchOnWindowFocus: false
