@@ -26,7 +26,6 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
     
     switch (reportType) {
       case 'x_reading':
-      case 'daily_summary':
         // Today only
         setDateRange({
           from: today,
@@ -93,8 +92,7 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
   const formatDateRange = () => {
     if (
       reportType === 'x_reading' || 
-      reportType === 'z_reading' || 
-      reportType === 'daily_summary'
+      reportType === 'z_reading'
     ) {
       // Single date format
       return dateRange.from ? format(dateRange.from, 'PPP') : "Select date";

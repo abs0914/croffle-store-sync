@@ -5,7 +5,6 @@ import {
   fetchSalesReport,
   fetchInventoryReport,
   fetchProfitLossReport,
-  fetchStockReport,
   fetchCashierReport
 } from "@/services/reports";
 import { ReportWithDataSource } from "@/services/reports/utils/dataSourceUtils";
@@ -53,13 +52,6 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
               to
             );
             break;
-          case 'stock':
-            result = await fetchStockReport(
-              isAllStores ? 'all' : storeId,
-              from,
-              to
-            );
-            break;
           case 'cashier':
             result = await fetchCashierReport(
               isAllStores ? 'all' : storeId,
@@ -79,7 +71,7 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
       }
     },
     enabled: !!storeId && !!from && !!to &&
-            ['sales', 'inventory', 'profit_loss', 'stock', 'cashier'].includes(reportType),
+            ['sales', 'inventory', 'profit_loss', 'cashier'].includes(reportType),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     refetchOnWindowFocus: false

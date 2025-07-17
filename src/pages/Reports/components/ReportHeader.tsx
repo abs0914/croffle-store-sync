@@ -15,17 +15,13 @@ export function ReportHeader({ storeId, reportType, isAllStores }: ReportHeaderP
       case 'sales':
         return 'Sales Report';
       case 'inventory':
-        return 'Menu Report';
-      case 'stock':
-        return 'Stock Report';
+        return 'Inventory Report';
       case 'profit_loss':
         return 'Profit & Loss Analysis';
       case 'x_reading':
         return 'X-Reading Report';
       case 'z_reading':
         return 'Z-Reading Report';
-      case 'daily_summary':
-        return 'Daily Sales Summary';
       case 'vat':
         return 'VAT Report';
       case 'cashier':
