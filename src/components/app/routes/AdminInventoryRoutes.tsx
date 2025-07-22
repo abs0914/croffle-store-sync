@@ -10,7 +10,7 @@ import InventoryStock from "@/pages/Inventory/InventoryStock";
 import InventoryManagement from "@/pages/Inventory/InventoryManagement";
 import Ingredients from "@/pages/Inventory/Ingredients";
 import InventoryHistory from "@/pages/Inventory/InventoryHistory";
-import CommissaryInventory from "@/pages/CommissaryInventory";
+import CommissaryManagement from "@/pages/Commissary/CommissaryManagement";
 // InventoryConversion removed in favor of direct recipe management
 
 export function AdminInventoryRoutes() {
@@ -87,7 +87,7 @@ export function AdminInventoryRoutes() {
       <Route path="/admin/commissary-inventory" element={
         <AdminProtectedRoute>
           <AdminLayout>
-            <CommissaryInventory />
+            <CommissaryManagement />
           </AdminLayout>
         </AdminProtectedRoute>
       } />
