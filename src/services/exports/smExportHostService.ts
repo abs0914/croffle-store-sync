@@ -178,10 +178,10 @@ log_message "SIA directory ready: $SIA_PATH"
 # Generate filename based on current month/year
 MONTH=$(date +%m)
 YEAR=$(date +%Y)
-FILENAME="${MONTH}_${YEAR}"
+FILENAME="\${MONTH}_\${YEAR}"
 
-TRANSACTIONS_FILE="$SIA_PATH/${FILENAME}_transactions.csv"
-DETAILS_FILE="$SIA_PATH/${FILENAME}_transactiondetails.csv"
+TRANSACTIONS_FILE="$SIA_PATH/\${FILENAME}_transactions.csv"
+DETAILS_FILE="$SIA_PATH/\${FILENAME}_transactiondetails.csv"
 
 # Export transactions
 log_message "Exporting transactions to: $TRANSACTIONS_FILE"

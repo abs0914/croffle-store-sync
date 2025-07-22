@@ -83,18 +83,18 @@ export const ExportHostConfiguration: React.FC<ExportHostConfigProps> = ({
 
   const generateDeploymentPackage = () => {
     try {
-      const package = exportHostService.generateDeploymentPackage(
+      const deploymentPkg = exportHostService.generateDeploymentPackage(
         exportHostConfig,
         connectionConfig,
         storeId,
         storeName
       );
       
-      setDeploymentPackage(package);
+      setDeploymentPackage(deploymentPkg);
       
       toast({
         title: "Deployment Package Generated",
-        description: `Generated ${package.scripts.length} scripts and ${package.schedulerConfigs.length} configurations`,
+        description: `Generated ${deploymentPkg.scripts.length} scripts and ${deploymentPkg.schedulerConfigs.length} configurations`,
         variant: "default"
       });
     } catch (error) {
