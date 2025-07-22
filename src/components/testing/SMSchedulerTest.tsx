@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle, XCircle, Send, Clock, FileText, Mail, Server, Database, Settings } from 'lucide-react';
 import { SMSchedulerTesting, SchedulerTestResult } from '@/services/testing/smSchedulerTesting';
 import { ExportHostConfiguration } from './ExportHostConfig';
+import { SMExportMonitoring } from './SMExportMonitoring';
 import { useToast } from '@/hooks/use-toast';
 
 interface SchedulerTestProps {
@@ -268,68 +269,7 @@ export const SMSchedulerTest: React.FC<SchedulerTestProps> = ({
           </TabsContent>
 
           <TabsContent value="monitoring" className="space-y-4">
-            <Alert>
-              <Settings className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Export Monitoring:</strong> Monitor export status, file generation, 
-                and delivery success rates across all configured stores.
-              </AlertDescription>
-            </Alert>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-green-600">98.5%</div>
-                  <p className="text-xs text-muted-foreground">Export Success Rate</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold">24</div>
-                  <p className="text-xs text-muted-foreground">Daily Exports</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-blue-600">1.2GB</div>
-                  <p className="text-xs text-muted-foreground">Data Exported Today</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-orange-600">2</div>
-                  <p className="text-xs text-muted-foreground">Pending Retries</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="font-medium">Recent Export Activity</h4>
-              <div className="space-y-2">
-                {[
-                  { time: '14:00', store: 'SM Mall of Asia', status: 'success', files: 2 },
-                  { time: '13:00', store: 'SM North EDSA', status: 'success', files: 2 },
-                  { time: '12:00', store: 'SM Megamall', status: 'retry', files: 1 },
-                  { time: '11:00', store: 'SM Aura', status: 'success', files: 2 },
-                ].map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-md">
-                    <div className="flex items-center gap-3">
-                      <Badge variant={activity.status === 'success' ? 'default' : 'destructive'}>
-                        {activity.status}
-                      </Badge>
-                      <span className="font-mono text-sm">{activity.time}</span>
-                      <span>{activity.store}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {activity.files} files
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SMExportMonitoring />
           </TabsContent>
         </Tabs>
       </CardContent>
