@@ -255,10 +255,14 @@ export interface ConversionRecipeIngredientForm {
   quantity: number;
 }
 
-// Simplified filters for commissary inventory - removed redundant category filter
+// Enhanced filters for commissary inventory
 export interface CommissaryInventoryFilters {
   stockLevel?: 'all' | 'good' | 'low' | 'out';  
   supplier?: string;
+  category?: 'all' | 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
   search?: string;
-  item_type?: 'all' | 'raw_material' | 'orderable_item'; // Simplified to just raw materials and finished products
+  item_type?: 'all' | 'raw_material' | 'orderable_item';
+  expiring?: 'all' | 'expiring_soon' | 'expired'; // Items expiring within 30 days or already expired
+  sortBy?: 'name' | 'stock' | 'expiry_date' | 'updated_at';
+  sortOrder?: 'asc' | 'desc';
 }
