@@ -50,13 +50,13 @@ export async function fetchVATReport(
       });
     }
     
-    // Process transactions for VAT reporting
+    // Process transactions for VAT reporting with proper BIR calculations
     const vatTransactions = transactions.map(tx => {
-      // Apply simple VAT calculation
-      const vatableSales = tx.subtotal - (tx.discount || 0);
-      const vatAmount = tx.tax;
-      const vatExemptSales = 0; // In a real system, would extract from items with VAT exemption
-      const vatZeroRatedSales = 0; // In a real system, would extract from items with zero VAT rate
+      // Use stored BIR-compliant fields or calculate from transaction data
+      const vatableSales = tx.vat_sales || (tx.subtotal - (tx.discount || 0)) / 1.12;
+      const vatAmount = tx.tax || (vatableSales * 0.12);
+      const vatExemptSales = tx.vat_exempt_sales || 0;
+      const vatZeroRatedSales = tx.zero_rated_sales || 0;
       
       return {
         date: tx.created_at,

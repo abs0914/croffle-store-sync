@@ -17,8 +17,10 @@ import {
   XCircle,
   Clock,
   BookOpen,
-  Archive
+  Archive,
+  TestTube
 } from 'lucide-react';
+import BIRTestingDashboard from '@/components/bir/BIRTestingDashboard';
 import { useStore } from '@/contexts/StoreContext';
 import { BIRComplianceService } from '@/services/bir/birComplianceService';
 import { BIRComplianceStatus, BIRAuditLog, BIRCumulativeSales, BIREJournal } from '@/types/bir';
@@ -217,8 +219,9 @@ export default function BIRCompliance() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="testing">Testing</TabsTrigger>
           <TabsTrigger value="ejournal">E-Journal</TabsTrigger>
           <TabsTrigger value="audit">Audit Logs</TabsTrigger>
           <TabsTrigger value="cumulative">Cumulative Sales</TabsTrigger>
@@ -267,6 +270,10 @@ export default function BIRCompliance() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="testing" className="space-y-4">
+          <BIRTestingDashboard />
         </TabsContent>
 
         <TabsContent value="ejournal" className="space-y-4">

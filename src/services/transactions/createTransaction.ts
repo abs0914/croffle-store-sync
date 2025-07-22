@@ -54,10 +54,23 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
     // Get next sequence number (simplified approach)
     const sequenceNumber = count! + 1;
     
-    // Calculate BIR-compliant VAT breakdown
-    const vatableSales = transaction.subtotal - (transaction.discount || 0);
-    const seniorDiscount = transaction.discountType === 'senior' ? (transaction.discount || 0) : 0;
-    const pwdDiscount = transaction.discountType === 'pwd' ? (transaction.discount || 0) : 0;
+    // Calculate BIR-compliant VAT breakdown (12% standard rate)
+    const grossAmount = transaction.subtotal;
+    const discountAmount = transaction.discount || 0;
+    const netAmount = grossAmount - discountAmount;
+    
+    // VAT calculation: Net amount is inclusive of 12% VAT
+    const vatableSales = netAmount / 1.12; // Amount before VAT
+    const vatAmount = netAmount - vatableSales; // 12% VAT portion
+    
+    // Discount breakdown for BIR compliance
+    const seniorDiscount = transaction.discountType === 'senior' ? discountAmount : 0;
+    const pwdDiscount = transaction.discountType === 'pwd' ? discountAmount : 0;
+    const employeeDiscount = transaction.discountType === 'employee' ? discountAmount : 0;
+    
+    // VAT-exempt and zero-rated sales (can be enhanced based on item classification)
+    const vatExemptSales = seniorDiscount + pwdDiscount; // Senior/PWD discounts are VAT-exempt
+    const zeroRatedSales = 0; // For export sales or zero-rated items
     
     // Handle promo details for SM Accreditation
     let promoReference = null;
@@ -88,10 +101,10 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
       status: transaction.status,
       receipt_number: receiptNumber,
       created_at: now.toISOString(),
-      // BIR Compliance fields
+      // BIR Compliance fields - Updated with proper calculations
       vat_sales: vatableSales,
-      vat_exempt_sales: 0, // Can be enhanced based on product settings
-      zero_rated_sales: 0,
+      vat_exempt_sales: vatExemptSales,
+      zero_rated_sales: zeroRatedSales,
       senior_citizen_discount: seniorDiscount,
       pwd_discount: pwdDiscount,
       sequence_number: Number(sequenceNumber),
