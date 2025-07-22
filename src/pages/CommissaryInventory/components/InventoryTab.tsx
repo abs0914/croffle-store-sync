@@ -27,14 +27,99 @@ export function InventoryTab({
 }: InventoryTabProps) {
   // Filter items based on current filter selection
   const getFilteredItems = () => {
-    switch (filters.item_type) {
-      case 'raw_material':
-        return items.filter(item => item.item_type === 'raw_material');
-      case 'orderable_item':
-        return items.filter(item => item.item_type === 'orderable_item');
-      default:
-        return items; // Show all items
+    let filteredItems = items;
+
+    // Filter by search term
+    if (filters.search) {
+      filteredItems = filteredItems.filter(item =>
+        item.name.toLowerCase().includes(filters.search.toLowerCase())
+      );
     }
+
+    // Filter by item type
+    if (filters.item_type && filters.item_type !== 'all') {
+      filteredItems = filteredItems.filter(item => item.item_type === filters.item_type);
+    }
+
+    // Filter by category
+    if (filters.category && filters.category !== 'all') {
+      filteredItems = filteredItems.filter(item => item.category === filters.category);
+    }
+
+    // Filter by stock level
+    if (filters.stockLevel && filters.stockLevel !== 'all') {
+      filteredItems = filteredItems.filter(item => {
+        switch (filters.stockLevel) {
+          case 'good':
+            return item.current_stock > item.minimum_threshold;
+          case 'low':
+            return item.current_stock <= item.minimum_threshold && item.current_stock > 0;
+          case 'out':
+            return item.current_stock <= 0;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Filter by supplier
+    if (filters.supplier) {
+      filteredItems = filteredItems.filter(item => item.supplier_id === filters.supplier);
+    }
+
+    // Filter by expiring status
+    if (filters.expiring && filters.expiring !== 'all') {
+      const today = new Date();
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+      filteredItems = filteredItems.filter(item => {
+        if (!item.expiry_date) return filters.expiring !== 'expiring_soon' && filters.expiring !== 'expired';
+        
+        const expiryDate = new Date(item.expiry_date);
+        
+        switch (filters.expiring) {
+          case 'expiring_soon':
+            return expiryDate <= thirtyDaysFromNow && expiryDate > today;
+          case 'expired':
+            return expiryDate <= today;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Sort items
+    const sortBy = filters.sortBy || 'name';
+    const sortOrder = filters.sortOrder || 'asc';
+    
+    filteredItems.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortBy) {
+        case 'stock':
+          aValue = a.current_stock;
+          bValue = b.current_stock;
+          break;
+        case 'expiry_date':
+          aValue = a.expiry_date ? new Date(a.expiry_date).getTime() : 0;
+          bValue = b.expiry_date ? new Date(b.expiry_date).getTime() : 0;
+          break;
+        case 'updated_at':
+          aValue = new Date(a.updated_at).getTime();
+          bValue = new Date(b.updated_at).getTime();
+          break;
+        default: // name
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+      }
+      
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filteredItems;
   };
 
   // Get dynamic content based on filter
