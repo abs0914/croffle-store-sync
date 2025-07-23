@@ -5,8 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Banknote, CreditCard, Wallet } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Banknote, CreditCard, Wallet, QrCode } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
+import { GCashQRModal } from "./GCashQRModal";
 
 interface PaymentMethodsProps {
   total: number;
@@ -122,28 +124,48 @@ export function CardPaymentTab({
 }
 
 export function EWalletPaymentTab({
+  total,
   eWalletProvider,
   setEWalletProvider,
   eWalletReferenceNumber,
   setEWalletReferenceNumber
 }: {
+  total: number;
   eWalletProvider: string;
   setEWalletProvider: (provider: string) => void;
   eWalletReferenceNumber: string;
   setEWalletReferenceNumber: (reference: string) => void;
 }) {
+  const [showQRModal, setShowQRModal] = useState(false);
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="eWalletProvider">Provider</Label>
-        <Tabs defaultValue={eWalletProvider} onValueChange={setEWalletProvider} className="w-full">
-          <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="GCash">GCash</TabsTrigger>
-            <TabsTrigger value="Maya">Maya</TabsTrigger>
-            <TabsTrigger value="Other">Other</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <Select value={eWalletProvider} onValueChange={setEWalletProvider}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select e-wallet provider" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="GCash">GCash</SelectItem>
+            <SelectItem value="Maya">Maya</SelectItem>
+            <SelectItem value="Other">Other</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
+
+      {eWalletProvider === "GCash" && (
+        <div className="space-y-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowQRModal(true)}
+            className="w-full"
+          >
+            <QrCode className="mr-2 h-4 w-4" />
+            Show QR Code
+          </Button>
+        </div>
+      )}
       
       <div className="space-y-2">
         <Label htmlFor="eWalletReferenceNumber">Reference Number</Label>
@@ -154,6 +176,12 @@ export function EWalletPaymentTab({
           onChange={(e) => setEWalletReferenceNumber(e.target.value)}
         />
       </div>
+
+      <GCashQRModal 
+        isOpen={showQRModal}
+        onClose={() => setShowQRModal(false)}
+        total={total}
+      />
     </div>
   );
 }
@@ -212,6 +240,7 @@ export default function PaymentMethods({
       
       <TabsContent value="e-wallet">
         <EWalletPaymentTab
+          total={total}
           eWalletProvider={eWalletProvider}
           setEWalletProvider={setEWalletProvider}
           eWalletReferenceNumber={eWalletReferenceNumber}
