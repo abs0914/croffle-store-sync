@@ -97,21 +97,35 @@ export function ComboSelectionDialog({
       return miniProducts;
     }
     
-    // For other categories, find exact category match
-    const category = categories.find(c => c.name === categoryName);
+    // For other categories, find products by category name with more robust matching
+    // Handle multiple categories with the same name (data consistency issue)
+    const categoryIds = categories
+      .filter(c => c.name === categoryName && c.is_active)
+      .map(c => c.id);
+    
     console.log(`Category "${categoryName}" search:`, {
-      found: !!category,
-      categoryId: category?.id,
-      allCategories: categories.map(c => c.name)
+      found: categoryIds.length > 0,
+      categoryIds,
+      categoriesWithName: categories.filter(c => c.name === categoryName),
+      allCategories: categories.map(c => ({ id: c.id, name: c.name, is_active: c.is_active }))
     });
     
-    if (!category) {
-      console.log(`No category found for "${categoryName}"`);
+    if (categoryIds.length === 0) {
+      console.log(`No active category found for "${categoryName}"`);
       return [];
     }
     
-    const categoryProducts = products.filter(p => p.category_id === category.id && p.is_active);
-    console.log(`Products in "${categoryName}" category:`, categoryProducts.length, categoryProducts.map(p => p.name));
+    // Filter products that belong to any of the matching category IDs
+    const categoryProducts = products.filter(p => 
+      categoryIds.includes(p.category_id) && 
+      p.is_active
+    );
+    
+    console.log(`Products in "${categoryName}" category:`, {
+      count: categoryProducts.length,
+      products: categoryProducts.map(p => ({ id: p.id, name: p.name, category_id: p.category_id }))
+    });
+    
     return categoryProducts;
   };
 
