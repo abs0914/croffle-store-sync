@@ -130,58 +130,60 @@ export default function CompletedTransaction({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 h-full max-w-6xl mx-auto p-3 lg:p-4">
-      {/* Receipt Section */}
-      <div className="space-y-3 lg:space-y-4 order-1">
-        <div className="text-center">
-          <h1 className="text-xl lg:text-2xl font-bold mb-2 text-green-600">Sale Complete!</h1>
-          <p className="text-sm lg:text-base text-gray-600 mb-3 lg:mb-4">Transaction #{transaction.receiptNumber}</p>
-        </div>
-        
-        <Card>
-          <CardContent className="p-3 lg:p-4">
-            {transaction && transaction.receiptNumber ? (
-              <ReceiptGenerator 
-                transaction={transaction}
-                customer={customer}
-              />
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-red-600">Error: Invalid transaction data</p>
-                <Button onClick={startNewSale} className="mt-2">
-                  Start New Sale
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Actions Section */}
-      <div className="flex flex-col justify-center items-center space-y-4 lg:space-y-6 order-2 lg:order-none">
-        <div className="text-center lg:block hidden">
-          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-            <CheckCircle className="h-8 w-8 text-green-600" />
+    <div className="h-full overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 min-h-full max-w-6xl mx-auto p-3 lg:p-4">
+        {/* Receipt Section */}
+        <div className="space-y-3 lg:space-y-4 order-1">
+          <div className="text-center">
+            <h1 className="text-xl lg:text-2xl font-bold mb-2 text-green-600">Sale Complete!</h1>
+            <p className="text-sm lg:text-base text-gray-600 mb-3 lg:mb-4">Transaction #{transaction.receiptNumber}</p>
           </div>
-          <h2 className="text-xl font-semibold mb-2">Transaction Complete</h2>
-          <p className="text-muted-foreground">Ready for next customer</p>
+          
+          <Card>
+            <CardContent className="p-3 lg:p-4">
+              {transaction && transaction.receiptNumber ? (
+                <ReceiptGenerator 
+                  transaction={transaction}
+                  customer={customer}
+                />
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-red-600">Error: Invalid transaction data</p>
+                  <Button onClick={startNewSale} className="mt-2">
+                    Start New Sale
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
         
-        {/* Mobile: Compact success indicator */}
-        <div className="text-center lg:hidden">
-          <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
-            <CheckCircle className="h-6 w-6 text-green-600" />
+        {/* Actions Section */}
+        <div className="flex flex-col justify-center items-center space-y-4 lg:space-y-6 order-2 lg:order-none min-h-[200px] lg:min-h-0">
+          <div className="text-center lg:block hidden">
+            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Transaction Complete</h2>
+            <p className="text-muted-foreground">Ready for next customer</p>
           </div>
-          <p className="text-sm text-muted-foreground">Ready for next customer</p>
+          
+          {/* Mobile: Compact success indicator */}
+          <div className="text-center lg:hidden">
+            <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <p className="text-sm text-muted-foreground">Ready for next customer</p>
+          </div>
+          
+          <Button 
+            onClick={startNewSale}
+            className="w-full max-w-sm py-4 lg:py-8 text-lg lg:text-xl font-semibold sticky bottom-4 lg:static"
+            size="lg"
+          >
+            New Sale
+          </Button>
         </div>
-        
-        <Button 
-          onClick={startNewSale}
-          className="w-full max-w-sm py-4 lg:py-8 text-lg lg:text-xl font-semibold"
-          size="lg"
-        >
-          New Sale
-        </Button>
       </div>
     </div>
   );
