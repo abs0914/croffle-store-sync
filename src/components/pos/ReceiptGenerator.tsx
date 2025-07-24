@@ -377,15 +377,6 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
         </Button>
 
         {/* Download button */}
-        <Button
-          onClick={() => {/* TODO: Implement download functionality */}}
-          variant="outline"
-          className="w-full flex items-center justify-center"
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Download Receipt
-        </Button>
-        
         <Button 
           variant="outline" 
           className="w-full flex items-center justify-center"
