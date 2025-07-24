@@ -71,20 +71,20 @@ export function MainMenu() {
   };
 
   return (
-    <nav className="space-y-2">
+    <nav className="space-y-2 px-2">
       {menuItems.map((item) => (
         <Link
           key={item.href}
           to={item.href}
           className={cn(
-            "flex items-center px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors whitespace-nowrap overflow-hidden text-ellipsis",
+            "flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-md transition-colors min-w-0",
             isActiveLink(item.href)
               ? "bg-croffle-accent text-white"
               : "text-gray-700 hover:bg-gray-100"
           )}
         >
-          <item.icon className="h-4 w-4 mr-2 flex-shrink-0" />
-          <span className="truncate">{item.title}</span>
+          <item.icon className="h-5 w-5 flex-shrink-0" />
+          <span className="flex-1 min-w-0 truncate">{item.title}</span>
         </Link>
       ))}
     </nav>
