@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Settings, User, Wifi, WifiOff, Clock, AlertTriangle, CheckCircle, AlertCircle, Menu } from "lucide-react";
+import { Settings, User, Wifi, WifiOff, Clock, AlertTriangle, CheckCircle, AlertCircle, Menu, Receipt } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useShift } from "@/contexts/shift";
 import StartShiftDialog from "./dialogs/StartShiftDialog";
@@ -34,6 +34,9 @@ interface OptimizedPOSHeaderProps {
   isConnected: boolean;
   lastSync: Date;
   storeId?: string;
+  lastTransaction?: any;
+  lastCustomer?: Customer | null;
+  onViewReceipt?: () => void;
 }
 
 export default function OptimizedPOSHeader({
@@ -42,7 +45,10 @@ export default function OptimizedPOSHeader({
   selectedCustomer,
   isConnected,
   lastSync,
-  storeId
+  storeId,
+  lastTransaction,
+  lastCustomer,
+  onViewReceipt
 }: OptimizedPOSHeaderProps) {
   const { user } = useAuth();
   const { config } = useStoreDisplay();
@@ -224,6 +230,17 @@ export default function OptimizedPOSHeader({
             <Separator orientation="vertical" className="h-4 hidden lg:block" />
             
             <div className="flex items-center gap-1">
+              {lastTransaction && onViewReceipt && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-6 w-6 p-0"
+                  onClick={onViewReceipt}
+                  title="View Last Receipt"
+                >
+                  <Receipt className="h-3 w-3" />
+                </Button>
+              )}
               <PrinterStatusIndicator />
               <ThermalPrinterSettings>
                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0">

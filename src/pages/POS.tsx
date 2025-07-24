@@ -13,11 +13,16 @@ import CompletedTransaction from "@/components/pos/CompletedTransaction";
 import OptimizedPOSHeader from "@/components/pos/OptimizedPOSHeader";
 import { toast } from "sonner";
 import { TransactionItem } from "@/types/transaction";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ReceiptGenerator from "@/components/pos/ReceiptGenerator";
 
 export default function POS() {
   const { currentStore } = useStore();
   const { currentShift } = useShift();
   const { items, subtotal, tax, total, addItem } = useCart();
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [lastCompletedTransaction, setLastCompletedTransaction] = useState<any>(null);
+  const [lastTransactionCustomer, setLastTransactionCustomer] = useState<any>(null);
   
   // Enhanced transaction handler with direct inventory integration
   const {
@@ -162,11 +167,18 @@ export default function POS() {
       items: transactionItems
     };
 
+    // Store last transaction for receipt viewing
+    setLastCompletedTransaction(transactionForReceipt);
+    setLastTransactionCustomer(selectedCustomer);
+
     return (
       <CompletedTransaction
         transaction={transactionForReceipt}
         customer={selectedCustomer}
-        startNewSale={startNewSale}
+        startNewSale={() => {
+          startNewSale();
+          // Keep last transaction data for receipt viewing
+        }}
       />
     );
   }
@@ -182,6 +194,9 @@ export default function POS() {
           isConnected={isConnected}
           lastSync={lastSync}
           storeId={currentStore?.id}
+          lastTransaction={lastCompletedTransaction}
+          lastCustomer={lastTransactionCustomer}
+          onViewReceipt={() => setShowReceiptModal(true)}
         />
       </div>
 
@@ -209,6 +224,21 @@ export default function POS() {
           storeId={currentStore?.id}
         />
       </div>
+
+      {/* Receipt View Modal */}
+      <Dialog open={showReceiptModal} onOpenChange={setShowReceiptModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Last Receipt</DialogTitle>
+          </DialogHeader>
+          {lastCompletedTransaction && (
+            <ReceiptGenerator 
+              transaction={lastCompletedTransaction}
+              customer={lastTransactionCustomer}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
