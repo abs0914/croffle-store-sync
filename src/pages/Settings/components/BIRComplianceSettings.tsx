@@ -49,6 +49,15 @@ interface BIRComplianceConfig {
   enableThermalPrinting: boolean;
   receiptCopies: number;
   fontSizeMultiplier: number;
+  
+  // Enhanced BIR Compliance
+  vatMode: boolean;
+  nonVatDisclaimer: string;
+  validityStatement: string;
+  showExemptMarking: boolean;
+  showValidityStatement: boolean;
+  showSupplierInfo: boolean;
+  requireAccreditedSupplier: boolean;
 }
 
 const defaultConfig: BIRComplianceConfig = {
@@ -77,7 +86,15 @@ const defaultConfig: BIRComplianceConfig = {
   requireDigitalSignature: false,
   enableThermalPrinting: true,
   receiptCopies: 1,
-  fontSizeMultiplier: 1.0
+  fontSizeMultiplier: 1.0,
+  // Enhanced BIR Compliance defaults
+  vatMode: true,
+  nonVatDisclaimer: 'This document is not valid for claim of input tax.',
+  validityStatement: 'This receipt/invoice shall be valid for five (5) years from the date of the ATP.',
+  showExemptMarking: false,
+  showValidityStatement: true,
+  showSupplierInfo: true,
+  requireAccreditedSupplier: true
 };
 
 export function BIRComplianceSettings() {
@@ -590,6 +607,86 @@ export function BIRComplianceSettings() {
                 onCheckedChange={(checked) => handleConfigChange('enableXReading', checked)}
               />
               <Label>Enable X-Reading</Label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Enhanced BIR Compliance Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Enhanced BIR Compliance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={config.vatMode}
+                onCheckedChange={(checked) => handleConfigChange('vatMode', checked)}
+              />
+              <Label>VAT Mode (Enable for VAT taxpayers)</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={config.showExemptMarking}
+                onCheckedChange={(checked) => handleConfigChange('showExemptMarking', checked)}
+              />
+              <Label>Show EXEMPT marking for non-VAT taxpayers</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={config.showValidityStatement}
+                onCheckedChange={(checked) => handleConfigChange('showValidityStatement', checked)}
+              />
+              <Label>Show validity statement on receipts</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={config.showSupplierInfo}
+                onCheckedChange={(checked) => handleConfigChange('showSupplierInfo', checked)}
+              />
+              <Label>Show accredited supplier information</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={config.requireAccreditedSupplier}
+                onCheckedChange={(checked) => handleConfigChange('requireAccreditedSupplier', checked)}
+              />
+              <Label>Require accredited supplier information</Label>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Non-VAT Disclaimer Text</Label>
+              <Textarea
+                value={config.nonVatDisclaimer}
+                onChange={(e) => handleConfigChange('nonVatDisclaimer', e.target.value)}
+                placeholder="Enter non-VAT disclaimer text..."
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">
+                This text will be displayed on receipts for non-VAT taxpayers
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Validity Statement</Label>
+              <Textarea
+                value={config.validityStatement}
+                onChange={(e) => handleConfigChange('validityStatement', e.target.value)}
+                placeholder="Enter receipt/invoice validity statement..."
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">
+                Legal statement about the validity period of the receipt/invoice
+              </p>
             </div>
           </div>
         </CardContent>

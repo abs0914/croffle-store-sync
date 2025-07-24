@@ -408,9 +408,15 @@ export class BluetoothPrinterService {
     receipt += address.substring(0, 32) + ESCPOSFormatter.lineFeed();
     receipt += cityState.substring(0, 32) + ESCPOSFormatter.lineFeed();
     
-    // VAT Registration Status & TIN
-    const vatStatus = store?.is_bir_accredited ? 'VAT-REGISTERED' : 'NON-VAT';
+    // VAT Registration Status & TIN with enhanced compliance
+    const vatStatus = store?.is_vat_registered !== false ? 'VAT-REGISTERED' : 'NON-VAT';
     receipt += ESCPOSFormatter.bold(vatStatus) + ESCPOSFormatter.lineFeed();
+    
+    // Show EXEMPT marking for non-VAT taxpayers
+    if (store?.is_vat_registered === false) {
+      receipt += ESCPOSFormatter.bold('EXEMPT') + ESCPOSFormatter.lineFeed();
+    }
+    
     const tin = store?.tin || '000-000-000-000';
     receipt += `TIN: ${tin}` + ESCPOSFormatter.lineFeed();
     
@@ -419,6 +425,11 @@ export class BluetoothPrinterService {
     const machineAccred = store?.machine_accreditation_number || 'N/A';
     receipt += `SN: ${serialNumber.substring(0, 20)}` + ESCPOSFormatter.lineFeed();
     receipt += `MIN: ${machineAccred.substring(0, 20)}` + ESCPOSFormatter.lineFeed();
+    
+    // BIR Final Permit Number
+    if (store?.bir_final_permit_number) {
+      receipt += `PTU: ${store.bir_final_permit_number.substring(0, 20)}` + ESCPOSFormatter.lineFeed();
+    }
     
     receipt += ESCPOSFormatter.lineFeed();
     const docType = store?.is_bir_accredited ? 'SALES INVOICE' : 'SALES RECEIPT';
@@ -578,32 +589,62 @@ export class BluetoothPrinterService {
     receipt += ESCPOSFormatter.lineFeed(2);
     receipt += ESCPOSFormatter.center();
     
-    // Accredited supplier information (required by BIR)
-    receipt += 'Accredited System Provider:' + ESCPOSFormatter.lineFeed();
-    receipt += 'CROFFLE TECH SOLUTIONS' + ESCPOSFormatter.lineFeed();
-    receipt += 'TIN: 987-654-321-000' + ESCPOSFormatter.lineFeed();
-    receipt += 'Accred No: A123456789' + ESCPOSFormatter.lineFeed();
-    const accredDate = store?.date_issued || '01/15/2024';
-    receipt += `Date: ${accredDate}` + ESCPOSFormatter.lineFeed();
-    const ptuNumber = store?.permit_number || 'PTU-2024-001';
-    receipt += `PTU No: ${ptuNumber}` + ESCPOSFormatter.lineFeed();
+    // Accredited supplier information (enhanced BIR compliance)
+    if (store?.supplier_name) {
+      receipt += 'Accredited System Provider:' + ESCPOSFormatter.lineFeed();
+      receipt += store.supplier_name.substring(0, 32) + ESCPOSFormatter.lineFeed();
+      if (store.supplier_tin) {
+        receipt += `TIN: ${store.supplier_tin}` + ESCPOSFormatter.lineFeed();
+      }
+      if (store.accreditation_number) {
+        receipt += `Accred No: ${store.accreditation_number}` + ESCPOSFormatter.lineFeed();
+      }
+      if (store.supplier_address) {
+        receipt += store.supplier_address.substring(0, 32) + ESCPOSFormatter.lineFeed();
+      }
+      if (store.accreditation_date) {
+        receipt += `Date: ${store.accreditation_date}` + ESCPOSFormatter.lineFeed();
+      }
+    } else {
+      // Fallback to default if not configured
+      receipt += 'Accredited System Provider:' + ESCPOSFormatter.lineFeed();
+      receipt += 'CROFFLE TECH SOLUTIONS' + ESCPOSFormatter.lineFeed();
+      receipt += 'TIN: 987-654-321-000' + ESCPOSFormatter.lineFeed();
+      receipt += 'Accred No: A123456789' + ESCPOSFormatter.lineFeed();
+    }
+    
+    if (store?.bir_final_permit_number) {
+      receipt += `PTU No: ${store.bir_final_permit_number}` + ESCPOSFormatter.lineFeed();
+    }
     
     receipt += ESCPOSFormatter.lineFeed();
     
-    // BIR validity statement (required by law)
-    receipt += ESCPOSFormatter.bold(
-      'THIS INVOICE/RECEIPT SHALL BE' + ESCPOSFormatter.lineFeed() +
-      'VALID FOR FIVE (5) YEARS FROM' + ESCPOSFormatter.lineFeed() +
-      'THE DATE OF THE PERMIT TO USE.'
-    );
-    
-    // Add NON-VAT disclaimer if applicable
-    if (!store?.is_bir_accredited) {
-      receipt += ESCPOSFormatter.lineFeed(2);
+    // BIR validity statement (enhanced)
+    if (store?.validity_statement) {
+      const validityLines = store.validity_statement.match(/.{1,32}/g) || [];
+      receipt += ESCPOSFormatter.bold(validityLines.join(ESCPOSFormatter.lineFeed()));
+    } else {
+      // Fallback to default validity statement
       receipt += ESCPOSFormatter.bold(
-        'THIS DOCUMENT IS NOT VALID' + ESCPOSFormatter.lineFeed() +
-        'FOR CLAIM OF INPUT TAX'
+        'THIS INVOICE/RECEIPT SHALL BE' + ESCPOSFormatter.lineFeed() +
+        'VALID FOR FIVE (5) YEARS FROM' + ESCPOSFormatter.lineFeed() +
+        'THE DATE OF THE PERMIT TO USE.'
       );
+    }
+    
+    // Add NON-VAT disclaimer if applicable (enhanced)
+    if (store?.is_vat_registered === false) {
+      receipt += ESCPOSFormatter.lineFeed(2);
+      if (store?.non_vat_disclaimer) {
+        const disclaimerLines = store.non_vat_disclaimer.match(/.{1,32}/g) || [];
+        receipt += ESCPOSFormatter.bold(disclaimerLines.join(ESCPOSFormatter.lineFeed()));
+      } else {
+        // Fallback to default disclaimer
+        receipt += ESCPOSFormatter.bold(
+          'THIS DOCUMENT IS NOT VALID' + ESCPOSFormatter.lineFeed() +
+          'FOR CLAIM OF INPUT TAX'
+        );
+      }
     }
     
     receipt += ESCPOSFormatter.lineFeed(2);

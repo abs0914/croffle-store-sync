@@ -26,7 +26,17 @@ export default function AdminStoreSettings() {
       permit_number: '',
       date_issued: '',
       valid_until: '',
-      is_bir_accredited: false
+      is_bir_accredited: false,
+      // Enhanced fields
+      supplier_name: '',
+      supplier_address: '',
+      supplier_tin: '',
+      accreditation_number: '',
+      accreditation_date: '',
+      bir_final_permit_number: '',
+      is_vat_registered: true,
+      non_vat_disclaimer: 'This document is not valid for claim of input tax.',
+      validity_statement: 'This receipt/invoice shall be valid for five (5) years from the date of the ATP.'
     }
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -77,7 +87,7 @@ export default function AdminStoreSettings() {
     
     setIsLoading(true);
     try {
-      // Update store BIR fields
+      // Update store BIR fields including enhanced fields
       const { error: storeError } = await supabase
         .from('stores')
         .update({
@@ -89,7 +99,17 @@ export default function AdminStoreSettings() {
           permit_number: storeSettings.bir_compliance_config.permit_number,
           date_issued: storeSettings.bir_compliance_config.date_issued,
           valid_until: storeSettings.bir_compliance_config.valid_until,
-          is_bir_accredited: storeSettings.bir_compliance_config.is_bir_accredited
+          is_bir_accredited: storeSettings.bir_compliance_config.is_bir_accredited,
+          // Enhanced BIR fields
+          supplier_name: storeSettings.bir_compliance_config.supplier_name,
+          supplier_address: storeSettings.bir_compliance_config.supplier_address,
+          supplier_tin: storeSettings.bir_compliance_config.supplier_tin,
+          accreditation_number: storeSettings.bir_compliance_config.accreditation_number,
+          accreditation_date: storeSettings.bir_compliance_config.accreditation_date,
+          bir_final_permit_number: storeSettings.bir_compliance_config.bir_final_permit_number,
+          is_vat_registered: storeSettings.bir_compliance_config.is_vat_registered,
+          non_vat_disclaimer: storeSettings.bir_compliance_config.non_vat_disclaimer,
+          validity_statement: storeSettings.bir_compliance_config.validity_statement
         })
         .eq('id', id);
       
@@ -219,6 +239,98 @@ export default function AdminStoreSettings() {
                 value={storeSettings.bir_compliance_config.valid_until || ''}
                 onChange={(e) => updateBIRConfig('valid_until', e.target.value)}
               />
+            </div>
+            
+            <div>
+              <Label htmlFor="bir_final_permit_number">BIR Final Permit Number</Label>
+              <Input
+                id="bir_final_permit_number"
+                value={storeSettings.bir_compliance_config.bir_final_permit_number || ''}
+                onChange={(e) => updateBIRConfig('bir_final_permit_number', e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Accredited Supplier Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="supplier_name">Supplier Name</Label>
+                <Input
+                  id="supplier_name"
+                  value={storeSettings.bir_compliance_config.supplier_name || ''}
+                  onChange={(e) => updateBIRConfig('supplier_name', e.target.value)}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="supplier_tin">Supplier TIN</Label>
+                <Input
+                  id="supplier_tin"
+                  value={storeSettings.bir_compliance_config.supplier_tin || ''}
+                  onChange={(e) => updateBIRConfig('supplier_tin', e.target.value)}
+                />
+              </div>
+              
+              <div className="md:col-span-2">
+                <Label htmlFor="supplier_address">Supplier Address</Label>
+                <Textarea
+                  id="supplier_address"
+                  value={storeSettings.bir_compliance_config.supplier_address || ''}
+                  onChange={(e) => updateBIRConfig('supplier_address', e.target.value)}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="accreditation_number">Accreditation Number</Label>
+                <Input
+                  id="accreditation_number"
+                  value={storeSettings.bir_compliance_config.accreditation_number || ''}
+                  onChange={(e) => updateBIRConfig('accreditation_number', e.target.value)}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="accreditation_date">Accreditation Date</Label>
+                <Input
+                  id="accreditation_date"
+                  type="date"
+                  value={storeSettings.bir_compliance_config.accreditation_date || ''}
+                  onChange={(e) => updateBIRConfig('accreditation_date', e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">VAT Configuration</h3>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_vat_registered"
+                checked={storeSettings.bir_compliance_config.is_vat_registered !== false}
+                onCheckedChange={(checked) => updateBIRConfig('is_vat_registered', checked)}
+              />
+              <Label htmlFor="is_vat_registered">VAT Registered</Label>
+            </div>
+            
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label htmlFor="non_vat_disclaimer">Non-VAT Disclaimer</Label>
+                <Textarea
+                  id="non_vat_disclaimer"
+                  value={storeSettings.bir_compliance_config.non_vat_disclaimer || ''}
+                  onChange={(e) => updateBIRConfig('non_vat_disclaimer', e.target.value)}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="validity_statement">Validity Statement</Label>
+                <Textarea
+                  id="validity_statement"
+                  value={storeSettings.bir_compliance_config.validity_statement || ''}
+                  onChange={(e) => updateBIRConfig('validity_statement', e.target.value)}
+                />
+              </div>
             </div>
           </div>
           

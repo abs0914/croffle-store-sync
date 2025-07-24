@@ -46,6 +46,16 @@ export interface Store {
   date_issued?: string;
   valid_until?: string;
   is_bir_accredited?: boolean;
+  // Enhanced BIR Compliance Fields
+  supplier_name?: string;
+  supplier_address?: string;
+  supplier_tin?: string;
+  accreditation_number?: string;
+  accreditation_date?: string;
+  bir_final_permit_number?: string;
+  is_vat_registered?: boolean;
+  non_vat_disclaimer?: string;
+  validity_statement?: string;
 }
 
 export interface StoreSettings {

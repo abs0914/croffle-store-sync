@@ -3983,7 +3983,10 @@ export type Database = {
       }
       stores: {
         Row: {
+          accreditation_date: string | null
+          accreditation_number: string | null
           address: string
+          bir_final_permit_number: string | null
           business_name: string | null
           business_type: string | null
           city: string | null
@@ -3998,12 +4001,14 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_bir_accredited: boolean | null
+          is_vat_registered: boolean | null
           location_type: string | null
           logistics_zone: string | null
           logo_url: string | null
           machine_accreditation_number: string | null
           machine_serial_number: string | null
           name: string
+          non_vat_disclaimer: string | null
           opening_date: string | null
           owner_address: string | null
           owner_contact_number: string | null
@@ -4016,14 +4021,21 @@ export type Database = {
           region: string | null
           state: string | null
           store_location_photo_url: string | null
+          supplier_address: string | null
+          supplier_name: string | null
+          supplier_tin: string | null
           tax_id: string | null
           tin: string | null
           updated_at: string | null
           valid_until: string | null
+          validity_statement: string | null
           zip_code: string | null
         }
         Insert: {
+          accreditation_date?: string | null
+          accreditation_number?: string | null
           address: string
+          bir_final_permit_number?: string | null
           business_name?: string | null
           business_type?: string | null
           city?: string | null
@@ -4038,12 +4050,14 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_bir_accredited?: boolean | null
+          is_vat_registered?: boolean | null
           location_type?: string | null
           logistics_zone?: string | null
           logo_url?: string | null
           machine_accreditation_number?: string | null
           machine_serial_number?: string | null
           name: string
+          non_vat_disclaimer?: string | null
           opening_date?: string | null
           owner_address?: string | null
           owner_contact_number?: string | null
@@ -4056,14 +4070,21 @@ export type Database = {
           region?: string | null
           state?: string | null
           store_location_photo_url?: string | null
+          supplier_address?: string | null
+          supplier_name?: string | null
+          supplier_tin?: string | null
           tax_id?: string | null
           tin?: string | null
           updated_at?: string | null
           valid_until?: string | null
+          validity_statement?: string | null
           zip_code?: string | null
         }
         Update: {
+          accreditation_date?: string | null
+          accreditation_number?: string | null
           address?: string
+          bir_final_permit_number?: string | null
           business_name?: string | null
           business_type?: string | null
           city?: string | null
@@ -4078,12 +4099,14 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_bir_accredited?: boolean | null
+          is_vat_registered?: boolean | null
           location_type?: string | null
           logistics_zone?: string | null
           logo_url?: string | null
           machine_accreditation_number?: string | null
           machine_serial_number?: string | null
           name?: string
+          non_vat_disclaimer?: string | null
           opening_date?: string | null
           owner_address?: string | null
           owner_contact_number?: string | null
@@ -4096,10 +4119,14 @@ export type Database = {
           region?: string | null
           state?: string | null
           store_location_photo_url?: string | null
+          supplier_address?: string | null
+          supplier_name?: string | null
+          supplier_tin?: string | null
           tax_id?: string | null
           tin?: string | null
           updated_at?: string | null
           valid_until?: string | null
+          validity_statement?: string | null
           zip_code?: string | null
         }
         Relationships: []
