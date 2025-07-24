@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ThermalPrinterSettings } from '@/components/printer/ThermalPrinterSettings';
 import { PrinterStatusIndicator } from '@/components/printer/PrinterStatusIndicator';
+import { CashDrawerControls } from '@/components/pos/CashDrawerControls';
 import { Printer } from 'lucide-react';
 
 export function ThermalPrinterPage() {
@@ -55,7 +56,43 @@ export function ThermalPrinterPage() {
               <li>• QR code printing</li>
               <li>• Automatic paper cutting</li>
               <li>• Text formatting (bold, center, sizing)</li>
+              <li>• Cash drawer control (if connected to printer)</li>
             </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cash Drawer Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Cash Drawer Control</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <CashDrawerControls />
+            </div>
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 rounded-lg">
+                <h3 className="font-semibold text-green-900 mb-2">How it works:</h3>
+                <ul className="text-sm text-green-800 space-y-1">
+                  <li>• Cash drawer connects to thermal printer via RJ11/RJ12 cable</li>
+                  <li>• Printer sends electrical pulse to trigger drawer opening</li>
+                  <li>• Works with most standard cash drawer models</li>
+                  <li>• Can be triggered manually or automatically after transactions</li>
+                </ul>
+              </div>
+              
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <h3 className="font-semibold text-blue-900 mb-2">Setup Requirements:</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Compatible cash drawer with RJ11/RJ12 connection</li>
+                  <li>• Connect drawer cable to printer's cash drawer port</li>
+                  <li>• Ensure printer is connected via Bluetooth</li>
+                  <li>• Configure cash drawer settings in BIR Compliance tab</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

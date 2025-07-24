@@ -58,6 +58,13 @@ interface BIRComplianceConfig {
   showValidityStatement: boolean;
   showSupplierInfo: boolean;
   requireAccreditedSupplier: boolean;
+  
+  // Cash Drawer Settings
+  enableCashDrawer?: boolean;
+  autoOpenDrawer?: boolean;
+  drawerPin?: number;
+  drawerPulseDuration?: number;
+  drawerPulseInterval?: number;
 }
 
 const defaultConfig: BIRComplianceConfig = {
@@ -94,7 +101,14 @@ const defaultConfig: BIRComplianceConfig = {
   showExemptMarking: false,
   showValidityStatement: true,
   showSupplierInfo: true,
-  requireAccreditedSupplier: true
+  requireAccreditedSupplier: true,
+  
+  // Cash Drawer defaults
+  enableCashDrawer: false,
+  autoOpenDrawer: false,
+  drawerPin: 0,
+  drawerPulseDuration: 25,
+  drawerPulseInterval: 25
 };
 
 export function BIRComplianceSettings() {
@@ -738,6 +752,65 @@ export function BIRComplianceSettings() {
                 onCheckedChange={(checked) => handleConfigChange('requireDigitalSignature', checked)}
               />
               <Label>Require Digital Signature</Label>
+            </div>
+          </div>
+          
+          <Separator />
+          
+          {/* Cash Drawer Settings */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium">Cash Drawer Configuration</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={config.enableCashDrawer || false}
+                  onCheckedChange={(checked) => handleConfigChange('enableCashDrawer', checked)}
+                />
+                <Label>Enable Cash Drawer Integration</Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={config.autoOpenDrawer || false}
+                  onCheckedChange={(checked) => handleConfigChange('autoOpenDrawer', checked)}
+                />
+                <Label>Auto-open drawer on transaction completion</Label>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Drawer Pin (0 or 1)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="1"
+                  value={config.drawerPin || 0}
+                  onChange={(e) => handleConfigChange('drawerPin', parseInt(e.target.value) || 0)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Pulse Duration (ms)</Label>
+                <Input
+                  type="number"
+                  min="10"
+                  max="100"
+                  value={config.drawerPulseDuration || 25}
+                  onChange={(e) => handleConfigChange('drawerPulseDuration', parseInt(e.target.value) || 25)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Pulse Interval (ms)</Label>
+                <Input
+                  type="number"
+                  min="10"
+                  max="100"
+                  value={config.drawerPulseInterval || 25}
+                  onChange={(e) => handleConfigChange('drawerPulseInterval', parseInt(e.target.value) || 25)}
+                />
+              </div>
             </div>
           </div>
         </CardContent>

@@ -136,4 +136,25 @@ export class ESCPOSFormatter {
 
     return result;
   }
+
+  // Cash Drawer Controls
+  static openCashDrawer(drawerPin: number = 0, onTime: number = 25, offTime: number = 25): string {
+    // ESC/POS command for cash drawer kick
+    // ESC p m t1 t2 where:
+    // m = drawer pin (0 or 1)
+    // t1 = on time (pulse width, typically 25 = 500ms)
+    // t2 = off time (typically 25 = 500ms)
+    return this.ESC + 'p' + String.fromCharCode(drawerPin, onTime, offTime);
+  }
+
+  // Alternative cash drawer command for different drawer types
+  static openCashDrawerAlt(): string {
+    // Alternative command used by some thermal printers
+    return this.GS + 'V' + String.fromCharCode(66) + String.fromCharCode(0);
+  }
+
+  // Beep command (useful for drawer open confirmation)
+  static beep(count: number = 1): string {
+    return '\x07'.repeat(count); // ASCII bell character
+  }
 }

@@ -58,7 +58,8 @@ export class BluetoothPrinterService {
     transaction: Transaction,
     customer?: Customer | null,
     store?: Store,
-    cashierName?: string
+    cashierName?: string,
+    autoOpenDrawer?: boolean
   ): Promise<boolean> {
     const printer = PrinterDiscovery.getConnectedPrinter();
     if (!printer?.isConnected) {
@@ -71,6 +72,20 @@ export class BluetoothPrinterService {
 
       if (success) {
         console.log('Receipt printed successfully');
+        
+        // Auto-open cash drawer if enabled and it's a cash transaction
+        if (autoOpenDrawer && transaction.paymentMethod === 'cash') {
+          console.log('Auto-opening cash drawer for cash transaction...');
+          setTimeout(async () => {
+            try {
+              await this.openCashDrawer();
+              console.log('Cash drawer auto-opened successfully');
+            } catch (drawerError) {
+              console.error('Failed to auto-open cash drawer:', drawerError);
+              // Don't fail the receipt printing if drawer fails
+            }
+          }, 500); // Small delay to ensure receipt finishes printing first
+        }
       }
 
       return success;
@@ -94,6 +109,65 @@ export class BluetoothPrinterService {
       return await this.sendDataToPrinter(printer, testData);
     } catch (error) {
       console.error('Failed to print test receipt:', error);
+      return false;
+    }
+  }
+
+  static async openCashDrawer(drawerPin: number = 0, onTime: number = 25, offTime: number = 25): Promise<boolean> {
+    const printer = PrinterDiscovery.getConnectedPrinter();
+    if (!printer?.isConnected) {
+      throw new Error('No printer connected');
+    }
+
+    try {
+      console.log('💰 Opening cash drawer...');
+      const drawerCommand = ESCPOSFormatter.openCashDrawer(drawerPin, onTime, offTime);
+      console.log(`📨 Drawer command prepared (${drawerCommand.length} bytes)`);
+
+      const success = await this.sendDataToPrinter(printer, drawerCommand);
+      
+      if (success) {
+        console.log('✅ Cash drawer opened successfully');
+        // Optional: Add beep for confirmation
+        setTimeout(() => {
+          this.sendDataToPrinter(printer, ESCPOSFormatter.beep(1));
+        }, 200);
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Failed to open cash drawer:', error);
+      return false;
+    }
+  }
+
+  static async testCashDrawer(): Promise<boolean> {
+    const printer = PrinterDiscovery.getConnectedPrinter();
+    if (!printer?.isConnected) {
+      throw new Error('No printer connected');
+    }
+
+    try {
+      console.log('🧪 Testing cash drawer connection...');
+      
+      // Try primary command first
+      let success = await this.openCashDrawer(0, 25, 25);
+      
+      if (!success) {
+        console.log('Primary drawer command failed, trying alternative...');
+        const altCommand = ESCPOSFormatter.openCashDrawerAlt();
+        success = await this.sendDataToPrinter(printer, altCommand);
+      }
+
+      if (success) {
+        console.log('✅ Cash drawer test successful');
+      } else {
+        console.log('❌ Cash drawer test failed - drawer may not be connected');
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Cash drawer test failed:', error);
       return false;
     }
   }
