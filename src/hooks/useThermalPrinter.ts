@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { BluetoothPrinterService } from '@/services/printer/BluetoothPrinterService';
-import { PrinterDiscovery, ThermalPrinter } from '@/services/printer/PrinterDiscovery';
+import { PrinterDiscovery, BluetoothPrinter, ThermalPrinter } from '@/services/printer/PrinterDiscovery';
 import { Transaction, Customer } from '@/types';
 import { Store } from '@/types/store';
 import { toast } from 'sonner';
@@ -9,10 +9,10 @@ import { toast } from 'sonner';
 export function useThermalPrinter() {
   const [isAvailable, setIsAvailable] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [availablePrinters, setAvailablePrinters] = useState<ThermalPrinter[]>([]);
+  const [availablePrinters, setAvailablePrinters] = useState<BluetoothPrinter[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [connectedPrinter, setConnectedPrinter] = useState<ThermalPrinter | null>(null);
+  const [connectedPrinter, setConnectedPrinter] = useState<BluetoothPrinter | null>(null);
 
   useEffect(() => {
     checkAvailability();
@@ -85,7 +85,7 @@ export function useThermalPrinter() {
     }
   };
 
-  const connectToPrinter = async (printer: ThermalPrinter) => {
+  const connectToPrinter = async (printer: BluetoothPrinter) => {
     try {
       console.log(`Attempting to connect to printer: ${printer.name} (${printer.connectionType})`);
       toast.info(`Connecting to ${printer.name}...`);

@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Printer, Bluetooth, Search } from 'lucide-react';
 import { useThermalPrinter } from '@/hooks/useThermalPrinter';
+import { PrinterTypeManager } from '@/services/printer/PrinterTypeManager';
 
 interface ThermalPrinterSettingsProps {
   children: React.ReactNode;
@@ -82,17 +83,42 @@ export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge 
-                    variant={isConnected ? "default" : "secondary"}
-                    className={isConnected ? "bg-green-500" : "bg-gray-500"}
-                  >
-                    {isConnected ? 'Connected' : 'Disconnected'}
-                  </Badge>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={isConnected ? "default" : "secondary"}
+                      className={isConnected ? "bg-green-500" : "bg-gray-500"}
+                    >
+                      {isConnected ? 'Connected' : 'Disconnected'}
+                    </Badge>
+                    {connectedPrinter && (
+                      <span className="text-sm text-gray-600">
+                        {connectedPrinter.name}
+                      </span>
+                    )}
+                  </div>
                   {connectedPrinter && (
-                    <span className="text-sm text-gray-600">
-                      {connectedPrinter.name}
-                    </span>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {connectedPrinter.printerType || 'thermal'}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {PrinterTypeManager.getMaxLineWidth(connectedPrinter)} chars
+                      </Badge>
+                    </div>
+                  )}
+                  {connectedPrinter && (
+                    <div className="text-xs text-muted-foreground">
+                      <div>Features:</div>
+                      <div className="flex gap-1 mt-1 flex-wrap">
+                        {PrinterTypeManager.supportsCutting(connectedPrinter) && 
+                          <Badge variant="outline" className="text-xs">Paper Cutting</Badge>}
+                        {PrinterTypeManager.supportsQRCodes(connectedPrinter) && 
+                          <Badge variant="outline" className="text-xs">QR Codes</Badge>}
+                        {PrinterTypeManager.supportsCashDrawer(connectedPrinter) && 
+                          <Badge variant="outline" className="text-xs">Cash Drawer</Badge>}
+                      </div>
+                    </div>
                   )}
                 </div>
                 {isConnected && (
@@ -137,20 +163,30 @@ export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium">Available Printers:</h4>
                   {availablePrinters.map((printer) => (
-                    <div
-                      key={printer.id}
-                      className="flex items-center justify-between p-2 border rounded"
-                    >
-                      <span className="text-sm">{printer.name}</span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => connectToPrinter(printer)}
-                        disabled={printer.isConnected}
-                      >
-                        {printer.isConnected ? 'Connected' : 'Connect'}
-                      </Button>
-                    </div>
+                     <div
+                       key={printer.id}
+                       className="flex items-center justify-between p-2 border rounded"
+                     >
+                       <div className="flex flex-col">
+                         <span className="text-sm font-medium">{printer.name}</span>
+                         <div className="flex gap-2 mt-1">
+                           <Badge variant="secondary" className="text-xs">
+                             {printer.connectionType === 'web' ? 'Web Bluetooth' : 'Native Bluetooth'}
+                           </Badge>
+                           <Badge variant="outline" className="text-xs capitalize">
+                             {printer.printerType || 'thermal'}
+                           </Badge>
+                         </div>
+                       </div>
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         onClick={() => connectToPrinter(printer)}
+                         disabled={printer.isConnected}
+                       >
+                         {printer.isConnected ? 'Connected' : 'Connect'}
+                       </Button>
+                     </div>
                   ))}
                 </div>
               )}

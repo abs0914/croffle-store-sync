@@ -1,17 +1,13 @@
 
 import { BleClient, BleDevice } from '@capacitor-community/bluetooth-le';
+import { BluetoothPrinter, ThermalPrinter, PrinterType } from '@/types/printer';
+import { PrinterTypeManager } from './PrinterTypeManager';
 
-export interface ThermalPrinter {
-  id: string;
-  name: string;
-  isConnected: boolean;
-  device?: BleDevice;
-  webBluetoothDevice?: BluetoothDevice; // For Web Bluetooth API
-  connectionType?: 'web' | 'capacitor'; // Track connection type
-}
+// Legacy export for backward compatibility
+export type { ThermalPrinter, BluetoothPrinter };
 
 export class PrinterDiscovery {
-  private static connectedPrinter: ThermalPrinter | null = null;
+  private static connectedPrinter: BluetoothPrinter | null = null;
   private static discoveredDevices: Map<string, BleDevice> = new Map();
 
   static async initialize(): Promise<void> {
@@ -50,7 +46,7 @@ export class PrinterDiscovery {
     }
   }
 
-  static async scanForPrinters(): Promise<ThermalPrinter[]> {
+  static async scanForPrinters(): Promise<BluetoothPrinter[]> {
     try {
       // Clear previous scan results
       this.discoveredDevices.clear();
@@ -68,7 +64,7 @@ export class PrinterDiscovery {
     }
   }
 
-  private static async scanWithWebBluetooth(): Promise<ThermalPrinter[]> {
+  private static async scanWithWebBluetooth(): Promise<BluetoothPrinter[]> {
     console.log('Using Web Bluetooth API for scanning...');
 
     try {
@@ -111,19 +107,18 @@ export class PrinterDiscovery {
 
       console.log(`Found thermal printer via Web Bluetooth: ${device.name}`);
 
-      // Convert to our ThermalPrinter format
-      const printer: ThermalPrinter = {
+      // Convert to our BluetoothPrinter format
+      const printer: BluetoothPrinter = {
         id: device.id,
         name: device.name || 'Unknown Printer',
         isConnected: false,
         webBluetoothDevice: device,
-        connectionType: 'web',
-        device: {
-          deviceId: device.id,
-          name: device.name || 'Unknown Printer',
-          uuids: []
-        }
+        connectionType: 'web'
       };
+      
+      // Detect printer type and set capabilities
+      printer.printerType = PrinterTypeManager.detectPrinterType(printer);
+      printer.capabilities = PrinterTypeManager.getCapabilities(printer.printerType);
 
       return [printer];
     } catch (error: any) {
@@ -135,7 +130,7 @@ export class PrinterDiscovery {
     }
   }
 
-  private static async scanWithCapacitorBLE(): Promise<ThermalPrinter[]> {
+  private static async scanWithCapacitorBLE(): Promise<BluetoothPrinter[]> {
     console.log('Using Capacitor BLE for scanning...');
 
     // Request permissions first
@@ -166,7 +161,7 @@ export class PrinterDiscovery {
     console.log(`Scan completed. Found ${this.discoveredDevices.size} devices.`);
 
     // Filter for thermal printers based on device names
-    const printers: ThermalPrinter[] = [];
+    const printers: BluetoothPrinter[] = [];
     const thermalPrinterPatterns = [
       /thermal/i,
       /printer/i,
@@ -199,14 +194,20 @@ export class PrinterDiscovery {
       );
 
       if (isThermalPrinter || deviceName.toLowerCase().includes('print')) {
-        printers.push({
+        const printer: BluetoothPrinter = {
           id: deviceId,
           name: deviceName,
           isConnected: false,
           device: device,
           connectionType: 'capacitor'
-        });
-        console.log(`Identified thermal printer: ${deviceName} (${deviceId})`);
+        };
+        
+        // Detect printer type and set capabilities
+        printer.printerType = PrinterTypeManager.detectPrinterType(printer);
+        printer.capabilities = PrinterTypeManager.getCapabilities(printer.printerType);
+        
+        printers.push(printer);
+        console.log(`Identified printer: ${deviceName} (${printer.printerType}) (${deviceId})`);
       }
     }
 
@@ -214,7 +215,7 @@ export class PrinterDiscovery {
     return printers;
   }
   
-  static async connectToPrinter(printer: ThermalPrinter): Promise<boolean> {
+  static async connectToPrinter(printer: BluetoothPrinter): Promise<boolean> {
     try {
       console.log(`Attempting to connect to printer: ${printer.name} (Type: ${printer.connectionType})`);
 
@@ -232,7 +233,7 @@ export class PrinterDiscovery {
     }
   }
 
-  private static async connectWithWebBluetooth(printer: ThermalPrinter): Promise<boolean> {
+  private static async connectWithWebBluetooth(printer: BluetoothPrinter): Promise<boolean> {
     try {
       if (!printer.webBluetoothDevice) {
         throw new Error('No Web Bluetooth device available');
@@ -269,7 +270,7 @@ export class PrinterDiscovery {
     }
   }
 
-  private static async connectWithCapacitorBLE(printer: ThermalPrinter): Promise<boolean> {
+  private static async connectWithCapacitorBLE(printer: BluetoothPrinter): Promise<boolean> {
     try {
       if (!printer.device) {
         throw new Error('No Capacitor BLE device available');
@@ -322,7 +323,7 @@ export class PrinterDiscovery {
     }
   }
   
-  static getConnectedPrinter(): ThermalPrinter | null {
+  static getConnectedPrinter(): BluetoothPrinter | null {
     return this.connectedPrinter;
   }
   

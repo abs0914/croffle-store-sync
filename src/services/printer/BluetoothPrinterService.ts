@@ -1,6 +1,7 @@
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import { ESCPOSFormatter } from './ESCPOSFormatter';
-import { PrinterDiscovery, ThermalPrinter } from './PrinterDiscovery';
+import { PrinterDiscovery, BluetoothPrinter } from './PrinterDiscovery';
+import { PrinterTypeManager } from './PrinterTypeManager';
 import { Transaction, Customer } from '@/types';
 import { Store } from '@/types/store';
 import { BIRComplianceService } from '@/services/bir/birComplianceService';
@@ -67,14 +68,14 @@ export class BluetoothPrinterService {
     }
 
     try {
-      const receiptData = this.formatReceiptForThermal(transaction, customer, store, cashierName);
+      const receiptData = PrinterTypeManager.formatReceipt(printer, transaction, customer, store, cashierName);
       const success = await this.sendDataToPrinter(printer, receiptData);
 
       if (success) {
         console.log('Receipt printed successfully');
         
-        // Auto-open cash drawer if enabled and it's a cash transaction
-        if (autoOpenDrawer && transaction.paymentMethod === 'cash') {
+        // Auto-open cash drawer if enabled, it's a cash transaction, and printer supports it
+        if (autoOpenDrawer && transaction.paymentMethod === 'cash' && PrinterTypeManager.supportsCashDrawer(printer)) {
           console.log('Auto-opening cash drawer for cash transaction...');
           setTimeout(async () => {
             try {
@@ -103,7 +104,7 @@ export class BluetoothPrinterService {
 
     try {
       console.log('🖨️ Preparing test receipt...');
-      const testData = this.formatTestReceipt();
+      const testData = PrinterTypeManager.formatTestReceipt(printer);
       console.log(`📄 Test receipt formatted (${testData.length} characters)`);
 
       return await this.sendDataToPrinter(printer, testData);
@@ -117,6 +118,10 @@ export class BluetoothPrinterService {
     const printer = PrinterDiscovery.getConnectedPrinter();
     if (!printer?.isConnected) {
       throw new Error('No printer connected');
+    }
+
+    if (!PrinterTypeManager.supportsCashDrawer(printer)) {
+      throw new Error('Connected printer does not support cash drawer functionality');
     }
 
     try {
@@ -145,6 +150,10 @@ export class BluetoothPrinterService {
     const printer = PrinterDiscovery.getConnectedPrinter();
     if (!printer?.isConnected) {
       throw new Error('No printer connected');
+    }
+
+    if (!PrinterTypeManager.supportsCashDrawer(printer)) {
+      throw new Error('Connected printer does not support cash drawer functionality');
     }
 
     try {
