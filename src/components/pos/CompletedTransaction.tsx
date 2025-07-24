@@ -31,11 +31,16 @@ export default function CompletedTransaction({
     const autoPrint = async () => {
       if (isConnected && transaction && !hasTriggered) {
         hasTriggered = true;
-        console.log('Auto-printing receipt to thermal printer...');
-        await printReceipt(transaction, customer, currentStore, 'Cashier');
-        
-        // Show brief success message and start countdown for auto-navigation
-        setShowBriefSuccess(true);
+        try {
+          console.log('Auto-printing receipt to thermal printer...');
+          await printReceipt(transaction, customer, currentStore, 'Cashier');
+          
+          // Show brief success message and start countdown for auto-navigation
+          setShowBriefSuccess(true);
+        } catch (error) {
+          console.error('Auto-print failed:', error);
+          // Don't show error to user, just skip auto-print
+        }
       }
     };
 
