@@ -26,10 +26,15 @@ export default function CompletedTransaction({
 
   // Automatically print receipt when transaction completes and printer is connected
   useEffect(() => {
+    // Skip printing process entirely if no printer is connected
+    if (!isConnected) {
+      return;
+    }
+
     let hasTriggered = false; // Prevent multiple prints
 
     const autoPrint = async () => {
-      if (isConnected && transaction && !hasTriggered) {
+      if (transaction && !hasTriggered) {
         hasTriggered = true;
         try {
           console.log('Auto-printing receipt to thermal printer...');
@@ -47,7 +52,7 @@ export default function CompletedTransaction({
     // Small delay to ensure transaction is fully processed
     const timer = setTimeout(autoPrint, 1000);
     return () => clearTimeout(timer);
-  }, [isConnected, transaction?.receiptNumber]); // Only depend on essential values
+  }, [isConnected, transaction?.receiptNumber, printReceipt, customer, currentStore]); // Only depend on essential values
 
   // Auto-navigation countdown when printer is connected
   useEffect(() => {
