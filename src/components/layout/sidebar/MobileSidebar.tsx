@@ -18,7 +18,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
 }) => {
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-64 p-0 bg-croffle-background pt-20">
+      <SheetContent side="left" className="w-[85vw] max-w-64 p-0 bg-croffle-background pt-20">
         <BrandHeader isMobile={true} />
         <StartShiftButton />
         <StoreSelector />

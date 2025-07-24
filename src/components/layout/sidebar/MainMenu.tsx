@@ -77,14 +77,14 @@ export function MainMenu() {
           key={item.href}
           to={item.href}
           className={cn(
-            "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+            "flex items-center px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors whitespace-nowrap overflow-hidden text-ellipsis",
             isActiveLink(item.href)
               ? "bg-croffle-accent text-white"
               : "text-gray-700 hover:bg-gray-100"
           )}
         >
-          <item.icon className="h-4 w-4 mr-2" />
-          {item.title}
+          <item.icon className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span className="truncate">{item.title}</span>
         </Link>
       ))}
     </nav>
