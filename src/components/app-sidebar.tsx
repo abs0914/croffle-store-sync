@@ -47,12 +47,12 @@ import {
 import { cn } from "@/lib/utils"
 
 // Collapsed-aware BrandHeader component
-function CollapsedAwareBrandHeader({ collapsed }: { collapsed: boolean }) {
+function CollapsedAwareBrandHeader({ collapsed, isMobile }: { collapsed: boolean; isMobile: boolean }) {
   const { currentStore } = useStore()
   const { config } = useStoreDisplay()
   const showStoreName = currentStore && config.sidebarMode !== "hidden"
 
-  if (collapsed) {
+  if (collapsed && !isMobile) {
     // Collapsed state: show only a small logo/icon with tooltip
     return (
       <div className="flex items-center justify-center py-3 px-2">
@@ -103,11 +103,11 @@ function CollapsedAwareBrandHeader({ collapsed }: { collapsed: boolean }) {
 }
 
 // Collapsed-aware UserProfile component
-function CollapsedAwareUserProfile({ collapsed }: { collapsed: boolean }) {
+function CollapsedAwareUserProfile({ collapsed, isMobile }: { collapsed: boolean; isMobile: boolean }) {
   const { user, logout } = useAuth()
   const { currentStore } = useStore()
 
-  if (collapsed) {
+  if (collapsed && !isMobile) {
     // Collapsed state: show only avatar with dropdown
     return (
       <div className="p-2 border-t border-border">
@@ -221,7 +221,7 @@ const items = [
 ]
 
 export function AppSidebar() {
-  const { state } = useSidebar()
+  const { state, isMobile } = useSidebar()
   const location = useLocation()
   const currentPath = location.pathname
   const collapsed = state === "collapsed"
@@ -235,21 +235,23 @@ export function AppSidebar() {
 
   const getNavCls = (active: boolean) =>
     active
-      ? "bg-croffle-accent/10 text-croffle-accent font-medium border-r-2 border-croffle-accent"
-      : "text-croffle-text hover:bg-croffle-accent/5 hover:text-croffle-accent"
+      ? "bg-croffle-accent text-white font-medium"
+      : "text-croffle-text hover:bg-croffle-accent/80 hover:text-white"
 
   return (
     <Sidebar
       className="border-r border-border bg-croffle-background"
       collapsible="icon"
+      side="left"
+      variant="sidebar"
     >
-      <SidebarHeader className={cn("border-b border-border", collapsed ? "p-0" : "")}>
-        <CollapsedAwareBrandHeader collapsed={collapsed} />
+      <SidebarHeader className={cn("border-b border-border", (collapsed && !isMobile) ? "p-0" : "")}>
+        <CollapsedAwareBrandHeader collapsed={collapsed} isMobile={isMobile} />
       </SidebarHeader>
 
       <SidebarContent>
         {/* Store & Shift Controls */}
-        {!collapsed && (
+        {(!collapsed || isMobile) && (
           <div className="p-3 border-b border-border space-y-2">
             <StartShiftButton />
             <StoreSelector />
@@ -266,7 +268,7 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
-                    <NavLink
+                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
                       className={({ isActive }) =>
@@ -277,7 +279,7 @@ export function AppSidebar() {
                       }
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
-                      {!collapsed && <span className="truncate">{item.title}</span>}
+                      {(!collapsed || isMobile) && <span className="truncate">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -289,7 +291,7 @@ export function AppSidebar() {
 
       {/* User Profile at bottom */}
       <div className="mt-auto">
-        <CollapsedAwareUserProfile collapsed={collapsed} />
+        <CollapsedAwareUserProfile collapsed={collapsed} isMobile={isMobile} />
       </div>
     </Sidebar>
   )

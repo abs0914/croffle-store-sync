@@ -50,7 +50,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Render main layout if authenticated
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={false} open={undefined}>
       <div className="flex h-screen w-full bg-background" data-component="main-layout">
         <AppSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
