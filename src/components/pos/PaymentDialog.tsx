@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -34,6 +35,34 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [eWalletDetails, setEWalletDetails] = useState({ provider: '', reference: '' });
 
   const handlePayment = () => {
+    // Validate total amount before processing
+    if (total <= 0) {
+      toast.error('Cannot process payment for empty cart');
+      return;
+    }
+
+    // Validate cash payment amount
+    if (paymentMethod === 'cash' && amountTendered < total) {
+      toast.error('Amount tendered must be equal to or greater than total');
+      return;
+    }
+
+    // Validate card details
+    if (paymentMethod === 'card') {
+      if (!cardDetails.type || !cardDetails.number) {
+        toast.error('Please enter card type and number');
+        return;
+      }
+    }
+
+    // Validate e-wallet details
+    if (paymentMethod === 'e-wallet') {
+      if (!eWalletDetails.provider || !eWalletDetails.reference) {
+        toast.error('Please select provider and enter reference number');
+        return;
+      }
+    }
+
     let paymentDetails;
     
     if (paymentMethod === 'card') {

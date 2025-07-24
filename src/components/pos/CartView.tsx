@@ -229,7 +229,13 @@ export default function CartView({
             orderType={orderType}
             deliveryPlatform={deliveryPlatform}
             deliveryOrderNumber={deliveryOrderNumber}
-            onCheckout={() => setIsPaymentDialogOpen(true)}
+            onCheckout={() => {
+              if (calculations.finalTotal <= 0) {
+                toast.error('Cannot checkout with empty cart');
+                return;
+              }
+              setIsPaymentDialogOpen(true);
+            }}
           />
         </div>
       )}
