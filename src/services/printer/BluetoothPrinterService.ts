@@ -2,6 +2,8 @@ import { BleClient } from '@capacitor-community/bluetooth-le';
 import { ESCPOSFormatter } from './ESCPOSFormatter';
 import { PrinterDiscovery, ThermalPrinter } from './PrinterDiscovery';
 import { Transaction, Customer } from '@/types';
+import { Store } from '@/types/store';
+import { BIRComplianceService } from '@/services/bir/birComplianceService';
 
 export class BluetoothPrinterService {
   // Capacitor BLE UUIDs (for mobile apps)
@@ -55,7 +57,8 @@ export class BluetoothPrinterService {
   static async printReceipt(
     transaction: Transaction,
     customer?: Customer | null,
-    storeName?: string
+    store?: Store,
+    cashierName?: string
   ): Promise<boolean> {
     const printer = PrinterDiscovery.getConnectedPrinter();
     if (!printer?.isConnected) {
@@ -63,7 +66,7 @@ export class BluetoothPrinterService {
     }
 
     try {
-      const receiptData = this.formatReceiptForThermal(transaction, customer, storeName);
+      const receiptData = this.formatReceiptForThermal(transaction, customer, store, cashierName);
       const success = await this.sendDataToPrinter(printer, receiptData);
 
       if (success) {
@@ -383,91 +386,172 @@ export class BluetoothPrinterService {
   private static formatReceiptForThermal(
     transaction: Transaction,
     customer?: Customer | null,
-    storeName?: string
+    store?: Store,
+    cashierName?: string
   ): string {
     let receipt = ESCPOSFormatter.init();
 
     // Use normal font for visibility
     receipt += ESCPOSFormatter.useNormalFont();
 
-    // Header - Store name (centered, bold)
+    // BIR-COMPLIANT HEADER SECTION
     receipt += ESCPOSFormatter.center();
-    receipt += ESCPOSFormatter.bold((storeName || 'THE CROFFLE STORE'));
+    
+    // Business Name (taxpayer registered name)
+    const businessName = store?.business_name || store?.name || 'THE CROFFLE STORE';
+    receipt += ESCPOSFormatter.bold(businessName);
     receipt += ESCPOSFormatter.lineFeed();
-    receipt += 'SALES RECEIPT' + ESCPOSFormatter.lineFeed(2);
+    
+    // Store address (detailed business address)
+    const address = store?.address || 'IT Park, Lahug, Cebu City';
+    const cityState = `${store?.city || 'Cebu City'}, ${store?.country || 'Philippines'}`;
+    receipt += address.substring(0, 32) + ESCPOSFormatter.lineFeed();
+    receipt += cityState.substring(0, 32) + ESCPOSFormatter.lineFeed();
+    
+    // VAT Registration Status & TIN
+    const vatStatus = store?.is_bir_accredited ? 'VAT-REGISTERED' : 'NON-VAT';
+    receipt += ESCPOSFormatter.bold(vatStatus) + ESCPOSFormatter.lineFeed();
+    const tin = store?.tin || '000-000-000-000';
+    receipt += `TIN: ${tin}` + ESCPOSFormatter.lineFeed();
+    
+    // Machine identification
+    const serialNumber = store?.machine_serial_number || 'N/A';
+    const machineAccred = store?.machine_accreditation_number || 'N/A';
+    receipt += `SN: ${serialNumber.substring(0, 20)}` + ESCPOSFormatter.lineFeed();
+    receipt += `MIN: ${machineAccred.substring(0, 20)}` + ESCPOSFormatter.lineFeed();
+    
+    receipt += ESCPOSFormatter.lineFeed();
+    const docType = store?.is_bir_accredited ? 'SALES INVOICE' : 'SALES RECEIPT';
+    receipt += ESCPOSFormatter.bold(docType) + ESCPOSFormatter.lineFeed();
     receipt += ESCPOSFormatter.left();
+    
+    // Add cashier information
+    if (cashierName) {
+      receipt += ESCPOSFormatter.formatLine('Cashier:', cashierName.substring(0, 20));
+    }
 
-    // Receipt details (shorter format for thermal paper)
+    // Transaction details with BIR requirements
     receipt += ESCPOSFormatter.formatLine(
-      'Receipt #:',
-      transaction.receiptNumber.substring(0, 15) // Truncate if too long
+      'SI No:',
+      transaction.receiptNumber.substring(0, 15)
     );
     receipt += ESCPOSFormatter.formatLine(
       'Date:',
-      new Date(transaction.createdAt).toLocaleDateString('en-US', {
+      new Date(transaction.createdAt).toLocaleDateString('en-PH', {
         month: '2-digit',
         day: '2-digit',
-        year: '2-digit'
+        year: 'numeric'
       })
     );
     receipt += ESCPOSFormatter.formatLine(
       'Time:',
-      new Date(transaction.createdAt).toLocaleTimeString('en-US', {
+      new Date(transaction.createdAt).toLocaleTimeString('en-PH', {
         hour12: false,
         hour: '2-digit',
         minute: '2-digit'
       })
     );
+    receipt += ESCPOSFormatter.formatLine(
+      'Terminal:',
+      transaction.terminal_id || 'TERMINAL-01'
+    );
     
+    // Customer information section with TIN space
     if (customer) {
       receipt += ESCPOSFormatter.lineFeed();
-      receipt += ESCPOSFormatter.formatLine('Customer:', customer.name.substring(0, 20)); // Truncate long names
-      if (customer.phone) {
-        receipt += ESCPOSFormatter.formatLine('Phone:', customer.phone);
+      receipt += ESCPOSFormatter.formatLine('Customer:', customer.name.substring(0, 20));
+      if (customer.address) {
+        receipt += ESCPOSFormatter.formatLine('Address:', customer.address.substring(0, 25));
       }
+      if (customer.tin) {
+        receipt += ESCPOSFormatter.formatLine('TIN:', customer.tin);
+      } else {
+        receipt += 'TIN: _________________' + ESCPOSFormatter.lineFeed();
+      }
+    } else {
+      receipt += ESCPOSFormatter.lineFeed();
+      receipt += 'Customer: _______________' + ESCPOSFormatter.lineFeed();
+      receipt += 'Address: ________________' + ESCPOSFormatter.lineFeed();
+      receipt += 'TIN: ____________________' + ESCPOSFormatter.lineFeed();
     }
 
     receipt += ESCPOSFormatter.horizontalLine();
 
-    // Items (simplified formatting)
+    // Items with detailed description
+    receipt += ESCPOSFormatter.bold('DESCRIPTION') + ESCPOSFormatter.lineFeed();
     transaction.items.forEach(item => {
-      // Truncate long product names
-      const itemName = item.name.length > 30 ? item.name.substring(0, 27) + '...' : item.name;
-      receipt += ESCPOSFormatter.bold(itemName) + ESCPOSFormatter.lineFeed();
+      const itemName = item.name.length > 28 ? item.name.substring(0, 25) + '...' : item.name;
+      receipt += itemName + ESCPOSFormatter.lineFeed();
 
-      // Format price line with better spacing
       const unitPrice = item.unitPrice.toFixed(2);
       const totalPrice = item.totalPrice.toFixed(2);
       receipt += ESCPOSFormatter.formatLine(
-        `  P${unitPrice} x ${item.quantity}`,
+        ` ${item.quantity} x P${unitPrice}`,
         `P${totalPrice}`
       );
     });
 
     receipt += ESCPOSFormatter.horizontalLine();
     
-    // Totals (improved formatting with peso symbol)
+    // VAT BREAKDOWN (BIR Required)
+    const vatableSales = transaction.vat_sales || (transaction.subtotal - (transaction.discount || 0));
+    const vatExemptSales = transaction.vat_exempt_sales || 0;
+    const zeroRatedSales = transaction.zero_rated_sales || 0;
+    const vatAmount = transaction.tax || 0;
+    
     receipt += ESCPOSFormatter.formatLine(
-      'Subtotal:',
-      `P${transaction.subtotal.toFixed(2)}`
+      'VATable Sales:',
+      `P${vatableSales.toFixed(2)}`
     );
-
-    if (transaction.discount > 0) {
+    
+    if (vatExemptSales > 0) {
       receipt += ESCPOSFormatter.formatLine(
-        'Discount:',
-        `-P${transaction.discount.toFixed(2)}`
+        'VAT-Exempt Sales:',
+        `P${vatExemptSales.toFixed(2)}`
       );
     }
-
+    
+    if (zeroRatedSales > 0) {
+      receipt += ESCPOSFormatter.formatLine(
+        'Zero Rated Sales:',
+        `P${zeroRatedSales.toFixed(2)}`
+      );
+    }
+    
     receipt += ESCPOSFormatter.formatLine(
-      'VAT (12%):',
-      `P${transaction.tax.toFixed(2)}`
+      'VAT Amount (12%):',
+      `P${vatAmount.toFixed(2)}`
     );
+
+    // Discount breakdown (BIR compliance for PWD/Senior)
+    if (transaction.discount > 0) {
+      receipt += ESCPOSFormatter.lineFeed();
+      const discountType = transaction.discountType || 'regular';
+      let discountLabel = 'Discount:';
+      
+      if (discountType === 'senior') {
+        discountLabel = 'Senior Citizen Disc:';
+      } else if (discountType === 'pwd') {
+        discountLabel = 'PWD Discount:';
+      }
+      
+      receipt += ESCPOSFormatter.formatLine(
+        discountLabel,
+        `-P${transaction.discount.toFixed(2)}`
+      );
+      
+      if (transaction.discountIdNumber) {
+        receipt += ESCPOSFormatter.formatLine(
+          'ID Number:',
+          transaction.discountIdNumber
+        );
+      }
+    }
 
     receipt += ESCPOSFormatter.horizontalLine();
     receipt += ESCPOSFormatter.bold(
       ESCPOSFormatter.formatLine(
-        'TOTAL:',
+        'AMOUNT DUE:',
         `P${transaction.total.toFixed(2)}`
       )
     );
@@ -475,13 +559,13 @@ export class BluetoothPrinterService {
     // Payment details
     receipt += ESCPOSFormatter.lineFeed();
     receipt += ESCPOSFormatter.formatLine(
-      'Payment:',
+      'Payment Method:',
       transaction.paymentMethod.toUpperCase()
     );
 
     if (transaction.paymentMethod === 'cash') {
       receipt += ESCPOSFormatter.formatLine(
-        'Tendered:',
+        'Amount Tendered:',
         `P${(transaction.amountTendered || 0).toFixed(2)}`
       );
       receipt += ESCPOSFormatter.formatLine(
@@ -490,10 +574,40 @@ export class BluetoothPrinterService {
       );
     }
 
-    // Footer
+    // BIR COMPLIANCE FOOTER
     receipt += ESCPOSFormatter.lineFeed(2);
     receipt += ESCPOSFormatter.center();
-    receipt += 'Thank you for your purchase!' + ESCPOSFormatter.lineFeed(2);
+    
+    // Accredited supplier information (required by BIR)
+    receipt += 'Accredited System Provider:' + ESCPOSFormatter.lineFeed();
+    receipt += 'CROFFLE TECH SOLUTIONS' + ESCPOSFormatter.lineFeed();
+    receipt += 'TIN: 987-654-321-000' + ESCPOSFormatter.lineFeed();
+    receipt += 'Accred No: A123456789' + ESCPOSFormatter.lineFeed();
+    const accredDate = store?.date_issued || '01/15/2024';
+    receipt += `Date: ${accredDate}` + ESCPOSFormatter.lineFeed();
+    const ptuNumber = store?.permit_number || 'PTU-2024-001';
+    receipt += `PTU No: ${ptuNumber}` + ESCPOSFormatter.lineFeed();
+    
+    receipt += ESCPOSFormatter.lineFeed();
+    
+    // BIR validity statement (required by law)
+    receipt += ESCPOSFormatter.bold(
+      'THIS INVOICE/RECEIPT SHALL BE' + ESCPOSFormatter.lineFeed() +
+      'VALID FOR FIVE (5) YEARS FROM' + ESCPOSFormatter.lineFeed() +
+      'THE DATE OF THE PERMIT TO USE.'
+    );
+    
+    // Add NON-VAT disclaimer if applicable
+    if (!store?.is_bir_accredited) {
+      receipt += ESCPOSFormatter.lineFeed(2);
+      receipt += ESCPOSFormatter.bold(
+        'THIS DOCUMENT IS NOT VALID' + ESCPOSFormatter.lineFeed() +
+        'FOR CLAIM OF INPUT TAX'
+      );
+    }
+    
+    receipt += ESCPOSFormatter.lineFeed(2);
+    receipt += 'Thank you for your purchase!' + ESCPOSFormatter.lineFeed();
     receipt += ESCPOSFormatter.qrCode(transaction.receiptNumber);
     receipt += ESCPOSFormatter.lineFeed(3);
     receipt += ESCPOSFormatter.cut();

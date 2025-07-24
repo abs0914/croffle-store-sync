@@ -30,6 +30,7 @@ export interface Customer {
   email?: string;
   phone?: string;
   address?: string;
+  tin?: string; // TIN for BIR compliance
   loyaltyPoints?: number;
   storeId?: string;
   storeName?: string;

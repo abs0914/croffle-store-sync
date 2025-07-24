@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { BluetoothPrinterService } from '@/services/printer/BluetoothPrinterService';
 import { PrinterDiscovery, ThermalPrinter } from '@/services/printer/PrinterDiscovery';
 import { Transaction, Customer } from '@/types';
+import { Store } from '@/types/store';
 import { toast } from 'sonner';
 
 export function useThermalPrinter() {
@@ -133,7 +134,8 @@ export function useThermalPrinter() {
   const printReceipt = async (
     transaction: Transaction,
     customer?: Customer | null,
-    storeName?: string
+    store?: Store,
+    cashierName?: string
   ) => {
     if (!isConnected) {
       toast.error('No printer connected');
@@ -145,7 +147,7 @@ export function useThermalPrinter() {
       console.log(`Starting receipt print for transaction: ${transaction.receiptNumber}`);
       toast.info('Sending receipt to printer...');
 
-      const success = await BluetoothPrinterService.printReceipt(transaction, customer, storeName);
+      const success = await BluetoothPrinterService.printReceipt(transaction, customer, store, cashierName);
 
       if (success) {
         toast.success('Receipt sent to printer successfully!');

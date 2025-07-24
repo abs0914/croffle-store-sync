@@ -92,7 +92,7 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
       return;
     }
 
-    const success = await printReceipt(transaction, customer, currentStore?.name);
+    const success = await printReceipt(transaction, customer, currentStore, 'Cashier');
     if (success) {
       toast.success('Receipt printed to thermal printer');
     }

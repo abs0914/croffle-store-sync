@@ -32,7 +32,7 @@ export default function CompletedTransaction({
       if (isConnected && transaction && !hasTriggered) {
         hasTriggered = true;
         console.log('Auto-printing receipt to thermal printer...');
-        await printReceipt(transaction, customer, currentStore?.name);
+        await printReceipt(transaction, customer, currentStore, 'Cashier');
         
         // Show brief success message and start countdown for auto-navigation
         setShowBriefSuccess(true);
