@@ -130,36 +130,51 @@ export default function CompletedTransaction({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full max-w-md mx-auto">
-      <div className="w-full text-center mb-6">
-        <h1 className="text-2xl font-bold mb-2 text-green-600">Sale Complete!</h1>
-        <p className="text-gray-600 mb-4">Transaction #{transaction.receiptNumber}</p>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full max-w-6xl mx-auto p-4">
+      {/* Left Column - Receipt */}
+      <div className="space-y-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2 text-green-600">Sale Complete!</h1>
+          <p className="text-gray-600 mb-4">Transaction #{transaction.receiptNumber}</p>
+        </div>
+        
+        <Card>
+          <CardContent className="p-4">
+            {transaction && transaction.receiptNumber ? (
+              <ReceiptGenerator 
+                transaction={transaction}
+                customer={customer}
+              />
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-red-600">Error: Invalid transaction data</p>
+                <Button onClick={startNewSale} className="mt-2">
+                  Start New Sale
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
       
-      <Card className="w-full mb-6">
-        <CardContent className="p-4">
-          {transaction && transaction.receiptNumber ? (
-            <ReceiptGenerator 
-              transaction={transaction}
-              customer={customer}
-            />
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-red-600">Error: Invalid transaction data</p>
-              <Button onClick={startNewSale} className="mt-2">
-                Start New Sale
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      <Button 
-        onClick={startNewSale}
-        className="w-full py-6 text-lg"
-      >
-        New Sale
-      </Button>
+      {/* Right Column - Actions */}
+      <div className="flex flex-col justify-center items-center space-y-6">
+        <div className="text-center">
+          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Transaction Complete</h2>
+          <p className="text-muted-foreground">Ready for next customer</p>
+        </div>
+        
+        <Button 
+          onClick={startNewSale}
+          className="w-full max-w-sm py-8 text-xl font-semibold"
+          size="lg"
+        >
+          New Sale
+        </Button>
+      </div>
     </div>
   );
 }
