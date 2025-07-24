@@ -5,8 +5,9 @@ import ReceiptGenerator from "./ReceiptGenerator";
 import { Transaction, Customer } from "@/types";
 import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import { useStore } from "@/contexts/StoreContext";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { CheckCircle, Printer } from "lucide-react";
+import { toast } from "sonner";
 
 interface CompletedTransactionProps {
   transaction: Transaction;
@@ -23,6 +24,36 @@ export default function CompletedTransaction({
   const { currentStore } = useStore();
   const [countdown, setCountdown] = useState(3);
   const [showBriefSuccess, setShowBriefSuccess] = useState(false);
+
+  // Add defensive checks for transaction data
+  React.useEffect(() => {
+    console.log("CompletedTransaction: Component mounted with:", {
+      transaction: {
+        receiptNumber: transaction?.receiptNumber,
+        total: transaction?.total,
+        itemsCount: transaction?.items?.length,
+        createdAt: transaction?.createdAt,
+        paymentMethod: transaction?.paymentMethod
+      },
+      customer: customer?.name,
+      currentStore: currentStore?.name
+    });
+
+    // Validate critical transaction fields
+    if (!transaction) {
+      console.error("CompletedTransaction: No transaction provided");
+      toast.error("Error: No transaction data");
+      startNewSale();
+      return;
+    }
+
+    if (!transaction.receiptNumber) {
+      console.error("CompletedTransaction: Missing receipt number");
+      toast.error("Error: Invalid receipt data");
+      startNewSale();
+      return;
+    }
+  }, [transaction, customer, currentStore, startNewSale]);
 
   // Automatically print receipt when transaction completes and printer is connected
   useEffect(() => {
@@ -107,10 +138,19 @@ export default function CompletedTransaction({
       
       <Card className="w-full mb-6">
         <CardContent className="p-4">
-          <ReceiptGenerator 
-            transaction={transaction}
-            customer={customer}
-          />
+          {transaction && transaction.receiptNumber ? (
+            <ReceiptGenerator 
+              transaction={transaction}
+              customer={customer}
+            />
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-red-600">Error: Invalid transaction data</p>
+              <Button onClick={startNewSale} className="mt-2">
+                Start New Sale
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
       

@@ -21,6 +21,35 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
   const { isAvailable, isConnected, printReceipt, isPrinting } = useThermalPrinter();
   const receiptRef = React.useRef<HTMLDivElement>(null);
 
+  // Add validation and logging
+  React.useEffect(() => {
+    console.log("ReceiptGenerator: Component mounted with:", {
+      transaction: {
+        receiptNumber: transaction?.receiptNumber,
+        createdAt: transaction?.createdAt,
+        itemsCount: transaction?.items?.length,
+        total: transaction?.total
+      },
+      customer: customer?.name,
+      currentStore: currentStore?.name
+    });
+
+    if (!transaction) {
+      console.error("ReceiptGenerator: No transaction provided");
+      return;
+    }
+
+    if (!transaction.receiptNumber) {
+      console.error("ReceiptGenerator: Missing receipt number");
+      return;
+    }
+
+    if (!transaction.items || transaction.items.length === 0) {
+      console.error("ReceiptGenerator: No items in transaction");
+      return;
+    }
+  }, [transaction, customer, currentStore]);
+
   const handlePrint = () => {
     const content = receiptRef.current;
     if (!content) return;
@@ -105,8 +134,19 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
     }).format(amount);
   };
 
-  // Generate QR code content
-  const qrContent = `RECEIPT:${transaction.receiptNumber}|STORE:${currentStore?.name || ''}|DATE:${format(new Date(transaction.createdAt), 'yyyy-MM-dd HH:mm')}|TOTAL:${transaction.total}`;
+  // Generate QR code content with error handling
+  const qrContent = React.useMemo(() => {
+    try {
+      const receiptNum = transaction?.receiptNumber || 'UNKNOWN';
+      const storeName = currentStore?.name || 'Unknown Store';
+      const date = transaction?.createdAt ? format(new Date(transaction.createdAt), 'yyyy-MM-dd HH:mm') : 'Unknown Date';
+      const total = transaction?.total || 0;
+      return `RECEIPT:${receiptNum}|STORE:${storeName}|DATE:${date}|TOTAL:${total}`;
+    } catch (error) {
+      console.error("ReceiptGenerator: Error generating QR content:", error);
+      return `RECEIPT:${transaction?.receiptNumber || 'ERROR'}`;
+    }
+  }, [transaction, currentStore]);
 
   return (
     <div>
@@ -122,7 +162,7 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
           <div className="mt-2">
             <h3 className="font-bold">SALES RECEIPT</h3>
             <p>Receipt #: {transaction.receiptNumber}</p>
-            <p>Date: {format(new Date(transaction.createdAt), 'MMM dd, yyyy h:mm a')}</p>
+            <p>Date: {transaction.createdAt ? format(new Date(transaction.createdAt), 'MMM dd, yyyy h:mm a') : 'Unknown Date'}</p>
             {currentStore?.machine_accreditation_number && (
               <p className="text-xs">Machine ACC: {currentStore.machine_accreditation_number}</p>
             )}
@@ -154,18 +194,22 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
           
           <Separator className="my-1" />
           
-          {transaction.items.map((item, index) => (
+          {transaction.items?.map((item, index) => (
             <div key={index} className="mb-1">
-              <div className="font-medium">{item.name}</div>
+              <div className="font-medium">{item.name || 'Unknown Item'}</div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{formatCurrency(item.unitPrice)} each</span>
+                <span className="text-muted-foreground">{formatCurrency(item.unitPrice || 0)} each</span>
                 <div className="flex">
-                  <span className="w-16 text-center">{item.quantity}</span>
-                  <span className="w-20 text-right">{formatCurrency(item.totalPrice)}</span>
+                  <span className="w-16 text-center">{item.quantity || 0}</span>
+                  <span className="w-20 text-right">{formatCurrency(item.totalPrice || 0)}</span>
                 </div>
               </div>
             </div>
-          ))}
+          )) || (
+            <div className="text-center text-red-600">
+              No items found in transaction
+            </div>
+          )}
           
           <Separator className="my-2" />
           
@@ -272,9 +316,15 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
         
         <div className="mt-4 text-center">
           <div className="flex justify-center mb-2">
-            <QRCodeSVG value={qrContent} size={80} />
+            {qrContent ? (
+              <QRCodeSVG value={qrContent} size={80} />
+            ) : (
+              <div className="w-20 h-20 bg-gray-200 flex items-center justify-center text-xs">
+                QR Error
+              </div>
+            )}
           </div>
-          <p className="text-xs">{transaction.receiptNumber}</p>
+          <p className="text-xs">{transaction.receiptNumber || 'No Receipt Number'}</p>
           {transaction.sequence_number && (
             <p className="text-xs">Seq: {transaction.sequence_number}</p>
           )}
