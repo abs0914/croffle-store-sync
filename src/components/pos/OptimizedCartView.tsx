@@ -42,63 +42,67 @@ const OptimizedCartView = memo(function OptimizedCartView({
   const { subtotal, tax, total } = useCartCalculations();
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-bold text-lg text-croffle-primary">Current Order</h2>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={clearCart}
-          className="text-croffle-accent hover:text-croffle-accent/90 hover:bg-croffle-background"
-          disabled={items.length === 0 || !isShiftActive}
-        >
-          Clear All
-        </Button>
-      </div>
-      
-      {/* Customer Selection */}
-      <div className="mb-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+      {/* Left Column - Order Management */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="font-bold text-lg text-croffle-primary">Current Order</h2>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={clearCart}
+            className="text-croffle-accent hover:text-croffle-accent/90 hover:bg-croffle-background"
+            disabled={items.length === 0 || !isShiftActive}
+          >
+            Clear All
+          </Button>
+        </div>
+        
+        {/* Customer Selection */}
         <CustomerLookup 
           onSelectCustomer={setSelectedCustomer}
           selectedCustomer={selectedCustomer}
         />
+        
+        {/* Cart Items */}
+        <div className="max-h-[calc(100vh-24rem)] overflow-y-auto">
+          <CartItemsList
+            items={items}
+            isTransitioning={false}
+            orderType="dine_in"
+            updateQuantity={updateQuantity}
+            updateItemPrice={() => {}}
+            removeItem={removeItem}
+            getItemValidation={() => ({ isValid: true, insufficientItems: [] })}
+          />
+        </div>
       </div>
-      
-      {/* Cart Items */}
-      <div className="mb-4 max-h-[calc(100vh-22rem)] overflow-y-auto">
-        <CartItemsList
-          items={items}
-          isTransitioning={false}
-          orderType="dine_in"
-          updateQuantity={updateQuantity}
-          updateItemPrice={() => {}}
-          removeItem={removeItem}
-          getItemValidation={() => ({ isValid: true, insufficientItems: [] })}
+
+      {/* Right Column - Discount and Summary */}
+      <div className="space-y-4">
+        {/* Discount Selection */}
+        <DiscountSelector
+          subtotal={subtotal}
+          onApplyDiscount={handleApplyDiscount}
+          currentDiscount={discount}
+          currentDiscountType={discountType}
+          currentDiscountIdNumber={discountIdNumber}
         />
-      </div>
-      
-      {/* Discount Selection */}
-      <DiscountSelector
-        subtotal={subtotal}
-        onApplyDiscount={handleApplyDiscount}
-        currentDiscount={discount}
-        currentDiscountType={discountType}
-        currentDiscountIdNumber={discountIdNumber}
-      />
-      
-      {/* Order Summary - Using basic display since CartSummary has different interface */}
-      <div className="border-t pt-4 space-y-2">
-        <div className="flex justify-between">
-          <span>Subtotal:</span>
-          <span>₱{subtotal.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Tax:</span>
-          <span>₱{tax.toFixed(2)}</span>
-        </div>
-        <div className="flex justify-between font-bold">
-          <span>Total:</span>
-          <span>₱{total.toFixed(2)}</span>
+        
+        {/* Order Summary */}
+        <div className="border-t pt-4 space-y-3">
+          <div className="flex justify-between text-base">
+            <span>Subtotal:</span>
+            <span>₱{subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-base">
+            <span>Tax:</span>
+            <span>₱{tax.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between font-bold text-lg border-t pt-2">
+            <span>Total:</span>
+            <span>₱{total.toFixed(2)}</span>
+          </div>
         </div>
       </div>
     </div>
