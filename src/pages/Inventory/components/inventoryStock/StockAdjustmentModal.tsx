@@ -63,8 +63,9 @@ export const StockAdjustmentModal = ({
           <Input
             id="stock-quantity"
             type="number"
+            step="0.01"
             value={stockAdjustment.quantity}
-            onChange={(e) => handleChange("quantity", Number(e.target.value))}
+            onChange={(e) => handleChange("quantity", parseFloat(e.target.value) || 0)}
             className="col-span-3"
             min="0"
           />

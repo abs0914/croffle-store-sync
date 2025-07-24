@@ -123,7 +123,7 @@ export const useInventoryStockMutations = (
     createMutation.mutate({
       ...newStockItem,
       store_id: currentStore.id,
-      stock_quantity: Number(newStockItem.stock_quantity || 0),
+      stock_quantity: parseFloat(String(newStockItem.stock_quantity || 0)),
       is_active: true
     } as Omit<InventoryStock, "id">);
   }, [currentStore, createMutation]);

@@ -75,8 +75,9 @@ export const AddStockItemForm = ({ onSave, onCancel, isLoading }: AddStockItemFo
           <Input
             id="stock_quantity"
             type="number"
+            step="0.01"
             value={newStockItem.stock_quantity || 0}
-            onChange={(e) => handleChange("stock_quantity", Number(e.target.value))}
+            onChange={(e) => handleChange("stock_quantity", parseFloat(e.target.value) || 0)}
             className="col-span-3"
             min="0"
           />

@@ -139,7 +139,7 @@ export const InventoryStockList = ({
               <TableCell>{stockItem.unit}</TableCell>
               <TableCell className="text-right">
                 <span className={`font-medium ${stockItem.stock_quantity <= 5 ? 'text-destructive' : ''}`}>
-                  {stockItem.stock_quantity}
+                  {Number(stockItem.stock_quantity).toFixed(2)}
                 </span>
               </TableCell>
               <TableCell className="text-right">

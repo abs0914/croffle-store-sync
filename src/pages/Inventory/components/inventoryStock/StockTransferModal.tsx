@@ -128,10 +128,11 @@ export const StockTransferModal = ({
           <Input
             id="transfer-quantity"
             type="number"
+            step="0.01"
             value={transferData.quantity}
-            onChange={(e) => handleChange("quantity", Number(e.target.value))}
+            onChange={(e) => handleChange("quantity", parseFloat(e.target.value) || 0)}
             className="col-span-3"
-            min="1"
+            min="0.01"
             max={stockItem.stock_quantity}
           />
         </div>
