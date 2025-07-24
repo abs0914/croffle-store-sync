@@ -133,7 +133,7 @@ export default function CompletedTransaction({
     <div className="h-full overflow-y-auto">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 min-h-full max-w-6xl mx-auto p-3 lg:p-4">
         {/* Receipt Section */}
-        <div className="space-y-3 lg:space-y-4 order-1">
+        <div className="space-y-3 lg:space-y-4 order-2 lg:order-1">
           <div className="text-center">
             <h1 className="text-xl lg:text-2xl font-bold mb-2 text-green-600">Sale Complete!</h1>
             <p className="text-sm lg:text-base text-gray-600 mb-3 lg:mb-4">Transaction #{transaction.receiptNumber}</p>
@@ -158,8 +158,18 @@ export default function CompletedTransaction({
           </Card>
         </div>
         
-        {/* Actions Section */}
-        <div className="flex flex-col justify-center items-center space-y-4 lg:space-y-6 order-2 lg:order-none min-h-[200px] lg:min-h-0">
+        {/* Actions Section - Top on mobile, right on desktop */}
+        <div className="flex flex-col justify-start lg:justify-center items-center space-y-4 lg:space-y-6 order-1 lg:order-2">
+          {/* New Sale Button - prominently at top */}
+          <Button 
+            onClick={startNewSale}
+            className="w-full max-w-sm py-4 lg:py-8 text-lg lg:text-xl font-semibold"
+            size="lg"
+          >
+            New Sale
+          </Button>
+          
+          {/* Success indicator below button */}
           <div className="text-center lg:block hidden">
             <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
@@ -175,14 +185,6 @@ export default function CompletedTransaction({
             </div>
             <p className="text-sm text-muted-foreground">Ready for next customer</p>
           </div>
-          
-          <Button 
-            onClick={startNewSale}
-            className="w-full max-w-sm py-4 lg:py-8 text-lg lg:text-xl font-semibold sticky bottom-4 lg:static"
-            size="lg"
-          >
-            New Sale
-          </Button>
         </div>
       </div>
     </div>
