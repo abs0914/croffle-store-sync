@@ -130,16 +130,16 @@ export default function CompletedTransaction({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full max-w-6xl mx-auto p-4">
-      {/* Left Column - Receipt */}
-      <div className="space-y-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 h-full max-w-6xl mx-auto p-3 lg:p-4">
+      {/* Receipt Section */}
+      <div className="space-y-3 lg:space-y-4 order-1">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2 text-green-600">Sale Complete!</h1>
-          <p className="text-gray-600 mb-4">Transaction #{transaction.receiptNumber}</p>
+          <h1 className="text-xl lg:text-2xl font-bold mb-2 text-green-600">Sale Complete!</h1>
+          <p className="text-sm lg:text-base text-gray-600 mb-3 lg:mb-4">Transaction #{transaction.receiptNumber}</p>
         </div>
         
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 lg:p-4">
             {transaction && transaction.receiptNumber ? (
               <ReceiptGenerator 
                 transaction={transaction}
@@ -157,9 +157,9 @@ export default function CompletedTransaction({
         </Card>
       </div>
       
-      {/* Right Column - Actions */}
-      <div className="flex flex-col justify-center items-center space-y-6">
-        <div className="text-center">
+      {/* Actions Section */}
+      <div className="flex flex-col justify-center items-center space-y-4 lg:space-y-6 order-2 lg:order-none">
+        <div className="text-center lg:block hidden">
           <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
@@ -167,9 +167,17 @@ export default function CompletedTransaction({
           <p className="text-muted-foreground">Ready for next customer</p>
         </div>
         
+        {/* Mobile: Compact success indicator */}
+        <div className="text-center lg:hidden">
+          <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
+            <CheckCircle className="h-6 w-6 text-green-600" />
+          </div>
+          <p className="text-sm text-muted-foreground">Ready for next customer</p>
+        </div>
+        
         <Button 
           onClick={startNewSale}
-          className="w-full max-w-sm py-8 text-xl font-semibold"
+          className="w-full max-w-sm py-4 lg:py-8 text-lg lg:text-xl font-semibold"
           size="lg"
         >
           New Sale
