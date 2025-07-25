@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { SMAccreditationTestRunner } from '@/components/testing/SMAccreditationTestRunner';
 import { SMSchedulerTest } from '@/components/testing/SMSchedulerTest';
+import { ManualCSVDownloader } from '@/components/testing/ManualCSVDownloader';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { FileCheck, Store, AlertTriangle, CheckCircle2 } from 'lucide-react';
@@ -209,6 +210,14 @@ export default function SMAccreditationTesting() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Manual CSV Download & Email */}
+      {selectedStoreId && (
+        <ManualCSVDownloader 
+          storeId={selectedStoreId}
+          storeName={stores.find(s => s.id === selectedStoreId)?.name}
+        />
+      )}
 
       {/* Test Runner */}
       {selectedStoreId && (
