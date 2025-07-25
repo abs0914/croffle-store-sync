@@ -7,6 +7,7 @@ import { UserListView, ErrorView, LoadingView } from "./components";
 import { useUserDebug, useUsersData, useUserDialogs } from "./hooks";
 import UserAccessView from "./components/UserAccessView";
 import UserDialogs from "./components/UserDialogs";
+import { SecurityAuditPanel } from "@/components/security/SecurityAuditPanel";
 import { syncAuthWithAppUsers, updateAppUsersFromAuthMetadata } from "@/services/appUser/sync";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -129,6 +130,11 @@ export default function UsersPage() {
         onRefresh={refetch}
         onSyncUsers={handleSyncUsers}
       />
+
+      {/* Security Audit Panel - Only show to admin/owner users */}
+      {canManageUsers && ['admin', 'owner'].includes(user?.role || '') && (
+        <SecurityAuditPanel />
+      )}
 
       {/* Dialogs - Only render for users with management permissions */}
       {canManageUsers && (

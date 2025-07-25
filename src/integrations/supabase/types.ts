@@ -4318,6 +4318,42 @@ export type Database = {
           },
         ]
       }
+      user_role_audit: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          id: string
+          ip_address: unknown | null
+          new_role: Database["public"]["Enums"]["app_role"]
+          old_role: Database["public"]["Enums"]["app_role"] | null
+          reason: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          id?: string
+          ip_address?: unknown | null
+          new_role: Database["public"]["Enums"]["app_role"]
+          old_role?: Database["public"]["Enums"]["app_role"] | null
+          reason?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          ip_address?: unknown | null
+          new_role?: Database["public"]["Enums"]["app_role"]
+          old_role?: Database["public"]["Enums"]["app_role"] | null
+          reason?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_stores: {
         Row: {
           created_at: string | null
@@ -4611,6 +4647,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_current_user_admin_or_owner: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_user_admin_or_owner: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -4737,6 +4777,15 @@ export type Database = {
           error_message: string
           missing_ingredients: string[]
         }[]
+      }
+      validate_user_input: {
+        Args: {
+          p_email: string
+          p_first_name: string
+          p_last_name: string
+          p_contact_number?: string
+        }
+        Returns: boolean
       }
     }
     Enums: {

@@ -2,10 +2,7 @@
 import { useState } from "react";
 import { setUserPassword } from "@/services/appUser/appUserAuth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -14,39 +11,20 @@ interface PasswordManagementTabProps {
 }
 
 export default function PasswordManagementTab({ userEmail }: PasswordManagementTabProps) {
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
-  const handleResetPassword = async () => {
-    // Reset any previous error message
+  const handleSendResetEmail = async () => {
     setErrorMessage(null);
-    
-    if (!password) {
-      setErrorMessage("Password is required");
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      setErrorMessage("Passwords don't match");
-      return;
-    }
-    
-    if (password.length < 6) {
-      setErrorMessage("Password must be at least 6 characters long");
-      return;
-    }
-
     setIsResetting(true);
+    
     try {
-      const success = await setUserPassword(userEmail, password);
-      if (success) {
-        setPassword('');
-        setConfirmPassword('');
+      const success = await setUserPassword(userEmail, '');
+      if (!success) {
+        setErrorMessage("Failed to send password reset email");
       }
     } catch (error) {
-      console.error("Error during password reset:", error);
+      console.error("Error sending password reset:", error);
       setErrorMessage("An unexpected error occurred. Please try again.");
     } finally {
       setIsResetting(false);
@@ -63,9 +41,15 @@ export default function PasswordManagementTab({ userEmail }: PasswordManagementT
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-muted-foreground mb-4">
-        Set a new password for user: <span className="font-medium">{userEmail}</span>
-      </div>
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          <strong>🔒 Secure Password Management</strong><br />
+          For enhanced security, passwords cannot be set directly by administrators. 
+          A secure password reset link will be sent to <strong>{userEmail}</strong>. 
+          This ensures only the user can set their own password and prevents unauthorized access.
+        </AlertDescription>
+      </Alert>
       
       {errorMessage && (
         <Alert variant="destructive" className="mb-4">
@@ -74,37 +58,26 @@ export default function PasswordManagementTab({ userEmail }: PasswordManagementT
         </Alert>
       )}
       
-      <div className="space-y-2">
-        <Label htmlFor="new-password">New Password</Label>
-        <Input
-          id="new-password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter new password"
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="confirm-password">Confirm Password</Label>
-        <Input
-          id="confirm-password"
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          placeholder="Confirm new password"
-        />
-      </div>
-      
       <Button
         type="button"
-        onClick={handleResetPassword}
-        disabled={isResetting || !password || !confirmPassword}
+        onClick={handleSendResetEmail}
+        disabled={isResetting}
         className="w-full mt-2"
+        variant="outline"
       >
         {isResetting ? <Spinner className="mr-2 h-4 w-4" /> : null}
-        Reset Password
+        Send Password Reset Email
       </Button>
+      
+      <div className="text-xs text-muted-foreground mt-2 p-3 bg-muted rounded-md">
+        <strong>How it works:</strong>
+        <ul className="list-disc list-inside mt-1 space-y-1">
+          <li>User receives a secure reset link via email</li>
+          <li>Link expires after a limited time</li>
+          <li>User sets their own password securely</li>
+          <li>Admin cannot view or set passwords directly</li>
+        </ul>
+      </div>
     </div>
   );
 }

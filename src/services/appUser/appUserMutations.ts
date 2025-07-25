@@ -6,6 +6,20 @@ import { toast } from "sonner";
 
 export const createAppUser = async (data: AppUserFormData): Promise<AppUser | null> => {
   try {
+    // Validate input data before proceeding
+    const { error: validationError } = await supabase.rpc('validate_user_input', {
+      p_email: data.email,
+      p_first_name: data.firstName,
+      p_last_name: data.lastName,
+      p_contact_number: data.contactNumber
+    });
+
+    if (validationError) {
+      console.error('Input validation failed:', validationError);
+      toast.error(`Invalid input: ${validationError.message}`);
+      return null;
+    }
+
     // For admin and owner users, automatically assign all active stores if no stores are specified
     let storeIds = data.storeIds;
     if ((data.role === 'admin' || data.role === 'owner') && (!storeIds || storeIds.length === 0)) {
@@ -79,6 +93,20 @@ export const updateAppUser = async (data: AppUserFormData): Promise<AppUser | nu
   try {
     if (!data.id) {
       toast.error('User ID is required for update');
+      return null;
+    }
+
+    // Validate input data before proceeding
+    const { error: validationError } = await supabase.rpc('validate_user_input', {
+      p_email: data.email,
+      p_first_name: data.firstName,
+      p_last_name: data.lastName,
+      p_contact_number: data.contactNumber
+    });
+
+    if (validationError) {
+      console.error('Input validation failed:', validationError);
+      toast.error(`Invalid input: ${validationError.message}`);
       return null;
     }
 
