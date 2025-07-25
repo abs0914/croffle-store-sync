@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, FileText, Mail, AlertTriangle } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Download, FileText, Mail, AlertTriangle, TestTube } from 'lucide-react';
 import { SMAccreditationService } from '@/services/exports/smAccreditationService';
+import { SMAccreditationTesting } from '@/services/testing/smAccreditationTesting';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
