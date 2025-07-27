@@ -459,67 +459,33 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
             </Tabs>
           ) : (
             /* Combo Croffles - Show combo selection */
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="toppings">
-                  Toppings ({comboSelection.toppings.length}/{croffleType === 'overload' ? '3' : '2'})
-                </TabsTrigger>
-                {croffleType === 'mini_overload' && (
-                  <TabsTrigger value="sauces">
-                    Sauces ({comboSelection.sauces.length}/2)
-                  </TabsTrigger>
-                )}
-              </TabsList>
-              
-              <TabsContent value="toppings" className="space-y-4">
-                <div className="space-y-4">
-                  {croffleType === 'overload' ? (
-                    /* Croffle Overload - Only sauces */
-                    <div>
-                      <h4 className="font-medium mb-2">Sauce Selection</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
-                      </div>
-                    </div>
-                  ) : (
-                    /* Mini Croffle - Sauces and Toppings */
-                    <>
-                      <div>
-                        <h4 className="font-medium mb-2">Sauce Selection</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="font-medium mb-2">Toppings Selection</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {mixMatchToppings.map(topping => renderMixMatchCard(topping, 'toppings'))}
-                        </div>
-                      </div>
-                    </>
-                  )}
+            <div className="space-y-6">
+              {croffleType === 'overload' ? (
+                /* Croffle Overload - Only sauces */
+                <div>
+                  <h4 className="font-medium mb-3">Sauce Selection</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
+                  </div>
                 </div>
-              </TabsContent>
-              
-              {croffleType === 'mini_overload' && (
-                <TabsContent value="sauces" className="space-y-4">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Spreads</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {classicSauces.map(addon => renderAddonCard(addon, true, 'sauces'))}
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium mb-2">Fruit Jams</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {premiumSauces.map(addon => renderAddonCard(addon, true, 'sauces'))}
-                      </div>
+              ) : (
+                /* Mini Croffle - Sauces and Toppings */
+                <>
+                  <div>
+                    <h4 className="font-medium mb-3">Sauce Selection</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
                     </div>
                   </div>
-                </TabsContent>
+                  <div>
+                    <h4 className="font-medium mb-3">Toppings Selection</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {mixMatchToppings.map(topping => renderMixMatchCard(topping, 'toppings'))}
+                    </div>
+                  </div>
+                </>
               )}
-            </Tabs>
+            </div>
           )}
 
           <Separator />
