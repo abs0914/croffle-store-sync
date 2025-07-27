@@ -95,10 +95,25 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     return category?.items || [];
   };
 
-  const classicToppings = getAddonsByCategory('basic_toppings');
-  const premiumToppings = getAddonsByCategory('premium_toppings');
-  const classicSauces = getAddonsByCategory('premium_spreads');
-  const premiumSauces = getAddonsByCategory('fruit_jams');
+  // Define fixed sauce and topping options for Mix & Match
+  const mixMatchSauces = [
+    { id: 'chocolate', name: 'Chocolate', price: 0 },
+    { id: 'caramel', name: 'Caramel', price: 0 },
+    { id: 'tiramisu', name: 'Tiramisu', price: 0 }
+  ];
+
+  const mixMatchToppings = [
+    { id: 'colored_sprinkles', name: 'Colored Sprinkles', price: 0 },
+    { id: 'marshmallow', name: 'Marshmallow', price: 0 },
+    { id: 'chocolate_flakes', name: 'Chocolate Flakes', price: 0 },
+    { id: 'peanuts', name: 'Peanuts', price: 0 }
+  ];
+
+  // Get addons from categories for regular croffles
+  const classicToppings = croffleType === 'regular' ? getAddonsByCategory('basic_toppings') : [];
+  const premiumToppings = croffleType === 'regular' ? getAddonsByCategory('premium_toppings') : [];
+  const classicSauces = croffleType === 'regular' ? getAddonsByCategory('premium_spreads') : [];
+  const premiumSauces = croffleType === 'regular' ? getAddonsByCategory('fruit_jams') : [];
 
   // Handle addon quantity changes for regular croffle
   const handleAddonQuantityChange = (addon: AddonItem, change: number) => {
@@ -166,16 +181,17 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
   // Calculate pricing
   const calculateTotal = (): number => {
+    // Fixed prices for Mix & Match products
+    if (croffleType === 'overload') {
+      return 99; // Fixed price for Croffle Overload
+    } else if (croffleType === 'mini_overload') {
+      return 65; // Fixed price for Mini Croffle
+    }
+    
+    // For regular croffles, use base price + addons
     const basePrice = product?.price || 0;
     const variationPrice = (product as any)?.selectedVariation?.price || 0;
-    
-    if (croffleType === 'regular') {
-      return basePrice + variationPrice + calculateAddonTotal(selectedAddons);
-    } else {
-      // For combo items, use combo pricing
-      const comboPrice = getComboPrice();
-      return basePrice + variationPrice + comboPrice;
-    }
+    return basePrice + variationPrice + calculateAddonTotal(selectedAddons);
   };
 
   const getComboPrice = (): number => {
@@ -196,9 +212,9 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     if (croffleType === 'regular') {
       return true; // Regular can have any addons or none
     } else if (croffleType === 'overload') {
-      return comboSelection.toppings.length >= 2; // Minimum 2 toppings
+      return comboSelection.sauces.length >= 1; // At least 1 sauce required
     } else if (croffleType === 'mini_overload') {
-      return comboSelection.toppings.length >= 1 && comboSelection.sauces.length >= 1; // At least 1 of each
+      return comboSelection.sauces.length >= 1; // At least 1 sauce required
     }
     return false;
   };
@@ -208,9 +224,9 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
     if (!isSelectionValid()) {
       if (croffleType === 'overload') {
-        toast.error('Please select at least 2 toppings for Croffle Overload');
+        toast.error('Please select at least 1 sauce for Croffle Overload');
       } else if (croffleType === 'mini_overload') {
-        toast.error('Please select at least 1 topping and 1 sauce for Mini Croffle Overload');
+        toast.error('Please select at least 1 sauce for Mini Croffle');
       }
       return;
     }
@@ -335,6 +351,41 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     }
   };
 
+  // Render mix & match cards for fixed sauce/topping options
+  const renderMixMatchCard = (item: { id: string; name: string; price: number }, type: 'toppings' | 'sauces') => {
+    const isSelected = comboSelection[type].some(selected => selected.addon.id === item.id);
+    
+    // Create a temporary addon object for compatibility
+    const addonItem: AddonItem = {
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      cost_per_unit: 0,
+      category: type === 'sauces' ? 'classic_sauce' : 'classic_topping',
+      is_active: true
+    };
+    
+    return (
+      <Card 
+        key={item.id} 
+        className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
+        onClick={() => handleComboSelection(type, addonItem, !isSelected)}
+      >
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex-1">
+              <h4 className="font-medium text-sm">{item.name}</h4>
+              <p className="text-xs text-muted-foreground">No charge</p>
+            </div>
+            {isSelected && (
+              <CheckCircle className="h-5 w-5 text-primary" />
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (!product) return null;
 
   return (
@@ -347,8 +398,8 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
           </DialogTitle>
           <DialogDescription>
             {croffleType === 'regular' && 'Select add-ons to enhance your croffle'}
-            {croffleType === 'overload' && 'Choose 2-3 toppings for your Croffle Overload combo'}
-            {croffleType === 'mini_overload' && 'Choose toppings and sauces for your Mini Croffle Overload combo'}
+            {croffleType === 'overload' && 'Mix and match selections are no additional charge'}
+            {croffleType === 'mini_overload' && 'Mix and match selections are no additional charge'}
           </DialogDescription>
         </DialogHeader>
 
@@ -359,7 +410,11 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="font-medium">{product.name}</h3>
-                  <p className="text-sm text-muted-foreground">Base Price: ₱{product.price}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {croffleType === 'overload' ? 'Fixed Price: ₱99' : 
+                     croffleType === 'mini_overload' ? 'Fixed Price: ₱65' : 
+                     `Base Price: ₱${product.price}`}
+                  </p>
                 </div>
                 <Badge variant="outline" className="capitalize">
                   {croffleType.replace('_', ' ')}
@@ -418,18 +473,31 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
               
               <TabsContent value="toppings" className="space-y-4">
                 <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Basic Toppings</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {classicToppings.map(addon => renderAddonCard(addon, true, 'toppings'))}
+                  {croffleType === 'overload' ? (
+                    /* Croffle Overload - Only sauces */
+                    <div>
+                      <h4 className="font-medium mb-2">Sauce Selection</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Premium Toppings</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {premiumToppings.map(addon => renderAddonCard(addon, true, 'toppings'))}
-                    </div>
-                  </div>
+                  ) : (
+                    /* Mini Croffle - Sauces and Toppings */
+                    <>
+                      <div>
+                        <h4 className="font-medium mb-2">Sauce Selection</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-medium mb-2">Toppings Selection</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {mixMatchToppings.map(topping => renderMixMatchCard(topping, 'toppings'))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </TabsContent>
               
@@ -459,49 +527,52 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
           {/* Order Summary */}
           <div className="space-y-3">
             <h4 className="font-medium">Order Summary</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Base {product.name}</span>
-                <span>₱{product.price}</span>
-              </div>
-              
-              {croffleType === 'regular' && selectedAddons.length > 0 && (
-                selectedAddons.map(({ addon, quantity }) => (
-                  <div key={addon.id} className="flex justify-between text-sm">
-                    <span>{addon.name} x{quantity}</span>
-                    <span>₱{(addon.price * quantity).toFixed(2)}</span>
-                  </div>
-                ))
-              )}
-              
-              {croffleType !== 'regular' && (
-                <>
-                  {comboSelection.toppings.length > 0 && (
-                    <div className="space-y-1">
-                      <div className="text-sm font-medium text-muted-foreground">Selected Toppings:</div>
-                      {comboSelection.toppings.map(({ addon }) => (
-                        <div key={addon.id} className="flex justify-between text-sm pl-2">
-                          <span>• {addon.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {comboSelection.sauces.length > 0 && (
-                    <div className="space-y-1">
-                      <div className="text-sm font-medium text-muted-foreground">Selected Sauces:</div>
-                      {comboSelection.sauces.map(({ addon }) => (
-                        <div key={addon.id} className="flex justify-between text-sm pl-2">
-                          <span>• {addon.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                   <div className="flex justify-between text-sm">
-                     <span>Combo Pricing</span>
-                     <span>₱{getComboPrice().toFixed(2)}</span>
+             <div className="space-y-2">
+               {croffleType === 'regular' ? (
+                 <>
+                   <div className="flex justify-between">
+                     <span>Base {product.name}</span>
+                     <span>₱{product.price}</span>
                    </div>
+                   {selectedAddons.length > 0 && (
+                     selectedAddons.map(({ addon, quantity }) => (
+                       <div key={addon.id} className="flex justify-between text-sm">
+                         <span>{addon.name} x{quantity}</span>
+                         <span>₱{(addon.price * quantity).toFixed(2)}</span>
+                       </div>
+                     ))
+                   )}
+                 </>
+               ) : (
+                 <>
+                   <div className="flex justify-between">
+                     <span>Base {product.name}</span>
+                     <span>₱{calculateTotal()}</span>
+                   </div>
+                   
+                   {comboSelection.sauces.length > 0 && (
+                     <div className="space-y-1">
+                       <div className="text-sm font-medium text-muted-foreground">Selected Sauces:</div>
+                       {comboSelection.sauces.map(({ addon }) => (
+                         <div key={addon.id} className="flex justify-between text-sm pl-2">
+                           <span>• {addon.name}</span>
+                           <span>No charge</span>
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                   
+                   {comboSelection.toppings.length > 0 && (
+                     <div className="space-y-1">
+                       <div className="text-sm font-medium text-muted-foreground">Selected Toppings:</div>
+                       {comboSelection.toppings.map(({ addon }) => (
+                         <div key={addon.id} className="flex justify-between text-sm pl-2">
+                           <span>• {addon.name}</span>
+                           <span>No charge</span>
+                         </div>
+                       ))}
+                     </div>
+                   )}
                  </>
                )}
              </div>
