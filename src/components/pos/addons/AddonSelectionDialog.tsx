@@ -41,15 +41,15 @@ export const AddonSelectionDialog: React.FC<AddonSelectionDialogProps> = ({
   recommendedAddons = []
 }) => {
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('recommended');
+  const [activeCategory, setActiveCategory] = useState<string>(addonCategories[0]?.name || '');
 
   // Reset selections when dialog opens
   useEffect(() => {
     if (isOpen) {
       setSelectedAddons([]);
-      setActiveCategory('recommended');
+      setActiveCategory(addonCategories[0]?.name || '');
     }
-  }, [isOpen]);
+  }, [isOpen, addonCategories]);
 
   const handleAddonQuantityChange = (addon: AddonItem, change: number) => {
     setSelectedAddons(prev => {
@@ -174,13 +174,6 @@ export const AddonSelectionDialog: React.FC<AddonSelectionDialogProps> = ({
         <div className="space-y-6">
           {/* Category Tabs */}
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant={activeCategory === 'recommended' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveCategory('recommended')}
-            >
-              Recommended
-            </Button>
             {addonCategories.map((category) => (
               <Button
                 key={category.name}
@@ -195,22 +188,12 @@ export const AddonSelectionDialog: React.FC<AddonSelectionDialogProps> = ({
 
           {/* Addon Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {activeCategory === 'recommended' ? (
-              recommendedAddons.length > 0 ? (
-                recommendedAddons.map(renderAddonCard)
-              ) : (
-                <div className="col-span-full text-center py-8 text-muted-foreground">
-                  No recommended add-ons available
-                </div>
-              )
-            ) : (
-              addonCategories
-                .find(cat => cat.name === activeCategory)
-                ?.items.map(renderAddonCard) || (
-                <div className="col-span-full text-center py-8 text-muted-foreground">
-                  No add-ons in this category
-                </div>
-              )
+            {addonCategories
+              .find(cat => cat.name === activeCategory)
+              ?.items.map(renderAddonCard) || (
+              <div className="col-span-full text-center py-8 text-muted-foreground">
+                No add-ons in this category
+              </div>
             )}
           </div>
 
