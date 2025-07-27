@@ -171,30 +171,42 @@ export default function ProductGrid({
     // For Mix & Match products, continue with the existing customization flow
     console.log("ProductGrid: Mix & Match product - showing customization options:", product.name);
 
-    // Check for enhanced customization first (croffles) - prioritize over recipe customization
-    if (shouldShowEnhancedCustomization(product)) {
-      console.log("ProductGrid: Showing enhanced customization for croffle:", product.name);
-      setSelectedProductForCustomization(product);
-      setIsEnhancedCustomizationOpen(true);
-      return;
-    }
-
-    // Check if this product has a customizable recipe (for non-croffle products)
+    // First check if this product has a customizable recipe with enhanced matching
     const customizableRecipe = customizableRecipes.find(recipe => {
-      const recipeName = recipe.name.toLowerCase().trim();
-      const productName = product.name.toLowerCase().trim();
+      const recipeName = recipe.name.toLowerCase().replace(/[^\w\s]/g, '').trim();
+      const productName = product.name.toLowerCase().replace(/[^\w\s]/g, '').trim();
       
       console.log(`Comparing recipe "${recipeName}" with product "${productName}"`);
       
-      return recipeName === productName ||
-             recipeName.includes(productName) ||
-             productName.includes(recipeName);
+      // Exact match
+      if (recipeName === productName) return true;
+      
+      // Contains match
+      if (recipeName.includes(productName) || productName.includes(recipeName)) return true;
+      
+      // Special handling for "Croffle Overload" and "Mini Croffle" variations
+      if (productName.includes('croffle')) {
+        if (recipeName.includes('mini') && productName.includes('mini')) return true;
+        if (recipeName.includes('overload') && productName.includes('overload')) return true;
+        if (recipeName === 'croffle overload' && productName.includes('overload')) return true;
+        if (recipeName === 'mini croffle' && (productName.includes('mini') || productName.includes('croffle'))) return true;
+      }
+      
+      return false;
     });
 
     if (customizableRecipe) {
       console.log("ProductGrid: Found customizable recipe for Mix & Match product:", customizableRecipe);
       setSelectedCustomizableRecipe(customizableRecipe);
       setIsRecipeCustomizationOpen(true);
+      return;
+    }
+
+    // If no customizable recipe found, check for enhanced customization (croffles)
+    if (shouldShowEnhancedCustomization(product)) {
+      console.log("ProductGrid: Showing enhanced customization for croffle:", product.name);
+      setSelectedProductForCustomization(product);
+      setIsEnhancedCustomizationOpen(true);
       return;
     }
 
@@ -210,23 +222,11 @@ export default function ProductGrid({
         setProductVariations(variations);
         setIsDialogOpen(true);
       } else {
-        // Check for addon selection (already handled enhanced customization above)
-        if (shouldShowAddonSelection(product)) {
-          console.log("ProductGrid: Showing addon selection for product:", product.name);
-          setSelectedProductForAddons(product);
-          setIsAddonDialogOpen(true);
-        } else {
-          // Add the product directly without addons
-          console.log("ProductGrid: Adding regular Mix & Match product directly (no variations, no addons)");
-          console.log("ProductGrid: Calling addItemToCart with:", {
-            product: product.name,
-            productId: product.id,
-            price: product.price
-          });
-          addItemToCart(product);
-        }
+        // For Mix & Match products without variations or recipes, always show addon selection
+        console.log("ProductGrid: Showing addon selection for Mix & Match product:", product.name);
+        setSelectedProductForAddons(product);
+        setIsAddonDialogOpen(true);
       }
-
     } catch (error) {
       console.error("ProductGrid: Error loading product variations:", error);
     } finally {
@@ -341,25 +341,38 @@ export default function ProductGrid({
 
   const shouldShowEnhancedCustomization = (product: UnifiedProduct): boolean => {
     const productName = product.name.toLowerCase();
+    const categoryName = getCategoryName(product.category_id).toLowerCase();
     
-    // Don't show enhanced customization for Mix & Match products - they use recipe customization
-    // Mini Croffle and Croffle Overload should use the recipe-based customization instead
-    return false; // Disable enhanced customization to allow recipe customization for Mix & Match products
+    // Show enhanced customization for classic/premium/fruity croffles (not Mix & Match)
+    if (categoryName === 'mix & match') {
+      return false; // Mix & Match products should use recipe customization instead
+    }
+    
+    // Show for other croffle categories
+    return productName.includes('croffle') && 
+           (categoryName.includes('classic') || categoryName.includes('premium') || categoryName.includes('fruity'));
   };
 
   const shouldShowAddonSelection = (product: UnifiedProduct): boolean => {
     const productName = product.name.toLowerCase();
+    const categoryName = getCategoryName(product.category_id).toLowerCase();
     
     // Don't show addons for products that use enhanced customization
     if (shouldShowEnhancedCustomization(product)) {
       return false;
     }
 
+    // Always show addon selection for Mix & Match products (as fallback when no recipe is found)
+    if (categoryName === 'mix & match') {
+      console.log("ProductGrid: Mix & Match product - will show addon selection:", product.name);
+      return true;
+    }
+
     // Show addon selection for Classic, Fruity, and Premium croffles
     // First check by category_id (preferred), then fallback to name-based classification
     if (product.category) {
-      const categoryName = typeof product.category === 'string' ? product.category : product.category.name;
-      const categoryLower = categoryName?.toLowerCase();
+      const categoryNameFromProduct = typeof product.category === 'string' ? product.category : product.category.name;
+      const categoryLower = categoryNameFromProduct?.toLowerCase();
       if (categoryLower === 'classic' || categoryLower === 'fruity' || categoryLower === 'premium') {
         return true;
       }
@@ -380,8 +393,8 @@ export default function ProductGrid({
     if (isAddonProduct) return false;
 
     // Check if product is from addon category (by category name)
-    const categoryName = getCategoryName(product.category_id)?.toLowerCase() || '';
-    if (categoryName === 'addon' || categoryName === 'add-ons') {
+    const addonCategoryName = getCategoryName(product.category_id)?.toLowerCase() || '';
+    if (addonCategoryName === 'addon' || addonCategoryName === 'add-ons') {
       return false;
     }
 
