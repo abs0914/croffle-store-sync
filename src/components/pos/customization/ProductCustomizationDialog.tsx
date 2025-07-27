@@ -13,6 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Minus, ShoppingCart, CheckCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { UnifiedProduct } from '@/services/product/unifiedProductService';
 import { ProductVariation } from '@/types';
 import {
@@ -368,23 +370,23 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     };
     
     return (
-      <Card 
+      <div 
         key={item.id} 
-        className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
+        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
         onClick={() => handleComboSelection(type, addonItem, !isSelected)}
       >
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex-1">
-              <h4 className="font-medium text-sm">{item.name}</h4>
-              <p className="text-xs text-muted-foreground">No charge</p>
-            </div>
-            {isSelected && (
-              <CheckCircle className="h-5 w-5 text-primary" />
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        <Checkbox
+          id={`${type}-${item.id}`}
+          checked={isSelected}
+          onChange={() => {}} // Handled by parent onClick
+        />
+        <Label 
+          htmlFor={`${type}-${item.id}`}
+          className="flex-1 cursor-pointer font-medium text-sm"
+        >
+          {item.name}
+        </Label>
+      </div>
     );
   };
 
@@ -518,29 +520,27 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
                      <span>₱{calculateTotal()}</span>
                    </div>
                    
-                   {comboSelection.sauces.length > 0 && (
-                     <div className="space-y-1">
-                       <div className="text-sm font-medium text-muted-foreground">Selected Sauces:</div>
-                       {comboSelection.sauces.map(({ addon }) => (
-                         <div key={addon.id} className="flex justify-between text-sm pl-2">
-                           <span>• {addon.name}</span>
-                           <span>No charge</span>
-                         </div>
-                       ))}
-                     </div>
-                   )}
-                   
-                   {comboSelection.toppings.length > 0 && (
-                     <div className="space-y-1">
-                       <div className="text-sm font-medium text-muted-foreground">Selected Toppings:</div>
-                       {comboSelection.toppings.map(({ addon }) => (
-                         <div key={addon.id} className="flex justify-between text-sm pl-2">
-                           <span>• {addon.name}</span>
-                           <span>No charge</span>
-                         </div>
-                       ))}
-                     </div>
-                   )}
+                    {comboSelection.sauces.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-muted-foreground">Selected Sauces:</div>
+                        {comboSelection.sauces.map(({ addon }) => (
+                          <div key={addon.id} className="text-sm pl-2">
+                            <span>• {addon.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {comboSelection.toppings.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-muted-foreground">Selected Toppings:</div>
+                        {comboSelection.toppings.map(({ addon }) => (
+                          <div key={addon.id} className="text-sm pl-2">
+                            <span>• {addon.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                  </>
                )}
              </div>
