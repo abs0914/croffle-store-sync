@@ -121,7 +121,15 @@ export default function ProductGrid({
     if (categoryName === "Combo") {
       // Open combo selection dialog instead of showing products
       if (isShiftActive) {
-        setIsComboDialogOpen(true);
+        // Check if data is ready before opening dialog
+        if (products.length > 0 && categories.length > 0) {
+          setIsComboDialogOpen(true);
+        } else {
+          console.warn('Cannot open combo dialog: data not ready', {
+            productsCount: products.length,
+            categoriesCount: categories.length
+          });
+        }
       }
     } else {
       // Normal category selection

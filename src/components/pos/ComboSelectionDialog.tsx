@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Coffee, IceCream } from "lucide-react";
+import { Coffee, IceCream, RefreshCw, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 import { Product, Category } from "@/types/product";
 import { useComboService } from "@/hooks/pos/useComboService";
 import { MiniCroffleComboDialog } from "./MiniCroffleComboDialog";
@@ -39,33 +41,78 @@ export function ComboSelectionDialog({
   onAddToCart,
 }: ComboSelectionDialogProps) {
   const [step, setStep] = useState<"croffle" | "customize" | "espresso">("croffle");
-  const [selectedCategory, setSelectedCategory] = useState<string>(() => {
-    // Find the first category that has products
-    const firstCategoryWithProducts = CROFFLE_CATEGORIES.find(catName => {
+  const [selectedCategory, setSelectedCategory] = useState<string>("Classic");
+  const [selectedCroffle, setSelectedCroffle] = useState<UnifiedProduct | null>(null);
+  const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
+  const [miniCroffleCustomization, setMiniCroffleCustomization] = useState<any>(null);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { getComboPrice, getEspressoProducts } = useComboService();
+
+  // Check if data is properly loaded
+  const isDataLoaded = useMemo(() => {
+    const hasProducts = products && products.length > 0;
+    const hasCategories = categories && categories.length > 0;
+    return hasProducts && hasCategories;
+  }, [products, categories]);
+
+  // Validate if there are any croffle products available
+  const hasAnyValidProducts = useMemo(() => {
+    if (!isDataLoaded) return false;
+    
+    return CROFFLE_CATEGORIES.some(catName => {
       if (catName === "Mini Croffle") {
-        // Check for Mini products by name first
         const hasMiniByName = products.some(p => p.name.toLowerCase().includes("mini") && p.is_active);
         if (hasMiniByName) return true;
         
-        // Check in Mix & Match category
         const mixMatchCategory = categories.find(c => c.name === "Mix & Match");
         return mixMatchCategory && products.some(p => p.category_id === mixMatchCategory.id && p.is_active);
       }
       const category = categories.find(c => c.name === catName);
       return category && products.some(p => p.category_id === category.id && p.is_active);
     });
-    console.log('Initial category selection:', firstCategoryWithProducts);
-    return firstCategoryWithProducts || "Premium"; // Default to Premium since that's where products are
-  });
-  const [selectedCroffle, setSelectedCroffle] = useState<UnifiedProduct | null>(null);
-  const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
-  const [miniCroffleCustomization, setMiniCroffleCustomization] = useState<any>(null);
-  const { getComboPrice, getEspressoProducts } = useComboService();
+  }, [products, categories, isDataLoaded]);
 
-  // Debug logging to investigate empty categories
+  // Auto-select first available category when data loads
+  useEffect(() => {
+    if (!isDataLoaded || !hasAnyValidProducts) return;
+
+    const firstCategoryWithProducts = CROFFLE_CATEGORIES.find(catName => {
+      if (catName === "Mini Croffle") {
+        const hasMiniByName = products.some(p => p.name.toLowerCase().includes("mini") && p.is_active);
+        if (hasMiniByName) return true;
+        
+        const mixMatchCategory = categories.find(c => c.name === "Mix & Match");
+        return mixMatchCategory && products.some(p => p.category_id === mixMatchCategory.id && p.is_active);
+      }
+      const category = categories.find(c => c.name === catName);
+      return category && products.some(p => p.category_id === category.id && p.is_active);
+    });
+
+    if (firstCategoryWithProducts && firstCategoryWithProducts !== selectedCategory) {
+      console.log('Auto-selecting category with products:', firstCategoryWithProducts);
+      setSelectedCategory(firstCategoryWithProducts);
+      setDataError(null);
+    }
+  }, [products, categories, isDataLoaded, hasAnyValidProducts]);
+
+  // Reset error when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setDataError(null);
+      setIsRefreshing(false);
+    }
+  }, [open]);
+
+  // Enhanced debug logging
   console.log('ComboSelectionDialog Debug:', {
+    open,
+    isDataLoaded,
+    hasAnyValidProducts,
     productsCount: products.length,
     categoriesCount: categories.length,
+    selectedCategory,
+    dataError,
     products: products.map(p => ({ id: p.id, name: p.name, category_id: p.category_id, is_active: p.is_active })),
     categories: categories.map(c => ({ id: c.id, name: c.name, is_active: c.is_active })),
     croffleCategories: CROFFLE_CATEGORIES
@@ -214,12 +261,29 @@ export function ComboSelectionDialog({
     }
   };
 
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setDataError(null);
+    
+    // Trigger a re-evaluation of the data by forcing a re-render
+    setTimeout(() => {
+      setIsRefreshing(false);
+      
+      // Check if we now have valid data
+      if (!hasAnyValidProducts) {
+        setDataError("No croffle products available. Please check your product catalog.");
+      }
+    }, 500);
+  };
+
   const handleClose = () => {
     setStep("croffle");
     setSelectedCategory("Classic");
     setSelectedCroffle(null);
     setCustomizedCroffle(null);
     setMiniCroffleCustomization(null);
+    setDataError(null);
+    setIsRefreshing(false);
     onOpenChange(false);
   };
 
@@ -241,21 +305,63 @@ export function ComboSelectionDialog({
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1">
-          {step === "croffle" ? (
+          {/* Loading State */}
+          {!isDataLoaded && (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">Loading products and categories...</p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {isDataLoaded && !hasAnyValidProducts && (
+            <div className="space-y-4">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {dataError || "No croffle products are currently available. Please check your product catalog."}
+                </AlertDescription>
+              </Alert>
+              <div className="flex justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="gap-2"
+                >
+                  {isRefreshing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Refresh Data
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Normal Content */}
+          {isDataLoaded && hasAnyValidProducts && step === "croffle" && (
             <div className="space-y-6">
               {/* Category Tabs */}
               <div className="flex gap-2 flex-wrap">
-                {CROFFLE_CATEGORIES.map((category) => (
-                  <Button
-                    key={category}
-                    variant={selectedCategory === category ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedCategory(category)}
-                    className="transition-all"
-                  >
-                    {category}
-                  </Button>
-                ))}
+                {CROFFLE_CATEGORIES.map((category) => {
+                  const categoryProducts = getCategoryProducts(category);
+                  const hasProducts = categoryProducts.length > 0;
+                  
+                  return (
+                    <Button
+                      key={category}
+                      variant={selectedCategory === category ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCategory(category)}
+                      disabled={!hasProducts}
+                      className={`transition-all ${!hasProducts ? 'opacity-50' : ''}`}
+                    >
+                      {category} {!hasProducts && '(0)'}
+                    </Button>
+                  );
+                })}
               </div>
 
               <Separator />
@@ -289,12 +395,28 @@ export function ComboSelectionDialog({
               </div>
 
               {getCategoryProducts(selectedCategory).length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No products available in {selectedCategory} category
+                <div className="text-center py-8 space-y-3">
+                  <p className="text-muted-foreground">No products available in {selectedCategory} category</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="gap-2"
+                  >
+                    {isRefreshing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Refresh
+                  </Button>
                 </div>
               )}
             </div>
-          ) : step === "espresso" ? (
+          )}
+
+          {isDataLoaded && hasAnyValidProducts && step === "espresso" && (
             <div className="space-y-6">
               {/* Espresso Selection */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -355,12 +477,26 @@ export function ComboSelectionDialog({
               </div>
 
               {espressoProducts.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No espresso products available
+                <div className="text-center py-8 space-y-3">
+                  <p className="text-muted-foreground">No espresso products available</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="gap-2"
+                  >
+                    {isRefreshing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Refresh
+                  </Button>
                 </div>
               )}
             </div>
-          ) : null}
+          )}
         </div>
 
         {/* MiniCroffleComboDialog for Mini Croffle */}
