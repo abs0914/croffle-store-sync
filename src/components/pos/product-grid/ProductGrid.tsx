@@ -343,14 +343,12 @@ export default function ProductGrid({
     const productName = product.name.toLowerCase();
     const categoryName = getCategoryName(product.category_id).toLowerCase();
     
-    // Show enhanced customization for classic/premium/fruity croffles (not Mix & Match)
-    if (categoryName === 'mix & match') {
-      return false; // Mix & Match products should use recipe customization instead
+    // Show enhanced customization for all croffle products (including Mix & Match croffles)
+    if (productName.includes('croffle')) {
+      return true;
     }
     
-    // Show for other croffle categories
-    return productName.includes('croffle') && 
-           (categoryName.includes('classic') || categoryName.includes('premium') || categoryName.includes('fruity'));
+    return false;
   };
 
   const shouldShowAddonSelection = (product: UnifiedProduct): boolean => {
