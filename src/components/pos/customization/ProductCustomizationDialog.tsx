@@ -148,7 +148,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
       if (selected) {
         // Check limits based on croffle type
         const maxToppings = croffleType === 'overload' ? 3 : 2;
-        const maxSauces = croffleType === 'mini_overload' ? 2 : 0;
+        const maxSauces = croffleType === 'overload' ? 1 : (croffleType === 'mini_overload' ? 2 : 0);
         
         if (type === 'toppings' && currentSelection.length >= maxToppings) {
           toast.error(`Maximum ${maxToppings} toppings allowed`);
