@@ -63,6 +63,8 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
       return 'mini_overload';
     } else if (name.includes('overload')) {
       return 'overload';
+    } else if (name.includes('mini')) {
+      return 'mini_overload'; // Treat Mini Croffle as mix & match
     }
     return 'regular';
   };
