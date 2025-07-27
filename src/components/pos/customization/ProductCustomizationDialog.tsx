@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Minus, ShoppingCart, CheckCircle } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { UnifiedProduct } from '@/services/product/unifiedProductService';
 import { ProductVariation } from '@/types';
@@ -372,17 +372,17 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     return (
       <div 
         key={item.id} 
-        className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+        className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
         onClick={() => handleComboSelection(type, addonItem, !isSelected)}
       >
-        <Checkbox
+        <RadioGroupItem
+          value={item.id}
           id={`${type}-${item.id}`}
           checked={isSelected}
-          onChange={() => {}} // Handled by parent onClick
         />
         <Label 
           htmlFor={`${type}-${item.id}`}
-          className="flex-1 cursor-pointer font-medium text-sm"
+          className="flex-1 cursor-pointer text-sm"
         >
           {item.name}
         </Label>
