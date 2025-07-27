@@ -32,25 +32,21 @@ const SAUCE_OPTIONS = [{
   price: 0
 }];
 const TOPPING_OPTIONS = [{
-  id: "nuts",
-  name: "Nuts",
-  price: 10
+  id: "colored_sprinkles",
+  name: "Colored Sprinkles",
+  price: 0
 }, {
-  id: "whipped_cream",
-  name: "Whipped Cream",
-  price: 15
+  id: "marshmallow",
+  name: "Marshmallow",
+  price: 0
 }, {
-  id: "fresh_fruits",
-  name: "Fresh Fruits",
-  price: 20
+  id: "chocolate_flakes",
+  name: "Chocolate Flakes",
+  price: 0
 }, {
-  id: "chocolate_chips",
-  name: "Chocolate Chips",
-  price: 10
-}, {
-  id: "caramel_drizzle",
-  name: "Caramel Drizzle",
-  price: 15
+  id: "peanuts",
+  name: "Peanuts",
+  price: 0
 }];
 export function MiniCroffleComboDialog({
   open,
@@ -69,12 +65,13 @@ export function MiniCroffleComboDialog({
     }
   };
   const calculateTotalPrice = () => {
-    const basePrice = product.price;
-    const toppingsPrice = selectedToppings.reduce((total, toppingId) => {
-      const topping = TOPPING_OPTIONS.find(t => t.id === toppingId);
-      return total + (topping?.price || 0);
-    }, 0);
-    return basePrice + toppingsPrice;
+    // Fixed prices based on product type
+    if (product.name.toLowerCase().includes('mini')) {
+      return 65;
+    } else if (product.name.toLowerCase().includes('overload')) {
+      return 99;
+    }
+    return product.price; // fallback
   };
   const getSelectedSauceName = () => {
     const sauce = SAUCE_OPTIONS.find(s => s.id === selectedSauce);
@@ -115,10 +112,10 @@ export function MiniCroffleComboDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
-            Customize Mini Croffle
+            Customize {product.name}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Customizable Mini Croffle with choice groups for toppings/sauces
+            Mix and match selections are no additional charge
           </p>
         </DialogHeader>
 
@@ -140,25 +137,22 @@ export function MiniCroffleComboDialog({
 
           <Separator />
 
-          {/* Toppings Selection (Optional) */}
-          <div>
-            <Label className="text-base font-medium mb-3 block">
-              Toppings Selection 
-            </Label>
-            <div className="space-y-3">
-              {TOPPING_OPTIONS.map(topping => <div key={topping.id} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+          {/* Toppings Selection (Optional - Mini Croffle only) */}
+          {product.name.toLowerCase().includes('mini') && (
+            <div>
+              <Label className="text-base font-medium mb-3 block">
+                Toppings Selection 
+              </Label>
+              <div className="space-y-3">
+                {TOPPING_OPTIONS.map(topping => <div key={topping.id} className="flex items-center space-x-2">
                     <Checkbox id={topping.id} checked={selectedToppings.includes(topping.id)} onCheckedChange={checked => handleToppingChange(topping.id, checked as boolean)} />
                     <Label htmlFor={topping.id} className="cursor-pointer">
                       {topping.name}
                     </Label>
-                  </div>
-                  <span className="text-sm text-muted-foreground">
-                    +₱{topping.price}
-                  </span>
-                </div>)}
+                  </div>)}
+              </div>
             </div>
-          </div>
+          )}
 
           <Separator />
 
@@ -168,14 +162,14 @@ export function MiniCroffleComboDialog({
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>{product.name} ({getSelectedSauceName()})</span>
-                <span>₱{product.price}</span>
+                <span>₱{calculateTotalPrice()}</span>
               </div>
               {selectedToppings.length > 0 && <div className="space-y-1">
                   {selectedToppings.map(toppingId => {
                 const topping = TOPPING_OPTIONS.find(t => t.id === toppingId);
                 return <div key={toppingId} className="flex justify-between text-muted-foreground">
                         <span>+ {topping?.name}</span>
-                        <span>₱{topping?.price}</span>
+                        <span>No charge</span>
                       </div>;
               })}
                 </div>}
