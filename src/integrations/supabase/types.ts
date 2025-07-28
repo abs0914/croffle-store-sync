@@ -4170,6 +4170,62 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_items: {
+        Row: {
+          category_id: string | null
+          category_name: string | null
+          created_at: string
+          id: string
+          name: string
+          product_id: string
+          product_type: string | null
+          quantity: number
+          total_price: number
+          transaction_id: string
+          unit_price: number
+          updated_at: string
+          variation_id: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          category_name?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          product_id: string
+          product_type?: string | null
+          quantity?: number
+          total_price?: number
+          transaction_id: string
+          unit_price?: number
+          updated_at?: string
+          variation_id?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          category_name?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          product_id?: string
+          product_type?: string | null
+          quantity?: number
+          total_price?: number
+          transaction_id?: string
+          unit_price?: number
+          updated_at?: string
+          variation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount_tendered: number | null
@@ -4756,6 +4812,10 @@ export type Database = {
               p_user_id?: string
             }
         Returns: undefined
+      }
+      try_cast_jsonb: {
+        Args: { txt: string }
+        Returns: Json
       }
       user_has_store_access: {
         Args: { user_id: string; store_id: string }

@@ -106,8 +106,8 @@ export function useTransactionHandler(storeId: string) {
       status: 'completed'
     };
     
-    // Call the service to create the transaction
-    const result = await createTransaction(transaction);
+    // Call the service to create the transaction with cart items for enrichment
+    const result = await createTransaction(transaction, items);
     
     if (result) {
       setCompletedTransaction(result);

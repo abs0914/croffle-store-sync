@@ -4,6 +4,7 @@ import { Transaction } from "@/types";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { enrichCartItemsWithCategories, insertTransactionItems } from "./transactionItemsService";
 
 // Type definition for transaction data from Supabase
 interface TransactionRow {
@@ -31,7 +32,10 @@ interface TransactionRow {
 /**
  * Creates a new transaction in the database
  */
-export const createTransaction = async (transaction: Omit<Transaction, "id" | "createdAt" | "receiptNumber">): Promise<Transaction | null> => {
+export const createTransaction = async (
+  transaction: Omit<Transaction, "id" | "createdAt" | "receiptNumber">, 
+  cartItems?: any[]
+): Promise<Transaction | null> => {
   try {
     // Generate a receipt number based on date and time
     const now = new Date();
@@ -113,7 +117,7 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
       promo_details: promoDetails
     };
     
-    // Remove customer object before sending to Supabase
+    // Insert main transaction record
     const { data, error } = await supabase
       .from("transactions")
       .insert(newTransaction)
@@ -122,6 +126,17 @@ export const createTransaction = async (transaction: Omit<Transaction, "id" | "c
     
     if (error) {
       throw new Error(error.message);
+    }
+
+    // Insert detailed transaction items with category information
+    if (cartItems && cartItems.length > 0) {
+      try {
+        const enrichedItems = await enrichCartItemsWithCategories(cartItems);
+        await insertTransactionItems(data.id, enrichedItems);
+      } catch (itemsError) {
+        console.warn('Failed to insert enriched transaction items:', itemsError);
+        // Don't fail the entire transaction for this
+      }
     }
     
     toast.success("Transaction completed successfully");
