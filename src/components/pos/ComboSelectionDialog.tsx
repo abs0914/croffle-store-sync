@@ -167,7 +167,7 @@ export function ComboSelectionDialog({
   });
 
   // Enhanced category selection with visual feedback
-  const handleCategorySelect = useCallback(async (category: string) => {
+  const handleCategorySelect = useCallback((category: string) => {
     console.log(`🏷️ Category switching from "${selectedCategory}" to "${category}"`);
     
     if (category === selectedCategory) {
@@ -175,14 +175,9 @@ export function ComboSelectionDialog({
       return;
     }
 
-    setIsChangingCategory(true);
-    
-    // Small delay for visual feedback
-    setTimeout(() => {
-      setSelectedCategory(category);
-      setIsChangingCategory(false);
-      console.log(`🏷️ Category changed to "${category}" - ${getCategoryProducts(category).length} products`);
-    }, 150);
+    console.log(`🏷️ Setting category to "${category}"`);
+    setSelectedCategory(category);
+    console.log(`🏷️ Category set to "${category}" - ${getCategoryProducts(category).length} products`);
   }, [selectedCategory, getCategoryProducts]);
 
   // Function is now defined above in the hook section
@@ -247,9 +242,8 @@ export function ComboSelectionDialog({
       customization: customizedCroffle?.customization
     });
 
-    // Reset dialog
+    // Reset dialog (but keep selected category)
     setStep("croffle");
-    setSelectedCategory("Classic");
     setSelectedCroffle(null);
     setCustomizedCroffle(null);
     setMiniCroffleCustomization(null);
@@ -276,7 +270,6 @@ export function ComboSelectionDialog({
 
   const handleClose = () => {
     setStep("croffle");
-    setSelectedCategory("Classic");
     setSelectedCroffle(null);
     setCustomizedCroffle(null);
     setMiniCroffleCustomization(null);
