@@ -43,6 +43,7 @@ export function ComboSelectionDialog({
 }: ComboSelectionDialogProps) {
   const [step, setStep] = useState<"croffle" | "customize" | "espresso">("croffle");
   const [selectedCategory, setSelectedCategory] = useState<string>("Classic");
+  const [isChangingCategory, setIsChangingCategory] = useState<boolean>(false);
   const [selectedCroffle, setSelectedCroffle] = useState<UnifiedProduct | null>(null);
   const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
   const [miniCroffleCustomization, setMiniCroffleCustomization] = useState<any>(null);
@@ -164,6 +165,25 @@ export function ComboSelectionDialog({
       count: getCategoryProducts(catName).length
     }))
   });
+
+  // Enhanced category selection with visual feedback
+  const handleCategorySelect = useCallback(async (category: string) => {
+    console.log(`🏷️ Category switching from "${selectedCategory}" to "${category}"`);
+    
+    if (category === selectedCategory) {
+      console.log('🏷️ Same category selected, no change needed');
+      return;
+    }
+
+    setIsChangingCategory(true);
+    
+    // Small delay for visual feedback
+    setTimeout(() => {
+      setSelectedCategory(category);
+      setIsChangingCategory(false);
+      console.log(`🏷️ Category changed to "${category}" - ${getCategoryProducts(category).length} products`);
+    }, 150);
+  }, [selectedCategory, getCategoryProducts]);
 
   // Function is now defined above in the hook section
 
@@ -334,60 +354,122 @@ export function ComboSelectionDialog({
           {/* Normal Content with Data Ready Check */}
           {isDataLoaded && isDataReady && hasAnyValidProducts && step === "croffle" && (
             <div className="space-y-6">
-              {/* Category Tabs */}
-              <div className="flex gap-2 flex-wrap">
-                {CROFFLE_CATEGORIES.map((category) => {
-                  const categoryProducts = getCategoryProducts(category);
-                  const hasProducts = categoryProducts.length > 0;
-                  
-                  return (
-                    <Button
-                      key={category}
-                      variant={selectedCategory === category ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedCategory(category)}
-                      disabled={!hasProducts}
-                      className={`transition-all ${!hasProducts ? 'opacity-50' : ''}`}
-                    >
-                      {category} {!hasProducts && '(0)'}
-                    </Button>
-                  );
-                })}
+              {/* Enhanced Category Tabs with Visual Feedback */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-muted-foreground">Choose Category</h3>
+                  <div className="text-xs text-muted-foreground">
+                    {isChangingCategory ? "Loading..." : `${getCategoryProducts(selectedCategory).length} items`}
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {CROFFLE_CATEGORIES.map((category) => {
+                    const categoryProducts = getCategoryProducts(category);
+                    const hasProducts = categoryProducts.length > 0;
+                    const isActive = selectedCategory === category;
+                    
+                    return (
+                      <Button
+                        key={category}
+                        variant={isActive ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleCategorySelect(category)}
+                        disabled={!hasProducts || isChangingCategory}
+                        className={`
+                          transition-all duration-200 relative
+                          ${!hasProducts ? 'opacity-50' : ''}
+                          ${isActive ? 'scale-105 shadow-md' : 'hover:scale-102'}
+                          ${isChangingCategory ? 'opacity-70' : ''}
+                        `}
+                      >
+                        <span className="flex items-center gap-1">
+                          {category}
+                          <Badge 
+                            variant={isActive ? "secondary" : "outline"} 
+                            className={`
+                              ml-1 text-xs h-4 px-1 
+                              ${isActive ? 'bg-background text-foreground' : ''}
+                            `}
+                          >
+                            {categoryProducts.length}
+                          </Badge>
+                        </span>
+                        {isActive && (
+                          <div className="absolute inset-0 bg-primary/10 rounded-md animate-pulse" />
+                        )}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
 
               <Separator />
 
-              {/* Croffle Products */}
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                {getCategoryProducts(selectedCategory).map((product) => (
-                  <div
-                    key={product.id}
-                    className="border rounded-lg p-3 hover:bg-accent/50 cursor-pointer transition-colors"
-                    onClick={() => handleCroffleSelect(product)}
-                  >
-                    {product.image_url && (
-                      <div className="aspect-square bg-muted rounded-md mb-2 overflow-hidden w-16 h-16 mx-auto">
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <h3 className="font-medium text-xs mb-1 text-center">{product.name}</h3>
-                    <p className="text-primary font-semibold text-xs text-center">₱{product.price}</p>
-                    {product.description && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-1 text-center">
-                        {product.description}
-                      </p>
-                    )}
+              {/* Current Category Display */}
+              <div className="flex items-center justify-between bg-muted/30 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium">{selectedCategory}</h4>
+                  <Badge variant="secondary">{getCategoryProducts(selectedCategory).length} products</Badge>
+                </div>
+                {isChangingCategory && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading...
                   </div>
-                ))}
+                )}
               </div>
 
-              {getCategoryProducts(selectedCategory).length === 0 && (
-                <div className="text-center py-8 space-y-3">
-                  <p className="text-muted-foreground">No products available in {selectedCategory} category</p>
+              {/* Croffle Products with Loading State */}
+              <div className={`
+                transition-all duration-300 
+                ${isChangingCategory ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}
+              `}>
+                {isChangingCategory ? (
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3 min-h-[200px]">
+                    {[...Array(8)].map((_, i) => (
+                      <div key={i} className="border rounded-lg p-3 animate-pulse">
+                        <div className="aspect-square bg-muted rounded-md mb-2 w-16 h-16 mx-auto" />
+                        <div className="h-3 bg-muted rounded mb-1" />
+                        <div className="h-3 bg-muted rounded w-1/2 mx-auto" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-3 animate-fade-in">
+                    {getCategoryProducts(selectedCategory).map((product, index) => (
+                      <div
+                        key={product.id}
+                        className="border rounded-lg p-3 hover:bg-accent/50 cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-md"
+                        onClick={() => handleCroffleSelect(product)}
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        {product.image_url && (
+                          <div className="aspect-square bg-muted rounded-md mb-2 overflow-hidden w-16 h-16 mx-auto">
+                            <img
+                              src={product.image_url}
+                              alt={product.name}
+                              className="w-full h-full object-cover transition-transform duration-200 hover:scale-110"
+                            />
+                          </div>
+                        )}
+                        <h3 className="font-medium text-xs mb-1 text-center">{product.name}</h3>
+                        <p className="text-primary font-semibold text-xs text-center">₱{product.price}</p>
+                        {product.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1 text-center">
+                            {product.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {!isChangingCategory && getCategoryProducts(selectedCategory).length === 0 && (
+                <div className="text-center py-8 space-y-3 animate-fade-in">
+                  <div className="text-4xl">🔍</div>
+                  <p className="text-muted-foreground font-medium">No products available in {selectedCategory} category</p>
+                  <p className="text-sm text-muted-foreground">Try selecting a different category or refresh the data</p>
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -400,7 +482,7 @@ export function ComboSelectionDialog({
                     ) : (
                       <RefreshCw className="h-4 w-4" />
                     )}
-                    Refresh
+                    Refresh Data
                   </Button>
                 </div>
               )}
