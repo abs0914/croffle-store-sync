@@ -485,45 +485,82 @@ export function ComboSelectionDialog({
           {isDataLoaded && isDataReady && hasAnyValidProducts && step === "espresso" && (
             <div className="space-y-6">
               {/* Espresso Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {espressoProducts.map((espresso) => {
-                  const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
-                  
-                  // Fix category mapping for Mini Croffle in display
-                  let categoryForPricing = croffleCategory;
-                  if (selectedCroffle?.name.toLowerCase().includes("mini")) {
-                    categoryForPricing = "Mini Croffle";
-                  }
-                  
-                  // Map espresso product name to espresso type for pricing
-                  let espressoType = "Hot Espresso"; // default
-                  if (espresso.name.toLowerCase().includes("iced") || espresso.name.toLowerCase().includes("cold")) {
-                    espressoType = "Iced Espresso";
-                  }
-                  
-                  const comboPrice = getComboPrice(categoryForPricing, espressoType);
-                  
-                  return (
-                    <div
-                      key={espresso.id}
-                      className="border rounded-lg p-6 hover:bg-accent/50 cursor-pointer transition-colors"
-                      onClick={() => handleEspressoSelect(espresso)}
-                    >
-                      <div className="flex items-center gap-3 mb-3">
-                        {espresso.name.includes("Iced") ? (
-                          <IceCream className="h-8 w-8 text-blue-500" />
-                        ) : (
-                          <Coffee className="h-8 w-8 text-orange-500" />
-                        )}
-                        <div>
-                          <h3 className="font-medium">{espresso.name}</h3>
-                          <p className="text-sm text-muted-foreground">₱{espresso.price}</p>
-                        </div>
-                      </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Hot Espresso Column */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-center text-orange-600 border-b pb-2">
+                    <Coffee className="inline h-5 w-5 mr-2" />
+                    Hot Espresso
+                  </h3>
+                  {espressoProducts
+                    .filter(espresso => !espresso.name.toLowerCase().includes("iced") && !espresso.name.toLowerCase().includes("cold"))
+                    .map((espresso) => {
+                      const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
                       
-                    </div>
-                  );
-                })}
+                      // Fix category mapping for Mini Croffle in display
+                      let categoryForPricing = croffleCategory;
+                      if (selectedCroffle?.name.toLowerCase().includes("mini")) {
+                        categoryForPricing = "Mini Croffle";
+                      }
+                      
+                      const espressoType = "Hot Espresso";
+                      const comboPrice = getComboPrice(categoryForPricing, espressoType);
+                      
+                      return (
+                        <div
+                          key={espresso.id}
+                          className="border rounded-lg p-4 hover:bg-accent/50 cursor-pointer transition-colors"
+                          onClick={() => handleEspressoSelect(espresso)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Coffee className="h-6 w-6 text-orange-500" />
+                            <div>
+                              <h4 className="font-medium">{espresso.name}</h4>
+                              <p className="text-sm text-muted-foreground">₱{espresso.price}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {/* Cold Espresso Column */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-center text-blue-600 border-b pb-2">
+                    <IceCream className="inline h-5 w-5 mr-2" />
+                    Cold Espresso
+                  </h3>
+                  {espressoProducts
+                    .filter(espresso => espresso.name.toLowerCase().includes("iced") || espresso.name.toLowerCase().includes("cold"))
+                    .map((espresso) => {
+                      const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
+                      
+                      // Fix category mapping for Mini Croffle in display
+                      let categoryForPricing = croffleCategory;
+                      if (selectedCroffle?.name.toLowerCase().includes("mini")) {
+                        categoryForPricing = "Mini Croffle";
+                      }
+                      
+                      const espressoType = "Iced Espresso";
+                      const comboPrice = getComboPrice(categoryForPricing, espressoType);
+                      
+                      return (
+                        <div
+                          key={espresso.id}
+                          className="border rounded-lg p-4 hover:bg-accent/50 cursor-pointer transition-colors"
+                          onClick={() => handleEspressoSelect(espresso)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <IceCream className="h-6 w-6 text-blue-500" />
+                            <div>
+                              <h4 className="font-medium">{espresso.name}</h4>
+                              <p className="text-sm text-muted-foreground">₱{espresso.price}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
 
               {espressoProducts.length === 0 && (
