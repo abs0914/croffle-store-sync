@@ -40,6 +40,7 @@ import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
 
 interface ProductGridProps {
   products: UnifiedProduct[];
+  allProducts?: UnifiedProduct[]; // Unfiltered products for combo dialog
   categories: Category[];
   activeCategory: string;
   setActiveCategory: (category: string) => void;
@@ -51,6 +52,7 @@ interface ProductGridProps {
 
 export default function ProductGrid({
   products,
+  allProducts,
   categories,
   activeCategory,
   setActiveCategory,
@@ -118,32 +120,19 @@ export default function ProductGrid({
   const handleCategorySelect = (categoryId: string) => {
     const categoryName = getCategoryName(categoryId);
     
-    console.log('🔥 ProductGrid handleCategorySelect:', {
-      categoryId,
-      categoryName,
-      totalProducts: products.length,
-      totalCategories: categories.length,
-      activeProducts: products.filter(p => p.is_active).length,
-      allProductNames: products.map(p => p.name),
-      allCategoryNames: categories.map(c => c.name)
-    });
-    
     if (categoryName === "Combo") {
       // Open combo selection dialog instead of showing products
       if (isShiftActive) {
         // Check if data is ready before opening dialog
-        if (products.length > 0 && categories.length > 0) {
-          console.log('🔥 OPENING COMBO DIALOG with:', {
-            products: products.length,
-            categories: categories.length,
-            sampleProducts: products.slice(0, 5).map(p => ({ name: p.name, category_id: p.category_id, is_active: p.is_active }))
+        if ((allProducts || products).length > 0 && categories.length > 0) {
+          console.log('Opening combo dialog with unfiltered data:', {
+            filteredProducts: products.length,
+            allProducts: allProducts?.length || 'undefined',
+            categories: categories.length
           });
           setIsComboDialogOpen(true);
         } else {
-          console.warn('Cannot open combo dialog: data not ready', {
-            productsCount: products.length,
-            categoriesCount: categories.length
-          });
+          console.warn('Cannot open combo dialog: data not ready');
         }
       }
     } else {
@@ -677,12 +666,12 @@ export default function ProductGrid({
         onAddToCart={handleEnhancedCustomizationAddToCart}
       />
 
-      {/* Combo Selection Dialog - Always use original unfiltered data */}
+      {/* Combo Selection Dialog - Use unfiltered products and categories */}
       <ComboSelectionDialog
         open={isComboDialogOpen}
         onOpenChange={setIsComboDialogOpen}
-        products={products} // Original unfiltered products
-        categories={categories} // Original unfiltered categories
+        products={allProducts || products} // Use unfiltered products if available
+        categories={categories} // Categories should be unfiltered
         addonCategories={addonCategories}
         comboRules={comboRules}
         onAddToCart={handleComboAddToCart}

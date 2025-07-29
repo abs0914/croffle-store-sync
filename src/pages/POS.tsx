@@ -43,6 +43,7 @@ export default function POS() {
   // Load product data from product_catalog using consolidated hook
   const {
     products,
+    allProducts, // Unfiltered products for combo dialog
     categories,
     isLoading,
     activeCategory,
@@ -263,6 +264,7 @@ export default function POS() {
           activeCategory={activeCategory}
           setActiveCategory={setActiveCategory}
           products={products}
+          allProducts={allProducts}
           categories={categories}
           isLoading={isLoading}
           currentStore={currentStore}

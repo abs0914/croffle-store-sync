@@ -42,6 +42,7 @@ export function useProductCatalogData(storeId: string | null) {
 
   return {
     products: filteredProducts,
+    allProducts: products, // Original unfiltered products
     categories,
     isLoading,
     error,

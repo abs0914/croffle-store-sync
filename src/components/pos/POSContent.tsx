@@ -14,6 +14,7 @@ interface POSContentProps {
   activeCategory: string;
   setActiveCategory: (category: string) => void;
   products: Product[];
+  allProducts: Product[]; // Unfiltered products for combo dialog
   categories: Category[];
   isLoading: boolean;
   currentStore: any;
@@ -41,6 +42,7 @@ export default function POSContent({
   activeCategory,
   setActiveCategory,
   products,
+  allProducts,
   categories,
   isLoading,
   currentStore,
@@ -77,6 +79,7 @@ export default function POSContent({
           <div className="p-3 md:p-4 h-full flex flex-col">
             <ProductGrid
               products={products} 
+              allProducts={allProducts}
               categories={categories} 
               activeCategory={activeCategory} 
               setActiveCategory={setActiveCategory} 
