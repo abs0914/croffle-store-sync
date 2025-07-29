@@ -521,22 +521,6 @@ export function ComboSelectionDialog({
                         </div>
                       </div>
                       
-                      <Separator className="my-3" />
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Combo Price:</span>
-                          <span className="font-semibold text-primary">₱{comboPrice}</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Regular Price:</span>
-                          <span>₱{(selectedCroffle?.price || 0) + espresso.price}</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-green-600">
-                          <span>You Save:</span>
-                          <span>₱{((selectedCroffle?.price || 0) + espresso.price) - comboPrice}</span>
-                        </div>
-                      </div>
                     </div>
                   );
                 })}
