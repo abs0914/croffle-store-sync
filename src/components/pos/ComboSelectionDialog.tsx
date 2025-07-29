@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
 import { Product, Category } from "@/types/product";
 import { useComboService } from "@/hooks/pos/useComboService";
+import { useComboDataValidation } from "@/hooks/pos/useComboDataValidation";
 import { MiniCroffleComboDialog } from "./MiniCroffleComboDialog";
 import { UnifiedProduct } from "@/services/product/unifiedProductService";
 import { AddonCategory } from "@/services/pos/addonService";
@@ -45,64 +46,113 @@ export function ComboSelectionDialog({
   const [selectedCroffle, setSelectedCroffle] = useState<UnifiedProduct | null>(null);
   const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
   const [miniCroffleCustomization, setMiniCroffleCustomization] = useState<any>(null);
-  const [dataError, setDataError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  
   const { getComboPrice, getEspressoProducts } = useComboService();
+  const {
+    isDataLoaded,
+    isDataReady,
+    hasAnyValidProducts,
+    dataError,
+    retryCount,
+    isRefreshing,
+    handleRefresh,
+    resetError
+  } = useComboDataValidation(products, categories);
 
-  // Check if data is properly loaded
-  const isDataLoaded = useMemo(() => {
-    const hasProducts = products && products.length > 0;
-    const hasCategories = categories && categories.length > 0;
-    return hasProducts && hasCategories;
+  // Enhanced getCategoryProducts with error handling and caching
+  const getCategoryProducts = useCallback((categoryName: string): UnifiedProduct[] => {
+    try {
+      console.log(`Getting products for category: "${categoryName}"`);
+      
+      // Validate inputs
+      if (!categoryName || !Array.isArray(products) || !Array.isArray(categories)) {
+        console.warn('Invalid input data for getCategoryProducts');
+        return [];
+      }
+      
+      // Special case for Mini Croffle with improved matching
+      if (categoryName === "Mini Croffle") {
+        // First try to find by name
+        let miniProducts = products.filter(p => 
+          p && p.name && typeof p.name === 'string' &&
+          p.name.toLowerCase().includes("mini") && 
+          p.is_active
+        );
+        
+        // If no products found by name, try "Mix & Match" category
+        if (miniProducts.length === 0) {
+          const mixMatchCategory = categories.find(c => c && c.name === "Mix & Match" && c.is_active);
+          if (mixMatchCategory && mixMatchCategory.id) {
+            miniProducts = products.filter(p => 
+              p && p.category_id === mixMatchCategory.id && p.is_active
+            );
+          }
+        }
+        
+        console.log(`Mini Croffle products found:`, miniProducts.length, miniProducts.map(p => p.name));
+        return miniProducts || [];
+      }
+      
+      // For other categories, find products with enhanced validation
+      const matchingCategories = categories.filter(c => 
+        c && c.name === categoryName && c.is_active && c.id
+      );
+      
+      if (matchingCategories.length === 0) {
+        console.log(`No active category found for "${categoryName}"`);
+        return [];
+      }
+      
+      const categoryIds = matchingCategories.map(c => c.id);
+      
+      console.log(`Category "${categoryName}" search:`, {
+        found: categoryIds.length > 0,
+        categoryIds,
+        categoriesWithName: matchingCategories,
+        allCategories: categories.map(c => ({ id: c.id, name: c.name, is_active: c.is_active }))
+      });
+      
+      // Filter products with enhanced validation
+      const categoryProducts = products.filter(p => 
+        p && p.category_id && categoryIds.includes(p.category_id) && p.is_active
+      );
+      
+      console.log(`Products in "${categoryName}" category:`, {
+        count: categoryProducts.length,
+        products: categoryProducts.map(p => ({ id: p.id, name: p.name, category_id: p.category_id }))
+      });
+      
+      return categoryProducts || [];
+    } catch (error) {
+      console.error(`Error in getCategoryProducts for "${categoryName}":`, error);
+      return [];
+    }
   }, [products, categories]);
 
-  // Validate if there are any croffle products available
-  const hasAnyValidProducts = useMemo(() => {
-    if (!isDataLoaded) return false;
-    
-    return CROFFLE_CATEGORIES.some(catName => {
-      if (catName === "Mini Croffle") {
-        const hasMiniByName = products.some(p => p.name.toLowerCase().includes("mini") && p.is_active);
-        if (hasMiniByName) return true;
-        
-        const mixMatchCategory = categories.find(c => c.name === "Mix & Match");
-        return mixMatchCategory && products.some(p => p.category_id === mixMatchCategory.id && p.is_active);
-      }
-      const category = categories.find(c => c.name === catName);
-      return category && products.some(p => p.category_id === category.id && p.is_active);
-    });
-  }, [products, categories, isDataLoaded]);
-
-  // Auto-select first available category when data loads
+  // Auto-select first available category when data is ready
   useEffect(() => {
-    if (!isDataLoaded || !hasAnyValidProducts) return;
+    if (!isDataReady) return;
 
     const firstCategoryWithProducts = CROFFLE_CATEGORIES.find(catName => {
-      if (catName === "Mini Croffle") {
-        const hasMiniByName = products.some(p => p.name.toLowerCase().includes("mini") && p.is_active);
-        if (hasMiniByName) return true;
-        
-        const mixMatchCategory = categories.find(c => c.name === "Mix & Match");
-        return mixMatchCategory && products.some(p => p.category_id === mixMatchCategory.id && p.is_active);
+      try {
+        return getCategoryProducts(catName).length > 0;
+      } catch {
+        return false;
       }
-      const category = categories.find(c => c.name === catName);
-      return category && products.some(p => p.category_id === category.id && p.is_active);
     });
 
     if (firstCategoryWithProducts && firstCategoryWithProducts !== selectedCategory) {
       console.log('Auto-selecting category with products:', firstCategoryWithProducts);
       setSelectedCategory(firstCategoryWithProducts);
-      setDataError(null);
     }
-  }, [products, categories, isDataLoaded, hasAnyValidProducts]);
+  }, [isDataReady, selectedCategory, getCategoryProducts]);
 
   // Reset error when dialog closes
   useEffect(() => {
     if (!open) {
-      setDataError(null);
-      setIsRefreshing(false);
+      resetError();
     }
-  }, [open]);
+  }, [open, resetError]);
 
   // Enhanced debug logging
   console.log('ComboSelectionDialog Debug:', {
@@ -118,63 +168,7 @@ export function ComboSelectionDialog({
     croffleCategories: CROFFLE_CATEGORIES
   });
 
-  const getCategoryProducts = (categoryName: string) => {
-    console.log(`Getting products for category: "${categoryName}"`);
-    
-    // Special case for Mini Croffle - look for products with "Mini" in name OR in "Mix & Match" category
-    if (categoryName === "Mini Croffle") {
-      // First try to find by name
-      let miniProducts = products.filter(p => 
-        p.name.toLowerCase().includes("mini") && 
-        p.is_active
-      );
-      
-      // If no products found by name, try "Mix & Match" category
-      if (miniProducts.length === 0) {
-        const mixMatchCategory = categories.find(c => c.name === "Mix & Match");
-        if (mixMatchCategory) {
-          miniProducts = products.filter(p => 
-            p.category_id === mixMatchCategory.id && 
-            p.is_active
-          );
-        }
-      }
-      
-      console.log(`Mini Croffle products found:`, miniProducts.length, miniProducts.map(p => p.name));
-      return miniProducts;
-    }
-    
-    // For other categories, find products by category name with more robust matching
-    // Handle multiple categories with the same name (data consistency issue)
-    const categoryIds = categories
-      .filter(c => c.name === categoryName && c.is_active)
-      .map(c => c.id);
-    
-    console.log(`Category "${categoryName}" search:`, {
-      found: categoryIds.length > 0,
-      categoryIds,
-      categoriesWithName: categories.filter(c => c.name === categoryName),
-      allCategories: categories.map(c => ({ id: c.id, name: c.name, is_active: c.is_active }))
-    });
-    
-    if (categoryIds.length === 0) {
-      console.log(`No active category found for "${categoryName}"`);
-      return [];
-    }
-    
-    // Filter products that belong to any of the matching category IDs
-    const categoryProducts = products.filter(p => 
-      categoryIds.includes(p.category_id) && 
-      p.is_active
-    );
-    
-    console.log(`Products in "${categoryName}" category:`, {
-      count: categoryProducts.length,
-      products: categoryProducts.map(p => ({ id: p.id, name: p.name, category_id: p.category_id }))
-    });
-    
-    return categoryProducts;
-  };
+  // Function is now defined above in the hook section
 
   const espressoProducts = getEspressoProducts(products, categories);
 
@@ -261,20 +255,7 @@ export function ComboSelectionDialog({
     }
   };
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setDataError(null);
-    
-    // Trigger a re-evaluation of the data by forcing a re-render
-    setTimeout(() => {
-      setIsRefreshing(false);
-      
-      // Check if we now have valid data
-      if (!hasAnyValidProducts) {
-        setDataError("No croffle products available. Please check your product catalog.");
-      }
-    }, 500);
-  };
+  // Use the handleRefresh from the validation hook
 
   const handleClose = () => {
     setStep("croffle");
@@ -282,8 +263,7 @@ export function ComboSelectionDialog({
     setSelectedCroffle(null);
     setCustomizedCroffle(null);
     setMiniCroffleCustomization(null);
-    setDataError(null);
-    setIsRefreshing(false);
+    resetError();
     onOpenChange(false);
   };
 
@@ -305,24 +285,31 @@ export function ComboSelectionDialog({
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1">
-          {/* Loading State */}
-          {!isDataLoaded && (
+          {/* Progressive Loading State */}
+          {(!isDataLoaded || !isDataReady) && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground">Loading products and categories...</p>
+              <p className="text-muted-foreground">
+                {!isDataLoaded ? "Loading products and categories..." : "Validating product data..."}
+              </p>
+              {retryCount > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Retry {retryCount}/3
+                </p>
+              )}
             </div>
           )}
 
-          {/* Error State */}
-          {isDataLoaded && !hasAnyValidProducts && (
+          {/* Error State with Enhanced Recovery */}
+          {isDataLoaded && !isDataReady && retryCount >= 3 && (
             <div className="space-y-4">
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {dataError || "No croffle products are currently available. Please check your product catalog."}
+                  {dataError || "Unable to load croffle products after multiple attempts. Please try refreshing or contact support."}
                 </AlertDescription>
               </Alert>
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-2">
                 <Button 
                   variant="outline" 
                   onClick={handleRefresh}
@@ -334,14 +321,21 @@ export function ComboSelectionDialog({
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  Refresh Data
+                  Retry
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={handleClose}
+                  size="sm"
+                >
+                  Close
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Normal Content */}
-          {isDataLoaded && hasAnyValidProducts && step === "croffle" && (
+          {/* Normal Content with Data Ready Check */}
+          {isDataLoaded && isDataReady && hasAnyValidProducts && step === "croffle" && (
             <div className="space-y-6">
               {/* Category Tabs */}
               <div className="flex gap-2 flex-wrap">
@@ -416,7 +410,7 @@ export function ComboSelectionDialog({
             </div>
           )}
 
-          {isDataLoaded && hasAnyValidProducts && step === "espresso" && (
+          {isDataLoaded && isDataReady && hasAnyValidProducts && step === "espresso" && (
             <div className="space-y-6">
               {/* Espresso Selection */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
