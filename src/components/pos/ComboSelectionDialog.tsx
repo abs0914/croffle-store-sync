@@ -494,6 +494,7 @@ export function ComboSelectionDialog({
                   </h3>
                   {espressoProducts
                     .filter(espresso => !espresso.name.toLowerCase().includes("iced") && !espresso.name.toLowerCase().includes("cold"))
+                    .sort((a, b) => a.name.localeCompare(b.name))
                     .map((espresso) => {
                       const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
                       
@@ -532,6 +533,7 @@ export function ComboSelectionDialog({
                   </h3>
                   {espressoProducts
                     .filter(espresso => espresso.name.toLowerCase().includes("iced") || espresso.name.toLowerCase().includes("cold"))
+                    .sort((a, b) => a.name.localeCompare(b.name))
                     .map((espresso) => {
                       const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
                       
