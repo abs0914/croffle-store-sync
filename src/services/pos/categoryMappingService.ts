@@ -247,13 +247,24 @@ export const enhanceProductsWithCategories = async (products: any[], storeId: st
     // Enhance each product
     const enhancedProducts = products.map((product) => {
       if (!product.recipe_id) {
-        // Product without recipe - assign to "Classic" category as default
-        const defaultCategory = categoryMap.get('Classic') || categoryMap.get('Other');
-        console.log(`📦 ${product.name}: No recipe, using default category "${defaultCategory?.name}"`);
+        // Product without recipe - check if it's an espresso drink
+        const productName = product.name.toLowerCase();
+        let targetCategory;
+        
+        if (productName.includes('latte') || productName.includes('americano') || 
+            productName.includes('cappuccino') || productName.includes('mocha') ||
+            productName.includes('espresso')) {
+          targetCategory = categoryMap.get('Espresso');
+          console.log(`📦 ${product.name}: No recipe, detected as espresso drink → "${targetCategory?.name}"`);
+        } else {
+          targetCategory = categoryMap.get('Classic') || categoryMap.get('Other');
+          console.log(`📦 ${product.name}: No recipe, using default category "${targetCategory?.name}"`);
+        }
+        
         return {
           ...product,
-          category_id: defaultCategory?.id,
-          category: defaultCategory,
+          category_id: targetCategory?.id,
+          category: targetCategory,
           template_category: 'none'
         };
       }
