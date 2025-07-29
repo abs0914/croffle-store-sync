@@ -118,11 +118,26 @@ export default function ProductGrid({
   const handleCategorySelect = (categoryId: string) => {
     const categoryName = getCategoryName(categoryId);
     
+    console.log('🔥 ProductGrid handleCategorySelect:', {
+      categoryId,
+      categoryName,
+      totalProducts: products.length,
+      totalCategories: categories.length,
+      activeProducts: products.filter(p => p.is_active).length,
+      allProductNames: products.map(p => p.name),
+      allCategoryNames: categories.map(c => c.name)
+    });
+    
     if (categoryName === "Combo") {
       // Open combo selection dialog instead of showing products
       if (isShiftActive) {
         // Check if data is ready before opening dialog
         if (products.length > 0 && categories.length > 0) {
+          console.log('🔥 OPENING COMBO DIALOG with:', {
+            products: products.length,
+            categories: categories.length,
+            sampleProducts: products.slice(0, 5).map(p => ({ name: p.name, category_id: p.category_id, is_active: p.is_active }))
+          });
           setIsComboDialogOpen(true);
         } else {
           console.warn('Cannot open combo dialog: data not ready', {

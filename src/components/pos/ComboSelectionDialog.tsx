@@ -154,23 +154,24 @@ export function ComboSelectionDialog({
     }
   }, [open, resetError]);
 
-  // Enhanced debug logging - Check if receiving filtered data
-  console.log('ComboSelectionDialog Debug:', {
+  // CRITICAL DEBUG: Check what data we actually receive
+  console.log('🔥 ComboSelectionDialog RECEIVING DATA:', {
     open,
     isDataLoaded,
     isDataReady,
     hasAnyValidProducts,
-    productsCount: products.length,
-    categoriesCount: categories.length,
+    totalProductsReceived: products.length,
+    totalCategoriesReceived: categories.length,
     selectedCategory,
     dataError,
     allProductNames: products.map(p => p.name),
     allCategoryNames: categories.map(c => c.name),
-    productsByCategory: CROFFLE_CATEGORIES.map(catName => ({
+    croffleProductCounts: CROFFLE_CATEGORIES.map(catName => ({
       category: catName,
       count: getCategoryProducts(catName).length,
-      products: getCategoryProducts(catName).map(p => p.name)
-    }))
+      productNames: getCategoryProducts(catName).map(p => p.name)
+    })),
+    activeProductsOnly: products.filter(p => p.is_active).map(p => ({ name: p.name, category_id: p.category_id }))
   });
 
   // Function is now defined above in the hook section
