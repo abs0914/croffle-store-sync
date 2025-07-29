@@ -130,7 +130,7 @@ export function ComboSelectionDialog({
     }
   }, [products, categories]);
 
-  // Auto-select first available category when data is ready
+  // Auto-select first available category when data is ready (only once)
   useEffect(() => {
     if (!isDataReady) return;
 
@@ -142,11 +142,11 @@ export function ComboSelectionDialog({
       }
     });
 
-    if (firstCategoryWithProducts && firstCategoryWithProducts !== selectedCategory) {
+    if (firstCategoryWithProducts && selectedCategory === "Classic" && getCategoryProducts("Classic").length === 0) {
       console.log('Auto-selecting category with products:', firstCategoryWithProducts);
       setSelectedCategory(firstCategoryWithProducts);
     }
-  }, [isDataReady, selectedCategory, getCategoryProducts]);
+  }, [isDataReady, getCategoryProducts]);
 
   // Reset error when dialog closes
   useEffect(() => {
