@@ -18,7 +18,10 @@ export function useProductCatalogFetch(storeId: string | null) {
 
   const loadData = useCallback(async () => {
     try {
+      console.log('🔍 useProductCatalogFetch: Starting data fetch for store:', storeId);
+      
       if (!storeId) {
+        console.log('🔍 useProductCatalogFetch: No storeId provided');
         setIsLoading(false);
         return;
       }
@@ -26,11 +29,19 @@ export function useProductCatalogFetch(storeId: string | null) {
       setIsLoading(true);
       setError(null);
 
+      console.log('🔍 useProductCatalogFetch: Fetching products and categories...');
+      
       // Fetch products from product_catalog and enhanced categories in parallel
       const [productsData, categoriesData] = await Promise.all([
         fetchProductCatalogForPOS(storeId),
         getOrCreatePOSCategories(storeId) // Use enhanced category mapping
       ]);
+
+      console.log('🔍 useProductCatalogFetch: Fetched data:', {
+        productsCount: productsData.length,
+        categoriesCount: categoriesData.length,
+        storeId
+      });
 
       setProducts(productsData);
 

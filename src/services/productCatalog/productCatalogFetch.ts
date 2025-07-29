@@ -6,6 +6,8 @@ import { enhanceProductsWithCategories } from "@/services/pos/categoryMappingSer
 
 export const fetchProductCatalogForPOS = async (storeId: string): Promise<Product[]> => {
   try {
+    console.log('🔍 fetchProductCatalogForPOS: Starting fetch for store:', storeId);
+    
     const { data, error } = await supabase
       .from("product_catalog")
       .select(`
@@ -23,8 +25,16 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
       .eq("is_available", true)
       .order("display_order", { ascending: true });
     
+    console.log('🔍 fetchProductCatalogForPOS: Query result:', { dataCount: data?.length, error });
+    
     if (error) {
+      console.error('🔍 fetchProductCatalogForPOS: Supabase error:', error);
       throw new Error(error.message);
+    }
+    
+    if (!data || data.length === 0) {
+      console.log('🔍 fetchProductCatalogForPOS: No products found for store:', storeId);
+      return [];
     }
     
     // Map product_catalog data to Product interface for POS compatibility
