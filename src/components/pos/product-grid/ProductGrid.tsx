@@ -662,12 +662,12 @@ export default function ProductGrid({
         onAddToCart={handleEnhancedCustomizationAddToCart}
       />
 
-      {/* Combo Selection Dialog */}
+      {/* Combo Selection Dialog - Always use original unfiltered data */}
       <ComboSelectionDialog
         open={isComboDialogOpen}
         onOpenChange={setIsComboDialogOpen}
-        products={products}
-        categories={categories}
+        products={products} // Original unfiltered products
+        categories={categories} // Original unfiltered categories
         addonCategories={addonCategories}
         comboRules={comboRules}
         onAddToCart={handleComboAddToCart}
