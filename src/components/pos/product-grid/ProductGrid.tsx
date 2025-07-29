@@ -40,7 +40,7 @@ import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
 
 interface ProductGridProps {
   products: UnifiedProduct[];
-  allProducts?: UnifiedProduct[]; // Unfiltered products for combo dialog
+  allProducts?: any[]; // Accept any array type and cast as needed
   categories: Category[];
   activeCategory: string;
   setActiveCategory: (category: string) => void;
@@ -124,15 +124,20 @@ export default function ProductGrid({
       // Open combo selection dialog instead of showing products
       if (isShiftActive) {
         // Check if data is ready before opening dialog
+        console.log('🔧 Combo button clicked - checking data:', {
+          filteredProductsCount: products.length,
+          allProductsCount: allProducts?.length || 'undefined',
+          allProductsType: typeof allProducts,
+          categoriesCount: categories.length,
+          productsType: typeof products,
+          firstProductSample: products[0]
+        });
+        
         if ((allProducts || products).length > 0 && categories.length > 0) {
-          console.log('Opening combo dialog with unfiltered data:', {
-            filteredProducts: products.length,
-            allProducts: allProducts?.length || 'undefined',
-            categories: categories.length
-          });
+          console.log('🔧 Opening combo dialog with data');
           setIsComboDialogOpen(true);
         } else {
-          console.warn('Cannot open combo dialog: data not ready');
+          console.warn('🔧 Cannot open combo dialog: data not ready');
         }
       }
     } else {
@@ -670,7 +675,7 @@ export default function ProductGrid({
       <ComboSelectionDialog
         open={isComboDialogOpen}
         onOpenChange={setIsComboDialogOpen}
-        products={allProducts || products} // Use unfiltered products if available
+        products={(allProducts || products) as UnifiedProduct[]} // Cast to UnifiedProduct[] since it extends Product
         categories={categories} // Categories should be unfiltered
         addonCategories={addonCategories}
         comboRules={comboRules}
