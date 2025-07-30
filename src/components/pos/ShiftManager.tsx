@@ -30,7 +30,8 @@ export default function ShiftManager() {
   const handleStartShift = async (
     startingCash: number,
     photo?: string,
-    cashierId?: string
+    cashierId?: string,
+    inventoryCounts?: Record<string, number>
   ) => {
     if (!currentStore) {
       toast.error("Please select a store first");
@@ -42,10 +43,12 @@ export default function ShiftManager() {
       console.log("About to call startShift with", {
         cashValue: startingCash,
         hasPhoto: !!photo,
-        cashierId
+        cashierId,
+        inventoryItemCount: inventoryCounts ? Object.keys(inventoryCounts).length : 0,
+        totalInventoryCount: inventoryCounts ? Object.values(inventoryCounts).reduce((sum, count) => sum + count, 0) : 0
       });
       
-      const success = await startShift(startingCash, photo, cashierId);
+      const success = await startShift(startingCash, photo, cashierId, inventoryCounts);
       
       if (success) {
         setIsStartShiftOpen(false);

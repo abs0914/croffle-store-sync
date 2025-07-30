@@ -54,7 +54,8 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   const startShift = async (
     startingCash: number,
     startPhoto?: string,
-    cashierId?: string
+    cashierId?: string,
+    inventoryCounts?: Record<string, number>
   ): Promise<boolean> => {
     if (!user || !currentStore) {
       toast.error("Missing user or store information");
@@ -76,14 +77,18 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      console.log(`🚀 Starting streamlined shift for store: ${currentStore.id} with user: ${user.id}`);
+      console.log(`🚀 Starting streamlined shift for store: ${currentStore.id} with user: ${user.id}`, {
+        inventoryItemCount: inventoryCounts ? Object.keys(inventoryCounts).length : 0,
+        totalInventoryCount: inventoryCounts ? Object.values(inventoryCounts).reduce((sum, count) => sum + count, 0) : 0
+      });
 
       const shift = await createShift(
         user.id,
         currentStore.id,
         startingCash,
         startPhoto, // Required photo
-        cashierId
+        cashierId,
+        inventoryCounts
       );
 
       if (shift) {

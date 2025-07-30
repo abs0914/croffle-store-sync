@@ -16,7 +16,7 @@ import StartShiftDialogFooter from "./shift/StartShiftDialogFooter";
 interface StartShiftDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onStartShift: (startingCash: number, photo?: string, cashierId?: string) => Promise<void>;
+  onStartShift: (startingCash: number, photo?: string, cashierId?: string, inventoryCounts?: Record<string, number>) => Promise<void>;
   storeId: string | null;
 }
 
@@ -78,7 +78,8 @@ export default function StartShiftDialog({
       await onStartShift(
         dialogState.startingCash,
         dialogState.photo,
-        dialogState.selectedCashierId
+        dialogState.selectedCashierId,
+        dialogState.inventoryCounts
       );
     } catch (error) {
       console.error("Error starting shift:", error);

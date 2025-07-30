@@ -48,7 +48,8 @@ export async function createShift(
   storeId: string,
   startingCash: number,
   startPhoto?: string,
-  cashierId?: string
+  cashierId?: string,
+  startInventoryCount?: Record<string, number>
 ): Promise<Shift | null> {
   try {
     // Verify authentication status
@@ -58,7 +59,7 @@ export async function createShift(
     }
 
     console.log("Creating shift with params:", {
-      userId, storeId, startingCash, cashierId
+      userId, storeId, startingCash, cashierId, startInventoryCount
     });
 
     // For current logged-in users (app_users table), don't set cashier_id
@@ -80,7 +81,8 @@ export async function createShift(
       starting_cash: startingCash,
       status: 'active',
       start_photo: startPhoto,
-      cashier_id: finalCashierId
+      cashier_id: finalCashierId,
+      start_inventory_count: startInventoryCount || null
     };
 
     const { data, error } = await supabase
