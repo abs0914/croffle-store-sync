@@ -218,7 +218,7 @@ export function ComboSelectionDialog({
     // Map espresso product name to espresso type for pricing
     let espressoType = "Hot Espresso"; // default
     if (espresso.name.toLowerCase().includes("iced") || espresso.name.toLowerCase().includes("cold")) {
-      espressoType = "Iced Espresso";
+      espressoType = "Cold Espresso";
     }
 
     const comboPrice = getComboPrice(categoryForPricing, espressoType);
@@ -543,7 +543,7 @@ export function ComboSelectionDialog({
                         categoryForPricing = "Mini Croffle";
                       }
                       
-                      const espressoType = "Iced Espresso";
+                      const espressoType = "Cold Espresso";
                       const comboPrice = getComboPrice(categoryForPricing, espressoType);
                       
                       return (
