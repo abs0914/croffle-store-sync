@@ -247,7 +247,7 @@ export const enhanceProductsWithCategories = async (products: any[], storeId: st
     // Enhance each product
     const enhancedProducts = products.map((product) => {
       if (!product.recipe_id) {
-        // Product without recipe - check if it's an espresso drink
+        // Product without recipe - categorize based on product name
         const productName = product.name.toLowerCase();
         let targetCategory;
         
@@ -256,6 +256,22 @@ export const enhanceProductsWithCategories = async (products: any[], storeId: st
             productName.includes('espresso')) {
           targetCategory = categoryMap.get('Espresso');
           console.log(`📦 ${product.name}: No recipe, detected as espresso drink → "${targetCategory?.name}"`);
+        } else if (productName.includes('coke') || productName.includes('sprite') || 
+                   productName.includes('water') || productName.includes('juice') ||
+                   productName.includes('soda') || productName.includes('drink')) {
+          targetCategory = categoryMap.get('Beverages');
+          console.log(`📦 ${product.name}: No recipe, detected as beverage → "${targetCategory?.name}"`);
+        } else if (productName.includes('chocolate') || productName.includes('caramel') || 
+                   productName.includes('sprinkles') || productName.includes('oreo') ||
+                   productName.includes('peanut') || productName.includes('marshmallow') ||
+                   productName.includes('crushed') || productName.includes('flakes') ||
+                   productName.includes('cookies')) {
+          targetCategory = categoryMap.get('Add-ons') || categoryMap.get('Add-on');
+          console.log(`📦 ${product.name}: No recipe, detected as add-on → "${targetCategory?.name}"`);
+        } else if (productName.includes('bag') || productName.includes('box') || 
+                   productName.includes('container') || productName.includes('packaging')) {
+          targetCategory = categoryMap.get('Add-ons') || categoryMap.get('Add-on');
+          console.log(`📦 ${product.name}: No recipe, detected as packaging → "${targetCategory?.name}"`);
         } else {
           targetCategory = categoryMap.get('Classic') || categoryMap.get('Other');
           console.log(`📦 ${product.name}: No recipe, using default category "${targetCategory?.name}"`);
