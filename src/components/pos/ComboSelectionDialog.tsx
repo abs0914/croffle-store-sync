@@ -73,10 +73,15 @@ export function ComboSelectionDialog({
       
       // Special case for Mini Croffle with improved matching
       if (categoryName === "Mini Croffle") {
-        // First try to find by name
+        // First try to find by name with proper croffle filtering
         let miniProducts = products.filter(p => 
           p && p.name && typeof p.name === 'string' &&
           p.name.toLowerCase().includes("mini") && 
+          (p.name.toLowerCase().includes("croffle") || p.name.toLowerCase().includes("mix")) &&
+          !p.name.toLowerCase().includes("box") &&
+          !p.name.toLowerCase().includes("packaging") &&
+          !p.name.toLowerCase().includes("container") &&
+          !p.name.toLowerCase().includes("bag") &&
           p.is_active
         );
         
@@ -85,7 +90,10 @@ export function ComboSelectionDialog({
           const mixMatchCategory = categories.find(c => c && c.name === "Mix & Match" && c.is_active);
           if (mixMatchCategory && mixMatchCategory.id) {
             miniProducts = products.filter(p => 
-              p && p.category_id === mixMatchCategory.id && p.is_active
+              p && p.category_id === mixMatchCategory.id && 
+              p.name && !p.name.toLowerCase().includes("box") &&
+              !p.name.toLowerCase().includes("packaging") &&
+              p.is_active
             );
           }
         }
@@ -113,9 +121,18 @@ export function ComboSelectionDialog({
         allCategories: categories.map(c => ({ id: c.id, name: c.name, is_active: c.is_active }))
       });
       
-      // Filter products with enhanced validation
+      // Filter products with enhanced validation and exclude non-croffle items
       const categoryProducts = products.filter(p => 
-        p && p.category_id && categoryIds.includes(p.category_id) && p.is_active
+        p && p.category_id && categoryIds.includes(p.category_id) && p.is_active &&
+        // Exclude add-on items and packaging from croffle categories
+        !(p.name && (
+          p.name.toLowerCase().includes("crushed") ||
+          p.name.toLowerCase().includes("box") ||
+          p.name.toLowerCase().includes("packaging") ||
+          p.name.toLowerCase().includes("container") ||
+          p.name.toLowerCase().includes("bag") ||
+          (p.name.toLowerCase().includes("biscoff") && p.name.toLowerCase().includes("crushed"))
+        ))
       );
       
       console.log(`Products in "${categoryName}" category:`, {
