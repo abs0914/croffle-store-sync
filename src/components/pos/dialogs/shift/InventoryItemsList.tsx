@@ -121,8 +121,9 @@ export default function InventoryItemsList({
                   <Input
                     type="number"
                     min="0"
+                    step="0.1"
                     value={inventoryCounts[item.id] || 0}
-                    onChange={(e) => handleCountChange(item.id, parseInt(e.target.value) || 0)}
+                    onChange={(e) => handleCountChange(item.id, parseFloat(e.target.value) || 0)}
                     className="text-right text-sm"
                     placeholder="0"
                   />
