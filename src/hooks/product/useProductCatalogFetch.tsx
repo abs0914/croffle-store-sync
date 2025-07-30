@@ -40,7 +40,9 @@ export function useProductCatalogFetch(storeId: string | null) {
       console.log('🔍 useProductCatalogFetch: Fetched data:', {
         productsCount: productsData.length,
         categoriesCount: categoriesData.length,
-        storeId
+        storeId,
+        sampleProducts: productsData.slice(0, 3).map(p => ({ name: p.name, category_id: p.category_id })),
+        sampleCategories: categoriesData.slice(0, 5).map(c => ({ name: c.name, id: c.id, is_active: c.is_active }))
       });
 
       setProducts(productsData);

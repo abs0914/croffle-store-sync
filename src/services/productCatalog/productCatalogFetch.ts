@@ -25,7 +25,16 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
       .eq("is_available", true)
       .order("display_order", { ascending: true });
     
-    console.log('🔍 fetchProductCatalogForPOS: Query result:', { dataCount: data?.length, error });
+    console.log('🔍 fetchProductCatalogForPOS: Query result:', { 
+      dataCount: data?.length, 
+      error,
+      storeId,
+      sampleData: data?.slice(0, 2).map(item => ({ 
+        name: item.product_name, 
+        category_id: item.category_id,
+        is_available: item.is_available 
+      }))
+    });
     
     if (error) {
       console.error('🔍 fetchProductCatalogForPOS: Supabase error:', error);

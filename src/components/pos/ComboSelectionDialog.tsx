@@ -172,15 +172,33 @@ export function ComboSelectionDialog({
     }
   }, [open, resetError]);
 
-  // Debug log for combo dialog data (remove after testing)
-  console.log('ComboSelectionDialog received:', {
+  // Enhanced debug log for combo dialog data  
+  console.log('🔍 ComboSelectionDialog received:', {
     totalProducts: products.length,
     totalCategories: categories.length,
     sampleProductNames: products.slice(0, 5).map(p => p.name),
+    storeFilter: categories.length > 0 ? categories[0].store_id : 'unknown',
+    categoriesDetails: categories.map(c => ({
+      id: c.id,
+      name: c.name,
+      is_active: c.is_active,
+      store_id: c.store_id
+    })),
     croffleProductCounts: CROFFLE_CATEGORIES.map(catName => ({
       category: catName,
-      count: getCategoryProducts(catName).length
+      count: getCategoryProducts(catName).length,
+      foundCategories: categories.filter(c => c.name === catName).length,
+      categoryDetails: categories.filter(c => c.name === catName).map(c => ({ id: c.id, is_active: c.is_active }))
     }))
+  });
+
+  // Log combo service debug info
+  const espressoProducts = getEspressoProducts(products, categories);
+  console.log('🔍 ComboDialog - Final validation:', {
+    hasEspressoProducts: espressoProducts.length > 0,
+    espressoCount: espressoProducts.length,
+    dataLoadStatus: { isDataLoaded, isDataReady, hasAnyValidProducts },
+    validationErrors: dataError
   });
 
   // Enhanced category selection with visual feedback
@@ -199,17 +217,7 @@ export function ComboSelectionDialog({
 
   // Function is now defined above in the hook section
 
-  const espressoProducts = getEspressoProducts(products, categories);
-  
-  // Debug espresso products availability
-  console.log('🔍 ComboDialog - Espresso products debug:', {
-    totalProducts: products.length,
-    totalCategories: categories.length,
-    espressoProductsFound: espressoProducts.length,
-    espressoCategory: categories.find(c => c.name === "Espresso"),
-    userId: 'rbnorth.cashier@croffle.com', // For debugging
-    timestamp: new Date().toISOString()
-  });
+  // This will be logged above in the enhanced debug section
 
   const handleCroffleSelect = (croffle: UnifiedProduct) => {
     setSelectedCroffle(croffle);
