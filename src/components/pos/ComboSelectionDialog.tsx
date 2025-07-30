@@ -183,6 +183,16 @@ export function ComboSelectionDialog({
   // Function is now defined above in the hook section
 
   const espressoProducts = getEspressoProducts(products, categories);
+  
+  // Debug espresso products availability
+  console.log('🔍 ComboDialog - Espresso products debug:', {
+    totalProducts: products.length,
+    totalCategories: categories.length,
+    espressoProductsFound: espressoProducts.length,
+    espressoCategory: categories.find(c => c.name === "Espresso"),
+    userId: 'rbnorth.cashier@croffle.com', // For debugging
+    timestamp: new Date().toISOString()
+  });
 
   const handleCroffleSelect = (croffle: UnifiedProduct) => {
     setSelectedCroffle(croffle);
