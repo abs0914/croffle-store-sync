@@ -6,29 +6,29 @@ export function useComboService() {
   // Combo pricing rules based on the provided table
   const comboPricing = useMemo(() => ({
     "Classic": {
-      "Hot Espresso": 110,
-      "Iced Espresso": 115
+      "Hot Espresso": 170,
+      "Cold Espresso": 175
     },
     "Glaze": {
       "Hot Espresso": 125,
-      "Iced Espresso": 130
+      "Cold Espresso": 130
     },
     "Fruity": {
-      "Hot Espresso": 110,
-      "Iced Espresso": 115
+      "Hot Espresso": 170,
+      "Cold Espresso": 175
     },
     "Premium": {
-      "Hot Espresso": 110,
-      "Iced Espresso": 115
+      "Hot Espresso": 170,
+      "Cold Espresso": 175
     },
     "Mini Croffle": {
-      "Hot Espresso": 170,
-      "Iced Espresso": 175
+      "Hot Espresso": 110,
+      "Cold Espresso": 115
     }
   }), []);
 
   const getComboPrice = (croffleCategory: string, espressoType: string): number => {
-    return comboPricing[croffleCategory as keyof typeof comboPricing]?.[espressoType as "Hot Espresso" | "Iced Espresso"] || 0;
+    return comboPricing[croffleCategory as keyof typeof comboPricing]?.[espressoType as "Hot Espresso" | "Cold Espresso"] || 0;
   };
 
   const getEspressoProducts = (products: UnifiedProduct[], categories: Category[]): UnifiedProduct[] => {
