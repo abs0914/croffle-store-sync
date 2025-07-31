@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { InventoryStock } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,11 +33,17 @@ export const EditStockItemForm = ({
   onCancel,
   isLoading 
 }: EditStockItemFormProps) => {
+  const [formData, setFormData] = useState<InventoryStock>(stockItem);
+
   const handleChange = (field: keyof InventoryStock, value: any) => {
-    onUpdate({
-      ...stockItem,
+    setFormData(prev => ({
+      ...prev,
       [field]: value
-    });
+    }));
+  };
+
+  const handleSave = () => {
+    onUpdate(formData);
   };
 
   return (
@@ -54,7 +61,7 @@ export const EditStockItemForm = ({
           </Label>
           <Input
             id="edit-item"
-            value={stockItem.item}
+            value={formData.item}
             onChange={(e) => handleChange("item", e.target.value)}
             className="col-span-3"
           />
@@ -65,7 +72,7 @@ export const EditStockItemForm = ({
           </Label>
           <Input
             id="edit-unit"
-            value={stockItem.unit}
+            value={formData.unit}
             onChange={(e) => handleChange("unit", e.target.value)}
             className="col-span-3"
           />
@@ -75,7 +82,7 @@ export const EditStockItemForm = ({
             Status
           </Label>
           <Select 
-            value={stockItem.is_active ? "active" : "inactive"} 
+            value={formData.is_active ? "active" : "inactive"} 
             onValueChange={(value) => handleChange("is_active", value === "active")}
           >
             <SelectTrigger className="col-span-3">
@@ -93,7 +100,7 @@ export const EditStockItemForm = ({
           Cancel
         </Button>
         <Button 
-          onClick={() => onUpdate(stockItem)}
+          onClick={handleSave}
           disabled={isLoading}
           className="bg-croffle-accent hover:bg-croffle-accent/90"
         >
