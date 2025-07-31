@@ -53,7 +53,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     <SidebarProvider defaultOpen={false} open={undefined}>
       <div className="flex h-screen w-full bg-background" data-component="main-layout">
         <AppSidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col">
           {/* Header with sidebar trigger - only for non-POS pages */}
           {!window.location.pathname.includes('/pos') && (
             <header className="h-12 flex items-center border-b bg-background px-4">
@@ -73,7 +73,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </header>
           )}
           
-          <main className={`flex-1 overflow-hidden ${window.location.pathname.includes('/pos') ? '' : 'p-4 md:p-6 bg-croffle-background/30 overflow-y-auto'}`}>
+          <main className={`flex-1 min-h-0 ${window.location.pathname.includes('/pos') ? 'overflow-hidden' : 'p-4 md:p-6 bg-croffle-background/30 overflow-y-auto'}`}>
             {children}
           </main>
         </div>
