@@ -61,6 +61,11 @@ export function MiniCroffleComboDialog({
   
   const isMiniCroffle = product.name.toLowerCase().includes('mini');
   const isCroffleOverload = product.name.toLowerCase().includes('overload');
+  
+  // Debug logging
+  console.log('Product name:', product.name);
+  console.log('isMiniCroffle:', isMiniCroffle);
+  console.log('isCroffleOverload:', isCroffleOverload);
   const handleToppingChange = (toppingId: string, checked: boolean) => {
     if (checked) {
       setSelectedToppings(prev => [...prev, toppingId]);
