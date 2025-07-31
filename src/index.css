@@ -54,6 +54,19 @@
       overflow-y: scroll !important;
       -webkit-overflow-scrolling: touch;
     }
+    
+    .tablet-optimized {
+      touch-action: manipulation;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      z-index: 100 !important;
+    }
+    
+    .fast-tap {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
   }
 
   /* APK-specific optimizations */

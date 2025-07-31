@@ -95,11 +95,15 @@ export default function Settings() {
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-11 w-11 p-0 touch-manipulation fast-tap md:h-11 md:w-11"
+                        >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuContent align="end" className="w-48 z-[100] tablet-optimized">
                         <DropdownMenuItem className="cursor-default">
                           <User className="mr-2 h-4 w-4" />
                           My Account
