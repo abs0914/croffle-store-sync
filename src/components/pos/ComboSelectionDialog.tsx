@@ -330,7 +330,8 @@ export function ComboSelectionDialog({
           )}
         </DialogHeader>
 
-        <ScrollArea className="flex-1 max-h-[calc(80vh-200px)] min-h-[400px]">
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-[60vh]">
           {/* Progressive Loading State */}
           {(!isDataLoaded || !isDataReady) && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -620,9 +621,10 @@ export function ComboSelectionDialog({
                   </Button>
                 </div>
               )}
-            </div>
-          )}
-        </ScrollArea>
+             </div>
+           )}
+          </ScrollArea>
+        </div>
 
         {/* MiniCroffleComboDialog for Mini Croffle */}
         {step === "customize" && selectedCroffle && (
