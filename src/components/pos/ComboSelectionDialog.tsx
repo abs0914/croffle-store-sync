@@ -314,7 +314,7 @@ export function ComboSelectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden touch-manipulation">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             {step === "croffle" && "Select Your Croffle"}
@@ -329,7 +329,7 @@ export function ComboSelectionDialog({
           )}
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1">
+        <div className="overflow-y-auto flex-1 touch-scroll">
           {/* Progressive Loading State */}
           {(!isDataLoaded || !isDataReady) && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
