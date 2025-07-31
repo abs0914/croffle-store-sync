@@ -521,7 +521,7 @@ export function ComboSelectionDialog({
           {isDataLoaded && isDataReady && hasAnyValidProducts && step === "espresso" && (
             <div className="space-y-6">
               {/* Espresso Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-6 md:grid md:grid-cols-2 md:gap-8 md:space-y-0">
                 {/* Hot Espresso Column */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-center text-orange-600 border-b pb-2">
