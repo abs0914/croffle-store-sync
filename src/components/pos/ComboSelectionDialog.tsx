@@ -330,7 +330,7 @@ export function ComboSelectionDialog({
           )}
         </DialogHeader>
 
-        <ScrollArea className="flex-1 h-full">
+        <ScrollArea className="flex-1 max-h-[calc(80vh-200px)] min-h-[400px]">
           {/* Progressive Loading State */}
           {(!isDataLoaded || !isDataReady) && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
