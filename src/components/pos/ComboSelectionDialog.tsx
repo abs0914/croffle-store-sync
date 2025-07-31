@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Coffee, IceCream, RefreshCw, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
@@ -314,7 +315,7 @@ export function ComboSelectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden touch-manipulation">
+      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             {step === "croffle" && "Select Your Croffle"}
@@ -329,7 +330,7 @@ export function ComboSelectionDialog({
           )}
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1 touch-scroll">
+        <ScrollArea className="flex-1 max-h-[60vh]">
           {/* Progressive Loading State */}
           {(!isDataLoaded || !isDataReady) && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -621,7 +622,7 @@ export function ComboSelectionDialog({
               )}
             </div>
           )}
-        </div>
+        </ScrollArea>
 
         {/* MiniCroffleComboDialog for Mini Croffle */}
         {step === "customize" && selectedCroffle && (
