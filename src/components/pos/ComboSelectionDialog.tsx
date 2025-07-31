@@ -331,7 +331,7 @@ export function ComboSelectionDialog({
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-[60vh]">
+          <ScrollArea className="h-[50vh] md:h-[65vh] lg:h-[60vh] tablet-scroll-optimized">
           {/* Progressive Loading State */}
           {(!isDataLoaded || !isDataReady) && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">

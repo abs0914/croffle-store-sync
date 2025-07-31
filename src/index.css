@@ -42,6 +42,12 @@
     .tablet-optimized {
       @apply text-sm;
     }
+    
+    .tablet-scroll-optimized {
+      height: 70vh !important;
+      touch-action: pan-y;
+      overscroll-behavior: contain;
+    }
   }
 
   /* APK-specific optimizations */
