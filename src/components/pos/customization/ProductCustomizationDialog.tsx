@@ -216,9 +216,9 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     if (croffleType === 'regular') {
       return true; // Regular can have any addons or none
     } else if (croffleType === 'overload') {
-      return comboSelection.sauces.length >= 1; // At least 1 sauce required
+      return comboSelection.toppings.length >= 1; // At least 1 topping required
     } else if (croffleType === 'mini_overload') {
-      return comboSelection.sauces.length >= 1; // At least 1 sauce required
+      return comboSelection.sauces.length >= 1 && comboSelection.toppings.length >= 1; // At least 1 sauce AND 1 topping required
     }
     return false;
   };
@@ -228,9 +228,9 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
     if (!isSelectionValid()) {
       if (croffleType === 'overload') {
-        toast.error('Please select at least 1 sauce for Croffle Overload');
+        toast.error('Please select one topping for Croffle Overload');
       } else if (croffleType === 'mini_overload') {
-        toast.error('Please select at least 1 sauce for Mini Croffle');
+        toast.error('Please select at least 1 sauce and 1 topping for Mini Croffle');
       }
       return;
     }
@@ -466,27 +466,82 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
             /* Combo Croffles - Show combo selection */
             <div className="space-y-6">
               {croffleType === 'overload' ? (
-                /* Croffle Overload - Only sauces */
+                /* Croffle Overload - Only toppings required (single selection) */
                 <div>
-                  <h4 className="font-medium mb-3">Sauce Selection</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
+                  <h4 className="font-medium mb-3">
+                    Toppings Selection <span className="text-destructive">*</span>
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-3">Select one option</p>
+                  <div className="space-y-2">
+                    {mixMatchToppings.map(topping => {
+                      const isSelected = comboSelection.toppings.some(selected => selected.addon.id === topping.id);
+                      const addonItem: AddonItem = {
+                        id: topping.id,
+                        name: topping.name,
+                        price: topping.price,
+                        cost_per_unit: 0,
+                        category: 'classic_topping',
+                        is_active: true
+                      };
+                      
+                      return (
+                        <div 
+                          key={topping.id} 
+                          className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => {
+                            // For overload, clear other selections and select only this one
+                            setComboSelection(prev => ({
+                              ...prev,
+                              toppings: isSelected ? [] : [{ addon: addonItem, quantity: 1 }]
+                            }));
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            id={`topping-${topping.id}`}
+                            name="overload-topping"
+                            checked={isSelected}
+                            onChange={() => {}} // Handled by parent onClick
+                            className="h-3 w-3"
+                          />
+                          <Label 
+                            htmlFor={`topping-${topping.id}`}
+                            className="flex-1 cursor-pointer text-sm"
+                          >
+                            {topping.name} 0.5 Portion
+                          </Label>
+                        </div>
+                      );
+                    })}
                   </div>
+                  {comboSelection.toppings.length === 0 && (
+                    <p className="text-sm text-destructive mt-2">Please select one topping</p>
+                  )}
                 </div>
               ) : (
                 /* Mini Croffle - Sauces and Toppings */
                 <>
                   <div>
-                    <h4 className="font-medium mb-3">Sauce Selection</h4>
+                    <h4 className="font-medium mb-3">
+                      Sauce Selection <span className="text-destructive">*</span>
+                    </h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
                     </div>
+                    {comboSelection.sauces.length === 0 && (
+                      <p className="text-sm text-destructive mt-2">Please select at least one sauce</p>
+                    )}
                   </div>
                   <div>
-                    <h4 className="font-medium mb-3">Toppings Selection</h4>
+                    <h4 className="font-medium mb-3">
+                      Toppings Selection <span className="text-destructive">*</span>
+                    </h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {mixMatchToppings.map(topping => renderMixMatchCard(topping, 'toppings'))}
                     </div>
+                    {comboSelection.toppings.length === 0 && (
+                      <p className="text-sm text-destructive mt-2">Please select at least one topping</p>
+                    )}
                   </div>
                 </>
               )}
