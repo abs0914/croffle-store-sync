@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Croffle Store Sync</string>
+    <string name="title_activity_main">Croffle Store Sync</string>
+    <string name="package_name">com.croffle.storesync</string>
+    <string name="custom_url_scheme">com.croffle.storesync</string>
+</resources>
