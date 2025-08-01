@@ -508,7 +508,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
                             htmlFor={`topping-${topping.id}`}
                             className="flex-1 cursor-pointer text-sm"
                           >
-                            {topping.name} 0.5 Portion
+                            {topping.name} 1 Portion
                           </Label>
                         </div>
                       );

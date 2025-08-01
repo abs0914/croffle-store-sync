@@ -106,7 +106,7 @@ export function MiniCroffleComboDialog({
     if (isMiniCroffle) {
       return `${product.name} (${getSelectedSauceName()})`;
     } else if (isCroffleOverload) {
-      return selectedTopping ? `${product.name} (${getSelectedToppingName()} 0.5 Portion)` : product.name;
+      return selectedTopping ? `${product.name} (${getSelectedToppingName()} 1 Portion)` : product.name;
     }
     return product.name;
   };
@@ -124,7 +124,7 @@ export function MiniCroffleComboDialog({
         price: calculateTotalPrice(),
         customization: {
           sauce: isMiniCroffle ? getSelectedSauceName() : "",
-          toppings: isMiniCroffle ? getSelectedToppingsNames() : (selectedTopping ? [`${getSelectedToppingName()} 0.5 Portion`] : [])
+          toppings: isMiniCroffle ? getSelectedToppingsNames() : (selectedTopping ? [`${getSelectedToppingName()} 1 Portion`] : [])
         }
       }
     };
@@ -201,7 +201,7 @@ export function MiniCroffleComboDialog({
                 {TOPPING_OPTIONS.map(topping => <div key={topping.id} className="flex items-center space-x-2">
                     <RadioGroupItem value={topping.id} id={topping.id} />
                     <Label htmlFor={topping.id} className="flex-1 cursor-pointer">
-                      {topping.name} 0.5 Portion
+                      {topping.name} 1 Portion
                     </Label>
                   </div>)}
               </RadioGroup>
@@ -236,7 +236,7 @@ export function MiniCroffleComboDialog({
               {/* Croffle Overload topping */}
               {isCroffleOverload && selectedTopping && (
                 <div className="flex justify-between text-muted-foreground">
-                  <span>+ {getSelectedToppingName()} 0.5 Portion</span>
+                  <span>+ {getSelectedToppingName()} 1 Portion</span>
                   <span>No charge</span>
                 </div>
               )}
