@@ -45,10 +45,11 @@ export const deductIngredientsForProduct = async (
 
       if (updateError) throw updateError;
 
-      // Create movement record only if transactionId is a valid UUID
+      // Create movement record only if transactionId is a valid UUID (not temporary)
       const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId);
+      const isTemporaryId = transactionId.startsWith('temp-');
       
-      if (isValidUUID) {
+      if (isValidUUID && !isTemporaryId) {
         const { error: movementError } = await supabase
           .from('inventory_movements')
           .insert({

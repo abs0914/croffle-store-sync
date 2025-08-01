@@ -159,13 +159,24 @@ export const createTransaction = async (
       receiptNumber
     );
     
-    // Process inventory deduction with improved error handling
+    // Process inventory deduction with proper integration
+    console.log('🔄 Starting inventory deduction for transaction:', data.id);
     try {
-      await updateInventoryStockForTransaction(transaction.items, transaction.storeId);
+      const inventorySuccess = await updateInventoryStockForTransaction(transaction.items, transaction.storeId, data.id);
+      if (!inventorySuccess) {
+        console.error('❌ Inventory deduction failed - rolling back transaction:', data.id);
+        // Rollback transaction if inventory deduction fails
+        await supabase.from("transactions").delete().eq("id", data.id);
+        toast.error('Transaction failed - insufficient inventory');
+        return null;
+      }
+      console.log('✅ Inventory deduction completed successfully for transaction:', data.id);
     } catch (inventoryError) {
-      console.warn('Inventory update warning:', inventoryError);
-      // Don't fail the transaction for inventory issues - log and continue
-      toast.info('Transaction completed - inventory may need manual adjustment');
+      console.error('❌ Critical inventory error:', inventoryError);
+      // Rollback transaction for critical errors
+      await supabase.from("transactions").delete().eq("id", data.id);
+      toast.error('Transaction failed - inventory processing error');
+      return null;
     }
     
     // Cast the returned data to our custom type
@@ -201,32 +212,44 @@ export const createTransaction = async (
 };
 
 /**
- * Updates inventory stock after a transaction is completed
+ * Updates inventory stock after a transaction is completed using real inventory integration
  */
-const updateInventoryStockForTransaction = async (items: any[], storeId: string) => {
-  // Mock implementation - simplified for new direct inventory system
-  
+const updateInventoryStockForTransaction = async (items: any[], storeId: string, transactionId: string): Promise<boolean> => {
   try {
-    // Use the unified inventory deduction service
-    const updates = items.map(item => ({
-      productId: item.productId,
-      variationId: item.variationId,
-      quantitySold: item.quantity,
-      transactionId: "transaction", // This will be properly set by the calling function
-      storeId: storeId
-    }));
+    console.log('Processing inventory deduction for transaction:', { transactionId, itemCount: items.length });
 
-    // Mock implementation for now - in real app this would call inventory service
-    const result = { success: true, errors: [] };
-    
-    if (!result.success && result.errors.length > 0) {
-      console.warn('Inventory deduction warnings:', result.errors);
-      // Don't throw - just log warnings
+    // Import the actual inventory service
+    const { processProductSale } = await import('@/services/productCatalog/inventoryIntegrationService');
+
+    // Process each item through the proper inventory deduction service
+    for (const item of items) {
+      const success = await processProductSale(
+        item.productId,
+        item.quantity,
+        transactionId,
+        storeId
+      );
+      
+      if (!success) {
+        console.error(`Failed to process inventory for product: ${item.productId}`);
+        return false;
+      }
     }
+
+    console.log('All inventory deductions completed successfully');
+    return true;
   } catch (error) {
-    console.warn('Failed to process inventory deduction:', error);
+    console.error('Error in inventory deduction:', error);
+    
     // Fallback to legacy product stock update for products without recipes
-    await legacyProductStockUpdate(items);
+    try {
+      await legacyProductStockUpdate(items);
+      console.log('Fallback to legacy stock update completed');
+      return true;
+    } catch (fallbackError) {
+      console.error('Legacy fallback also failed:', fallbackError);
+      return false;
+    }
   }
 };
 

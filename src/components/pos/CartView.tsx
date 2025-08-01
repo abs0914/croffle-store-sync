@@ -96,7 +96,6 @@ export default function CartView({
   const { 
     isValidating, 
     validateCartItems, 
-    processCartSale, 
     getItemValidation 
   } = useInventoryValidation(currentStore?.id || '');
 
@@ -119,7 +118,7 @@ export default function CartView({
     validateCart();
   }, [cartItems, validateCartItems]);
 
-  const handlePaymentCompleteWithDeduction = async (
+  const handlePaymentCompleteWithInventoryValidation = async (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
     amountTendered: number,
     paymentDetails?: any
@@ -128,24 +127,21 @@ export default function CartView({
       toast.error('No store selected');
       return;
     }
-
-    // Generate temporary transaction ID for tracking
-    const tempTransactionId = `temp-${Date.now()}`;
     
     try {
-      // Process inventory deductions first
-      const deductionSuccess = await processCartSale(cartItems, tempTransactionId);
-      if (!deductionSuccess) {
-        toast.error('Failed to process inventory deductions');
+      // Only validate inventory availability before payment - actual deduction happens in transaction
+      const validationSuccess = await validateCartItems(cartItems);
+      if (!validationSuccess) {
+        toast.error('Inventory validation failed - insufficient stock');
         return;
       }
 
-      // If deductions successful, complete the payment
+      // Proceed with payment - inventory deduction will happen automatically in transaction creation
       handlePaymentComplete(paymentMethod, amountTendered, paymentDetails);
       setIsPaymentDialogOpen(false);
     } catch (error) {
-      console.error('Error processing payment with deductions:', error);
-      toast.error('Payment processing failed');
+      console.error('Error during payment validation:', error);
+      toast.error('Payment validation failed');
     }
   };
   
@@ -245,7 +241,7 @@ export default function CartView({
         isOpen={isPaymentDialogOpen}
         onClose={() => setIsPaymentDialogOpen(false)}
         total={calculations.finalTotal}
-        onPaymentComplete={handlePaymentCompleteWithDeduction}
+        onPaymentComplete={handlePaymentCompleteWithInventoryValidation}
       />
     </div>
   );

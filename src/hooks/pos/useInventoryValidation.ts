@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { validateProductAvailability, processProductSale, InventoryValidationResult } from '@/services/productCatalog/inventoryIntegrationService';
+import { validateProductAvailability, InventoryValidationResult } from '@/services/productCatalog/inventoryIntegrationService';
 import { CartItem } from '@/types';
 
 export const useInventoryValidation = (storeId: string) => {
@@ -35,33 +35,6 @@ export const useInventoryValidation = (storeId: string) => {
     }
   }, [storeId]);
 
-  const processCartSale = useCallback(async (
-    items: CartItem[], 
-    transactionId: string
-  ): Promise<boolean> => {
-    if (!storeId) return false;
-
-    try {
-      // Process each item
-      for (const item of items) {
-        const success = await processProductSale(
-          item.productId,
-          item.quantity,
-          transactionId,
-          storeId
-        );
-        
-        if (!success) {
-          throw new Error(`Failed to process sale for ${item.product.name}`);
-        }
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error processing cart sale:', error);
-      return false;
-    }
-  }, [storeId]);
 
   const getItemValidation = useCallback((productId: string, variationId?: string): InventoryValidationResult | null => {
     const key = `${productId}-${variationId || 'default'}`;
@@ -72,7 +45,6 @@ export const useInventoryValidation = (storeId: string) => {
     isValidating,
     validationResults,
     validateCartItems,
-    processCartSale,
     getItemValidation
   };
 };
