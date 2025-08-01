@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Download, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { formatCurrency } from "@/utils/format";
+import { cn } from "@/lib/utils";
 
 interface Transaction {
   id: string;
@@ -30,6 +31,7 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set());
 
   // Filter and search transactions
   const filteredTransactions = useMemo(() => {
@@ -55,6 +57,16 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
   useState(() => {
     setCurrentPage(1);
   });
+
+  const toggleTransactionExpansion = (transactionId: string) => {
+    const newExpanded = new Set(expandedTransactions);
+    if (newExpanded.has(transactionId)) {
+      newExpanded.delete(transactionId);
+    } else {
+      newExpanded.add(transactionId);
+    }
+    setExpandedTransactions(newExpanded);
+  };
 
   const exportToCSV = () => {
     const csvHeaders = [
@@ -165,32 +177,78 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
             <TableBody>
               {paginatedTransactions.map((tx) => {
                 const items = typeof tx.items === 'string' ? JSON.parse(tx.items) : tx.items;
-                const itemCount = items.length;
-                const firstItem = items[0]?.name || 'N/A';
+                const hasMultipleItems = items.length > 1;
+                const isExpanded = expandedTransactions.has(tx.id);
                 
                 return (
-                  <TableRow key={tx.id}>
-                    <TableCell className="text-sm">
-                      {format(new Date(tx.created_at), "MMM dd, HH:mm")}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {tx.receipt_number}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {tx.cashier_name || 'N/A'}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm">
-                      <div className="max-w-48 truncate">
-                        {itemCount === 1 ? firstItem : `${firstItem} +${itemCount - 1} more`}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getPaymentMethodBadge(tx.payment_method)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(tx.total)}
-                    </TableCell>
-                  </TableRow>
+                  <>
+                    {/* Main transaction row */}
+                    <TableRow key={tx.id} className={cn(hasMultipleItems && "cursor-pointer hover:bg-muted/50")}>
+                      <TableCell className="text-sm">
+                        {format(new Date(tx.created_at), "MMM dd, HH:mm")}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {tx.receipt_number}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {tx.cashier_name || 'N/A'}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-sm">
+                        <div className="flex items-center gap-2">
+                          {hasMultipleItems && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => toggleTransactionExpansion(tx.id)}
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="h-3 w-3" />
+                              ) : (
+                                <ChevronDown className="h-3 w-3" />
+                              )}
+                            </Button>
+                          )}
+                          <div className="max-w-48 truncate">
+                            {hasMultipleItems ? (
+                              <span className="text-muted-foreground">
+                                {items.length} items
+                              </span>
+                            ) : (
+                              items[0]?.name || 'N/A'
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getPaymentMethodBadge(tx.payment_method)}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(tx.total)}
+                      </TableCell>
+                    </TableRow>
+
+                    {/* Expanded items rows */}
+                    {hasMultipleItems && isExpanded && items.map((item: any, itemIndex: number) => (
+                      <TableRow key={`${tx.id}-item-${itemIndex}`} className="bg-muted/25">
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="hidden sm:table-cell text-sm pl-8">
+                          <div className="flex items-center justify-between">
+                            <span>{item.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              Qty: {item.quantity}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="text-right text-sm text-muted-foreground">
+                          {formatCurrency(item.totalPrice || (item.price * item.quantity))}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </>
                 );
               })}
             </TableBody>
