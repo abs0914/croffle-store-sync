@@ -3,6 +3,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SalesReport } from "@/types/reports";
 import { formatCurrency } from "@/utils/format";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { TransactionDetailsTable } from "../TransactionDetailsTable";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
 interface SalesReportViewProps {
@@ -12,9 +15,50 @@ interface SalesReportViewProps {
     to: Date | undefined;
   };
   isAllStores?: boolean;
+  storeId: string;
 }
 
-export function SalesReportView({ data, dateRange, isAllStores }: SalesReportViewProps) {
+export function SalesReportView({ data, dateRange, isAllStores, storeId }: SalesReportViewProps) {
+  // Fetch detailed transactions for the table
+  const { data: transactions } = useQuery({
+    queryKey: ['transactions', storeId, dateRange.from, dateRange.to],
+    queryFn: async () => {
+      if (!dateRange.from || !dateRange.to) return [];
+      
+      const fromStr = format(dateRange.from, 'yyyy-MM-dd');
+      const toStr = format(dateRange.to, 'yyyy-MM-dd');
+      
+      let query = supabase
+        .from('transactions')
+        .select(`
+          id,
+          created_at,
+          receipt_number,
+          total,
+          payment_method,
+          items
+        `)
+        .eq('status', 'completed')
+        .gte('created_at', fromStr)
+        .lte('created_at', toStr + 'T23:59:59')
+        .order('created_at', { ascending: false });
+
+      if (storeId !== 'all') {
+        query = query.eq('store_id', storeId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return data?.map(tx => ({
+        ...tx,
+        cashier_name: 'N/A', // We'll enhance this when we have proper cashier data
+        customer_name: 'Walk-in' // Default customer name
+      })) || [];
+    },
+    enabled: !!dateRange.from && !!dateRange.to
+  });
+
   if (!data) {
     return (
       <Card>
@@ -129,6 +173,11 @@ export function SalesReportView({ data, dateRange, isAllStores }: SalesReportVie
           </div>
         </CardContent>
       </Card>
+
+      {/* Transaction Details Table */}
+      {transactions && transactions.length > 0 && (
+        <TransactionDetailsTable transactions={transactions} />
+      )}
     </div>
   );
 }

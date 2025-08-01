@@ -161,7 +161,8 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
       ROUTE_PATHS.POS,
       ROUTE_PATHS.PRODUCTS,
       ROUTE_PATHS.CUSTOMERS,
-      ROUTE_PATHS.EXPENSES
+      ROUTE_PATHS.EXPENSES,
+      ROUTE_PATHS.REPORTS
     ]
   };
   
