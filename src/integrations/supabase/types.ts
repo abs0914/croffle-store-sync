@@ -4830,6 +4830,14 @@ export type Database = {
           details: string
         }[]
       }
+      validate_product_ingredients_availability: {
+        Args: { product_id: string; quantity?: number }
+        Returns: {
+          is_available: boolean
+          missing_ingredients: string[]
+          insufficient_stock: string[]
+        }[]
+      }
       validate_recipe_deployment: {
         Args: { template_id_param: string; store_id_param: string }
         Returns: {

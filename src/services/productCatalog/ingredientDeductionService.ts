@@ -10,8 +10,8 @@ export const deductIngredientsForProduct = async (
   try {
     console.log('Deducting ingredients for product:', { productId, quantity, transactionId });
 
-    // Get product ingredients
-    const { data: ingredients, error } = await supabase
+    // Get product ingredients (primary path)
+    const { data: productIngredients, error: productError } = await supabase
       .from('product_ingredients')
       .select(`
         *,
@@ -19,10 +19,45 @@ export const deductIngredientsForProduct = async (
       `)
       .eq('product_catalog_id', productId);
 
-    if (error) throw error;
+    if (productError) throw productError;
 
-    if (!ingredients || ingredients.length === 0) {
-      console.warn('No ingredients found for product:', productId);
+    let ingredients = productIngredients || [];
+
+    // If no product ingredients found, check recipe ingredients (fallback path)
+    if (ingredients.length === 0) {
+      console.log('No product ingredients found, checking recipe ingredients...');
+      
+      const { data: productCatalog, error: catalogError } = await supabase
+        .from('product_catalog')
+        .select('recipe_id')
+        .eq('id', productId)
+        .single();
+
+      if (catalogError) throw catalogError;
+
+      if (productCatalog?.recipe_id) {
+        const { data: recipeIngredients, error: recipeError } = await supabase
+          .from('recipe_ingredients')
+          .select(`
+            *,
+            inventory_item:inventory_stock(*)
+          `)
+          .eq('recipe_id', productCatalog.recipe_id);
+
+        if (recipeError) throw recipeError;
+
+        // Map recipe ingredients to product ingredient format
+        ingredients = recipeIngredients?.map(ri => ({
+          ...ri,
+          product_catalog_id: productId,
+          required_quantity: ri.quantity,
+          inventory_stock_id: ri.inventory_stock_id
+        })) || [];
+      }
+    }
+
+    if (ingredients.length === 0) {
+      console.warn('No ingredients found for product (neither product_ingredients nor recipe_ingredients):', productId);
       return true; // Allow products without ingredients
     }
 
