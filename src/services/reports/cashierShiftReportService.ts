@@ -19,6 +19,11 @@ export interface CashierShiftSales {
   averageTransactionValue: number;
   cashSales: number;
   cardSales: number;
+  gcashSales: number;
+  discountAmount: number;
+  refundAmount: number;
+  paidInAmount: number;
+  paidOutAmount: number;
   hourlyBreakdown: Array<{
     hour: string;
     sales: number;
@@ -111,8 +116,20 @@ export async function fetchCashierShiftReport(
       .reduce((sum, t) => sum + (t.total || 0), 0);
     
     const cardSales = transactions
-      .filter(t => ['card', 'gcash', 'paymaya'].includes(t.payment_method || ''))
+      .filter(t => t.payment_method === 'card')
       .reduce((sum, t) => sum + (t.total || 0), 0);
+    
+    const gcashSales = transactions
+      .filter(t => ['gcash', 'paymaya', 'e-wallet'].includes(t.payment_method || ''))
+      .reduce((sum, t) => sum + (t.total || 0), 0);
+
+    // Calculate discount and refund amounts (these would come from transaction details)
+    const discountAmount = transactions
+      .reduce((sum, t) => sum + (t.discount_amount || 0), 0);
+    
+    const refundAmount = 0; // TODO: Add refund tracking
+    const paidInAmount = 0; // TODO: Add paid in tracking  
+    const paidOutAmount = 0; // TODO: Add paid out tracking
 
     // Create hourly breakdown
     const hourlyBreakdown = Array.from({ length: 24 }, (_, hour) => ({
@@ -157,6 +174,11 @@ export async function fetchCashierShiftReport(
       averageTransactionValue,
       cashSales,
       cardSales,
+      gcashSales,
+      discountAmount,
+      refundAmount,
+      paidInAmount,
+      paidOutAmount,
       hourlyBreakdown
     };
 

@@ -72,12 +72,12 @@ export default function CashierShiftReportView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h2 className="text-2xl font-bold">My Daily Shift Report</h2>
         
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+            <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal">
               <CalendarIcon className="mr-2 h-4 w-4" />
               {format(selectedDate, "PPP")}
             </Button>
@@ -207,39 +207,107 @@ export default function CashierShiftReportView() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <DollarSign className="h-5 w-5 mr-2" />
-              Payment Breakdown
+              Sales Summary
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <div className="flex justify-between">
               <span className="font-medium">Cash Sales:</span>
               <span>{formatCurrency(sales.cashSales)}</span>
             </div>
             
             <div className="flex justify-between">
-              <span className="font-medium">Card/Digital Sales:</span>
+              <span className="font-medium">Card Sales:</span>
               <span>{formatCurrency(sales.cardSales)}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="font-medium">GCash Sales:</span>
+              <span>{formatCurrency(sales.gcashSales)}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="font-medium">Discounts:</span>
+              <span className="text-red-600">-{formatCurrency(sales.discountAmount)}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="font-medium">Refunds:</span>
+              <span className="text-red-600">-{formatCurrency(sales.refundAmount)}</span>
             </div>
             
             <div className="flex justify-between border-t pt-2">
               <span className="font-medium">Total Sales:</span>
               <span className="font-bold">{formatCurrency(sales.totalSales)}</span>
             </div>
-
-            <div className="flex justify-between">
-              <span className="font-medium">Expected Cash:</span>
-              <span>{formatCurrency(shift.startingCash + sales.cashSales)}</span>
-            </div>
-
-            {shift.endingCash !== null && (
-              <div className="flex justify-between">
-                <span className="font-medium">Actual Cash:</span>
-                <span>{formatCurrency(shift.endingCash)}</span>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Cash Drawer Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <DollarSign className="h-5 w-5 mr-2" />
+            Cash Drawer Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="font-medium">Starting Cash:</span>
+                <span>{formatCurrency(shift.startingCash)}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="font-medium">Cash Sales:</span>
+                <span>{formatCurrency(sales.cashSales)}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="font-medium">Paid In:</span>
+                <span className="text-green-600">+{formatCurrency(sales.paidInAmount)}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="font-medium">Paid Out:</span>
+                <span className="text-red-600">-{formatCurrency(sales.paidOutAmount)}</span>
+              </div>
+
+              <div className="flex justify-between border-t pt-2">
+                <span className="font-medium">Expected Cash:</span>
+                <span className="font-bold">{formatCurrency(shift.startingCash + sales.cashSales + sales.paidInAmount - sales.paidOutAmount)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {shift.endingCash !== null && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Actual Cash:</span>
+                    <span>{formatCurrency(shift.endingCash)}</span>
+                  </div>
+
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="font-medium">Cash Variance:</span>
+                    <span className={`font-bold ${cashVariance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {cashVariance >= 0 ? '+' : ''}{formatCurrency(cashVariance)}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {previousShiftEndingCash !== null && (
+                <div className="flex justify-between">
+                  <span className="font-medium">Previous Shift End:</span>
+                  <span>{formatCurrency(previousShiftEndingCash)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Hourly Sales Chart */}
       <Card>

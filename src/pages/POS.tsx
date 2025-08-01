@@ -12,6 +12,7 @@ import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
 import OptimizedPOSHeader from "@/components/pos/OptimizedPOSHeader";
 import { ComboTestDebugger } from "@/components/pos/ComboTestDebugger";
+import { QuickShiftAccess } from "@/components/pos/QuickShiftAccess";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { TransactionItem } from "@/types/transaction";
