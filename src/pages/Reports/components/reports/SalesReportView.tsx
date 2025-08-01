@@ -56,7 +56,12 @@ export function SalesReportView({ data, dateRange, isAllStores, storeId }: Sales
         customer_name: 'Walk-in' // Default customer name
       })) || [];
     },
-    enabled: !!dateRange.from && !!dateRange.to
+    enabled: !!dateRange.from && !!dateRange.to,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    staleTime: Infinity, // Data never becomes stale
+    gcTime: 10 * 60 * 1000 // Keep data in cache for 10 minutes
   });
 
   if (!data) {

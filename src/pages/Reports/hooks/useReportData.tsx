@@ -70,7 +70,11 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
             ['sales', 'expense', 'profit_loss', 'cashier'].includes(reportType),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    staleTime: Infinity, // Data never becomes stale
+    gcTime: 10 * 60 * 1000 // Keep data in cache for 10 minutes
   });
 
   // Handle both old and new response formats
