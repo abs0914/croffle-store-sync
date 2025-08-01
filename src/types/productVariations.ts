@@ -15,8 +15,9 @@ export interface ProductVariation {
 export interface AddOnItem {
   id: string;
   name: string;
-  category: 'classic_topping' | 'classic_sauce' | 'premium_topping' | 'premium_sauce' | 'biscuits';
+  category: 'classic_topping' | 'classic_sauce' | 'premium_topping' | 'premium_sauce' | 'biscuits' | 'utensils';
   price: number;
+  cost_per_unit?: number;
   is_available: boolean;
   display_order: number;
   created_at: string;

@@ -102,6 +102,12 @@ const menuItems = [
     href: ROUTE_PATHS.ADMIN_REPORTS,
     permission: 'reports' as const,
   },
+  {
+    title: "Add-ons",
+    icon: Package,
+    href: ROUTE_PATHS.ADMIN_ADDONS,
+    permission: 'recipe_management' as const,
+  },
 ];
 
 export function AdminMainMenu() {

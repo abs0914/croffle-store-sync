@@ -10,6 +10,7 @@ import AdminReports from "@/pages/Admin/AdminReports";
 import AdminExpenses from "@/pages/Admin/AdminExpenses";
 import AdminOrders from "@/pages/Admin/AdminOrders";
 import CommissaryManagement from "@/pages/Commissary/CommissaryManagement";
+import { AddOnsPage } from "@/pages/Admin/AddOnsPage";
 
 // Import modular route components
 import { AdminInventoryRoutes } from "./routes/AdminInventoryRoutes";
@@ -77,6 +78,14 @@ export function AdminRoutes() {
         <AdminProtectedRoute>
           <AdminLayout>
             <CommissaryManagement />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+
+      <Route path="/admin/add-ons" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AddOnsPage />
           </AdminLayout>
         </AdminProtectedRoute>
       } />

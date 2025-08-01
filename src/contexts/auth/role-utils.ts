@@ -72,6 +72,7 @@ export const ROUTE_PATHS = {
   ADMIN_CASHIERS: '/admin/cashiers',
   ADMIN_REPORTS: '/admin/reports',
   ADMIN_EXPENSES: '/admin/expenses',
+  ADMIN_ADDONS: '/admin/add-ons',
   SM_ACCREDITATION_TESTING: '/sm-accreditation-testing'
 } as const;
 
@@ -104,6 +105,7 @@ const ADMIN_ROUTES = [
   ROUTE_PATHS.ADMIN_CASHIERS,
   ROUTE_PATHS.ADMIN_REPORTS,
   ROUTE_PATHS.ADMIN_EXPENSES,
+  ROUTE_PATHS.ADMIN_ADDONS,
   ROUTE_PATHS.SM_ACCREDITATION_TESTING
 ];
 
@@ -248,6 +250,7 @@ export const getRouteAccessDescription = (route: string): string => {
     [ROUTE_PATHS.ADMIN_CASHIERS]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_REPORTS]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_EXPENSES]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_ADDONS]: 'Admin and owner only',
     [ROUTE_PATHS.SM_ACCREDITATION_TESTING]: 'Admin and owner only'
   };
   
