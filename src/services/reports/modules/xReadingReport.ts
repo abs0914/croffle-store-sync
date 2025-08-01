@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { XReadingReport } from "@/types/reports";
 import { fetchStoreInfo, handleReportError } from "../utils/reportUtils";
+import { fetchTransactionsWithFallback } from "../utils/transactionQueryUtils";
 
 // Helper function to create sample X-Reading data
 function createSampleXReading(store: any): XReadingReport {
@@ -61,21 +62,27 @@ export async function fetchXReading(
       .limit(1)
       .maybeSingle();
 
-    // Get transactions for the specified date (regardless of shift status)
-    const { data: transactions, error: txError } = await supabase
-      .from("transactions")
-      .select("*")
-      .eq("store_id", storeId)
-      .gte("created_at", startOfDay.toISOString())
-      .lte("created_at", endOfDay.toISOString())
-      .eq("status", "completed");
+    // Use the same robust transaction query as the Sales Report
+    const queryResult = await fetchTransactionsWithFallback({
+      storeId,
+      from: date,
+      to: date,
+      status: "completed",
+      orderBy: "created_at",
+      ascending: true
+    });
+
+    const { data: transactions, error: txError } = queryResult;
     
     if (txError) throw txError;
     
     // If no transactions found, return mock data for demo
     if (!transactions || transactions.length === 0) {
+      console.log('No transactions found for X-Reading, returning sample data');
       return createSampleXReading(storeData);
     }
+    
+    console.log(`X-Reading found ${transactions.length} transactions for ${storeData.name} on ${date}`);
     
     // Get user information separately since there's no direct relationship
     let cashierName = "Unknown";
