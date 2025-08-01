@@ -47,38 +47,43 @@ export async function fetchXReading(
       throw new Error("Store information not found");
     }
     
-    // Get active shift information
-    const { data: shiftData, error: shiftError } = await supabase
+    // Try to get shift information for the date (both active and completed)
+    const startOfDay = new Date(date + "T00:00:00.000Z");
+    const endOfDay = new Date(date + "T23:59:59.999Z");
+    
+    const { data: shiftData } = await supabase
       .from("shifts")
       .select("id, user_id, start_time, starting_cash")
       .eq("store_id", storeId)
-      .eq("status", "active")
+      .gte("start_time", startOfDay.toISOString())
+      .lte("start_time", endOfDay.toISOString())
       .order("start_time", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    // If no active shift, return mock data for demo
-    if (shiftError) {
-      // For demo, create sample data
+    // Get transactions for the specified date (regardless of shift status)
+    const { data: transactions, error: txError } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("store_id", storeId)
+      .gte("created_at", startOfDay.toISOString())
+      .lte("created_at", endOfDay.toISOString())
+      .eq("status", "completed");
+    
+    if (txError) throw txError;
+    
+    // If no transactions found, return mock data for demo
+    if (!transactions || transactions.length === 0) {
       return createSampleXReading(storeData);
     }
     
     // Get user information separately since there's no direct relationship
     let cashierName = "Unknown";
-    if (shiftData.user_id) {
+    if (shiftData?.user_id) {
       // This would require a users table in your database
       // For now we'll use a placeholder
       cashierName = "Cashier #" + shiftData.user_id.substring(0, 5);
     }
-    
-    // Get transactions for this shift
-    const { data: transactions, error: txError } = await supabase
-      .from("transactions")
-      .select("*")
-      .eq("shift_id", shiftData.id)
-      .eq("status", "completed");
-    
-    if (txError) throw txError;
     
     // Calculate totals using BIR-compliant fields
     let grossSales = 0;
