@@ -36,41 +36,76 @@ export function useComboService() {
       productsCount: products.length,
       categoriesCount: categories.length,
       allCategories: categories.map(c => ({ name: c.name, id: c.id })),
-      currentUser: { /* Add auth info if needed */ }
+      allProducts: products.map(p => ({ name: p.name, category_id: p.category_id, is_active: p.is_active }))
     });
     
+    // Try multiple approaches to find espresso products
+    let espressoProducts: UnifiedProduct[] = [];
+    
+    // Approach 1: Find by category name "Espresso"
     const espressoCategory = categories.find(c => c.name === "Espresso");
-    if (!espressoCategory) {
-      console.error('❌ No Espresso category found! Available categories:', categories.map(c => c.name));
-      console.log('🔧 Debugging tip: Check RLS policies for categories table');
-      return [];
+    if (espressoCategory) {
+      console.log('✅ Espresso category found:', { 
+        id: espressoCategory.id, 
+        name: espressoCategory.name,
+        store_id: espressoCategory.store_id 
+      });
+      
+      espressoProducts = products.filter(p => 
+        p.category_id === espressoCategory.id && p.is_active
+      );
     }
     
-    console.log('✅ Espresso category found:', { 
-      id: espressoCategory.id, 
-      name: espressoCategory.name,
-      store_id: espressoCategory.store_id 
-    });
+    // Approach 2: If no products found, search by product names containing espresso keywords
+    if (espressoProducts.length === 0) {
+      console.log('🔍 No products found by category, searching by product names...');
+      espressoProducts = products.filter(p => 
+        p.is_active && p.name && (
+          p.name.toLowerCase().includes('espresso') ||
+          p.name.toLowerCase().includes('americano') ||
+          p.name.toLowerCase().includes('latte') ||
+          p.name.toLowerCase().includes('cappuccino') ||
+          p.name.toLowerCase().includes('macchiato')
+        )
+      );
+    }
     
-    const allActiveProducts = products.filter(p => p.is_active);
-    const espressoProducts = products.filter(p => 
-      p.category_id === espressoCategory.id && p.is_active
-    );
+    // Approach 3: Try finding category with different variations of "Espresso"
+    if (espressoProducts.length === 0) {
+      console.log('🔍 Searching for espresso categories with different names...');
+      const possibleEspressoCategories = categories.filter(c => 
+        c.is_active && c.name && (
+          c.name.toLowerCase().includes('espresso') ||
+          c.name.toLowerCase().includes('coffee') ||
+          c.name.toLowerCase().includes('beverage') ||
+          c.name.toLowerCase().includes('drink')
+        )
+      );
+      
+      console.log('🔍 Possible espresso categories:', possibleEspressoCategories.map(c => c.name));
+      
+      for (const category of possibleEspressoCategories) {
+        const categoryProducts = products.filter(p => 
+          p.category_id === category.id && p.is_active
+        );
+        espressoProducts.push(...categoryProducts);
+      }
+    }
     
-    console.log('🔍 Product filtering results:', {
-      totalProducts: products.length,
-      activeProducts: allActiveProducts.length,
-      espressoProducts: espressoProducts.length,
-      espressoProductNames: espressoProducts.map(p => ({ name: p.name, id: p.id, store_id: p.store_id }))
+    console.log('🔍 Final espresso products:', {
+      count: espressoProducts.length,
+      products: espressoProducts.map(p => ({ 
+        name: p.name, 
+        id: p.id, 
+        category_id: p.category_id,
+        price: p.price 
+      }))
     });
     
     if (espressoProducts.length === 0) {
-      console.error('❌ No espresso products found! Debugging info:', {
-        espressoCategoryId: espressoCategory.id,
-        productsInEspressoCategory: products.filter(p => p.category_id === espressoCategory.id),
-        allProductCategories: [...new Set(products.map(p => p.category_id))]
-      });
-      console.log('🔧 Debugging tip: Check RLS policies for products table and user store access');
+      console.error('❌ No espresso products found after all attempts!');
+      console.log('🔧 Available categories:', categories.map(c => c.name));
+      console.log('🔧 Sample products:', products.slice(0, 10).map(p => ({ name: p.name, category_id: p.category_id })));
     }
     
     return espressoProducts;

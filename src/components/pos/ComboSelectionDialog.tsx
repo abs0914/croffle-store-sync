@@ -603,22 +603,36 @@ export function ComboSelectionDialog({
               </div>
 
               {espressoProducts.length === 0 && (
-                <div className="text-center py-8 space-y-3">
-                  <p className="text-muted-foreground">No espresso products available</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className="gap-2"
-                  >
-                    {isRefreshing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4" />
-                    )}
-                    Refresh
-                  </Button>
+                <div className="text-center py-8 space-y-4">
+                  <div className="text-4xl">☕</div>
+                  <div>
+                    <p className="text-muted-foreground font-medium">No espresso products available</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Missing: Americano, Cafe Latte, Caramel Latte and other espresso drinks
+                    </p>
+                  </div>
+                  <div className="flex gap-2 justify-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                      className="gap-2"
+                    >
+                      {isRefreshing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      Retry Loading
+                    </Button>
+                  </div>
+                  <div className="text-xs text-muted-foreground bg-muted/50 rounded p-3 max-w-md mx-auto">
+                    <p className="font-medium mb-1">Debug Info:</p>
+                    <p>Categories found: {categories.length}</p>
+                    <p>Products loaded: {products.length}</p>
+                    <p>Espresso category exists: {categories.some(c => c.name === "Espresso") ? "Yes" : "No"}</p>
+                  </div>
                 </div>
               )}
              </div>

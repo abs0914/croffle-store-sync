@@ -11,6 +11,8 @@ import { realTimeNotificationService } from "@/services/notifications/realTimeNo
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
 import OptimizedPOSHeader from "@/components/pos/OptimizedPOSHeader";
+import { ComboTestDebugger } from "@/components/pos/ComboTestDebugger";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { TransactionItem } from "@/types/transaction";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,6 +25,7 @@ export default function POS() {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [lastCompletedTransaction, setLastCompletedTransaction] = useState<any>(null);
   const [lastTransactionCustomer, setLastTransactionCustomer] = useState<any>(null);
+  const [showDebugger, setShowDebugger] = useState(false);
   
   // Enhanced transaction handler with direct inventory integration
   const {
@@ -243,6 +246,28 @@ export default function POS() {
 
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background">
+      {/* Debug Toggle Button */}
+      <div className="absolute top-4 right-4 z-50">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setShowDebugger(!showDebugger)}
+        >
+          {showDebugger ? "Hide" : "Show"} Combo Debug
+        </Button>
+      </div>
+
+      {/* Debug Panel */}
+      {showDebugger && (
+        <div className="absolute inset-0 z-40 bg-background/95 backdrop-blur-sm overflow-auto p-4">
+          <ComboTestDebugger 
+            products={allProducts || products}
+            categories={categories}
+            cartItems={items}
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex-shrink-0 bg-card border-b border-border shadow-sm">
         <OptimizedPOSHeader
