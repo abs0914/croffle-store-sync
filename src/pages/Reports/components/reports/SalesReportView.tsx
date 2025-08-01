@@ -7,6 +7,7 @@ import { TransactionDetailsTable } from "../TransactionDetailsTable";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { fetchTransactionsWithFallback } from "@/services/reports/utils/transactionQueryUtils";
 
 interface SalesReportViewProps {
   data: SalesReport | null;
@@ -19,7 +20,7 @@ interface SalesReportViewProps {
 }
 
 export function SalesReportView({ data, dateRange, isAllStores, storeId }: SalesReportViewProps) {
-  // Fetch detailed transactions for the table
+  // Fetch detailed transactions for the table using the same robust utility
   const { data: transactions } = useQuery({
     queryKey: ['transactions', storeId, dateRange.from, dateRange.to],
     queryFn: async () => {
@@ -28,27 +29,22 @@ export function SalesReportView({ data, dateRange, isAllStores, storeId }: Sales
       const fromStr = format(dateRange.from, 'yyyy-MM-dd');
       const toStr = format(dateRange.to, 'yyyy-MM-dd');
       
-      let query = supabase
-        .from('transactions')
-        .select(`
-          id,
-          created_at,
-          receipt_number,
-          total,
-          payment_method,
-          items
-        `)
-        .eq('status', 'completed')
-        .gte('created_at', fromStr)
-        .lte('created_at', toStr + 'T23:59:59')
-        .order('created_at', { ascending: false });
+      console.log('Sales Report: Fetching transaction details with fetchTransactionsWithFallback');
+      
+      // Use the same robust transaction query as the X-Reading and main sales report
+      const queryResult = await fetchTransactionsWithFallback({
+        storeId: storeId === 'all' ? undefined : storeId,
+        from: fromStr,
+        to: toStr,
+        status: "completed",
+        orderBy: "created_at",
+        ascending: false
+      });
 
-      if (storeId !== 'all') {
-        query = query.eq('store_id', storeId);
-      }
-
-      const { data, error } = await query;
+      const { data, error } = queryResult;
       if (error) throw error;
+
+      console.log(`Sales Report: Found ${data?.length || 0} transaction details`);
 
       return data?.map(tx => ({
         ...tx,

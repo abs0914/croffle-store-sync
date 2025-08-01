@@ -5,6 +5,7 @@ import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { enrichCartItemsWithCategories, insertTransactionItems } from "./transactionItemsService";
+import { validateProductForSale } from "@/services/productCatalog/productValidationService";
 
 // Type definition for transaction data from Supabase
 interface TransactionRow {
@@ -37,6 +38,25 @@ export const createTransaction = async (
   cartItems?: any[]
 ): Promise<Transaction | null> => {
   try {
+    console.log('🔍 Pre-transaction validation for products...');
+    
+    // Validate all products before creating transaction
+    for (const item of transaction.items) {
+      const validation = await validateProductForSale(item.productId, item.quantity);
+      
+      if (!validation.isValid) {
+        const errorMessage = `Cannot sell "${validation.productName}": ${validation.errors.join(', ')}`;
+        if (validation.lowStockIngredients.length > 0) {
+          toast.error(`${errorMessage}. Low stock: ${validation.lowStockIngredients.join(', ')}`);
+        } else {
+          toast.error(errorMessage);
+        }
+        console.error('❌ Product validation failed:', validation);
+        return null;
+      }
+    }
+    
+    console.log('✅ All products validated successfully');
     // Generate a receipt number based on date and time
     const now = new Date();
     const receiptPrefix = format(now, "yyyyMMdd");

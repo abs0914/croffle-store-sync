@@ -8,7 +8,24 @@ export const deductIngredientsForProduct = async (
   transactionId: string
 ): Promise<boolean> => {
   try {
-    console.log('Deducting ingredients for product:', { productId, quantity, transactionId });
+    console.log('🔄 Starting ingredient deduction for product:', { productId, quantity, transactionId });
+
+    // First, get product details for better logging
+    const { data: productInfo, error: productInfoError } = await supabase
+      .from('product_catalog')
+      .select('product_name, recipe_id')
+      .eq('id', productId)
+      .single();
+
+    if (productInfoError) {
+      console.error('❌ Failed to get product info:', productInfoError);
+      throw productInfoError;
+    }
+
+    console.log('📦 Product details:', { 
+      productName: productInfo?.product_name, 
+      recipeId: productInfo?.recipe_id 
+    });
 
     // Get product ingredients (primary path)
     const { data: productIngredients, error: productError } = await supabase
@@ -57,9 +74,16 @@ export const deductIngredientsForProduct = async (
     }
 
     if (ingredients.length === 0) {
-      console.warn('No ingredients found for product (neither product_ingredients nor recipe_ingredients):', productId);
-      return true; // Allow products without ingredients
+      console.warn('⚠️ No ingredients configured for product:', {
+        productId,
+        productName: productInfo?.product_name,
+        recipeId: productInfo?.recipe_id
+      });
+      toast.error(`No ingredients configured for "${productInfo?.product_name}". Please set up ingredients before selling.`);
+      return false; // Prevent sale of products without ingredient configuration
     }
+
+    console.log(`✅ Found ${ingredients.length} ingredients for product "${productInfo?.product_name}"`);
 
     // Process each ingredient deduction
     for (const ingredient of ingredients) {
@@ -67,8 +91,22 @@ export const deductIngredientsForProduct = async (
       const currentStock = ingredient.inventory_item?.stock_quantity || 0;
       const newStock = currentStock - deductionAmount;
 
+      console.log(`🔍 Processing ingredient: ${ingredient.inventory_item?.item}`, {
+        required: ingredient.required_quantity,
+        quantity,
+        deductionAmount,
+        currentStock,
+        newStock
+      });
+
       if (newStock < 0) {
-        toast.error(`Insufficient stock for ${ingredient.inventory_item?.item || 'ingredient'}`);
+        console.error(`❌ Insufficient stock for ingredient:`, {
+          ingredient: ingredient.inventory_item?.item,
+          required: deductionAmount,
+          available: currentStock,
+          shortfall: Math.abs(newStock)
+        });
+        toast.error(`Insufficient stock for ${ingredient.inventory_item?.item || 'ingredient'}. Need ${deductionAmount}, have ${currentStock}`);
         return false;
       }
 
@@ -108,7 +146,7 @@ export const deductIngredientsForProduct = async (
       }
     }
 
-    console.log('Successfully deducted ingredients for product:', productId);
+    console.log(`✅ Successfully deducted ingredients for product "${productInfo?.product_name}" (${productId})`);
     return true;
   } catch (error) {
     console.error('Error deducting ingredients:', error);

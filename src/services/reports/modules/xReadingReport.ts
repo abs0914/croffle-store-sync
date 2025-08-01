@@ -82,7 +82,8 @@ export async function fetchXReading(
       return createSampleXReading(storeData);
     }
     
-    console.log(`X-Reading found ${transactions.length} transactions for ${storeData.name} on ${date}`);
+    console.log(`📊 X-Reading found ${transactions.length} transactions for ${storeData.name} on ${date}`);
+    console.log('Transaction IDs:', transactions.map(t => ({ id: t.id, receipt: t.receipt_number, total: t.total })));
     
     // Get user information separately since there's no direct relationship
     let cashierName = "Unknown";
