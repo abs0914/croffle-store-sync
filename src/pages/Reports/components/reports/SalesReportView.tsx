@@ -7,6 +7,7 @@ import { TransactionDetailsTable } from "../TransactionDetailsTable";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { fetchTransactionsWithFallback } from "@/services/reports/utils/transactionQueryUtils";
 
 interface SalesReportViewProps {
@@ -26,10 +27,13 @@ export function SalesReportView({ data, dateRange, isAllStores, storeId }: Sales
     queryFn: async () => {
       if (!dateRange.from || !dateRange.to) return [];
       
-      const fromStr = format(dateRange.from, 'yyyy-MM-dd');
-      const toStr = format(dateRange.to, 'yyyy-MM-dd');
+      // Use Philippine timezone for proper date filtering
+      const PHILIPPINES_TZ = 'Asia/Manila';
+      const fromStr = formatInTimeZone(dateRange.from, PHILIPPINES_TZ, 'yyyy-MM-dd');
+      const toStr = formatInTimeZone(dateRange.to, PHILIPPINES_TZ, 'yyyy-MM-dd');
       
-      console.log('Sales Report: Fetching transaction details with fetchTransactionsWithFallback');
+      console.log('Sales Report: Fetching transaction details with Philippine timezone');
+      console.log(`Date range: ${fromStr} to ${toStr} (Philippine time)`);
       
       // Use the same robust transaction query as the X-Reading and main sales report
       const queryResult = await fetchTransactionsWithFallback({
@@ -72,8 +76,9 @@ export function SalesReportView({ data, dateRange, isAllStores, storeId }: Sales
     );
   }
 
+  const PHILIPPINES_TZ = 'Asia/Manila';
   const dateRangeText = dateRange.from && dateRange.to
-    ? `${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}`
+    ? `${formatInTimeZone(dateRange.from, PHILIPPINES_TZ, 'MMM dd, yyyy')} - ${formatInTimeZone(dateRange.to, PHILIPPINES_TZ, 'MMM dd, yyyy')}`
     : 'Custom Range';
 
   return (
