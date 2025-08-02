@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Search, Download, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/utils/format";
 import { cn } from "@/lib/utils";
 
@@ -84,7 +85,7 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
       const itemsText = items.map((item: any) => `${item.name} (${item.quantity})`).join("; ");
       
       return [
-        format(new Date(tx.created_at), "MMM dd, yyyy HH:mm"),
+        formatInTimeZone(new Date(tx.created_at), 'Asia/Manila', "MMM dd, yyyy HH:mm"),
         tx.receipt_number,
         tx.cashier_name || "N/A",
         tx.customer_name || "Walk-in",
@@ -185,7 +186,7 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
                     {/* Main transaction row */}
                     <TableRow key={tx.id} className={cn(hasMultipleItems && "cursor-pointer hover:bg-muted/50")}>
                       <TableCell className="text-sm">
-                        {format(new Date(tx.created_at), "MMM dd, HH:mm")}
+                        {formatInTimeZone(new Date(tx.created_at), 'Asia/Manila', "MMM dd, HH:mm")}
                       </TableCell>
                       <TableCell className="font-mono text-sm">
                         {tx.receipt_number}
