@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CartItem, Customer } from '@/types';
-import { PaymentDialog } from './PaymentDialog';
+import PaymentProcessor from './payment/PaymentProcessor';
 import { CustomerSelector } from './CustomerSelector';
 import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
 import { OrderTypeSelector } from './OrderTypeSelector';
@@ -236,13 +236,28 @@ export default function CartView({
         </div>
       )}
 
-      {/* Dialogs */}
-      <PaymentDialog
-        isOpen={isPaymentDialogOpen}
-        onClose={() => setIsPaymentDialogOpen(false)}
-        total={calculations.finalTotal}
-        onPaymentComplete={handlePaymentCompleteWithInventoryValidation}
-      />
+      {/* Payment Dialog */}
+      {isPaymentDialogOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-lg">
+            <PaymentProcessor
+              total={calculations.finalTotal}
+              onPaymentComplete={async (paymentMethod, amountTendered, paymentDetails) => {
+                await handlePaymentCompleteWithInventoryValidation(paymentMethod, amountTendered, paymentDetails);
+                setIsPaymentDialogOpen(false);
+              }}
+            />
+            <div className="p-4 border-t">
+              <button
+                onClick={() => setIsPaymentDialogOpen(false)}
+                className="w-full py-2 px-4 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

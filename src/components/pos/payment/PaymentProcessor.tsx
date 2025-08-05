@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useShift } from "@/contexts/shift";
 import PaymentMethods from "./PaymentMethods";
 import { formatCurrency } from "@/utils/format";
+import { Loader2 } from "lucide-react";
 
 interface PaymentProcessorProps {
   total: number;
@@ -24,6 +25,7 @@ interface PaymentProcessorProps {
 export default function PaymentProcessor({ total, onPaymentComplete }: PaymentProcessorProps) {
   const { currentShift } = useShift();
   const [isOpen, setIsOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'e-wallet'>('cash');
   const [amountTendered, setAmountTendered] = useState<number>(0);
   
@@ -35,58 +37,82 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
   const [eWalletProvider, setEWalletProvider] = useState<string>('');
   const [eWalletReferenceNumber, setEWalletReferenceNumber] = useState<string>('');
   
-  const handlePayment = () => {
+  const handlePayment = async () => {
     // Validate payment
     if (!currentShift) {
       toast.error("No active shift. Please start a shift before processing payments.");
       return;
     }
-    
-    if (paymentMethod === 'cash') {
-      if (amountTendered < total) {
-        toast.error("Cash amount must be equal to or greater than the total.");
-        return;
-      }
-      
-      onPaymentComplete(paymentMethod, amountTendered);
-      
-    } else if (paymentMethod === 'card') {
-      if (!cardType) {
-        toast.error("Please select a card type.");
-        return;
-      }
-      if (!cardNumber || cardNumber.length < 4) {
-        toast.error("Please enter at least the last 4 digits of the card.");
-        return;
-      }
-      
-      onPaymentComplete(
-        paymentMethod, 
-        total, 
-        { cardType, cardNumber: cardNumber.slice(-4) }
-      );
-      
-    } else if (paymentMethod === 'e-wallet') {
-      if (!eWalletProvider) {
-        toast.error("Please select an e-wallet provider.");
-        return;
-      }
-      if (!eWalletReferenceNumber) {
-        toast.error("Please enter the reference number.");
-        return;
-      }
-      
-      onPaymentComplete(
-        paymentMethod,
-        total,
-        { eWalletProvider, eWalletReferenceNumber }
-      );
+
+    if (total <= 0) {
+      toast.error("Cannot process payment for empty cart.");
+      return;
     }
-    
-    // Close dialog
-    setIsOpen(false);
-    
-    // Reset state
+
+    // Set processing state
+    setIsProcessing(true);
+
+    try {
+      let paymentDetails;
+      
+      if (paymentMethod === 'cash') {
+        if (amountTendered < total) {
+          toast.error("Cash amount must be equal to or greater than the total.");
+          return;
+        }
+        
+        await onPaymentComplete(paymentMethod, amountTendered);
+        
+      } else if (paymentMethod === 'card') {
+        if (!cardType.trim()) {
+          toast.error("Please select a card type.");
+          return;
+        }
+        if (!cardNumber.trim() || cardNumber.length < 4) {
+          toast.error("Please enter at least the last 4 digits of the card.");
+          return;
+        }
+        
+        paymentDetails = { 
+          cardType: cardType.trim(), 
+          cardNumber: cardNumber.slice(-4).trim() 
+        };
+        
+        console.log('Processing card payment with details:', paymentDetails);
+        await onPaymentComplete(paymentMethod, total, paymentDetails);
+        
+      } else if (paymentMethod === 'e-wallet') {
+        if (!eWalletProvider.trim()) {
+          toast.error("Please select an e-wallet provider.");
+          return;
+        }
+        if (!eWalletReferenceNumber.trim()) {
+          toast.error("Please enter the reference number.");
+          return;
+        }
+        
+        paymentDetails = { 
+          eWalletProvider: eWalletProvider.trim(), 
+          eWalletReferenceNumber: eWalletReferenceNumber.trim() 
+        };
+        
+        console.log('Processing e-wallet payment with details:', paymentDetails);
+        await onPaymentComplete(paymentMethod, total, paymentDetails);
+      }
+      
+      // Close dialog and reset state only on success
+      setIsOpen(false);
+      resetFormState();
+      
+    } catch (error) {
+      console.error('Payment processing error:', error);
+      toast.error("Payment processing failed. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const resetFormState = () => {
     setAmountTendered(0);
     setCardType('');
     setCardNumber('');
@@ -94,14 +120,30 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
     setEWalletReferenceNumber('');
   };
 
+  const handleDialogClose = (open: boolean) => {
+    if (!isProcessing) {
+      setIsOpen(open);
+      if (!open) {
+        resetFormState();
+      }
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogTrigger asChild>
         <Button
           className="w-full mt-4 bg-green-600 hover:bg-green-700 text-lg py-6"
-          disabled={total <= 0 || !currentShift}
+          disabled={total <= 0 || !currentShift || isProcessing}
         >
-          Pay {formatCurrency(total)}
+          {isProcessing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            `Pay ${formatCurrency(total)}`
+          )}
         </Button>
       </DialogTrigger>
       
@@ -124,14 +166,29 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
           setEWalletProvider={setEWalletProvider}
           eWalletReferenceNumber={eWalletReferenceNumber}
           setEWalletReferenceNumber={setEWalletReferenceNumber}
+          disabled={isProcessing}
         />
         
         <DialogFooter>
-          <Button onClick={() => setIsOpen(false)} variant="outline">
+          <Button 
+            onClick={() => handleDialogClose(false)} 
+            variant="outline" 
+            disabled={isProcessing}
+          >
             Cancel
           </Button>
-          <Button onClick={handlePayment}>
-            Complete Payment
+          <Button 
+            onClick={handlePayment} 
+            disabled={isProcessing || total <= 0}
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Complete Payment'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

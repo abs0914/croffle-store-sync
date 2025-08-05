@@ -121,7 +121,7 @@ export const createTransaction = async (
       amount_tendered: transaction.amountTendered,
       change: transaction.change,
       payment_method: transaction.paymentMethod,
-      payment_details: transaction.paymentDetails ? JSON.stringify(transaction.paymentDetails) : null,
+      payment_details: transaction.paymentDetails ? transaction.paymentDetails : null,
       status: transaction.status,
       receipt_number: receiptNumber,
       created_at: now.toISOString(),

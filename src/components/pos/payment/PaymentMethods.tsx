@@ -24,16 +24,19 @@ interface PaymentMethodsProps {
   setEWalletProvider: (provider: string) => void;
   eWalletReferenceNumber: string;
   setEWalletReferenceNumber: (reference: string) => void;
+  disabled?: boolean;
 }
 
 export function CashPaymentTab({ 
   total, 
   amountTendered, 
-  setAmountTendered 
+  setAmountTendered,
+  disabled = false
 }: {
   total: number;
   amountTendered: number;
   setAmountTendered: (amount: number) => void;
+  disabled?: boolean;
 }) {
   // Calculate quick amount buttons and remove duplicates
   const quickAmounts = [
@@ -57,6 +60,7 @@ export function CashPaymentTab({
           type="number"
           value={amountTendered || ''}
           onChange={(e) => setAmountTendered(Number(e.target.value))}
+          disabled={disabled}
         />
       </div>
       
@@ -66,6 +70,7 @@ export function CashPaymentTab({
             key={amount}
             variant="outline"
             onClick={() => setAmountTendered(amount)}
+            disabled={disabled}
           >
             {formatCurrency(amount)}
           </Button>
@@ -86,12 +91,14 @@ export function CardPaymentTab({
   cardType,
   setCardType,
   cardNumber,
-  setCardNumber
+  setCardNumber,
+  disabled = false
 }: {
   cardType: string;
   setCardType: (type: string) => void;
   cardNumber: string;
   setCardNumber: (number: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -99,9 +106,9 @@ export function CardPaymentTab({
         <Label htmlFor="cardType">Card Type</Label>
         <Tabs defaultValue={cardType} onValueChange={setCardType} className="w-full">
           <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="Visa">Visa</TabsTrigger>
-            <TabsTrigger value="MasterCard">MasterCard</TabsTrigger>
-            <TabsTrigger value="Other">Other</TabsTrigger>
+            <TabsTrigger value="Visa" disabled={disabled}>Visa</TabsTrigger>
+            <TabsTrigger value="MasterCard" disabled={disabled}>MasterCard</TabsTrigger>
+            <TabsTrigger value="Other" disabled={disabled}>Other</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -117,6 +124,7 @@ export function CardPaymentTab({
             const value = e.target.value.replace(/\D/g, '');
             setCardNumber(value.slice(0, 4));
           }}
+          disabled={disabled}
         />
       </div>
     </div>
@@ -128,13 +136,15 @@ export function EWalletPaymentTab({
   eWalletProvider,
   setEWalletProvider,
   eWalletReferenceNumber,
-  setEWalletReferenceNumber
+  setEWalletReferenceNumber,
+  disabled = false
 }: {
   total: number;
   eWalletProvider: string;
   setEWalletProvider: (provider: string) => void;
   eWalletReferenceNumber: string;
   setEWalletReferenceNumber: (reference: string) => void;
+  disabled?: boolean;
 }) {
   const [showQRModal, setShowQRModal] = useState(false);
 
@@ -142,7 +152,7 @@ export function EWalletPaymentTab({
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="eWalletProvider">Provider</Label>
-        <Select value={eWalletProvider} onValueChange={setEWalletProvider}>
+        <Select value={eWalletProvider} onValueChange={setEWalletProvider} disabled={disabled}>
           <SelectTrigger>
             <SelectValue placeholder="Select e-wallet provider" />
           </SelectTrigger>
@@ -160,6 +170,7 @@ export function EWalletPaymentTab({
             variant="outline" 
             onClick={() => setShowQRModal(true)}
             className="w-full"
+            disabled={disabled}
           >
             <QrCode className="mr-2 h-4 w-4" />
             Show QR Code
@@ -174,6 +185,7 @@ export function EWalletPaymentTab({
           placeholder="Enter reference number"
           value={eWalletReferenceNumber}
           onChange={(e) => setEWalletReferenceNumber(e.target.value)}
+          disabled={disabled}
         />
       </div>
 
@@ -200,6 +212,7 @@ export default function PaymentMethods({
   setEWalletProvider,
   eWalletReferenceNumber,
   setEWalletReferenceNumber,
+  disabled = false
 }: PaymentMethodsProps) {
   return (
     <Tabs defaultValue="cash" value={paymentMethod} onValueChange={(value: string) => {
@@ -207,15 +220,15 @@ export default function PaymentMethods({
       setAmountTendered(total); // Reset amount tendered for card and e-wallet
     }}>
       <TabsList className="grid grid-cols-3 mb-4">
-        <TabsTrigger value="cash" className="flex items-center">
+        <TabsTrigger value="cash" className="flex items-center" disabled={disabled}>
           <Banknote className="mr-2 h-4 w-4" />
           Cash
         </TabsTrigger>
-        <TabsTrigger value="card" className="flex items-center">
+        <TabsTrigger value="card" className="flex items-center" disabled={disabled}>
           <CreditCard className="mr-2 h-4 w-4" />
           Card
         </TabsTrigger>
-        <TabsTrigger value="e-wallet" className="flex items-center">
+        <TabsTrigger value="e-wallet" className="flex items-center" disabled={disabled}>
           <Wallet className="mr-2 h-4 w-4" />
           E-wallet
         </TabsTrigger>
@@ -226,6 +239,7 @@ export default function PaymentMethods({
           total={total} 
           amountTendered={amountTendered} 
           setAmountTendered={setAmountTendered} 
+          disabled={disabled}
         />
       </TabsContent>
       
@@ -235,6 +249,7 @@ export default function PaymentMethods({
           setCardType={setCardType}
           cardNumber={cardNumber}
           setCardNumber={setCardNumber}
+          disabled={disabled}
         />
       </TabsContent>
       
@@ -245,6 +260,7 @@ export default function PaymentMethods({
           setEWalletProvider={setEWalletProvider}
           eWalletReferenceNumber={eWalletReferenceNumber}
           setEWalletReferenceNumber={setEWalletReferenceNumber}
+          disabled={disabled}
         />
       </TabsContent>
     </Tabs>
