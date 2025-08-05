@@ -247,16 +247,6 @@ export default function POS() {
 
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background">
-      {/* Debug Toggle Button */}
-      <div className="absolute top-4 right-4 z-50">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setShowDebugger(!showDebugger)}
-        >
-          {showDebugger ? "Hide" : "Show"} Combo Debug
-        </Button>
-      </div>
 
       {/* Debug Panel */}
       {showDebugger && (
