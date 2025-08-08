@@ -1912,6 +1912,42 @@ export type Database = {
           },
         ]
       }
+      product_add_ons: {
+        Row: {
+          category: string
+          cost_per_unit: number | null
+          created_at: string
+          display_order: number | null
+          id: string
+          is_available: boolean
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          cost_per_unit?: number | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_available?: boolean
+          name: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          cost_per_unit?: number | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          is_available?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_addon_items: {
         Row: {
           addon_category_id: string | null
@@ -4571,6 +4607,10 @@ export type Database = {
       }
       format_promo_details: {
         Args: { promo_ref: string; promo_name: string }
+        Returns: string
+      }
+      generate_purchase_order_number: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       generate_recipe_sku: {
