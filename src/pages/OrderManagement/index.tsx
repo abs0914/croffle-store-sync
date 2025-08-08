@@ -6,11 +6,11 @@ import { useAuth } from "@/contexts/auth";
 import { PurchaseOrdersTab } from "./components/PurchaseOrdersTab";
 import { GRNTab } from "./components/GRNTab";
 import { ShoppingCart, ClipboardCheck } from "lucide-react";
-
+import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 export default function OrderManagement() {
   const { user, hasPermission } = useAuth();
   const [activeTab, setActiveTab] = useState("my-orders");
-
+  useOrderNotifications();
   if (!user || (!hasPermission('manager') && !hasPermission('admin') && !hasPermission('owner'))) {
     return (
       <div className="container mx-auto p-6">

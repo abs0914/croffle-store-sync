@@ -5,7 +5,7 @@ import { Spinner } from "../ui/spinner";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AdminSidebar } from "./admin/AdminSidebar";
-
+import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 interface AdminLayoutProps {
   children: ReactNode;
 }
@@ -14,7 +14,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-
+  useOrderNotifications();
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
