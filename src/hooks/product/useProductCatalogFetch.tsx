@@ -59,8 +59,7 @@ export function useProductCatalogFetch(storeId: string | null) {
             .from('categories')
             .select('*')
             .in('id', categoryIds)
-            .eq('store_id', storeId)
-            .eq('is_active', true);
+            .eq('store_id', storeId);
 
           if (catsError) {
             console.warn('useProductCatalogFetch: categories query failed at final fallback:', catsError);
