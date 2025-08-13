@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Product, Category } from "@/types";
 import { fetchProductCatalogForPOS } from "@/services/productCatalog/productCatalogFetch";
-import { fetchCategories } from "@/services/category/categoryFetch";
+
 import { getOrCreatePOSCategories } from "@/services/pos/categoryMappingService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,11 +31,34 @@ export function useProductCatalogFetch(storeId: string | null) {
 
       console.log('🔍 useProductCatalogFetch: Fetching products and categories...');
       
-      // Fetch products from product_catalog and enhanced categories in parallel
-      const [productsData, categoriesData] = await Promise.all([
-        fetchProductCatalogForPOS(storeId),
-        getOrCreatePOSCategories(storeId) // Use enhanced category mapping
-      ]);
+      // 1) Fetch products from product_catalog
+      const productsData = await fetchProductCatalogForPOS(storeId);
+
+      // 2) Derive categories directly from products' category_ids (most reliable for POS)
+      const categoryIds = Array.from(new Set((productsData || [])
+        .map(p => p.category_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)));
+
+      let categoriesData: Category[] = [];
+      if (categoryIds.length > 0) {
+        const { data: cats, error: catsError } = await supabase
+          .from('categories')
+          .select('*')
+          .in('id', categoryIds)
+          .eq('store_id', storeId)
+          .eq('is_active', true);
+
+        if (catsError) {
+          console.warn('useProductCatalogFetch: categories query failed, falling back to mapping service:', catsError);
+        } else {
+          categoriesData = cats || [];
+        }
+      }
+
+      // 3) Fallback: if no categories resolved (e.g., missing links/RLS), generate from recipes mapping
+      if (categoriesData.length === 0) {
+        categoriesData = await getOrCreatePOSCategories(storeId);
+      }
 
       console.log('🔍 useProductCatalogFetch: Fetched data:', {
         productsCount: productsData.length,
