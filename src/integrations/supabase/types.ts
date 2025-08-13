@@ -4747,6 +4747,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_store_accessible: {
+        Args: { store: string }
+        Returns: boolean
+      }
       is_user_admin_or_owner: {
         Args: Record<PropertyKey, never>
         Returns: boolean
