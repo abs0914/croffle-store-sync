@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Product, Category } from "@/types";
 import { fetchProductCatalogForPOS } from "@/services/productCatalog/productCatalogFetch";
+import { fetchCategories } from "@/services/category/categoryFetch";
 
 import { getOrCreatePOSCategories } from "@/services/pos/categoryMappingService";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,33 +32,42 @@ export function useProductCatalogFetch(storeId: string | null) {
 
       console.log('🔍 useProductCatalogFetch: Fetching products and categories...');
       
-      // 1) Fetch products from product_catalog
-      const productsData = await fetchProductCatalogForPOS(storeId);
+      // 1) Fetch products and base categories in parallel
+      const [productsData, initialCategories] = await Promise.all([
+        fetchProductCatalogForPOS(storeId),
+        fetchCategories(storeId).catch((err) => {
+          console.warn('useProductCatalogFetch: fetchCategories failed, will fall back:', err);
+          return [] as Category[];
+        })
+      ]);
 
-      // 2) Derive categories directly from products' category_ids (most reliable for POS)
-      const categoryIds = Array.from(new Set((productsData || [])
-        .map(p => p.category_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0)));
+      let categoriesData: Category[] = initialCategories || [];
 
-      let categoriesData: Category[] = [];
-      if (categoryIds.length > 0) {
-        const { data: cats, error: catsError } = await supabase
-          .from('categories')
-          .select('*')
-          .in('id', categoryIds)
-          .eq('store_id', storeId)
-          .eq('is_active', true);
-
-        if (catsError) {
-          console.warn('useProductCatalogFetch: categories query failed, falling back to mapping service:', catsError);
-        } else {
-          categoriesData = cats || [];
-        }
-      }
-
-      // 3) Fallback: if no categories resolved (e.g., missing links/RLS), generate from recipes mapping
+      // 2) Fallback: if no categories returned from categories table, try enhanced mapping service
       if (categoriesData.length === 0) {
         categoriesData = await getOrCreatePOSCategories(storeId);
+      }
+
+      // 3) Final fallback: derive categories from products' category_ids and fetch them
+      if (categoriesData.length === 0) {
+        const categoryIds = Array.from(new Set((productsData || [])
+          .map(p => p.category_id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)));
+
+        if (categoryIds.length > 0) {
+          const { data: cats, error: catsError } = await supabase
+            .from('categories')
+            .select('*')
+            .in('id', categoryIds)
+            .eq('store_id', storeId)
+            .eq('is_active', true);
+
+          if (catsError) {
+            console.warn('useProductCatalogFetch: categories query failed at final fallback:', catsError);
+          } else {
+            categoriesData = cats || [];
+          }
+        }
       }
 
       console.log('🔍 useProductCatalogFetch: Fetched data:', {
