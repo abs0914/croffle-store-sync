@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Category } from "@/types";
-import { toast } from "sonner";
+
 import { sortCategoriesForPOS } from "@/utils/categoryOrdering";
 
 export const fetchCategories = async (storeId: string): Promise<Category[]> => {
@@ -32,8 +32,7 @@ export const fetchCategories = async (storeId: string): Promise<Category[]> => {
     // Apply custom POS ordering
     return sortCategoriesForPOS(categories);
   } catch (error) {
-    console.error("Error fetching categories:", error);
-    toast.error("Failed to load categories");
+    console.warn("fetchCategories: Failed to load categories, returning empty list.", { storeId, error });
     return [];
   }
 };
