@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Plus, Minus, ShoppingCart, CheckCircle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { UnifiedProduct } from '@/services/product/unifiedProductService';
+import { Product } from '@/types';
 import { ProductVariation } from '@/types';
 import {
   AddonItem,
@@ -32,7 +32,7 @@ export type CroffleType = 'regular' | 'overload' | 'mini_overload';
 interface ProductCustomizationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  product: UnifiedProduct & { selectedVariation?: ProductVariation } | null;
+  product: Product & { selectedVariation?: ProductVariation } | null;
   addonCategories: AddonCategory[];
   comboRules: MixMatchRule[];
   onAddToCart: (items: any[]) => void;

@@ -7,24 +7,23 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Coffee, IceCream, RefreshCw, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
-import { Product, Category } from "@/types/product";
+import { Product, Category } from "@/types";
 import { useComboService } from "@/hooks/pos/useComboService";
 import { useComboDataValidation } from "@/hooks/pos/useComboDataValidation";
 import { MiniCroffleComboDialog } from "./MiniCroffleComboDialog";
-import { UnifiedProduct } from "@/services/product/unifiedProductService";
 import { AddonCategory } from "@/services/pos/addonService";
 import { MixMatchRule } from "@/types/productVariations";
 
 interface ComboSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  products: UnifiedProduct[];
+  products: Product[];
   categories: Category[];
   addonCategories?: AddonCategory[];
   comboRules?: MixMatchRule[];
   onAddToCart: (comboData: {
-    croffle: UnifiedProduct;
-    espresso: UnifiedProduct;
+    croffle: Product;
+    espresso: Product;
     comboPrice: number;
     comboName: string;
     customization?: any;
@@ -45,7 +44,7 @@ export function ComboSelectionDialog({
   const [step, setStep] = useState<"croffle" | "customize" | "espresso">("croffle");
   const [selectedCategory, setSelectedCategory] = useState<string>("Classic");
   const [isChangingCategory, setIsChangingCategory] = useState<boolean>(false);
-  const [selectedCroffle, setSelectedCroffle] = useState<UnifiedProduct | null>(null);
+  const [selectedCroffle, setSelectedCroffle] = useState<Product | null>(null);
   const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
   const [miniCroffleCustomization, setMiniCroffleCustomization] = useState<any>(null);
   
@@ -62,7 +61,7 @@ export function ComboSelectionDialog({
   } = useComboDataValidation(products, categories);
 
   // Enhanced getCategoryProducts with error handling and caching
-  const getCategoryProducts = useCallback((categoryName: string): UnifiedProduct[] => {
+  const getCategoryProducts = useCallback((categoryName: string): Product[] => {
     try {
       console.log(`Getting products for category: "${categoryName}"`);
       
@@ -220,7 +219,7 @@ export function ComboSelectionDialog({
 
   // This will be logged above in the enhanced debug section
 
-  const handleCroffleSelect = (croffle: UnifiedProduct) => {
+  const handleCroffleSelect = (croffle: Product) => {
     setSelectedCroffle(croffle);
     
     // Check if it's a Mini Croffle that needs customization
@@ -238,7 +237,7 @@ export function ComboSelectionDialog({
     setStep("espresso");
   };
 
-  const handleEspressoSelect = (espresso: UnifiedProduct) => {
+  const handleEspressoSelect = (espresso: Product) => {
     const croffleToUse = customizedCroffle || selectedCroffle;
     if (!croffleToUse) return;
 

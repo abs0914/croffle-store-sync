@@ -3,15 +3,15 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UnifiedProduct } from "@/services/product/unifiedProductService";
+import { Product } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Info } from "lucide-react";
 
 interface ProductCardProps {
-  product: UnifiedProduct;
+  product: Product;
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
-  onClick: (product: UnifiedProduct) => void;
+  onClick: (product: Product) => void;
 }
 
 export default function ProductCard({

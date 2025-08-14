@@ -1,263 +1,292 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Product } from "@/types/product";
+import { Product, Category } from "@/types";
+import { ProductCatalog } from "@/services/productCatalog/types";
 import { toast } from "sonner";
 
-export interface UnifiedProduct extends Product {
-  inventory_status?: 'in_stock' | 'low_stock' | 'out_of_stock';
-  recipe_ingredients?: Array<{
-    id: string;
-    name: string;
-    quantity: number;
-    unit: string;
-    current_stock: number;
-  }>;
+export interface UnifiedProductUpdate {
+  name?: string;
+  description?: string;
+  price?: number;
+  image_url?: string;
+  category_id?: string | null;
+  is_active?: boolean;
+  display_order?: number;
 }
 
-// Fetch products with inventory status
-export const fetchUnifiedProducts = async (storeId: string): Promise<UnifiedProduct[]> => {
+export interface SyncResult {
+  success: boolean;
+  productCatalogUpdated: boolean;
+  productsTableUpdated: boolean;
+  error?: string;
+}
+
+// Cache invalidation helper
+const broadcastCacheInvalidation = async (productId: string, storeId: string, eventType: 'UPDATE' | 'INSERT' | 'DELETE') => {
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .select(`
-        *,
-        category:categories(name),
-        product_variations(*),
-        inventory_item:inventory_stock(*)
-      `)
-      .eq('store_id', storeId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    // Process products to add inventory status
-    const processedProducts = await Promise.all((data || []).map(async (product) => {
-      const inventoryStatus = await calculateInventoryStatus(product, storeId);
-      const recipeIngredients = await fetchRecipeIngredients(product);
-      
-      return {
-        ...product,
-        category: product.category?.name || product.category || '', // Handle category properly
-        inventory_status: inventoryStatus,
-        recipe_ingredients: recipeIngredients,
-        product_variations: product.product_variations?.map((v: any) => ({
-          ...v,
-          size: v.size as any // Type assertion to handle database string vs enum
-        })) || []
-      };
-    }));
-
-    return processedProducts as UnifiedProduct[];
-  } catch (error) {
-    console.error('Error fetching unified products:', error);
-    toast.error('Failed to fetch products');
-    return [];
-  }
-};
-
-// Calculate inventory status based on product type and stock
-async function calculateInventoryStatus(product: any, storeId: string): Promise<'in_stock' | 'low_stock' | 'out_of_stock'> {
-  if (product.product_type === 'direct') {
-    // For direct products, check the linked inventory stock
-    if (product.inventory_stock_id && product.inventory_item) {
-      const currentStock = product.inventory_item.stock_quantity || 0;
-      const threshold = product.inventory_item.minimum_threshold || 10;
-      
-      if (currentStock <= 0) return 'out_of_stock';
-      if (currentStock <= threshold) return 'low_stock';
-      return 'in_stock';
-    }
+    console.log(`Broadcasting cache invalidation for product ${productId} in store ${storeId}`);
     
-    // Fallback to product's own stock_quantity if no inventory link
-    if (product.stock_quantity <= 0) return 'out_of_stock';
-    if (product.stock_quantity <= 5) return 'low_stock';
-    return 'in_stock';
-  }
+    const channel = supabase.channel('cache_invalidation_temp');
+    
+    await channel.send({
+      type: 'broadcast',
+      event: 'product_catalog_changed',
+      payload: {
+        productId,
+        storeId,
+        eventType,
+        timestamp: new Date().toISOString()
+      }
+    });
 
-  // For recipe products, check ingredient availability
-  if (product.product_type === 'recipe') {
+    await supabase.removeChannel(channel);
+    console.log(`Cache invalidation broadcasted successfully`);
+  } catch (error) {
+    console.warn('Failed to broadcast cache invalidation:', error);
+  }
+};
+
+export const unifiedProductService = {
+  /**
+   * Update a product in both product_catalog and products tables
+   * This ensures data consistency across both tables
+   */
+  async updateProduct(
+    productCatalogId: string, 
+    updates: UnifiedProductUpdate
+  ): Promise<SyncResult> {
     try {
-      // Get recipe ingredients from recipe_ingredients table
-      const { data: ingredients, error } = await supabase
-        .from('recipe_ingredients')
-        .select(`
-          quantity,
-          commissary_item:commissary_inventory(
-            current_stock,
-            minimum_threshold,
-            name,
-            unit
-          )
-        `)
-        .eq('recipe_id', product.recipe_id || product.id);
+      console.log('🔄 Unified Service: Starting product update for:', productCatalogId);
+      console.log('📝 Unified Service: Update data:', updates);
 
-      if (error) {
-        console.warn('Error fetching recipe ingredients:', error);
-        return product.is_active ? 'in_stock' : 'out_of_stock';
+      // First get the existing product catalog data
+      const { data: existingProduct } = await supabase
+        .from('product_catalog')
+        .select('store_id, recipe_id, product_name, price, image_url, category_id')
+        .eq('id', productCatalogId)
+        .single();
+
+      if (!existingProduct) {
+        throw new Error('Product not found in catalog');
       }
 
-      if (!ingredients || ingredients.length === 0) {
-        // No ingredients defined, assume available if product is active
-        return product.is_active ? 'in_stock' : 'out_of_stock';
+      console.log('📊 Unified Service: Current product data:', existingProduct);
+
+      // Prepare catalog updates
+      const catalogUpdates: Partial<ProductCatalog> = {};
+      if (updates.name !== undefined) catalogUpdates.product_name = updates.name;
+      if (updates.description !== undefined) catalogUpdates.description = updates.description;
+      if (updates.price !== undefined) catalogUpdates.price = updates.price;
+      if (updates.image_url !== undefined) catalogUpdates.image_url = updates.image_url;
+      if (updates.category_id !== undefined) catalogUpdates.category_id = updates.category_id;
+      if (updates.is_active !== undefined) catalogUpdates.is_available = updates.is_active;
+      if (updates.display_order !== undefined) catalogUpdates.display_order = updates.display_order;
+
+      // Update product catalog
+      const { error: catalogError } = await supabase
+        .from('product_catalog')
+        .update(catalogUpdates)
+        .eq('id', productCatalogId);
+
+      if (catalogError) {
+        console.error('❌ Unified Service: Catalog update failed:', catalogError);
+        throw catalogError;
       }
 
-      let hasOutOfStock = false;
-      let hasLowStock = false;
+      console.log('✅ Unified Service: Product catalog updated successfully');
 
-      for (const ingredient of ingredients) {
-        if (!ingredient.commissary_item) continue;
+      // Sync to products table if a matching product exists
+      let productsTableUpdated = false;
+      
+      const { data: productTableEntry } = await supabase
+        .from('products')
+        .select('id, name, price, image_url, category_id, is_active')
+        .eq('name', existingProduct.product_name)
+        .eq('store_id', existingProduct.store_id)
+        .maybeSingle();
+
+      if (productTableEntry) {
+        console.log('🔗 Unified Service: Found matching product in products table, syncing...');
         
-        const requiredQuantity = ingredient.quantity || 1;
-        const availableStock = ingredient.commissary_item.current_stock || 0;
-        const threshold = ingredient.commissary_item.minimum_threshold || 10;
+        // Prepare products table updates
+        const productUpdates: Partial<Product> = {};
+        if (updates.name !== undefined) productUpdates.name = updates.name;
+        if (updates.description !== undefined) productUpdates.description = updates.description;
+        if (updates.price !== undefined) productUpdates.price = updates.price;
+        if (updates.image_url !== undefined) productUpdates.image_url = updates.image_url;
+        if (updates.category_id !== undefined) productUpdates.category_id = updates.category_id;
+        if (updates.is_active !== undefined) productUpdates.is_active = updates.is_active;
 
-        if (availableStock < requiredQuantity) {
-          hasOutOfStock = true;
-          break;
-        } else if (availableStock <= threshold) {
-          hasLowStock = true;
+        const { error: productUpdateError } = await supabase
+          .from('products')
+          .update(productUpdates)
+          .eq('id', productTableEntry.id);
+
+        if (productUpdateError) {
+          console.warn('⚠️ Unified Service: Failed to sync to products table:', productUpdateError);
+        } else {
+          console.log('✅ Unified Service: Successfully synced to products table');
+          productsTableUpdated = true;
         }
+      } else {
+        console.log('ℹ️ Unified Service: No matching product found in products table');
       }
 
-      if (hasOutOfStock) return 'out_of_stock';
-      if (hasLowStock) return 'low_stock';
-      return 'in_stock';
+      // Broadcast cache invalidation
+      await broadcastCacheInvalidation(productCatalogId, existingProduct.store_id, 'UPDATE');
+
+      return {
+        success: true,
+        productCatalogUpdated: true,
+        productsTableUpdated
+      };
+
     } catch (error) {
-      console.error('Error calculating recipe inventory status:', error);
-      return product.is_active ? 'in_stock' : 'out_of_stock';
+      console.error('❌ Unified Service: Update failed:', error);
+      return {
+        success: false,
+        productCatalogUpdated: false,
+        productsTableUpdated: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
-  }
+  },
 
-  // Default fallback
-  return product.is_active ? 'in_stock' : 'out_of_stock';
-}
+  /**
+   * Update a product from the products table and sync to product_catalog
+   * This handles updates coming from the traditional product form
+   */
+  async updateFromProductsTable(
+    productId: string,
+    updates: Partial<Product>
+  ): Promise<SyncResult> {
+    try {
+      console.log('🔄 Unified Service: Starting products table update for:', productId);
 
-// Fetch recipe ingredients for display
-async function fetchRecipeIngredients(product: any): Promise<Array<{
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  current_stock: number;
-}>> {
-  if (product.product_type !== 'recipe') return [];
+      // First get the existing product data
+      const { data: existingProduct } = await supabase
+        .from('products')
+        .select('store_id, name, price, image_url, category_id, is_active, recipe_id')
+        .eq('id', productId)
+        .single();
 
-  try {
-    const { data: ingredients, error } = await supabase
-      .from('recipe_ingredients')
-      .select(`
-        id,
-        quantity,
-        commissary_item:commissary_inventory(
-          id,
-          name,
-          unit,
-          current_stock
-        )
-      `)
-      .eq('recipe_id', product.recipe_id || product.id);
+      if (!existingProduct) {
+        throw new Error('Product not found');
+      }
 
-    if (error) throw error;
+      // Update products table
+      const { error: productError } = await supabase
+        .from('products')
+        .update(updates)
+        .eq('id', productId);
 
-    return (ingredients || []).map(ingredient => ({
-      id: ingredient.id,
-      name: ingredient.commissary_item?.name || 'Unknown ingredient',
-      quantity: ingredient.quantity || 0,
-      unit: ingredient.commissary_item?.unit || 'units',
-      current_stock: ingredient.commissary_item?.current_stock || 0
-    }));
-  } catch (error) {
-    console.error('Error fetching recipe ingredients:', error);
-    return [];
-  }
-}
+      if (productError) {
+        console.error('❌ Unified Service: Products table update failed:', productError);
+        throw productError;
+      }
 
-// Bulk operations
-export const bulkUpdateProductStatus = async (productIds: string[], isActive: boolean): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('products')
-      .update({ is_active: isActive, updated_at: new Date().toISOString() })
-      .in('id', productIds);
+      console.log('✅ Unified Service: Products table updated successfully');
 
-    if (error) throw error;
+      // Sync to product catalog if matching entry exists
+      let productCatalogUpdated = false;
+      
+      const { data: catalogEntry } = await supabase
+        .from('product_catalog')
+        .select('id, product_name, price, image_url, category_id, is_available')
+        .eq('product_name', existingProduct.name)
+        .eq('store_id', existingProduct.store_id)
+        .maybeSingle();
 
-    toast.success(`${productIds.length} product${productIds.length !== 1 ? 's' : ''} ${isActive ? 'activated' : 'deactivated'} successfully`);
-    return true;
-  } catch (error) {
-    console.error('Error bulk updating product status:', error);
-    toast.error('Failed to update product status');
-    return false;
-  }
-};
+      if (catalogEntry) {
+        console.log('🔗 Unified Service: Found matching product in catalog, syncing...');
+        
+        // Prepare catalog updates
+        const catalogUpdates: Partial<ProductCatalog> = {};
+        if (updates.name !== undefined) catalogUpdates.product_name = updates.name;
+        if (updates.description !== undefined) catalogUpdates.description = updates.description;
+        if (updates.price !== undefined) catalogUpdates.price = updates.price;
+        if (updates.image_url !== undefined) catalogUpdates.image_url = updates.image_url;
+        if (updates.category_id !== undefined) catalogUpdates.category_id = updates.category_id;
+        if (updates.is_active !== undefined) catalogUpdates.is_available = updates.is_active;
 
-export const bulkDeleteProducts = async (productIds: string[]): Promise<boolean> => {
-  try {
-    // First, delete related variations
-    const { error: variationsError } = await supabase
-      .from('product_variations')
-      .delete()
-      .in('product_id', productIds);
+        const { error: catalogUpdateError } = await supabase
+          .from('product_catalog')
+          .update(catalogUpdates)
+          .eq('id', catalogEntry.id);
 
-    if (variationsError) throw variationsError;
+        if (catalogUpdateError) {
+          console.warn('⚠️ Unified Service: Failed to sync to product catalog:', catalogUpdateError);
+        } else {
+          console.log('✅ Unified Service: Successfully synced to product catalog');
+          productCatalogUpdated = true;
+          
+          // Broadcast cache invalidation for catalog update
+          await broadcastCacheInvalidation(catalogEntry.id, existingProduct.store_id, 'UPDATE');
+        }
+      } else {
+        console.log('ℹ️ Unified Service: No matching product found in catalog');
+      }
 
-    // Then delete the products
-    const { error: productsError } = await supabase
-      .from('products')
-      .delete()
-      .in('id', productIds);
+      return {
+        success: true,
+        productCatalogUpdated,
+        productsTableUpdated: true
+      };
 
-    if (productsError) throw productsError;
+    } catch (error) {
+      console.error('❌ Unified Service: Products table update failed:', error);
+      return {
+        success: false,
+        productCatalogUpdated: false,
+        productsTableUpdated: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  },
 
-    toast.success(`${productIds.length} product${productIds.length !== 1 ? 's' : ''} deleted successfully`);
-    return true;
-  } catch (error) {
-    console.error('Error bulk deleting products:', error);
-    toast.error('Failed to delete products');
-    return false;
-  }
-};
+  /**
+   * Get unified product data from both tables
+   */
+  async getUnifiedProduct(productCatalogId: string): Promise<{
+    catalog: ProductCatalog | null;
+    product: Product | null;
+    inSync: boolean;
+  }> {
+    try {
+      // Get catalog data
+      const { data: catalog } = await supabase
+        .from('product_catalog')
+        .select('*')
+        .eq('id', productCatalogId)
+        .single();
 
-export const toggleProductAvailability = async (productId: string, isActive: boolean): Promise<boolean> => {
-  try {
-    const { error } = await supabase
-      .from('products')
-      .update({ is_active: isActive, updated_at: new Date().toISOString() })
-      .eq('id', productId);
+      if (!catalog) {
+        return { catalog: null, product: null, inSync: false };
+      }
 
-    if (error) throw error;
+      // Find matching product
+      const { data: product } = await supabase
+        .from('products')
+        .select('*')
+        .eq('name', catalog.product_name)
+        .eq('store_id', catalog.store_id)
+        .maybeSingle();
 
-    toast.success(`Product ${isActive ? 'activated' : 'deactivated'} successfully`);
-    return true;
-  } catch (error) {
-    console.error('Error toggling product availability:', error);
-    toast.error('Failed to update product availability');
-    return false;
-  }
-};
+      // Check if they're in sync
+      let inSync = true;
+      if (product && catalog) {
+        inSync = (
+          product.name === catalog.product_name &&
+          product.price === catalog.price &&
+          product.image_url === catalog.image_url &&
+          product.category_id === catalog.category_id &&
+          product.is_active === catalog.is_available
+        );
+      }
 
-export const deleteProduct = async (productId: string): Promise<boolean> => {
-  try {
-    // First, delete related variations
-    const { error: variationsError } = await supabase
-      .from('product_variations')
-      .delete()
-      .eq('product_id', productId);
-
-    if (variationsError) throw variationsError;
-
-    // Then delete the product
-    const { error: productError } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', productId);
-
-    if (productError) throw productError;
-
-    toast.success('Product deleted successfully');
-    return true;
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    toast.error('Failed to delete product');
-    return false;
+      return { catalog: catalog as ProductCatalog, product: product as Product, inSync };
+    } catch (error) {
+      console.error('Error getting unified product:', error);
+      return { catalog: null, product: null, inSync: false };
+    }
   }
 };

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { AlertCircle, Info } from "lucide-react";
 import { Category, ProductVariation } from "@/types";
-import { UnifiedProduct } from "@/services/product/unifiedProductService";
+import { Product } from "@/types";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -39,12 +39,12 @@ import { MixMatchRule } from "@/types/productVariations";
 import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
 
 interface ProductGridProps {
-  products: UnifiedProduct[];
+  products: Product[];
   allProducts?: any[]; // Accept any array type and cast as needed
   categories: Category[];
   activeCategory: string;
   setActiveCategory: (category: string) => void;
-  addItemToCart: (product: UnifiedProduct, quantity?: number, variation?: ProductVariation) => void;
+  addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   isShiftActive: boolean;
   isLoading: boolean;
   storeId?: string;
@@ -62,7 +62,7 @@ export default function ProductGrid({
   storeId
 }: ProductGridProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState<UnifiedProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productVariations, setProductVariations] = useState<ProductVariation[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoadingVariations, setIsLoadingVariations] = useState(false);
@@ -76,11 +76,11 @@ export default function ProductGrid({
   const [addonItems, setAddonItems] = useState<AddonItem[]>([]);
   const [addonCategories, setAddonCategories] = useState<AddonCategory[]>([]);
   const [isAddonDialogOpen, setIsAddonDialogOpen] = useState(false);
-  const [selectedProductForAddons, setSelectedProductForAddons] = useState<UnifiedProduct & { selectedVariation?: ProductVariation } | null>(null);
+  const [selectedProductForAddons, setSelectedProductForAddons] = useState<Product & { selectedVariation?: ProductVariation } | null>(null);
   
   // Enhanced customization states
   const [isEnhancedCustomizationOpen, setIsEnhancedCustomizationOpen] = useState(false);
-  const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<UnifiedProduct & { selectedVariation?: ProductVariation } | null>(null);
+  const [selectedProductForCustomization, setSelectedProductForCustomization] = useState<Product & { selectedVariation?: ProductVariation } | null>(null);
   const [comboRules, setComboRules] = useState<MixMatchRule[]>([]);
 
   // Combo selection states
@@ -147,7 +147,7 @@ export default function ProductGrid({
   };
 
   // Handle product selection
-  const handleProductClick = async (product: UnifiedProduct) => {
+  const handleProductClick = async (product: Product) => {
     console.log("ProductGrid: Product clicked", {
       productName: product.name,
       productId: product.id,
@@ -348,7 +348,7 @@ export default function ProductGrid({
     return 'unknown';
   };
 
-  const shouldShowEnhancedCustomization = (product: UnifiedProduct): boolean => {
+  const shouldShowEnhancedCustomization = (product: Product): boolean => {
     const productName = product.name.toLowerCase();
     const categoryName = getCategoryName(product.category_id).toLowerCase();
     
@@ -360,7 +360,7 @@ export default function ProductGrid({
     return false;
   };
 
-  const shouldShowAddonSelection = (product: UnifiedProduct): boolean => {
+  const shouldShowAddonSelection = (product: Product): boolean => {
     const productName = product.name.toLowerCase();
     const categoryName = getCategoryName(product.category_id).toLowerCase();
     
@@ -460,7 +460,7 @@ export default function ProductGrid({
 
   const handleComboAddToCart = (comboData: {
     croffle: any;
-    espresso: UnifiedProduct;
+    espresso: Product;
     comboPrice: number;
     comboName: string;
     customization?: any;
@@ -469,7 +469,7 @@ export default function ProductGrid({
     
     // Create a combo product for the cart
     const croffleData = comboData.croffle.product || comboData.croffle;
-    const comboProduct: UnifiedProduct = {
+    const comboProduct: Product = {
       ...croffleData,
       id: `combo-${croffleData.id}-${comboData.espresso.id}`,
       name: comboData.comboName,
@@ -675,7 +675,7 @@ export default function ProductGrid({
       <ComboSelectionDialog
         open={isComboDialogOpen}
         onOpenChange={setIsComboDialogOpen}
-        products={(allProducts || products) as UnifiedProduct[]} // Cast to UnifiedProduct[] since it extends Product
+        products={(allProducts || products) as Product[]} // Cast to Product[]
         categories={categories} // Categories should be unfiltered
         addonCategories={addonCategories}
         comboRules={comboRules}

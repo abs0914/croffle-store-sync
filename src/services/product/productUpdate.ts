@@ -2,38 +2,27 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types";
 import { toast } from "sonner";
+import { unifiedProductService } from "./unifiedProductService";
 
 export const updateProduct = async (id: string, product: Partial<Product>): Promise<Product | null> => {
   try {
-    // Prepare the data for database update
-    const dbProduct: any = {};
-    if (product.name !== undefined) dbProduct.name = product.name;
-    if (product.description !== undefined) dbProduct.description = product.description;
-    if (product.sku !== undefined) dbProduct.sku = product.sku;
-    if (product.barcode !== undefined) dbProduct.barcode = product.barcode;
-    if (product.price !== undefined) dbProduct.price = product.price;
-    if (product.cost !== undefined) dbProduct.cost = product.cost;
-    if (product.stock_quantity !== undefined) dbProduct.stock_quantity = product.stock_quantity;
-    else if (product.stockQuantity !== undefined) dbProduct.stock_quantity = product.stockQuantity;
+    // Use unified service for consistent updates across both tables
+    const result = await unifiedProductService.updateFromProductsTable(id, product);
     
-    // Fix for UUID fields - ensure empty strings are converted to null
-    // Also handle "uncategorized" special value
-    if (product.category_id !== undefined) {
-      dbProduct.category_id = product.category_id && product.category_id !== "uncategorized" ? product.category_id : null;
-    } else if (product.categoryId !== undefined) {
-      dbProduct.category_id = product.categoryId && product.categoryId !== "uncategorized" ? product.categoryId : null;
+    if (!result.success) {
+      throw new Error(result.error || 'Update failed');
     }
-    
-    if (product.is_active !== undefined) dbProduct.is_active = product.is_active;
-    else if (product.isActive !== undefined) dbProduct.is_active = product.isActive;
-    if (product.image_url !== undefined) dbProduct.image_url = product.image_url;
-    else if (product.image !== undefined) dbProduct.image_url = product.image;
-    
+
+    console.log('✅ Product update result:', {
+      productCatalogUpdated: result.productCatalogUpdated,
+      productsTableUpdated: result.productsTableUpdated
+    });
+
+    // Get the updated product data for return
     const { data, error } = await supabase
       .from("products")
-      .update(dbProduct)
-      .eq("id", id)
       .select()
+      .eq("id", id)
       .single();
     
     if (error) {
