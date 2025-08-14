@@ -16,6 +16,7 @@ const Expenses = React.lazy(() => import('@/pages/Expenses'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
 const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
 const SMAccreditationTesting = React.lazy(() => import('@/pages/SMAccreditationTesting'));
+const CustomerManagement = React.lazy(() => import('@/pages/Customers/CustomerManagement'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -203,10 +204,7 @@ export const MainAppRoutes = () => {
           <ProtectedRoute requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
-                <div className="p-4">
-                  <h1 className="text-2xl font-bold">Customer Management</h1>
-                  <p className="text-gray-600 mt-2">Manage customer information and relationships.</p>
-                </div>
+                <CustomerManagement />
               </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
