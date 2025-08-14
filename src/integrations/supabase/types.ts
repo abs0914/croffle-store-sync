@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -4613,13 +4613,13 @@ export type Database = {
       analyze_store_deployment_status: {
         Args: Record<PropertyKey, never>
         Returns: {
-          store_name: string
-          store_id: string
-          total_products: number
-          products_with_images: number
-          products_without_images: number
           expected_products: number
           missing_products: number
+          products_with_images: number
+          products_without_images: number
+          store_id: string
+          store_name: string
+          total_products: number
         }[]
       }
       assign_admin_role_securely: {
@@ -4639,16 +4639,16 @@ export type Database = {
         Returns: number
       }
       can_access_user_record: {
-        Args: { target_user_id: string; target_store_ids: string[] }
+        Args: { target_store_ids: string[]; target_user_id: string }
         Returns: boolean
       }
       check_auth_rate_limit: {
         Args: {
+          p_block_minutes?: number
           p_identifier: string
           p_identifier_type?: string
           p_max_attempts?: number
           p_window_minutes?: number
-          p_block_minutes?: number
         }
         Returns: boolean
       }
@@ -4658,13 +4658,13 @@ export type Database = {
       }
       create_app_user: {
         Args: {
-          p_user_id: string
-          p_user_email: string
           p_first_name: string
-          p_last_name: string
-          p_user_role: string
-          p_store_ids: string[]
           p_is_active: boolean
+          p_last_name: string
+          p_store_ids: string[]
+          p_user_email: string
+          p_user_id: string
+          p_user_role: string
         }
         Returns: string
       }
@@ -4676,49 +4676,49 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           deployed_count: number
-          error_count: number
           details: string[]
+          error_count: number
         }[]
       }
       export_transaction_details_csv: {
-        Args: { start_date?: string; end_date?: string }
+        Args: { end_date?: string; start_date?: string }
         Returns: {
-          receipt_number: string
-          item_sequence: number
           item_description: string
-          quantity: number
-          unit_price: number
-          line_total: number
           item_discount: number
+          item_sequence: number
+          line_total: number
+          quantity: number
+          receipt_number: string
+          unit_price: number
           vat_exempt_flag: boolean
         }[]
       }
       export_transaction_details_csv_recent: {
-        Args: { store_id_param: string; days_back?: number }
+        Args: { days_back?: number; store_id_param: string }
         Returns: {
           csv_data: string
         }[]
       }
       export_transactions_csv: {
-        Args: { start_date?: string; end_date?: string }
+        Args: { end_date?: string; start_date?: string }
         Returns: {
-          receipt_number: string
           business_date: string
-          transaction_time: string
-          gross_amount: number
           discount_amount: number
-          net_amount: number
-          vat_amount: number
-          payment_method: string
-          discount_type: string
           discount_id: string
+          discount_type: string
+          gross_amount: number
+          net_amount: number
+          payment_method: string
           promo_details: string
-          senior_discount: number
           pwd_discount: number
+          receipt_number: string
+          senior_discount: number
+          transaction_time: string
+          vat_amount: number
         }[]
       }
       export_transactions_csv_recent: {
-        Args: { store_id_param: string; days_back?: number }
+        Args: { days_back?: number; store_id_param: string }
         Returns: {
           csv_data: string
         }[]
@@ -4728,7 +4728,7 @@ export type Database = {
         Returns: number
       }
       format_promo_details: {
-        Args: { promo_ref: string; promo_name: string }
+        Args: { promo_name: string; promo_ref: string }
         Returns: string
       }
       generate_purchase_order_number: {
@@ -4746,43 +4746,43 @@ export type Database = {
       get_all_users: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
-          user_id: string
-          first_name: string
-          last_name: string
-          email: string
           contact_number: string
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          is_active: boolean
+          last_name: string
           role: string
           store_ids: string[]
-          is_active: boolean
-          created_at: string
           updated_at: string
+          user_id: string
         }[]
       }
       get_commissary_purchase_history: {
         Args: { item_id: string; limit_count?: number }
         Returns: {
-          purchase_date: string
-          quantity_purchased: number
-          unit_cost: number
-          total_cost: number
-          supplier_name: string
           batch_number: string
           notes: string
+          purchase_date: string
+          quantity_purchased: number
+          supplier_name: string
+          total_cost: number
+          unit_cost: number
         }[]
       }
       get_current_user_info: {
         Args: Record<PropertyKey, never> | { user_email: string }
         Returns: {
-          id: string
-          user_id: string
-          first_name: string
-          last_name: string
-          email: string
           contact_number: string
+          email: string
+          first_name: string
+          id: string
+          is_active: boolean
+          last_name: string
           role: string
           store_ids: string[]
-          is_active: boolean
+          user_id: string
         }[]
       }
       get_location_suppliers: {
@@ -4795,47 +4795,47 @@ export type Database = {
       get_low_stock_items: {
         Args: { store_id_param: string }
         Returns: {
-          id: string
-          store_id: string
-          item: string
-          unit: string
-          stock_quantity: number
-          minimum_threshold: number
-          maximum_capacity: number
           cost: number
-          is_active: boolean
           created_at: string
+          id: string
+          is_active: boolean
+          item: string
+          maximum_capacity: number
+          minimum_threshold: number
+          stock_quantity: number
+          store_id: string
+          unit: string
           updated_at: string
         }[]
       }
       get_sm_cron_jobs: {
         Args: Record<PropertyKey, never>
         Returns: {
-          jobid: number
-          schedule: string
+          active: boolean
           command: string
+          database: string
+          jobid: number
+          jobname: string
           nodename: string
           nodeport: number
-          database: string
+          schedule: string
           username: string
-          active: boolean
-          jobname: string
         }[]
       }
       get_store_users: {
         Args: { store_id_param: string }
         Returns: {
-          id: string
-          user_id: string
-          first_name: string
-          last_name: string
-          email: string
           contact_number: string
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          is_active: boolean
+          last_name: string
           role: string
           store_ids: string[]
-          is_active: boolean
-          created_at: string
           updated_at: string
+          user_id: string
         }[]
       }
       get_user_role_permissions: {
@@ -4845,15 +4845,15 @@ export type Database = {
       get_users_needing_sync: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
           email: string
+          id: string
           user_metadata: Json
         }[]
       }
       has_route_access: {
         Args: {
-          user_role: Database["public"]["Enums"]["app_role"]
           required_access: string
+          user_role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
       }
@@ -4883,59 +4883,59 @@ export type Database = {
       }
       log_bir_audit: {
         Args: {
-          p_store_id: string
-          p_log_type: string
-          p_event_name: string
-          p_event_data: Json
-          p_user_id?: string
           p_cashier_name?: string
+          p_event_data: Json
+          p_event_name: string
+          p_log_type: string
+          p_receipt_number?: string
+          p_store_id: string
           p_terminal_id?: string
           p_transaction_id?: string
-          p_receipt_number?: string
+          p_user_id?: string
         }
         Returns: string
       }
       log_security_event: {
         Args: {
-          p_event_type: string
-          p_user_id?: string
-          p_user_email?: string
           p_event_data?: Json
+          p_event_type: string
           p_risk_level?: string
+          p_user_email?: string
+          p_user_id?: string
         }
         Returns: string
       }
       log_sm_export_activity: {
         Args: {
-          p_store_id: string
           p_action?: string
-          p_success?: boolean
-          p_email_sent?: boolean
-          p_upload_sent?: boolean
-          p_transaction_count?: number
           p_detail_count?: number
-          p_filename?: string
           p_details?: string
+          p_email_sent?: boolean
           p_error_message?: string
           p_execution_time?: number
+          p_filename?: string
+          p_store_id: string
+          p_success?: boolean
+          p_transaction_count?: number
+          p_upload_sent?: boolean
         }
         Returns: string
       }
       migrate_product_catalog_to_products: {
         Args: Record<PropertyKey, never>
         Returns: {
+          details: string[]
+          error_count: number
           migrated_count: number
           skipped_count: number
-          error_count: number
-          details: string[]
         }[]
       }
       migrate_recipes_to_product_catalog: {
         Args: Record<PropertyKey, never>
         Returns: {
-          migrated_count: number
-          error_count: number
           details: string[]
+          error_count: number
+          migrated_count: number
         }[]
       }
       normalize_unit_name: {
@@ -4945,37 +4945,37 @@ export type Database = {
       repair_missing_product_catalog_entries: {
         Args: Record<PropertyKey, never>
         Returns: {
-          repaired_count: number
           errors: string[]
+          repaired_count: number
         }[]
       }
       sync_auth_user_to_app_users: {
         Args: {
-          user_email: string
+          contact_number?: string
           first_name: string
           last_name: string
-          user_role?: Database["public"]["Enums"]["app_role"]
           store_ids?: string[]
-          contact_number?: string
+          user_email: string
+          user_role?: Database["public"]["Enums"]["app_role"]
         }
         Returns: string
       }
       sync_template_images_to_products: {
         Args: Record<PropertyKey, never>
         Returns: {
-          updated_count: number
-          error_count: number
           details: string[]
+          error_count: number
+          updated_count: number
         }[]
       }
       transfer_commissary_to_store: {
         Args: {
           p_commissary_item_id: string
-          p_store_id: string
-          p_quantity: number
-          p_unit_cost: number
           p_fulfilled_by: string
           p_notes?: string
+          p_quantity: number
+          p_store_id: string
+          p_unit_cost: number
         }
         Returns: boolean
       }
@@ -4983,12 +4983,12 @@ export type Database = {
         Args:
           | Record<PropertyKey, never>
           | {
+              p_item: string
+              p_notes?: string
+              p_quantity: number
               p_source_id: string
               p_target_store_id: string
-              p_item: string
               p_unit: string
-              p_quantity: number
-              p_notes?: string
               p_user_id?: string
             }
         Returns: undefined
@@ -4998,16 +4998,16 @@ export type Database = {
         Returns: Json
       }
       user_has_store_access: {
-        Args: { user_id: string; store_id: string }
+        Args: { store_id: string; user_id: string }
         Returns: boolean
       }
       validate_clean_slate_migration: {
         Args: Record<PropertyKey, never>
         Returns: {
           check_name: string
-          status: string
           count_items: number
           details: string
+          status: string
         }[]
       }
       validate_password_strength: {
@@ -5017,25 +5017,25 @@ export type Database = {
       validate_product_ingredients_availability: {
         Args: { product_id: string; quantity?: number }
         Returns: {
+          insufficient_stock: string[]
           is_available: boolean
           missing_ingredients: string[]
-          insufficient_stock: string[]
         }[]
       }
       validate_recipe_deployment: {
-        Args: { template_id_param: string; store_id_param: string }
+        Args: { store_id_param: string; template_id_param: string }
         Returns: {
-          is_valid: boolean
           error_message: string
+          is_valid: boolean
           missing_ingredients: string[]
         }[]
       }
       validate_user_input: {
         Args: {
+          p_contact_number?: string
           p_email: string
           p_first_name: string
           p_last_name: string
-          p_contact_number?: string
         }
         Returns: boolean
       }
