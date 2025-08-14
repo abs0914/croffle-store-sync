@@ -3,6 +3,7 @@ import { useCart } from "@/contexts/cart/CartContext";
 import { Customer, Transaction } from "@/types";
 import { createTransaction } from "@/services/transactions";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export interface SeniorDiscount {
   id: string;
@@ -14,6 +15,7 @@ export interface SeniorDiscount {
 }
 
 export function useTransactionHandler(storeId: string) {
+  const navigate = useNavigate();
   const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [discount, setDiscount] = useState(0);
@@ -110,8 +112,17 @@ export function useTransactionHandler(storeId: string) {
     const result = await createTransaction(transaction, items);
     
     if (result) {
-      setCompletedTransaction(result);
       clearCart(); // Clear the cart after successful transaction
+      
+      // Navigate immediately to invoice page with transaction data
+      navigate(`/invoice/${result.id}`, {
+        state: {
+          transaction: result,
+          customer: selectedCustomer
+        },
+        replace: true
+      });
+      
       return true;
     }
     

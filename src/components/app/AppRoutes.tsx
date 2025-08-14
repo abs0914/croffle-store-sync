@@ -8,6 +8,7 @@ import { AdminRoutes } from './AdminRoutes';
 // Lazy load components for better performance
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const POS = React.lazy(() => import('@/pages/POS'));
+const Invoice = React.lazy(() => import('@/pages/Invoice'));
 const Products = React.lazy(() => import('@/pages/Products'));
 const ProductForm = React.lazy(() => import('@/pages/Inventory/ProductForm'));
 const Inventory = React.lazy(() => import('@/pages/Inventory'));
@@ -37,6 +38,7 @@ export const AppRoutes: React.FC = () => {
         {/* Protected Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/pos" element={<ProtectedRoute><POS /></ProtectedRoute>} />
+        <Route path="/invoice/:transactionId" element={<ProtectedRoute><Invoice /></ProtectedRoute>} />
         <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
         <Route path="/products/new" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />
         <Route path="/products/edit/:id" element={<ProtectedRoute><ProductForm /></ProtectedRoute>} />

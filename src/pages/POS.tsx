@@ -231,42 +231,8 @@ export default function POS() {
     }
   }, [completedTransaction?.id]); // Only depend on transaction ID to prevent loops
 
-  // If we have a completed transaction, show the receipt immediately
-  if (completedTransaction) {
-    const transactionForDisplay = {
-      ...completedTransaction,
-      shiftId: currentShift?.id || '',
-      storeId: currentStore?.id || '',
-      userId: currentShift?.userId || '',
-      paymentMethod: completedTransaction.paymentMethod || 'cash',
-      status: 'completed' as const,
-      items: completedTransaction.items?.map((item, index) => ({
-        productId: item.productId || '',
-        variationId: item.variationId || undefined,
-        name: item.name || 'Unknown Item',
-        quantity: item.quantity || 1,
-        unitPrice: item.unitPrice || 0,
-        totalPrice: item.totalPrice || 0
-      })) || [],
-      subtotal: completedTransaction.subtotal || 0,
-      tax: completedTransaction.tax || 0,
-      total: completedTransaction.total || 0,
-      discount: completedTransaction.discount || 0,
-      amountTendered: completedTransaction.amountTendered || 0,
-      change: completedTransaction.change || 0
-    };
-
-    return (
-      <CompletedTransaction
-        transaction={transactionForDisplay}
-        customer={selectedCustomer}
-        startNewSale={() => {
-          console.log("POS: Starting new sale from completed transaction");
-          startNewSale();
-        }}
-      />
-    );
-  }
+  // Note: Transaction completion now navigates to invoice page immediately
+  // This code is kept as fallback but shouldn't normally execute
 
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background">
