@@ -18,6 +18,7 @@ interface PaymentProcessorProps {
       cardNumber?: string;
       eWalletProvider?: string;
       eWalletReferenceNumber?: string;
+      paymentTransactionId?: string;
     }
   ) => void;
 }
