@@ -22,43 +22,58 @@ const validateComboProductAvailability = async (
   try {
     console.log('Validating combo product availability:', { productId, quantity });
     
-    // Extract croffle and espresso component IDs from combo product ID
-    // Format: combo-${croffleUUID}-${espressoUUID}
-    // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 characters)
-    const comboMatch = productId.match(/^combo-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
-    if (!comboMatch) {
+    // Extract component product IDs from combo ID
+    // Format: combo-{product1-id}-{product2-id}
+    const parts = productId.split('-');
+    if (parts.length < 3) {
       return {
         isValid: false,
         insufficientItems: ['Invalid combo product format']
       };
     }
 
-    const [, croffleId, espressoId] = comboMatch;
-    console.log('Combo components:', { croffleId, espressoId });
+    // Extract the component product IDs (everything after "combo-")
+    const componentIds: string[] = [];
+    let currentId = '';
+    
+    for (let i = 1; i < parts.length; i++) {
+      if (currentId) {
+        currentId += '-' + parts[i];
+      } else {
+        currentId = parts[i];
+      }
+      
+      // Check if this looks like a complete UUID (36 characters with dashes)
+      if (currentId.length === 36 && currentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        componentIds.push(currentId);
+        currentId = '';
+      }
+    }
+
+    if (componentIds.length === 0) {
+      return {
+        isValid: false,
+        insufficientItems: ['Could not parse combo product components']
+      };
+    }
+
+    console.log('🧩 Found combo components for validation:', componentIds);
 
     // Validate each component individually
-    const croffleValidation = await validateProductAvailability(croffleId, quantity);
-    const espressoValidation = await validateProductAvailability(espressoId, quantity);
+    const validationResults: InventoryValidationResult[] = [];
+    for (const componentId of componentIds) {
+      const componentValidation = await validateProductAvailability(componentId, quantity);
+      validationResults.push(componentValidation);
+    }
 
     // Combine validation results and deduplicate error messages
-    const allInsufficientItems = [
-      ...croffleValidation.insufficientItems,
-      ...espressoValidation.insufficientItems
-    ];
-    
-    // Remove duplicate error messages
+    const allInsufficientItems = validationResults.flatMap(result => result.insufficientItems);
     const combinedInsufficientItems = [...new Set(allInsufficientItems)];
 
-    const isValid = croffleValidation.isValid && espressoValidation.isValid;
-    const availableQuantity = Math.min(
-      croffleValidation.availableQuantity || 0,
-      espressoValidation.availableQuantity || 0
-    );
-
     return {
-      isValid,
+      isValid: combinedInsufficientItems.length === 0 && validationResults.every(r => r.isValid),
       insufficientItems: combinedInsufficientItems,
-      availableQuantity
+      availableQuantity: Math.min(...validationResults.map(r => r.availableQuantity || 0))
     };
   } catch (error) {
     console.error('Error validating combo product availability:', error);
@@ -130,28 +145,46 @@ const processComboProductSale = async (
   try {
     console.log('Processing combo product sale:', { productId, quantity, transactionId, storeId });
     
-    // Extract croffle and espresso component IDs from combo product ID
-    // Format: combo-${croffleUUID}-${espressoUUID}
-    const comboMatch = productId.match(/^combo-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
-    if (!comboMatch) {
+    // Extract component product IDs from combo ID
+    // Format: combo-{product1-id}-{product2-id}
+    const parts = productId.split('-');
+    if (parts.length < 3) {
       toast.error('Invalid combo product format');
       return false;
     }
 
-    const [, croffleId, espressoId] = comboMatch;
-    console.log('Processing combo components:', { croffleId, espressoId });
+    // Extract the component product IDs (everything after "combo-")
+    const componentIds: string[] = [];
+    let currentId = '';
+    
+    for (let i = 1; i < parts.length; i++) {
+      if (currentId) {
+        currentId += '-' + parts[i];
+      } else {
+        currentId = parts[i];
+      }
+      
+      // Check if this looks like a complete UUID (36 characters with dashes)
+      if (currentId.length === 36 && currentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        componentIds.push(currentId);
+        currentId = '';
+      }
+    }
 
-    // Process each component individually
-    const croffleSuccess = await deductIngredientsForProduct(croffleId, quantity, transactionId);
-    if (!croffleSuccess) {
-      toast.error('Failed to process croffle component');
+    if (componentIds.length === 0) {
+      toast.error('Could not parse combo product components');
       return false;
     }
 
-    const espressoSuccess = await deductIngredientsForProduct(espressoId, quantity, transactionId);
-    if (!espressoSuccess) {
-      toast.error('Failed to process espresso component');
-      return false;
+    console.log('🧩 Processing combo components:', componentIds);
+
+    // Process each component individually
+    for (const componentId of componentIds) {
+      const success = await deductIngredientsForProduct(componentId, quantity, transactionId);
+      if (!success) {
+        toast.error(`Failed to process component: ${componentId}`);
+        return false;
+      }
     }
 
     console.log('Combo product sale processed successfully');

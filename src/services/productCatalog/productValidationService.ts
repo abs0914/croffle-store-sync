@@ -16,7 +16,12 @@ export const validateProductForSale = async (
   try {
     console.log('🔍 Validating product for sale:', { productId, quantity });
 
-    // Get product details
+    // Check if this is a combo product (has "combo-" prefix)
+    if (productId.startsWith('combo-')) {
+      return await validateComboProduct(productId, quantity);
+    }
+
+    // Get product details for regular products
     const { data: productInfo, error: productInfoError } = await supabase
       .from('product_catalog')
       .select('product_name, recipe_id, is_available')
@@ -118,6 +123,108 @@ export const validateProductForSale = async (
     };
   }
 };
+
+/**
+ * Validates combo products by checking their individual components
+ */
+const validateComboProduct = async (
+  comboProductId: string,
+  quantity: number = 1
+): Promise<ProductValidationResult> => {
+  try {
+    console.log('🔍 Validating combo product:', comboProductId);
+    
+    // Extract component product IDs from combo ID
+    // Format: combo-{product1-id}-{product2-id}
+    const parts = comboProductId.split('-');
+    if (parts.length < 3) {
+      return {
+        isValid: false,
+        productName: 'Invalid Combo Product',
+        missingIngredients: true,
+        lowStockIngredients: [],
+        errors: ['Invalid combo product format']
+      };
+    }
+
+    // Extract the component product IDs (everything after "combo-")
+    const componentIds: string[] = [];
+    let currentId = '';
+    
+    for (let i = 1; i < parts.length; i++) {
+      if (currentId) {
+        currentId += '-' + parts[i];
+      } else {
+        currentId = parts[i];
+      }
+      
+      // Check if this looks like a complete UUID (36 characters with dashes)
+      if (currentId.length === 36 && currentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        componentIds.push(currentId);
+        currentId = '';
+      }
+    }
+
+    if (componentIds.length === 0) {
+      return {
+        isValid: false,
+        productName: 'Invalid Combo Product',
+        missingIngredients: true,
+        lowStockIngredients: [],
+        errors: ['Could not parse combo product components']
+      };
+    }
+
+    console.log('🧩 Found combo components:', componentIds);
+
+    // Get component product names for display
+    const { data: componentProducts } = await supabase
+      .from('product_catalog')
+      .select('id, product_name')
+      .in('id', componentIds);
+
+    const comboName = componentProducts
+      ?.map(p => p.product_name)
+      ?.join(' + ') || 'Combo Product';
+
+    // Validate each component
+    const result: ProductValidationResult = {
+      isValid: true,
+      productName: comboName,
+      missingIngredients: false,
+      lowStockIngredients: [],
+      errors: []
+    };
+
+    for (const componentId of componentIds) {
+      const componentValidation = await validateProductForSale(componentId, quantity);
+      
+      if (!componentValidation.isValid) {
+        result.isValid = false;
+        result.errors.push(...componentValidation.errors);
+      }
+      
+      if (componentValidation.missingIngredients) {
+        result.missingIngredients = true;
+      }
+      
+      result.lowStockIngredients.push(...componentValidation.lowStockIngredients);
+    }
+
+    console.log('✅ Combo product validation result:', result);
+    return result;
+
+  } catch (error) {
+    console.error('❌ Error validating combo product:', error);
+    return {
+      isValid: false,
+      productName: 'Combo Product Error',
+      missingIngredients: true,
+      lowStockIngredients: [],
+      errors: ['Failed to validate combo product']
+    };
+  }
+}
 
 export const validateStoreProducts = async (storeId: string): Promise<{
   totalProducts: number;
