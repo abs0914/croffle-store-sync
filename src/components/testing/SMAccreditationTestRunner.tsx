@@ -68,8 +68,18 @@ export const SMAccreditationTestRunner: React.FC<TestRunnerProps> = ({
     const blob = new Blob([content], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
+    
+    // Use SM-compliant naming convention
+    const currentDate = new Date();
+    const monthYear = currentDate.toLocaleDateString('en-US', { month: '2-digit', year: 'numeric' }).replace('/', '_');
+    
+    if (type === 'transactions') {
+      a.download = `${monthYear}_transactions.csv`;
+    } else {
+      a.download = `${monthYear}_transactiondetails.csv`;
+    }
+    
     a.href = url;
-    a.download = `${filename}_${type}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
