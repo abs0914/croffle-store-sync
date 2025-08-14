@@ -7,6 +7,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 // Lazy load components for better performance
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const POS = React.lazy(() => import('@/pages/POS'));
+const Invoice = React.lazy(() => import('@/pages/Invoice'));
 const Products = React.lazy(() => import('@/pages/Products'));
 const ProductForm = React.lazy(() => import('@/pages/Inventory/ProductForm'));
 const Inventory = React.lazy(() => import('@/pages/Inventory'));
@@ -52,6 +53,20 @@ export const MainAppRoutes = () => {
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <POS />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Invoice Page - Accessible to all with store access */}
+      <Route
+        path="/invoice/:transactionId"
+        element={
+          <ProtectedRoute requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Invoice />
               </React.Suspense>
             </MainLayout>
           </ProtectedRoute>

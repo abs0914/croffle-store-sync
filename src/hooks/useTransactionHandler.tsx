@@ -112,9 +112,16 @@ export function useTransactionHandler(storeId: string) {
     const result = await createTransaction(transaction, items);
     
     if (result) {
+      console.log("🎯 Transaction created successfully, navigating to invoice:", {
+        transactionId: result.id,
+        receiptNumber: result.receiptNumber,
+        customer: selectedCustomer?.name || 'No customer'
+      });
+      
       clearCart(); // Clear the cart after successful transaction
       
       // Navigate immediately to invoice page with transaction data
+      console.log("🧭 Navigating to invoice page...");
       navigate(`/invoice/${result.id}`, {
         state: {
           transaction: result,
@@ -123,9 +130,11 @@ export function useTransactionHandler(storeId: string) {
         replace: true
       });
       
+      console.log("✅ Navigation call completed");
       return true;
     }
     
+    console.log("❌ Transaction creation failed");
     return false;
   };
   

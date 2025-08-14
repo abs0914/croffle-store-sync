@@ -11,6 +11,12 @@ export default function Invoice() {
   const navigate = useNavigate();
   const location = useLocation();
   
+  console.log("🧾 Invoice page loaded with:", {
+    transactionId,
+    hasLocationState: !!location.state,
+    stateKeys: location.state ? Object.keys(location.state) : []
+  });
+  
   // Get transaction data from navigation state (immediate access)
   const [transaction, setTransaction] = useState<Transaction | null>(
     location.state?.transaction || null
@@ -20,8 +26,19 @@ export default function Invoice() {
   );
 
   useEffect(() => {
+    console.log("🔍 Invoice useEffect - checking transaction data:", {
+      hasTransaction: !!transaction,
+      hasTransactionId: !!transactionId,
+      transactionData: transaction ? {
+        id: transaction.id,
+        receiptNumber: transaction.receiptNumber,
+        total: transaction.total
+      } : null
+    });
+
     // If no transaction data was passed through navigation state, redirect to POS
     if (!transaction && !transactionId) {
+      console.log("❌ No transaction data found, redirecting to POS");
       toast.error("No transaction data found");
       navigate('/pos', { replace: true });
       return;
@@ -30,7 +47,7 @@ export default function Invoice() {
     // TODO: If transactionId is provided but no transaction state, 
     // we could fetch transaction data from the backend here
     if (transactionId && !transaction) {
-      console.log("Transaction ID provided, could fetch from backend:", transactionId);
+      console.log("🔄 Transaction ID provided but no state, could fetch from backend:", transactionId);
       // For now, redirect to POS if no state was passed
       toast.error("Transaction data not available");
       navigate('/pos', { replace: true });
