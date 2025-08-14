@@ -98,6 +98,17 @@ export class SMAccreditationTesting {
   }
 
   /**
+   * Generate consistent POS-style receipt number
+   */
+  private generateReceiptNumber(businessDate: string, sequenceNumber: number): string {
+    // Format: YYYYMMDD-XXXX-NNNNNN
+    const dateStr = format(new Date(businessDate), 'yyyyMMdd');
+    const terminalId = String(sequenceNumber).padStart(4, '0');
+    const receiptId = String(Math.floor(Math.random() * 900000) + 100000);
+    return `${dateStr}-${terminalId}-${receiptId}`;
+  }
+
+  /**
    * Scenario 1: Regular transactions with basic discounts
    * Business Date: 5 days ago (single date for this scenario)
    */
@@ -110,7 +121,7 @@ export class SMAccreditationTesting {
       description: 'Basic transactions with standard discounts and VAT',
       transactions: [
         {
-          receipt_number: 'SC1-001',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 1),
           business_date: scenarioDate,
           transaction_time: '10:30:00',
           items: [
@@ -127,7 +138,7 @@ export class SMAccreditationTesting {
           customer_type: 'regular'
         },
         {
-          receipt_number: 'SC1-002',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 2),
           business_date: scenarioDate,
           transaction_time: '14:15:00',
           items: [
@@ -142,7 +153,7 @@ export class SMAccreditationTesting {
           customer_type: 'regular'
         },
         {
-          receipt_number: 'SC1-003',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 3),
           business_date: scenarioDate,
           transaction_time: '16:45:00',
           items: [
@@ -181,7 +192,7 @@ export class SMAccreditationTesting {
       description: 'Transactions with senior citizen and PWD discounts (20% on VATable)',
       transactions: [
         {
-          receipt_number: 'SC2-001',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 1),
           business_date: scenarioDate,
           transaction_time: '11:00:00',
           items: [
@@ -198,7 +209,7 @@ export class SMAccreditationTesting {
           customer_type: 'senior'
         },
         {
-          receipt_number: 'SC2-002',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 2),
           business_date: scenarioDate,
           transaction_time: '16:30:00',
           items: [
@@ -238,7 +249,7 @@ export class SMAccreditationTesting {
       description: 'Transactions with various promotional campaigns and combo deals',
       transactions: [
         {
-          receipt_number: 'SC3-001',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 1),
           business_date: scenarioDate,
           transaction_time: '12:45:00',
           items: [
@@ -256,7 +267,7 @@ export class SMAccreditationTesting {
           customer_type: 'regular'
         },
         {
-          receipt_number: 'SC3-002',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 2),
           business_date: scenarioDate,
           transaction_time: '15:20:00',
           items: [
@@ -297,7 +308,7 @@ export class SMAccreditationTesting {
       description: 'Transactions with returns, voids, and refunds',
       transactions: [
         {
-          receipt_number: 'SC4-001',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 1),
           business_date: scenarioDate,
           transaction_time: '13:10:00',
           items: [
@@ -312,7 +323,7 @@ export class SMAccreditationTesting {
           customer_type: 'regular'
         },
         {
-          receipt_number: 'SC4-002-VOID',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 2) + '-VOID',
           business_date: scenarioDate,
           transaction_time: '13:15:00',
           items: [
@@ -326,7 +337,7 @@ export class SMAccreditationTesting {
           customer_type: 'regular'
         },
         {
-          receipt_number: 'SC4-003-RETURN',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 3) + '-RETURN',
           business_date: scenarioDate,
           transaction_time: '17:45:00',
           items: [
@@ -364,7 +375,7 @@ export class SMAccreditationTesting {
       description: 'Complex scenario with mixed customer types, multiple discounts, and promos',
       transactions: [
         {
-          receipt_number: 'SC5-001',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 1),
           business_date: scenarioDate,
           transaction_time: '09:30:00',
           items: [
@@ -384,7 +395,7 @@ export class SMAccreditationTesting {
           customer_type: 'senior'
         },
         {
-          receipt_number: 'SC5-002',
+          receipt_number: this.generateReceiptNumber(scenarioDate, 2),
           business_date: scenarioDate,
           transaction_time: '14:00:00',
           items: [
@@ -765,12 +776,16 @@ export class SMAccreditationTesting {
    */
   async cleanupTestData(storeId: string): Promise<void> {
     try {
-      // Delete test transactions (those with receipt numbers starting with 'SC')
+      // Get current date range for test data (last 10 days to be safe)
+      const startDate = format(subDays(new Date(), 10), 'yyyyMMdd');
+      const endDate = format(new Date(), 'yyyyMMdd');
+
+      // Delete test transactions (those with receipt numbers in our date format or old SC format)
       const { error: deleteError } = await supabase
         .from('transactions')
         .delete()
         .eq('store_id', storeId)
-        .like('receipt_number', 'SC%');
+        .or(`receipt_number.like.${startDate}%,receipt_number.like.${endDate}%,receipt_number.like.SC%`);
 
       if (deleteError) {
         console.error('Error cleaning up test transactions:', deleteError);
