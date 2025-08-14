@@ -50,6 +50,7 @@ export const ROUTE_PATHS = {
   
   // Store-Level Routes (Role-based access)
   POS: '/pos',
+  INVOICE: '/invoice', // Invoice page for completed transactions
   PRODUCTS: '/products', // Unified product management for stores
   INVENTORY: '/inventory', // Store inventory management
   ORDER_MANAGEMENT: '/order-management', // Store order management
@@ -82,6 +83,7 @@ export const ROUTE_PATHS = {
 const STORE_ROUTES = [
   ROUTE_PATHS.DASHBOARD,
   ROUTE_PATHS.POS,
+  ROUTE_PATHS.INVOICE,
   ROUTE_PATHS.PRODUCTS,
   ROUTE_PATHS.INVENTORY,
   ROUTE_PATHS.ORDER_MANAGEMENT,
@@ -147,6 +149,7 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
     manager: [
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
+      ROUTE_PATHS.INVOICE,
       ROUTE_PATHS.PRODUCTS,
       ROUTE_PATHS.INVENTORY,
       ROUTE_PATHS.ORDER_MANAGEMENT,
@@ -159,6 +162,7 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
     cashier: [
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
+      ROUTE_PATHS.INVOICE,
       ROUTE_PATHS.PRODUCTS,
       ROUTE_PATHS.CUSTOMERS,
       ROUTE_PATHS.EXPENSES,
@@ -231,6 +235,7 @@ export const getRouteAccessDescription = (route: string): string => {
     [ROUTE_PATHS.ROOT]: 'All authenticated users',
     [ROUTE_PATHS.DASHBOARD]: 'All authenticated users',
     [ROUTE_PATHS.POS]: 'All authenticated users with store access',
+    [ROUTE_PATHS.INVOICE]: 'All authenticated users with store access',
     [ROUTE_PATHS.PRODUCTS]: 'All authenticated users with store access',
     [ROUTE_PATHS.STOCK_ORDERS]: 'Managers and above with store access',
     [ROUTE_PATHS.INVENTORY]: 'Managers and above with store access',
