@@ -74,7 +74,9 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
         }
         
         await onPaymentComplete(paymentMethod, amountTendered, {
-          paymentTransactionId: paymentResult.transactionId
+          // Store payment transaction ID in a way that matches the expected interface
+          cardType: 'PaymentProcessed',
+          cardNumber: paymentResult.transactionId || 'PROCESSED'
         });
         
       } else if (paymentMethod === 'card') {
@@ -98,7 +100,8 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
         
         await onPaymentComplete(paymentMethod, total, {
           ...paymentDetails,
-          paymentTransactionId: paymentResult.transactionId
+          // Store payment transaction ID in card number field for simplicity
+          cardNumber: paymentResult.transactionId || paymentDetails.cardNumber
         });
         
       } else if (paymentMethod === 'e-wallet') {
@@ -122,7 +125,8 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
         
         await onPaymentComplete(paymentMethod, total, {
           ...paymentDetails,
-          paymentTransactionId: paymentResult.transactionId
+          // Store payment transaction ID in reference number
+          eWalletReferenceNumber: paymentResult.transactionId || paymentDetails.eWalletReferenceNumber
         });
       }
       
