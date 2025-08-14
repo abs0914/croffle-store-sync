@@ -72,14 +72,9 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
           return;
         }
         
-        const success = await onPaymentComplete(paymentMethod, amountTendered, {
+        await onPaymentComplete(paymentMethod, amountTendered, {
           paymentTransactionId: paymentResult.transactionId
         });
-        
-        if (!success) {
-          toast.error("Transaction processing failed");
-          return;
-        }
         
       } else if (paymentMethod === 'card') {
         paymentDetails = { 
@@ -100,15 +95,10 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
           return;
         }
         
-        const success = await onPaymentComplete(paymentMethod, total, {
+        await onPaymentComplete(paymentMethod, total, {
           ...paymentDetails,
           paymentTransactionId: paymentResult.transactionId
         });
-        
-        if (!success) {
-          toast.error("Transaction processing failed");
-          return;
-        }
         
       } else if (paymentMethod === 'e-wallet') {
         paymentDetails = { 
@@ -129,15 +119,10 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
           return;
         }
         
-        const success = await onPaymentComplete(paymentMethod, total, {
+        await onPaymentComplete(paymentMethod, total, {
           ...paymentDetails,
           paymentTransactionId: paymentResult.transactionId
         });
-        
-        if (!success) {
-          toast.error("Transaction processing failed");
-          return;
-        }
       }
       
       // Close dialog and reset state only on success
