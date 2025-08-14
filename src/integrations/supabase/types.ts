@@ -703,30 +703,39 @@ export type Database = {
       }
       customers: {
         Row: {
+          address: string | null
           created_at: string | null
           email: string | null
           id: string
+          loyalty_points: number | null
           name: string
           phone: string
           store_id: string | null
+          tin: string | null
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
+          loyalty_points?: number | null
           name: string
           phone: string
           store_id?: string | null
+          tin?: string | null
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
+          loyalty_points?: number | null
           name?: string
           phone?: string
           store_id?: string | null
+          tin?: string | null
           updated_at?: string | null
         }
         Relationships: [

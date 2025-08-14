@@ -56,6 +56,24 @@ export default function CustomerDetailView({ customer }: CustomerDetailViewProps
                 <p className="text-muted-foreground">{customer.email}</p>
               </div>
             )}
+            {customer.address && (
+              <div>
+                <p className="text-sm font-medium">Address</p>
+                <p className="text-muted-foreground">{customer.address}</p>
+              </div>
+            )}
+            {customer.tin && (
+              <div>
+                <p className="text-sm font-medium">TIN</p>
+                <p className="text-muted-foreground">{customer.tin}</p>
+              </div>
+            )}
+            {customer.loyaltyPoints !== undefined && customer.loyaltyPoints > 0 && (
+              <div>
+                <p className="text-sm font-medium">Loyalty Points</p>
+                <p className="text-muted-foreground">{customer.loyaltyPoints}</p>
+              </div>
+            )}
             {customer.storeName && (
               <div>
                 <p className="text-sm font-medium">Registered at</p>
