@@ -90,6 +90,11 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
 
   // Show date format based on report type
   const formatDateRange = () => {
+    // Safety check for undefined dateRange
+    if (!dateRange) {
+      return "Select date range";
+    }
+    
     if (
       reportType === 'x_reading' || 
       reportType === 'z_reading'

@@ -24,6 +24,13 @@ interface ReportContentProps {
 
 export function ReportContent({ reportType, storeId, selectedStoreId, dateRange }: ReportContentProps) {
   const isMobile = useIsMobile();
+  
+  // Safety check for undefined dateRange
+  if (!dateRange) {
+    console.error('ReportContent: dateRange is undefined');
+    return <ReportErrorState errorMessage="Date range not available" />;
+  }
+  
   const from = dateRange.from?.toISOString().split('T')[0];
   const to = dateRange.to?.toISOString().split('T')[0];
 
