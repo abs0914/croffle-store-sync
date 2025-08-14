@@ -24,7 +24,7 @@ interface CartViewProps {
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
   handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }) => void;
-  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any) => void;
+  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any) => Promise<boolean>;
   isShiftActive: boolean;
 }
 
@@ -122,10 +122,10 @@ export default function CartView({
     paymentMethod: 'cash' | 'card' | 'e-wallet',
     amountTendered: number,
     paymentDetails?: any
-  ) => {
+  ): Promise<boolean> => {
     if (!currentStore?.id) {
       toast.error('No store selected');
-      return;
+      return false;
     }
     
     try {
@@ -133,15 +133,19 @@ export default function CartView({
       const validationSuccess = await validateCartItems(cartItems);
       if (!validationSuccess) {
         toast.error('Inventory validation failed - insufficient stock');
-        return;
+        return false;
       }
 
       // Proceed with payment - inventory deduction will happen automatically in transaction creation
-      handlePaymentComplete(paymentMethod, amountTendered, paymentDetails);
-      setIsPaymentDialogOpen(false);
+      const success = await handlePaymentComplete(paymentMethod, amountTendered, paymentDetails);
+      if (success) {
+        setIsPaymentDialogOpen(false);
+      }
+      return success;
     } catch (error) {
       console.error('Error during payment validation:', error);
       toast.error('Payment validation failed');
+      return false;
     }
   };
   
@@ -242,10 +246,7 @@ export default function CartView({
           <div className="bg-white rounded-lg w-full max-w-lg">
             <PaymentProcessor
               total={calculations.finalTotal}
-              onPaymentComplete={async (paymentMethod, amountTendered, paymentDetails) => {
-                await handlePaymentCompleteWithInventoryValidation(paymentMethod, amountTendered, paymentDetails);
-                setIsPaymentDialogOpen(false);
-              }}
+              onPaymentComplete={handlePaymentCompleteWithInventoryValidation}
             />
             <div className="p-4 border-t">
               <button

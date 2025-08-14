@@ -112,12 +112,12 @@ export default function POS() {
   ) => {
     if (!currentStore) {
       toast.error("Please select a store first");
-      return;
+      return false;
     }
     
     if (!currentShift) {
       toast.error("Please start a shift first");
-      return;
+      return false;
     }
     
     try {
@@ -130,7 +130,7 @@ export default function POS() {
       name: item.product?.name || 'Unknown Product'
     }));
 
-      await processPayment(
+      const success = await processPayment(
         currentStore, 
         currentShift, 
         cartItemsForTransaction, 
@@ -141,9 +141,12 @@ export default function POS() {
         amountTendered,
         paymentDetails
       );
+
+      return success;
     } catch (error) {
       console.error("Payment processing failed:", error);
       toast.error("Failed to process payment");
+      return false;
     }
   };
 

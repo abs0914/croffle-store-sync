@@ -33,7 +33,7 @@ interface POSContentProps {
     cardNumber?: string;
     eWalletProvider?: string;
     eWalletReferenceNumber?: string;
-  }) => void;
+  }) => Promise<boolean>;
   addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   storeId?: string;
 }

@@ -20,7 +20,7 @@ interface PaymentProcessorProps {
       eWalletReferenceNumber?: string;
       paymentTransactionId?: string;
     }
-  ) => void;
+  ) => Promise<boolean>;
 }
 
 export default function PaymentProcessor({ total, onPaymentComplete }: PaymentProcessorProps) {
@@ -73,11 +73,17 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
           return;
         }
         
-        await onPaymentComplete(paymentMethod, amountTendered, {
+        // Wait for complete payment flow including navigation
+        const success = await onPaymentComplete(paymentMethod, amountTendered, {
           // Store payment transaction ID in a way that matches the expected interface
           cardType: 'PaymentProcessed',
           cardNumber: paymentResult.transactionId || 'PROCESSED'
         });
+
+        if (!success) {
+          toast.error("Failed to complete transaction");
+          return;
+        }
         
       } else if (paymentMethod === 'card') {
         paymentDetails = { 
@@ -98,11 +104,17 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
           return;
         }
         
-        await onPaymentComplete(paymentMethod, total, {
+        // Wait for complete payment flow including navigation
+        const success = await onPaymentComplete(paymentMethod, total, {
           ...paymentDetails,
           // Store payment transaction ID in card number field for simplicity
           cardNumber: paymentResult.transactionId || paymentDetails.cardNumber
         });
+
+        if (!success) {
+          toast.error("Failed to complete transaction");
+          return;
+        }
         
       } else if (paymentMethod === 'e-wallet') {
         paymentDetails = { 
@@ -123,15 +135,21 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
           return;
         }
         
-        await onPaymentComplete(paymentMethod, total, {
+        // Wait for complete payment flow including navigation
+        const success = await onPaymentComplete(paymentMethod, total, {
           ...paymentDetails,
           // Store payment transaction ID in reference number
           eWalletReferenceNumber: paymentResult.transactionId || paymentDetails.eWalletReferenceNumber
         });
+
+        if (!success) {
+          toast.error("Failed to complete transaction");
+          return;
+        }
       }
       
-      // Close dialog and reset state only on success
-      toast.success("Payment processed successfully");
+      // Payment completed successfully, now close dialog
+      toast.success("Payment completed - Redirecting to invoice...");
       setIsOpen(false);
       resetFormState();
       
