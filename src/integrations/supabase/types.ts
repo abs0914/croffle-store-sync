@@ -92,6 +92,39 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_rate_limits: {
+        Row: {
+          attempt_count: number | null
+          blocked_until: string | null
+          created_at: string | null
+          first_attempt: string | null
+          id: string
+          identifier: string
+          identifier_type: string
+          last_attempt: string | null
+        }
+        Insert: {
+          attempt_count?: number | null
+          blocked_until?: string | null
+          created_at?: string | null
+          first_attempt?: string | null
+          id?: string
+          identifier: string
+          identifier_type: string
+          last_attempt?: string | null
+        }
+        Update: {
+          attempt_count?: number | null
+          blocked_until?: string | null
+          created_at?: string | null
+          first_attempt?: string | null
+          id?: string
+          identifier?: string
+          identifier_type?: string
+          last_attempt?: string | null
+        }
+        Relationships: []
+      }
       bir_audit_logs: {
         Row: {
           cashier_name: string | null
@@ -3535,6 +3568,42 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_logs: {
+        Row: {
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          risk_level: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          risk_level?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          risk_level?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       shifts: {
         Row: {
           cashier_id: string | null
@@ -4553,6 +4622,10 @@ export type Database = {
           missing_products: number
         }[]
       }
+      assign_admin_role_securely: {
+        Args: { user_email: string }
+        Returns: boolean
+      }
       calculate_recipe_cost: {
         Args: { recipe_id: number }
         Returns: number
@@ -4567,6 +4640,16 @@ export type Database = {
       }
       can_access_user_record: {
         Args: { target_user_id: string; target_store_ids: string[] }
+        Returns: boolean
+      }
+      check_auth_rate_limit: {
+        Args: {
+          p_identifier: string
+          p_identifier_type?: string
+          p_max_attempts?: number
+          p_window_minutes?: number
+          p_block_minutes?: number
+        }
         Returns: boolean
       }
       cleanup_test_data: {
@@ -4774,6 +4857,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_email: {
+        Args: { email_address: string }
+        Returns: boolean
+      }
       is_admin_or_owner: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -4805,6 +4892,16 @@ export type Database = {
           p_terminal_id?: string
           p_transaction_id?: string
           p_receipt_number?: string
+        }
+        Returns: string
+      }
+      log_security_event: {
+        Args: {
+          p_event_type: string
+          p_user_id?: string
+          p_user_email?: string
+          p_event_data?: Json
+          p_risk_level?: string
         }
         Returns: string
       }
@@ -4912,6 +5009,10 @@ export type Database = {
           count_items: number
           details: string
         }[]
+      }
+      validate_password_strength: {
+        Args: { password: string }
+        Returns: boolean
       }
       validate_product_ingredients_availability: {
         Args: { product_id: string; quantity?: number }
