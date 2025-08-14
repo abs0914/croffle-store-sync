@@ -231,10 +231,9 @@ export default function POS() {
     }
   }, [completedTransaction?.id]); // Only depend on transaction ID to prevent loops
 
-  // If we have a completed transaction, show the receipt
+  // If we have a completed transaction, show the receipt immediately
   if (completedTransaction) {
-    // Use lastCompletedTransaction if available, otherwise use completedTransaction directly
-    const transactionForDisplay = lastCompletedTransaction || {
+    const transactionForDisplay = {
       ...completedTransaction,
       shiftId: currentShift?.id || '',
       storeId: currentStore?.id || '',
