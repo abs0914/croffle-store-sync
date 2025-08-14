@@ -147,92 +147,44 @@ export default function POS() {
     }
   };
 
-  // Use useEffect to handle completed transaction state updates
-  useEffect(() => {
-    if (completedTransaction) {
-      try {
-        console.log("POS: Processing completed transaction:", {
-          transaction: completedTransaction,
-          hasReceiptNumber: !!completedTransaction.receiptNumber,
-          hasItems: !!completedTransaction.items?.length,
-          hasCreatedAt: !!completedTransaction.createdAt,
-          selectedCustomer: selectedCustomer
-        });
-
-        // Validate required fields and handle errors asynchronously
-        if (!completedTransaction.receiptNumber) {
-          console.error("POS: Missing receipt number in completed transaction");
-          toast.error("Error: Missing receipt number");
-          setTimeout(() => startNewSale(), 100);
-          return;
-        }
-
-        if (!completedTransaction.items || completedTransaction.items.length === 0) {
-          console.error("POS: Missing items in completed transaction");
-          toast.error("Error: Missing transaction items");
-          setTimeout(() => startNewSale(), 100);
-          return;
-        }
-
-        if (!completedTransaction.createdAt) {
-          console.error("POS: Missing creation date in completed transaction");
-          toast.error("Error: Missing transaction date");
-          setTimeout(() => startNewSale(), 100);
-          return;
-        }
-
-        // Convert CartItems to TransactionItems for the receipt with error handling
-        const transactionItems: TransactionItem[] = completedTransaction.items.map((item, index) => {
-          if (!item.name || !item.productId) {
-            console.warn(`POS: Item ${index} missing required fields:`, item);
-          }
-          
-          return {
-            productId: item.productId || '',
-            variationId: item.variationId || undefined,
-            name: item.name || 'Unknown Item',
-            quantity: item.quantity || 1,
-            unitPrice: item.unitPrice || 0,
-            totalPrice: item.totalPrice || 0
-          };
-        });
-
-        // Convert CompletedTransaction to Transaction format for compatibility with safe defaults
-        const transactionForReceipt = {
-          ...completedTransaction,
-          shiftId: currentShift?.id || '',
-          storeId: currentStore?.id || '',
-          userId: currentShift?.userId || '',
-          paymentMethod: completedTransaction.paymentMethod || 'cash',
-          status: 'completed' as const,
-          createdAt: completedTransaction.createdAt,
-          receiptNumber: completedTransaction.receiptNumber,
-          items: transactionItems,
-          // Ensure all numeric fields have defaults
-          subtotal: completedTransaction.subtotal || 0,
-          tax: completedTransaction.tax || 0,
-          total: completedTransaction.total || 0,
-          discount: completedTransaction.discount || 0,
-          amountTendered: completedTransaction.amountTendered || 0,
-          change: completedTransaction.change || 0
-        };
-
-        console.log("POS: Transaction converted for receipt:", transactionForReceipt);
-
-        // Store last transaction for receipt viewing without causing re-renders
-        setLastCompletedTransaction(transactionForReceipt);
-        setLastTransactionCustomer(selectedCustomer);
-
-      } catch (error) {
-        console.error("POS: Error processing completed transaction:", error);
-        toast.error("Error displaying receipt. Starting new sale.");
-        setTimeout(() => startNewSale(), 100);
-      }
-    }
-  }, [completedTransaction?.id]); // Only depend on transaction ID to prevent loops
-
   // Note: Transaction completion now navigates to invoice page immediately
-  // This code is kept as fallback but shouldn't normally execute
+  // The completedTransaction handling is disabled to prevent interference with navigation
+  
+  // Store completed transaction for receipt modal only (when explicitly requested)
+  useEffect(() => {
+    if (completedTransaction && showReceiptModal) {
+      console.log("POS: Processing completed transaction for receipt modal only");
+      
+      // Convert for receipt display only
+      const transactionItems: TransactionItem[] = completedTransaction.items?.map((item, index) => ({
+        productId: item.productId || '',
+        variationId: item.variationId || undefined,
+        name: item.name || 'Unknown Item',
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || 0,
+        totalPrice: item.totalPrice || 0
+      })) || [];
+
+      const transactionForReceipt = {
+        ...completedTransaction,
+        shiftId: currentShift?.id || '',
+        storeId: currentStore?.id || '',
+        userId: currentShift?.userId || '',
+        paymentMethod: completedTransaction.paymentMethod || 'cash',
+        status: 'completed' as const,
+        items: transactionItems,
+        subtotal: completedTransaction.subtotal || 0,
+        tax: completedTransaction.tax || 0,
+        total: completedTransaction.total || 0,
+        discount: completedTransaction.discount || 0,
+        amountTendered: completedTransaction.amountTendered || 0,
+        change: completedTransaction.change || 0
+      };
+
+      setLastCompletedTransaction(transactionForReceipt);
+      setLastTransactionCustomer(selectedCustomer);
+    }
+  }, [completedTransaction?.id, showReceiptModal]); // Only process when receipt modal is requested
 
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background">
