@@ -6,6 +6,7 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
+import { FixJanaUserButton } from "@/components/debug/FixJanaUserButton";
 
 export default function Dashboard() {
   console.log('Dashboard component rendering...');
@@ -29,6 +30,7 @@ export default function Dashboard() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <FixJanaUserButton />
       <DashboardHeader />
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
