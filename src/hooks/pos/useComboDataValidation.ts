@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { UnifiedProduct } from "@/services/product/unifiedProductService";
+import { Product } from "@/types";
 import { Category } from "@/types/product";
 
 interface ComboDataValidationResult {
@@ -16,7 +16,7 @@ interface ComboDataValidationResult {
 const CROFFLE_CATEGORIES = ["Classic", "Glaze", "Fruity", "Premium", "Mini Croffle"];
 
 export function useComboDataValidation(
-  products: UnifiedProduct[], 
+  products: Product[], 
   categories: Category[]
 ): ComboDataValidationResult {
   const [dataError, setDataError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export function useComboDataValidation(
   }, [products, categories, isDataLoaded]);
 
   // Category products validation function
-  const getCategoryProducts = useCallback((categoryName: string): UnifiedProduct[] => {
+  const getCategoryProducts = useCallback((categoryName: string): Product[] => {
     try {
       // Validate inputs
       if (!categoryName || !Array.isArray(products) || !Array.isArray(categories)) {

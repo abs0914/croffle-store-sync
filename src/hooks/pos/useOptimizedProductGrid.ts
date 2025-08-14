@@ -1,7 +1,9 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useOptimizedDataFetch } from '@/hooks/useOptimizedDataFetch';
-import { fetchUnifiedProducts, UnifiedProduct } from '@/services/product/unifiedProductService';
+import { fetchProductCatalog } from '@/services/productCatalog/productCatalogService';
+import { ProductCatalog } from '@/services/productCatalog/types';
+import { Product } from '@/types';
 import { fetchCategories } from '@/services/categoryService';
 import { Category } from '@/types';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -29,9 +31,9 @@ export function useOptimizedProductGrid(storeId: string) {
     data: products = [],
     isLoading: isLoadingProducts,
     error: productsError
-  } = useOptimizedDataFetch<UnifiedProduct[]>(
+  } = useOptimizedDataFetch<ProductCatalog[]>(
     ['unified-products', storeId],
-    () => fetchUnifiedProducts(storeId),
+    () => fetchProductCatalog(storeId),
     {
       enabled: !!storeId,
       cacheConfig: {
@@ -62,13 +64,12 @@ export function useOptimizedProductGrid(storeId: string) {
 
     let filtered = products;
 
-    // Apply filters efficiently
     if (filters.activeOnly) {
-      filtered = filtered.filter(product => product.is_active || product.isActive);
+      filtered = filtered.filter(product => product.is_available);
     }
 
     if (filters.inStockOnly) {
-      filtered = filtered.filter(product => (product.stock_quantity || 0) > 0);
+      // ProductCatalog doesn't have stock_quantity, skip this filter for now
     }
 
     if (filters.categoryId !== 'all') {
@@ -78,13 +79,13 @@ export function useOptimizedProductGrid(storeId: string) {
     if (debouncedSearchTerm) {
       const searchLower = debouncedSearchTerm.toLowerCase();
       filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchLower) ||
+        product.product_name.toLowerCase().includes(searchLower) ||
         (product.description && product.description.toLowerCase().includes(searchLower))
       );
     }
 
-    // Sort by name for consistent ordering
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+    // Sort by product_name for consistent ordering
+    return filtered.sort((a, b) => a.product_name.localeCompare(b.product_name));
   }, [products, filters.activeOnly, filters.inStockOnly, filters.categoryId, debouncedSearchTerm]);
 
   // Memoized category lookup

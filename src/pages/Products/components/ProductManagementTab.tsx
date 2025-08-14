@@ -27,14 +27,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/contexts/StoreContext';
 import { formatCurrency } from '@/utils/format';
+import { fetchProductCatalog } from '@/services/productCatalog/productCatalogService';
 import { 
-  fetchUnifiedProducts, 
-  bulkUpdateProductStatus, 
-  bulkDeleteProducts,
   toggleProductAvailability,
-  deleteProduct,
-  UnifiedProduct 
-} from '@/services/product/unifiedProductService';
+  updateProductStatus,
+  deleteProduct
+} from '@/services/productCatalog/productCatalogService';
+import { Product } from '@/types';
 import { toast } from 'sonner';
 
 interface ProductManagementTabProps {
@@ -53,7 +52,7 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
   // Fetch products with inventory status
   const { data: products = [], isLoading, refetch } = useQuery({
     queryKey: ['unified-products', currentStore?.id],
-    queryFn: () => currentStore?.id ? fetchUnifiedProducts(currentStore.id) : Promise.resolve([]),
+    queryFn: () => currentStore?.id ? fetchProductCatalog(currentStore.id) : Promise.resolve([]),
     enabled: !!currentStore?.id,
     refetchInterval: 30000, // Refresh every 30 seconds for inventory status
   });
@@ -85,11 +84,12 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
     const allActive = selectedProductObjects.every(p => p.is_active);
     const newStatus = !allActive;
     
-    const success = await bulkUpdateProductStatus(selectedProducts, newStatus);
-    if (success) {
-      setSelectedProducts([]);
-      refetch();
+    // Use individual toggle calls for now instead of bulk operation
+    for (const productId of selectedProducts) {
+      await toggleProductAvailability(productId, newStatus);
     }
+    setSelectedProducts([]);
+    refetch();
   };
 
   const handleBulkDelete = async () => {
@@ -99,11 +99,12 @@ export const ProductManagementTab: React.FC<ProductManagementTabProps> = ({
       return;
     }
     
-    const success = await bulkDeleteProducts(selectedProducts);
-    if (success) {
-      setSelectedProducts([]);
-      refetch();
+    // Use individual delete calls for now instead of bulk operation
+    for (const productId of selectedProducts) {
+      await deleteProduct(productId);
     }
+    setSelectedProducts([]);
+    refetch();
   };
 
   const handleToggleProductStatus = async (productId: string, currentStatus: boolean) => {

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import { Product, Category } from "@/types/product";
-import { UnifiedProduct } from "@/services/product/unifiedProductService";
+import { Product, Category } from "@/types";
 
 export function useComboService() {
   // Combo pricing rules based on the provided table
@@ -31,7 +30,7 @@ export function useComboService() {
     return comboPricing[croffleCategory as keyof typeof comboPricing]?.[espressoType as "Hot Espresso" | "Cold Espresso"] || 0;
   };
 
-  const getEspressoProducts = (products: UnifiedProduct[], categories: Category[]): UnifiedProduct[] => {
+  const getEspressoProducts = (products: Product[], categories: Category[]): Product[] => {
     console.log('🔍 getEspressoProducts debug:', {
       productsCount: products.length,
       categoriesCount: categories.length,
@@ -40,7 +39,7 @@ export function useComboService() {
     });
     
     // Try multiple approaches to find espresso products
-    let espressoProducts: UnifiedProduct[] = [];
+    let espressoProducts: Product[] = [];
     
     // Approach 1: Find by category name "Espresso"
     const espressoCategory = categories.find(c => c.name === "Espresso");
