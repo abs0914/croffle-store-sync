@@ -73,25 +73,30 @@ export default function Invoice() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-card border-b border-border shadow-sm p-4">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          <div className="flex items-center gap-4">
+      <div className="bg-card border-b border-border shadow-sm p-3 md:p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between max-w-4xl mx-auto">
+          {/* Left section - Back button and title */}
+          <div className="flex items-center gap-3 md:gap-4 min-w-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleBackToPOS}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 shrink-0"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to POS
+              <span className="hidden sm:inline">Back to POS</span>
+              <span className="sm:hidden">Back</span>
             </Button>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Receipt className="h-4 w-4" />
-              <span className="text-sm font-medium">Invoice #{transaction.receiptNumber}</span>
+            <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+              <Receipt className="h-4 w-4 shrink-0" />
+              <span className="text-sm font-medium truncate">
+                Invoice #{transaction.receiptNumber}
+              </span>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          {/* Right section - Action buttons */}
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
@@ -99,9 +104,9 @@ export default function Invoice() {
               className="flex items-center gap-2"
             >
               <Printer className="h-4 w-4" />
-              Print
+              <span className="hidden sm:inline">Print</span>
             </Button>
-            <Button onClick={handleNewSale}>
+            <Button onClick={handleNewSale} className="whitespace-nowrap">
               New Sale
             </Button>
           </div>
