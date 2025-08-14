@@ -527,8 +527,8 @@ export class SMAccreditationTesting {
         // Use the test shift ID we created earlier
         const shiftId = testShiftId;
 
-        // Insert transaction with valid shift_id
-        const { error: transactionError } = await supabase
+        // Insert transaction with valid shift_id and get the ID back
+        const { data: transactionData, error: transactionError } = await supabase
           .from('transactions')
           .insert({
             store_id: storeId,
@@ -552,11 +552,38 @@ export class SMAccreditationTesting {
               (transaction.customer_type === 'pwd' ? 'PWD001' : null),
             items: JSON.stringify(transaction.items),
             user_id: user.id
-          });
+          })
+          .select('id')
+          .single();
 
         if (transactionError) {
           console.error('Error creating transaction:', transactionError);
           throw new Error(`Failed to create transaction: ${transactionError.message}`);
+        }
+
+        const transactionId = transactionData.id;
+
+        // Create transaction items for each product in the transaction
+        for (let itemIndex = 0; itemIndex < transaction.items.length; itemIndex++) {
+          const item = transaction.items[itemIndex];
+          
+          const { error: itemError } = await supabase
+            .from('transaction_items')
+            .insert({
+              transaction_id: transactionId,
+              product_id: shiftId, // Using shift_id as placeholder product_id
+              name: item.description,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              total_price: item.quantity * item.unit_price,
+              category_name: 'Test Item',
+              product_type: item.vat_exempt ? 'vat_exempt' : 'regular'
+            });
+
+          if (itemError) {
+            console.error('Error inserting transaction item:', itemError);
+            // Continue with other items even if one fails
+          }
         }
       }
     } catch (error) {
