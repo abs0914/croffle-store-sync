@@ -62,21 +62,12 @@ export const createTransaction = async (
     const receiptPrefix = format(now, "yyyyMMdd");
     const timestamp = format(now, "HHmmss");
     
-    // Query to get the count of transactions for today to generate sequential receipt number
-    const { count, error: countError } = await supabase
-      .from("transactions")
-      .select("id", { count: 'exact', head: true })
-      .gte('created_at', format(now, "yyyy-MM-dd"))
-      .lt('created_at', format(new Date(now.getTime() + 86400000), "yyyy-MM-dd"));
+    // Optimized receipt number generation - avoid counting for performance
+    const randomSuffix = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+    const receiptNumber = `${receiptPrefix}-${randomSuffix}-${timestamp}`;
     
-    if (countError) {
-      throw new Error(countError.message);
-    }
-    
-    const receiptNumber = `${receiptPrefix}-${String(count! + 1).padStart(4, '0')}-${timestamp}`;
-    
-    // Get next sequence number (simplified approach)
-    const sequenceNumber = count! + 1;
+    // Use timestamp-based sequence for better performance
+    const sequenceNumber = parseInt(timestamp);
     
     // Calculate BIR-compliant VAT breakdown (12% standard rate)
     const grossAmount = transaction.subtotal;

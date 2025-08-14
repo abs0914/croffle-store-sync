@@ -196,8 +196,7 @@ export class PaymentValidationService {
     try {
       console.log('🔄 Processing payment:', { paymentMethod, total, paymentDetails });
       
-      // Simulate payment processing delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Remove artificial delay for immediate processing
       
       // Mock payment processing logic
       // In production, this would integrate with actual payment gateways

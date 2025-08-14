@@ -27,8 +27,8 @@ export const deductIngredientsForProduct = async (
       recipeId: productInfo?.recipe_id 
     });
 
-    // Get product ingredients (primary path)
-    const { data: productIngredients, error: productError } = await supabase
+    // Optimized ingredient fetching with single query using JOINs
+    const { data: ingredients, error: ingredientsError } = await supabase
       .from('product_ingredients')
       .select(`
         *,
@@ -36,44 +36,35 @@ export const deductIngredientsForProduct = async (
       `)
       .eq('product_catalog_id', productId);
 
-    if (productError) throw productError;
+    if (ingredientsError) throw ingredientsError;
 
-    let ingredients = productIngredients || [];
+    let finalIngredients = ingredients || [];
 
-    // If no product ingredients found, check recipe ingredients (fallback path)
-    if (ingredients.length === 0) {
+    // If no product ingredients found, check recipe ingredients with optimized query
+    if (finalIngredients.length === 0) {
       console.log('No product ingredients found, checking recipe ingredients...');
       
-      const { data: productCatalog, error: catalogError } = await supabase
-        .from('product_catalog')
-        .select('recipe_id')
-        .eq('id', productId)
-        .single();
+      const { data: recipeIngredients, error: recipeError } = await supabase
+        .from('recipe_ingredients')
+        .select(`
+          *,
+          inventory_item:inventory_stock(*),
+          recipe:recipes!inner(id, products:product_catalog!recipe_id(id))
+        `)
+        .eq('recipe.products.id', productId);
 
-      if (catalogError) throw catalogError;
+      if (recipeError) throw recipeError;
 
-      if (productCatalog?.recipe_id) {
-        const { data: recipeIngredients, error: recipeError } = await supabase
-          .from('recipe_ingredients')
-          .select(`
-            *,
-            inventory_item:inventory_stock(*)
-          `)
-          .eq('recipe_id', productCatalog.recipe_id);
-
-        if (recipeError) throw recipeError;
-
-        // Map recipe ingredients to product ingredient format
-        ingredients = recipeIngredients?.map(ri => ({
-          ...ri,
-          product_catalog_id: productId,
-          required_quantity: ri.quantity,
-          inventory_stock_id: ri.inventory_stock_id
-        })) || [];
-      }
+      // Map recipe ingredients to product ingredient format
+      finalIngredients = recipeIngredients?.map(ri => ({
+        ...ri,
+        product_catalog_id: productId,
+        required_quantity: ri.quantity,
+        inventory_stock_id: ri.inventory_stock_id
+      })) || [];
     }
 
-    if (ingredients.length === 0) {
+    if (finalIngredients.length === 0) {
       console.warn('⚠️ No ingredients configured for product:', {
         productId,
         productName: productInfo?.product_name,
@@ -83,40 +74,69 @@ export const deductIngredientsForProduct = async (
       return false; // Prevent sale of products without ingredient configuration
     }
 
-    console.log(`✅ Found ${ingredients.length} ingredients for product "${productInfo?.product_name}"`);
+    console.log(`✅ Found ${finalIngredients.length} ingredients for product "${productInfo?.product_name}"`);
 
-    // Process each ingredient deduction
-    for (const ingredient of ingredients) {
+    // Batch validation: Check all ingredients first to fail fast
+    const insufficientStock = [];
+    const updates = [];
+    
+    for (const ingredient of finalIngredients) {
       const deductionAmount = ingredient.required_quantity * quantity;
       const currentStock = ingredient.inventory_item?.stock_quantity || 0;
       const newStock = currentStock - deductionAmount;
 
-      console.log(`🔍 Processing ingredient: ${ingredient.inventory_item?.item}`, {
-        required: ingredient.required_quantity,
-        quantity,
-        deductionAmount,
-        currentStock,
-        newStock
-      });
-
       if (newStock < 0) {
-        console.error(`❌ Insufficient stock for ingredient:`, {
+        insufficientStock.push({
           ingredient: ingredient.inventory_item?.item,
           required: deductionAmount,
           available: currentStock,
           shortfall: Math.abs(newStock)
         });
-        toast.error(`Insufficient stock for ${ingredient.inventory_item?.item || 'ingredient'}. Need ${deductionAmount}, have ${currentStock}`);
-        return false;
+      } else {
+        updates.push({
+          id: ingredient.inventory_stock_id,
+          newStock,
+          deductionAmount,
+          currentStock,
+          item: ingredient.inventory_item?.item,
+          unit: ingredient.unit
+        });
       }
+    }
 
-      // Update inventory stock
-      const { error: updateError } = await supabase
+    // Fail fast if any ingredient has insufficient stock
+    if (insufficientStock.length > 0) {
+      const errorMsg = insufficientStock.map(item => 
+        `${item.ingredient}: need ${item.required}, have ${item.available}`
+      ).join('; ');
+      console.error('❌ Insufficient stock for ingredients:', insufficientStock);
+      toast.error(`Insufficient stock: ${errorMsg}`);
+      return false;
+    }
+
+    // Batch update all inventory items
+    const updatePromises = updates.map(update => 
+      supabase
         .from('inventory_stock')
-        .update({ stock_quantity: newStock })
-        .eq('id', ingredient.inventory_stock_id);
+        .update({ stock_quantity: update.newStock })
+        .eq('id', update.id)
+    );
 
-      if (updateError) throw updateError;
+    const updateResults = await Promise.allSettled(updatePromises);
+    const failedUpdates = updateResults.filter(result => result.status === 'rejected');
+    
+    if (failedUpdates.length > 0) {
+      console.error('❌ Some inventory updates failed:', failedUpdates);
+      throw new Error(`Failed to update ${failedUpdates.length} inventory items`);
+    }
+
+    // Process movement records
+    for (const update of updates) {
+      console.log(`🔍 Processing movement for: ${update.item}`, {
+        deductionAmount: update.deductionAmount,
+        currentStock: update.currentStock,
+        newStock: update.newStock
+      });
 
       // Create movement record only if transactionId is a valid UUID (not temporary)
       const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId);
@@ -126,15 +146,15 @@ export const deductIngredientsForProduct = async (
         const { error: movementError } = await supabase
           .from('inventory_movements')
           .insert({
-            inventory_stock_id: ingredient.inventory_stock_id,
+            inventory_stock_id: update.id,
             movement_type: 'sale_deduction',
-            quantity_change: -deductionAmount,
-            previous_quantity: currentStock,
-            new_quantity: newStock,
+            quantity_change: -update.deductionAmount,
+            previous_quantity: update.currentStock,
+            new_quantity: update.newStock,
             created_by: (await supabase.auth.getUser()).data.user?.id,
             reference_type: 'transaction',
             reference_id: transactionId,
-            notes: `Product sale: ${ingredient.inventory_item?.item} (${deductionAmount} ${ingredient.unit})`
+            notes: `Product sale: ${update.item} (${update.deductionAmount} ${update.unit})`
           });
 
         if (movementError) {
