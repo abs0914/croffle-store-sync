@@ -53,54 +53,95 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
     setIsProcessing(true);
 
     try {
+      // Import and use payment validation service
+      const { PaymentValidationService } = await import('@/services/payment/paymentValidationService');
+      
       let paymentDetails;
       
       if (paymentMethod === 'cash') {
-        if (amountTendered < total) {
-          toast.error("Cash amount must be equal to or greater than the total.");
+        // Validate cash payment
+        const validation = PaymentValidationService.validateCashPayment(total, amountTendered);
+        if (!validation.isValid) {
+          return; // Errors already shown via toast
+        }
+        
+        // Process payment
+        const paymentResult = await PaymentValidationService.processPayment('cash', total);
+        if (!paymentResult.success) {
+          toast.error(`Payment failed: ${paymentResult.error}`);
           return;
         }
         
-        await onPaymentComplete(paymentMethod, amountTendered);
+        const success = await onPaymentComplete(paymentMethod, amountTendered, {
+          paymentTransactionId: paymentResult.transactionId
+        });
+        
+        if (!success) {
+          toast.error("Transaction processing failed");
+          return;
+        }
         
       } else if (paymentMethod === 'card') {
-        if (!cardType.trim()) {
-          toast.error("Please select a card type.");
-          return;
-        }
-        if (!cardNumber.trim() || cardNumber.length < 4) {
-          toast.error("Please enter at least the last 4 digits of the card.");
-          return;
-        }
-        
         paymentDetails = { 
           cardType: cardType.trim(), 
           cardNumber: cardNumber.slice(-4).trim() 
         };
         
-        console.log('Processing card payment with details:', paymentDetails);
-        await onPaymentComplete(paymentMethod, total, paymentDetails);
+        // Validate card payment
+        const validation = PaymentValidationService.validateCardPayment(total, paymentDetails);
+        if (!validation.isValid) {
+          return; // Errors already shown via toast
+        }
+        
+        // Process payment
+        const paymentResult = await PaymentValidationService.processPayment('card', total, paymentDetails);
+        if (!paymentResult.success) {
+          toast.error(`Payment failed: ${paymentResult.error}`);
+          return;
+        }
+        
+        const success = await onPaymentComplete(paymentMethod, total, {
+          ...paymentDetails,
+          paymentTransactionId: paymentResult.transactionId
+        });
+        
+        if (!success) {
+          toast.error("Transaction processing failed");
+          return;
+        }
         
       } else if (paymentMethod === 'e-wallet') {
-        if (!eWalletProvider.trim()) {
-          toast.error("Please select an e-wallet provider.");
-          return;
-        }
-        if (!eWalletReferenceNumber.trim()) {
-          toast.error("Please enter the reference number.");
-          return;
-        }
-        
         paymentDetails = { 
           eWalletProvider: eWalletProvider.trim(), 
           eWalletReferenceNumber: eWalletReferenceNumber.trim() 
         };
         
-        console.log('Processing e-wallet payment with details:', paymentDetails);
-        await onPaymentComplete(paymentMethod, total, paymentDetails);
+        // Validate e-wallet payment
+        const validation = PaymentValidationService.validateEWalletPayment(total, paymentDetails);
+        if (!validation.isValid) {
+          return; // Errors already shown via toast
+        }
+        
+        // Process payment
+        const paymentResult = await PaymentValidationService.processPayment('e-wallet', total, paymentDetails);
+        if (!paymentResult.success) {
+          toast.error(`Payment failed: ${paymentResult.error}`);
+          return;
+        }
+        
+        const success = await onPaymentComplete(paymentMethod, total, {
+          ...paymentDetails,
+          paymentTransactionId: paymentResult.transactionId
+        });
+        
+        if (!success) {
+          toast.error("Transaction processing failed");
+          return;
+        }
       }
       
       // Close dialog and reset state only on success
+      toast.success("Payment processed successfully");
       setIsOpen(false);
       resetFormState();
       
