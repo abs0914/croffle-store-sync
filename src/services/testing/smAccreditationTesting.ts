@@ -524,11 +524,15 @@ export class SMAccreditationTesting {
         const promoDetails = transaction.promos.length > 0 ? 
           SMAccreditationService.formatPromoDetails(transaction.promos) : null;
 
+        // Use the test shift ID we created earlier
+        const shiftId = testShiftId;
+
         // Insert transaction with valid shift_id
         const { error: transactionError } = await supabase
           .from('transactions')
           .insert({
             store_id: storeId,
+            shift_id: shiftId,
             receipt_number: transaction.receipt_number,
             total: Math.round((netAmount || 0) * 100) / 100,
             subtotal: Math.round((grossAmount || 0) * 100) / 100,
@@ -570,17 +574,9 @@ export class SMAccreditationTesting {
       const monthYear = format(currentDate, 'MM_yyyy');
       
       // Export with SM-compliant naming convention
-      const transactions = await this.smService.exportTransactionsCSV(
-        storeId, 
-        30,
-        `${monthYear}_transactions.csv`
-      );
+      const transactions = await this.smService.exportTransactionsCSV(storeId);
       
-      const details = await this.smService.exportTransactionDetailsCSV(
-        storeId,
-        30,
-        `${monthYear}_transactiondetails.csv`
-      );
+      const details = await this.smService.exportTransactionDetailsCSV(storeId);
 
       return { transactions, details };
     } catch (error) {
@@ -766,6 +762,66 @@ export class SMAccreditationTesting {
       console.log('Test data cleaned up successfully');
     } catch (error) {
       console.error('Error during test data cleanup:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Run all tests method expected by TestRunner component
+   */
+  async runAllTests(storeId: string): Promise<{
+    scenarios: Array<{
+      scenario: TestScenario;
+      validation: ValidationResult;
+      csvFiles: { transactions: string; transactionDetails: string; filename: string; };
+    }>;
+    overallPassed: boolean;
+  }> {
+    try {
+      console.log('Starting SM Accreditation test suite...');
+      
+      const scenarios = this.getTestScenarios();
+      const results = [];
+      let allPassed = true;
+
+      for (const scenario of scenarios) {
+        console.log(`Running scenario: ${scenario.name}`);
+        
+        // Create test data for this scenario
+        await this.createTestData(scenario, storeId);
+        
+        // Export CSV files
+        const csvFiles = await this.exportTestDataToCSV(storeId);
+        
+        // Validate the results
+        const validation = await this.validateCSVFiles(csvFiles.transactions, csvFiles.details);
+        
+        if (!validation.passed) {
+          allPassed = false;
+        }
+
+        results.push({
+          scenario,
+          validation,
+          csvFiles: {
+            transactions: csvFiles.transactions,
+            transactionDetails: csvFiles.details,
+            filename: `${format(new Date(), 'MM_yyyy')}_scenario_${scenario.id}`
+          }
+        });
+        
+        // Clean up test data for this scenario
+        await this.cleanupTestData(storeId);
+      }
+
+      console.log('SM Accreditation test suite completed');
+      
+      return {
+        scenarios: results,
+        overallPassed: allPassed
+      };
+    } catch (error) {
+      console.error('Error running all tests:', error);
       throw error;
     }
   }
