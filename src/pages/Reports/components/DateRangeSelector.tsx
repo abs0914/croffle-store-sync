@@ -26,14 +26,9 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
     
     switch (reportType) {
       case 'x_reading':
-        // Today only
-        setDateRange({
-          from: today,
-          to: today
-        });
-        break;
       case 'z_reading':
-        // Today by default, but allow selection
+      case 'daily_shift':
+        // Single date reports - Today only
         setDateRange({
           from: today,
           to: today
@@ -97,7 +92,8 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
     
     if (
       reportType === 'x_reading' || 
-      reportType === 'z_reading'
+      reportType === 'z_reading' ||
+      reportType === 'daily_shift'
     ) {
       // Single date format
       return dateRange.from ? format(dateRange.from, 'PPP') : "Select date";
@@ -114,7 +110,8 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
   };
 
   const isDateRangeSelectable = ![
-    'x_reading'
+    'x_reading',
+    'daily_shift'
   ].includes(reportType);
 
   return (
