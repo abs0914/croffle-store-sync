@@ -65,17 +65,18 @@ export const voidTransaction = async (data: VoidTransactionData): Promise<boolea
       throw new Error(updateError.message);
     }
 
-    // Create void audit record - temporarily commented out until types are regenerated
-    console.log('Creating void audit record:', {
+    // Create void audit record - log for now until audit table is properly integrated
+    console.log('Void audit record:', {
       transaction_id: data.transactionId,
       voided_by: data.voidedBy,
       void_reason: data.reason,
       reason_category: data.reasonCategory,
       notes: data.notes,
-      original_amount: transaction.total
+      original_amount: transaction.total,
+      voided_at: new Date().toISOString()
     });
 
-    // Audit record creation will be implemented after types are regenerated
+    
 
     // Reverse inventory deductions
     try {
@@ -121,25 +122,35 @@ export const voidTransaction = async (data: VoidTransactionData): Promise<boolea
  */
 const reverseInventoryDeductions = async (transaction: any) => {
   try {
-    const items = JSON.parse(transaction.items);
+    const items = JSON.parse(String(transaction.items));
     
-    // Import the inventory service to reverse the deductions
-    const { processProductSale } = await import('@/services/productCatalog/inventoryIntegrationService');
-
-    // For now, we'll log the inventory reversal requirement
-    // In a production system, you'd implement proper inventory reversal
-    console.log('Inventory reversal needed for voided transaction:', {
+    console.log('Processing inventory reversal for voided transaction:', {
       transactionId: transaction.id,
-      items: items.map((item: any) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        name: item.name
-      }))
+      itemCount: items.length
     });
 
-    // TODO: Implement proper inventory reversal logic
-    // This would typically involve adding back the quantities that were deducted
-    
+    // For each item, we need to add back the quantity that was deducted
+    for (const item of items) {
+      try {
+        // Import the inventory service to reverse the deductions
+        const { processProductSale } = await import('@/services/productCatalog/inventoryIntegrationService');
+        
+        // We can't directly reverse, so we'll log the requirement for now
+        // In a production system, you'd implement proper inventory reversal
+        console.log(`Inventory reversal needed for item:`, {
+          productId: item.productId,
+          quantity: item.quantity,
+          name: item.name
+        });
+        
+        // TODO: Implement proper inventory reversal logic
+        // This would typically involve adding back the quantities that were deducted
+        
+      } catch (itemError) {
+        console.warn(`Failed to process inventory reversal for product ${item.productId}:`, itemError);
+        // Continue with other items
+      }
+    }
   } catch (error) {
     console.error('Error in inventory reversal process:', error);
     // Don't throw to avoid blocking the void process

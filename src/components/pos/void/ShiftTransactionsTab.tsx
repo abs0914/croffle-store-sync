@@ -151,7 +151,7 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
                     {/* Items Summary */}
                     <div className="bg-muted/50 p-2 rounded text-sm">
                       <div className="font-medium mb-1">Items:</div>
-                      {JSON.parse(transaction.items as string).map((item: any, index: number) => (
+                      {JSON.parse(String(transaction.items)).map((item: any, index: number) => (
                         <div key={index} className="flex justify-between">
                           <span>{item.name} x{item.quantity}</span>
                           <span>{formatCurrency(item.totalPrice)}</span>
