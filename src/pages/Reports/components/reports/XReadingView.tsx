@@ -75,6 +75,18 @@ export function XReadingView({ storeId, date }: XReadingViewProps) {
           <div className="mb-4">
             <p><strong>Cashier:</strong> {data.cashierName}</p>
             <p><strong>Terminal:</strong> {data.terminal}</p>
+            <div className="mt-2 p-2 bg-muted rounded text-sm">
+              {data.cashierName === "No Active Shift" ? (
+                <div className="text-amber-600">
+                  ⚠️ <strong>Warning:</strong> No active shift found for this date. 
+                  This report shows completed transactions only.
+                </div>
+              ) : (
+                <div className="text-green-600">
+                  ✓ <strong>Active Shift:</strong> Report generated from current shift data.
+                </div>
+              )}
+            </div>
           </div>
           
           <Separator className="my-4" />
@@ -166,6 +178,10 @@ export function XReadingView({ storeId, date }: XReadingViewProps) {
           <div className="text-center mt-8 text-sm">
             <p>THIS IS NOT A VALID RECEIPT FOR ACCOUNTING PURPOSES</p>
             <p>X-Reading is for monitoring purposes only</p>
+            <div className="mt-4 text-xs text-muted-foreground">
+              <p>Bureau of Internal Revenue (BIR) Compliance Report</p>
+              <p>For internal monitoring and audit purposes</p>
+            </div>
           </div>
         </CardContent>
       </Card>
