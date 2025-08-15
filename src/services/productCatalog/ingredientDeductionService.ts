@@ -74,6 +74,17 @@ export const deductIngredientsForProduct = async (
     }
 
     console.log(`✅ Found ${finalIngredients.length} ingredients for product "${productInfo?.product_name}"`);
+    
+    // Debug: Log first few ingredients to understand the multiplication
+    if (finalIngredients.length > 10) {
+      console.warn('🔍 Debug: Too many ingredients found, first 5:', finalIngredients.slice(0, 5).map(ing => ({
+        id: ing.id,
+        inventory_stock_id: ing.inventory_stock_id,
+        quantity: ing.required_quantity,
+        item_name: ing.inventory_item?.item,
+        store_id: ing.inventory_item?.store_id
+      })));
+    }
 
     // Batch validation: Check all ingredients first to fail fast
     const insufficientStock = [];

@@ -23,10 +23,10 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
     try {
       // Fetch product with category information
       const { data: product, error } = await supabase
-        .from('products')
+        .from('product_catalog')
         .select(`
           id,
-          name,
+          product_name,
           category_id,
           categories (
             id,
@@ -43,7 +43,7 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
       const enrichedItem: DetailedTransactionItem = {
         product_id: item.productId,
         variation_id: item.variationId || undefined,
-        name: item.variation ? `${item.product.name} (${item.variation.name})` : item.product.name,
+        name: item.variation ? `${item.product.name} (${item.variation.name})` : (product?.product_name || item.product.name),
         quantity: item.quantity,
         unit_price: item.price,
         total_price: item.price * item.quantity,
