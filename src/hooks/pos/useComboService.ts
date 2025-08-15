@@ -62,7 +62,7 @@ export function useComboService() {
         p.is_active && p.name && (
           p.name.toLowerCase().includes('espresso') ||
           p.name.toLowerCase().includes('americano') ||
-          p.name.toLowerCase().includes('latte') ||
+          (p.name.toLowerCase().includes('latte') && !p.name.toLowerCase().includes('caramel')) ||
           p.name.toLowerCase().includes('cappuccino') ||
           p.name.toLowerCase().includes('macchiato')
         )
