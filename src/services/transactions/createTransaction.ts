@@ -67,9 +67,26 @@ export const createTransaction = async (
     } else {
       // Use sequential validation for small orders
       for (const item of transaction.items) {
+        console.log('🔍 Validating product for sale:', {
+          productId: item.productId,
+          productName: item.name,
+          quantity: item.quantity,
+          price: item.price
+        });
+        
         const validation = await validateProductForSale(item.productId, item.quantity);
+        console.log('✅ Product validation result:', validation);
         
         if (!validation.isValid) {
+          console.error('❌ Product validation failed:', {
+            productId: item.productId,
+            productName: validation.productName,
+            errors: validation.errors,
+            lowStockIngredients: validation.lowStockIngredients,
+            missingIngredients: validation.missingIngredients,
+            fullValidation: validation
+          });
+          
           const errorMessage = `Cannot sell "${validation.productName}": ${validation.errors.join(', ')}`;
           if (validation.lowStockIngredients.length > 0) {
             toast.error(`${errorMessage}. Low stock: ${validation.lowStockIngredients.join(', ')}`);
