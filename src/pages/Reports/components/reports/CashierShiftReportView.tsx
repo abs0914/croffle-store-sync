@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,15 +13,35 @@ import { formatCurrency } from "@/utils/format";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
-export default function CashierShiftReportView() {
+interface CashierShiftReportViewProps {
+  dateRange?: {
+    from: Date | undefined;
+    to: Date | undefined;
+  };
+}
+
+export default function CashierShiftReportView({ dateRange: propDateRange }: CashierShiftReportViewProps) {
   const { user } = useAuth();
   const { currentStore } = useStore();
-  // Default to yesterday's date since shifts are typically viewed the next day
-  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+  
+  // Use the dateRange from props if available, otherwise default to yesterday
+  const getInitialDate = () => {
+    if (propDateRange?.from) {
+      return propDateRange.from;
+    }
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     return yesterday;
-  });
+  };
+  
+  const [selectedDate, setSelectedDate] = useState<Date>(getInitialDate);
+
+  // Update selectedDate when propDateRange changes
+  useEffect(() => {
+    if (propDateRange?.from) {
+      setSelectedDate(propDateRange.from);
+    }
+  }, [propDateRange?.from]);
 
   const { data: reportData, isLoading, error } = useQuery({
     queryKey: ["cashier-shift-report", user?.id, currentStore?.id, selectedDate],

@@ -51,7 +51,7 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
         dateRange={dateRange} 
       />;
     case 'daily_shift':
-      return <CashierShiftReportView />;
+      return <CashierShiftReportView dateRange={dateRange} />;
     case 'inventory_status':
       return <CashierInventoryReportView />;
     default:
