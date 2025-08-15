@@ -179,10 +179,12 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
 };
 
 /**
- * Check if a user can access admin panel
+ * Check if a user can access admin panel (updated with new permissions)
  */
 export const canAccessAdminPanel = (userRole: UserRole | undefined): boolean => {
-  return userRole === 'admin' || userRole === 'owner';
+  // Import dynamically to avoid circular dependencies
+  const { hasAnyAdminAccess } = require('@/utils/adminPermissions');
+  return hasAnyAdminAccess(userRole);
 };
 
 /**
@@ -200,17 +202,21 @@ export const canAccessRecipeManagement = (userRole: UserRole | undefined): boole
 };
 
 /**
- * Check if a user can access commissary inventory (admin-only)
+ * Check if a user can access commissary inventory (updated with new permissions)
  */
 export const canAccessCommissary = (userRole: UserRole | undefined): boolean => {
-  return userRole === 'admin' || userRole === 'owner';
+  // Import dynamically to avoid circular dependencies
+  const { hasAdminSectionAccess } = require('@/utils/adminPermissions');
+  return hasAdminSectionAccess(userRole, 'commissary-inventory');
 };
 
 /**
- * Check if a user can access production management (admin-only)
+ * Check if a user can access production management (updated with new permissions)
  */
 export const canAccessProduction = (userRole: UserRole | undefined): boolean => {
-  return userRole === 'admin' || userRole === 'owner';
+  // Import dynamically to avoid circular dependencies
+  const { hasAdminSectionAccess } = require('@/utils/adminPermissions');
+  return hasAdminSectionAccess(userRole, 'production-management');
 };
 
 /**

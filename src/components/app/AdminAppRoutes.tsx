@@ -50,7 +50,7 @@ export const AdminAppRoutes = () => {
       <Route
         path="/admin/commissary-inventory"
         element={
-          <AdminProtectedRoute>
+          <AdminProtectedRoute section="commissary-inventory">
             <AdminLayout>
               <CommissaryManagement />
             </AdminLayout>
