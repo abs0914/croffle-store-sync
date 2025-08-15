@@ -40,18 +40,17 @@ export const deductIngredientsForProduct = async (
 
     let finalIngredients = ingredients || [];
 
-    // If no product ingredients found, check recipe ingredients with optimized query
-    if (finalIngredients.length === 0) {
+    // If no product ingredients found, check recipe ingredients with simplified query
+    if (finalIngredients.length === 0 && productInfo?.recipe_id) {
       console.log('No product ingredients found, checking recipe ingredients...');
       
       const { data: recipeIngredients, error: recipeError } = await supabase
         .from('recipe_ingredients')
         .select(`
           *,
-          inventory_item:inventory_stock(*),
-          recipe:recipes!inner(id, products:product_catalog!recipe_id(id))
+          inventory_item:inventory_stock(*)
         `)
-        .eq('recipe.products.id', productId);
+        .eq('recipe_id', productInfo.recipe_id);
 
       if (recipeError) throw recipeError;
 
