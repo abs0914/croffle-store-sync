@@ -169,8 +169,26 @@ export const deductIngredientsForProduct = async (
     console.log(`✅ Successfully deducted ingredients for product "${productInfo?.product_name}" (${productId})`);
     return true;
   } catch (error) {
-    console.error('Error deducting ingredients:', error);
-    toast.error('Failed to process ingredient deductions');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❌ Critical ingredient deduction error:', {
+      error: errorMessage,
+      productId,
+      quantity,
+      transactionId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Provide specific error feedback
+    if (errorMessage.includes('permission denied')) {
+      toast.error('Access denied for inventory updates - check user permissions');
+    } else if (errorMessage.includes('foreign key')) {
+      toast.error('Product or ingredient configuration error - please check setup');
+    } else if (errorMessage.includes('null value')) {
+      toast.error('Missing required data - please check product ingredient setup');
+    } else {
+      toast.error(`Ingredient processing failed: ${errorMessage}`);
+    }
+    
     return false;
   }
 };
