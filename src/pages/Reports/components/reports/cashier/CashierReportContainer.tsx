@@ -26,6 +26,9 @@ interface CashierReportContainerProps {
 export function CashierReportContainer({ storeId, data }: CashierReportContainerProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const { currentShift } = useShift();
+  
+  // Debug logging
+  console.log('CashierReportContainer - currentShift:', currentShift);
 
   return (
     <div className="space-y-6">
@@ -39,9 +42,7 @@ export function CashierReportContainer({ storeId, data }: CashierReportContainer
           <TabsTrigger value="hourly" className="flex-1">Hourly Analysis</TabsTrigger>
           <TabsTrigger value="cashiers" className="flex-1">Cashiers</TabsTrigger>
           <TabsTrigger value="attendance" className="flex-1">Attendance</TabsTrigger>
-          {currentShift && (
-            <TabsTrigger value="void-transactions" className="flex-1">Void Orders</TabsTrigger>
-          )}
+          <TabsTrigger value="void-transactions" className="flex-1">Void Orders</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -60,14 +61,21 @@ export function CashierReportContainer({ storeId, data }: CashierReportContainer
           <CashierAttendanceTab data={data} />
         </TabsContent>
 
-        {currentShift && (
-          <TabsContent value="void-transactions">
+        <TabsContent value="void-transactions">
+          {currentShift ? (
             <ShiftTransactionsTab 
               shiftId={currentShift.id} 
               storeId={storeId} 
             />
-          </TabsContent>
-        )}
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No active shift found.</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                You need an active shift to view and void transactions.
+              </p>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );
