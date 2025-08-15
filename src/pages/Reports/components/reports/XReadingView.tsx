@@ -41,7 +41,15 @@ export function XReadingView({ storeId, date }: XReadingViewProps) {
       <Card>
         <CardContent className="p-4">
           <div className="text-center py-10">
-            <p>No X-Reading data available for the selected date</p>
+            <div className="mb-4">
+              <p className="text-lg font-semibold text-destructive">Error Loading X-Reading</p>
+              <p className="text-sm text-muted-foreground">
+                Unable to fetch X-Reading data. Please try again or contact support.
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
           </div>
         </CardContent>
       </Card>

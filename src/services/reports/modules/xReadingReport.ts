@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { XReadingReport } from "@/types/reports";
 import { fetchStoreInfo, handleReportError } from "../utils/reportUtils";
 import { fetchTransactionsWithFallback } from "../utils/transactionQueryUtils";
+import { toast } from "sonner";
 
 // Helper function to get cashier name from user_id
 async function getCashierName(userId: string): Promise<string> {
@@ -211,6 +212,43 @@ export async function fetchXReading(
       totalPayments: cashPayments + cardPayments + eWalletPayments
     };
   } catch (error) {
-    return handleReportError("X-Reading", error);
+    console.error("❌ X-Reading generation error:", error);
+    
+    // Return a basic structure even on error, with error indication
+    try {
+      const storeData = await fetchStoreInfo(storeId);
+      return {
+        storeName: storeData?.business_name || storeData?.name || 'Unknown Store',
+        storeAddress: storeData?.address || 'Unknown Address',
+        contactInfo: storeData?.phone || storeData?.email || 'No Contact Info',
+        taxId: storeData?.tin || storeData?.tax_id || 'No TIN',
+        cashierName: "Error: Unable to determine cashier",
+        terminal: storeData?.machine_serial_number || 'TERMINAL-01',
+        beginningReceiptNumber: '-',
+        endingReceiptNumber: '-',
+        transactionCount: 0,
+        grossSales: 0,
+        vatableSales: 0,
+        vatExemptSales: 0,
+        vatZeroRatedSales: 0,
+        totalDiscounts: 0,
+        seniorDiscount: 0,
+        pwdDiscount: 0,
+        employeeDiscount: 0,
+        otherDiscounts: 0,
+        netSales: 0,
+        vatAmount: 0,
+        vatExempt: 0,
+        vatZeroRated: 0,
+        cashPayments: 0,
+        cardPayments: 0,
+        eWalletPayments: 0,
+        totalPayments: 0
+      };
+    } catch (fallbackError) {
+      console.error("❌ X-Reading fallback error:", fallbackError);
+      toast.error("Failed to generate X-Reading report");
+      return null;
+    }
   }
 }
