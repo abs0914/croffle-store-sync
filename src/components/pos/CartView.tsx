@@ -246,6 +246,7 @@ export default function CartView({
           <div className="bg-white rounded-lg w-full max-w-lg">
             <PaymentProcessor
               total={calculations.finalTotal}
+              itemCount={cartItems.length}
               onPaymentComplete={handlePaymentCompleteWithInventoryValidation}
             />
             <div className="p-4 border-t">

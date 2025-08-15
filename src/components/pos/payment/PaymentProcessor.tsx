@@ -5,11 +5,13 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { toast } from "sonner";
 import { useShift } from "@/contexts/shift";
 import PaymentMethods from "./PaymentMethods";
+import PaymentProgress from "./PaymentProgress";
 import { formatCurrency } from "@/utils/format";
 import { Loader2 } from "lucide-react";
 
 interface PaymentProcessorProps {
   total: number;
+  itemCount?: number;
   onPaymentComplete: (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
     amountTendered: number,
@@ -23,12 +25,19 @@ interface PaymentProcessorProps {
   ) => Promise<boolean>;
 }
 
-export default function PaymentProcessor({ total, onPaymentComplete }: PaymentProcessorProps) {
+export default function PaymentProcessor({ total, itemCount = 1, onPaymentComplete }: PaymentProcessorProps) {
   const { currentShift } = useShift();
   const [isOpen, setIsOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'e-wallet'>('cash');
   const [amountTendered, setAmountTendered] = useState<number>(0);
+  
+  // Progress tracking for large orders
+  const [showProgress, setShowProgress] = useState(false);
+  const [progressStage, setProgressStage] = useState<'validation' | 'inventory' | 'payment' | 'complete'>('validation');
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
+  const [estimatedTime, setEstimatedTime] = useState<number>();
   
   // Card payment details
   const [cardType, setCardType] = useState<string>('');
@@ -52,6 +61,18 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
 
     // Set processing state
     setIsProcessing(true);
+    
+    // Import batch processing service to check if we need progress indication
+    const { BatchProcessingService } = await import('@/services/transactions/batchProcessingService');
+    const shouldShowProgress = BatchProcessingService.shouldUseBatchProcessing(itemCount);
+    
+    if (shouldShowProgress) {
+      setShowProgress(true);
+      setProgressStage('payment');
+      setProgressPercent(0);
+      setProgressMessage('Preparing payment...');
+      setEstimatedTime(BatchProcessingService.estimateProcessingTime(itemCount));
+    }
 
     try {
       // Import and use payment validation service
@@ -71,6 +92,12 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
         if (!paymentResult.success) {
           toast.error(`Payment failed: ${paymentResult.error}`);
           return;
+        }
+        
+        // Update progress for large orders
+        if (shouldShowProgress) {
+          setProgressPercent(50);
+          setProgressMessage('Processing transaction...');
         }
         
         // Wait for complete payment flow including navigation
@@ -148,7 +175,15 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
         }
       }
       
-      // Payment completed successfully, now close dialog
+      // Payment completed successfully
+      if (shouldShowProgress) {
+        setProgressStage('complete');
+        setProgressPercent(100);
+        setProgressMessage('Transaction completed!');
+        // Give user a moment to see completion
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
       toast.success("Payment completed - Redirecting to invoice...");
       setIsOpen(false);
       resetFormState();
@@ -158,6 +193,8 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
       toast.error("Payment processing failed. Please try again.");
     } finally {
       setIsProcessing(false);
+      setShowProgress(false);
+      setProgressPercent(0);
     }
   };
 
@@ -167,6 +204,9 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
     setCardNumber('');
     setEWalletProvider('');
     setEWalletReferenceNumber('');
+    setShowProgress(false);
+    setProgressPercent(0);
+    setProgressMessage('');
   };
 
   const handleDialogClose = (open: boolean) => {
@@ -179,56 +219,12 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
-      <DialogTrigger asChild>
-        <Button
-          className="w-full mt-4 bg-green-600 hover:bg-green-700 text-lg py-6"
-          disabled={total <= 0 || !currentShift || isProcessing}
-        >
-          {isProcessing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            `Pay ${formatCurrency(total)}`
-          )}
-        </Button>
-      </DialogTrigger>
-      
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Payment: {formatCurrency(total)}</DialogTitle>
-        </DialogHeader>
-        
-        <PaymentMethods
-          total={total}
-          paymentMethod={paymentMethod}
-          setPaymentMethod={setPaymentMethod}
-          amountTendered={amountTendered}
-          setAmountTendered={setAmountTendered}
-          cardType={cardType}
-          setCardType={setCardType}
-          cardNumber={cardNumber}
-          setCardNumber={setCardNumber}
-          eWalletProvider={eWalletProvider}
-          setEWalletProvider={setEWalletProvider}
-          eWalletReferenceNumber={eWalletReferenceNumber}
-          setEWalletReferenceNumber={setEWalletReferenceNumber}
-          disabled={isProcessing}
-        />
-        
-        <DialogFooter>
-          <Button 
-            onClick={() => handleDialogClose(false)} 
-            variant="outline" 
-            disabled={isProcessing}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handlePayment} 
-            disabled={isProcessing || total <= 0}
+    <>
+      <Dialog open={isOpen} onOpenChange={handleDialogClose}>
+        <DialogTrigger asChild>
+          <Button
+            className="w-full mt-4 bg-green-600 hover:bg-green-700 text-lg py-6"
+            disabled={total <= 0 || !currentShift || isProcessing}
           >
             {isProcessing ? (
               <>
@@ -236,11 +232,72 @@ export default function PaymentProcessor({ total, onPaymentComplete }: PaymentPr
                 Processing...
               </>
             ) : (
-              'Complete Payment'
+              `Pay ${formatCurrency(total)}`
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogTrigger>
+        
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              Payment: {formatCurrency(total)}
+              {itemCount > 5 && (
+                <div className="text-sm text-gray-600 font-normal mt-1">
+                  Large order ({itemCount} items) - Processing may take longer
+                </div>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <PaymentMethods
+            total={total}
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+            amountTendered={amountTendered}
+            setAmountTendered={setAmountTendered}
+            cardType={cardType}
+            setCardType={setCardType}
+            cardNumber={cardNumber}
+            setCardNumber={setCardNumber}
+            eWalletProvider={eWalletProvider}
+            setEWalletProvider={setEWalletProvider}
+            eWalletReferenceNumber={eWalletReferenceNumber}
+            setEWalletReferenceNumber={setEWalletReferenceNumber}
+            disabled={isProcessing}
+          />
+          
+          <DialogFooter>
+            <Button 
+              onClick={() => handleDialogClose(false)} 
+              variant="outline" 
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handlePayment} 
+              disabled={isProcessing || total <= 0}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Complete Payment'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <PaymentProgress
+        isVisible={showProgress}
+        stage={progressStage}
+        progress={progressPercent}
+        message={progressMessage}
+        estimatedTime={estimatedTime}
+      />
+    </>
   );
 }

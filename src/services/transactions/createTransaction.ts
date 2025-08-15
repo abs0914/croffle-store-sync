@@ -40,19 +40,45 @@ export const createTransaction = async (
   try {
     console.log('🔍 Pre-transaction validation for products...');
     
-    // Validate all products before creating transaction
-    for (const item of transaction.items) {
-      const validation = await validateProductForSale(item.productId, item.quantity);
+    // Import batch processing service
+    const { BatchProcessingService } = await import('./batchProcessingService');
+    
+    // Determine processing strategy based on order size
+    const itemCount = transaction.items.length;
+    const useBatchProcessing = BatchProcessingService.shouldUseBatchProcessing(itemCount);
+    
+    if (useBatchProcessing) {
+      console.log(`🔄 Using batch processing for large order (${itemCount} items)`);
       
-      if (!validation.isValid) {
-        const errorMessage = `Cannot sell "${validation.productName}": ${validation.errors.join(', ')}`;
-        if (validation.lowStockIngredients.length > 0) {
-          toast.error(`${errorMessage}. Low stock: ${validation.lowStockIngredients.join(', ')}`);
-        } else {
-          toast.error(errorMessage);
+      // Use batch validation for large orders
+      const batchValidation = await BatchProcessingService.batchValidateProducts(
+        transaction.items,
+        (progress) => {
+          console.log(`📊 Validation progress: ${progress.current}/${progress.total} - ${progress.message}`);
         }
-        console.error('❌ Product validation failed:', validation);
+      );
+      
+      if (!batchValidation.isValid) {
+        const errorMessage = `Validation failed: ${batchValidation.errors.join(', ')}`;
+        toast.error(errorMessage);
+        console.error('❌ Batch validation failed:', batchValidation.errors);
         return null;
+      }
+    } else {
+      // Use sequential validation for small orders
+      for (const item of transaction.items) {
+        const validation = await validateProductForSale(item.productId, item.quantity);
+        
+        if (!validation.isValid) {
+          const errorMessage = `Cannot sell "${validation.productName}": ${validation.errors.join(', ')}`;
+          if (validation.lowStockIngredients.length > 0) {
+            toast.error(`${errorMessage}. Low stock: ${validation.lowStockIngredients.join(', ')}`);
+          } else {
+            toast.error(errorMessage);
+          }
+          console.error('❌ Product validation failed:', validation);
+          return null;
+        }
       }
     }
     
@@ -170,10 +196,30 @@ export const createTransaction = async (
       receiptNumber
     );
     
-    // Process inventory deduction with proper integration
+    // Process inventory deduction with optimized strategy
     console.log('🔄 Starting inventory deduction for transaction:', data.id);
     try {
-      const inventorySuccess = await updateInventoryStockForTransaction(transaction.items, transaction.storeId, data.id);
+      let inventorySuccess = false;
+      
+      if (useBatchProcessing) {
+        console.log('📦 Using batch inventory processing for large order');
+        
+        // Import batch processing service again for inventory
+        const { BatchProcessingService } = await import('./batchProcessingService');
+        
+        inventorySuccess = await BatchProcessingService.batchProcessInventory(
+          transaction.items,
+          transaction.storeId,
+          data.id,
+          (progress) => {
+            console.log(`📊 Inventory progress: ${progress.current}/${progress.total} - ${progress.message}`);
+          }
+        );
+      } else {
+        // Use sequential processing for small orders
+        inventorySuccess = await updateInventoryStockForTransaction(transaction.items, transaction.storeId, data.id);
+      }
+      
       if (!inventorySuccess) {
         console.error('❌ Inventory deduction failed - rolling back transaction:', data.id);
         // Rollback transaction if inventory deduction fails
