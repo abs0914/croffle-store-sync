@@ -10,6 +10,7 @@ import { Settings as SettingsIcon, User, Printer, MoreVertical, Shield, LogOut, 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useNavigate } from "react-router-dom";
+import { canAccessAdminPanel } from "@/contexts/auth/role-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +25,7 @@ export default function Settings() {
   const { currentStore } = useStore();
   const navigate = useNavigate();
 
-  const canAccessAdmin = user?.role === 'admin' || user?.role === 'owner';
+  const canAccessAdmin = canAccessAdminPanel(user?.role);
 
   return (
     <div className="space-y-6">
