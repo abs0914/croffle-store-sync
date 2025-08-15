@@ -16,7 +16,12 @@ import { Badge } from "@/components/ui/badge";
 export default function CashierShiftReportView() {
   const { user } = useAuth();
   const { currentStore } = useStore();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  // Default to yesterday's date since shifts are typically viewed the next day
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday;
+  });
 
   const { data: reportData, isLoading, error } = useQuery({
     queryKey: ["cashier-shift-report", user?.id, currentStore?.id, selectedDate],
