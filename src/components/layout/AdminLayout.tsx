@@ -1,10 +1,12 @@
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/auth";
 import { Spinner } from "../ui/spinner";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AdminSidebar } from "./admin/AdminSidebar";
+import { AdminMobileMenuTrigger } from "./admin/AdminMobileMenuTrigger";
+import { AdminMobileSidebar } from "./admin/AdminMobileSidebar";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
 interface AdminLayoutProps {
   children: ReactNode;
@@ -14,6 +16,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   useOrderNotifications();
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -47,8 +50,23 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   // Render admin layout
   return (
     <div className="flex h-screen bg-background" data-component="admin-layout">
+      {/* Mobile Menu Trigger */}
+      {isMobile && (
+        <AdminMobileMenuTrigger onClick={() => setIsMobileMenuOpen(true)} />
+      )}
+      
+      {/* Desktop Sidebar */}
       <AdminSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden ml-64">
+      
+      {/* Mobile Sidebar */}
+      {isMobile && (
+        <AdminMobileSidebar 
+          isOpen={isMobileMenuOpen} 
+          onOpenChange={setIsMobileMenuOpen} 
+        />
+      )}
+      
+      <div className={`flex-1 flex flex-col overflow-hidden ${isMobile ? 'ml-0' : 'ml-64'}`}>
         <main className={`flex-1 overflow-y-auto p-4 md:p-6 bg-croffle-background/30 ${isMobile ? 'pt-16' : ''}`}>
           {children}
         </main>
