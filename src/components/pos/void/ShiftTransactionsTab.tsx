@@ -99,7 +99,7 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
                         <div className="flex items-center gap-2">
                           <Receipt className="h-4 w-4" />
                           <span className="font-medium">{transaction.receipt_number}</span>
-                          <Badge variant={transaction.status === 'completed' ? 'success' : 'destructive'}>
+                          <Badge variant={transaction.status === 'completed' ? 'default' : 'destructive'}>
                             {transaction.status}
                           </Badge>
                         </div>
@@ -151,7 +151,7 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
                     {/* Items Summary */}
                     <div className="bg-muted/50 p-2 rounded text-sm">
                       <div className="font-medium mb-1">Items:</div>
-                      {JSON.parse(transaction.items).map((item: any, index: number) => (
+                      {JSON.parse(transaction.items as string).map((item: any, index: number) => (
                         <div key={index} className="flex justify-between">
                           <span>{item.name} x{item.quantity}</span>
                           <span>{formatCurrency(item.totalPrice)}</span>
