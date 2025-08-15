@@ -4949,6 +4949,10 @@ export type Database = {
           repaired_count: number
         }[]
       }
+      reset_user_rate_limit: {
+        Args: { user_email: string }
+        Returns: undefined
+      }
       sync_auth_user_to_app_users: {
         Args: {
           contact_number?: string
