@@ -136,6 +136,11 @@ export function AdminMainMenu() {
 
   // Filter menu items based on user permissions
   const visibleMenuItems = menuItems.filter(item => {
+    // Always show dashboard if user has dashboard permission
+    if (item.title === "Dashboard" && hasPermission('dashboard')) {
+      return true;
+    }
+    
     if (item.permission && !hasPermission(item.permission)) {
       return false;
     }
@@ -145,7 +150,7 @@ export function AdminMainMenu() {
         hasPermission(subItem.permission || 'dashboard')
       );
     }
-    return true;
+    return hasPermission(item.permission || 'dashboard');
   });
 
   return (
