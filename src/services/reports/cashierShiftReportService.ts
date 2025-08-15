@@ -90,22 +90,42 @@ export async function fetchCashierShiftReport(
     const shiftStart = new Date(shiftData.start_time);
     const shiftEnd = shiftData.end_time ? new Date(shiftData.end_time) : new Date();
 
-    // Get sales data - using any to avoid complex type inference
-    const salesResult = await (supabase
-      .from('transactions') as any)
-      .select('id, total, payment_method, created_at, status')
-      .eq('store_id', storeId)
-      .eq('cashier_id', userId)
-      .gte('created_at', shiftStart.toISOString())
-      .lte('created_at', shiftEnd.toISOString())
-      .eq('status', 'completed');
+    // Get sales data - try shift_id first, fallback to user_id and time range
+    let salesResult;
     
+    // Primary approach: Use shift_id if available
+    if (shiftData.id) {
+      salesResult = await supabase
+        .from('transactions')
+        .select('id, total, payment_method, created_at, status, discount_amount, subtotal, tax')
+        .eq('store_id', storeId)
+        .eq('shift_id', shiftData.id)
+        .eq('status', 'completed');
+    }
+    
+    // Fallback approach: Use user_id and time range if no shift-linked transactions
     const { data: salesData, error: salesError } = salesResult;
-
+    
+    let transactions = salesData || [];
+    
+    // If no transactions found with shift_id, try user_id approach
+    if (transactions.length === 0) {
+      const fallbackResult = await supabase
+        .from('transactions')
+        .select('id, total, payment_method, created_at, status, discount_amount, subtotal, tax')
+        .eq('store_id', storeId)
+        .eq('user_id', userId)
+        .gte('created_at', shiftStart.toISOString())
+        .lte('created_at', shiftEnd.toISOString())
+        .eq('status', 'completed');
+      
+      if (fallbackResult.error) throw fallbackResult.error;
+      transactions = fallbackResult.data || [];
+    }
+    
     if (salesError) throw salesError;
 
     // Process sales data
-    const transactions = salesData || [];
     const totalTransactions = transactions.length;
     const totalSales = transactions.reduce((sum, t) => sum + (t.total || 0), 0);
     const averageTransactionValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
@@ -123,9 +143,9 @@ export async function fetchCashierShiftReport(
       .filter(t => ['gcash', 'paymaya', 'e-wallet'].includes(t.payment_method || ''))
       .reduce((sum, t) => sum + (t.total || 0), 0);
 
-    // Calculate discount and refund amounts (these would come from transaction details)
+    // Calculate discount amounts with proper null checking
     const discountAmount = transactions
-      .reduce((sum, t) => sum + (t.discount_amount || 0), 0);
+      .reduce((sum, t) => sum + (Number(t.discount_amount) || 0), 0);
     
     const refundAmount = 0; // TODO: Add refund tracking
     const paidInAmount = 0; // TODO: Add paid in tracking  
