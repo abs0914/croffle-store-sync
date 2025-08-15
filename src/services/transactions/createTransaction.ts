@@ -71,7 +71,7 @@ export const createTransaction = async (
           productId: item.productId,
           productName: item.name,
           quantity: item.quantity,
-          price: item.price
+          unitPrice: item.unitPrice
         });
         
         const validation = await validateProductForSale(item.productId, item.quantity);
@@ -85,6 +85,11 @@ export const createTransaction = async (
             lowStockIngredients: validation.lowStockIngredients,
             missingIngredients: validation.missingIngredients,
             fullValidation: validation
+          });
+          
+          // Log the specific errors for debugging
+          validation.errors.forEach((error, index) => {
+            console.error(`❌ Validation Error ${index + 1}:`, error);
           });
           
           const errorMessage = `Cannot sell "${validation.productName}": ${validation.errors.join(', ')}`;
