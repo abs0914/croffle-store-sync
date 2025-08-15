@@ -182,9 +182,11 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
  * Check if a user can access admin panel (updated with new permissions)
  */
 export const canAccessAdminPanel = (userRole: UserRole | undefined): boolean => {
-  // Import dynamically to avoid circular dependencies
-  const { hasAnyAdminAccess } = require('@/utils/adminPermissions');
-  return hasAnyAdminAccess(userRole);
+  if (!userRole) return false;
+  
+  // Define roles that can access admin panel (avoiding circular dependency)
+  const adminRoles: UserRole[] = ['admin', 'owner', 'manager', 'stock_user', 'production_user'];
+  return adminRoles.includes(userRole);
 };
 
 /**
@@ -205,18 +207,22 @@ export const canAccessRecipeManagement = (userRole: UserRole | undefined): boole
  * Check if a user can access commissary inventory (updated with new permissions)
  */
 export const canAccessCommissary = (userRole: UserRole | undefined): boolean => {
-  // Import dynamically to avoid circular dependencies
-  const { hasAdminSectionAccess } = require('@/utils/adminPermissions');
-  return hasAdminSectionAccess(userRole, 'commissary-inventory');
+  if (!userRole) return false;
+  
+  // Define roles that can access commissary inventory
+  const commissaryRoles: UserRole[] = ['admin', 'owner', 'stock_user', 'production_user'];
+  return commissaryRoles.includes(userRole);
 };
 
 /**
  * Check if a user can access production management (updated with new permissions)
  */
 export const canAccessProduction = (userRole: UserRole | undefined): boolean => {
-  // Import dynamically to avoid circular dependencies
-  const { hasAdminSectionAccess } = require('@/utils/adminPermissions');
-  return hasAdminSectionAccess(userRole, 'production-management');
+  if (!userRole) return false;
+  
+  // Define roles that can access production management
+  const productionRoles: UserRole[] = ['admin', 'owner', 'production_user', 'stock_user'];
+  return productionRoles.includes(userRole);
 };
 
 /**
