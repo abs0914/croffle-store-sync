@@ -173,7 +173,7 @@ export const getVoidableTransactions = async (shiftId: string, storeId: string) 
       `)
       .eq('shift_id', shiftId)
       .eq('store_id', storeId)
-      .eq('status', 'completed')
+      .in('status', ['completed', 'voided'])
       .gte('created_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
       .order('created_at', { ascending: false });
 

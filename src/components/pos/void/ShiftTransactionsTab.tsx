@@ -110,15 +110,21 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
                         </div>
                       </div>
 
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleVoidClick(transaction)}
-                        className="flex items-center gap-1"
-                      >
-                        <AlertTriangle className="h-3 w-3" />
-                        Void
-                      </Button>
+                      {transaction.status === 'completed' ? (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleVoidClick(transaction)}
+                          className="flex items-center gap-1"
+                        >
+                          <AlertTriangle className="h-3 w-3" />
+                          Void
+                        </Button>
+                      ) : (
+                        <Badge variant="destructive" className="text-xs">
+                          VOIDED
+                        </Badge>
+                      )}
                     </div>
 
                     <Separator />
