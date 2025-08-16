@@ -19,6 +19,8 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { useUnifiedRecipeState } from '@/hooks/admin/useUnifiedRecipeState';
+import { useRecipeErrorHandling } from '@/hooks/admin/useRecipeErrorHandling';
+import { SimpleRecipeService } from '@/services/recipeManagement/simpleRecipeService';
 import { RecipeTemplateDialog } from '@/pages/Admin/components/RecipeTemplateDialog';
 import { EnhancedRecipeDeploymentDialog } from '@/components/Admin/recipe/EnhancedRecipeDeploymentDialog';
 
@@ -41,6 +43,8 @@ export function SimplifiedRecipeManagement() {
     updateTemplate,
     deleteTemplate
   } = useUnifiedRecipeState();
+
+  const { handleError, validateRecipeData } = useRecipeErrorHandling();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
@@ -139,7 +143,7 @@ export function SimplifiedRecipeManagement() {
       console.log('Parsed data:', parsed);
       
       if (parsed.ingredients.length === 0) {
-        toast.error('Please add ingredients in table format');
+        handleError(new Error('Please add ingredients in table format'), 'Template Creation');
         return;
       }
 
@@ -151,28 +155,31 @@ export function SimplifiedRecipeManagement() {
       console.log('Category name:', categoryName);
 
       if (!templateName) {
-        toast.error('Please enter a template name or provide product name in table data');
+        handleError(new Error('Please enter a template name or provide product name in table data'), 'Template Creation');
         return;
       }
 
-      console.log('Creating template with data:', {
+      const templateData = {
         name: templateName,
         description: newTemplate.description?.trim() || undefined,
         category_name: categoryName || undefined,
         yield_quantity: newTemplate.yieldQuantity,
         serving_size: newTemplate.servingSize,
         ingredients: parsed.ingredients
-      });
+      };
+
+      // Validate recipe data before creating
+      try {
+        SimpleRecipeService.validateRecipeTemplate(templateData);
+      } catch (validationError) {
+        handleError(validationError, 'Template Validation');
+        return;
+      }
+
+      console.log('Creating template with validated data:', templateData);
 
       // Call the actual template creation function
-      createTemplate({
-        name: templateName,
-        description: newTemplate.description?.trim() || undefined,
-        category_name: categoryName || undefined,
-        yield_quantity: newTemplate.yieldQuantity,
-        serving_size: newTemplate.servingSize,
-        ingredients: parsed.ingredients
-      });
+      await createTemplate(templateData);
       
       // Reset form
       setNewTemplate({
@@ -184,9 +191,10 @@ export function SimplifiedRecipeManagement() {
         servingSize: 1
       });
       setShowCreateForm(false);
+      toast.success('Template created successfully');
     } catch (error) {
       console.error('Error creating template:', error);
-      toast.error('Failed to create template');
+      handleError(error, 'Template Creation');
     }
   };
 

@@ -83,8 +83,8 @@ export function OrdersList({ storeId }: OrdersListProps) {
       order.supplier?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.notes?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = selectedStatus === '' || order.status === selectedStatus;
-    const matchesSupplier = selectedSupplier === '' || order.supplier_id === selectedSupplier;
+    const matchesStatus = selectedStatus === '' || selectedStatus === 'all' || order.status === selectedStatus;
+    const matchesSupplier = selectedSupplier === '' || selectedSupplier === 'all' || order.supplier_id === selectedSupplier;
     
     return matchesSearch && matchesStatus && matchesSupplier;
   });
