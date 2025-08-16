@@ -14,6 +14,7 @@ interface AdminCustomersHeaderProps {
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
   stores: Store[];
+  onExport: () => void;
 }
 export const AdminCustomersHeader: React.FC<AdminCustomersHeaderProps> = ({
   searchQuery,
@@ -24,7 +25,8 @@ export const AdminCustomersHeader: React.FC<AdminCustomersHeaderProps> = ({
   setStatusFilter,
   viewMode,
   setViewMode,
-  stores
+  stores,
+  onExport
 }) => {
   return <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -36,13 +38,10 @@ export const AdminCustomersHeader: React.FC<AdminCustomersHeaderProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
-          
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={onExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          
-          
         </div>
       </div>
       

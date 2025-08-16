@@ -73,6 +73,37 @@ export default function AdminCustomers() {
     setSelectedCustomers([]);
   };
 
+  const handleExport = () => {
+    // Create CSV content
+    const csvHeaders = ['Name', 'Phone', 'Email', 'Store', 'Total Orders', 'Total Spent', 'Loyalty Points', 'Created Date'];
+    const csvRows = filteredCustomers.map(customer => [
+      customer.name,
+      customer.phone,
+      customer.email || '',
+      customer.storeName || '',
+      customer.totalOrders.toString(),
+      customer.totalSpent.toFixed(2),
+      customer.loyaltyPoints.toString(),
+      new Date(customer.registrationDate).toLocaleDateString()
+    ]);
+
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvRows.map(row => row.map(field => `"${field}"`).join(','))
+    ].join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `customers-export-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       <AdminCustomersHeader 
@@ -85,6 +116,7 @@ export default function AdminCustomers() {
         viewMode={viewMode}
         setViewMode={setViewMode}
         stores={stores}
+        onExport={handleExport}
       />
       
       <AdminCustomersMetrics metrics={customerMetrics} />
@@ -125,6 +157,7 @@ export default function AdminCustomers() {
         isOpen={!!editCustomer}
         onOpenChange={(open) => !open && setEditCustomer(null)}
         onCustomerUpdated={handleCustomerUpdated}
+        onCustomerDeleted={handleCustomerUpdated}
         stores={stores}
       />
 
