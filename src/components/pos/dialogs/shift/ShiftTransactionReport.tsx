@@ -140,15 +140,39 @@ export default function ShiftTransactionReport({
   }
   const totalSales = transactions.reduce((sum, t) => sum + t.total, 0);
   const totalItems = inventoryTransactions.reduce((sum, t) => sum + Math.abs(t.quantity), 0);
-  const totalDiscounts = transactions.reduce((sum, t) => sum + (t.discount_amount || 0), 0);
+  
+  // Calculate actual discounts from subtotal vs total difference
+  const totalDiscounts = transactions.reduce((sum, t) => {
+    const subtotal = t.subtotal || t.total;
+    const actualDiscount = subtotal - t.total;
+    return sum + Math.max(0, actualDiscount);
+  }, 0);
+  
   const totalSubtotal = transactions.reduce((sum, t) => sum + (t.subtotal || t.total), 0);
   
-  // Calculate discount breakdown
-  const seniorDiscounts = transactions.reduce((sum, t) => sum + (t.senior_citizen_discount || 0), 0);
-  const pwdDiscounts = transactions.reduce((sum, t) => sum + (t.pwd_discount || 0), 0);
+  // Calculate discount breakdown by type
+  const seniorDiscounts = transactions.reduce((sum, t) => {
+    if (t.discount_type === 'senior') {
+      const subtotal = t.subtotal || t.total;
+      return sum + Math.max(0, subtotal - t.total);
+    }
+    return sum + (t.senior_citizen_discount || 0);
+  }, 0);
+  
+  const pwdDiscounts = transactions.reduce((sum, t) => {
+    if (t.discount_type === 'pwd') {
+      const subtotal = t.subtotal || t.total;
+      return sum + Math.max(0, subtotal - t.total);
+    }
+    return sum + (t.pwd_discount || 0);
+  }, 0);
+  
   const otherDiscounts = totalDiscounts - seniorDiscounts - pwdDiscounts;
   
-  const discountedTransactions = transactions.filter(t => (t.discount_amount || 0) > 0);
+  const discountedTransactions = transactions.filter(t => {
+    const subtotal = t.subtotal || t.total;
+    return subtotal > t.total;
+  });
   return <div className="space-y-4">
       {/* Orders Summary */}
       <Card>
@@ -221,32 +245,44 @@ export default function ShiftTransactionReport({
                         <Receipt className="w-4 h-4 text-gray-400" />
                         <span className="font-medium">{transaction.receipt_number}</span>
                         {transaction.customer_name && <span className="text-muted-foreground">• {transaction.customer_name}</span>}
-                        {(transaction.discount_amount || 0) > 0 && (
-                          <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700">
-                            <Percent className="w-3 h-3 mr-1" />
-                            {transaction.discount_type}
-                          </Badge>
-                        )}
+                        {(() => {
+                          const subtotal = transaction.subtotal || transaction.total;
+                          const hasDiscount = subtotal > transaction.total;
+                          return hasDiscount && (
+                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700">
+                              <Percent className="w-3 h-3 mr-1" />
+                              {transaction.discount_type || 'discount'}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">
                           {transaction.payment_method}
                         </Badge>
-                        {(transaction.discount_amount || 0) > 0 && (
-                          <div className="text-right">
-                            <div className="text-xs text-muted-foreground line-through">
-                              {formatCurrency(transaction.subtotal || transaction.total)}
-                            </div>
-                            <div className="font-medium text-green-600">
-                              {formatCurrency(transaction.total)}
-                            </div>
-                          </div>
-                        )}
-                        {(transaction.discount_amount || 0) === 0 && (
-                          <span className="font-medium text-green-600">
-                            {formatCurrency(transaction.total)}
-                          </span>
-                        )}
+                        {(() => {
+                          const subtotal = transaction.subtotal || transaction.total;
+                          const hasDiscount = subtotal > transaction.total;
+                          
+                          if (hasDiscount) {
+                            return (
+                              <div className="text-right">
+                                <div className="text-xs text-muted-foreground line-through">
+                                  {formatCurrency(subtotal)}
+                                </div>
+                                <div className="font-medium text-green-600">
+                                  {formatCurrency(transaction.total)}
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <span className="font-medium text-green-600">
+                                {formatCurrency(transaction.total)}
+                              </span>
+                            );
+                          }
+                        })()}
                       </div>
                     </div>)}
                   {transactions.length > 10 && <p className="text-xs text-muted-foreground text-center py-2">
