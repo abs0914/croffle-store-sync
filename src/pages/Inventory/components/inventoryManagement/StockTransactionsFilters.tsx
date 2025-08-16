@@ -46,12 +46,12 @@ export function StockTransactionsFilters({
         />
       </div>
       
-      <Select value={selectedItem} onValueChange={setSelectedItem}>
+      <Select value={selectedItem || "all"} onValueChange={(value) => setSelectedItem(value === "all" ? "" : value)}>
         <SelectTrigger className="w-48">
           <SelectValue placeholder="All Items" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Items</SelectItem>
+          <SelectItem value="all">All Items</SelectItem>
           {inventoryItems.map((item) => (
             <SelectItem key={item.id} value={item.id}>
               {item.name}
@@ -60,12 +60,12 @@ export function StockTransactionsFilters({
         </SelectContent>
       </Select>
       
-      <Select value={selectedType} onValueChange={setSelectedType}>
+      <Select value={selectedType || "all"} onValueChange={(value) => setSelectedType(value === "all" ? "" : value)}>
         <SelectTrigger className="w-48">
           <SelectValue placeholder="All Types" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Types</SelectItem>
+          <SelectItem value="all">All Types</SelectItem>
           <SelectItem value="adjustment">Adjustment</SelectItem>
           <SelectItem value="transfer_in">Transfer In</SelectItem>
           <SelectItem value="transfer_out">Transfer Out</SelectItem>

@@ -200,12 +200,12 @@ export const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="store">Store</Label>
-                <Select value={formData.storeId} onValueChange={(value) => setFormData(prev => ({ ...prev, storeId: value }))}>
+                <Select value={formData.storeId || "none"} onValueChange={(value) => setFormData(prev => ({ ...prev, storeId: value === "none" ? "" : value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select store" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Store</SelectItem>
+                    <SelectItem value="none">No Store</SelectItem>
                     {stores.map((store) => (
                       <SelectItem key={store.id} value={store.id}>
                         {store.name}
