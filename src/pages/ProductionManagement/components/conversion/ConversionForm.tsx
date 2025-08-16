@@ -60,20 +60,20 @@ export function ConversionForm({
   };
   const handleConversion = async () => {
     if (!conversionName.trim()) {
-      toast.error("Please enter a conversion name");
+      toast.error("Please enter a repackaging process name");
       return;
     }
     if (!outputItem.name.trim()) {
-      toast.error("Please enter a finished product name");
+      toast.error("Please enter a repackaged item name");
       return;
     }
     if (!outputItem.uom) {
-      toast.error("Please select a unit of measure for the finished product");
+      toast.error("Please select a unit of measure for the repackaged items");
       return;
     }
     const validInputItems = inputItems.filter(item => item.commissary_item_id && item.quantity > 0);
     if (validInputItems.length === 0) {
-      toast.error("Please select at least one input item with valid quantity");
+      toast.error("Please select at least one bulk item with valid quantity");
       return;
     }
 
@@ -93,8 +93,8 @@ export function ConversionForm({
         return sum + item.quantity * (material?.unit_cost || 0);
       }, 0);
 
-      // Add 10% processing overhead
-      return totalInputCost * 1.1 / outputItem.quantity;
+      // Add 5% repackaging overhead
+      return totalInputCost * 1.05 / outputItem.quantity;
     })();
     const conversionRequest: ConversionRequest = {
       name: conversionName,
@@ -111,7 +111,7 @@ export function ConversionForm({
     if (success) {
       onConversionComplete();
       resetForm();
-      toast.success(`Successfully created finished product: ${outputItem.name}`);
+      toast.success(`Successfully repackaged: ${outputItem.name}`);
     }
     setConverting(false);
   };
@@ -119,7 +119,7 @@ export function ConversionForm({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" />
-          Create Finished Product (Conversion)
+          Repackage Bulk Items
         </CardTitle>
         
       </CardHeader>
@@ -133,10 +133,10 @@ export function ConversionForm({
         <Button onClick={handleConversion} disabled={converting} className="w-full">
           {converting ? <>
               <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Converting...
+              Repackaging...
             </> : <>
               <ArrowRight className="h-4 w-4 mr-2" />
-              Create Finished Product
+              Process Repackaging
             </>}
         </Button>
       </CardContent>

@@ -16,7 +16,7 @@ export default function ProductionManagement() {
         <div>
           <h1 className="text-3xl font-bold">Production Management</h1>
           <p className="text-muted-foreground">
-            Convert raw materials into finished products and manage production processes
+            Repackage bulk commissary inventory into smaller portions for store use
           </p>
         </div>
       </div>

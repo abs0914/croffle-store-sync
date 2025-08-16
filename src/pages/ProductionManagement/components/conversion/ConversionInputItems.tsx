@@ -31,7 +31,7 @@ export function ConversionInputItems({
     const updated = [...inputItems];
     updated[index] = { ...updated[index], [field]: value };
     
-    // Auto-update unit when raw material is selected
+    // Auto-update unit when bulk item is selected
     if (field === 'commissary_item_id') {
       const selectedMaterial = rawMaterials.find(rm => rm.id === value);
       if (selectedMaterial) {
@@ -45,7 +45,7 @@ export function ConversionInputItems({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <Label>Input Items (Raw Materials)</Label>
+        <Label>Bulk Items to Repackage</Label>
         <Button
           type="button"
           variant="outline"
@@ -64,7 +64,7 @@ export function ConversionInputItems({
             onValueChange={(value) => updateInputItem(index, 'commissary_item_id', value)}
           >
             <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Select raw material" />
+              <SelectValue placeholder="Select bulk item" />
             </SelectTrigger>
             <SelectContent>
               {rawMaterials.map((material) => (

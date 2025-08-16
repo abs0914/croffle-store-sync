@@ -31,31 +31,31 @@ const STANDARD_UOM_OPTIONS = [
   'Piping Bag'
 ];
 
-// Define business-relevant categories for finished products
+// Define business-relevant categories for repackaged items
 const FINISHED_PRODUCT_CATEGORIES = [
-  { value: 'supplies', label: 'Finished Products' },
-  { value: 'raw_materials', label: 'Processed Materials' },  
-  { value: 'packaging_materials', label: 'Packaged Items' }
+  { value: 'supplies', label: 'Single Portions' },
+  { value: 'raw_materials', label: 'Multi-Packs' },  
+  { value: 'packaging_materials', label: 'Repackaged Items' }
 ];
 
 export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOutputItemProps) {
   return (
     <div className="space-y-4">
-      <h3 className="font-medium">Output Item (Finished Product)</h3>
+      <h3 className="font-medium">Repackaged Items</h3>
       
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="output-name">Product Name *</Label>
+          <Label htmlFor="output-name">Repackaged Item Name *</Label>
           <Input
             id="output-name"
             value={outputItem.name}
             onChange={(e) => setOutputItem(prev => ({ ...prev, name: e.target.value }))}
-            placeholder="e.g., Ready Croissant or Croissant + Whipped Cream"
+            placeholder="e.g., Nutella Sauce Portion (8 packs)"
           />
         </div>
         
         <div>
-          <Label htmlFor="output-category">Product Category *</Label>
+          <Label htmlFor="output-category">Item Category *</Label>
           <Select 
             value={outputItem.category} 
             onValueChange={(value) => setOutputItem(prev => ({ ...prev, category: value }))}
@@ -74,7 +74,7 @@ export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOu
         </div>
         
         <div>
-          <Label htmlFor="output-quantity">Quantity Produced *</Label>
+          <Label htmlFor="output-quantity">Number of Portions *</Label>
           <Input
             id="output-quantity"
             type="number"
@@ -115,7 +115,7 @@ export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOu
             placeholder="Leave blank for auto-calculation"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Auto-calculated from input costs + minimal processing overhead
+            Auto-calculated from bulk costs + minimal repackaging overhead
           </p>
         </div>
         
@@ -136,7 +136,7 @@ export function ConversionOutputItem({ outputItem, setOutputItem }: ConversionOu
           id="storage-location"
           value={outputItem.storage_location}
           onChange={(e) => setOutputItem(prev => ({ ...prev, storage_location: e.target.value }))}
-          placeholder="e.g., Cold Storage, Pantry, Freezer"
+          placeholder="e.g., Sauce Station, Pantry, Cool Storage"
         />
       </div>
     </div>
