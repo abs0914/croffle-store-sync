@@ -25,12 +25,7 @@ export default function ProductionManagement() {
         
 
         <TabsContent value="conversion">
-          <Card>
-            
-            <CardContent>
-              <ConversionProcessTab />
-            </CardContent>
-          </Card>
+          <ConversionProcessTab />
         </TabsContent>
 
         {/* Other tabs removed - using simplified direct recipe system */}
