@@ -60,6 +60,12 @@ export const MENU_INGREDIENT_MAPPINGS: MenuItemIngredients = {
   'Cafe Latte': [
     { recipe_template_name: 'Cafe Latte', commissary_item_name: 'Espresso Beans', store_inventory_item: 'Espresso Beans', quantity_per_serving: 18, unit: 'g' },
     { recipe_template_name: 'Cafe Latte', commissary_item_name: 'Milk', store_inventory_item: 'Milk', quantity_per_serving: 200, unit: 'ml' }
+  ],
+  'Iced Latte': [
+    { recipe_template_name: 'Iced Latte', commissary_item_name: 'Espresso Beans', store_inventory_item: 'Espresso Beans', quantity_per_serving: 18, unit: 'g' },
+    { recipe_template_name: 'Iced Latte', commissary_item_name: 'Milk', store_inventory_item: 'Milk', quantity_per_serving: 200, unit: 'ml' },
+    { recipe_template_name: 'Iced Latte', commissary_item_name: 'Ice', store_inventory_item: 'Ice', quantity_per_serving: 100, unit: 'g' },
+    { recipe_template_name: 'Iced Latte', commissary_item_name: 'Caramel Sauce', store_inventory_item: 'Caramel Sauce', quantity_per_serving: 15, unit: 'ml' }
   ]
 };
 
