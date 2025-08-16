@@ -5024,6 +5024,10 @@ export type Database = {
         Args: { unit_text: string }
         Returns: string
       }
+      recalculate_senior_discounts: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       repair_missing_product_catalog_entries: {
         Args: Record<PropertyKey, never>
         Returns: {
