@@ -302,6 +302,44 @@ export type Database = {
           },
         ]
       }
+      budget_alerts: {
+        Row: {
+          alert_type: string
+          budget_id: string
+          created_at: string
+          id: string
+          notification_sent: boolean
+          threshold_percentage: number
+          updated_at: string
+        }
+        Insert: {
+          alert_type: string
+          budget_id: string
+          created_at?: string
+          id?: string
+          notification_sent?: boolean
+          threshold_percentage: number
+          updated_at?: string
+        }
+        Update: {
+          alert_type?: string
+          budget_id?: string
+          created_at?: string
+          id?: string
+          notification_sent?: boolean
+          threshold_percentage?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_alerts_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "expense_budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cashiers: {
         Row: {
           contact_number: string | null
