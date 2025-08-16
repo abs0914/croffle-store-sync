@@ -16,7 +16,7 @@ export default function ProductionManagement() {
         <div>
           <h1 className="text-3xl font-bold">Production Management</h1>
           <p className="text-muted-foreground">
-            Convert raw materials into finished products and manage production processes for {currentStore?.name || 'your store'}
+            Convert raw materials into finished products and manage production processes
           </p>
         </div>
       </div>
