@@ -141,36 +141,40 @@ export default function ShiftTransactionReport({
   const totalSales = transactions.reduce((sum, t) => sum + t.total, 0);
   const totalItems = inventoryTransactions.reduce((sum, t) => sum + Math.abs(t.quantity), 0);
   
-  // Calculate actual discounts from subtotal vs total difference
+  // Calculate actual discounts from subtotal vs total difference (includes VAT exemptions)
   const totalDiscounts = transactions.reduce((sum, t) => {
-    const subtotal = t.subtotal || t.total;
+    // Use subtotal if available, otherwise fall back to total (no discount case)
+    const subtotal = t.subtotal && t.subtotal > 0 ? t.subtotal : t.total;
     const actualDiscount = subtotal - t.total;
     return sum + Math.max(0, actualDiscount);
   }, 0);
   
-  const totalSubtotal = transactions.reduce((sum, t) => sum + (t.subtotal || t.total), 0);
+  const totalSubtotal = transactions.reduce((sum, t) => {
+    const subtotal = t.subtotal && t.subtotal > 0 ? t.subtotal : t.total;
+    return sum + subtotal;
+  }, 0);
   
-  // Calculate discount breakdown by type
+  // Calculate discount breakdown by type (includes both percentage discount and VAT exemption)
   const seniorDiscounts = transactions.reduce((sum, t) => {
     if (t.discount_type === 'senior') {
-      const subtotal = t.subtotal || t.total;
+      const subtotal = t.subtotal && t.subtotal > 0 ? t.subtotal : t.total;
       return sum + Math.max(0, subtotal - t.total);
     }
-    return sum + (t.senior_citizen_discount || 0);
+    return sum;
   }, 0);
   
   const pwdDiscounts = transactions.reduce((sum, t) => {
     if (t.discount_type === 'pwd') {
-      const subtotal = t.subtotal || t.total;
+      const subtotal = t.subtotal && t.subtotal > 0 ? t.subtotal : t.total;
       return sum + Math.max(0, subtotal - t.total);
     }
-    return sum + (t.pwd_discount || 0);
+    return sum;
   }, 0);
   
   const otherDiscounts = totalDiscounts - seniorDiscounts - pwdDiscounts;
   
   const discountedTransactions = transactions.filter(t => {
-    const subtotal = t.subtotal || t.total;
+    const subtotal = t.subtotal && t.subtotal > 0 ? t.subtotal : t.total;
     return subtotal > t.total;
   });
   return <div className="space-y-4">
@@ -246,7 +250,7 @@ export default function ShiftTransactionReport({
                         <span className="font-medium">{transaction.receipt_number}</span>
                         {transaction.customer_name && <span className="text-muted-foreground">• {transaction.customer_name}</span>}
                         {(() => {
-                          const subtotal = transaction.subtotal || transaction.total;
+                          const subtotal = transaction.subtotal && transaction.subtotal > 0 ? transaction.subtotal : transaction.total;
                           const hasDiscount = subtotal > transaction.total;
                           return hasDiscount && (
                             <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700">
@@ -261,7 +265,7 @@ export default function ShiftTransactionReport({
                           {transaction.payment_method}
                         </Badge>
                         {(() => {
-                          const subtotal = transaction.subtotal || transaction.total;
+                          const subtotal = transaction.subtotal && transaction.subtotal > 0 ? transaction.subtotal : transaction.total;
                           const hasDiscount = subtotal > transaction.total;
                           
                           if (hasDiscount) {
@@ -272,6 +276,9 @@ export default function ShiftTransactionReport({
                                 </div>
                                 <div className="font-medium text-green-600">
                                   {formatCurrency(transaction.total)}
+                                </div>
+                                <div className="text-xs text-orange-600">
+                                  -{formatCurrency(subtotal - transaction.total)}
                                 </div>
                               </div>
                             );
