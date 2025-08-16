@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,10 +11,14 @@ import {
   Edit3,
   Check,
   X,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
-import { useProductCatalogState } from '@/hooks/product/useProductCatalogState';
+import { useEnhancedProductCatalog } from '@/hooks/productCatalog/useEnhancedProductCatalog';
+import { ConsistencyMonitor } from './ConsistencyMonitor';
 import { ProductStatusManager } from './ProductStatusManager';
 import { ProductStatus } from '@/services/productCatalog/types';
 import { formatCurrency } from '@/utils/format';
@@ -30,17 +33,20 @@ export default function EnhancedProductCatalogManager() {
 
   const storeId = user?.storeIds?.[0] || '';
 
-  // Use unified state management
+  // Use enhanced state management with consistency monitoring
   const {
     products,
+    consistencyReport,
+    lastValidation,
     isLoading: loading,
-    error,
+    isValidating,
+    isSyncing,
+    validateConsistency,
     updateProduct,
-    updateStatus,
+    syncCatalog,
     isUpdating,
-    isUpdatingStatus,
     refetch
-  } = useProductCatalogState(storeId);
+  } = useEnhancedProductCatalog(storeId);
 
   const handleEditPrice = (productId: string, currentPrice: number) => {
     setEditingPrice(productId);
@@ -71,7 +77,13 @@ export default function EnhancedProductCatalogManager() {
 
   const handleStatusChange = (productId: string, status: ProductStatus, isAvailable: boolean) => {
     console.log(`🔄 Updating status for product ${productId} to:`, status, 'available:', isAvailable);
-    updateStatus({ id: productId, status, isAvailable });
+    updateProduct({ 
+      id: productId, 
+      updates: { 
+        product_status: status, 
+        is_available: isAvailable 
+      } 
+    });
   };
 
   const filteredProducts = products.filter(product => {
@@ -83,6 +95,7 @@ export default function EnhancedProductCatalogManager() {
 
   const availableCount = products.filter(p => p.is_available).length;
   const unavailableCount = products.filter(p => !p.is_available).length;
+  const actuallyAvailableCount = products.filter(p => p.actuallyAvailable).length;
 
   if (loading) {
     return (
@@ -90,7 +103,7 @@ export default function EnhancedProductCatalogManager() {
         <div className="flex items-center gap-3">
           <Package className="h-8 w-8 text-croffle-accent" />
           <div>
-            <h1 className="text-3xl font-bold">Product Catalog Manager</h1>
+            <h1 className="text-3xl font-bold">Enhanced Product Catalog</h1>
             <p className="text-muted-foreground">Loading products...</p>
           </div>
         </div>
@@ -117,12 +130,22 @@ export default function EnhancedProductCatalogManager() {
       <div className="flex items-center gap-3">
         <Package className="h-8 w-8 text-croffle-accent" />
         <div>
-          <h1 className="text-3xl font-bold">Product Catalog Manager</h1>
+          <h1 className="text-3xl font-bold">Enhanced Product Catalog</h1>
           <p className="text-muted-foreground">
-            Manage product availability, pricing, and status for your store's POS system
+            Advanced product management with real-time consistency monitoring and inventory validation
           </p>
         </div>
       </div>
+
+      {/* Consistency Monitor */}
+      <ConsistencyMonitor
+        report={consistencyReport}
+        lastValidation={lastValidation}
+        isValidating={isValidating}
+        isSyncing={isSyncing}
+        onValidate={validateConsistency}
+        onSync={syncCatalog}
+      />
 
       {/* Info Banner */}
       <Card className="border-blue-200 bg-blue-50">
@@ -130,9 +153,9 @@ export default function EnhancedProductCatalogManager() {
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-blue-900">Enhanced Product Management</h3>
+              <h3 className="font-semibold text-blue-900">Enhanced Features</h3>
               <p className="text-sm text-blue-700 mt-1">
-                Unified product catalog management with real-time updates, optimistic UI, and comprehensive status tracking.
+                Real-time availability checking, automatic sync with products table, and comprehensive validation.
               </p>
             </div>
           </div>
@@ -140,7 +163,7 @@ export default function EnhancedProductCatalogManager() {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -153,8 +176,8 @@ export default function EnhancedProductCatalogManager() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-green-600" />
-              <div className="text-sm text-muted-foreground">Available</div>
+              <Eye className="h-4 w-4 text-green-600" />
+              <div className="text-sm text-muted-foreground">Enabled</div>
             </div>
             <div className="text-2xl font-bold">{availableCount}</div>
           </CardContent>
@@ -162,7 +185,16 @@ export default function EnhancedProductCatalogManager() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-orange-600" />
+              <Package className="h-4 w-4 text-emerald-600" />
+              <div className="text-sm text-muted-foreground">Actually Available</div>
+            </div>
+            <div className="text-2xl font-bold">{actuallyAvailableCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <EyeOff className="h-4 w-4 text-orange-600" />
               <div className="text-sm text-muted-foreground">Unavailable</div>
             </div>
             <div className="text-2xl font-bold">{unavailableCount}</div>
@@ -237,14 +269,28 @@ export default function EnhancedProductCatalogManager() {
                   <CardTitle className="text-base line-clamp-2">
                     {product.product_name}
                   </CardTitle>
-                  <ProductStatusManager
-                    currentStatus={product.product_status || 'available'}
-                    isAvailable={product.is_available}
-                    onStatusChange={(status, isAvailable) => 
-                      handleStatusChange(product.id, status, isAvailable)
-                    }
-                    disabled={isUpdatingStatus}
-                  />
+                  <div className="flex items-center gap-2">
+                    {product.actuallyAvailable ? (
+                      <Eye className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                        {!product.actuallyAvailable && product.is_available && (
+                          <div title={product.availabilityReason}>
+                            <AlertTriangle className="h-3 w-3 text-amber-500" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <ProductStatusManager
+                      currentStatus={product.product_status || 'available'}
+                      isAvailable={product.is_available}
+                      onStatusChange={(status, isAvailable) => 
+                        handleStatusChange(product.id, status, isAvailable)
+                      }
+                      disabled={isUpdating}
+                    />
+                  </div>
                 </div>
               </CardHeader>
 
@@ -314,6 +360,12 @@ export default function EnhancedProductCatalogManager() {
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {product.description}
                     </p>
+                  )}
+
+                  {!product.actuallyAvailable && product.is_available && (
+                    <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                      {product.availabilityReason}
+                    </div>
                   )}
 
                   {product.recipe_id && (

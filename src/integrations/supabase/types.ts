@@ -5100,6 +5100,14 @@ export type Database = {
         Args: { password: string }
         Returns: boolean
       }
+      validate_product_catalog_consistency: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          count_affected: number
+          description: string
+          issue_type: string
+        }[]
+      }
       validate_product_ingredients_availability: {
         Args: { product_id: string; quantity?: number }
         Returns: {
