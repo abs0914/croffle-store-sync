@@ -4,6 +4,7 @@ import { Customer, Transaction } from "@/types";
 import { createTransaction } from "@/services/transactions";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { SeniorDiscount as CartSeniorDiscount, OtherDiscount as CartOtherDiscount } from "@/services/cart/CartCalculationService";
 
 export interface SeniorDiscount {
   id: string;
@@ -24,16 +25,37 @@ export function useTransactionHandler(storeId: string) {
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>([]);
   const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | undefined>(undefined);
   
-  const { clearCart } = useCart();
+  const { clearCart, applyDiscounts: applyCartDiscounts } = useCart();
 
   const handleApplyDiscount = (
     discountAmount: number, 
     type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo',
     idNumber?: string
   ) => {
+    // Update transaction handler state
     setDiscount(discountAmount);
     setDiscountType(type);
     setDiscountIdNumber(idNumber);
+    
+    // Sync with cart context to ensure calculations are updated
+    if (type === 'senior') {
+      // Convert single senior discount to multiple discount format
+      const seniorDiscount: CartSeniorDiscount = {
+        id: idNumber || 'single-senior',
+        idNumber: idNumber || '',
+        name: 'Senior Citizen',
+        discountAmount: discountAmount
+      };
+      applyCartDiscounts([seniorDiscount], undefined, 1);
+    } else {
+      // Handle other discount types
+      const otherDiscountData: CartOtherDiscount = {
+        type: type as 'pwd' | 'employee' | 'loyalty' | 'promo',
+        amount: discountAmount,
+        idNumber: idNumber
+      };
+      applyCartDiscounts([], otherDiscountData, 1);
+    }
   };
 
   const handleApplyMultipleDiscounts = (
@@ -55,6 +77,25 @@ export function useTransactionHandler(storeId: string) {
       setDiscountType(otherDiscountValue.type);
       setDiscountIdNumber(otherDiscountValue.idNumber);
     }
+    
+    // Sync with cart context - convert formats if needed
+    const cartSeniorDiscounts: CartSeniorDiscount[] = seniorDiscountsArray.map(discount => ({
+      id: discount.id,
+      idNumber: discount.idNumber,
+      name: discount.name,
+      discountAmount: discount.discountAmount
+    }));
+    
+    const cartOtherDiscount: CartOtherDiscount | undefined = otherDiscountValue ? {
+      type: otherDiscountValue.type,
+      amount: otherDiscountValue.amount,
+      idNumber: otherDiscountValue.idNumber
+    } : undefined;
+    
+    // Calculate total diners based on senior discounts
+    const totalDiners = Math.max(1, seniorDiscountsArray.length);
+    
+    applyCartDiscounts(cartSeniorDiscounts, cartOtherDiscount, totalDiners);
   };
   
   const handlePaymentComplete = async (
@@ -146,6 +187,7 @@ export function useTransactionHandler(storeId: string) {
     setDiscountIdNumber(undefined);
     setSeniorDiscounts([]);
     setOtherDiscount(undefined);
+    // Clear cart will also clear discounts in cart context
     clearCart();
   };
   
