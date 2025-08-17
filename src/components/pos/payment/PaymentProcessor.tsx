@@ -218,6 +218,14 @@ export default function PaymentProcessor({ total, itemCount = 1, onPaymentComple
     }
   };
 
+  // Debug log for troubleshooting
+  console.log("🔍 PaymentProcessor: Button state", {
+    total,
+    currentShift: currentShift ? 'Active' : 'None',
+    isProcessing,
+    disabled: total < 0 || !currentShift || isProcessing
+  });
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleDialogClose}>
