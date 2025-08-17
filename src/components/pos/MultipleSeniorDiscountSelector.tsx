@@ -296,12 +296,10 @@ export default function MultipleSeniorDiscountSelector({
                     <RadioGroupItem value="promo" id="promo" />
                     <Label htmlFor="promo">Promo (Custom)</Label>
                   </div>
-                  {user && (
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="complimentary" id="complimentary" />
-                      <Label htmlFor="complimentary">Complimentary (100%)</Label>
-                    </div>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="complimentary" id="complimentary" />
+                    <Label htmlFor="complimentary">Complimentary (100%)</Label>
+                  </div>
                 </RadioGroup>
 
                 {otherDiscountType === 'pwd' && (
