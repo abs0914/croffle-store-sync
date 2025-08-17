@@ -29,17 +29,26 @@ export class PaymentValidationService {
     const errors: string[] = [];
     const warnings: string[] = [];
     
-    // Basic validation
-    if (total <= 0) {
+    // Basic validation - allow zero totals for complimentary discounts
+    if (total < 0) {
       errors.push("Invalid transaction total");
     }
     
-    if (amountTendered <= 0) {
-      errors.push("Amount tendered must be greater than zero");
-    }
-    
-    if (amountTendered < total) {
-      errors.push("Insufficient payment amount");
+    // For zero totals (complimentary), allow zero amount tendered
+    if (total === 0) {
+      // For complimentary transactions, amount tendered should be zero
+      if (amountTendered !== 0) {
+        errors.push("Amount tendered should be zero for complimentary transactions");
+      }
+    } else {
+      // For normal transactions, require positive amount tendered
+      if (amountTendered <= 0) {
+        errors.push("Amount tendered must be greater than zero");
+      }
+      
+      if (amountTendered < total) {
+        errors.push("Insufficient payment amount");
+      }
     }
     
     // Warnings for large amounts
@@ -69,7 +78,7 @@ export class PaymentValidationService {
     const errors: string[] = [];
     const warnings: string[] = [];
     
-    if (total <= 0) {
+    if (total < 0) {
       errors.push("Invalid transaction total");
     }
     
@@ -110,7 +119,7 @@ export class PaymentValidationService {
     const errors: string[] = [];
     const warnings: string[] = [];
     
-    if (total <= 0) {
+    if (total < 0) {
       errors.push("Invalid transaction total");
     }
     
