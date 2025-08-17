@@ -239,8 +239,9 @@ export default function CartView({
                 type: typeof calculations
               });
               
-              if (!calculations || calculations.finalTotal <= 0) {
-                console.error("❌ Checkout blocked - invalid calculations", {
+              // Allow checkout if there are items in cart, even if total is 0 (complimentary)
+              if (!calculations || cartItems?.length === 0) {
+                console.error("❌ Checkout blocked - no items in cart", {
                   calculations,
                   finalTotal: calculations?.finalTotal,
                   itemsInCart: cartItems?.length
@@ -248,6 +249,16 @@ export default function CartView({
                 toast.error('Cannot checkout with empty cart');
                 return;
               }
+              
+              // Allow ₱0 total for complimentary discounts
+              if (calculations.finalTotal < 0) {
+                console.error("❌ Checkout blocked - negative total", {
+                  finalTotal: calculations.finalTotal
+                });
+                toast.error('Invalid cart total');
+                return;
+              }
+              
               setIsPaymentDialogOpen(true);
             }}
           />
