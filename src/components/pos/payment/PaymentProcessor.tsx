@@ -54,8 +54,8 @@ export default function PaymentProcessor({ total, itemCount = 1, onPaymentComple
       return;
     }
 
-    if (total <= 0) {
-      toast.error("Cannot process payment for empty cart.");
+    if (total < 0) {
+      toast.error("Cannot process payment for negative amount.");
       return;
     }
 
@@ -224,7 +224,7 @@ export default function PaymentProcessor({ total, itemCount = 1, onPaymentComple
         <DialogTrigger asChild>
           <Button
             className="w-full mt-4 bg-green-600 hover:bg-green-700 text-lg py-6"
-            disabled={total <= 0 || !currentShift || isProcessing}
+            disabled={total < 0 || !currentShift || isProcessing}
           >
             {isProcessing ? (
               <>
@@ -276,7 +276,7 @@ export default function PaymentProcessor({ total, itemCount = 1, onPaymentComple
             </Button>
             <Button 
               onClick={handlePayment} 
-              disabled={isProcessing || total <= 0}
+              disabled={isProcessing || total < 0}
             >
               {isProcessing ? (
                 <>
