@@ -222,7 +222,7 @@ export default function POS() {
           selectedCustomer={selectedCustomer}
           setSelectedCustomer={setSelectedCustomer}
           discount={discount}
-          discountType={discountType as 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | undefined}
+          discountType={discountType as 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | undefined}
           discountIdNumber={discountIdNumber}
           seniorDiscounts={seniorDiscounts}
           otherDiscount={otherDiscount}

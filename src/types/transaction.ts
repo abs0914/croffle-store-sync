@@ -62,7 +62,7 @@ export interface Transaction {
   subtotal: number;
   tax: number;
   discount: number;
-  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
+  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary';
   discountIdNumber?: string;
   total: number;
   amountTendered?: number;

@@ -8,9 +8,10 @@ export interface SeniorDiscount {
 }
 
 export interface OtherDiscount {
-  type: 'pwd' | 'employee' | 'loyalty' | 'promo';
+  type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary';
   amount: number;
   idNumber?: string;
+  justification?: string;
 }
 
 export interface CartCalculations {
@@ -113,6 +114,9 @@ export class CartCalculationService {
           break;
         case 'promo':
           otherDiscountAmount = otherDiscount.amount;
+          break;
+        case 'complimentary':
+          otherDiscountAmount = discountSubtotal; // 100% discount
           break;
       }
     }

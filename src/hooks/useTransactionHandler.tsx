@@ -20,17 +20,18 @@ export function useTransactionHandler(storeId: string) {
   const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [discount, setDiscount] = useState(0);
-  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | undefined>(undefined);
+  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | undefined>(undefined);
   const [discountIdNumber, setDiscountIdNumber] = useState<string | undefined>(undefined);
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>([]);
-  const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | undefined>(undefined);
+  const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', amount: number, idNumber?: string, justification?: string } | undefined>(undefined);
   
   const { clearCart, applyDiscounts: applyCartDiscounts } = useCart();
 
   const handleApplyDiscount = (
     discountAmount: number, 
-    type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo',
-    idNumber?: string
+    type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary',
+    idNumber?: string,
+    justification?: string
   ) => {
     // Update transaction handler state
     setDiscount(discountAmount);
@@ -50,9 +51,10 @@ export function useTransactionHandler(storeId: string) {
     } else {
       // Handle other discount types
       const otherDiscountData: CartOtherDiscount = {
-        type: type as 'pwd' | 'employee' | 'loyalty' | 'promo',
+        type: type as 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary',
         amount: discountAmount,
-        idNumber: idNumber
+        idNumber: idNumber,
+        justification: justification
       };
       applyCartDiscounts([], otherDiscountData, 1);
     }
@@ -60,7 +62,7 @@ export function useTransactionHandler(storeId: string) {
 
   const handleApplyMultipleDiscounts = (
     seniorDiscountsArray: SeniorDiscount[],
-    otherDiscountValue?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }
+    otherDiscountValue?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', amount: number, idNumber?: string, justification?: string }
   ) => {
     setSeniorDiscounts(seniorDiscountsArray);
     setOtherDiscount(otherDiscountValue);
@@ -89,7 +91,8 @@ export function useTransactionHandler(storeId: string) {
     const cartOtherDiscount: CartOtherDiscount | undefined = otherDiscountValue ? {
       type: otherDiscountValue.type,
       amount: otherDiscountValue.amount,
-      idNumber: otherDiscountValue.idNumber
+      idNumber: otherDiscountValue.idNumber,
+      justification: otherDiscountValue.justification
     } : undefined;
     
     // Calculate total diners based on senior discounts
