@@ -43,6 +43,13 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
   };
 
   const canApplyComplimentary = checkPermission(user?.role, 'manager');
+  
+  // Debug logging to check user role and permission
+  console.log('DiscountDialog Debug:', {
+    userRole: user?.role,
+    canApplyComplimentary,
+    userEmail: user?.email
+  });
 
   const handleTypeChange = (type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary') => {
     setDiscountType(type);
