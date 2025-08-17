@@ -31,6 +31,7 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
   const [discountPercentage, setDiscountPercentage] = useState(20);
   const [idNumber, setIdNumber] = useState('');
   const [justification, setJustification] = useState('');
+  const [approverName, setApproverName] = useState('');
   const { user } = useAuth();
 
   const discountTypes = {
@@ -42,31 +43,35 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
     complimentary: { label: 'Complimentary (100%)', defaultPercent: 100 }
   };
 
-  const canApplyComplimentary = checkPermission(user?.role, 'manager');
-  
-  // Debug logging to check user role and permission
-  console.log('DiscountDialog Debug:', {
-    userRole: user?.role,
-    canApplyComplimentary,
-    userEmail: user?.email
-  });
+  // Allow all authenticated users to apply complimentary discounts with proper authorization
+  const canApplyComplimentary = !!user;
 
   const handleTypeChange = (type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary') => {
     setDiscountType(type);
     setDiscountPercentage(discountTypes[type].defaultPercent);
     if (type !== 'complimentary') {
       setJustification('');
+      setApproverName('');
     }
   };
 
   const handleApply = () => {
-    if (discountType === 'complimentary' && !justification.trim()) {
-      alert('Justification is required for complimentary discounts');
-      return;
+    if (discountType === 'complimentary') {
+      if (!justification.trim()) {
+        alert('Justification is required for complimentary discounts');
+        return;
+      }
+      if (!approverName.trim()) {
+        alert('Approver name is required for complimentary discounts');
+        return;
+      }
     }
     
     const discountAmount = (currentTotal * discountPercentage) / 100;
-    onApplyDiscount(discountAmount, discountType, idNumber, justification);
+    const completeJustification = discountType === 'complimentary' 
+      ? `${justification} | Approved by: ${approverName}`
+      : justification;
+    onApplyDiscount(discountAmount, discountType, idNumber, completeJustification);
     onClose();
   };
 
@@ -131,16 +136,28 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
           )}
 
           {discountType === 'complimentary' && (
-            <div>
-              <Label htmlFor="justification">Justification (Required)</Label>
-              <Textarea
-                id="justification"
-                value={justification}
-                onChange={(e) => setJustification(e.target.value)}
-                placeholder="Enter reason for complimentary discount..."
-                required
-              />
-            </div>
+            <>
+              <div>
+                <Label htmlFor="justification">Reason (Required)</Label>
+                <Textarea
+                  id="justification"
+                  value={justification}
+                  onChange={(e) => setJustification(e.target.value)}
+                  placeholder="Enter reason for complimentary discount..."
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="approver-name">Approver Name (Required)</Label>
+                <Input
+                  id="approver-name"
+                  value={approverName}
+                  onChange={(e) => setApproverName(e.target.value)}
+                  placeholder="Enter name of manager/supervisor who approved this"
+                  required
+                />
+              </div>
+            </>
           )}
 
           <div className={`p-3 rounded ${discountType === 'complimentary' ? 'bg-red-50 border border-red-200' : 'bg-gray-100'}`}>
@@ -160,7 +177,7 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
             </div>
             {discountType === 'complimentary' && (
               <div className="text-sm text-red-600 mt-2 font-medium">
-                ⚠️ Manager authorization required
+                ⚠️ Requires reason and approver name
               </div>
             )}
           </div>
