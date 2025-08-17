@@ -67,6 +67,11 @@ export function useTransactionHandler(storeId: string) {
     setSeniorDiscounts(seniorDiscountsArray);
     setOtherDiscount(otherDiscountValue);
     
+    // Clear the old single discount state to prevent UI conflicts
+    setDiscount(0);
+    setDiscountType(undefined);
+    setDiscountIdNumber(undefined);
+    
     const totalSeniorDiscount = seniorDiscountsArray.reduce((sum, discount) => sum + (discount.amount || discount.discountAmount), 0);
     const totalOtherDiscount = otherDiscountValue?.amount || 0;
     const totalDiscount = totalSeniorDiscount + totalOtherDiscount;
