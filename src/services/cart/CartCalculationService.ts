@@ -137,7 +137,7 @@ export class CartCalculationService {
     const totalDiscountAmount = seniorDiscountAmount + otherDiscountAmount;
     const finalTotal = grossSubtotal - vatExemption - seniorDiscountAmount - otherDiscountAmount;
     
-    return {
+    const result = {
       grossSubtotal,
       netAmount,
       standardVAT,
@@ -153,6 +153,9 @@ export class CartCalculationService {
       totalDiners: effectiveTotalDiners,
       numberOfSeniors
     };
+    
+    console.log("🧮 CartCalculationService: Final result", result);
+    return result;
   }
 
   static distributeSeniorDiscounts(

@@ -232,7 +232,19 @@ export default function CartView({
             deliveryPlatform={deliveryPlatform}
             deliveryOrderNumber={deliveryOrderNumber}
             onCheckout={() => {
-              if (calculations.finalTotal <= 0) {
+              console.log("🚀 Checkout attempt", {
+                calculationsObject: calculations,
+                finalTotal: calculations?.finalTotal,
+                cartItemsLength: cartItems?.length,
+                type: typeof calculations
+              });
+              
+              if (!calculations || calculations.finalTotal <= 0) {
+                console.error("❌ Checkout blocked - invalid calculations", {
+                  calculations,
+                  finalTotal: calculations?.finalTotal,
+                  itemsInCart: cartItems?.length
+                });
                 toast.error('Cannot checkout with empty cart');
                 return;
               }
