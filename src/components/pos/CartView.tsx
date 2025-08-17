@@ -61,10 +61,12 @@ export default function CartView({
   } = useCart();
 
   // Debug logging to track cart data
-  console.log('CartView: Cart data from context', {
+  console.log('🔍 CartView: Cart data from context', {
     itemCount: cartItems?.length || 0,
     orderType,
-    calculations: calculations.finalTotal,
+    calculations: calculations,
+    calculationsFinalTotal: calculations?.finalTotal,
+    calculationsType: typeof calculations,
     seniorDiscountsCount: seniorDiscounts?.length || 0,
     cartItemsRaw: cartItems,
     isOrderTypeTransitioning

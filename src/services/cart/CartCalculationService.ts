@@ -55,8 +55,18 @@ export class CartCalculationService {
     otherDiscount?: OtherDiscount | null,
     totalDiners: number = 1
   ): CartCalculations {
+    console.log("🧮 CartCalculationService: Starting calculation", {
+      itemsCount: items.length,
+      items: items.map(i => ({ price: i.price, qty: i.quantity, total: i.price * i.quantity })),
+      seniorDiscountsCount: seniorDiscounts.length,
+      otherDiscount,
+      totalDiners
+    });
+    
     // Basic calculations - amounts are VAT-inclusive (standard POS behavior)
     const grossSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    console.log("🧮 CartCalculationService: Gross subtotal calculated", grossSubtotal);
     
     const numberOfSeniors = seniorDiscounts.length;
     const effectiveTotalDiners = Math.max(totalDiners, numberOfSeniors);

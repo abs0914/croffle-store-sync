@@ -39,12 +39,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Get calculations using the centralized service
   const getCartCalculations = (): CartCalculations => {
-    return CartCalculationService.calculateCartTotals(
+    const calculationResult = CartCalculationService.calculateCartTotals(
       items,
       seniorDiscounts,
       otherDiscount,
       totalDiners
     );
+    console.log("🧮 CartProvider: Cart calculation debug", {
+      itemsCount: items.length,
+      itemsData: items.map(i => ({ name: i.product.name, qty: i.quantity, price: i.price })),
+      seniorDiscountsCount: seniorDiscounts.length,
+      otherDiscount: otherDiscount,
+      totalDiners,
+      calculationResult
+    });
+    return calculationResult;
   };
 
   const calculations = getCartCalculations();
