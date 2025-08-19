@@ -66,15 +66,30 @@ export const deductIngredientsForProduct = async (
     if (!productInfo) {
       console.error('❌ Product not found in either catalog or products table:', productId);
       
+      // Try to find similar products for debugging
+      const { data: similarProducts } = await supabase
+        .from('product_catalog')
+        .select('id, product_name')
+        .ilike('product_name', '%mini%croffle%')
+        .limit(5);
+      
+      console.error('🔍 Available Mini Croffle products:', similarProducts);
+      
+      // Check if this might be a combo product ID
+      if (productId.startsWith('combo-')) {
+        console.error('🧩 This appears to be a combo product ID, but validation failed');
+      }
+      
       // Log failure to audit system
       await supabase.rpc('log_inventory_sync_result', {
         p_transaction_id: transactionId,
         p_sync_status: 'failed',
-        p_error_details: `Product not found: ${productId}`,
+        p_error_details: `Product not found: ${productId}. Available Mini Croffle products: ${similarProducts?.map(p => `${p.product_name} (${p.id})`).join(', ') || 'none'}`,
         p_items_processed: 0,
         p_sync_duration_ms: Date.now() - syncStartTime
       });
       
+      toast.error(`Product not found. Please check product configuration.`);
       return false;
     }
 

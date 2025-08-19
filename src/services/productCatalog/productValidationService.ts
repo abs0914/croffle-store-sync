@@ -26,15 +26,25 @@ export const validateProductForSale = async (
       .from('product_catalog')
       .select('product_name, recipe_id, is_available')
       .eq('id', productId)
-      .single();
+      .maybeSingle();
 
     if (productInfoError || !productInfo) {
+      // Try to find similar products for debugging
+      const { data: similarProducts } = await supabase
+        .from('product_catalog')
+        .select('id, product_name')
+        .ilike('product_name', '%mini%croffle%')
+        .limit(5);
+      
+      console.error('🔍 Product validation failed for ID:', productId);
+      console.error('🔍 Available Mini Croffle products:', similarProducts);
+      
       return {
         isValid: false,
         productName: 'Unknown Product',
         missingIngredients: true,
         lowStockIngredients: [],
-        errors: ['Product not found']
+        errors: [`Product not found: ${productId}. Available products: ${similarProducts?.map(p => p.product_name).join(', ') || 'none'}`]
       };
     }
 
