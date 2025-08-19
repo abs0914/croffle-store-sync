@@ -14,6 +14,7 @@ export const mapUserRole = (email: string): UserRole => {
   if (email.includes('manager') || email === 'rbsons.north.manager@croffle.com') return 'manager';
   if (email.includes('stock') || email.match(/\.stock@/)) return 'stock_user';
   if (email.includes('production') || email.match(/\.production@/)) return 'production_user';
+  if (email.includes('commissary') || email.match(/\.commissary@/)) return 'commissary_user';
   
   // Specific user mappings
   if (email === 'marasabaras@croffle.com' || email === 'robinsons.north@croffle.com') return 'cashier';
@@ -28,8 +29,9 @@ export const checkPermission = (userRole: UserRole | undefined, requiredRole: Us
   if (!userRole) return false;
   
   const roleHierarchy: Record<UserRole, number> = {
-    admin: 6,
-    owner: 5,
+    admin: 7,
+    owner: 6,
+    commissary_user: 5,
     stock_user: 4,
     manager: 3,
     production_user: 2,
@@ -136,6 +138,12 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
   const roleRoutes: Record<UserRole, string[]> = {
     admin: [...STORE_ROUTES, ...ADMIN_ROUTES], // Admin gets everything
     owner: [...STORE_ROUTES, ...ADMIN_ROUTES], // Owner gets everything
+    commissary_user: [
+      ROUTE_PATHS.DASHBOARD,
+      ROUTE_PATHS.ADMIN_COMMISSARY,
+      ROUTE_PATHS.ADMIN_PRODUCTION,
+      ROUTE_PATHS.ADMIN_ORDER_MANAGEMENT
+    ],
     stock_user: [
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.INVENTORY,
@@ -185,7 +193,7 @@ export const canAccessAdminPanel = (userRole: UserRole | undefined): boolean => 
   if (!userRole) return false;
   
   // Define roles that can access admin panel (avoiding circular dependency)
-  const adminRoles: UserRole[] = ['admin', 'owner', 'manager', 'stock_user', 'production_user'];
+  const adminRoles: UserRole[] = ['admin', 'owner', 'manager', 'stock_user', 'production_user', 'commissary_user'];
   return adminRoles.includes(userRole);
 };
 
@@ -210,7 +218,7 @@ export const canAccessCommissary = (userRole: UserRole | undefined): boolean => 
   if (!userRole) return false;
   
   // Define roles that can access commissary inventory
-  const commissaryRoles: UserRole[] = ['admin', 'owner', 'stock_user', 'production_user'];
+  const commissaryRoles: UserRole[] = ['admin', 'owner', 'stock_user', 'production_user', 'commissary_user'];
   return commissaryRoles.includes(userRole);
 };
 
@@ -221,7 +229,7 @@ export const canAccessProduction = (userRole: UserRole | undefined): boolean => 
   if (!userRole) return false;
   
   // Define roles that can access production management
-  const productionRoles: UserRole[] = ['admin', 'owner', 'production_user', 'stock_user'];
+  const productionRoles: UserRole[] = ['admin', 'owner', 'production_user', 'stock_user', 'commissary_user'];
   return productionRoles.includes(userRole);
 };
 

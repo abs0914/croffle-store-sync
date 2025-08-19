@@ -82,8 +82,9 @@ export const fetchAppUserData = async (email: string): Promise<AppUserData | nul
  */
 export const hasPermission = (userRole: UserRole, requiredRole: UserRole): boolean => {
   const roleHierarchy: Record<UserRole, number> = {
-    admin: 6,
-    owner: 5,
+    admin: 7,
+    owner: 6,
+    commissary_user: 5,
     stock_user: 4,
     manager: 3,
     production_user: 2,

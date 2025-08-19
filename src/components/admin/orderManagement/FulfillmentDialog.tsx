@@ -22,13 +22,13 @@ import { toast } from "sonner";
 import { Package, CheckCircle2, AlertCircle, Minus, Plus } from "lucide-react";
 
 interface FulfillmentDialogProps {
-  order: PurchaseOrder;
+  purchaseOrder: PurchaseOrder;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onFulfillmentComplete: () => void;
 }
 
-export function FulfillmentDialog({ order, isOpen, onClose, onSuccess }: FulfillmentDialogProps) {
+export function FulfillmentDialog({ purchaseOrder, isOpen, onClose, onFulfillmentComplete }: FulfillmentDialogProps) {
   const { user } = useAuth();
   const [currentFulfillment, setCurrentFulfillment] = useState<PurchaseOrderFulfillment | null>(null);
   const [fulfillmentItems, setFulfillmentItems] = useState<PurchaseOrderFulfillmentItem[]>([]);
@@ -36,24 +36,24 @@ export function FulfillmentDialog({ order, isOpen, onClose, onSuccess }: Fulfill
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen && order) {
+    if (isOpen && purchaseOrder) {
       initializeFulfillment();
     }
-  }, [isOpen, order]);
+  }, [isOpen, purchaseOrder]);
 
   const initializeFulfillment = async () => {
-    if (!user?.id || !order.items) return;
+    if (!user?.id || !purchaseOrder.items) return;
 
     setLoading(true);
     try {
       // Create a new fulfillment session
-      const fulfillment = await createFulfillment(order.id, user.id, notes);
+      const fulfillment = await createFulfillment(purchaseOrder.id, user.id, notes);
       
       if (fulfillment) {
         setCurrentFulfillment(fulfillment);
         
         // Create fulfillment items based on purchase order items
-        const items = order.items.map(item => ({
+        const items = purchaseOrder.items.map(item => ({
           purchase_order_item_id: item.id,
           ordered_quantity: item.quantity,
           unit_price: item.unit_price
@@ -62,7 +62,7 @@ export function FulfillmentDialog({ order, isOpen, onClose, onSuccess }: Fulfill
         await createFulfillmentItems(fulfillment.id, items);
         
         // Initialize fulfillment items state
-        const initialItems: PurchaseOrderFulfillmentItem[] = order.items.map(item => ({
+        const initialItems: PurchaseOrderFulfillmentItem[] = purchaseOrder.items.map(item => ({
           id: '', // Will be set after creation
           fulfillment_id: fulfillment.id,
           purchase_order_item_id: item.id,
@@ -157,7 +157,7 @@ export function FulfillmentDialog({ order, isOpen, onClose, onSuccess }: Fulfill
       await completeFulfillment(currentFulfillment.id, user.id, notes);
       
       toast.success('Fulfillment completed successfully');
-      onSuccess();
+      onFulfillmentComplete();
       onClose();
     } catch (error) {
       console.error('Error completing fulfillment:', error);
@@ -176,7 +176,7 @@ export function FulfillmentDialog({ order, isOpen, onClose, onSuccess }: Fulfill
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Fulfill Order - {order.order_number}
+            Fulfill Order - {purchaseOrder.order_number}
           </DialogTitle>
         </DialogHeader>
 
@@ -190,11 +190,11 @@ export function FulfillmentDialog({ order, isOpen, onClose, onSuccess }: Fulfill
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <Label className="text-muted-foreground">Store</Label>
-                  <p className="font-medium">{order.store?.name}</p>
+                  <p className="font-medium">{purchaseOrder.store?.name}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Total Amount</Label>
-                  <p className="font-medium">₱{order.total_amount.toFixed(2)}</p>
+                  <p className="font-medium">₱{purchaseOrder.total_amount.toFixed(2)}</p>
                 </div>
               </div>
               {currentFulfillment && (

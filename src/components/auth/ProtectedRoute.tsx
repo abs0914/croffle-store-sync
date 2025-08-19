@@ -51,8 +51,9 @@ export function ProtectedRoute({
     // If a required role is specified, check role hierarchy
     if (requiredRole) {
       const roleHierarchy: Record<UserRole, number> = {
-        admin: 6,
-        owner: 5,
+        admin: 7,
+        owner: 6,
+        commissary_user: 5,
         stock_user: 4,
         manager: 3,
         production_user: 2,

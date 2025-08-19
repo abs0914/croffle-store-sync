@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Eye, CheckCircle, XCircle, Building2, User, Calendar, Package, DollarSign, Truck, ClipboardCheck } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Building2, User, Calendar, Package, DollarSign, Truck, ClipboardCheck, Settings } from 'lucide-react';
 import { PurchaseOrder } from '@/types/orderManagement';
 import { Store } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FulfillmentDialog } from '@/components/admin/orderManagement/FulfillmentDialog';
 
 interface AdminPurchaseOrdersListProps {
   orders: PurchaseOrder[];
@@ -40,6 +41,7 @@ export function AdminPurchaseOrdersList({
   onDeliverOrder,
   stores
 }: AdminPurchaseOrdersListProps) {
+  const [fulfillmentOrder, setFulfillmentOrder] = React.useState<PurchaseOrder | null>(null);
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -77,6 +79,7 @@ export function AdminPurchaseOrdersList({
     switch (status) {
       case 'approved': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'in_progress': return 'bg-orange-100 text-orange-800';
       case 'fulfilled': return 'bg-blue-100 text-blue-800';
       case 'delivered': return 'bg-purple-100 text-purple-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
@@ -114,17 +117,32 @@ export function AdminPurchaseOrdersList({
       );
     }
     
-    if (order.status === 'approved' && onFulfillOrder) {
+    if (order.status === 'approved') {
       actions.push(
         <Button
           key="fulfill"
           variant="outline"
           size="sm"
-          onClick={() => onFulfillOrder(order.id)}
+          onClick={() => setFulfillmentOrder(order)}
           className="text-blue-600 hover:bg-blue-50"
         >
-          <Truck className="h-3 w-3 mr-1" />
-          Fulfill
+          <Settings className="h-3 w-3 mr-1" />
+          Start Fulfillment
+        </Button>
+      );
+    }
+    
+    if (order.status === 'in_progress') {
+      actions.push(
+        <Button
+          key="continue-fulfill"
+          variant="outline"
+          size="sm"
+          onClick={() => setFulfillmentOrder(order)}
+          className="text-orange-600 hover:bg-orange-50"
+        >
+          <Settings className="h-3 w-3 mr-1" />
+          Continue Fulfillment
         </Button>
       );
     }
@@ -277,6 +295,18 @@ export function AdminPurchaseOrdersList({
           </TableBody>
         </Table>
       </Card>
+
+      {fulfillmentOrder && (
+        <FulfillmentDialog
+          isOpen={!!fulfillmentOrder}
+          onClose={() => setFulfillmentOrder(null)}
+          purchaseOrder={fulfillmentOrder}
+          onFulfillmentComplete={() => {
+            setFulfillmentOrder(null);
+            onRefresh();
+          }}
+        />
+      )}
     </div>
   );
 }
