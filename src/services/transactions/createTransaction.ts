@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { enrichCartItemsWithCategories, insertTransactionItems } from "./transactionItemsService";
 import { validateProductForSale } from "@/services/productCatalog/productValidationService";
+import { logInventorySyncSuccess, rollbackTransactionWithAudit } from "./transactionAuditService";
+import { rollbackProcessedItems } from "./inventoryRollbackService";
 
 // Type definition for transaction data from Supabase
 interface TransactionRow {
@@ -218,7 +220,7 @@ export const createTransaction = async (
       receiptNumber
     );
     
-    // Process inventory deduction with optimized strategy
+    // Enhanced inventory deduction with comprehensive error handling
     console.log('🔄 Starting inventory deduction for transaction:', data.id);
     console.log('🔄 Transaction items for inventory processing:', transaction.items.map(item => ({
       productId: item.productId,
@@ -226,16 +228,20 @@ export const createTransaction = async (
       quantity: item.quantity
     })));
     
+    // Start monitoring for this transaction
+    const { startInventorySyncMonitoring } = await import('@/services/inventory/inventorySyncMonitor');
+    startInventorySyncMonitoring(data.id, transaction.storeId, transaction.items);
+    
     try {
-      let inventorySuccess = false;
+      let inventoryResult: { success: boolean; errors: string[] } = { success: false, errors: [] };
       
       if (useBatchProcessing) {
         console.log('📦 Using batch inventory processing for large order');
         
-        // Import batch processing service again for inventory
-        const { BatchProcessingService } = await import('./batchProcessingService');
+        // Import enhanced batch processing service
+        const { EnhancedBatchProcessingService } = await import('./enhancedBatchProcessingService');
         
-        inventorySuccess = await BatchProcessingService.batchProcessInventory(
+        inventoryResult = await EnhancedBatchProcessingService.batchProcessInventoryWithErrorHandling(
           transaction.items,
           transaction.storeId,
           data.id,
@@ -244,24 +250,70 @@ export const createTransaction = async (
           }
         );
       } else {
-        // Use sequential processing for small orders
+        // Use enhanced sequential processing with proper error tracking
         console.log('🔄 Processing inventory sequentially for', transaction.items.length, 'items');
-        inventorySuccess = await updateInventoryStockForTransaction(transaction.items, transaction.storeId, data.id);
+        inventoryResult = await enhancedUpdateInventoryStockForTransaction(transaction.items, transaction.storeId, data.id);
       }
       
-      if (!inventorySuccess) {
-        console.error('❌ Inventory deduction failed - rolling back transaction:', data.id);
-        // Rollback transaction if inventory deduction fails
-        await supabase.from("transactions").delete().eq("id", data.id);
-        toast.error('Transaction failed - insufficient inventory');
+      if (!inventoryResult.success) {
+        console.error('❌ Inventory deduction failed:', {
+          transactionId: data.id,
+          errors: inventoryResult.errors,
+          itemsProcessed: transaction.items.length
+        });
+        
+        // Report sync failure to monitoring
+        const { reportInventorySyncFailure } = await import('@/services/inventory/inventorySyncMonitor');
+        await reportInventorySyncFailure(data.id, transaction.storeId, inventoryResult.errors, transaction.items);
+        
+        // Enhanced rollback with audit logging
+        await rollbackTransactionWithAudit(data.id, inventoryResult.errors, transaction.storeId, transaction.userId);
+        
+        // Provide detailed error message to user
+        const errorMessage = inventoryResult.errors.length > 0 
+          ? `Inventory error: ${inventoryResult.errors.slice(0, 2).join(', ')}${inventoryResult.errors.length > 2 ? '...' : ''}`
+          : 'Insufficient inventory or processing error';
+        
+        toast.error(errorMessage);
         return null;
       }
+      
       console.log('✅ Inventory deduction completed successfully for transaction:', data.id);
+      
+      // Report sync success to monitoring
+      const { reportInventorySyncSuccess } = await import('@/services/inventory/inventorySyncMonitor');
+      reportInventorySyncSuccess(data.id);
+      
+      // Log successful inventory sync for monitoring
+      await logInventorySyncSuccess(data.id, transaction.items.length, transaction.storeId);
+      
     } catch (inventoryError) {
-      console.error('❌ Critical inventory error:', inventoryError);
-      // Rollback transaction for critical errors
-      await supabase.from("transactions").delete().eq("id", data.id);
-      toast.error('Transaction failed - inventory processing error');
+      console.error('❌ Critical inventory processing error:', {
+        error: inventoryError,
+        transactionId: data.id,
+        storeId: transaction.storeId,
+        itemCount: transaction.items.length,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Report critical failure to monitoring
+      const { reportInventorySyncFailure } = await import('@/services/inventory/inventorySyncMonitor');
+      await reportInventorySyncFailure(
+        data.id, 
+        transaction.storeId, 
+        [`Critical error: ${inventoryError instanceof Error ? inventoryError.message : String(inventoryError)}`], 
+        transaction.items
+      );
+      
+      // Enhanced rollback with comprehensive error logging
+      await rollbackTransactionWithAudit(
+        data.id, 
+        [`Critical error: ${inventoryError instanceof Error ? inventoryError.message : String(inventoryError)}`], 
+        transaction.storeId, 
+        transaction.userId
+      );
+      
+      toast.error('Transaction failed - critical inventory processing error');
       return null;
     }
     
@@ -321,11 +373,23 @@ export const createTransaction = async (
 };
 
 /**
- * Updates inventory stock after a transaction is completed using real inventory integration
+ * Enhanced inventory stock update with comprehensive error tracking and rollback
  */
-const updateInventoryStockForTransaction = async (items: any[], storeId: string, transactionId: string): Promise<boolean> => {
+const enhancedUpdateInventoryStockForTransaction = async (
+  items: any[], 
+  storeId: string, 
+  transactionId: string
+): Promise<{ success: boolean; errors: string[] }> => {
+  const errors: string[] = [];
+  const processedItems: { productId: string; name: string; quantity: number }[] = [];
+  
   try {
-    console.log('🔍 Processing inventory deduction for transaction:', { transactionId, itemCount: items.length, storeId });
+    console.log('🔍 Enhanced inventory processing for transaction:', { 
+      transactionId, 
+      itemCount: items.length, 
+      storeId 
+    });
+    
     console.log('🔍 Items to process:', items.map(item => ({ 
       productId: item.productId, 
       name: item.name, 
@@ -335,47 +399,83 @@ const updateInventoryStockForTransaction = async (items: any[], storeId: string,
     // Import the actual inventory service
     const { processProductSale } = await import('@/services/productCatalog/inventoryIntegrationService');
 
-    // Process each item through the proper inventory deduction service
-    let allSuccessful = true;
-    
+    // Process each item with enhanced error tracking
     for (const item of items) {
-      console.log(`🔍 Processing item: ${item.name} (${item.productId}) - Qty: ${item.quantity}`);
-      
-      const success = await processProductSale(
-        item.productId,
-        item.quantity,
-        transactionId,
-        storeId
-      );
-      
-      if (!success) {
-        console.error(`❌ Failed to process inventory for product: ${item.productId} (${item.name})`);
-        allSuccessful = false;
-        // Continue processing other items
-      } else {
-        console.log(`✅ Successfully processed inventory for: ${item.name}`);
+      try {
+        console.log(`🔍 Processing item: ${item.name} (${item.productId}) - Qty: ${item.quantity}`);
+        
+        const success = await processProductSale(
+          item.productId,
+          item.quantity,
+          transactionId,
+          storeId
+        );
+        
+        if (!success) {
+          const errorMsg = `Failed to process inventory for ${item.name} (${item.productId})`;
+          console.error(`❌ ${errorMsg}`);
+          errors.push(errorMsg);
+        } else {
+          console.log(`✅ Successfully processed inventory for: ${item.name}`);
+          processedItems.push({ 
+            productId: item.productId, 
+            name: item.name, 
+            quantity: item.quantity 
+          });
+        }
+      } catch (itemError) {
+        const errorMsg = `Critical error processing ${item.name}: ${itemError instanceof Error ? itemError.message : String(itemError)}`;
+        console.error(`❌ ${errorMsg}`);
+        errors.push(errorMsg);
       }
     }
 
-    if (!allSuccessful) {
-      console.error('❌ Some inventory deductions failed - transaction may need rollback');
-      return false;
+    // If any items failed, rollback processed items
+    if (errors.length > 0) {
+      console.error('❌ Inventory processing failed - attempting rollback of processed items');
+      
+      if (processedItems.length > 0) {
+        try {
+          await rollbackProcessedItems(processedItems, transactionId);
+          console.log('✅ Rollback completed for processed items');
+        } catch (rollbackError) {
+          console.error('❌ Rollback failed:', rollbackError);
+          errors.push(`Rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`);
+        }
+      }
+      
+      return { success: false, errors };
     }
 
     console.log('✅ All inventory deductions completed successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Error in inventory deduction:', error);
+    return { success: true, errors: [] };
     
-    // Fallback to legacy product stock update for products without recipes
+  } catch (error) {
+    const criticalError = `Critical inventory processing error: ${error instanceof Error ? error.message : String(error)}`;
+    console.error('❌ Critical error in enhanced inventory processing:', error);
+    
+    // Attempt rollback of any processed items
+    if (processedItems.length > 0) {
+      try {
+        await rollbackProcessedItems(processedItems, transactionId);
+        console.log('✅ Emergency rollback completed');
+      } catch (rollbackError) {
+        console.error('❌ Emergency rollback failed:', rollbackError);
+        errors.push(`Emergency rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`);
+      }
+    }
+    
+    // Try legacy fallback as last resort
     try {
       console.log('🔄 Attempting legacy fallback for inventory update');
       await legacyProductStockUpdate(items);
       console.log('✅ Legacy fallback completed successfully');
-      return true;
+      return { success: true, errors: [`Used legacy fallback due to: ${criticalError}`] };
     } catch (fallbackError) {
       console.error('❌ Legacy fallback also failed:', fallbackError);
-      return false;
+      errors.push(criticalError);
+      errors.push(`Legacy fallback failed: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
+      return { success: false, errors };
     }
   }
 };

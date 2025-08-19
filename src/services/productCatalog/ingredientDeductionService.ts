@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -9,9 +8,8 @@ export const deductIngredientsForProduct = async (
 ): Promise<boolean> => {
   try {
     console.log('🔄 Starting ingredient deduction for product:', { productId, quantity, transactionId });
-    console.log('📊 Debug: Current user and session info');
 
-    // CRITICAL FIX: Handle product ID mapping between catalog and products table
+    // Handle product ID mapping between catalog and products table
     let actualProductId = productId;
     let productInfo: any = null;
 
@@ -25,19 +23,6 @@ export const deductIngredientsForProduct = async (
     if (catalogInfo) {
       productInfo = catalogInfo;
       console.log('📦 Found product in catalog:', catalogInfo.product_name);
-      
-      // Now find the corresponding product in products table by name and store
-      const { data: productsInfo } = await supabase
-        .from('products')
-        .select('id')
-        .eq('name', catalogInfo.product_name)
-        .eq('store_id', catalogInfo.store_id)
-        .maybeSingle();
-      
-      if (productsInfo) {
-        actualProductId = productsInfo.id;
-        console.log('🔄 Mapped catalog ID to products ID:', { catalogId: productId, productsId: actualProductId });
-      }
     } else {
       // If not found in catalog, try products table directly
       const { data: directProductInfo, error: productInfoError } = await supabase
@@ -54,16 +39,10 @@ export const deductIngredientsForProduct = async (
 
     if (!productInfo) {
       console.error('❌ Product not found in either catalog or products table:', productId);
-      throw new Error(`Product not found: ${productId}`);
+      return false;
     }
 
-    console.log('📦 Product details:', { 
-      productName: productInfo?.product_name, 
-      recipeId: productInfo?.recipe_id 
-    });
-
-    // Optimized ingredient fetching with single query using JOINs
-    // Use original productId (catalog ID) for ingredients since they're linked to catalog
+    // Get ingredients
     const { data: ingredients, error: ingredientsError } = await supabase
       .from('product_ingredients')
       .select(`
@@ -76,7 +55,7 @@ export const deductIngredientsForProduct = async (
 
     let finalIngredients = ingredients || [];
 
-    // If no product ingredients found, check recipe ingredients with simplified query
+    // If no product ingredients found, check recipe ingredients
     if (finalIngredients.length === 0 && productInfo?.recipe_id) {
       console.log('No product ingredients found, checking recipe ingredients...');
       
@@ -100,31 +79,12 @@ export const deductIngredientsForProduct = async (
     }
 
     if (finalIngredients.length === 0) {
-      console.warn('⚠️ No ingredients configured for product:', {
-        productId,
-        productName: productInfo?.product_name,
-        recipeId: productInfo?.recipe_id,
-        hadProductIngredients: ingredients?.length || 0,
-        hadRecipeIngredients: productInfo?.recipe_id ? 'checked recipe ingredients' : 'no recipe id'
-      });
-      toast.error(`No ingredients configured for "${productInfo?.product_name}". Please set up ingredients in product catalog or recipe before selling.`);
-      return false; // Prevent sale of products without ingredient configuration
+      console.warn('⚠️ No ingredients configured for product:', productInfo?.product_name);
+      toast.error(`No ingredients configured for "${productInfo?.product_name}"`);
+      return false;
     }
 
-    console.log(`✅ Found ${finalIngredients.length} ingredients for product "${productInfo?.product_name}"`);
-    
-    // Debug: Log first few ingredients to understand the multiplication
-    if (finalIngredients.length > 10) {
-      console.warn('🔍 Debug: Too many ingredients found, first 5:', finalIngredients.slice(0, 5).map(ing => ({
-        id: ing.id,
-        inventory_stock_id: ing.inventory_stock_id,
-        quantity: ing.required_quantity,
-        item_name: ing.inventory_item?.item,
-        store_id: ing.inventory_item?.store_id
-      })));
-    }
-
-    // Batch validation: Check all ingredients first to fail fast
+    // Validate stock and prepare updates
     const insufficientStock = [];
     const updates = [];
     
@@ -137,8 +97,7 @@ export const deductIngredientsForProduct = async (
         insufficientStock.push({
           ingredient: ingredient.inventory_item?.item,
           required: deductionAmount,
-          available: currentStock,
-          shortfall: Math.abs(newStock)
+          available: currentStock
         });
       } else {
         updates.push({
@@ -152,56 +111,29 @@ export const deductIngredientsForProduct = async (
       }
     }
 
-    // Fail fast if any ingredient has insufficient stock
+    // Check for insufficient stock
     if (insufficientStock.length > 0) {
-      const errorMsg = insufficientStock.map(item => 
-        `${item.ingredient}: need ${item.required}, have ${item.available}`
-      ).join('; ');
       console.error('❌ Insufficient stock for ingredients:', insufficientStock);
-      toast.error(`Insufficient stock: ${errorMsg}`);
       return false;
     }
 
-    // Batch update all inventory items
-    console.log(`🔄 About to update ${updates.length} inventory items...`);
-    const updatePromises = updates.map((update, index) => {
-      console.log(`  ${index + 1}. ${update.item}: ${update.currentStock} -> ${update.newStock} (${update.deductionAmount} ${update.unit})`);
-      return supabase
+    // Update inventory
+    for (const update of updates) {
+      const { error: updateError } = await supabase
         .from('inventory_stock')
         .update({ stock_quantity: update.newStock })
         .eq('id', update.id);
-    });
-
-    const updateResults = await Promise.allSettled(updatePromises);
-    const failedUpdates = updateResults.filter(result => result.status === 'rejected');
-    
-    console.log(`✅ Update results: ${updateResults.length - failedUpdates.length}/${updateResults.length} successful`);
-    if (failedUpdates.length > 0) {
-      console.error('❌ Failed updates:', failedUpdates.map((result, index) => ({
-        index,
-        error: result.status === 'rejected' ? result.reason : 'unknown'
-      })));
-    }
-    
-    if (failedUpdates.length > 0) {
-      console.error('❌ Some inventory updates failed:', failedUpdates);
-      throw new Error(`Failed to update ${failedUpdates.length} inventory items`);
-    }
-
-    // Process movement records
-    for (const update of updates) {
-      console.log(`🔍 Processing movement for: ${update.item}`, {
-        deductionAmount: update.deductionAmount,
-        currentStock: update.currentStock,
-        newStock: update.newStock
-      });
-
-      // Create movement record only if transactionId is a valid UUID (not temporary)
-      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId);
-      const isTemporaryId = transactionId.startsWith('temp-');
       
-      if (isValidUUID && !isTemporaryId) {
-        const { error: movementError } = await supabase
+      if (updateError) {
+        console.error(`❌ Failed to update ${update.item}:`, updateError);
+        return false;
+      }
+
+      // Create movement record
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId);
+      
+      if (isValidUUID) {
+        await supabase
           .from('inventory_movements')
           .insert({
             inventory_stock_id: update.id,
@@ -212,41 +144,16 @@ export const deductIngredientsForProduct = async (
             created_by: (await supabase.auth.getUser()).data.user?.id,
             reference_type: 'transaction',
             reference_id: transactionId,
-            notes: `Product sale: ${update.item} (${update.deductionAmount} ${update.unit})`
+            notes: `Product sale: ${update.item}`
           });
-
-        if (movementError) {
-          console.error('Failed to create movement record:', movementError);
-          // Don't fail the entire transaction for logging issues
-        }
-      } else {
-        console.log('Skipping movement record creation - temporary transaction ID:', transactionId);
       }
     }
 
-    console.log(`✅ Successfully deducted ingredients for product "${productInfo?.product_name}" (${productId})`);
+    console.log(`✅ Successfully deducted ingredients for product "${productInfo?.product_name}"`);
     return true;
+    
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ Critical ingredient deduction error:', {
-      error: errorMessage,
-      productId,
-      quantity,
-      transactionId,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Provide specific error feedback
-    if (errorMessage.includes('permission denied')) {
-      toast.error('Access denied for inventory updates - check user permissions');
-    } else if (errorMessage.includes('foreign key')) {
-      toast.error('Product or ingredient configuration error - please check setup');
-    } else if (errorMessage.includes('null value')) {
-      toast.error('Missing required data - please check product ingredient setup');
-    } else {
-      toast.error(`Ingredient processing failed: ${errorMessage}`);
-    }
-    
+    console.error('❌ Critical ingredient deduction error:', error);
     return false;
   }
 };
