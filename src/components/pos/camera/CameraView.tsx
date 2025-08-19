@@ -56,7 +56,7 @@ export default function CameraView({
         <AspectRatio ratio={9/16} className="w-full max-h-full">
           <video 
             ref={videoRef}
-            className="w-full h-full object-cover" 
+            className="w-full h-full object-contain" 
             autoPlay
             playsInline
             muted

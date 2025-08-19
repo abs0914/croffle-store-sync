@@ -70,45 +70,34 @@ export function useCameraInitialization({
       const constraintSets = [];
       
       if (selectedCameraId) {
-        // Primary: Use selected camera with mobile-optimized portrait settings
+        // Primary: Use selected camera with reasonable mobile settings
         constraintSets.push({
           video: { 
             deviceId: { exact: selectedCameraId },
-            width: { ideal: 720, max: 1080 },
-            height: { ideal: 1280, max: 1920 },
-            aspectRatio: { exact: 9/16 }, // More standard mobile portrait ratio
+            width: { ideal: 480, max: 720 },
+            height: { ideal: 640, max: 960 },
+            aspectRatio: { ideal: 9/16 }, // Prefer but don't force
             facingMode: 'environment' // Prefer back camera for business use
           },
           audio: false
         });
         
-        // Fallback: Use selected camera with basic portrait settings
+        // Fallback: Use selected camera with basic settings
         constraintSets.push({
           video: { 
-            deviceId: { exact: selectedCameraId },
-            width: { ideal: 480 },
-            height: { ideal: 854 },
-            aspectRatio: { ideal: 9/16 }
+            deviceId: { exact: selectedCameraId }
           },
           audio: false
         });
       } else {
-        // Mobile-optimized portrait constraint sets when no specific camera selected
+        // Mobile-friendly constraint sets when no specific camera selected
         constraintSets.push(
           { 
             video: { 
               facingMode: 'environment', // Back camera preferred for business
-              width: { ideal: 720, max: 1080 },
-              height: { ideal: 1280, max: 1920 },
-              aspectRatio: { exact: 9/16 } // Standard mobile portrait
-            },
-            audio: false
-          },
-          { 
-            video: { 
-              width: { ideal: 480 },
-              height: { ideal: 854 },
-              aspectRatio: { ideal: 9/16 }
+              width: { ideal: 480, max: 720 },
+              height: { ideal: 640, max: 960 },
+              aspectRatio: { ideal: 9/16 } // Prefer portrait but don't force
             },
             audio: false
           },
