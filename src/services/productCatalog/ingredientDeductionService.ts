@@ -9,6 +9,9 @@ export const deductIngredientsForProduct = async (
   try {
     console.log('🔄 Starting ingredient deduction for product:', { productId, quantity, transactionId });
 
+    // Track sync timing for audit
+    const syncStartTime = Date.now();
+
     // Handle product ID mapping between catalog and products table
     let actualProductId = productId;
     let productInfo: any = null;
@@ -39,6 +42,16 @@ export const deductIngredientsForProduct = async (
 
     if (!productInfo) {
       console.error('❌ Product not found in either catalog or products table:', productId);
+      
+      // Log failure to audit system
+      await supabase.rpc('log_inventory_sync_result', {
+        p_transaction_id: transactionId,
+        p_sync_status: 'failed',
+        p_error_details: `Product not found: ${productId}`,
+        p_items_processed: 0,
+        p_sync_duration_ms: Date.now() - syncStartTime
+      });
+      
       return false;
     }
 
@@ -51,7 +64,16 @@ export const deductIngredientsForProduct = async (
       `)
       .eq('product_catalog_id', productId);
 
-    if (ingredientsError) throw ingredientsError;
+    if (ingredientsError) {
+      await supabase.rpc('log_inventory_sync_result', {
+        p_transaction_id: transactionId,
+        p_sync_status: 'failed',
+        p_error_details: `Failed to fetch ingredients: ${ingredientsError.message}`,
+        p_items_processed: 0,
+        p_sync_duration_ms: Date.now() - syncStartTime
+      });
+      throw ingredientsError;
+    }
 
     let finalIngredients = ingredients || [];
 
@@ -67,7 +89,16 @@ export const deductIngredientsForProduct = async (
         `)
         .eq('recipe_id', productInfo.recipe_id);
 
-      if (recipeError) throw recipeError;
+      if (recipeError) {
+        await supabase.rpc('log_inventory_sync_result', {
+          p_transaction_id: transactionId,
+          p_sync_status: 'failed',
+          p_error_details: `Failed to fetch recipe ingredients: ${recipeError.message}`,
+          p_items_processed: 0,
+          p_sync_duration_ms: Date.now() - syncStartTime
+        });
+        throw recipeError;
+      }
 
       // Map recipe ingredients to product ingredient format
       finalIngredients = recipeIngredients?.map(ri => ({
@@ -81,6 +112,15 @@ export const deductIngredientsForProduct = async (
     if (finalIngredients.length === 0) {
       console.warn('⚠️ No ingredients configured for product:', productInfo?.product_name);
       toast.error(`No ingredients configured for "${productInfo?.product_name}"`);
+      
+      await supabase.rpc('log_inventory_sync_result', {
+        p_transaction_id: transactionId,
+        p_sync_status: 'failed',
+        p_error_details: `No ingredients configured for product: ${productInfo?.product_name}`,
+        p_items_processed: 0,
+        p_sync_duration_ms: Date.now() - syncStartTime
+      });
+      
       return false;
     }
 
@@ -114,10 +154,24 @@ export const deductIngredientsForProduct = async (
     // Check for insufficient stock
     if (insufficientStock.length > 0) {
       console.error('❌ Insufficient stock for ingredients:', insufficientStock);
+      
+      const errorDetails = insufficientStock.map(item => 
+        `${item.ingredient}: need ${item.required}, have ${item.available}`
+      ).join('; ');
+      
+      await supabase.rpc('log_inventory_sync_result', {
+        p_transaction_id: transactionId,
+        p_sync_status: 'failed',
+        p_error_details: `Insufficient stock: ${errorDetails}`,
+        p_items_processed: 0,
+        p_sync_duration_ms: Date.now() - syncStartTime
+      });
+      
       return false;
     }
 
     // Update inventory
+    let processedCount = 0;
     for (const update of updates) {
       const { error: updateError } = await supabase
         .from('inventory_stock')
@@ -126,6 +180,15 @@ export const deductIngredientsForProduct = async (
       
       if (updateError) {
         console.error(`❌ Failed to update ${update.item}:`, updateError);
+        
+        await supabase.rpc('log_inventory_sync_result', {
+          p_transaction_id: transactionId,
+          p_sync_status: 'failed',
+          p_error_details: `Failed to update ${update.item}: ${updateError.message}`,
+          p_items_processed: processedCount,
+          p_sync_duration_ms: Date.now() - syncStartTime
+        });
+        
         return false;
       }
 
@@ -147,13 +210,35 @@ export const deductIngredientsForProduct = async (
             notes: `Product sale: ${update.item}`
           });
       }
+      
+      processedCount++;
     }
+
+    // Log successful sync to audit system
+    await supabase.rpc('log_inventory_sync_result', {
+      p_transaction_id: transactionId,
+      p_sync_status: 'success',
+      p_error_details: null,
+      p_items_processed: processedCount,
+      p_sync_duration_ms: Date.now() - syncStartTime
+    });
 
     console.log(`✅ Successfully deducted ingredients for product "${productInfo?.product_name}"`);
     return true;
     
   } catch (error) {
     console.error('❌ Critical ingredient deduction error:', error);
+    
+    // Log critical error to audit system
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    await supabase.rpc('log_inventory_sync_result', {
+      p_transaction_id: transactionId,
+      p_sync_status: 'failed',
+      p_error_details: `Critical error: ${errorMessage}`,
+      p_items_processed: 0,
+      p_sync_duration_ms: null
+    });
+    
     return false;
   }
 };

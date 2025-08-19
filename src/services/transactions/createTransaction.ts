@@ -8,6 +8,7 @@ import { enrichCartItemsWithCategories, insertTransactionItems } from "./transac
 import { validateProductForSale } from "@/services/productCatalog/productValidationService";
 import { logInventorySyncSuccess, rollbackTransactionWithAudit } from "./transactionAuditService";
 import { rollbackProcessedItems } from "./inventoryRollbackService";
+import { startInventorySyncMonitoring, reportInventorySyncSuccess, reportInventorySyncFailure } from "../inventory/inventorySyncMonitor";
 
 // Type definition for transaction data from Supabase
 interface TransactionRow {

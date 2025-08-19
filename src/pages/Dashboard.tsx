@@ -7,6 +7,9 @@ import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import { TransactionIngredientTest } from "@/components/debug/TransactionIngredientTest";
+import { InventorySyncMonitor } from "@/components/dashboard/InventorySyncMonitor";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Dashboard() {
   console.log('Dashboard component rendering...');
@@ -46,19 +49,42 @@ export default function Dashboard() {
           <TransactionIngredientTest />
         </div>
       )}
-      
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <DashboardSummary storeId={currentStore.id} />
-          <QuickActions />
-        </div>
+
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="sync-monitor">Inventory Sync</TabsTrigger>
+        </TabsList>
         
-        <div className="space-y-6">
-          <StoreInfo />
-          <InventoryAlerts storeId={currentStore.id} />
-          <RecentTransactions storeId={currentStore.id} />
-        </div>
-      </div>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-6">
+              <DashboardSummary storeId={currentStore.id} />
+              <QuickActions />
+            </div>
+            
+            <div className="space-y-6">
+              <StoreInfo />
+              <InventoryAlerts storeId={currentStore.id} />
+              <RecentTransactions storeId={currentStore.id} />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="sync-monitor" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Inventory Synchronization Monitor</CardTitle>
+              <CardDescription>
+                Monitor the health and status of automatic inventory synchronization with sales transactions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <InventorySyncMonitor />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

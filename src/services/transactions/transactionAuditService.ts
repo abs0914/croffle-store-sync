@@ -111,20 +111,44 @@ export class TransactionAuditService {
   }
   
   /**
-   * Write audit log to storage (console for now, could be database table)
+   * Write audit log to database and console
    */
   private static async writeAuditLog(auditLog: TransactionAuditLog): Promise<void> {
-    // For now, log to console with structured format
-    // In production, this could write to a dedicated audit table
-    console.log('📊 AUDIT LOG:', JSON.stringify({
-      timestamp: new Date().toISOString(),
-      level: auditLog.action.includes('failed') ? 'ERROR' : 'INFO',
-      service: 'TransactionAuditService',
-      ...auditLog
-    }, null, 2));
-    
-    // Could also send to external monitoring service
-    // await this.sendToMonitoringService(auditLog);
+    try {
+      // Log to database using the new audit function
+      const syncStatus = auditLog.action.includes('failed') ? 'failed' : 
+                        auditLog.action.includes('success') ? 'success' : 'pending';
+      
+      const { error } = await supabase.rpc('log_inventory_sync_result', {
+        p_transaction_id: auditLog.transaction_id,
+        p_sync_status: syncStatus,
+        p_error_details: auditLog.error_details?.join(', ') || null,
+        p_items_processed: auditLog.details?.items_processed || 0,
+        p_sync_duration_ms: auditLog.details?.sync_duration_ms || null
+      });
+
+      if (error) {
+        console.error('Failed to log to database audit:', error);
+      }
+
+      // Also log to console for immediate debugging
+      console.log('📊 AUDIT LOG:', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: auditLog.action.includes('failed') ? 'ERROR' : 'INFO',
+        service: 'TransactionAuditService',
+        ...auditLog
+      }, null, 2));
+      
+    } catch (error) {
+      console.error('Critical audit logging error:', error);
+      // Fallback to console-only logging
+      console.log('📊 AUDIT LOG (FALLBACK):', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: auditLog.action.includes('failed') ? 'ERROR' : 'INFO',
+        service: 'TransactionAuditService',
+        ...auditLog
+      }, null, 2));
+    }
   }
   
   /**

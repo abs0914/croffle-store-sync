@@ -1760,6 +1760,57 @@ export type Database = {
           },
         ]
       }
+      inventory_sync_audit: {
+        Row: {
+          created_at: string | null
+          error_details: string | null
+          id: string
+          items_processed: number | null
+          resolved_at: string | null
+          resolved_by: string | null
+          sync_duration_ms: number | null
+          sync_status: string
+          transaction_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_details?: string | null
+          id?: string
+          items_processed?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sync_duration_ms?: number | null
+          sync_status: string
+          transaction_id: string
+        }
+        Update: {
+          created_at?: string | null
+          error_details?: string | null
+          id?: string
+          items_processed?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sync_duration_ms?: number | null
+          sync_status?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_sync_audit_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "inventory_sync_audit_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: true
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_transactions: {
         Row: {
           created_at: string | null
@@ -5150,6 +5201,16 @@ export type Database = {
           p_user_id?: string
         }
         Returns: string
+      }
+      log_inventory_sync_result: {
+        Args: {
+          p_error_details?: string
+          p_items_processed?: number
+          p_sync_duration_ms?: number
+          p_sync_status: string
+          p_transaction_id: string
+        }
+        Returns: undefined
       }
       log_security_event: {
         Args: {
