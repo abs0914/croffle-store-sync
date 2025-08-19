@@ -36,7 +36,7 @@ export default function CameraContainer({
   return (
     <div 
       ref={containerRef}
-      className="w-full h-80 bg-black rounded-md relative overflow-hidden" /* Increased height from h-48 to h-80 */
+      className="w-full aspect-[9/16] bg-black rounded-md relative overflow-hidden max-h-[70vh]" /* Mobile portrait aspect ratio */
     >
       {showCamera ? (
         <CameraView 
