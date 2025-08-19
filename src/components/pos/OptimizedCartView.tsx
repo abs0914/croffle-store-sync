@@ -70,6 +70,7 @@ const OptimizedCartView = memo(function OptimizedCartView({
             items={items}
             isTransitioning={false}
             orderType="dine_in"
+            deliveryPlatform={null}
             updateQuantity={updateQuantity}
             updateItemPrice={() => {}}
             removeItem={removeItem}

@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Plus, Minus, Edit3, Check, X } from 'lucide-react';
 import { CartItem } from '@/types';
+import { DeliveryPlatform } from '@/contexts/cart/CartContext';
 
 interface EditableCartItemProps {
   item: CartItem;
@@ -14,6 +15,7 @@ interface EditableCartItemProps {
   onUpdatePrice: (index: number, price: number) => void;
   onRemoveItem: (index: number) => void;
   canEditPrice: boolean;
+  deliveryPlatform?: DeliveryPlatform | null;
   hasStockIssue?: boolean;
   validation?: {
     isValid: boolean;
@@ -29,6 +31,7 @@ export function EditableCartItem({
   onUpdatePrice,
   onRemoveItem,
   canEditPrice,
+  deliveryPlatform,
   hasStockIssue = false,
   validation
 }: EditableCartItemProps) {
@@ -140,9 +143,19 @@ export function EditableCartItem({
                   )}
                 </div>
               )}
+              
+              {/* Original vs Override Price Display */}
+              {canEditPrice && deliveryPlatform && !isEditingPrice && (
+                <p className="text-xs text-muted-foreground">
+                  Platform: {deliveryPlatform === 'grab_food' ? 'Grab Food' : 'FoodPanda'} pricing
+                </p>
+              )}
+              
               {canEditPrice && !isEditingPrice && (
-                <Badge variant="outline" className="text-xs">
-                  Editable
+                <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
+                  {deliveryPlatform === 'grab_food' && 'Grab Price Override'}
+                  {deliveryPlatform === 'food_panda' && 'FoodPanda Price Override'}
+                  {!deliveryPlatform && 'Price Editable'}
                 </Badge>
               )}
             </div>

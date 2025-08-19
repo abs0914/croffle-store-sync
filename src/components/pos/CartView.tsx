@@ -187,6 +187,7 @@ export default function CartView({
         items={cartItems || []}
         isTransitioning={isOrderTypeTransitioning}
         orderType={orderType}
+        deliveryPlatform={deliveryPlatform}
         updateQuantity={updateQuantity}
         updateItemPrice={updateItemPrice}
         removeItem={removeItem}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { OrderType, DeliveryPlatform } from '@/contexts/cart/CartContext';
+import { BulkPricingOverride } from '../BulkPricingOverride';
 
 interface CartActionsProps {
   canCheckout: boolean;
@@ -28,6 +29,11 @@ export function CartActions({
 
   return (
     <div className="space-y-2 pt-2">
+      {/* Bulk Pricing Override - Show when delivery platform is selected */}
+      {orderType === 'online_delivery' && deliveryPlatform && (
+        <BulkPricingOverride platform={deliveryPlatform} />
+      )}
+      
       <Button
         onClick={onCheckout}
         className="w-full"
