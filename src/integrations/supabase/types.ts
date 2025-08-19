@@ -5320,6 +5320,7 @@ export type Database = {
         | "cashier"
         | "stock_user"
         | "production_user"
+        | "commissary_user"
       delivery_order_status:
         | "for_delivery"
         | "partial_delivery"
@@ -5491,6 +5492,7 @@ export const Constants = {
         "cashier",
         "stock_user",
         "production_user",
+        "commissary_user",
       ],
       delivery_order_status: [
         "for_delivery",
