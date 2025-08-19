@@ -7,7 +7,6 @@ import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import { InventoryRecoveryPanel } from "@/components/recovery/InventoryRecoveryPanel";
-import { IngredientTestPanel } from "@/components/debug/IngredientTestPanel";
 
 export default function Dashboard() {
   console.log('Dashboard component rendering...');
@@ -38,9 +37,8 @@ export default function Dashboard() {
       
       {/* Inventory Recovery Panel - Only show for Sugbo Mercado */}
       {isSugboMercado && (
-        <div className="mb-6 space-y-4">
+        <div className="mb-6">
           <InventoryRecoveryPanel />
-          <IngredientTestPanel />
         </div>
       )}
       
