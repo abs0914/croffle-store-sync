@@ -66,14 +66,26 @@ export const deductIngredientsForProduct = async (
     if (!productInfo) {
       console.error('❌ Product not found in either catalog or products table:', productId);
       
+      // Check current store to help with debugging
+      const currentStoreId = 'e78ad702-1135-482d-a508-88104e2706cf'; // This should come from context
+      
       // Try to find similar products for debugging
       const { data: similarProducts } = await supabase
         .from('product_catalog')
-        .select('id, product_name')
+        .select('id, product_name, store_id')
         .ilike('product_name', '%mini%croffle%')
-        .limit(5);
+        .limit(10);
       
       console.error('🔍 Available Mini Croffle products:', similarProducts);
+      
+      // Check specifically for current store
+      const { data: storeProducts } = await supabase
+        .from('product_catalog')
+        .select('id, product_name')
+        .eq('store_id', currentStoreId)
+        .ilike('product_name', '%mini%croffle%');
+      
+      console.error('🏪 Mini Croffle products for current store:', storeProducts);
       
       // Check if this might be a combo product ID
       if (productId.startsWith('combo-')) {
@@ -84,12 +96,12 @@ export const deductIngredientsForProduct = async (
       await supabase.rpc('log_inventory_sync_result', {
         p_transaction_id: transactionId,
         p_sync_status: 'failed',
-        p_error_details: `Product not found: ${productId}. Available Mini Croffle products: ${similarProducts?.map(p => `${p.product_name} (${p.id})`).join(', ') || 'none'}`,
+        p_error_details: `Product not found: ${productId}. Available Mini Croffle products: ${similarProducts?.map(p => `${p.product_name} (${p.id})`).join(', ') || 'none'}. Store products: ${storeProducts?.map(p => `${p.product_name} (${p.id})`).join(', ') || 'none'}`,
         p_items_processed: 0,
         p_sync_duration_ms: Date.now() - syncStartTime
       });
       
-      toast.error(`Product not found. Please check product configuration.`);
+      toast.error(`Product not found. Expected ID for current store: ${storeProducts?.[0]?.id || 'none found'}`);
       return false;
     }
 
