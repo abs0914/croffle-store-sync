@@ -78,6 +78,21 @@ export const EditStockItemForm = ({
           />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="edit-cost" className="text-right">
+            Unit Cost (₱)
+          </Label>
+          <Input
+            id="edit-cost"
+            type="number"
+            step="0.01"
+            value={formData.cost || 0}
+            onChange={(e) => handleChange("cost", parseFloat(e.target.value) || 0)}
+            className="col-span-3"
+            min="0"
+            placeholder="0.00"
+          />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="edit-status" className="text-right">
             Status
           </Label>

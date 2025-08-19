@@ -25,6 +25,7 @@ export const AddStockItemForm = ({ onSave, onCancel, isLoading }: AddStockItemFo
     item: "",
     unit: "",
     stock_quantity: 0,
+    cost: 0,
     is_active: true
   });
 
@@ -80,6 +81,21 @@ export const AddStockItemForm = ({ onSave, onCancel, isLoading }: AddStockItemFo
             onChange={(e) => handleChange("stock_quantity", parseFloat(e.target.value) || 0)}
             className="col-span-3"
             min="0"
+          />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="cost" className="text-right">
+            Unit Cost (₱)
+          </Label>
+          <Input
+            id="cost"
+            type="number"
+            step="0.01"
+            value={newStockItem.cost || 0}
+            onChange={(e) => handleChange("cost", parseFloat(e.target.value) || 0)}
+            className="col-span-3"
+            min="0"
+            placeholder="0.00"
           />
         </div>
       </div>
