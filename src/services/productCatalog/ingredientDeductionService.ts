@@ -192,7 +192,7 @@ export const deductIngredientsForProduct = async (
           .from('inventory_movements')
           .insert({
             inventory_stock_id: update.id,
-            movement_type: 'sale_deduction',
+            movement_type: 'sale',
             quantity_change: -update.deductionAmount,
             previous_quantity: update.currentStock,
             new_quantity: update.newStock,
