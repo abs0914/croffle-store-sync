@@ -9,6 +9,7 @@ export const deductIngredientsForProduct = async (
 ): Promise<boolean> => {
   try {
     console.log('🔄 Starting ingredient deduction for product:', { productId, quantity, transactionId });
+    console.log('📊 Debug: Current user and session info');
 
     // CRITICAL FIX: Handle product ID mapping between catalog and products table
     let actualProductId = productId;
@@ -102,9 +103,11 @@ export const deductIngredientsForProduct = async (
       console.warn('⚠️ No ingredients configured for product:', {
         productId,
         productName: productInfo?.product_name,
-        recipeId: productInfo?.recipe_id
+        recipeId: productInfo?.recipe_id,
+        hadProductIngredients: ingredients?.length || 0,
+        hadRecipeIngredients: productInfo?.recipe_id ? 'checked recipe ingredients' : 'no recipe id'
       });
-      toast.error(`No ingredients configured for "${productInfo?.product_name}". Please set up ingredients before selling.`);
+      toast.error(`No ingredients configured for "${productInfo?.product_name}". Please set up ingredients in product catalog or recipe before selling.`);
       return false; // Prevent sale of products without ingredient configuration
     }
 
@@ -160,15 +163,25 @@ export const deductIngredientsForProduct = async (
     }
 
     // Batch update all inventory items
-    const updatePromises = updates.map(update => 
-      supabase
+    console.log(`🔄 About to update ${updates.length} inventory items...`);
+    const updatePromises = updates.map((update, index) => {
+      console.log(`  ${index + 1}. ${update.item}: ${update.currentStock} -> ${update.newStock} (${update.deductionAmount} ${update.unit})`);
+      return supabase
         .from('inventory_stock')
         .update({ stock_quantity: update.newStock })
-        .eq('id', update.id)
-    );
+        .eq('id', update.id);
+    });
 
     const updateResults = await Promise.allSettled(updatePromises);
     const failedUpdates = updateResults.filter(result => result.status === 'rejected');
+    
+    console.log(`✅ Update results: ${updateResults.length - failedUpdates.length}/${updateResults.length} successful`);
+    if (failedUpdates.length > 0) {
+      console.error('❌ Failed updates:', failedUpdates.map((result, index) => ({
+        index,
+        error: result.status === 'rejected' ? result.reason : 'unknown'
+      })));
+    }
     
     if (failedUpdates.length > 0) {
       console.error('❌ Some inventory updates failed:', failedUpdates);
