@@ -56,7 +56,7 @@ const mapToValidUnit = (unit: string): string => {
   };
   
   const normalizedUnit = unit.toLowerCase().trim();
-  return unitMapping[normalizedUnit] || 'pieces'; // Default to pieces if not found
+  return unitMapping[normalizedUnit] || unit; // Return original unit if not found in mapping
 };
 
 export const fetchCommissaryInventory = async (filters?: any): Promise<CommissaryInventoryItem[]> => {
