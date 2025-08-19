@@ -6,6 +6,7 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
+import { TransactionIngredientTest } from "@/components/debug/TransactionIngredientTest";
 
 export default function Dashboard() {
   console.log('Dashboard component rendering...');
@@ -27,9 +28,19 @@ export default function Dashboard() {
 
   console.log('Rendering dashboard with store:', currentStore.name);
 
+  // Check if this is Sugbo Mercado (IT Park, Cebu) store for debugging  
+  const isSugboMercado = currentStore.id === 'd7c47e6b-f20a-4543-a6bd-000398f72df5';
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <DashboardHeader />
+      
+      {/* Debug Panel - Only show for Sugbo Mercado */}
+      {isSugboMercado && (
+        <div className="mb-6">
+          <TransactionIngredientTest />
+        </div>
+      )}
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
