@@ -220,6 +220,12 @@ export const createTransaction = async (
     
     // Process inventory deduction with optimized strategy
     console.log('🔄 Starting inventory deduction for transaction:', data.id);
+    console.log('🔄 Transaction items for inventory processing:', transaction.items.map(item => ({
+      productId: item.productId,
+      name: item.name,
+      quantity: item.quantity
+    })));
+    
     try {
       let inventorySuccess = false;
       
@@ -239,6 +245,7 @@ export const createTransaction = async (
         );
       } else {
         // Use sequential processing for small orders
+        console.log('🔄 Processing inventory sequentially for', transaction.items.length, 'items');
         inventorySuccess = await updateInventoryStockForTransaction(transaction.items, transaction.storeId, data.id);
       }
       
@@ -318,13 +325,22 @@ export const createTransaction = async (
  */
 const updateInventoryStockForTransaction = async (items: any[], storeId: string, transactionId: string): Promise<boolean> => {
   try {
-    console.log('Processing inventory deduction for transaction:', { transactionId, itemCount: items.length });
+    console.log('🔍 Processing inventory deduction for transaction:', { transactionId, itemCount: items.length, storeId });
+    console.log('🔍 Items to process:', items.map(item => ({ 
+      productId: item.productId, 
+      name: item.name, 
+      quantity: item.quantity 
+    })));
 
     // Import the actual inventory service
     const { processProductSale } = await import('@/services/productCatalog/inventoryIntegrationService');
 
     // Process each item through the proper inventory deduction service
+    let allSuccessful = true;
+    
     for (const item of items) {
+      console.log(`🔍 Processing item: ${item.name} (${item.productId}) - Qty: ${item.quantity}`);
+      
       const success = await processProductSale(
         item.productId,
         item.quantity,
@@ -333,23 +349,32 @@ const updateInventoryStockForTransaction = async (items: any[], storeId: string,
       );
       
       if (!success) {
-        console.error(`Failed to process inventory for product: ${item.productId}`);
-        return false;
+        console.error(`❌ Failed to process inventory for product: ${item.productId} (${item.name})`);
+        allSuccessful = false;
+        // Continue processing other items
+      } else {
+        console.log(`✅ Successfully processed inventory for: ${item.name}`);
       }
     }
 
-    console.log('All inventory deductions completed successfully');
+    if (!allSuccessful) {
+      console.error('❌ Some inventory deductions failed - transaction may need rollback');
+      return false;
+    }
+
+    console.log('✅ All inventory deductions completed successfully');
     return true;
   } catch (error) {
-    console.error('Error in inventory deduction:', error);
+    console.error('❌ Error in inventory deduction:', error);
     
     // Fallback to legacy product stock update for products without recipes
     try {
+      console.log('🔄 Attempting legacy fallback for inventory update');
       await legacyProductStockUpdate(items);
-      console.log('Fallback to legacy stock update completed');
+      console.log('✅ Legacy fallback completed successfully');
       return true;
     } catch (fallbackError) {
-      console.error('Legacy fallback also failed:', fallbackError);
+      console.error('❌ Legacy fallback also failed:', fallbackError);
       return false;
     }
   }

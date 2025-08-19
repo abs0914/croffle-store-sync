@@ -35,9 +35,14 @@ export default function Dashboard() {
     <div className="container mx-auto p-6 space-y-6">
       <DashboardHeader />
       
-      {/* Debug Panel - Only show for Sugbo Mercado */}
+      {/* Debug Panel - Only show for Sugbo Mercado while testing */}
       {isSugboMercado && (
         <div className="mb-6">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-yellow-800">
+              <strong>🔧 Debug Mode:</strong> Enhanced transaction logging enabled. Make a test sale to see detailed inventory processing logs.
+            </p>
+          </div>
           <TransactionIngredientTest />
         </div>
       )}
