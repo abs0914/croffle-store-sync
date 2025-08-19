@@ -13,6 +13,10 @@ export interface CartState {
   updateQuantity: (itemIndex: number, quantity: number) => void;
   updateItemPrice: (itemIndex: number, price: number) => void;
   clearCart: () => void;
+  // Cart validation functions
+  validateCart: () => Promise<void>;
+  cleanInvalidItems: () => Promise<void>;
+  refreshCartData: () => Promise<void>;
   subtotal: number;
   tax: number;
   total: number;
@@ -41,6 +45,10 @@ const initialState: CartState = {
   updateQuantity: () => {},
   updateItemPrice: () => {},
   clearCart: () => {},
+  // Cart validation functions (no-op in initial state)
+  validateCart: async () => {},
+  cleanInvalidItems: async () => {},
+  refreshCartData: async () => {},
   subtotal: 0,
   tax: 0,
   total: 0,

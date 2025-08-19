@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useStore } from "../StoreContext";
 import { CartContext, OrderType, DeliveryPlatform } from "./CartContext";
 import { CartCalculationService, SeniorDiscount, OtherDiscount, CartCalculations } from "@/services/cart/CartCalculationService";
+import { CartValidationService } from "@/services/cart/CartValidationService";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { currentStore } = useStore();
@@ -204,7 +205,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setTotalDiners(newTotalDiners);
   };
 
-  console.log("CartContext: Provider rendering with items:", items.length);
+  // Cart validation functions
+  const validateCart = async () => {
+    console.log('🔍 [CartProvider] Starting cart validation...');
+    if (!currentStore?.id) return;
+    
+    const validation = await CartValidationService.validateCartItems(items);
+    if (!validation.success) {
+      setItems(validation.validItems);
+    }
+  };
+
+  const cleanInvalidItems = async () => {
+    console.log('🧹 [CartProvider] Cleaning invalid items...');
+    if (!currentStore?.id) return;
+    
+    const cleanItems = await CartValidationService.cleanCart(items);
+    setItems(cleanItems);
+  };
+
+  const refreshCartData = async () => {
+    console.log('🔄 [CartProvider] Refreshing cart data...');
+    if (!currentStore?.id) return;
+    
+    const refreshedItems = await CartValidationService.refreshCartData(items, currentStore.id);
+    setItems(refreshedItems);
+  };
+
+  console.log("CartProvider: Provider rendering with items:", items.length);
 
   return (
     <CartContext.Provider
@@ -215,6 +243,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         updateQuantity,
         updateItemPrice,
         clearCart,
+        // Cart validation functions
+        validateCart,
+        cleanInvalidItems,
+        refreshCartData,
         subtotal: calculations.grossSubtotal,
         tax: calculations.adjustedVAT,
         total: calculations.finalTotal,
