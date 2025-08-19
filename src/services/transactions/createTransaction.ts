@@ -167,6 +167,10 @@ export const createTransaction = async (
       status: transaction.status,
       receipt_number: receiptNumber,
       created_at: now.toISOString(),
+      // Delivery platform fields
+      order_type: transaction.orderType || 'dine_in',
+      delivery_platform: transaction.deliveryPlatform,
+      delivery_order_number: transaction.deliveryOrderNumber,
       // BIR Compliance fields - Updated with proper calculations
       vat_sales: vatableSales,
       vat_exempt_sales: vatExemptSales,

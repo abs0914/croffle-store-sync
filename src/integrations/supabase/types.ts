@@ -4647,6 +4647,8 @@ export type Database = {
           change: number | null
           created_at: string | null
           customer_id: string | null
+          delivery_order_number: string | null
+          delivery_platform: string | null
           discount: number
           discount_amount: number | null
           discount_details: Json | null
@@ -4658,6 +4660,7 @@ export type Database = {
           items: Json
           order_notes: string | null
           order_status: string | null
+          order_type: string | null
           payment_details: Json | null
           payment_method: string
           promo_details: string | null
@@ -4688,6 +4691,8 @@ export type Database = {
           change?: number | null
           created_at?: string | null
           customer_id?: string | null
+          delivery_order_number?: string | null
+          delivery_platform?: string | null
           discount?: number
           discount_amount?: number | null
           discount_details?: Json | null
@@ -4699,6 +4704,7 @@ export type Database = {
           items: Json
           order_notes?: string | null
           order_status?: string | null
+          order_type?: string | null
           payment_details?: Json | null
           payment_method: string
           promo_details?: string | null
@@ -4729,6 +4735,8 @@ export type Database = {
           change?: number | null
           created_at?: string | null
           customer_id?: string | null
+          delivery_order_number?: string | null
+          delivery_platform?: string | null
           discount?: number
           discount_amount?: number | null
           discount_details?: Json | null
@@ -4740,6 +4748,7 @@ export type Database = {
           items?: Json
           order_notes?: string | null
           order_status?: string | null
+          order_type?: string | null
           payment_details?: Json | null
           payment_method?: string
           promo_details?: string | null

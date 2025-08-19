@@ -89,13 +89,34 @@ export const validateProductAvailability = async (
   quantity: number = 1
 ): Promise<InventoryValidationResult> => {
   try {
-    console.log('Validating product availability:', { productId, quantity });
+    console.log('🔍 Validating product availability:', { productId, quantity });
     
     // Check if this is a combo item
     if (productId.startsWith('combo-')) {
+      console.log('🧩 Detected combo product, using combo validation');
       return validateComboProductAvailability(productId, quantity);
     }
     
+    // Additional debugging for direct product validation
+    console.log('📦 Direct product validation for:', productId);
+    
+    // Get product name first for better error messages
+    const { data: productData, error: productError } = await supabase
+      .from('product_catalog')
+      .select('product_name')
+      .eq('id', productId)
+      .single();
+
+    if (productError) {
+      console.error('❌ Product not found:', { productId, error: productError });
+      return {
+        isValid: false,
+        insufficientItems: [`Product not found: ${productId}`]
+      };
+    }
+
+    console.log('📋 Validating product:', productData.product_name);
+
     // Get product ingredients
     const { data: ingredients, error } = await supabase
       .from('product_ingredients')
