@@ -10,16 +10,50 @@ export const deductIngredientsForProduct = async (
   try {
     console.log('🔄 Starting ingredient deduction for product:', { productId, quantity, transactionId });
 
-    // First, get product details for better logging
-    const { data: productInfo, error: productInfoError } = await supabase
-      .from('product_catalog')
-      .select('product_name, recipe_id')
-      .eq('id', productId)
-      .single();
+    // CRITICAL FIX: Handle product ID mapping between catalog and products table
+    let actualProductId = productId;
+    let productInfo: any = null;
 
-    if (productInfoError) {
-      console.error('❌ Failed to get product info:', productInfoError);
-      throw productInfoError;
+    // First try to get from product_catalog (transaction might use catalog ID)
+    const { data: catalogInfo, error: catalogError } = await supabase
+      .from('product_catalog')
+      .select('product_name, recipe_id, store_id')
+      .eq('id', productId)
+      .maybeSingle();
+
+    if (catalogInfo) {
+      productInfo = catalogInfo;
+      console.log('📦 Found product in catalog:', catalogInfo.product_name);
+      
+      // Now find the corresponding product in products table by name and store
+      const { data: productsInfo } = await supabase
+        .from('products')
+        .select('id')
+        .eq('name', catalogInfo.product_name)
+        .eq('store_id', catalogInfo.store_id)
+        .maybeSingle();
+      
+      if (productsInfo) {
+        actualProductId = productsInfo.id;
+        console.log('🔄 Mapped catalog ID to products ID:', { catalogId: productId, productsId: actualProductId });
+      }
+    } else {
+      // If not found in catalog, try products table directly
+      const { data: directProductInfo, error: productInfoError } = await supabase
+        .from('products')
+        .select('name, recipe_id')
+        .eq('id', productId)
+        .maybeSingle();
+      
+      if (directProductInfo) {
+        productInfo = { product_name: directProductInfo.name, recipe_id: directProductInfo.recipe_id };
+        console.log('📦 Found product directly in products table:', directProductInfo.name);
+      }
+    }
+
+    if (!productInfo) {
+      console.error('❌ Product not found in either catalog or products table:', productId);
+      throw new Error(`Product not found: ${productId}`);
     }
 
     console.log('📦 Product details:', { 
@@ -28,6 +62,7 @@ export const deductIngredientsForProduct = async (
     });
 
     // Optimized ingredient fetching with single query using JOINs
+    // Use original productId (catalog ID) for ingredients since they're linked to catalog
     const { data: ingredients, error: ingredientsError } = await supabase
       .from('product_ingredients')
       .select(`
