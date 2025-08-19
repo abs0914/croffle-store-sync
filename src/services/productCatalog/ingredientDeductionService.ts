@@ -26,6 +26,18 @@ export const deductIngredientsForProduct = async (
     if (catalogInfo) {
       productInfo = catalogInfo;
       console.log('📦 Found product in catalog:', catalogInfo.product_name);
+      
+      // Special debugging for Mini Croffle products
+      if (catalogInfo.product_name.toLowerCase().includes('mini croffle')) {
+        console.log('🥐 MINI CROFFLE DEBUG - Product Info:', {
+          productId,
+          productName: catalogInfo.product_name,
+          recipeId: catalogInfo.recipe_id,
+          storeId: catalogInfo.store_id,
+          quantity,
+          transactionId
+        });
+      }
     } else {
       // If not found in catalog, try products table directly
       const { data: directProductInfo, error: productInfoError } = await supabase
@@ -37,6 +49,17 @@ export const deductIngredientsForProduct = async (
       if (directProductInfo) {
         productInfo = { product_name: directProductInfo.name, recipe_id: directProductInfo.recipe_id };
         console.log('📦 Found product directly in products table:', directProductInfo.name);
+        
+        // Special debugging for Mini Croffle products
+        if (directProductInfo.name.toLowerCase().includes('mini croffle')) {
+          console.log('🥐 MINI CROFFLE DEBUG - Direct Product Info:', {
+            productId,
+            productName: directProductInfo.name,
+            recipeId: directProductInfo.recipe_id,
+            quantity,
+            transactionId
+          });
+        }
       }
     }
 
@@ -65,6 +88,16 @@ export const deductIngredientsForProduct = async (
       .eq('product_catalog_id', productId);
 
     if (ingredientsError) {
+      // Special logging for Mini Croffle ingredient fetch errors
+      if (productInfo?.product_name.toLowerCase().includes('mini croffle')) {
+        console.error('🥐 MINI CROFFLE DEBUG - Ingredients Error:', {
+          productId,
+          productName: productInfo.product_name,
+          error: ingredientsError.message,
+          recipeId: productInfo.recipe_id
+        });
+      }
+      
       await supabase.rpc('log_inventory_sync_result', {
         p_transaction_id: transactionId,
         p_sync_status: 'failed',
@@ -76,10 +109,31 @@ export const deductIngredientsForProduct = async (
     }
 
     let finalIngredients = ingredients || [];
+    
+    // Special debugging for Mini Croffle ingredient lookup
+    if (productInfo?.product_name.toLowerCase().includes('mini croffle')) {
+      console.log('🥐 MINI CROFFLE DEBUG - Product Ingredients Found:', {
+        productId,
+        productName: productInfo.product_name,
+        ingredientCount: finalIngredients.length,
+        ingredients: finalIngredients.map(ing => ({
+          id: ing.id,
+          inventoryStockId: ing.inventory_stock_id,
+          requiredQuantity: ing.required_quantity,
+          item: ing.inventory_item?.item,
+          currentStock: ing.inventory_item?.stock_quantity
+        }))
+      });
+    }
 
     // If no product ingredients found, check recipe ingredients
     if (finalIngredients.length === 0 && productInfo?.recipe_id) {
       console.log('No product ingredients found, checking recipe ingredients...');
+      
+      // Special debugging for Mini Croffle recipe lookup
+      if (productInfo.product_name.toLowerCase().includes('mini croffle')) {
+        console.log('🥐 MINI CROFFLE DEBUG - Checking recipe ingredients for recipe ID:', productInfo.recipe_id);
+      }
       
       const { data: recipeIngredients, error: recipeError } = await supabase
         .from('recipe_ingredients')
@@ -107,10 +161,41 @@ export const deductIngredientsForProduct = async (
         required_quantity: ri.quantity,
         inventory_stock_id: ri.inventory_stock_id
       })) || [];
+      
+      // Special debugging for Mini Croffle recipe ingredients
+      if (productInfo?.product_name.toLowerCase().includes('mini croffle')) {
+        console.log('🥐 MINI CROFFLE DEBUG - Recipe Ingredients Found:', {
+          productId,
+          productName: productInfo.product_name,
+          recipeId: productInfo.recipe_id,
+          recipeIngredientCount: finalIngredients.length,
+          recipeIngredients: finalIngredients.map(ing => ({
+            id: ing.id,
+            inventoryStockId: ing.inventory_stock_id,
+            requiredQuantity: ing.required_quantity,
+            item: ing.inventory_item?.item,
+            currentStock: ing.inventory_item?.stock_quantity
+          }))
+        });
+      }
     }
 
     if (finalIngredients.length === 0) {
       console.warn('⚠️ No ingredients configured for product:', productInfo?.product_name);
+      
+      // Special debugging for Mini Croffle no ingredients case
+      if (productInfo?.product_name.toLowerCase().includes('mini croffle')) {
+        console.error('🥐 MINI CROFFLE DEBUG - NO INGREDIENTS FOUND:', {
+          productId,
+          productName: productInfo.product_name,
+          recipeId: productInfo.recipe_id,
+          storeId: productInfo.store_id,
+          searchedInProductIngredients: true,
+          searchedInRecipeIngredients: !!productInfo.recipe_id,
+          transactionId
+        });
+      }
+      
       toast.error(`No ingredients configured for "${productInfo?.product_name}"`);
       
       await supabase.rpc('log_inventory_sync_result', {
@@ -154,6 +239,23 @@ export const deductIngredientsForProduct = async (
     // Check for insufficient stock
     if (insufficientStock.length > 0) {
       console.error('❌ Insufficient stock for ingredients:', insufficientStock);
+      
+      // Special debugging for Mini Croffle insufficient stock
+      if (productInfo?.product_name.toLowerCase().includes('mini croffle')) {
+        console.error('🥐 MINI CROFFLE DEBUG - INSUFFICIENT STOCK:', {
+          productId,
+          productName: productInfo.product_name,
+          quantity,
+          insufficientStock,
+          allIngredients: finalIngredients.map(ing => ({
+            item: ing.inventory_item?.item,
+            required: ing.required_quantity * quantity,
+            available: ing.inventory_item?.stock_quantity,
+            shortfall: (ing.required_quantity * quantity) - (ing.inventory_item?.stock_quantity || 0)
+          })),
+          transactionId
+        });
+      }
       
       const errorDetails = insufficientStock.map(item => 
         `${item.ingredient}: need ${item.required}, have ${item.available}`
