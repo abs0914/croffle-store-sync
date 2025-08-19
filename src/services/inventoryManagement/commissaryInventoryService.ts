@@ -152,7 +152,7 @@ export const updateCommissaryInventoryItem = async (
     const { uom, ...otherUpdates } = updates;
     const dbUpdates = {
       ...otherUpdates,
-      ...(uom && { unit: mapToValidUnit(uom) }) // Map and include unit if uom is provided
+      ...(uom && { unit: uom }) // Use uom directly without mapping when updating
     };
     
     const { error } = await supabase
