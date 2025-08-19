@@ -19,6 +19,47 @@ export interface ProductSyncResult {
 }
 
 export const unifiedProductService = {
+  // Validate product exists before operations
+  async validateProductExists(productId: string): Promise<{ exists: boolean; details?: any }> {
+    try {
+      console.log('🔍 Validating product exists:', productId);
+      
+      const { data: product, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', productId)
+        .single();
+      
+      if (error) {
+        console.error('❌ Product validation error:', error);
+        return { exists: false };
+      }
+      
+      console.log('✅ Product found:', product);
+      return { exists: true, details: product };
+    } catch (error) {
+      console.error('❌ Product validation exception:', error);
+      return { exists: false };
+    }
+  },
+
+  // Clear cached product data
+  async clearProductCache(): Promise<void> {
+    console.log('🗑️ Clearing product cache...');
+    // Clear localStorage caches that might contain stale product IDs
+    if (typeof localStorage !== 'undefined') {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('product') || key.includes('catalog') || key.includes('pos'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      console.log('🗑️ Cleared localStorage keys:', keysToRemove);
+    }
+  },
+
   // Update product across both product_catalog and products tables
   async updateProduct(
     storeId: string,

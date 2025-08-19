@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 export const fetchProducts = async (storeId: string): Promise<Product[]> => {
   try {
-    console.log("fetchProducts: Starting fetch for store:", storeId);
+    console.log("🔍 [fetchProducts] Starting fetch for store:", storeId);
     
     // First try a simple query to test basic access
     const { data: simpleTest } = await supabase
@@ -14,7 +14,7 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       .eq("store_id", storeId)
       .limit(1);
     
-    console.log("fetchProducts: Simple test result:", simpleTest);
+    console.log("🔍 [fetchProducts] Simple test result:", simpleTest);
     
     const { data, error } = await supabase
       .from("products")
@@ -26,19 +26,48 @@ export const fetchProducts = async (storeId: string): Promise<Product[]> => {
       .order("name");
     
     if (error) {
-      console.error("fetchProducts: Supabase error:", error);
+      console.error("❌ [fetchProducts] Supabase error:", error);
       throw new Error(`Database error: ${error.message}`);
     }
     
-    console.log("fetchProducts: Raw data received:", {
+    console.log("📦 [fetchProducts] Raw data received:", {
       count: data?.length || 0,
       sample: data?.[0],
       storeId
     });
     
     if (!data || data.length === 0) {
-      console.warn("fetchProducts: No products found for store:", storeId);
+      console.warn("⚠️ [fetchProducts] No products found for store:", storeId);
       return [];
+    }
+    
+    // Enhanced logging for Mini Croffle and Croffle Overload
+    const miniCroffles = data.filter(p => p.name?.toLowerCase().includes('mini croffle'));
+    const croffleOverloads = data.filter(p => p.name?.toLowerCase().includes('croffle overload'));
+    
+    if (miniCroffles.length > 0) {
+      console.log('🥐 [fetchProducts] Mini Croffle products found:', miniCroffles.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        is_active: p.is_active
+      })));
+      
+      // Alert if the problematic ID is found
+      const problematicId = '55a665cd-f0d0-4401-b854-bf908c411e56';
+      const foundProblematic = miniCroffles.find(p => p.id === problematicId);
+      if (foundProblematic) {
+        console.error('🚨 [fetchProducts] PROBLEMATIC ID FOUND IN RESULTS:', problematicId, foundProblematic);
+      }
+    }
+    
+    if (croffleOverloads.length > 0) {
+      console.log('🥐 [fetchProducts] Croffle Overload products found:', croffleOverloads.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        is_active: p.is_active
+      })));
     }
     
     // Map database fields to our TypeScript interface
