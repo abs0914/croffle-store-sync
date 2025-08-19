@@ -1269,6 +1269,65 @@ export type Database = {
           },
         ]
       }
+      fulfillment_modifications: {
+        Row: {
+          approval_notes: string | null
+          approved_by: string | null
+          created_at: string
+          fulfillment_id: string
+          id: string
+          justification: string | null
+          modification_type: string
+          new_data: Json
+          original_data: Json | null
+          processed_at: string | null
+          requested_at: string
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approval_notes?: string | null
+          approved_by?: string | null
+          created_at?: string
+          fulfillment_id: string
+          id?: string
+          justification?: string | null
+          modification_type: string
+          new_data: Json
+          original_data?: Json | null
+          processed_at?: string | null
+          requested_at?: string
+          requested_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approval_notes?: string | null
+          approved_by?: string | null
+          created_at?: string
+          fulfillment_id?: string
+          id?: string
+          justification?: string | null
+          modification_type?: string
+          new_data?: Json
+          original_data?: Json | null
+          processed_at?: string | null
+          requested_at?: string
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fulfillment_modifications_fulfillment_id_fkey"
+            columns: ["fulfillment_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_fulfillments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goods_received_notes: {
         Row: {
           created_at: string | null
@@ -2493,6 +2552,113 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_order_fulfillment_items: {
+        Row: {
+          created_at: string
+          fulfilled_quantity: number
+          fulfillment_id: string
+          id: string
+          notes: string | null
+          ordered_quantity: number
+          purchase_order_item_id: string
+          status: string
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fulfilled_quantity?: number
+          fulfillment_id: string
+          id?: string
+          notes?: string | null
+          ordered_quantity: number
+          purchase_order_item_id: string
+          status?: string
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fulfilled_quantity?: number
+          fulfillment_id?: string
+          id?: string
+          notes?: string | null
+          ordered_quantity?: number
+          purchase_order_item_id?: string
+          status?: string
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_fulfillment_items_fulfillment_id_fkey"
+            columns: ["fulfillment_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_fulfillments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_fulfillment_items_purchase_order_item_id_fkey"
+            columns: ["purchase_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_order_fulfillments: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          fulfillment_number: string
+          id: string
+          notes: string | null
+          purchase_order_id: string
+          started_at: string
+          started_by: string
+          status: string
+          total_fulfilled_items: number | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          fulfillment_number: string
+          id?: string
+          notes?: string | null
+          purchase_order_id: string
+          started_at?: string
+          started_by: string
+          status?: string
+          total_fulfilled_items?: number | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          fulfillment_number?: string
+          id?: string
+          notes?: string | null
+          purchase_order_id?: string
+          started_at?: string
+          started_by?: string
+          status?: string
+          total_fulfilled_items?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_fulfillments_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -4813,6 +4979,10 @@ export type Database = {
         Args: { promo_name: string; promo_ref: string }
         Returns: string
       }
+      generate_fulfillment_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_purchase_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -4931,6 +5101,10 @@ export type Database = {
           id: string
           user_metadata: Json
         }[]
+      }
+      has_fulfillment_access: {
+        Args: { user_role: Database["public"]["Enums"]["app_role"] }
+        Returns: boolean
       }
       has_route_access: {
         Args: {
