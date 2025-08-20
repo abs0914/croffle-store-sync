@@ -81,9 +81,9 @@ export default function Inventory() {
     const matchesStockFilter = (() => {
       switch (stockLevelFilter) {
         case 'low-stock':
-          return item.currentStock > 0 && item.currentStock <= (item.minimumThreshold || 10);
+          return item.stock_quantity > 0 && item.stock_quantity <= (item.minimum_threshold || 10);
         case 'out-of-stock':
-          return item.currentStock === 0;
+          return item.stock_quantity === 0;
         case 'all':
         default:
           return true;
