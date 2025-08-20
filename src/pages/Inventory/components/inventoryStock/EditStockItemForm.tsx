@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { InventoryStock, InventoryItemCategory } from "@/types/inventory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,11 @@ export const EditStockItemForm = ({
   isLoading 
 }: EditStockItemFormProps) => {
   const [formData, setFormData] = useState<InventoryStock>(stockItem);
+
+  // Update form data when stockItem prop changes
+  useEffect(() => {
+    setFormData(stockItem);
+  }, [stockItem]);
 
   const categoryOptions: { value: InventoryItemCategory; label: string }[] = [
     { value: 'base_ingredient', label: 'Base Ingredient' },
