@@ -6,6 +6,7 @@ import { useCart } from "@/contexts/cart/CartContext";
 import { useProductCatalogData } from "@/hooks/useProductCatalogData";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import { useAutomaticAvailability } from "@/hooks/useAutomaticAvailability";
+import { useLargeOrderDiagnostics } from "@/hooks/useLargeOrderDiagnostics";
 import { realTimeNotificationService } from "@/services/notifications/realTimeNotificationService";
 
 import POSContent from "@/components/pos/POSContent";
@@ -43,6 +44,9 @@ export default function POS() {
     handlePaymentComplete: processPayment,
     startNewSale
   } = useTransactionHandler(currentStore?.id || '');
+
+  // Large order diagnostics for debugging failures
+  const { logOrderAttempt } = useLargeOrderDiagnostics();
 
   // Load product data from product_catalog using consolidated hook
   const {

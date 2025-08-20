@@ -350,27 +350,33 @@ export const createTransaction = async (
   } catch (error) {
     console.error("❌ Critical transaction error:", error);
     
-    // Enhanced error reporting for debugging
+    // Enhanced error reporting for debugging large orders
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const isLargeOrder = transaction.items.length > 5;
+    
     console.error("📋 Transaction error details:", {
       error: errorMessage,
       storeId: transaction.storeId,
       userId: transaction.userId,
       itemCount: transaction.items.length,
-      timestamp: new Date().toISOString()
+      isLargeOrder,
+      timestamp: new Date().toISOString(),
+      items: transaction.items.map(item => ({ name: item.name, quantity: item.quantity }))
     });
     
-    // Show specific error message to user
+    // Show specific error message to user based on error type and order size
     if (errorMessage.includes('permission denied')) {
       toast.error("Permission denied - please check user access rights");
     } else if (errorMessage.includes('inventory')) {
-      toast.error("Inventory error - insufficient stock or processing failed");
+      toast.error(`Inventory error - ${isLargeOrder ? 'Large order processing failed. ' : ''}Insufficient stock or processing failed`);
     } else if (errorMessage.includes('validation')) {
-      toast.error("Product validation failed - please check product setup");
+      toast.error(`Product validation failed - ${isLargeOrder ? 'Some items in large order invalid. ' : ''}Please check product setup`);
     } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
-      toast.error("Network error - please check connection and try again");
+      toast.error(`Network error - ${isLargeOrder ? 'Large order upload failed. ' : ''}Please check connection and try again`);
+    } else if (errorMessage.includes('timeout')) {
+      toast.error(`Transaction timeout - ${isLargeOrder ? 'Large order processing timed out. ' : ''}Please try again`);
     } else {
-      toast.error(`Transaction failed: ${errorMessage}`);
+      toast.error(`Transaction failed: ${errorMessage}${isLargeOrder ? ' (Large order - 11 items)' : ''}`);
     }
     
     return null;

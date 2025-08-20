@@ -203,6 +203,13 @@ export function useTransactionHandler(storeId: string) {
     };
     
     // Call the service to create the transaction with cart items for enrichment
+    console.log("🔄 Creating transaction with enhanced error handling...", {
+      itemCount: items.length,
+      storeId: currentStore.id,
+      total: transaction.total,
+      paymentMethod: finalPaymentMethod
+    });
+    
     const result = await createTransaction(transaction, items);
     
     if (result) {
@@ -243,8 +250,9 @@ export function useTransactionHandler(storeId: string) {
         itemCount: items.length
       });
       
-      // Show performance feedback
-      toast.success(`Transaction completed! Background processing queued.`, {
+      // Show performance feedback with large order indication
+      const isLargeOrder = items.length > 5;
+      toast.success(`Transaction completed!${isLargeOrder ? ` (${items.length} items)` : ''} Background processing queued.`, {
         description: `Jobs: ${inventoryJobId?.slice(-8)}, ${receiptJobId?.slice(-8)}, ${analyticsJobId?.slice(-8)}`
       });
       
@@ -269,11 +277,33 @@ export function useTransactionHandler(storeId: string) {
       );
       
       return true;
+    } else {
+      // Enhanced error handling for failed transactions
+      const isLargeOrder = items.length > 5;
+      const errorMsg = `Transaction creation failed${isLargeOrder ? ` (${items.length} items)` : ''}`;
+      
+      console.log("❌ Transaction creation failed - detailed logging:", {
+        itemCount: items.length,
+        isLargeOrder,
+        storeId: currentStore.id,
+        shiftId: currentShift.id,
+        total: transaction.total,
+        paymentMethod: finalPaymentMethod
+      });
+      
+      toast.error(isLargeOrder ? 
+        `Failed to complete large order (${items.length} items). Please try smaller batches or contact support.` :
+        'Transaction failed. Please try again.'
+      );
+      
+      PerformanceMonitor.endTimer(operationId, 'transaction_failed', { 
+        error: 'Transaction creation failed',
+        itemCount: items.length,
+        isLargeOrder 
+      });
+      
+      return false;
     }
-    
-    console.log("❌ Transaction creation failed");
-    PerformanceMonitor.endTimer(operationId, 'transaction_failed', { error: 'Transaction creation failed' });
-    return false;
   };
   
   const startNewSale = () => {
