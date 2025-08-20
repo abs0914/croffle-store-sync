@@ -4,6 +4,7 @@ import { CategoryBasedInventoryValidator } from '@/components/Admin/CategoryBase
 import { PerformanceMonitor } from '@/components/Admin/PerformanceMonitor';
 import { InventoryHealthDashboard } from '@/components/Admin/InventoryHealthDashboard';
 import { CroffleDeploymentTool } from '@/components/Admin/CroffleDeploymentTool';
+import { CatalogCleanupTool } from '@/components/Admin/CatalogCleanupTool';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AdminRecipes() {
@@ -17,12 +18,13 @@ export default function AdminRecipes() {
       </div>
       
       <Tabs defaultValue="recipes" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="recipes">Recipe Templates</TabsTrigger>
           <TabsTrigger value="validator">Category Validator</TabsTrigger>
           <TabsTrigger value="performance">Performance Monitor</TabsTrigger>
           <TabsTrigger value="health">Inventory Health</TabsTrigger>
           <TabsTrigger value="deployment">Product Deployment</TabsTrigger>
+          <TabsTrigger value="cleanup">Catalog Cleanup</TabsTrigger>
         </TabsList>
 
         <TabsContent value="recipes">
@@ -43,6 +45,10 @@ export default function AdminRecipes() {
 
         <TabsContent value="deployment">
           <CroffleDeploymentTool />
+        </TabsContent>
+
+        <TabsContent value="cleanup">
+          <CatalogCleanupTool />
         </TabsContent>
       </Tabs>
     </div>
