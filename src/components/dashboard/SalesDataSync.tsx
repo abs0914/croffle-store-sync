@@ -197,10 +197,28 @@ export default function SalesDataSync({ storeId }: SalesDataSyncProps) {
         )}
 
         {!syncStatus.hasMetrics && !syncStatus.hasTransactions && (
-          <div className="text-center py-4">
+          <div className="text-center py-6">
+            <AlertTriangle className="h-8 w-8 text-blue-500 mx-auto mb-3" />
+            <p className="text-sm font-medium">No sales data for today</p>
+            <p className="text-xs text-muted-foreground">
+              This is normal if no transactions have been processed yet today
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Sales data will appear here once the first transaction is completed
+            </p>
+          </div>
+        )}
+
+        {syncStatus.hasMetrics && !syncStatus.hasTransactions && (
+          <div className="text-center py-4 bg-orange-50 rounded-lg border border-orange-200">
             <AlertTriangle className="h-8 w-8 text-orange-500 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">No sales data found for today</p>
-            <p className="text-xs text-muted-foreground">Check POS system integration</p>
+            <p className="text-sm font-medium text-orange-700">Data Sync Issue Detected</p>
+            <p className="text-xs text-muted-foreground">
+              Sales metrics exist but individual transactions are missing
+            </p>
+            <p className="text-xs text-muted-foreground">
+              This may indicate a database sync problem
+            </p>
           </div>
         )}
       </CardContent>
