@@ -25,25 +25,25 @@ export class DeliveryPlatformPricingService {
       markupType: 'product_specific',
       markupValue: 0,
       productPricing: {
-        // CLASSIC CROFFLE - ₱155
-        'TIRAMISU Croffle': 155,
-        'CHOCO NUTS Croffle': 155,
-        'CARAMEL DELIGHT Croffle': 155,
-        'CHOCO MARSHMALLOW Croffle': 155,
+        // CLASSIC CROFFLE - ₱155 (exact database names)
+        'Tiramisu Croffle': 155,
+        'Choco Nut Croffle': 155,
+        'Caramel Delight  Croffle': 155, // Note: extra space in database
+        'Choco Marshmallow Croffle': 155,
         // FRUITY CROFFLE - ₱155
-        'STRAWBERRY Croffle': 155,
-        'MANGO Croffle': 155,
-        'BLUEBERRY Croffle': 155,
+        'Strawberry Croffle': 155,
+        'Mango Croffle': 155,
+        'Blueberry Croffle': 155,
         // PREMIUM CROFFLE - ₱155
-        'BISCOFF Croffle': 155,
-        'NUTELLA Croffle': 155,
-        'KITKAT Croffle': 155,
-        'COOKIES & CREAM Croffle': 155,
-        'CHOCO OVERLOAD Croffle': 155,
-        'MATCHA Croffle': 155,
-        'DARK CHOCOLATE Croffle': 155,
+        'Biscoff Croffle': 155,
+        'Nutella Croffle': 155,
+        'Kitkat Croffle': 155,
+        'Cookies & Cream Croffle': 155,
+        'Choco Overload Croffle': 155,
+        'Matcha  Croffle': 155, // Note: extra space in database
+        'Dark Chocolate Croffle': 155,
         // MIX & MATCH - ₱80
-        'mini Croffle': 80
+        'Mini Croffle': 80
       }
     },
     {
@@ -51,25 +51,25 @@ export class DeliveryPlatformPricingService {
       markupType: 'product_specific',
       markupValue: 0,
       productPricing: {
-        // CLASSIC CROFFLE - ₱155
-        'TIRAMISU Croffle': 155,
-        'CHOCO NUTS Croffle': 155,
-        'CARAMEL DELIGHT Croffle': 155,
-        'CHOCO MARSHMALLOW Croffle': 155,
+        // CLASSIC CROFFLE - ₱155 (exact database names)
+        'Tiramisu Croffle': 155,
+        'Choco Nut Croffle': 155,
+        'Caramel Delight  Croffle': 155, // Note: extra space in database
+        'Choco Marshmallow Croffle': 155,
         // FRUITY CROFFLE - ₱155
-        'STRAWBERRY Croffle': 155,
-        'MANGO Croffle': 155,
-        'BLUEBERRY Croffle': 155,
+        'Strawberry Croffle': 155,
+        'Mango Croffle': 155,
+        'Blueberry Croffle': 155,
         // PREMIUM CROFFLE - ₱155
-        'BISCOFF Croffle': 155,
-        'NUTELLA Croffle': 155,
-        'KITKAT Croffle': 155,
-        'COOKIES & CREAM Croffle': 155,
-        'CHOCO OVERLOAD Croffle': 155,
-        'MATCHA Croffle': 155,
-        'DARK CHOCOLATE Croffle': 155,
+        'Biscoff Croffle': 155,
+        'Nutella Croffle': 155,
+        'Kitkat Croffle': 155,
+        'Cookies & Cream Croffle': 155,
+        'Choco Overload Croffle': 155,
+        'Matcha  Croffle': 155, // Note: extra space in database
+        'Dark Chocolate Croffle': 155,
         // MIX & MATCH - ₱80
-        'mini Croffle': 80
+        'Mini Croffle': 80
       }
     }
   ];
@@ -88,9 +88,18 @@ export class DeliveryPlatformPricingService {
 
     // Check for product-specific pricing first
     if (rule.markupType === 'product_specific' && rule.productPricing && productName) {
+      console.log(`🔍 Pricing check for "${productName}" on ${platform}:`, {
+        productName,
+        availableProducts: Object.keys(rule.productPricing),
+        hasMatch: productName in rule.productPricing
+      });
+      
       const specificPrice = rule.productPricing[productName];
       if (specificPrice !== undefined) {
+        console.log(`✅ Found specific price for "${productName}": ₱${specificPrice}`);
         return specificPrice;
+      } else {
+        console.log(`❌ No specific price found for "${productName}"`);
       }
     }
 
