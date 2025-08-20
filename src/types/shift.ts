@@ -13,4 +13,5 @@ export interface Shift {
   startInventoryCount?: Record<string, number>;
   endInventoryCount?: Record<string, number>;
   cashier_id?: string;
+  cashierName?: string;
 }
