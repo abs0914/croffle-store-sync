@@ -1,5 +1,6 @@
 import React from 'react';
 import { InventorySyncHealthDashboard } from '@/components/inventory/InventorySyncHealthDashboard';
+import { Phase3Dashboard } from '@/components/inventory/Phase3Dashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -165,8 +166,24 @@ const InventorySyncHealthPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Main Dashboard */}
+      {/* Phase 2 Dashboard */}
       <InventorySyncHealthDashboard />
+
+      {/* Phase 3 Advanced Dashboard */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-purple-600" />
+            Phase 3: Advanced Intelligence Dashboard
+          </CardTitle>
+          <CardDescription>
+            AI-powered analytics, workflow automation, and multi-store orchestration
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Phase3Dashboard />
+        </CardContent>
+      </Card>
 
       {/* Technical Details */}
       <Card>
