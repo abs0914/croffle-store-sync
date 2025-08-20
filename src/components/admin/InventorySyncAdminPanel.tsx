@@ -185,7 +185,7 @@ export const InventorySyncAdminPanel: React.FC = () => {
       const result = await correctTransactionInventory(transactionId);
       
       if (result.success) {
-        toast.success(`✅ Reconciliation completed! Made ${result.corrections?.length || 0} corrections`);
+        toast.success(`✅ Reconciliation completed! Made ${result.corrections_made || 0} corrections`);
       } else {
         toast.error(`❌ Reconciliation failed: ${result.errors?.join(', ') || 'Unknown error'}`);
       }
