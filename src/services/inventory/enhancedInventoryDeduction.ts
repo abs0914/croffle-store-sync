@@ -188,16 +188,19 @@ export const deductInventoryForTransaction = async (
       }
     }
 
-    // Log the deduction result
-    await supabase
-      .from('inventory_sync_audit')
-      .upsert({
-        transaction_id: transactionId,
-        sync_status: result.success ? 'success' : 'failed',
-        error_details: result.failedItems.length > 0 ? JSON.stringify(result.failedItems) : null,
-        items_processed: result.deductedItems.length,
-        sync_duration_ms: Date.now() - Date.now() // TODO: Implement proper timing
+    // Log the deduction result with fallback error handling
+    try {
+      await supabase.rpc('log_inventory_sync_result', {
+        p_transaction_id: transactionId,
+        p_sync_status: result.success ? 'success' : 'failed',
+        p_error_details: result.failedItems.length > 0 ? JSON.stringify(result.failedItems) : null,
+        p_items_processed: result.deductedItems.length,
+        p_sync_duration_ms: Date.now() - Date.now() // TODO: Implement proper timing
       });
+    } catch (auditError) {
+      console.warn('Failed to log inventory sync audit:', auditError);
+      // Don't throw - audit logging failure shouldn't break inventory deduction
+    }
 
     console.log(`🏁 Deduction completed. Success: ${result.success}, Deducted: ${result.deductedItems.length}, Failed: ${result.failedItems.length}`);
 
@@ -214,15 +217,18 @@ export const deductInventoryForTransaction = async (
   } catch (error) {
     console.error('❌ Critical error in inventory deduction:', error);
     
-    // Log critical error
-    await supabase
-      .from('inventory_sync_audit')
-      .upsert({
-        transaction_id: transactionId,
-        sync_status: 'error',
-        error_details: error instanceof Error ? error.message : 'Unknown error',
-        items_processed: 0
+    // Log critical error with fallback handling
+    try {
+      await supabase.rpc('log_inventory_sync_result', {
+        p_transaction_id: transactionId,
+        p_sync_status: 'error',
+        p_error_details: error instanceof Error ? error.message : 'Unknown error',
+        p_items_processed: 0,
+        p_sync_duration_ms: 0
       });
+    } catch (auditError) {
+      console.warn('Failed to log inventory sync audit error:', auditError);
+    }
 
     return {
       success: false,

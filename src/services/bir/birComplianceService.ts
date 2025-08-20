@@ -1,16 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
-import { BIRAuditLog, BIRCumulativeSales, BIREJournal, BIRReceiptData, BIRComplianceStatus } from "@/types/bir";
-import { Transaction } from "@/types/transaction";
-import { Store } from "@/types/store";
 
-export class BIRComplianceService {
-  
+/**
+ * BIR Compliance Service for audit logging
+ * Handles BIR-required transaction and system audit logging
+ */
+export class BirComplianceService {
   /**
-   * Log BIR audit event
+   * Log audit event with BIR compliance
    */
   static async logAuditEvent(
     storeId: string,
-    logType: 'transaction' | 'system' | 'modification' | 'access',
+    logType: string,
     eventName: string,
     eventData: Record<string, any>,
     userId?: string,
@@ -32,258 +32,128 @@ export class BIRComplianceService {
         p_receipt_number: receiptNumber
       });
 
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error logging BIR audit event:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get cumulative sales for a store
-   */
-  static async getCumulativeSales(storeId: string, terminalId: string = 'TERMINAL-01'): Promise<BIRCumulativeSales | null> {
-    try {
-      const { data, error } = await supabase
-        .from('bir_cumulative_sales')
-        .select('*')
-        .eq('store_id', storeId)
-        .eq('terminal_id', terminalId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      return data || null;
-    } catch (error) {
-      console.error('Error fetching cumulative sales:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Generate BIR-compliant receipt data
-   */
-  static generateBIRReceiptData(
-    transaction: Transaction, 
-    store: Store, 
-    cashierName: string
-  ): BIRReceiptData {
-    // Calculate VAT breakdown
-    const vatableSales = transaction.subtotal - (transaction.discount || 0);
-    const vatAmount = transaction.tax || 0;
-    const vatExemptSales = transaction.vat_exempt_sales || 0;
-    const zeroRatedSales = transaction.zero_rated_sales || 0;
-
-    // Calculate discount breakdown
-    const seniorDiscount = transaction.discountType === 'senior' ? (transaction.discount || 0) : 0;
-    const pwdDiscount = transaction.discountType === 'pwd' ? (transaction.discount || 0) : 0;
-    const employeeDiscount = transaction.discountType === 'employee' ? (transaction.discount || 0) : 0;
-    const otherDiscount = (transaction.discount || 0) - seniorDiscount - pwdDiscount - employeeDiscount;
-
-    return {
-      businessName: store.business_name || store.name,
-      taxpayerName: store.business_name || store.name,
-      tin: store.tin || '000000000000',
-      address: store.address || '',
-      receiptNumber: transaction.receiptNumber,
-      machineAccreditationNumber: store.machine_accreditation_number || 'N/A',
-      serialNumber: store.machine_serial_number || 'N/A',
-      terminalId: transaction.terminal_id || 'TERMINAL-01',
-      transactionDate: transaction.createdAt,
-      cashierName,
-      items: transaction.items.map(item => ({
-        quantity: item.quantity,
-        description: item.name,
-        unitPrice: item.unitPrice,
-        amount: item.totalPrice,
-        isVatExempt: false, // Can be enhanced based on product settings
-        isZeroRated: false
-      })),
-      subtotal: transaction.subtotal,
-      vatableSales,
-      vatExemptSales,
-      zeroRatedSales,
-      vatAmount,
-      discounts: {
-        senior: seniorDiscount,
-        pwd: pwdDiscount,
-        employee: employeeDiscount,
-        other: otherDiscount,
-        total: transaction.discount || 0
-      },
-      totalAmount: transaction.total,
-      amountDue: transaction.total - (transaction.discount || 0),
-      paymentMethod: transaction.paymentMethod,
-      amountTendered: transaction.amountTendered,
-      change: transaction.change
-    };
-  }
-
-  /**
-   * Generate daily e-Journal
-   */
-  static async generateEJournal(storeId: string, date: string, terminalId: string = 'TERMINAL-01'): Promise<BIREJournal | null> {
-    try {
-      // Get all transactions for the day
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('store_id', storeId)
-        .eq('terminal_id', terminalId)
-        .gte('created_at', `${date}T00:00:00`)
-        .lte('created_at', `${date}T23:59:59`)
-        .eq('status', 'completed')
-        .order('created_at');
-
-      if (error) throw error;
-
-      if (!transactions || transactions.length === 0) {
+      if (error) {
+        console.error('Error logging BIR audit event:', error);
+        // Don't throw error - make BIR audit logging optional to prevent transaction failures
         return null;
       }
 
-      // Calculate totals
-      let grossSales = 0;
-      let netSales = 0;
-      let vatSales = 0;
-      let vatAmount = 0;
-      let vatExemptSales = 0;
-      let zeroRatedSales = 0;
-
-      transactions.forEach(tx => {
-        grossSales += tx.subtotal;
-        netSales += tx.total;
-        vatSales += (tx.vat_sales || (tx.subtotal - (tx.discount || 0)));
-        vatAmount += (tx.tax || 0);
-        vatExemptSales += (tx.vat_exempt_sales || 0);
-        zeroRatedSales += (tx.zero_rated_sales || 0);
-      });
-
-      const journalData = {
-        transactions: transactions.map(tx => ({
-          receiptNumber: tx.receipt_number,
-          sequenceNumber: tx.sequence_number,
-          timestamp: tx.created_at,
-          gross: tx.subtotal,
-          discount: tx.discount,
-          net: tx.total,
-          vat: tx.tax,
-          paymentMethod: tx.payment_method
-        })),
-        summary: {
-          transactionCount: transactions.length,
-          grossSales,
-          netSales,
-          vatSales,
-          vatAmount,
-          vatExemptSales,
-          zeroRatedSales
-        }
-      };
-
-      // Create or update e-journal entry
-      const { data: ejournalData, error: ejournalError } = await supabase
-        .from('bir_ejournal')
-        .upsert({
-          store_id: storeId,
-          journal_date: date,
-          terminal_id: terminalId,
-          journal_data: journalData,
-          beginning_receipt: transactions[0].receipt_number,
-          ending_receipt: transactions[transactions.length - 1].receipt_number,
-          transaction_count: transactions.length,
-          gross_sales: grossSales,
-          net_sales: netSales,
-          vat_sales: vatSales,
-          vat_amount: vatAmount,
-          vat_exempt_sales: vatExemptSales,
-          zero_rated_sales: zeroRatedSales
-        }, {
-          onConflict: 'store_id,terminal_id,journal_date'
-        })
-        .select()
-        .single();
-
-      if (ejournalError) throw ejournalError;
-      return ejournalData as BIREJournal;
+      return data;
     } catch (error) {
-      console.error('Error generating e-journal:', error);
+      console.error('BIR audit logging failed:', error);
+      // Return null instead of throwing to prevent transaction failures
       return null;
     }
   }
 
   /**
-   * Check BIR compliance status
+   * Log transaction completion for BIR compliance
    */
-  static async checkComplianceStatus(storeId: string): Promise<BIRComplianceStatus> {
+  static async logTransactionComplete(
+    storeId: string,
+    transactionId: string,
+    receiptNumber: string,
+    transactionData: Record<string, any>,
+    userId?: string,
+    cashierName?: string
+  ): Promise<void> {
+    await this.logAuditEvent(
+      storeId,
+      'transaction',
+      'transaction_completed',
+      transactionData,
+      userId,
+      cashierName,
+      'TERMINAL-01',
+      transactionId,
+      receiptNumber
+    );
+  }
+
+  /**
+   * Log system events for BIR compliance
+   */
+  static async logSystemEvent(
+    storeId: string,
+    eventName: string,
+    eventData: Record<string, any>,
+    userId?: string
+  ): Promise<void> {
+    await this.logAuditEvent(
+      storeId,
+      'system',
+      eventName,
+      eventData,
+      userId
+    );
+  }
+
+  /**
+   * Check BIR compliance status for a store
+   */
+  static async checkComplianceStatus(storeId: string): Promise<{
+    isCompliant: boolean;
+    missingRequirements: string[];
+    lastAuditDate?: string;
+  }> {
     try {
-      const { data: store, error } = await supabase
+      // Get store information
+      const { data: store, error: storeError } = await supabase
         .from('stores')
-        .select('*')
+        .select('tin, business_name, permit_number, date_issued, valid_until, is_bir_accredited')
         .eq('id', storeId)
         .single();
 
-      if (error) throw error;
-
-      const missingFields: string[] = [];
-      const warnings: string[] = [];
-
-      // Check required BIR fields
-      if (!store.tin) missingFields.push('TIN (Taxpayer Identification Number)');
-      if (!store.business_name) missingFields.push('Business Name');
-      if (!store.machine_accreditation_number) missingFields.push('Machine Accreditation Number');
-      if (!store.machine_serial_number) missingFields.push('Machine Serial Number');
-      if (!store.permit_number) missingFields.push('Permit Number');
-
-      // Check dates
-      const today = new Date();
-      const validUntil = store.valid_until ? new Date(store.valid_until) : null;
-      
-      if (validUntil && validUntil < today) {
-        warnings.push('BIR accreditation has expired');
-      } else if (validUntil && (validUntil.getTime() - today.getTime()) < (30 * 24 * 60 * 60 * 1000)) {
-        warnings.push('BIR accreditation expires within 30 days');
+      if (storeError || !store) {
+        return {
+          isCompliant: false,
+          missingRequirements: ['Store not found']
+        };
       }
 
-      const accreditationStatus = store.is_bir_accredited 
-        ? (validUntil && validUntil < today ? 'expired' : 'approved')
-        : 'pending';
+      const missingRequirements: string[] = [];
+      
+      if (!store.tin) missingRequirements.push('TIN');
+      if (!store.business_name) missingRequirements.push('Business Name');
+      if (!store.permit_number) missingRequirements.push('Permit Number');
+      if (!store.date_issued) missingRequirements.push('Date Issued');
+      if (!store.valid_until) missingRequirements.push('Valid Until Date');
+      if (!store.is_bir_accredited) missingRequirements.push('BIR Accreditation');
+
+      // Check if permit is still valid
+      if (store.valid_until && new Date(store.valid_until) < new Date()) {
+        missingRequirements.push('Valid permit (expired)');
+      }
 
       return {
-        isCompliant: missingFields.length === 0 && accreditationStatus === 'approved',
-        missingFields,
-        warnings,
-        accreditationStatus,
-        lastAuditDate: store.updated_at,
-        nextAuditDate: validUntil?.toISOString()
+        isCompliant: missingRequirements.length === 0,
+        missingRequirements
       };
     } catch (error) {
       console.error('Error checking compliance status:', error);
       return {
         isCompliant: false,
-        missingFields: ['Unable to verify compliance'],
-        warnings: ['Error checking compliance status'],
-        accreditationStatus: 'pending'
+        missingRequirements: ['Error checking compliance']
       };
     }
   }
 
   /**
-   * Get audit logs for a store
+   * Get audit logs for BIR compliance
    */
   static async getAuditLogs(
-    storeId: string, 
-    logType?: string, 
-    startDate?: string, 
+    storeId: string,
+    logType?: string,
+    startDate?: string,
     endDate?: string,
     limit: number = 100
-  ): Promise<BIRAuditLog[]> {
+  ): Promise<any[]> {
     try {
       let query = supabase
         .from('bir_audit_logs')
         .select('*')
         .eq('store_id', storeId)
-        .order('created_at', { ascending: false })
-        .limit(limit);
+        .order('created_at', { ascending: false });
 
       if (logType) {
         query = query.eq('log_type', logType);
@@ -297,13 +167,127 @@ export class BIRComplianceService {
         query = query.lte('created_at', endDate);
       }
 
+      query = query.limit(limit);
+
       const { data, error } = await query;
 
-      if (error) throw error;
-      return (data || []) as BIRAuditLog[];
+      if (error) {
+        console.error('Error fetching audit logs:', error);
+        return [];
+      }
+
+      return data || [];
     } catch (error) {
-      console.error('Error fetching audit logs:', error);
+      console.error('Error getting audit logs:', error);
       return [];
     }
   }
+
+  /**
+   * Get cumulative sales data for BIR compliance
+   */
+  static async getCumulativeSales(storeId: string): Promise<{
+    grandTotalSales: number;
+    grandTotalTransactions: number;
+    lastTransactionDate?: string;
+    lastReceiptNumber?: string;
+  }> {
+    try {
+      const { data, error } = await supabase
+        .from('bir_cumulative_sales')
+        .select('*')
+        .eq('store_id', storeId)
+        .single();
+
+      if (error || !data) {
+        return {
+          grandTotalSales: 0,
+          grandTotalTransactions: 0
+        };
+      }
+
+      return {
+        grandTotalSales: data.grand_total_sales || 0,
+        grandTotalTransactions: data.grand_total_transactions || 0,
+        lastTransactionDate: data.last_transaction_date,
+        lastReceiptNumber: data.last_receipt_number
+      };
+    } catch (error) {
+      console.error('Error getting cumulative sales:', error);
+      return {
+        grandTotalSales: 0,
+        grandTotalTransactions: 0
+      };
+    }
+  }
+
+  /**
+   * Generate E-Journal for BIR compliance
+   */
+  static async generateEJournal(
+    storeId: string,
+    date: string,
+    terminalId: string = 'TERMINAL-01'
+  ): Promise<any | null> {
+    try {
+      // Get transactions for the date
+      const startDate = `${date}T00:00:00`;
+      const endDate = `${date}T23:59:59`;
+
+      const { data: transactions, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('store_id', storeId)
+        .gte('created_at', startDate)
+        .lte('created_at', endDate)
+        .eq('status', 'completed')
+        .order('created_at');
+
+      if (error) {
+        console.error('Error fetching transactions for e-journal:', error);
+        return null;
+      }
+
+      if (!transactions || transactions.length === 0) {
+        return null;
+      }
+
+      // Calculate totals
+      const grossSales = transactions.reduce((sum, tx) => sum + (tx.subtotal || 0), 0);
+      const netSales = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
+      const vatSales = transactions.reduce((sum, tx) => sum + (tx.tax || 0), 0);
+
+      return {
+        journalDate: date,
+        terminalId,
+        storeId,
+        transactionCount: transactions.length,
+        grossSales,
+        netSales,
+        vatSales,
+        beginningReceipt: transactions[0]?.receipt_number,
+        endingReceipt: transactions[transactions.length - 1]?.receipt_number,
+        transactions: transactions.map(tx => ({
+          receiptNumber: tx.receipt_number,
+          timestamp: tx.created_at,
+          total: tx.total,
+          subtotal: tx.subtotal,
+          tax: tx.tax,
+          discount: tx.discount,
+          paymentMethod: tx.payment_method
+        }))
+      };
+    } catch (error) {
+      console.error('Error generating e-journal:', error);
+      return null;
+    }
+  }
 }
+
+// Legacy exports for backward compatibility
+export const logAuditEvent = BirComplianceService.logAuditEvent;
+export const logTransactionComplete = BirComplianceService.logTransactionComplete;
+export const logSystemEvent = BirComplianceService.logSystemEvent;
+
+// Export with both naming conventions for compatibility
+export { BirComplianceService as BIRComplianceService };

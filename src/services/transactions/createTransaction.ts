@@ -267,10 +267,10 @@ export const createTransaction = async (
                 .from('products')
                 .select(`
                   recipe_id,
-                  recipes!inner(template_id)
+                  recipes(template_id)
                 `)
                 .eq('id', item.productId)
-                .single();
+                .maybeSingle();
               
               if (error || !productRecipe?.recipes) {
                 console.warn(`No recipe template found for product ${item.name} (${item.productId})`);

@@ -90,8 +90,8 @@ export class BackgroundQueue {
       const job = pendingJobs[0];
       await this.processJob(job);
       
-      // Process next job immediately
-      setImmediate(processNextJob);
+      // Process next job immediately (browser-compatible)
+      setTimeout(processNextJob, 0);
     };
 
     processNextJob();
