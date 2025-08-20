@@ -20,20 +20,20 @@ export const cleanupSugboMercadoCatalog = async (): Promise<CleanupResult> => {
       throw new Error('Sugbo Mercado store not found');
     }
 
-    // Get or create ADD ON category
+    // Get or create Add-on category
     let { data: addOnCategory } = await supabase
       .from('categories')
       .select('id')
       .eq('store_id', store.id)
-      .eq('name', 'ADD ON')
+      .eq('name', 'Add-on')
       .single();
 
     if (!addOnCategory) {
-      // Create ADD ON category if it doesn't exist
+      // Create Add-on category if it doesn't exist
       const { data: newCategory, error: categoryError } = await supabase
         .from('categories')
         .insert({
-          name: 'ADD ON',
+          name: 'Add-on',
           description: 'Add-on items for products',
           store_id: store.id,
           is_active: true
@@ -42,7 +42,7 @@ export const cleanupSugboMercadoCatalog = async (): Promise<CleanupResult> => {
         .single();
 
       if (categoryError) {
-        throw new Error(`Failed to create ADD ON category: ${categoryError.message}`);
+        throw new Error(`Failed to create Add-on category: ${categoryError.message}`);
       }
 
       addOnCategory = newCategory;
