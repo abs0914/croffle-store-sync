@@ -4,7 +4,8 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StoreInfo } from "@/components/dashboard/StoreInfo";
 import QuickActions from "@/components/dashboard/QuickActions";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
-import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
+import EnhancedInventoryAlerts from "@/components/dashboard/EnhancedInventoryAlerts";
+import SalesDataSync from "@/components/dashboard/SalesDataSync";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import { InventorySyncMonitor } from "@/components/dashboard/InventorySyncMonitor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,7 +51,8 @@ export default function Dashboard() {
             
             <div className="space-y-6">
               <StoreInfo />
-              <InventoryAlerts storeId={currentStore.id} />
+              <EnhancedInventoryAlerts storeId={currentStore.id} />
+              <SalesDataSync storeId={currentStore.id} />
               <RecentTransactions storeId={currentStore.id} />
             </div>
           </div>
