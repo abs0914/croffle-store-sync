@@ -18,15 +18,19 @@ export interface BIRAuditLog {
 }
 
 export interface BIRCumulativeSales {
-  id: string;
-  store_id: string;
-  terminal_id: string;
-  grand_total_sales: number;
-  grand_total_transactions: number;
+  grandTotalSales: number;
+  grandTotalTransactions: number;
+  lastTransactionDate?: string;
+  lastReceiptNumber?: string;
+  id?: string;
+  store_id?: string;
+  terminal_id?: string;
+  grand_total_sales?: number;
+  grand_total_transactions?: number;
   last_transaction_date?: string;
   last_receipt_number?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface BIREJournal {
@@ -99,9 +103,10 @@ export interface BIRReceiptData {
 
 export interface BIRComplianceStatus {
   isCompliant: boolean;
-  missingFields: string[];
-  warnings: string[];
-  accreditationStatus: 'pending' | 'approved' | 'expired' | 'rejected';
+  missingRequirements: string[];
   lastAuditDate?: string;
+  missingFields?: string[];
+  warnings?: string[];
+  accreditationStatus?: 'pending' | 'approved' | 'expired' | 'rejected';
   nextAuditDate?: string;
 }
