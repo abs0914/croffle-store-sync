@@ -112,8 +112,12 @@ export const validateProductForSale = async (
       const currentStock = ingredient.inventory_item?.stock_quantity || 0;
       const ingredientName = ingredient.inventory_item?.item || 'Unknown ingredient';
 
-      if (currentStock < deductionAmount) {
+      if (currentStock <= 0) {
+        // Only block if ingredient is completely out of stock
         result.isValid = false;
+        result.errors.push(`${ingredientName} is out of stock`);
+      } else if (currentStock < deductionAmount) {
+        // Allow sale but warn about low stock
         result.lowStockIngredients.push(
           `${ingredientName} (need ${deductionAmount}, have ${currentStock})`
         );
