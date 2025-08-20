@@ -4805,6 +4805,36 @@ export type Database = {
           },
         ]
       }
+      unit_conversions: {
+        Row: {
+          conversion_factor: number
+          created_at: string | null
+          from_unit: string
+          id: string
+          ingredient_type: string | null
+          to_unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversion_factor: number
+          created_at?: string | null
+          from_unit: string
+          id?: string
+          ingredient_type?: string | null
+          to_unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversion_factor?: number
+          created_at?: string | null
+          from_unit?: string
+          id?: string
+          ingredient_type?: string | null
+          to_unit?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_role_audit: {
         Row: {
           changed_at: string

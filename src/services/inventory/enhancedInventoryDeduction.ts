@@ -160,19 +160,8 @@ export const deductInventoryForTransaction = async (
             created_by: 'system' // TODO: Get actual user ID
           });
 
-        // Log inventory transaction
-        await supabase
-          .from('inventory_transactions')
-          .insert({
-            store_id: storeId,
-            product_id: match.inventory_item_id,
-            transaction_type: 'sale',
-            quantity: finalQuantity,
-            previous_quantity: availableQuantity,
-            new_quantity: newQuantity,
-            notes: `Transaction ${transactionId} - ${cartItem.product_name}`,
-            reference_id: transactionId
-          });
+        // Log inventory transaction (removed - not needed for this service)
+        // Transaction logging is handled by inventory_movements above
 
         result.deductedItems.push({
           ingredient_name: ingredient.ingredient_name,

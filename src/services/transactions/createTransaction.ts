@@ -225,40 +225,55 @@ export const createTransaction = async (
       receiptNumber
     );
     
-    // Enhanced inventory deduction with comprehensive error handling
-    console.log('🔄 Starting inventory deduction for transaction:', data.id);
-    console.log('🔄 Transaction items for inventory processing:', transaction.items.map(item => ({
-      productId: item.productId,
-      name: item.name,
-      quantity: item.quantity
-    })));
-    
-    // Start monitoring for this transaction
-    const { startInventorySyncMonitoring } = await import('@/services/inventory/inventorySyncMonitor');
-    startInventorySyncMonitoring(data.id, transaction.storeId, transaction.items);
-    
-    try {
-      let inventoryResult: { success: boolean; errors: string[] } = { success: false, errors: [] };
-      
-      if (useBatchProcessing) {
-        console.log('📦 Using batch inventory processing for large order');
-        
-        // Import enhanced batch processing service
-        const { EnhancedBatchProcessingService } = await import('./enhancedBatchProcessingService');
-        
-        inventoryResult = await EnhancedBatchProcessingService.batchProcessInventoryWithErrorHandling(
-          transaction.items,
-          transaction.storeId,
-          data.id,
-          (progress) => {
-            console.log(`📊 Inventory progress: ${progress.current}/${progress.total} - ${progress.message}`);
-          }
-        );
-      } else {
-        // Use enhanced sequential processing with proper error tracking
-        console.log('🔄 Processing inventory sequentially for', transaction.items.length, 'items');
-        inventoryResult = await enhancedUpdateInventoryStockForTransaction(transaction.items, transaction.storeId, data.id);
-      }
+     // Enhanced inventory deduction with comprehensive error handling
+     console.log('🔄 Starting enhanced inventory deduction for transaction:', data.id);
+     console.log('🔄 Transaction items for inventory processing:', transaction.items.map(item => ({
+       productId: item.productId,
+       name: item.name,
+       quantity: item.quantity
+     })));
+     
+     // Start monitoring for this transaction
+     const { startInventorySyncMonitoring } = await import('@/services/inventory/inventorySyncMonitor');
+     startInventorySyncMonitoring(data.id, transaction.storeId, transaction.items);
+     
+     try {
+       let inventoryResult: { success: boolean; errors: string[] } = { success: false, errors: [] };
+       
+       if (useBatchProcessing) {
+         console.log('📦 Using batch inventory processing for large order');
+         
+         // Import enhanced batch processing service
+         const { EnhancedBatchProcessingService } = await import('./enhancedBatchProcessingService');
+         
+         inventoryResult = await EnhancedBatchProcessingService.batchProcessInventoryWithErrorHandling(
+           transaction.items,
+           transaction.storeId,
+           data.id,
+           (progress) => {
+             console.log(`📊 Inventory progress: ${progress.current}/${progress.total} - ${progress.message}`);
+           }
+         );
+       } else {
+         // Use NEW enhanced deduction service with proper matching
+         console.log('🔄 Using enhanced inventory deduction with smart matching');
+         const { deductInventoryForTransaction } = await import('@/services/inventory/enhancedInventoryDeduction');
+         
+         const deductionResult = await deductInventoryForTransaction(
+           data.id,
+           transaction.storeId,
+           transaction.items.map(item => ({
+             product_name: item.name,
+             quantity: item.quantity,
+             recipe_template_id: item.productId // Assuming productId contains recipe template ID
+           }))
+         );
+         
+         inventoryResult = {
+           success: deductionResult.success,
+           errors: deductionResult.failedItems.map(f => f.reason)
+         };
+       }
       
       if (!inventoryResult.success) {
         console.error('❌ Inventory deduction failed:', {
