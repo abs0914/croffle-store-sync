@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { findInventoryMatch, IngredientMatch } from './inventoryMatcher';
+import { validateProductForInventory, validateProductsForInventory } from './inventoryValidationService';
 
 export interface DeductionResult {
   success: boolean;
@@ -20,7 +21,8 @@ export interface DeductionResult {
 }
 
 /**
- * Enhanced inventory deduction with proper matching and validation
+ * Enhanced inventory deduction with comprehensive validation and cleanup-aware processing
+ * Updated to work with the comprehensive inventory sync fix
  */
 export const deductInventoryForTransaction = async (
   transactionId: string,
@@ -40,27 +42,60 @@ export const deductInventoryForTransaction = async (
     warnings: []
   };
 
-  try {
-    console.log(`📦 Processing category-aware deduction for transaction ${transactionId}`);
-    console.log(`🛒 Cart items:`, cartItems);
+  // Pre-validate all items have proper template associations
+  const invalidItems = cartItems.filter(item => !item.recipe_template_id);
+  if (invalidItems.length > 0) {
+    console.error(`❌ Found ${invalidItems.length} items without recipe templates:`, 
+      invalidItems.map(i => i.product_name));
+    
+    for (const item of invalidItems) {
+      result.failedItems.push({
+        ingredient_name: item.product_name,
+        reason: 'No recipe template found - product requires sync',
+        required_quantity: item.quantity,
+        available_quantity: 0
+      });
+    }
+    result.success = false;
+  }
 
-    for (const cartItem of cartItems) {
+  try {
+    console.log(`📦 Processing validated deduction for transaction ${transactionId}`);
+    console.log(`🛒 Valid cart items: ${cartItems.filter(i => i.recipe_template_id).length}/${cartItems.length}`);
+
+    // Only process items with valid template IDs
+    const validItems = cartItems.filter(item => item.recipe_template_id);
+
+    for (const cartItem of validItems) {
       console.log(`\n🔍 Processing cart item: ${cartItem.product_name} (qty: ${cartItem.quantity})`);
       
+      // Double-check template ID (should always exist due to pre-validation)
       if (!cartItem.recipe_template_id) {
-        console.log(`⚠️ No recipe template ID for ${cartItem.product_name}, skipping inventory deduction`);
-        result.warnings.push(`No recipe found for ${cartItem.product_name} - inventory not deducted`);
+        result.warnings.push(`Skipping ${cartItem.product_name} - no recipe template`);
         continue;
       }
 
-      // Get recipe template ingredients
+      // Get recipe template ingredients with enhanced error handling
       const { data: recipeIngredients, error: recipeError } = await supabase
         .from('recipe_template_ingredients')
         .select('ingredient_name, unit, quantity')
         .eq('recipe_template_id', cartItem.recipe_template_id);
 
-      if (recipeError || !recipeIngredients) {
-        result.warnings.push(`Failed to fetch ingredients for ${cartItem.product_name}`);
+      if (recipeError) {
+        console.error(`❌ Database error fetching ingredients for ${cartItem.product_name}:`, recipeError);
+        result.failedItems.push({
+          ingredient_name: cartItem.product_name,
+          reason: `Database error: ${recipeError.message}`,
+          required_quantity: cartItem.quantity,
+          available_quantity: 0
+        });
+        result.success = false;
+        continue;
+      }
+
+      if (!recipeIngredients || recipeIngredients.length === 0) {
+        console.warn(`⚠️ No ingredients found for ${cartItem.product_name} template ${cartItem.recipe_template_id}`);
+        result.warnings.push(`No ingredients defined for ${cartItem.product_name} - inventory not deducted`);
         continue;
       }
 

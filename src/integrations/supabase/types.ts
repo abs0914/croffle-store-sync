@@ -425,6 +425,36 @@ export type Database = {
           },
         ]
       }
+      cleanup_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          new_id: string | null
+          old_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          new_id?: string | null
+          old_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          new_id?: string | null
+          old_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       combo_pricing_rules: {
         Row: {
           base_category: string
@@ -5349,6 +5379,14 @@ export type Database = {
         Args: { user_email: string }
         Returns: undefined
       }
+      simple_duplicate_cleanup: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      simple_template_fix: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       sync_auth_user_to_app_users: {
         Args: {
           contact_number?: string
@@ -5425,6 +5463,10 @@ export type Database = {
           description: string
           issue_type: string
         }[]
+      }
+      validate_product_has_recipe_template: {
+        Args: { product_id: string }
+        Returns: boolean
       }
       validate_product_ingredients_availability: {
         Args: { product_id: string; quantity?: number }
