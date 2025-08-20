@@ -38,20 +38,10 @@ export function OptimizedPOSHeader({
             {/* Sidebar Toggle */}
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={toggleSidebar}
-              className="md:hidden"
             >
-              <Menu className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleSidebar}
-              className="hidden md:flex items-center gap-2"
-            >
-              <Expand className="h-4 w-4" />
-              <span>Toggle Sidebar</span>
+              <img src="/lovable-uploads/cdab1fbe-c357-4fe1-b81f-bbf3be956673.png" alt="Menu" className="h-5 w-5" />
             </Button>
             
             <div>
