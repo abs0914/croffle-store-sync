@@ -4,9 +4,7 @@ import { useAuth } from "@/contexts/auth";
 import { Spinner } from "../ui/spinner";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AdminBrandHeader } from "./admin/AdminBrandHeader";
-import { AdminMainMenu } from "./admin/AdminMainMenu";
-import { AdminUserProfile } from "./admin/AdminUserProfile";
+import { AdminDesktopSidebar } from "./admin/AdminDesktopSidebar";
 import { AdminMobileMenuTrigger } from "./admin/AdminMobileMenuTrigger";
 import { AdminMobileSidebar } from "./admin/AdminMobileSidebar";
 import { useOrderNotifications } from "@/hooks/useOrderNotifications";
@@ -73,17 +71,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       )}
       
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 z-40">
-        <div className="flex flex-col h-full bg-croffle-background border-r border-croffle-light">
-          <AdminBrandHeader />
-          <div className="flex-1 overflow-y-auto py-2">
-            <div className="px-3 py-4">
-              <AdminMainMenu />
-            </div>
-          </div>
-          <AdminUserProfile />
-        </div>
-      </div>
+      <AdminDesktopSidebar />
       
       {/* Mobile Sidebar */}
       {isMobile && (
