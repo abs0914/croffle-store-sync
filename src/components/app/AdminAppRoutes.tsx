@@ -12,6 +12,7 @@ import AdminReports from '@/pages/Admin/AdminReports';
 import AdminExpenses from '@/pages/Admin/AdminExpenses';
 import CommissaryManagement from '@/pages/Commissary/CommissaryManagement';
 import ProductionManagement from '@/pages/ProductionManagement';
+import InventorySyncHealthPage from '@/pages/InventorySyncHealth';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
 import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
@@ -53,6 +54,18 @@ export const AdminAppRoutes = () => {
           <AdminProtectedRoute section="commissary-inventory">
             <AdminLayout>
               <CommissaryManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Admin Inventory Sync Health - Phase 2 Monitoring */}
+      <Route
+        path="/admin/inventory-sync-health"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout>
+              <InventorySyncHealthPage />
             </AdminLayout>
           </AdminProtectedRoute>
         }
