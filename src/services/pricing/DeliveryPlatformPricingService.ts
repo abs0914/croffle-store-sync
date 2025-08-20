@@ -25,15 +25,25 @@ export class DeliveryPlatformPricingService {
       markupType: 'product_specific',
       markupValue: 0,
       productPricing: {
-        'Choco Marshmallow Croffle': 155,
-        'Mini Croffle': 80,
-        // Add other croffle variants here as needed
-        'Croffle Overload': 155,
-        'Plain Croffle': 155,
-        'Bacon Croffle': 155,
-        'Ham and Cheese Croffle': 155,
-        'Nutella Croffle': 155,
-        'Peanut Butter Croffle': 155
+        // CLASSIC CROFFLE - ₱155
+        'TIRAMISU Croffle': 155,
+        'CHOCO NUTS Croffle': 155,
+        'CARAMEL DELIGHT Croffle': 155,
+        'CHOCO MARSHMALLOW Croffle': 155,
+        // FRUITY CROFFLE - ₱155
+        'STRAWBERRY Croffle': 155,
+        'MANGO Croffle': 155,
+        'BLUEBERRY Croffle': 155,
+        // PREMIUM CROFFLE - ₱155
+        'BISCOFF Croffle': 155,
+        'NUTELLA Croffle': 155,
+        'KITKAT Croffle': 155,
+        'COOKIES & CREAM Croffle': 155,
+        'CHOCO OVERLOAD Croffle': 155,
+        'MATCHA Croffle': 155,
+        'DARK CHOCOLATE Croffle': 155,
+        // MIX & MATCH - ₱80
+        'mini Croffle': 80
       }
     },
     {
@@ -41,15 +51,25 @@ export class DeliveryPlatformPricingService {
       markupType: 'product_specific',
       markupValue: 0,
       productPricing: {
-        'Choco Marshmallow Croffle': 155,
-        'Mini Croffle': 80,
-        // Add other croffle variants here as needed
-        'Croffle Overload': 155,
-        'Plain Croffle': 155,
-        'Bacon Croffle': 155,
-        'Ham and Cheese Croffle': 155,
-        'Nutella Croffle': 155,
-        'Peanut Butter Croffle': 155
+        // CLASSIC CROFFLE - ₱155
+        'TIRAMISU Croffle': 155,
+        'CHOCO NUTS Croffle': 155,
+        'CARAMEL DELIGHT Croffle': 155,
+        'CHOCO MARSHMALLOW Croffle': 155,
+        // FRUITY CROFFLE - ₱155
+        'STRAWBERRY Croffle': 155,
+        'MANGO Croffle': 155,
+        'BLUEBERRY Croffle': 155,
+        // PREMIUM CROFFLE - ₱155
+        'BISCOFF Croffle': 155,
+        'NUTELLA Croffle': 155,
+        'KITKAT Croffle': 155,
+        'COOKIES & CREAM Croffle': 155,
+        'CHOCO OVERLOAD Croffle': 155,
+        'MATCHA Croffle': 155,
+        'DARK CHOCOLATE Croffle': 155,
+        // MIX & MATCH - ₱80
+        'mini Croffle': 80
       }
     }
   ];
