@@ -29,8 +29,8 @@ export function OptimizedPOSHeader({
           {/* Sidebar Toggle & Store Info */}
           <div className="flex items-center space-x-4">
             {/* Sidebar Toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-3">
-              <Menu className="h-6 w-6" />
+            <Button variant="ghost" size="sm" onClick={toggleSidebar} className="mr-3">
+              <Menu className="h-4 w-4" />
             </Button>
             
             <div>
