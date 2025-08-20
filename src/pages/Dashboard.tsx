@@ -7,6 +7,7 @@ import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import EnhancedInventoryAlerts from "@/components/dashboard/EnhancedInventoryAlerts";
 import SalesDataSync from "@/components/dashboard/SalesDataSync";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
+import PaymentDebugPanel from "@/components/debug/PaymentDebugPanel";
 import { InventorySyncMonitor } from "@/components/dashboard/InventorySyncMonitor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,7 @@ export default function Dashboard() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="sync-monitor">Inventory Sync</TabsTrigger>
+          <TabsTrigger value="payment-debug">Payment Debug</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview" className="space-y-4">
@@ -55,6 +57,12 @@ export default function Dashboard() {
               <SalesDataSync storeId={currentStore.id} />
               <RecentTransactions storeId={currentStore.id} />
             </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="payment-debug" className="space-y-4">
+          <div className="max-w-4xl">
+            <PaymentDebugPanel />
           </div>
         </TabsContent>
 
