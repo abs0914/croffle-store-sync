@@ -1,4 +1,5 @@
 import { InventoryStock } from "@/types";
+import { InventoryItemCategory } from "@/types/inventory";
 import { Button } from "@/components/ui/button";
 import { 
   Table, 
@@ -21,6 +22,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { formatCurrency } from "@/utils/format";
+import { CategoryFilter } from "@/components/inventory/CategoryFilter";
 
 interface InventoryStockListProps {
   stockItems: InventoryStock[];
@@ -42,15 +44,18 @@ export const InventoryStockList = ({
   hasMultipleStores = false
 }: InventoryStockListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<InventoryItemCategory | 'all'>('all');
   const [sortConfig, setSortConfig] = useState<{ key: keyof InventoryStock; direction: 'asc' | 'desc' }>({
     key: 'item',
     direction: 'asc'
   });
 
-  // Filter items based on search
-  const filteredItems = stockItems.filter(item => 
-    item.item.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter items based on search and category
+  const filteredItems = stockItems.filter(item => {
+    const matchesSearch = item.item.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || item.item_category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   // Sort items based on the current sort configuration
   const sortedItems = [...filteredItems].sort((a, b) => {
@@ -91,14 +96,35 @@ export const InventoryStockList = ({
     return sortConfig.direction === 'asc' ? '↑' : '↓';
   };
 
+  const getCategoryLabel = (category: InventoryItemCategory | undefined) => {
+    if (!category) return 'Other';
+    
+    const labels: Record<InventoryItemCategory, string> = {
+      base_ingredient: 'Base',
+      classic_sauce: 'Classic Sauce',
+      premium_sauce: 'Premium Sauce',
+      classic_topping: 'Classic Topping',
+      premium_topping: 'Premium Topping',
+      packaging: 'Packaging',
+      biscuit: 'Biscuit'
+    };
+    
+    return labels[category] || 'Other';
+  };
+
   return (
     <div>
-      <div className="mb-4">
+      <div className="mb-4 flex gap-4">
         <Input
           placeholder="Search items..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
+        />
+        <CategoryFilter
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          className="w-48"
         />
       </div>
       
@@ -112,6 +138,7 @@ export const InventoryStockList = ({
             >
               Item {getSortIcon('item')}
             </TableHead>
+            <TableHead>Category</TableHead>
             <TableHead>Unit</TableHead>
             <TableHead 
               className="text-right cursor-pointer"
@@ -136,6 +163,11 @@ export const InventoryStockList = ({
           {sortedItems.map((stockItem) => (
             <TableRow key={stockItem.id}>
               <TableCell className="font-medium">{stockItem.item}</TableCell>
+              <TableCell>
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                  {getCategoryLabel(stockItem.item_category)}
+                </span>
+              </TableCell>
               <TableCell>{stockItem.unit}</TableCell>
               <TableCell className="text-right">
                 <span className={`font-medium ${stockItem.stock_quantity <= 5 ? 'text-destructive' : ''}`}>

@@ -1701,6 +1701,9 @@ export type Database = {
           is_active: boolean | null
           is_fractional_supported: boolean | null
           item: string
+          item_category:
+            | Database["public"]["Enums"]["inventory_item_category"]
+            | null
           minimum_threshold: number | null
           normalized_unit: string | null
           order_quantity: number | null
@@ -1720,6 +1723,9 @@ export type Database = {
           is_active?: boolean | null
           is_fractional_supported?: boolean | null
           item: string
+          item_category?:
+            | Database["public"]["Enums"]["inventory_item_category"]
+            | null
           minimum_threshold?: number | null
           normalized_unit?: string | null
           order_quantity?: number | null
@@ -1739,6 +1745,9 @@ export type Database = {
           is_active?: boolean | null
           is_fractional_supported?: boolean | null
           item?: string
+          item_category?:
+            | Database["public"]["Enums"]["inventory_item_category"]
+            | null
           minimum_threshold?: number | null
           normalized_unit?: string | null
           order_quantity?: number | null
@@ -5401,6 +5410,14 @@ export type Database = {
         | "optional_one"
         | "multiple"
       inventory_category: "ingredients" | "packaging" | "supplies"
+      inventory_item_category:
+        | "base_ingredient"
+        | "classic_sauce"
+        | "premium_sauce"
+        | "classic_topping"
+        | "premium_topping"
+        | "packaging"
+        | "biscuit"
       inventory_unit:
         | "kg"
         | "g"
@@ -5576,6 +5593,15 @@ export const Constants = {
         "multiple",
       ],
       inventory_category: ["ingredients", "packaging", "supplies"],
+      inventory_item_category: [
+        "base_ingredient",
+        "classic_sauce",
+        "premium_sauce",
+        "classic_topping",
+        "premium_topping",
+        "packaging",
+        "biscuit",
+      ],
       inventory_unit: ["kg", "g", "pieces", "liters", "ml", "boxes", "packs"],
       order_status: [
         "draft",

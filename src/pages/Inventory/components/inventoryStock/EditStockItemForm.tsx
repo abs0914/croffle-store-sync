@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { InventoryStock } from "@/types";
+import { InventoryStock, InventoryItemCategory } from "@/types/inventory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,16 @@ export const EditStockItemForm = ({
 }: EditStockItemFormProps) => {
   const [formData, setFormData] = useState<InventoryStock>(stockItem);
 
+  const categoryOptions: { value: InventoryItemCategory; label: string }[] = [
+    { value: 'base_ingredient', label: 'Base Ingredient' },
+    { value: 'classic_sauce', label: 'Classic Sauce' },
+    { value: 'premium_sauce', label: 'Premium Sauce' },
+    { value: 'classic_topping', label: 'Classic Topping' },
+    { value: 'premium_topping', label: 'Premium Topping' },
+    { value: 'packaging', label: 'Packaging' },
+    { value: 'biscuit', label: 'Biscuit' }
+  ];
+
   const handleChange = (field: keyof InventoryStock, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -65,6 +75,26 @@ export const EditStockItemForm = ({
             onChange={(e) => handleChange("item", e.target.value)}
             className="col-span-3"
           />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="edit-category" className="text-right">
+            Category
+          </Label>
+          <Select
+            value={formData.item_category || 'base_ingredient'}
+            onValueChange={(value) => handleChange("item_category", value as InventoryItemCategory)}
+          >
+            <SelectTrigger className="col-span-3">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {categoryOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="edit-unit" className="text-right">

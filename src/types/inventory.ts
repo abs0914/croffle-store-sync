@@ -1,4 +1,13 @@
 
+export type InventoryItemCategory = 
+  | 'base_ingredient'
+  | 'classic_sauce' 
+  | 'premium_sauce'
+  | 'classic_topping'
+  | 'premium_topping'
+  | 'packaging'
+  | 'biscuit';
+
 export interface InventoryStock {
   id: string;
   item: string;
@@ -13,6 +22,7 @@ export interface InventoryStock {
   created_at?: string;
   updated_at?: string;
   last_restocked?: string;
+  item_category?: InventoryItemCategory;
   // New bulk-to-serving fields
   bulk_unit?: string;
   bulk_quantity?: number;
