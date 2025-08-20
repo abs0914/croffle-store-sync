@@ -41,50 +41,96 @@ export class BackgroundProcessingService {
   ): Promise<void> {
     const startTime = Date.now();
     const failedItems: string[] = [];
+    let successCount = 0;
 
-    // Process all items in parallel for maximum speed
-    const inventoryPromises = items.map(async (item) => {
-      try {
-        const success = await processProductSale(
-          item.productId,
-          item.quantity,
-          transactionId,
-          storeId
-        );
+    // Import supabase for audit logging
+    const { supabase } = await import('@/integrations/supabase/client');
 
-        if (!success) {
-          failedItems.push(item.product?.name || item.productId);
-          console.warn(`⚠️ Inventory processing failed for: ${item.productId}`);
-        } else {
-          // Update cache after successful inventory processing
-          InventoryCacheService.invalidateStoreCache(storeId);
+    try {
+      // Process items sequentially to avoid overwhelming the system
+      for (const item of items) {
+        try {
+          console.log(`🔄 Processing inventory for: ${item.product?.name || item.productId}`);
+          
+          const success = await processProductSale(
+            item.productId,
+            item.quantity,
+            transactionId,
+            storeId
+          );
+
+          if (success) {
+            successCount++;
+            console.log(`✅ Successfully processed: ${item.product?.name || item.productId}`);
+            
+            // Update cache after successful inventory processing
+            InventoryCacheService.invalidateStoreCache(storeId);
+          } else {
+            const errorMsg = `Inventory processing failed for: ${item.product?.name || item.productId}`;
+            failedItems.push(errorMsg);
+            console.warn(`⚠️ ${errorMsg}`);
+          }
+
+        } catch (error) {
+          const errorMsg = `Error processing inventory for ${item.product?.name || item.productId}: ${error.message}`;
+          console.error(`❌ ${errorMsg}`, error);
+          failedItems.push(errorMsg);
         }
-
-        return success;
-      } catch (error) {
-        console.error(`❌ Error processing inventory for ${item.productId}:`, error);
-        failedItems.push(item.product?.name || item.productId);
-        return false;
       }
-    });
 
-    const results = await Promise.all(inventoryPromises);
-    const successCount = results.filter(result => result).length;
-    const processingTime = Date.now() - startTime;
+      const processingTime = Date.now() - startTime;
+      const syncStatus = failedItems.length === 0 ? 'success' : failedItems.length < items.length ? 'partial' : 'failed';
 
-    console.log(`📊 Background inventory processing stats:`, {
-      transactionId,
-      totalItems: items.length,
-      successCount,
-      failedCount: failedItems.length,
-      processingTime: `${processingTime}ms`
-    });
+      // Log the sync result to audit table
+      try {
+        await supabase.rpc('log_inventory_sync_result', {
+          p_transaction_id: transactionId,
+          p_sync_status: syncStatus,
+          p_error_details: failedItems.length > 0 ? failedItems.join('; ') : null,
+          p_items_processed: successCount,
+          p_sync_duration_ms: processingTime
+        });
+      } catch (auditError) {
+        console.error('Failed to log sync result:', auditError);
+      }
 
-    // Show success/failure notifications
-    if (failedItems.length === 0) {
-      toast.success(`Inventory updated for ${successCount} items (${processingTime}ms)`);
-    } else {
-      toast.warning(`Inventory partially updated: ${successCount}/${items.length} items processed`);
+      console.log(`📊 Background inventory processing stats:`, {
+        transactionId,
+        totalItems: items.length,
+        successCount,
+        failedCount: failedItems.length,
+        processingTime: `${processingTime}ms`,
+        syncStatus
+      });
+
+      // Show appropriate notifications
+      if (failedItems.length === 0) {
+        toast.success(`✅ Inventory updated for ${successCount} items (${processingTime}ms)`);
+      } else if (successCount > 0) {
+        toast.warning(`⚠️ Inventory partially updated: ${successCount}/${items.length} items processed`);
+      } else {
+        toast.error(`❌ Inventory sync failed for all ${items.length} items`);
+      }
+
+    } catch (error) {
+      const processingTime = Date.now() - startTime;
+      console.error('❌ Critical error in inventory processing:', error);
+      
+      // Log critical failure
+      try {
+        await supabase.rpc('log_inventory_sync_result', {
+          p_transaction_id: transactionId,
+          p_sync_status: 'failed',
+          p_error_details: `Critical processing error: ${error.message}`,
+          p_items_processed: successCount,
+          p_sync_duration_ms: processingTime
+        });
+      } catch (auditError) {
+        console.error('Failed to log critical failure:', auditError);
+      }
+
+      toast.error(`❌ Critical inventory sync error for transaction ${transactionId}`);
+      throw error;
     }
   }
 

@@ -108,6 +108,78 @@ export function useTransactionHandler(storeId: string) {
     applyCartDiscounts(cartSeniorDiscounts, cartOtherDiscount, totalDiners);
   };
   
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const processTransaction = async (transactionData: any) => {
+    try {
+      setIsProcessing(true);
+      console.log('🚀 Starting transaction processing...', transactionData);
+
+      // Import sync validator
+      const { InventorySyncValidator } = await import('@/services/inventory/inventorySyncValidator');
+      const syncValidator = InventorySyncValidator.getInstance();
+
+      // Check if we can process sales based on sync health
+      const syncCheck = await syncValidator.canProcessSale();
+      if (!syncCheck.allowed) {
+        throw new Error(`Sales temporarily disabled: ${syncCheck.reason}`);
+      }
+
+      // Validate items have required data
+      if (!transactionData.items || transactionData.items.length === 0) {
+        throw new Error('No items to process');
+      }
+
+      // Create transaction record first
+      const transaction = await createTransaction(transactionData);
+      console.log('✅ Transaction created:', transaction);
+
+      if (!transaction?.id) {
+        throw new Error('Failed to create transaction - no ID returned');
+      }
+
+      // Process inventory updates in background with enhanced error handling
+      const jobId = await BackgroundProcessingService.processInventoryInBackground(
+        transaction.id,
+        transactionData.items,
+        transactionData.storeId
+      );
+
+      console.log('🔄 Background inventory processing started:', jobId);
+
+      // Add to retry queue if initial processing fails
+      const { InventorySyncRetryService } = await import('@/services/inventory/inventorySyncRetryService');
+      const retryService = InventorySyncRetryService.getInstance();
+
+      // Monitor job completion and add to retry if needed
+      const jobSuccess = await BackgroundProcessingService.waitForJob(jobId, 10000); // Wait max 10 seconds
+      if (!jobSuccess) {
+        console.warn('⚠️ Background job may have failed, adding to retry queue');
+        await retryService.addRetryJob(
+          transaction.id,
+          transactionData.items,
+          transactionData.storeId,
+          'Initial background processing timeout or failure'
+        );
+      }
+
+      // Update store metrics
+      await BackgroundProcessingService.processAnalyticsInBackground({
+        transactionId: transaction.id,
+        storeId: transactionData.storeId,
+        total: transactionData.total,
+        itemCount: transactionData.items.length
+      });
+
+      return transaction;
+    } catch (error) {
+      console.error('❌ Transaction processing failed:', error);
+      throw error;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handlePaymentComplete = async (
     currentStore: any,
     currentShift: any,
