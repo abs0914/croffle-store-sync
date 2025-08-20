@@ -42,7 +42,7 @@ export function OptimizedPOSHeader({
               onClick={toggleSidebar}
               className="mr-3"
             >
-              <img src="/lovable-uploads/cdab1fbe-c357-4fe1-b81f-bbf3be956673.png" alt="Menu" className="h-6 w-6" />
+              <Menu className="h-6 w-6" />
             </Button>
             
             <div>
