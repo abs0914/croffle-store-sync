@@ -3,11 +3,12 @@ import { CartItem } from '@/types';
 
 export interface PlatformPricingRule {
   platform: DeliveryPlatform;
-  markupType: 'percentage' | 'fixed';
+  markupType: 'percentage' | 'fixed' | 'product_specific';
   markupValue: number;
   minPrice?: number;
   maxPrice?: number;
   applyToCategories?: string[];
+  productPricing?: Record<string, number>; // Product name to price mapping
 }
 
 export interface PricingOverride {
@@ -21,15 +22,35 @@ export class DeliveryPlatformPricingService {
   private static defaultRules: PlatformPricingRule[] = [
     {
       platform: 'grab_food',
-      markupType: 'percentage',
-      markupValue: 7.8, // 7.8% markup for Grab Food to reach ₱155 target
-      minPrice: 50 // Minimum ₱50
+      markupType: 'product_specific',
+      markupValue: 0,
+      productPricing: {
+        'Choco Marshmallow Croffle': 155,
+        'Mini Croffle': 80,
+        // Add other croffle variants here as needed
+        'Croffle Overload': 155,
+        'Plain Croffle': 155,
+        'Bacon Croffle': 155,
+        'Ham and Cheese Croffle': 155,
+        'Nutella Croffle': 155,
+        'Peanut Butter Croffle': 155
+      }
     },
     {
       platform: 'food_panda',
-      markupType: 'percentage', 
-      markupValue: 12, // 12% markup for FoodPanda
-      minPrice: 45 // Minimum ₱45
+      markupType: 'product_specific',
+      markupValue: 0,
+      productPricing: {
+        'Choco Marshmallow Croffle': 155,
+        'Mini Croffle': 80,
+        // Add other croffle variants here as needed
+        'Croffle Overload': 155,
+        'Plain Croffle': 155,
+        'Bacon Croffle': 155,
+        'Ham and Cheese Croffle': 155,
+        'Nutella Croffle': 155,
+        'Peanut Butter Croffle': 155
+      }
     }
   ];
 
@@ -39,10 +60,19 @@ export class DeliveryPlatformPricingService {
   static calculateSuggestedPrice(
     originalPrice: number, 
     platform: DeliveryPlatform,
-    categoryName?: string
+    categoryName?: string,
+    productName?: string
   ): number {
     const rule = this.defaultRules.find(r => r.platform === platform);
     if (!rule) return originalPrice;
+
+    // Check for product-specific pricing first
+    if (rule.markupType === 'product_specific' && rule.productPricing && productName) {
+      const specificPrice = rule.productPricing[productName];
+      if (specificPrice !== undefined) {
+        return specificPrice;
+      }
+    }
 
     // Check if rule applies to this category
     if (rule.applyToCategories && categoryName && !rule.applyToCategories.includes(categoryName)) {
@@ -90,12 +120,14 @@ export class DeliveryPlatformPricingService {
 
     items.forEach((item, index) => {
       const originalPrice = item.price;
+      const productName = item.product.name;
       const suggestedPrice = this.calculateSuggestedPrice(
         originalPrice,
         platform,
         typeof item.product.category === 'string' 
           ? item.product.category 
-          : item.product.category?.name || item.product.name // Safe access with fallback
+          : item.product.category?.name || item.product.name, // Safe access with fallback
+        productName
       );
 
       if (suggestedPrice !== originalPrice) {
