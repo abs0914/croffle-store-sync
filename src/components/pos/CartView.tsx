@@ -24,7 +24,14 @@ interface CartViewProps {
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
   handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }) => void;
-  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any) => Promise<boolean>;
+  handlePaymentComplete: (
+    paymentMethod: 'cash' | 'card' | 'e-wallet', 
+    amountTendered: number, 
+    paymentDetails?: any,
+    orderType?: string,
+    deliveryPlatform?: string,
+    deliveryOrderNumber?: string
+  ) => Promise<boolean>;
   isShiftActive: boolean;
 }
 
@@ -139,7 +146,14 @@ export default function CartView({
       }
 
       // Proceed with payment - inventory deduction will happen automatically in transaction creation
-      const success = await handlePaymentComplete(paymentMethod, amountTendered, paymentDetails);
+      const success = await handlePaymentComplete(
+        paymentMethod, 
+        amountTendered, 
+        paymentDetails,
+        orderType,
+        deliveryPlatform,
+        deliveryOrderNumber
+      );
       if (success) {
         setIsPaymentDialogOpen(false);
       }

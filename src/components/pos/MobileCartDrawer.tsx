@@ -15,7 +15,14 @@ interface MobileCartDrawerProps {
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
   handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }) => void;
-  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any) => Promise<boolean>;
+  handlePaymentComplete: (
+    paymentMethod: 'cash' | 'card' | 'e-wallet', 
+    amountTendered: number, 
+    paymentDetails?: any,
+    orderType?: string,
+    deliveryPlatform?: string,
+    deliveryOrderNumber?: string
+  ) => Promise<boolean>;
   isShiftActive: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;

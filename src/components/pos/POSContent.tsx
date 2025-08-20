@@ -28,12 +28,19 @@ interface POSContentProps {
   otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', amount: number, idNumber?: string, justification?: string } | null;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', idNumber?: string, justification?: string) => void;
   handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary', amount: number, idNumber?: string, justification?: string }) => void;
-  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: {
-    cardType?: string;
-    cardNumber?: string;
-    eWalletProvider?: string;
-    eWalletReferenceNumber?: string;
-  }) => Promise<boolean>;
+  handlePaymentComplete: (
+    paymentMethod: 'cash' | 'card' | 'e-wallet', 
+    amountTendered: number, 
+    paymentDetails?: {
+      cardType?: string;
+      cardNumber?: string;
+      eWalletProvider?: string;
+      eWalletReferenceNumber?: string;
+    },
+    orderType?: string,
+    deliveryPlatform?: string,
+    deliveryOrderNumber?: string
+  ) => Promise<boolean>;
   addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   storeId?: string;
 }

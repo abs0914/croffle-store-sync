@@ -22,7 +22,7 @@ import ReceiptGenerator from "@/components/pos/ReceiptGenerator";
 export default function POS() {
   const { currentStore } = useStore();
   const { currentShift } = useShift();
-  const { items, subtotal, tax, total, addItem } = useCart();
+  const { items, subtotal, tax, total, addItem, orderType, deliveryPlatform, deliveryOrderNumber } = useCart();
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [lastCompletedTransaction, setLastCompletedTransaction] = useState<any>(null);
   const [lastTransactionCustomer, setLastTransactionCustomer] = useState<any>(null);
@@ -108,7 +108,10 @@ export default function POS() {
       cardNumber?: string;
       eWalletProvider?: string;
       eWalletReferenceNumber?: string;
-    }
+    },
+    orderType?: string,
+    deliveryPlatform?: string,
+    deliveryOrderNumber?: string
   ) => {
     if (!currentStore) {
       toast.error("Please select a store first");
@@ -139,7 +142,10 @@ export default function POS() {
         total,
         paymentMethod,
         amountTendered,
-        paymentDetails
+        paymentDetails,
+        orderType,
+        deliveryPlatform,
+        deliveryOrderNumber
       );
 
       return success;

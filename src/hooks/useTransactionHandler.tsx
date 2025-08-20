@@ -120,7 +120,10 @@ export function useTransactionHandler(storeId: string) {
       cardNumber?: string;
       eWalletProvider?: string;
       eWalletReferenceNumber?: string;
-    }
+    },
+    orderType?: string,
+    deliveryPlatform?: string,
+    deliveryOrderNumber?: string
   ) => {
     if (!currentStore || !currentShift) {
       toast.error("No active store or shift found");
@@ -137,6 +140,38 @@ export function useTransactionHandler(storeId: string) {
       totalPrice: item.price * item.quantity
     }));
     
+    // Adjust payment method for delivery orders
+    let finalPaymentMethod = paymentMethod;
+    let finalAmountTendered = amountTendered;
+    let finalChange = paymentMethod === 'cash' ? amountTendered - (total - discount) : undefined;
+    
+    // For delivery orders, override payment method to reflect online payment
+    if (orderType === 'online_delivery') {
+      console.log('🚚 Processing delivery order, adjusting payment method');
+      if (deliveryPlatform === 'grab_food') {
+        finalPaymentMethod = 'e-wallet' as const;
+        if (!paymentDetails?.eWalletProvider) {
+          paymentDetails = { ...paymentDetails, eWalletProvider: 'Grab' };
+        }
+      } else if (deliveryPlatform === 'food_panda') {
+        finalPaymentMethod = 'e-wallet' as const;
+        if (!paymentDetails?.eWalletProvider) {
+          paymentDetails = { ...paymentDetails, eWalletProvider: 'FoodPanda' };
+        }
+      } else {
+        finalPaymentMethod = 'e-wallet' as const;
+        if (!paymentDetails?.eWalletProvider) {
+          paymentDetails = { ...paymentDetails, eWalletProvider: 'Online Payment' };
+        }
+      }
+      
+      // For delivery orders, amount tendered equals total (no cash handling)
+      finalAmountTendered = total - discount;
+      finalChange = undefined;
+      
+      console.log(`✅ Delivery payment method set to: ${finalPaymentMethod} via ${paymentDetails?.eWalletProvider}`);
+    }
+    
     const transaction: Omit<Transaction, "id" | "createdAt" | "receiptNumber"> = {
       shiftId: currentShift.id,
       storeId: currentStore.id,
@@ -150,11 +185,15 @@ export function useTransactionHandler(storeId: string) {
       discountType,
       discountIdNumber,
       total: total - discount,
-      amountTendered,
-      change: paymentMethod === 'cash' ? amountTendered - (total - discount) : undefined,
-      paymentMethod,
+      amountTendered: finalAmountTendered,
+      change: finalChange,
+      paymentMethod: finalPaymentMethod,
       paymentDetails,
-      status: 'completed'
+      status: 'completed',
+      // Add delivery order information
+      orderType: orderType as any,
+      deliveryPlatform: deliveryPlatform as any,
+      deliveryOrderNumber: deliveryOrderNumber
     };
     
     // Call the service to create the transaction with cart items for enrichment
