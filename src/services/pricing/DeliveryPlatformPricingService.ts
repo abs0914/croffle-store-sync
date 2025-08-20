@@ -22,7 +22,7 @@ export class DeliveryPlatformPricingService {
     {
       platform: 'grab_food',
       markupType: 'percentage',
-      markupValue: 15, // 15% markup for Grab Food
+      markupValue: 7.8, // 7.8% markup for Grab Food to reach ₱155 target
       minPrice: 50 // Minimum ₱50
     },
     {
