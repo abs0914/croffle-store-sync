@@ -34,11 +34,11 @@ export const validateProductForSale = async (
       const { data: similarProducts } = await supabase
         .from('product_catalog')
         .select('id, product_name')
-        .ilike('product_name', '%mini%croffle%')
-        .limit(5);
+        .ilike('product_name', '%croffle%')
+        .limit(10);
       
       console.error('🔍 Product validation failed for ID:', productId);
-      console.error('🔍 Available Mini Croffle products:', similarProducts);
+      console.error('🔍 Available croffle products:', similarProducts);
       
       return {
         isValid: false,
