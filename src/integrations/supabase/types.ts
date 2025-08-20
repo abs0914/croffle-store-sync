@@ -1483,6 +1483,33 @@ export type Database = {
           },
         ]
       }
+      ingredient_category_mappings: {
+        Row: {
+          created_at: string | null
+          expected_categories: string[]
+          id: string
+          ingredient_pattern: string
+          priority: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expected_categories: string[]
+          id?: string
+          ingredient_pattern: string
+          priority?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expected_categories?: string[]
+          id?: string
+          ingredient_pattern?: string
+          priority?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ingredient_unit_conversions: {
         Row: {
           conversion_factor: number

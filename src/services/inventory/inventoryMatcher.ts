@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { InventoryItemCategory } from '@/types/inventory';
 
 export interface IngredientMatch {
   ingredient_name: string;
@@ -10,12 +11,41 @@ export interface IngredientMatch {
   from_unit: string;
   to_unit: string;
   conversion_factor: number;
+  inventory_category?: InventoryItemCategory;
 }
 
 export interface UnitConversion {
   from_unit: string;
   to_unit: string;
   factor: number;
+}
+
+// Helper function to determine expected categories for an ingredient
+async function getExpectedCategories(ingredientName: string): Promise<InventoryItemCategory[]> {
+  try {
+    const { data: mappings, error } = await supabase
+      .from('ingredient_category_mappings')
+      .select('ingredient_pattern, expected_categories')
+      .order('priority', { ascending: false });
+
+    if (error) {
+      console.warn('Failed to fetch category mappings:', error);
+      return []; // Return empty array to search all categories
+    }
+
+    const lowerIngredientName = ingredientName.toLowerCase();
+    
+    for (const mapping of mappings || []) {
+      if (lowerIngredientName.includes(mapping.ingredient_pattern.toLowerCase())) {
+        return mapping.expected_categories as InventoryItemCategory[];
+      }
+    }
+    
+    return []; // No specific category found, search all
+  } catch (error) {
+    console.warn('Error getting expected categories:', error);
+    return [];
+  }
 }
 
 // Unit conversion mappings
@@ -39,7 +69,7 @@ const INGREDIENT_NAME_MAPPINGS: Record<string, string> = {
 };
 
 /**
- * Enhanced ingredient matching with exact name prioritization
+ * Enhanced category-aware ingredient matching
  */
 export const findInventoryMatch = async (
   ingredientName: string,
@@ -47,25 +77,52 @@ export const findInventoryMatch = async (
   storeId: string
 ): Promise<IngredientMatch> => {
   try {
-    // Get all inventory items for the store
-    const { data: inventoryItems, error } = await supabase
-      .from('inventory_stock')
-      .select('id, item, unit, stock_quantity')
-      .eq('store_id', storeId)
-      .eq('is_active', true);
+    console.log(`🔍 Finding inventory match for: "${ingredientName}" (${ingredientUnit}) in store ${storeId}`);
 
-    if (error || !inventoryItems) {
-      return {
-        ingredient_name: ingredientName,
-        inventory_item_id: '',
-        inventory_item_name: '',
-        match_type: 'none',
-        confidence: 0,
-        unit_conversion_needed: false,
-        from_unit: ingredientUnit,
-        to_unit: '',
-        conversion_factor: 1
-      };
+    // Get expected categories for this ingredient
+    const expectedCategories = await getExpectedCategories(ingredientName);
+    console.log(`📂 Expected categories for "${ingredientName}":`, expectedCategories);
+
+    // Fetch inventory items - prioritize expected categories first
+    let inventoryItems;
+    
+    if (expectedCategories.length > 0) {
+      // First attempt: search within expected categories only
+      const { data: categoryItems, error: categoryError } = await supabase
+        .from('inventory_stock')
+        .select('id, item, unit, stock_quantity, item_category')
+        .eq('store_id', storeId)
+        .eq('is_active', true)
+        .in('item_category', expectedCategories);
+
+      if (categoryError) {
+        console.error('Error fetching category-specific inventory:', categoryError);
+      } else {
+        inventoryItems = categoryItems;
+        console.log(`🎯 Found ${inventoryItems?.length || 0} items in expected categories:`, expectedCategories);
+      }
+    }
+
+    // Fallback: search all categories if no match in expected categories
+    if (!inventoryItems || inventoryItems.length === 0) {
+      console.log('🔄 No items found in expected categories, searching all categories...');
+      const { data: allItems, error } = await supabase
+        .from('inventory_stock')
+        .select('id, item, unit, stock_quantity, item_category')
+        .eq('store_id', storeId)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching all inventory:', error);
+        return createNoMatchResult(ingredientName, ingredientUnit);
+      }
+      
+      inventoryItems = allItems;
+    }
+
+    if (!inventoryItems || inventoryItems.length === 0) {
+      console.log('❌ No inventory items found for store');
+      return createNoMatchResult(ingredientName, ingredientUnit);
     }
 
     // 1. Try exact name match first (highest priority)
@@ -75,6 +132,7 @@ export const findInventoryMatch = async (
 
     if (exactMatch) {
       const unitConversion = findUnitConversion(ingredientUnit, exactMatch.unit);
+      console.log(`✅ Exact match found: ${ingredientName} -> ${exactMatch.item} (category: ${exactMatch.item_category})`);
       return {
         ingredient_name: ingredientName,
         inventory_item_id: exactMatch.id,
@@ -84,7 +142,8 @@ export const findInventoryMatch = async (
         unit_conversion_needed: unitConversion.factor !== 1,
         from_unit: ingredientUnit,
         to_unit: exactMatch.unit,
-        conversion_factor: unitConversion.factor
+        conversion_factor: unitConversion.factor,
+        inventory_category: exactMatch.item_category as InventoryItemCategory
       };
     }
 
@@ -97,6 +156,7 @@ export const findInventoryMatch = async (
 
       if (mappedMatch) {
         const unitConversion = findUnitConversion(ingredientUnit, mappedMatch.unit);
+        console.log(`✅ Standardized match found: ${ingredientName} -> ${mappedMatch.item} (category: ${mappedMatch.item_category})`);
         return {
           ingredient_name: ingredientName,
           inventory_item_id: mappedMatch.id,
@@ -106,7 +166,8 @@ export const findInventoryMatch = async (
           unit_conversion_needed: unitConversion.factor !== 1,
           from_unit: ingredientUnit,
           to_unit: mappedMatch.unit,
-          conversion_factor: unitConversion.factor
+          conversion_factor: unitConversion.factor,
+          inventory_category: mappedMatch.item_category as InventoryItemCategory
         };
       }
     }
@@ -126,6 +187,7 @@ export const findInventoryMatch = async (
       
       // Require high confidence for fuzzy matches to prevent wrong deductions
       if (bestMatch.similarity > 0.8) {
+        console.log(`✅ Fuzzy match found: ${ingredientName} -> ${bestMatch.item} (category: ${bestMatch.item_category}, confidence: ${bestMatch.similarity})`);
         return {
           ingredient_name: ingredientName,
           inventory_item_id: bestMatch.id,
@@ -135,38 +197,37 @@ export const findInventoryMatch = async (
           unit_conversion_needed: unitConversion.factor !== 1,
           from_unit: ingredientUnit,
           to_unit: bestMatch.unit,
-          conversion_factor: unitConversion.factor
+          conversion_factor: unitConversion.factor,
+          inventory_category: bestMatch.item_category as InventoryItemCategory
         };
       }
     }
 
     // No match found
-    return {
-      ingredient_name: ingredientName,
-      inventory_item_id: '',
-      inventory_item_name: '',
-      match_type: 'none',
-      confidence: 0,
-      unit_conversion_needed: false,
-      from_unit: ingredientUnit,
-      to_unit: '',
-      conversion_factor: 1
-    };
+    console.log(`❌ No suitable match found for ${ingredientName}`);
+    return createNoMatchResult(ingredientName, ingredientUnit);
 
   } catch (error) {
     console.error('Error finding inventory match:', error);
-    return {
-      ingredient_name: ingredientName,
-      inventory_item_id: '',
-      inventory_item_name: '',
-      match_type: 'none',
-      confidence: 0,
-      unit_conversion_needed: false,
-      from_unit: ingredientUnit,
-      to_unit: '',
-      conversion_factor: 1
-    };
+    return createNoMatchResult(ingredientName, ingredientUnit);
   }
+};
+
+/**
+ * Helper function to create a no-match result
+ */
+const createNoMatchResult = (ingredientName: string, ingredientUnit: string): IngredientMatch => {
+  return {
+    ingredient_name: ingredientName,
+    inventory_item_id: '',
+    inventory_item_name: '',
+    match_type: 'none',
+    confidence: 0,
+    unit_conversion_needed: false,
+    from_unit: ingredientUnit,
+    to_unit: '',
+    conversion_factor: 1
+  };
 };
 
 /**

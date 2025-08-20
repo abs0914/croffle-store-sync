@@ -41,9 +41,15 @@ export const deductInventoryForTransaction = async (
   };
 
   try {
+    console.log(`📦 Processing category-aware deduction for transaction ${transactionId}`);
+    console.log(`🛒 Cart items:`, cartItems);
+
     for (const cartItem of cartItems) {
+      console.log(`\n🔍 Processing cart item: ${cartItem.product_name} (qty: ${cartItem.quantity})`);
+      
       if (!cartItem.recipe_template_id) {
-        result.warnings.push(`No recipe template found for ${cartItem.product_name}`);
+        console.log(`⚠️ No recipe template ID for ${cartItem.product_name}, skipping inventory deduction`);
+        result.warnings.push(`No recipe found for ${cartItem.product_name} - inventory not deducted`);
         continue;
       }
 
@@ -66,12 +72,20 @@ export const deductInventoryForTransaction = async (
         
         console.log(`🔍 Finding match for ingredient: ${ingredient.ingredient_name} (${requiredQuantity} ${ingredient.unit})`);
         
-        // Find matching inventory item
+        // Use enhanced category-aware matching algorithm
         const match = await findInventoryMatch(
           ingredient.ingredient_name,
           ingredient.unit,
           storeId
         );
+
+        console.log(`🎯 Category-aware match result for ${ingredient.ingredient_name}:`, {
+          type: match.match_type,
+          confidence: match.confidence,
+          inventoryItem: match.inventory_item_name,
+          category: match.inventory_category,
+          conversionUsed: match.unit_conversion_needed
+        });
 
         if (match.match_type === 'none') {
           result.failedItems.push({
