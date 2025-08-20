@@ -5393,6 +5393,10 @@ export type Database = {
             }
         Returns: undefined
       }
+      trigger_auto_close_shifts: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       try_cast_jsonb: {
         Args: { txt: string }
         Returns: Json
