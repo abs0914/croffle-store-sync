@@ -254,20 +254,59 @@ export const createTransaction = async (
              console.log(`📊 Inventory progress: ${progress.current}/${progress.total} - ${progress.message}`);
            }
          );
-       } else {
-         // Use NEW enhanced deduction service with proper matching
-         console.log('🔄 Using enhanced inventory deduction with smart matching');
-         const { deductInventoryForTransaction } = await import('@/services/inventory/enhancedInventoryDeduction');
-         
-         const deductionResult = await deductInventoryForTransaction(
-           data.id,
-           transaction.storeId,
-           transaction.items.map(item => ({
-             product_name: item.name,
-             quantity: item.quantity,
-             recipe_template_id: item.productId // Assuming productId contains recipe template ID
-           }))
-         );
+        } else {
+          // Use NEW enhanced deduction service with proper matching
+          console.log('🔄 Using enhanced inventory deduction with smart matching');
+          const { deductInventoryForTransaction } = await import('@/services/inventory/enhancedInventoryDeduction');
+          
+          // Get recipe template IDs for each product  
+          const itemsWithTemplateIds = await Promise.all(
+            transaction.items.map(async (item) => {
+              // Get the recipe template ID from the product's recipe
+              const { data: productRecipe, error } = await supabase
+                .from('products')
+                .select(`
+                  recipe_id,
+                  recipes!inner(template_id)
+                `)
+                .eq('id', item.productId)
+                .single();
+              
+              if (error || !productRecipe?.recipes) {
+                console.warn(`No recipe template found for product ${item.name} (${item.productId})`);
+                return {
+                  product_name: item.name,
+                  quantity: item.quantity,
+                  recipe_template_id: null
+                };
+              }
+              
+              // Handle recipes array - get first recipe's template_id
+              const recipes = Array.isArray(productRecipe.recipes) ? productRecipe.recipes : [productRecipe.recipes];
+              const templateId = recipes[0]?.template_id;
+              
+              if (!templateId) {
+                console.warn(`No template_id found for product ${item.name} (${item.productId})`);
+                return {
+                  product_name: item.name,
+                  quantity: item.quantity,
+                  recipe_template_id: null
+                };
+              }
+              
+              return {
+                product_name: item.name,
+                quantity: item.quantity, 
+                recipe_template_id: templateId
+              };
+            })
+          );
+          
+          const deductionResult = await deductInventoryForTransaction(
+            data.id,
+            transaction.storeId,
+            itemsWithTemplateIds
+          );
          
          inventoryResult = {
            success: deductionResult.success,
