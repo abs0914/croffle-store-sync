@@ -62,9 +62,27 @@ export const MENU_INGREDIENT_MAPPINGS: MenuItemIngredients = {
     { recipe_template_name: 'Cafe Latte', commissary_item_name: 'Milk', store_inventory_item: 'Milk', quantity_per_serving: 200, unit: 'ml' }
   ],
   'Iced Latte': [
-    { recipe_template_name: 'Iced Latte', commissary_item_name: 'Espresso Beans', store_inventory_item: 'Espresso Beans', quantity_per_serving: 18, unit: 'g' },
+    { recipe_template_name: 'Iced Latte', commissary_item_name: 'Espresso Beans', store_inventory_item: 'Coffee Beans', quantity_per_serving: 18, unit: 'g' },
     { recipe_template_name: 'Iced Latte', commissary_item_name: 'Milk', store_inventory_item: 'Milk', quantity_per_serving: 200, unit: 'ml' },
     { recipe_template_name: 'Iced Latte', commissary_item_name: 'Ice', store_inventory_item: 'Ice', quantity_per_serving: 100, unit: 'g' }
+  ],
+  
+  // Additional drink recipes
+  'Strawberry Latte': [
+    { recipe_template_name: 'Strawberry Latte', commissary_item_name: 'Espresso Beans', store_inventory_item: 'Coffee Beans', quantity_per_serving: 18, unit: 'g' },
+    { recipe_template_name: 'Strawberry Latte', commissary_item_name: 'Milk', store_inventory_item: 'Milk', quantity_per_serving: 180, unit: 'ml' },
+    { recipe_template_name: 'Strawberry Latte', commissary_item_name: 'Strawberry Syrup', store_inventory_item: 'Strawberry Syrup', quantity_per_serving: 25, unit: 'ml' }
+  ],
+  'Caramel Latte': [
+    { recipe_template_name: 'Caramel Latte', commissary_item_name: 'Espresso Beans', store_inventory_item: 'Coffee Beans', quantity_per_serving: 18, unit: 'g' },
+    { recipe_template_name: 'Caramel Latte', commissary_item_name: 'Milk', store_inventory_item: 'Milk', quantity_per_serving: 180, unit: 'ml' },
+    { recipe_template_name: 'Caramel Latte', commissary_item_name: 'Caramel Syrup', store_inventory_item: 'Caramel Syrup', quantity_per_serving: 25, unit: 'ml' }
+  ],
+  'Cafe Mocha': [
+    { recipe_template_name: 'Cafe Mocha', commissary_item_name: 'Espresso Beans', store_inventory_item: 'Coffee Beans', quantity_per_serving: 18, unit: 'g' },
+    { recipe_template_name: 'Cafe Mocha', commissary_item_name: 'Milk', store_inventory_item: 'Milk', quantity_per_serving: 180, unit: 'ml' },
+    { recipe_template_name: 'Cafe Mocha', commissary_item_name: 'Chocolate Sauce', store_inventory_item: 'Chocolate Sauce', quantity_per_serving: 30, unit: 'ml' },
+    { recipe_template_name: 'Cafe Mocha', commissary_item_name: 'Whipped Cream', store_inventory_item: 'WHIPPED CREAM', quantity_per_serving: 20, unit: 'ml' }
   ]
 };
 
