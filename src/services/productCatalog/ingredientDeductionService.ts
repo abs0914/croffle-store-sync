@@ -105,6 +105,107 @@ export const deductIngredientsForProduct = async (
       return false;
     }
 
+    // Check if this is a direct inventory product (1:1 mapping to inventory_stock)
+    console.log('🔍 Checking for direct inventory mapping for:', productInfo.product_name);
+    
+    const { data: directInventoryItem, error: directError } = await supabase
+      .from('inventory_stock')
+      .select('id, item, stock_quantity, serving_ready_quantity, unit, store_id')
+      .eq('store_id', productInfo.store_id || 'e78ad702-1135-482d-a508-88104e2706cf')
+      .eq('is_active', true)
+      .or(`item.ilike.${productInfo.product_name},item.ilike.%${productInfo.product_name}%`)
+      .limit(1)
+      .maybeSingle();
+
+    // Handle direct inventory products (beverages, finished goods)
+    if (directInventoryItem && !directError) {
+      console.log('🥤 Processing as direct inventory product:', {
+        productName: productInfo.product_name,
+        inventoryItem: directInventoryItem.item,
+        currentStock: directInventoryItem.stock_quantity,
+        quantity
+      });
+
+      const currentStock = directInventoryItem.serving_ready_quantity || directInventoryItem.stock_quantity || 0;
+      const newStock = Math.max(0, currentStock - quantity);
+
+      if (currentStock < quantity) {
+        console.error('❌ Insufficient direct inventory stock:', {
+          product: productInfo.product_name,
+          required: quantity,
+          available: currentStock
+        });
+
+        await supabase.rpc('log_inventory_sync_result', {
+          p_transaction_id: transactionId,
+          p_sync_status: 'failed',
+          p_error_details: `Insufficient stock for ${productInfo.product_name}: need ${quantity}, have ${currentStock}`,
+          p_items_processed: 0,
+          p_sync_duration_ms: Date.now() - syncStartTime
+        });
+
+        return false;
+      }
+
+      // Update direct inventory stock
+      const { error: updateError } = await supabase
+        .from('inventory_stock')
+        .update({ 
+          stock_quantity: newStock,
+          serving_ready_quantity: newStock,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', directInventoryItem.id);
+
+      if (updateError) {
+        console.error('❌ Failed to update direct inventory:', updateError);
+        
+        await supabase.rpc('log_inventory_sync_result', {
+          p_transaction_id: transactionId,
+          p_sync_status: 'failed', 
+          p_error_details: `Failed to update direct inventory: ${updateError.message}`,
+          p_items_processed: 0,
+          p_sync_duration_ms: Date.now() - syncStartTime
+        });
+
+        return false;
+      }
+
+      // Create movement record for direct inventory
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId);
+      
+      if (isValidUUID) {
+        await supabase
+          .from('inventory_movements')
+          .insert({
+            inventory_stock_id: directInventoryItem.id,
+            movement_type: 'sale',
+            quantity_change: -quantity,
+            previous_quantity: currentStock,
+            new_quantity: newStock,
+            created_by: (await supabase.auth.getUser()).data.user?.id,
+            reference_type: 'transaction',
+            reference_id: transactionId,
+            notes: `Direct product sale: ${productInfo.product_name}`
+          });
+      }
+
+      // Log successful direct inventory sync
+      await supabase.rpc('log_inventory_sync_result', {
+        p_transaction_id: transactionId,
+        p_sync_status: 'success',
+        p_error_details: null,
+        p_items_processed: 1,
+        p_sync_duration_ms: Date.now() - syncStartTime
+      });
+
+      console.log(`✅ Successfully deducted direct inventory for "${productInfo.product_name}": ${currentStock} → ${newStock}`);
+      return true;
+    }
+
+    // Fallback to recipe-based ingredient deduction
+    console.log('📦 Processing as recipe-based product with ingredient mappings');
+
     // Get ingredients
     const { data: ingredients, error: ingredientsError } = await supabase
       .from('product_ingredients')
