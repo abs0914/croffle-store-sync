@@ -54,69 +54,17 @@ export function OptimizedPOSHeader({
             </div>
           </div>
 
-          {/* Status Indicators */}
-          <div className="flex items-center space-x-3">
-            {/* Performance Indicator */}
-            <div className="flex items-center space-x-1">
-              <Zap className={`w-4 h-4 ${
-                performanceStatus === 'excellent' ? 'text-green-500' : 
-                performanceStatus === 'good' ? 'text-blue-500' :
-                performanceStatus === 'warning' ? 'text-yellow-500' : 'text-red-500'
-              }`} />
-              <Badge 
+          {/* Actions */}
+          <div className="flex items-center space-x-2">
+            {onShowLastReceipt && (
+              <Button 
                 variant="outline" 
-                className={`text-xs ${
-                  performanceStatus === 'excellent' ? 'border-green-500 text-green-700' :
-                  performanceStatus === 'good' ? 'border-blue-500 text-blue-700' :
-                  performanceStatus === 'warning' ? 'border-yellow-500 text-yellow-700' :
-                  'border-red-500 text-red-700'
-                }`}
+                size="sm"
+                onClick={onShowLastReceipt}
               >
-                {performanceStatus === 'excellent' ? 'Turbo' :
-                 performanceStatus === 'good' ? 'Fast' :
-                 performanceStatus === 'warning' ? 'Normal' : 'Slow'}
-              </Badge>
-            </div>
-
-            {/* Cache Status */}
-            <div className="flex items-center space-x-1">
-              <Database className="w-4 h-4 text-blue-500" />
-              <Badge variant="outline" className="text-xs border-blue-500 text-blue-700">
-                Cache Active
-              </Badge>
-            </div>
-
-            {/* Connection Status */}
-            <div className="flex items-center space-x-1">
-              {connectionStatus === 'online' ? (
-                <>
-                  <Wifi className="w-4 h-4 text-green-500" />
-                  <Badge variant="outline" className="text-xs border-green-500 text-green-700">
-                    Online
-                  </Badge>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-4 h-4 text-red-500" />
-                  <Badge variant="outline" className="text-xs border-red-500 text-red-700">
-                    Offline
-                  </Badge>
-                </>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex space-x-2">
-              {onShowLastReceipt && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={onShowLastReceipt}
-                >
-                  Last Receipt
-                </Button>
-              )}
-            </div>
+                Last Receipt
+              </Button>
+            )}
           </div>
         </div>
 
