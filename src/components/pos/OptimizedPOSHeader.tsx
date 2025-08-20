@@ -5,12 +5,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   Wifi, 
   WifiOff, 
-  Zap, 
-  Clock, 
-  Database,
-  TrendingUp
+  Menu,
+  Expand
 } from 'lucide-react';
-import { PerformanceMonitor } from '@/services/performance/performanceMonitor';
+import { PrinterStatusIndicator } from '@/components/printer/PrinterStatusIndicator';
+import { useSidebar } from '@/components/ui/sidebar';
 
 interface OptimizedPOSHeaderProps {
   storeName: string;
@@ -28,22 +27,33 @@ export function OptimizedPOSHeader({
   connectionStatus,
   onShowLastReceipt
 }: OptimizedPOSHeaderProps) {
-  const getPerformanceStatus = () => {
-    const performanceStats = PerformanceMonitor.getStats();
-    if (performanceStats.averageDuration < 1000) return 'excellent';
-    if (performanceStats.averageDuration < 2000) return 'good';
-    if (performanceStats.averageDuration < 5000) return 'warning';
-    return 'poor';
-  };
-
-  const performanceStatus = getPerformanceStatus();
+  const { toggleSidebar } = useSidebar();
 
   return (
     <Card className="mb-4">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          {/* Store & Shift Info */}
+          {/* Sidebar Toggle & Store Info */}
           <div className="flex items-center space-x-4">
+            {/* Sidebar Toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleSidebar}
+              className="md:hidden"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleSidebar}
+              className="hidden md:flex items-center gap-2"
+            >
+              <Expand className="h-4 w-4" />
+              <span>Toggle Sidebar</span>
+            </Button>
+            
             <div>
               <h1 className="text-xl font-bold">{storeName}</h1>
               {shiftInfo && (
@@ -54,8 +64,31 @@ export function OptimizedPOSHeader({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center space-x-2">
+          {/* Status & Actions */}
+          <div className="flex items-center space-x-3">
+            {/* Connection Status */}
+            <div className="flex items-center space-x-1">
+              {connectionStatus === 'online' ? (
+                <>
+                  <Wifi className="w-4 h-4 text-green-500" />
+                  <Badge variant="outline" className="text-xs border-green-500 text-green-700">
+                    Online
+                  </Badge>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-4 h-4 text-red-500" />
+                  <Badge variant="outline" className="text-xs border-red-500 text-red-700">
+                    Offline
+                  </Badge>
+                </>
+              )}
+            </div>
+
+            {/* Printer Status */}
+            <PrinterStatusIndicator />
+
+            {/* Last Receipt Button */}
             {onShowLastReceipt && (
               <Button 
                 variant="outline" 
@@ -68,20 +101,6 @@ export function OptimizedPOSHeader({
           </div>
         </div>
 
-        {/* Performance Hint */}
-        {performanceStatus === 'excellent' && (
-          <div className="mt-2 text-xs text-green-600 bg-green-50 px-2 py-1 rounded flex items-center">
-            <TrendingUp className="w-3 h-3 mr-1" />
-            System optimized! Transactions are 3x faster with background processing.
-          </div>
-        )}
-
-        {performanceStatus === 'poor' && (
-          <div className="mt-2 text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded flex items-center">
-            <Clock className="w-3 h-3 mr-1" />
-            Performance slower than expected. Check network connection.
-          </div>
-        )}
       </CardContent>
     </Card>
   );
