@@ -6,7 +6,6 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
-import { TransactionIngredientTest } from "@/components/debug/TransactionIngredientTest";
 import { InventorySyncMonitor } from "@/components/dashboard/InventorySyncMonitor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,24 +30,10 @@ export default function Dashboard() {
 
   console.log('Rendering dashboard with store:', currentStore.name);
 
-  // Check if this is Sugbo Mercado (IT Park, Cebu) store for debugging  
-  const isSugboMercado = currentStore.id === 'd7c47e6b-f20a-4543-a6bd-000398f72df5';
-
   return (
     <div className="container mx-auto p-6 space-y-6">
       <DashboardHeader />
       
-      {/* Debug Panel - Only show for Sugbo Mercado while testing */}
-      {isSugboMercado && (
-        <div className="mb-6">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-yellow-800">
-              <strong>🔧 Debug Mode:</strong> Enhanced transaction logging enabled. Make a test sale to see detailed inventory processing logs.
-            </p>
-          </div>
-          <TransactionIngredientTest />
-        </div>
-      )}
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
