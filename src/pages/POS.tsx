@@ -10,7 +10,7 @@ import { realTimeNotificationService } from "@/services/notifications/realTimeNo
 
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
-import OptimizedPOSHeader from "@/components/pos/OptimizedPOSHeader";
+import { OptimizedPOSHeader } from "@/components/pos/OptimizedPOSHeader";
 
 import { QuickShiftAccess } from "@/components/pos/QuickShiftAccess";
 import { Button } from "@/components/ui/button";
@@ -202,15 +202,13 @@ export default function POS() {
       {/* Header */}
       <div className="flex-shrink-0 bg-card border-b border-border shadow-sm">
         <OptimizedPOSHeader
-          currentStore={currentStore}
-          currentShift={currentShift}
-          selectedCustomer={selectedCustomer}
-          isConnected={isConnected}
-          lastSync={lastSync}
-          storeId={currentStore?.id}
-          lastTransaction={lastCompletedTransaction}
-          lastCustomer={lastTransactionCustomer}
-          onViewReceipt={() => setShowReceiptModal(true)}
+          storeName={currentStore?.name || 'POS System'}
+          shiftInfo={currentShift ? {
+            cashierName: currentShift.cashierName || 'Unknown Cashier',
+            startTime: new Date(currentShift.startTime).toLocaleTimeString()
+          } : undefined}
+          connectionStatus={isConnected ? 'online' : 'offline'}
+          onShowLastReceipt={() => setShowReceiptModal(true)}
         />
       </div>
 

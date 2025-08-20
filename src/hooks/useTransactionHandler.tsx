@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { SeniorDiscount as CartSeniorDiscount, OtherDiscount as CartOtherDiscount } from "@/services/cart/CartCalculationService";
 import { BackgroundProcessingService } from "@/services/transactions/backgroundProcessingService";
+import { PerformanceMonitor } from "@/services/performance/performanceMonitor";
 
 export interface SeniorDiscount {
   id: string;
@@ -128,8 +129,12 @@ export function useTransactionHandler(storeId: string) {
   ) => {
     if (!currentStore || !currentShift) {
       toast.error("No active store or shift found");
-      return;
+      return false;
     }
+    
+    // Start performance monitoring
+    const operationId = `transaction_${Date.now()}`;
+    PerformanceMonitor.startTimer(operationId);
     
     // Create transaction objects
     const transactionItems = items.map(item => ({
@@ -238,6 +243,11 @@ export function useTransactionHandler(storeId: string) {
         itemCount: items.length
       });
       
+      // Show performance feedback
+      toast.success(`Transaction completed! Background processing queued.`, {
+        description: `Jobs: ${inventoryJobId?.slice(-8)}, ${receiptJobId?.slice(-8)}, ${analyticsJobId?.slice(-8)}`
+      });
+      
       console.log(`📋 Background jobs queued:`, {
         inventory: inventoryJobId,
         receipt: receiptJobId,
@@ -245,10 +255,24 @@ export function useTransactionHandler(storeId: string) {
       });
       
       console.log("✅ Optimistic transaction flow completed");
+      
+      // Record performance metrics
+      PerformanceMonitor.endTimer(
+        operationId,
+        'full_transaction_flow',
+        {
+          itemCount: items.length,
+          paymentMethod: finalPaymentMethod,
+          total: total - discount,
+          backgroundJobs: 3
+        }
+      );
+      
       return true;
     }
     
     console.log("❌ Transaction creation failed");
+    PerformanceMonitor.endTimer(operationId, 'transaction_failed', { error: 'Transaction creation failed' });
     return false;
   };
   
