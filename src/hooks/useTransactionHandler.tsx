@@ -221,14 +221,28 @@ export function useTransactionHandler(storeId: string) {
       });
       
       // Process inventory updates in background for better performance
-      BackgroundProcessingService.processInventoryInBackground(
+      const inventoryJobId = await BackgroundProcessingService.processInventoryInBackground(
         result.id,
         items,
         currentStore.id
       );
       
       // Process receipt generation in background
-      BackgroundProcessingService.processReceiptInBackground(result);
+      const receiptJobId = await BackgroundProcessingService.processReceiptInBackground(result);
+      
+      // Process analytics in background
+      const analyticsJobId = await BackgroundProcessingService.processAnalyticsInBackground({
+        transactionId: result.id,
+        storeId: currentStore.id,
+        total: result.total,
+        itemCount: items.length
+      });
+      
+      console.log(`📋 Background jobs queued:`, {
+        inventory: inventoryJobId,
+        receipt: receiptJobId,
+        analytics: analyticsJobId
+      });
       
       console.log("✅ Optimistic transaction flow completed");
       return true;

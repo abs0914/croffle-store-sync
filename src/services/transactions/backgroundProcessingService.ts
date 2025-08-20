@@ -1,35 +1,37 @@
 import { toast } from "sonner";
 import { processProductSale } from "@/services/productCatalog/inventoryIntegrationService";
 import { Transaction } from "@/types";
+import { BackgroundQueue } from "@/services/processing/backgroundQueue";
+import { InventoryCacheService } from "@/services/cache/inventoryCacheService";
 
 /**
- * Background processing service for non-blocking operations
+ * Enhanced background processing service with queue management
  */
 export class BackgroundProcessingService {
-  private static processingQueue: Map<string, Promise<void>> = new Map();
+  private static queue = BackgroundQueue.getInstance();
 
   /**
-   * Process inventory deductions in the background
+   * Process inventory deductions in the background with queue management
    */
   static async processInventoryInBackground(
     transactionId: string,
     items: any[],
     storeId: string
-  ): Promise<void> {
-    console.log('🚀 Starting background inventory processing for:', transactionId);
+  ): Promise<string> {
+    console.log('🚀 Queuing inventory processing for:', transactionId);
     
-    const processingPromise = this.executeInventoryProcessing(transactionId, items, storeId);
-    this.processingQueue.set(transactionId, processingPromise);
+    const jobId = this.queue.addJob({
+      type: 'inventory_sync',
+      data: { transactionId, items, storeId },
+      priority: 'high',
+      maxRetries: 3,
+      processor: async (data) => {
+        return this.executeInventoryProcessing(data.transactionId, data.items, data.storeId);
+      }
+    });
 
-    try {
-      await processingPromise;
-      console.log('✅ Background inventory processing completed for:', transactionId);
-    } catch (error) {
-      console.error('❌ Background inventory processing failed for:', transactionId, error);
-      toast.error("Inventory sync failed - please check transaction status");
-    } finally {
-      this.processingQueue.delete(transactionId);
-    }
+    // Don't wait for completion, return job ID for tracking
+    return jobId;
   }
 
   private static async executeInventoryProcessing(
@@ -53,6 +55,9 @@ export class BackgroundProcessingService {
         if (!success) {
           failedItems.push(item.product?.name || item.productId);
           console.warn(`⚠️ Inventory processing failed for: ${item.productId}`);
+        } else {
+          // Update cache after successful inventory processing
+          InventoryCacheService.invalidateStoreCache(storeId);
         }
 
         return success;
@@ -84,31 +89,77 @@ export class BackgroundProcessingService {
   }
 
   /**
-   * Check if a transaction is still being processed
+   * Process receipt generation in background
    */
-  static isProcessing(transactionId: string): boolean {
-    return this.processingQueue.has(transactionId);
+  static async processReceiptInBackground(transaction: Transaction): Promise<string> {
+    console.log('📄 Queuing receipt generation for:', transaction.id);
+    
+    const jobId = this.queue.addJob({
+      type: 'receipt_generation',
+      data: { transaction },
+      priority: 'normal',
+      maxRetries: 2,
+      processor: async (data) => {
+        // Simulate receipt processing (PDF generation, email sending, etc.)
+        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log('✅ Receipt processing completed for:', data.transaction.id);
+        return { success: true };
+      }
+    });
+
+    return jobId;
   }
 
   /**
-   * Get processing status for a transaction
+   * Process analytics updates in background
    */
-  static async waitForProcessing(transactionId: string): Promise<void> {
-    const processingPromise = this.processingQueue.get(transactionId);
-    if (processingPromise) {
-      await processingPromise;
-    }
+  static async processAnalyticsInBackground(transactionData: any): Promise<string> {
+    const jobId = this.queue.addJob({
+      type: 'analytics',
+      data: transactionData,
+      priority: 'low',
+      maxRetries: 1,
+      processor: async (data) => {
+        // Analytics processing logic here
+        console.log('📈 Processing analytics for transaction:', data.transactionId);
+        return { success: true };
+      }
+    });
+
+    return jobId;
   }
 
   /**
-   * Process transaction receipt generation in background
+   * Refresh inventory cache in background
    */
-  static async processReceiptInBackground(transaction: Transaction): Promise<void> {
-    console.log('📄 Processing receipt generation in background for:', transaction.id);
-    
-    // Simulate receipt processing (could be PDF generation, email sending, etc.)
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    console.log('✅ Receipt processing completed for:', transaction.id);
+  static async refreshCacheInBackground(storeId: string): Promise<string> {
+    const jobId = this.queue.addJob({
+      type: 'cache_refresh',
+      data: { storeId },
+      priority: 'low',
+      maxRetries: 1,
+      processor: async (data) => {
+        InventoryCacheService.invalidateStoreCache(data.storeId);
+        await InventoryCacheService.preloadStoreCache(data.storeId);
+        console.log('🔄 Cache refreshed for store:', data.storeId);
+        return { success: true };
+      }
+    });
+
+    return jobId;
+  }
+
+  /**
+   * Get processing stats
+   */
+  static getProcessingStats() {
+    return this.queue.getStats();
+  }
+
+  /**
+   * Wait for job completion
+   */
+  static async waitForJob(jobId: string, timeout?: number): Promise<boolean> {
+    return this.queue.waitForJob(jobId, timeout);
   }
 }

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { InventoryCacheService } from "@/services/cache/inventoryCacheService";
 
 export interface ProductValidationResult {
   isValid: boolean;
