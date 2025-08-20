@@ -279,11 +279,11 @@ class MultiStoreOrchestrator {
     try {
       console.log(`📍 Syncing store: ${result.storeName}`);
       
-      const storeHealth = await new ProactiveSyncMonitor().checkStoreHealth(storeId);
+      const storeHealth = await ProactiveSyncMonitor.getStoreSpecificHealth(storeId, result.storeName);
       
-      if (storeHealth.hasIssues && storeHealth.fixableIssues > 0) {
-        const repairResult = await new ProactiveSyncMonitor().performAutoRepair(storeId);
-        result.repairActions.push(`Auto-repair: ${repairResult.fixedCount} issues fixed`);
+      if (storeHealth.criticalIssues.length > 0 || storeHealth.warnings.length > 0) {
+        const repairResult = await ProactiveSyncMonitor.attemptAutoRepair(storeId);
+        result.repairActions.push(`Auto-repair: ${repairResult.repairsSuccessful} issues fixed`);
       }
 
       // Perform actual sync operations
@@ -307,8 +307,8 @@ class MultiStoreOrchestrator {
   private async syncSingleStoreWithRepair(sync: CrossStoreSync, storeId: string): Promise<void> {
     // First attempt repair, then sync
     try {
-      const repairResult = await new ProactiveSyncMonitor().performAutoRepair(storeId);
-      console.log(`🔧 Pre-sync repair for store ${storeId}: ${repairResult.fixedCount} issues fixed`);
+      const repairResult = await ProactiveSyncMonitor.attemptAutoRepair(storeId);
+      console.log(`🔧 Pre-sync repair for store ${storeId}: ${repairResult.repairsSuccessful} issues fixed`);
     } catch (error) {
       console.error(`Pre-sync repair failed for store ${storeId}:`, error);
     }
@@ -373,23 +373,10 @@ class MultiStoreOrchestrator {
 
   private async calculateStoreHealth(storeId: string): Promise<number> {
     try {
-      const storeHealth = await new ProactiveSyncMonitor().checkStoreHealth(storeId);
+      const storeHealth = await ProactiveSyncMonitor.getStoreSpecificHealth(storeId);
       
-      // Calculate health score based on various factors
-      let score = 1.0;
-      
-      // Deduct for issues
-      if (storeHealth.hasIssues) {
-        score -= (storeHealth.issueCount || 0) * 0.1;
-      }
-      
-      // Deduct for missing templates
-      score -= (storeHealth.missingTemplates || 0) * 0.05;
-      
-      // Deduct for duplicate products
-      score -= (storeHealth.duplicateProducts || 0) * 0.03;
-      
-      return Math.max(0, Math.min(1, score));
+      // Calculate health score based on sync health percentage
+      return storeHealth.syncHealthPercentage / 100;
     } catch (error) {
       return 0.5; // Default health if calculation fails
     }

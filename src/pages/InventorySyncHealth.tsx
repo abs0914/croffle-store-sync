@@ -1,8 +1,10 @@
 import React from 'react';
 import { InventorySyncHealthDashboard } from '@/components/inventory/InventorySyncHealthDashboard';
 import { Phase3Dashboard } from '@/components/inventory/Phase3Dashboard';
+import { Phase3Summary } from '@/components/inventory/Phase3Summary';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Activity, 
   Shield, 
@@ -10,7 +12,9 @@ import {
   RefreshCw, 
   TrendingUp,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  BarChart3,
+  Network
 } from 'lucide-react';
 
 const InventorySyncHealthPage: React.FC = () => {
@@ -166,24 +170,30 @@ const InventorySyncHealthPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Phase 2 Dashboard */}
-      <InventorySyncHealthDashboard />
+      {/* Enhanced Main Dashboard with Tabs */}
+      <Tabs defaultValue="phase2" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="phase2" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Phase 2: Health Monitor
+          </TabsTrigger>
+          <TabsTrigger value="phase3" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Phase 3: Advanced Analytics
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Phase 3 Advanced Dashboard */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-purple-600" />
-            Phase 3: Advanced Intelligence Dashboard
-          </CardTitle>
-          <CardDescription>
-            AI-powered analytics, workflow automation, and multi-store orchestration
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <TabsContent value="phase2" className="space-y-6">
+          {/* Phase 2 Dashboard */}
+          <InventorySyncHealthDashboard />
+        </TabsContent>
+
+        <TabsContent value="phase3" className="space-y-6">
+          {/* Phase 3 Summary and Dashboard */}
+          <Phase3Summary />
           <Phase3Dashboard />
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Technical Details */}
       <Card>

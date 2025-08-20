@@ -182,9 +182,21 @@ export const usePhase3Analytics = (storeId?: string) => {
     }
   }, [loadOrchestration]);
 
-  // Initialize and periodic refresh
   useEffect(() => {
     refreshAll();
+    
+    // Initialize engines
+    const initializeEngines = async () => {
+      try {
+        await workflowAutomationEngine.initialize();
+        await multiStoreOrchestrator.initialize();
+        console.log('✅ Phase 3 engines initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize Phase 3 engines:', error);
+      }
+    };
+    
+    initializeEngines();
     
     // Set up periodic refresh every 2 minutes
     const interval = setInterval(refreshAll, 2 * 60 * 1000);

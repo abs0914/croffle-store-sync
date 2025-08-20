@@ -436,21 +436,38 @@ class WorkflowAutomationEngine {
       
       switch (repairType) {
         case 'missing_templates':
-          const result = await new ProactiveSyncMonitor().performGlobalRepair();
+          // Get all stores and perform repair
+          const healthMetrics = await ProactiveSyncMonitor.getGlobalSyncHealth();
+          const criticalStores = healthMetrics.filter(m => m.syncHealthPercentage < 80);
+          
+          let totalFixed = 0;
+          for (const store of criticalStores) {
+            const repairResult = await ProactiveSyncMonitor.attemptAutoRepair(store.storeId);
+            totalFixed += repairResult.repairsSuccessful;
+          }
+          
           return {
             action: 'repair',
             success: true,
-            message: `Auto-repair completed: ${result.fixedCount} issues resolved`,
-            data: result
+            message: `Auto-repair completed: ${totalFixed} issues resolved across ${criticalStores.length} stores`,
+            data: { fixedCount: totalFixed, storesProcessed: criticalStores.length }
           };
           
         case 'preventive':
-          const preventiveResult = await new ProactiveSyncMonitor().performPreventiveMaintenance();
+          // Perform preventive maintenance on all stores
+          const allStores = await ProactiveSyncMonitor.getGlobalSyncHealth();
+          let preventiveFixed = 0;
+          
+          for (const store of allStores) {
+            const repairResult = await ProactiveSyncMonitor.attemptAutoRepair(store.storeId);
+            preventiveFixed += repairResult.repairsSuccessful;
+          }
+          
           return {
             action: 'repair',
             success: true,
             message: 'Preventive maintenance completed successfully',
-            data: preventiveResult
+            data: { fixedCount: preventiveFixed, storesProcessed: allStores.length }
           };
           
         default:

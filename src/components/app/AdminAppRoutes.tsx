@@ -71,6 +71,18 @@ export const AdminAppRoutes = () => {
         }
       />
 
+      {/* Phase 3 Analytics Route */}
+      <Route
+        path="/admin/phase3-analytics"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout>
+              <InventorySyncHealthPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
       {/* Admin Production Management - Admin Only */}
       <Route
         path="/admin/production-management"
