@@ -217,7 +217,10 @@ export default function PaymentMethods({
   return (
     <Tabs defaultValue="cash" value={paymentMethod} onValueChange={(value: string) => {
       setPaymentMethod(value as 'cash' | 'card' | 'e-wallet');
-      setAmountTendered(total); // Reset amount tendered for card and e-wallet
+      // Preserve amount tendered across payment method switches for better UX
+      if (value !== 'cash' && amountTendered === 0) {
+        setAmountTendered(total);
+      }
     }}>
       <TabsList className="grid grid-cols-3 mb-4">
         <TabsTrigger value="cash" className="flex items-center" disabled={disabled}>

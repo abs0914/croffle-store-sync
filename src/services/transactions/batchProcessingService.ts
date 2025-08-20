@@ -26,7 +26,7 @@ export class BatchProcessingService {
     items: any[], 
     onProgress?: (progress: BatchProcessingProgress) => void
   ): Promise<BatchValidationResult> {
-    const batchSize = 5; // Process 5 items at a time
+    const batchSize = 8; // Process 8 items at a time for faster validation
     const errors: string[] = [];
     const validatedItems: any[] = [];
     
@@ -79,9 +79,9 @@ export class BatchProcessingService {
         message: `Validated ${Math.min(i + batchSize, items.length)} of ${items.length} products`
       });
       
-      // Small delay to prevent overwhelming the system
+      // Minimal delay to prevent overwhelming the system (reduced for speed)
       if (i + batchSize < items.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 25));
       }
     }
     
@@ -101,7 +101,7 @@ export class BatchProcessingService {
     transactionId: string,
     onProgress?: (progress: BatchProcessingProgress) => void
   ): Promise<boolean> {
-    const batchSize = 3; // Smaller batch size for inventory operations
+    const batchSize = 6; // Optimized batch size for faster inventory operations
     
     onProgress?.({
       stage: 'inventory',
@@ -144,9 +144,9 @@ export class BatchProcessingService {
         message: `Processed ${Math.min(i + batchSize, items.length)} of ${items.length} items`
       });
       
-      // Small delay between batches
+      // Minimal delay between batches (reduced for speed)
       if (i + batchSize < items.length) {
-        await new Promise(resolve => setTimeout(resolve, 150));
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
     
@@ -157,15 +157,16 @@ export class BatchProcessingService {
    * Determines if an order should use batch processing
    */
   static shouldUseBatchProcessing(itemCount: number): boolean {
-    return itemCount > 5; // Use batch processing for orders with more than 5 items
+    return itemCount > 1; // Use batch processing for orders with more than 1 item (faster processing)
   }
   
   /**
    * Estimates processing time for an order
    */
   static estimateProcessingTime(itemCount: number): number {
-    if (itemCount <= 5) return 2000; // 2 seconds for small orders
-    if (itemCount <= 10) return 5000; // 5 seconds for medium orders
-    return Math.min(itemCount * 800, 30000); // Max 30 seconds for large orders
+    if (itemCount <= 2) return 800; // 0.8 seconds for small orders
+    if (itemCount <= 5) return 1500; // 1.5 seconds for medium orders
+    if (itemCount <= 10) return 3000; // 3 seconds for larger orders
+    return Math.min(itemCount * 400, 15000); // Max 15 seconds for very large orders
   }
 }

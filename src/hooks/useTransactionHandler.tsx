@@ -5,6 +5,7 @@ import { createTransaction } from "@/services/transactions";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { SeniorDiscount as CartSeniorDiscount, OtherDiscount as CartOtherDiscount } from "@/services/cart/CartCalculationService";
+import { BackgroundProcessingService } from "@/services/transactions/backgroundProcessingService";
 
 export interface SeniorDiscount {
   id: string;
@@ -200,16 +201,17 @@ export function useTransactionHandler(storeId: string) {
     const result = await createTransaction(transaction, items);
     
     if (result) {
-      console.log("🎯 Transaction created successfully, navigating to invoice:", {
+      console.log("🎯 Transaction created successfully, implementing optimistic navigation:", {
         transactionId: result.id,
         receiptNumber: result.receiptNumber,
         customer: selectedCustomer?.name || 'No customer'
       });
       
-      clearCart(); // Clear the cart after successful transaction
+      // Clear the cart immediately for better UX
+      clearCart();
       
-      // Navigate immediately to invoice page with transaction data
-      console.log("🧭 Navigating to invoice page...");
+      // Navigate immediately for optimistic UX (don't wait for inventory processing)
+      console.log("🚀 Optimistic navigation to invoice page...");
       navigate(`/invoice/${result.id}`, {
         state: {
           transaction: result,
@@ -218,7 +220,17 @@ export function useTransactionHandler(storeId: string) {
         replace: true
       });
       
-      console.log("✅ Navigation call completed");
+      // Process inventory updates in background for better performance
+      BackgroundProcessingService.processInventoryInBackground(
+        result.id,
+        items,
+        currentStore.id
+      );
+      
+      // Process receipt generation in background
+      BackgroundProcessingService.processReceiptInBackground(result);
+      
+      console.log("✅ Optimistic transaction flow completed");
       return true;
     }
     
