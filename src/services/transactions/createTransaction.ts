@@ -284,11 +284,12 @@ export const createTransaction = async (
               .maybeSingle();
 
             // Check if we have a valid template
-            if (product?.recipes?.recipe_templates?.id && product.recipes.recipe_templates.is_active) {
+            const recipe = Array.isArray(product?.recipes) ? product.recipes[0] : product?.recipes;
+            if (recipe?.recipe_templates?.id && recipe.recipe_templates.is_active) {
               console.log(`✅ Product ${item.name} validated with template`);
               return {
                 product_name: product.name,
-                recipe_template_id: product.recipes.recipe_templates.id,
+                recipe_template_id: recipe.recipe_templates.id,
                 quantity: item.quantity
               };
             }
@@ -298,7 +299,7 @@ export const createTransaction = async (
             
             if (product) {
               // Try to find template by name if we don't have one
-              if (!product.recipes?.recipe_templates?.id) {
+              if (!recipe?.recipe_templates?.id) {
                 const { data: template } = await supabase
                   .from('recipe_templates')
                   .select('id')
@@ -348,7 +349,7 @@ export const createTransaction = async (
                 // We already have a valid template from Strategy 1 lookup above
                 return {
                   product_name: product.name,
-                  recipe_template_id: product.recipes.template_id,
+                  recipe_template_id: recipe?.template_id,
                   quantity: item.quantity
                 };
               }

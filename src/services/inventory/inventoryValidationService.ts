@@ -134,8 +134,9 @@ export const validateProductsForInventory = async (
 
     // Process each product
     for (const product of productsData || []) {
-      const hasTemplate = product.recipes?.recipe_templates?.id ? true : false;
-      const templateIsActive = product.recipes?.recipe_templates?.is_active === true;
+      const recipe = Array.isArray(product.recipes) ? product.recipes[0] : product.recipes;
+      const hasTemplate = recipe?.recipe_templates?.id ? true : false;
+      const templateIsActive = recipe?.recipe_templates?.is_active === true;
       const canDeduct = product.is_active && hasTemplate && templateIsActive;
       
       let status: ProductValidationResult['status'] = 'valid';
@@ -149,7 +150,7 @@ export const validateProductsForInventory = async (
         canDeductInventory: canDeduct,
         status,
         reason: canDeduct ? undefined : `Product status: ${status}`,
-        templateId: product.recipes?.recipe_templates?.id
+        templateId: recipe?.recipe_templates?.id
       });
     }
 
@@ -227,20 +228,24 @@ export const getInventorySyncStatus = async (storeId: string) => {
       } else if (!product.recipe_id) {
         status = 'no_recipe';
         canDeductInventory = false;
-      } else if (!product.recipes?.template_id) {
-        status = 'no_template';
-        canDeductInventory = false;
-      } else if (!product.recipes?.recipe_templates?.is_active) {
-        status = 'inactive_template';
-        canDeductInventory = false;
+      } else {
+        const recipe = Array.isArray(product.recipes) ? product.recipes[0] : product.recipes;
+        if (!recipe?.template_id) {
+          status = 'no_template';
+          canDeductInventory = false;
+        } else if (!recipe?.recipe_templates?.is_active) {
+          status = 'inactive_template';
+          canDeductInventory = false;
+        }
       }
 
+      const recipe = Array.isArray(product.recipes) ? product.recipes[0] : product.recipes;
       return {
         ...product,
         status,
         can_deduct_inventory: canDeductInventory,
-        template_id: product.recipes?.recipe_templates?.id,
-        template_name: product.recipes?.recipe_templates?.name
+        template_id: recipe?.recipe_templates?.id,
+        template_name: recipe?.recipe_templates?.name
       };
     });
 
