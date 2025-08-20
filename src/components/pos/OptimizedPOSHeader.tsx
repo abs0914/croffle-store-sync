@@ -2,15 +2,9 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Wifi, 
-  WifiOff, 
-  Menu,
-  Expand
-} from 'lucide-react';
+import { Wifi, WifiOff, Menu, Expand } from 'lucide-react';
 import { PrinterStatusIndicator } from '@/components/printer/PrinterStatusIndicator';
 import { useSidebar } from '@/components/ui/sidebar';
-
 interface OptimizedPOSHeaderProps {
   storeName: string;
   shiftInfo?: {
@@ -20,38 +14,30 @@ interface OptimizedPOSHeaderProps {
   connectionStatus: 'online' | 'offline';
   onShowLastReceipt?: () => void;
 }
-
-export function OptimizedPOSHeader({ 
-  storeName, 
-  shiftInfo, 
+export function OptimizedPOSHeader({
+  storeName,
+  shiftInfo,
   connectionStatus,
   onShowLastReceipt
 }: OptimizedPOSHeaderProps) {
-  const { toggleSidebar } = useSidebar();
-
-  return (
-    <Card className="mb-4">
+  const {
+    toggleSidebar
+  } = useSidebar();
+  return <Card className="mb-4">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           {/* Sidebar Toggle & Store Info */}
           <div className="flex items-center space-x-4">
             {/* Sidebar Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="mr-3"
-            >
+            <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-3">
               <Menu className="h-6 w-6" />
             </Button>
             
             <div>
-              <h1 className="text-xl font-bold">{storeName}</h1>
-              {shiftInfo && (
-                <p className="text-sm text-muted-foreground">
+              
+              {shiftInfo && <p className="text-sm text-muted-foreground">
                   {shiftInfo.cashierName} • Started {shiftInfo.startTime}
-                </p>
-              )}
+                </p>}
             </div>
           </div>
 
@@ -59,40 +45,29 @@ export function OptimizedPOSHeader({
           <div className="flex items-center space-x-3">
             {/* Connection Status */}
             <div className="flex items-center space-x-1">
-              {connectionStatus === 'online' ? (
-                <>
+              {connectionStatus === 'online' ? <>
                   <Wifi className="w-4 h-4 text-green-500" />
                   <Badge variant="outline" className="text-xs border-green-500 text-green-700">
                     Online
                   </Badge>
-                </>
-              ) : (
-                <>
+                </> : <>
                   <WifiOff className="w-4 h-4 text-red-500" />
                   <Badge variant="outline" className="text-xs border-red-500 text-red-700">
                     Offline
                   </Badge>
-                </>
-              )}
+                </>}
             </div>
 
             {/* Printer Status */}
             <PrinterStatusIndicator />
 
             {/* Last Receipt Button */}
-            {onShowLastReceipt && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={onShowLastReceipt}
-              >
+            {onShowLastReceipt && <Button variant="outline" size="sm" onClick={onShowLastReceipt}>
                 Last Receipt
-              </Button>
-            )}
+              </Button>}
           </div>
         </div>
 
       </CardContent>
-    </Card>
-  );
+    </Card>;
 }
