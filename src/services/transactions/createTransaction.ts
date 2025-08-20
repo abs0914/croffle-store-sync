@@ -302,16 +302,43 @@ export const createTransaction = async (
             })
           );
           
-          const deductionResult = await deductInventoryForTransaction(
-            data.id,
-            transaction.storeId,
-            itemsWithTemplateIds
-          );
-         
-         inventoryResult = {
-           success: deductionResult.success,
-           errors: deductionResult.failedItems.map(f => f.reason)
-         };
+          // Filter out items without template IDs and log them
+          const validItems = itemsWithTemplateIds.filter(item => {
+            if (!item.recipe_template_id) {
+              console.error(`❌ Skipping inventory deduction for ${item.product_name} - no template ID found`);
+              return false;
+            }
+            return true;
+          });
+          
+          if (validItems.length === 0) {
+            console.warn('⚠️ No valid items for inventory deduction - all items lack template IDs');
+            inventoryResult = {
+              success: false,
+              errors: ['No valid recipe templates found for products']
+            };
+          } else {
+            const deductionResult = await deductInventoryForTransaction(
+              data.id,
+              transaction.storeId,
+              validItems
+            );
+           
+            inventoryResult = {
+              success: deductionResult.success,
+              errors: deductionResult.failedItems.map(f => f.reason)
+            };
+            
+            // Log detailed results
+            console.log(`📊 Inventory deduction completed:`, {
+              transactionId: data.id,
+              totalItems: itemsWithTemplateIds.length,
+              validItems: validItems.length,
+              success: deductionResult.success,
+              failedItems: deductionResult.failedItems?.length || 0,
+              warnings: deductionResult.warnings?.length || 0
+            });
+          }
        }
       
       if (!inventoryResult.success) {
