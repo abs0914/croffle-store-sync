@@ -130,7 +130,8 @@ export class CartCleanupService {
           )
         `)
         .eq('store_id', storeId)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .neq('name', productName); // Exclude the exact same product name
       
       // Add name similarity search
       if (searchTerms.length > 0) {
@@ -139,14 +140,25 @@ export class CartCleanupService {
         query = query.ilike('name', `%${mainTerm}%`);
       }
       
-      const { data: products, error } = await query.limit(limit);
+      const { data: products, error } = await query.limit(limit + 2); // Get extra to account for filtering
       
       if (error) {
         console.error('Error finding similar products:', error);
         return [];
       }
       
-      return (products || []).map(product => {
+      // Filter out products that are too similar to the original
+      const filteredProducts = (products || [])
+        .filter(product => {
+          const productNameLower = product.name.toLowerCase();
+          // Don't suggest the exact same name or very similar names
+          return productNameLower !== cleanName && 
+                 !productNameLower.includes(cleanName) && 
+                 !cleanName.includes(productNameLower);
+        })
+        .slice(0, limit); // Apply the original limit after filtering
+      
+      return filteredProducts.map(product => {
         const recipe = Array.isArray(product.recipes) ? product.recipes[0] : product.recipes;
         return {
           id: product.id,
