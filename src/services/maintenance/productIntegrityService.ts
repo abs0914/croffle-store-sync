@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AutomaticTemplateMatchingService } from "./automaticTemplateMatching";
 
 export interface ProductIntegrityReport {
   totalProducts: number;
@@ -164,13 +165,39 @@ export class ProductIntegrityService {
   }
 
   /**
-   * Run complete maintenance operation
+   * Run automatic template matching (Phase 1)
+   */
+  static async runPhase1AutoMatching(): Promise<MaintenanceResult> {
+    try {
+      const result = await AutomaticTemplateMatchingService.runAutomaticMatching();
+      return {
+        success: result.success,
+        message: result.message,
+        details: {
+          matched: result.matched,
+          unmatched: result.unmatched,
+          totalProcessed: result.totalProcessed,
+          matchedCount: result.matchedCount
+        }
+      };
+    } catch (error) {
+      console.error('Phase 1 auto matching failed:', error);
+      return {
+        success: false,
+        message: 'Automatic template matching failed'
+      };
+    }
+  }
+
+  /**
+   * Run complete maintenance operation with 3-phase plan
    */
   static async runCompleteMaintenance(storeId?: string): Promise<{
     initialReport: ProductIntegrityReport;
     duplicateCleanup: MaintenanceResult;
     templateFix: MaintenanceResult;
     recipeRepair: MaintenanceResult;
+    phase1AutoMatching: MaintenanceResult;
     finalReport: ProductIntegrityReport;
     overall: MaintenanceResult;
   }> {
@@ -191,12 +218,17 @@ export class ProductIntegrityService {
       console.log('⚡ Running advanced recipe repair...');
       const recipeRepair = await this.repairRecipeTemplateLinks();
       
+      // Step 4: Run Phase 1 automatic matching (NEW)
+      console.log('🎯 Running Phase 1 automatic template matching...');
+      const phase1AutoMatching = await this.runPhase1AutoMatching();
+      
       // Final analysis
       console.log('📊 Final integrity analysis...');
       const finalReport = await this.analyzeIntegrity(storeId);
       
       const improvementPercentage = finalReport.completionPercentage - initialReport.completionPercentage;
-      const success = duplicateCleanup.success && templateFix.success && recipeRepair.success;
+      const success = duplicateCleanup.success && templateFix.success && 
+                     recipeRepair.success && phase1AutoMatching.success;
       
       const overall: MaintenanceResult = {
         success,
@@ -208,7 +240,8 @@ export class ProductIntegrityService {
           beforeAfter: {
             before: initialReport,
             after: finalReport
-          }
+          },
+          phase1Results: phase1AutoMatching.details
         }
       };
 
@@ -217,6 +250,7 @@ export class ProductIntegrityService {
         duplicateCleanup,
         templateFix,
         recipeRepair,
+        phase1AutoMatching,
         finalReport,
         overall
       };
