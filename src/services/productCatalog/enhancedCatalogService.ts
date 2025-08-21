@@ -81,6 +81,7 @@ export const fetchEnhancedProductCatalog = async (storeId: string): Promise<Enha
     const enhancedProducts: EnhancedProductCatalog[] = products.map(product => {
       const enhanced: EnhancedProductCatalog = {
         ...product,
+        product_status: (product.product_status as any) || 'available',
         stock_status: 'missing_inventory' as const,
         has_recipe_template: false,
         pos_ready: false,
