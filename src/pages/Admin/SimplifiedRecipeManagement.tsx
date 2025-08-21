@@ -19,7 +19,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { SimplifiedRecipeForm } from '@/components/recipe/SimplifiedRecipeForm';
-import { unifiedRecipeService, UnifiedRecipe } from '@/services/unifiedRecipeService';
+import { unifiedRecipeRouter, NormalizedRecipe } from '@/services/recipeManagement/unifiedRecipeRouter';
+import { RecipeSystemStatus } from '@/components/Admin/components/RecipeSystemStatus';
 
 const SimplifiedRecipeManagement: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string>('');
@@ -27,7 +28,7 @@ const SimplifiedRecipeManagement: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState<UnifiedRecipe | null>(null);
+  const [selectedRecipe, setSelectedRecipe] = useState<NormalizedRecipe | null>(null);
   
   const queryClient = useQueryClient();
 
@@ -40,10 +41,10 @@ const SimplifiedRecipeManagement: React.FC = () => {
     }
   });
 
-  // Fetch recipes for selected store
+  // Fetch recipes for selected store (both systems)
   const { data: recipes = [], isLoading: recipesLoading } = useQuery({
-    queryKey: ['unified_recipes', selectedStore],
-    queryFn: () => unifiedRecipeService.getRecipesByStore(selectedStore),
+    queryKey: ['all_recipes', selectedStore],
+    queryFn: () => unifiedRecipeRouter.getRecipesByStore(selectedStore),
     enabled: !!selectedStore
   });
 
@@ -54,14 +55,15 @@ const SimplifiedRecipeManagement: React.FC = () => {
 
   // Create recipe mutation
   const createRecipeMutation = useMutation({
-    mutationFn: (data: { name: string; ingredients: any[] }) => 
-      unifiedRecipeService.createRecipe({
+    mutationFn: (data: { name: string; ingredients: any[]; target_system?: 'unified' | 'legacy' }) => 
+      unifiedRecipeRouter.createRecipe({
         name: data.name,
         store_id: selectedStore,
-        ingredients: data.ingredients
+        ingredients: data.ingredients,
+        target_system: data.target_system || 'unified'
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified_recipes', selectedStore] });
+      queryClient.invalidateQueries({ queryKey: ['all_recipes', selectedStore] });
       setCreateDialogOpen(false);
     }
   });
@@ -69,9 +71,9 @@ const SimplifiedRecipeManagement: React.FC = () => {
   // Update recipe mutation
   const updateRecipeMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: { name: string; ingredients: any[] } }) =>
-      unifiedRecipeService.updateRecipe(id, data),
+      unifiedRecipeRouter.updateRecipe(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified_recipes', selectedStore] });
+      queryClient.invalidateQueries({ queryKey: ['all_recipes', selectedStore] });
       setEditDialogOpen(false);
       setSelectedRecipe(null);
     }
@@ -79,9 +81,9 @@ const SimplifiedRecipeManagement: React.FC = () => {
 
   // Delete recipe mutation
   const deleteRecipeMutation = useMutation({
-    mutationFn: (id: string) => unifiedRecipeService.deleteRecipe(id),
+    mutationFn: (id: string) => unifiedRecipeRouter.deleteRecipe(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['unified_recipes', selectedStore] });
+      queryClient.invalidateQueries({ queryKey: ['all_recipes', selectedStore] });
       setDeleteDialogOpen(false);
       setSelectedRecipe(null);
     }
@@ -103,12 +105,12 @@ const SimplifiedRecipeManagement: React.FC = () => {
     }
   };
 
-  const openEditDialog = (recipe: UnifiedRecipe) => {
+  const openEditDialog = (recipe: NormalizedRecipe) => {
     setSelectedRecipe(recipe);
     setEditDialogOpen(true);
   };
 
-  const openDeleteDialog = (recipe: UnifiedRecipe) => {
+  const openDeleteDialog = (recipe: NormalizedRecipe) => {
     setSelectedRecipe(recipe);
     setDeleteDialogOpen(true);
   };
@@ -154,6 +156,12 @@ const SimplifiedRecipeManagement: React.FC = () => {
 
       {selectedStore && (
         <>
+          {/* Recipe System Status */}
+          <RecipeSystemStatus 
+            storeId={selectedStore} 
+            showFullBreakdown={false}
+          />
+
           {/* Actions Bar */}
           <div className="flex items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md">
@@ -207,10 +215,16 @@ const SimplifiedRecipeManagement: React.FC = () => {
                   {filteredRecipes.map((recipe) => (
                     <div key={recipe.id} className="p-4 border rounded-lg space-y-3">
                       <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                           <div className="flex items-center gap-2">
-                             <h3 className="font-medium text-lg">{recipe.name}</h3>
-                           </div>
+                       <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-lg">{recipe.name}</h3>
+                            <Badge 
+                              variant={recipe.system_type === 'unified' ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {recipe.system_type === 'unified' ? 'New System' : 'Legacy'}
+                            </Badge>
+                          </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Package className="h-3 w-3" />
