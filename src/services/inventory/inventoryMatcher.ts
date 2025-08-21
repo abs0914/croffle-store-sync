@@ -58,14 +58,23 @@ const UNIT_CONVERSIONS: UnitConversion[] = [
   { from_unit: 'grams', to_unit: 'portion', factor: 0.02 }, // Assuming 50g per portion
 ];
 
-// Ingredient name standardization mappings
+// Enhanced ingredient name standardization mappings with specific fixes
 const INGREDIENT_NAME_MAPPINGS: Record<string, string> = {
   'Chocolate Sauce': 'Chocolate Sauce for Coffee',
   'Marshmallow Toppings': 'Marshmallow',
   'Whipped Cream': 'Whipped Cream',
   'Regular Croissant': 'Regular Croissant',
   'Wax Paper': 'Wax Paper',
-  'Chopstick': 'Chopstick'
+  'Chopstick': 'Chopstick',
+  // Critical fixes for Mango Croffle recipe
+  'Mango Toppings': 'Mango Jam',        // Key fix for Mango Croffle
+  'Crushed Grahams': 'Graham Crushed',   // Key fix for Mango Croffle
+  'Grahams Crushed': 'Graham Crushed',
+  'Graham Crackers': 'Graham Crushed',
+  // Additional common mappings
+  'Chocolate Chips': 'Chocolate',
+  'Milk Chocolate': 'Chocolate',
+  'Dark Chocolate Chips': 'Dark Chocolate'
 };
 
 /**
@@ -268,9 +277,97 @@ const findUnitConversion = (fromUnit: string, toUnit: string): UnitConversion =>
 };
 
 /**
- * Calculate similarity between two strings using Levenshtein distance
+ * Calculate enhanced similarity between two strings with better matching
  */
 const calculateSimilarity = (str1: string, str2: string): number => {
+  const len1 = str1.length;
+  const len2 = str2.length;
+  
+  if (len1 === 0) return len2 === 0 ? 1 : 0;
+  if (len2 === 0) return 0;
+  
+  // Exact match
+  if (str1 === str2) return 1.0;
+  
+  // Enhanced synonym matching for common ingredient variations
+  const synonyms: Record<string, string[]> = {
+    'toppings': ['topping', 'jam', 'sauce', 'spread', 'syrup'],
+    'grahams': ['graham', 'cracker'],
+    'crushed': ['crumble', 'crumbled', 'ground'],
+    'pieces': ['piece', 'pcs', 'pc'],
+    'serving': ['serve', 'portion'],
+    'scoop': ['serving', 'portion', 'spoon']
+  };
+  
+  // Normalize both strings with synonyms
+  let normalized1 = str1.toLowerCase();
+  let normalized2 = str2.toLowerCase();
+  
+  Object.entries(synonyms).forEach(([key, values]) => {
+    values.forEach(synonym => {
+      const regex = new RegExp(`\\b${synonym}\\b`, 'g');
+      normalized1 = normalized1.replace(regex, key);
+      normalized2 = normalized2.replace(regex, key);
+    });
+  });
+  
+  // Check normalized exact match
+  if (normalized1 === normalized2) return 0.95;
+  
+  // Word-based matching for different word orders
+  const words1 = normalized1.split(/\s+/).filter(w => w.length > 2);
+  const words2 = normalized2.split(/\s+/).filter(w => w.length > 2);
+  
+  if (words1.length === 0 || words2.length === 0) {
+    return originalLevenshteinSimilarity(str1, str2);
+  }
+  
+  // Calculate word overlap with order flexibility
+  let matchScore = 0;
+  const maxWords = Math.max(words1.length, words2.length);
+  
+  for (const word1 of words1) {
+    let bestWordMatch = 0;
+    for (const word2 of words2) {
+      if (word1 === word2) {
+        bestWordMatch = 1.0;
+        break;
+      }
+      // Partial word matching for similar words
+      if (Math.max(word1.length, word2.length) >= 4) {
+        const wordSimilarity = originalLevenshteinSimilarity(word1, word2);
+        bestWordMatch = Math.max(bestWordMatch, wordSimilarity);
+      }
+    }
+    matchScore += bestWordMatch;
+  }
+  
+  let finalScore = matchScore / maxWords;
+  
+  // Boost score for key ingredient matches
+  if ((str1.includes('mango') && str2.includes('mango')) || 
+      (str1.includes('graham') && str2.includes('graham')) ||
+      (str1.includes('chocolate') && str2.includes('chocolate')) ||
+      (str1.includes('cream') && str2.includes('cream'))) {
+    finalScore = Math.min(finalScore * 1.3, 1.0);
+  }
+  
+  // Special case: Handle word order differences like "crushed grahams" vs "graham crushed"
+  if (words1.length === 2 && words2.length === 2) {
+    const [w1a, w1b] = words1;
+    const [w2a, w2b] = words2;
+    
+    if ((w1a === w2b && w1b === w2a) || 
+        (originalLevenshteinSimilarity(w1a, w2b) > 0.8 && originalLevenshteinSimilarity(w1b, w2a) > 0.8)) {
+      return Math.min(0.9, finalScore + 0.2);
+    }
+  }
+  
+  return finalScore;
+};
+
+// Original Levenshtein function renamed
+const originalLevenshteinSimilarity = (str1: string, str2: string): number => {
   const len1 = str1.length;
   const len2 = str2.length;
   

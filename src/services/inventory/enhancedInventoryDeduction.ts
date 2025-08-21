@@ -197,17 +197,23 @@ export const deductInventoryForTransaction = async (
         }
 
         // Log inventory movement
-        await supabase
-          .from('inventory_movements')
-          .insert({
-            inventory_stock_id: match.inventory_item_id,
-            movement_type: 'deduction',
-            quantity_change: -finalQuantity,
-            previous_quantity: availableQuantity,
-            new_quantity: newQuantity,
-            notes: `Transaction ${transactionId} - ${cartItem.product_name} (${match.match_type} match: ${ingredient.ingredient_name} -> ${match.inventory_item_name})`,
-            created_by: 'system' // TODO: Get actual user ID
-          });
+         // Log inventory movement with proper user ID
+         const { error: movementError } = await supabase
+           .from('inventory_movements')
+           .insert({
+             inventory_stock_id: match.inventory_item_id,
+             movement_type: 'deduction',
+             quantity_change: -finalQuantity,
+             previous_quantity: availableQuantity,
+             new_quantity: newQuantity,
+             notes: `Transaction ${transactionId} - ${cartItem.product_name} (${match.match_type} match: ${ingredient.ingredient_name} -> ${match.inventory_item_name})`,
+             created_by: null // Use null instead of 'system' string for UUID field
+           });
+
+         if (movementError) {
+           console.warn('Failed to log inventory movement:', movementError);
+           // Continue processing even if movement logging fails
+         }
 
         // Log inventory transaction (removed - not needed for this service)
         // Transaction logging is handled by inventory_movements above
@@ -223,15 +229,24 @@ export const deductInventoryForTransaction = async (
       }
     }
 
-    // Log the deduction result with fallback error handling
+    // Log the deduction result with better duplicate handling
     try {
-      await supabase.rpc('log_inventory_sync_result', {
-        p_transaction_id: transactionId,
-        p_sync_status: result.success ? 'success' : 'failed',
-        p_error_details: result.failedItems.length > 0 ? JSON.stringify(result.failedItems) : null,
-        p_items_processed: result.deductedItems.length,
-        p_sync_duration_ms: Date.now() - Date.now() // TODO: Implement proper timing
-      });
+      // Check if audit entry already exists
+      const { data: existingAudit } = await supabase
+        .from('inventory_sync_audit')
+        .select('id')
+        .eq('transaction_id', transactionId)
+        .maybeSingle();
+      
+      if (!existingAudit) {
+        await supabase.rpc('log_inventory_sync_result', {
+          p_transaction_id: transactionId,
+          p_sync_status: result.success ? 'success' : 'failed',
+          p_error_details: result.failedItems.length > 0 ? JSON.stringify(result.failedItems) : null,
+          p_items_processed: result.deductedItems.length,
+          p_sync_duration_ms: Date.now() - Date.now() // TODO: Implement proper timing
+        });
+      }
     } catch (auditError) {
       console.warn('Failed to log inventory sync audit:', auditError);
       // Don't throw - audit logging failure shouldn't break inventory deduction

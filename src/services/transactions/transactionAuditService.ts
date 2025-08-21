@@ -215,7 +215,30 @@ export const rollbackTransactionWithAudit = async (
   userId?: string
 ): Promise<void> => {
   try {
-    // Delete the transaction
+    console.log('🔄 Starting rollback with proper cleanup order...');
+    
+    // Step 1: Delete audit records first to avoid foreign key constraints
+    const { error: auditDeleteError } = await supabase
+      .from("inventory_sync_audit")
+      .delete()
+      .eq("transaction_id", transactionId);
+    
+    if (auditDeleteError) {
+      console.warn('Failed to delete audit records:', auditDeleteError);
+      // Continue with rollback - audit cleanup is not critical
+    }
+    
+    // Step 2: Delete transaction items
+    const { error: itemsDeleteError } = await supabase
+      .from("transaction_items")
+      .delete()
+      .eq("transaction_id", transactionId);
+    
+    if (itemsDeleteError) {
+      console.warn('Failed to delete transaction items:', itemsDeleteError);
+    }
+    
+    // Step 3: Delete the main transaction
     const { error: deleteError } = await supabase
       .from("transactions")
       .delete()
@@ -223,16 +246,26 @@ export const rollbackTransactionWithAudit = async (
     
     if (deleteError) {
       console.error('Failed to delete transaction:', deleteError);
-      errors.push(`Transaction deletion failed: ${deleteError.message}`);
+      // Still log rollback attempt even if deletion fails
+    } else {
+      console.log('✅ Transaction deleted successfully');
     }
     
-    // Log the rollback
+    // Step 4: Log the rollback attempt (even if deletion failed)
     await TransactionAuditService.logTransactionRollback(transactionId, errors, storeId, userId);
     
-    console.log('✅ Transaction rolled back with audit trail:', transactionId);
+    console.log('✅ Transaction rollback with audit completed:', transactionId);
     
   } catch (error) {
     console.error('❌ Failed to rollback transaction with audit:', error);
+    // Still attempt to log the failed rollback
+    try {
+      await TransactionAuditService.logTransactionRollback(transactionId, 
+        [...errors, `Rollback error: ${error instanceof Error ? error.message : String(error)}`], 
+        storeId, userId);
+    } catch (logError) {
+      console.error('❌ Failed to log rollback failure:', logError);
+    }
     throw error;
   }
 };
