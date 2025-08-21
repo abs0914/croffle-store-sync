@@ -318,7 +318,7 @@ export function ComboSelectionDialog({
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             {step === "croffle" && "Select Your Croffle"}
-            {step === "customize" && "Customize Your Mini Croffle"}
+            {step === "customize" && `Customize Your ${selectedCroffle?.name || "Croffle"}`}
             {step === "espresso" && "Select Your Espresso"}
           </DialogTitle>
           {(step === "espresso" || step === "customize") && selectedCroffle && (
