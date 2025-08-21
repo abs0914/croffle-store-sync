@@ -1828,6 +1828,7 @@ export type Database = {
       }
       inventory_sync_audit: {
         Row: {
+          affected_inventory_items: Json | null
           created_at: string | null
           error_details: string | null
           id: string
@@ -1839,6 +1840,7 @@ export type Database = {
           transaction_id: string
         }
         Insert: {
+          affected_inventory_items?: Json | null
           created_at?: string | null
           error_details?: string | null
           id?: string
@@ -1850,6 +1852,7 @@ export type Database = {
           transaction_id: string
         }
         Update: {
+          affected_inventory_items?: Json | null
           created_at?: string | null
           error_details?: string | null
           id?: string
