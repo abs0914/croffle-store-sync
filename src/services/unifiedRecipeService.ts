@@ -13,6 +13,7 @@ export interface UnifiedRecipe {
   created_at: string;
   updated_at: string;
   ingredients?: UnifiedRecipeIngredient[];
+  isLegacy?: boolean; // Flag to identify legacy recipes
 }
 
 export interface UnifiedRecipeIngredient {
@@ -42,7 +43,8 @@ export const unifiedRecipeService = {
   // Fetch all recipes for a store
   async getRecipesByStore(storeId: string): Promise<UnifiedRecipe[]> {
     try {
-      const { data, error } = await supabase
+      // Get unified recipes (new system)
+      const { data: unifiedData, error: unifiedError } = await supabase
         .from('unified_recipes')
         .select(`
           *,
@@ -60,15 +62,64 @@ export const unifiedRecipeService = {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (unifiedError) throw unifiedError;
 
-      return data?.map(recipe => ({
+      const unifiedRecipes = unifiedData?.map(recipe => ({
         ...recipe,
+        cost_per_serving: recipe.cost_per_serving || 0,
         ingredients: recipe.unified_recipe_ingredients?.map(ing => ({
           ...ing,
           recipe_id: recipe.id
         })) || []
       })) || [];
+
+      // Get legacy recipes (old system)
+      const { data: legacyData, error: legacyError } = await supabase
+        .from('recipes')
+        .select(`
+          id,
+          name,
+          store_id,
+          created_at,
+          recipe_ingredients (
+            ingredient_name,
+            quantity,
+            unit
+          )
+        `)
+        .eq('store_id', storeId)
+        .order('created_at', { ascending: false });
+
+      if (legacyError) {
+        console.warn('Error fetching legacy recipes:', legacyError);
+      }
+
+      // Convert legacy recipes to unified format
+      const convertedLegacyRecipes: UnifiedRecipe[] = (legacyData || []).map(recipe => ({
+        id: recipe.id,
+        name: recipe.name,
+        store_id: recipe.store_id,
+        total_cost: 0, // Legacy recipes don't have cost calculation
+        cost_per_serving: 0,
+        serving_size: 1,
+        is_active: true,
+        created_at: recipe.created_at,
+        updated_at: recipe.created_at,
+        ingredients: (recipe.recipe_ingredients || []).map((ing: any, index: number) => ({
+          id: `legacy-${recipe.id}-${index}`,
+          recipe_id: recipe.id,
+          inventory_stock_id: '',
+          ingredient_name: ing.ingredient_name,
+          quantity: ing.quantity || 0,
+          unit: ing.unit || '',
+          cost_per_unit: 0,
+          total_cost: 0
+        })),
+        isLegacy: true // Flag to identify legacy recipes
+      }));
+
+      // Combine and return both unified and legacy recipes
+      return [...unifiedRecipes, ...convertedLegacyRecipes];
     } catch (error) {
       console.error('Error fetching recipes:', error);
       toast.error('Failed to fetch recipes');

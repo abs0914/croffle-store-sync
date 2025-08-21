@@ -208,7 +208,12 @@ const SimplifiedRecipeManagement: React.FC = () => {
                     <div key={recipe.id} className="p-4 border rounded-lg space-y-3">
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
-                          <h3 className="font-medium text-lg">{recipe.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-lg">{recipe.name}</h3>
+                            {recipe.isLegacy && (
+                              <Badge variant="secondary" className="text-xs">Legacy</Badge>
+                            )}
+                          </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Package className="h-3 w-3" />
@@ -216,27 +221,45 @@ const SimplifiedRecipeManagement: React.FC = () => {
                             </span>
                             <span className="flex items-center gap-1">
                               <Calculator className="h-3 w-3" />
-                              ₱{recipe.total_cost.toFixed(2)} total cost
+                              {recipe.isLegacy ? (
+                                <span className="text-amber-600">Cost calculation unavailable</span>
+                              ) : (
+                                `₱${recipe.total_cost.toFixed(2)} total cost`
+                              )}
                             </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditDialog(recipe)}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openDeleteDialog(recipe)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {!recipe.isLegacy && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditDialog(recipe)}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                          )}
+                          {recipe.isLegacy ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                toast.info("Legacy recipes can be viewed in the old recipe management system");
+                              }}
+                            >
+                              View Legacy
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeleteDialog(recipe)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                       
