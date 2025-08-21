@@ -169,17 +169,28 @@ export const CategoryEnhancedIngredientForm: React.FC<CategoryEnhancedIngredient
         <div className="space-y-2">
           <Label htmlFor={`ingredient-${index}`}>Select Ingredient</Label>
           <Select
-            value={ingredient.inventory_stock_id}
+            value={ingredient.inventory_stock_id || ""}
             onValueChange={handleInventoryItemSelect}
           >
             <SelectTrigger>
-              <SelectValue 
-                placeholder="Choose an ingredient..."
-              >
+              <SelectValue placeholder="Choose an ingredient...">
                 {ingredient.ingredient_name || undefined}
               </SelectValue>
             </SelectTrigger>
             <SelectContent className="max-h-60">
+              {/* Show existing ingredient if not found in current inventory */}
+              {ingredient.ingredient_name && !selectedItem && !loading && (
+                <SelectItem value={ingredient.inventory_stock_id || ""} disabled>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <span>{ingredient.ingredient_name}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {ingredient.unit}
+                    </Badge>
+                    <span className="text-xs">(Not in current inventory)</span>
+                  </div>
+                </SelectItem>
+              )}
+              
               {loading ? (
                 <div className="p-2 text-center text-muted-foreground">
                   Loading inventory items...
