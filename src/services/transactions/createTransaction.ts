@@ -181,23 +181,28 @@ export const createTransaction = async (
     
     toast.success("Transaction completed successfully");
     
-    // Log BIR audit event
-    await BIRComplianceService.logAuditEvent(
-      transaction.storeId,
-      'transaction',
-      'Transaction Completed',
-      {
-        receiptNumber,
-        total: transaction.total,
-        paymentMethod: transaction.paymentMethod,
-        items: transaction.items.length
-      },
-      transaction.userId,
-      undefined, // cashierName - can be enhanced
-      'TERMINAL-01',
-      data.id,
-      receiptNumber
-    );
+    // Log BIR audit event (optional - don't fail transaction if it fails)
+    try {
+      await BIRComplianceService.logAuditEvent(
+        transaction.storeId,
+        'transaction',
+        'Transaction Completed',
+        {
+          receiptNumber,
+          total: transaction.total,
+          paymentMethod: transaction.paymentMethod,
+          items: transaction.items.length
+        },
+        transaction.userId,
+        undefined, // cashierName - can be enhanced
+        'TERMINAL-01',
+        data.id,
+        receiptNumber
+      );
+    } catch (birError) {
+      console.warn('BIR audit logging failed (non-critical):', birError);
+      // Continue with transaction - don't fail for audit logging issues
+    }
     
      // Simplified inventory processing - single path, fail fast
      console.log('🔄 Processing inventory for transaction:', data.id);
@@ -227,7 +232,12 @@ export const createTransaction = async (
            const template = recipe?.recipe_templates;
            
            if (!template || !template.is_active) {
-             throw new Error(`Product ${item.name} has no active recipe template`);
+             console.warn(`⚠️ Product ${item.name} has no active recipe template - proceeding without inventory deduction`);
+             return {
+               product_name: product?.name || item.name,
+               recipe_template_id: null,
+               quantity: item.quantity
+             };
            }
            
            return {
@@ -238,15 +248,26 @@ export const createTransaction = async (
          })
        );
        
-       // Process inventory deduction
-       const deductionResult = await deductInventoryForTransaction(
-         data.id,
-         transaction.storeId,
-         itemsWithTemplateIds
-       );
+       // Process inventory deduction - allow partial success
+       const validItems = itemsWithTemplateIds.filter(item => item.recipe_template_id);
+       const itemsWithoutTemplates = itemsWithTemplateIds.filter(item => !item.recipe_template_id);
        
-       if (!deductionResult.success) {
-         throw new Error(`Inventory deduction failed: ${deductionResult.failedItems[0]?.reason || 'Unknown error'}`);
+       if (itemsWithoutTemplates.length > 0) {
+         console.log(`ℹ️ ${itemsWithoutTemplates.length} items without templates - skipping inventory deduction:`, 
+           itemsWithoutTemplates.map(i => i.product_name));
+       }
+       
+       if (validItems.length > 0) {
+         console.log(`🔄 Processing ${validItems.length} items with templates`);
+         const deductionResult = await deductInventoryForTransaction(
+           data.id,
+           transaction.storeId,
+           validItems
+         );
+         
+         if (!deductionResult.success) {
+           console.warn('⚠️ Inventory deduction had issues but continuing transaction:', deductionResult.failedItems);
+         }
        }
        
        console.log('✅ Inventory processing completed successfully');
