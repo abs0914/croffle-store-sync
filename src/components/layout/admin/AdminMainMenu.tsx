@@ -34,9 +34,9 @@ const menuItems = [
     permission: 'settings' as const,
   },
   {
-    title: "Recipes",
+    title: "Recipe Management",
     icon: Receipt,
-    href: ROUTE_PATHS.ADMIN_RECIPES,
+    href: "/admin/recipe-management",
     permission: 'recipe_management' as const,
   },
   {
