@@ -4862,6 +4862,92 @@ export type Database = {
           },
         ]
       }
+      unified_recipe_ingredients: {
+        Row: {
+          cost_per_unit: number
+          created_at: string | null
+          id: string
+          ingredient_name: string
+          inventory_stock_id: string
+          quantity: number
+          recipe_id: string
+          total_cost: number | null
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          cost_per_unit: number
+          created_at?: string | null
+          id?: string
+          ingredient_name: string
+          inventory_stock_id: string
+          quantity: number
+          recipe_id: string
+          total_cost?: number | null
+          unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          cost_per_unit?: number
+          created_at?: string | null
+          id?: string
+          ingredient_name?: string
+          inventory_stock_id?: string
+          quantity?: number
+          recipe_id?: string
+          total_cost?: number | null
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unified_recipe_ingredients_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "unified_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unified_recipes: {
+        Row: {
+          cost_per_serving: number | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          serving_size: number | null
+          store_id: string
+          total_cost: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          cost_per_serving?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          serving_size?: number | null
+          store_id: string
+          total_cost?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          cost_per_serving?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          serving_size?: number | null
+          store_id?: string
+          total_cost?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       unit_conversions: {
         Row: {
           conversion_factor: number
@@ -5191,6 +5277,17 @@ export type Database = {
           role: string
           store_ids: string[]
           user_id: string
+        }[]
+      }
+      get_inventory_items_by_category: {
+        Args: { store_id_param: string }
+        Returns: {
+          cost: number
+          id: string
+          item: string
+          item_category: string
+          stock_quantity: number
+          unit: string
         }[]
       }
       get_location_suppliers: {
