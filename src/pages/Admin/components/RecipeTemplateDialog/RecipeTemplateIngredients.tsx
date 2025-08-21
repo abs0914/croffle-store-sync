@@ -3,7 +3,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { InventoryBasedIngredientForm } from '@/components/recipe/InventoryBasedIngredientForm';
 import { RecipeTemplateIngredientInput } from '@/services/recipeManagement/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,6 +42,20 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
   // Calculate total cost
   const totalCost = useMemo(() => {
     return inventoryIngredients.reduce((sum, ing) => sum + (ing.quantity * ing.cost_per_unit), 0);
+  }, [inventoryIngredients]);
+
+  // Calculate ingredient availability status
+  const ingredientStatus = useMemo(() => {
+    const available = inventoryIngredients.filter(ing => 
+      ing.ingredient_name && ing.quantity > 0 && ing.cost_per_unit > 0
+    ).length;
+    const total = inventoryIngredients.length;
+    
+    let status: 'complete' | 'partial' | 'empty' = 'empty';
+    if (available === total && total > 0) status = 'complete';
+    else if (available > 0) status = 'partial';
+    
+    return { available, total, status };
   }, [inventoryIngredients]);
 
   // Sync changes back to parent
@@ -91,8 +106,16 @@ export const RecipeTemplateIngredients: React.FC<RecipeTemplateIngredientsProps>
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Recipe Ingredients (Inventory-Based)</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>Recipe Ingredients (Inventory-Based)</CardTitle>
+              {ingredientStatus.status === 'complete' && <CheckCircle className="h-4 w-4 text-green-500" />}
+              {ingredientStatus.status === 'partial' && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+              {ingredientStatus.status === 'empty' && <XCircle className="h-4 w-4 text-red-500" />}
+            </div>
             <div className="flex items-center gap-4">
+              <Badge variant="secondary">
+                {ingredientStatus.available}/{ingredientStatus.total} configured
+              </Badge>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Total Estimated Cost</p>
                 <p className="text-lg font-semibold">₱{totalCost.toFixed(2)}</p>

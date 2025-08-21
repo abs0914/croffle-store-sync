@@ -21,12 +21,12 @@ export function useProductCatalogData(storeId: string | null) {
   
   // Further filter products based on active tab AND availability status
   const filteredProducts = categoryFilteredProducts.filter(product => {
-    // First check availability (ingredient-based validation)
+    // Enhanced ingredient-based availability checking
     const isIngredientAvailable = product.product_status !== 'out_of_stock' && 
                                   product.product_status !== 'temporarily_unavailable' &&
                                   (product.is_available !== false); // Respect is_available field from automatic service
     
-    // Then apply tab filtering
+    // Enhanced tab filtering with recipe-based logic
     switch (activeTab) {
       case "active":
         return (product.is_active || product.isActive) && isIngredientAvailable;
@@ -34,8 +34,12 @@ export function useProductCatalogData(storeId: string | null) {
         return !(product.is_active || product.isActive) || !isIngredientAvailable;
       case "low-stock":
         return (product.stock_quantity || product.stockQuantity || 0) <= 10 || !isIngredientAvailable;
+      case "setup-needed":
+        // Show products that need recipe setup
+        return product.product_status === 'temporarily_unavailable' && 
+               (!product.recipe_id || product.recipe_id === null);
       default:
-        return isIngredientAvailable; // Only show products with sufficient ingredients by default
+        return true; // Show all products by default, let user filter as needed
     }
   });
   
