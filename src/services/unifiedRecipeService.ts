@@ -13,7 +13,6 @@ export interface UnifiedRecipe {
   created_at: string;
   updated_at: string;
   ingredients?: UnifiedRecipeIngredient[];
-  isLegacy?: boolean; // Flag to identify legacy recipes
 }
 
 export interface UnifiedRecipeIngredient {
@@ -114,8 +113,7 @@ export const unifiedRecipeService = {
           unit: ing.unit || '',
           cost_per_unit: 0,
           total_cost: 0
-        })),
-        isLegacy: true // Flag to identify legacy recipes
+        }))
       }));
 
       // Combine and return both unified and legacy recipes
