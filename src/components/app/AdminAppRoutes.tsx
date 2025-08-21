@@ -7,7 +7,7 @@ import AdminDashboard from '@/pages/Admin/AdminDashboard';
 import AdminStores from '@/pages/Admin/AdminStores';
 import AdminCustomers from '@/pages/Admin/AdminCustomers';
 import AdminOrders from '@/pages/Admin/AdminOrders';
-import AdminRecipes from '@/pages/Admin/AdminRecipes';
+
 import AdminReports from '@/pages/Admin/AdminReports';
 import AdminExpenses from '@/pages/Admin/AdminExpenses';
 import CommissaryManagement from '@/pages/Commissary/CommissaryManagement';
@@ -35,17 +35,6 @@ export const AdminAppRoutes = () => {
       />
 
 
-      {/* Admin Recipe Management - Admin Only */}
-      <Route
-        path="/admin/recipes"
-        element={
-          <AdminProtectedRoute>
-            <AdminLayout>
-              <AdminRecipes />
-            </AdminLayout>
-          </AdminProtectedRoute>
-        }
-      />
 
       {/* Admin Commissary Inventory - Admin Only */}
       <Route
