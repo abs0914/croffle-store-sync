@@ -15,7 +15,34 @@ export const validateProductForInventory = async (
   productId: string
 ): Promise<ProductValidationResult> => {
   try {
-    // Use the new validation function from the database  
+    // First check if product exists
+    const { data: productExists, error: existsError } = await supabase
+      .from('products')
+      .select('id')
+      .eq('id', productId)
+      .maybeSingle();
+
+    if (existsError) {
+      console.error('Error checking product existence:', existsError);
+      return {
+        isValid: false,
+        canDeductInventory: false,
+        status: 'no_template',
+        reason: `Database error: ${existsError.message}`
+      };
+    }
+
+    if (!productExists) {
+      console.error('❌ Product not found in database:', productId);
+      return {
+        isValid: false,
+        canDeductInventory: false,
+        status: 'no_template',
+        reason: 'Product not found in database - may have been deleted or cart data is stale'
+      };
+    }
+
+    // Use the validation function from the database  
     const { data, error } = await supabase
       .rpc('validate_product_has_recipe_template', { product_id: productId });
 

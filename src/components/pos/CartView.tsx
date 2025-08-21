@@ -138,6 +138,21 @@ export default function CartView({
     }
     
     try {
+      // First validate that cart items reference valid products
+      const cartItemsForValidation = cartItems.map(item => ({
+        productId: item.productId,
+        name: item.product.name,
+        quantity: item.quantity
+      }));
+      
+      const { validateAndCleanCart } = await import('@/services/pos/cartCleanupService');
+      const cartIsValid = await validateAndCleanCart(cartItemsForValidation, currentStore.id);
+      
+      if (!cartIsValid) {
+        toast.error('Please refresh your cart and try again');
+        return false;
+      }
+
       // Only validate inventory availability before payment - actual deduction happens in transaction
       const validationSuccess = await validateCartItems(cartItems);
       if (!validationSuccess) {

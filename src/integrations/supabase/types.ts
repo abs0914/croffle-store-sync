@@ -5408,22 +5408,14 @@ export type Database = {
         Returns: string
       }
       log_inventory_sync_result: {
-        Args:
-          | {
-              p_affected_inventory_items?: Json
-              p_error_details?: string
-              p_items_processed?: number
-              p_sync_duration_ms?: number
-              p_sync_status: string
-              p_transaction_id: string
-            }
-          | {
-              p_error_details?: string
-              p_items_processed?: number
-              p_sync_duration_ms?: number
-              p_sync_status: string
-              p_transaction_id: string
-            }
+        Args: {
+          p_affected_inventory_items?: Json
+          p_error_details?: string
+          p_items_processed?: number
+          p_sync_duration_ms?: number
+          p_sync_status: string
+          p_transaction_id: string
+        }
         Returns: undefined
       }
       log_security_event: {
