@@ -127,7 +127,7 @@ export const CategoryEnhancedIngredientForm: React.FC<CategoryEnhancedIngredient
   const totalCost = ingredient.quantity * ingredient.cost_per_unit;
   const selectedItem = inventoryItems.find(item => item.id === ingredient.inventory_stock_id);
 
-  if (loading) {
+  if (loading && !ingredient.ingredient_name) {
     return (
       <Card>
         <CardContent className="p-4">
@@ -173,34 +173,48 @@ export const CategoryEnhancedIngredientForm: React.FC<CategoryEnhancedIngredient
             onValueChange={handleInventoryItemSelect}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Choose an ingredient..." />
+              <SelectValue 
+                placeholder="Choose an ingredient..."
+              >
+                {ingredient.ingredient_name || undefined}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="max-h-60">
-              {Object.entries(groupedInventory).map(([category, items]) => (
-                <div key={category}>
-                  {/* Category Header */}
-                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/50 sticky top-0">
-                    {getCategoryLabel(category)}
-                  </div>
-                  
-                  {/* Category Items */}
-                  {items.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <span>{item.item}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {item.unit}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Stock: {item.stock_quantity} • ₱{item.cost?.toFixed(2) || '0.00'}
-                        </div>
-                      </div>
-                    </SelectItem>
-                  ))}
+              {loading ? (
+                <div className="p-2 text-center text-muted-foreground">
+                  Loading inventory items...
                 </div>
-              ))}
+              ) : Object.entries(groupedInventory).length > 0 ? (
+                Object.entries(groupedInventory).map(([category, items]) => (
+                  <div key={category}>
+                    {/* Category Header */}
+                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/50 sticky top-0">
+                      {getCategoryLabel(category)}
+                    </div>
+                    
+                    {/* Category Items */}
+                    {items.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <span>{item.item}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {item.unit}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Stock: {item.stock_quantity} • ₱{item.cost?.toFixed(2) || '0.00'}
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <div className="p-2 text-center text-muted-foreground">
+                  No inventory items found
+                </div>
+              )}
             </SelectContent>
           </Select>
         </div>
