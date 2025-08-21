@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -140,18 +139,13 @@ export function MiniCroffleComboDialog({
     reset();
     onOpenChange(false);
   };
-  return <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            Customize {product.name}
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Mix and match selections are no additional charge
-          </p>
-        </DialogHeader>
+  return (
+    <>
+      <p className="text-sm text-muted-foreground mb-4">
+        Mix and match selections are no additional charge
+      </p>
 
-        <div className="space-y-6">
+      <div className="space-y-6">
           {/* Sauce Selection (Required - Mini Croffle only) */}
           {isMiniCroffle && (
             <div>
@@ -259,6 +253,6 @@ export function MiniCroffleComboDialog({
             Next
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>;
+    </>
+  );
 }
