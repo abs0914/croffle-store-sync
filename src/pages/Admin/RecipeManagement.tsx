@@ -14,8 +14,13 @@ import {
   RefreshCw, 
   CheckCircle2,
   AlertCircle,
-  Zap
+  Zap,
+  Edit,
+  Eye,
+  Plus
 } from 'lucide-react';
+import { RecipeEditDialog } from '@/components/recipe/RecipeEditDialog';
+import { RecipeTemplateEditDialog } from '@/components/recipe/RecipeTemplateEditDialog';
 
 interface Product {
   id: string;
@@ -33,6 +38,10 @@ interface RecipeTemplate {
 
 const RecipeManagement: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string>('');
+  const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const queryClient = useQueryClient();
 
   // Fetch stores
@@ -393,21 +402,33 @@ const RecipeManagement: React.FC = () => {
                           size="sm" 
                           variant="outline"
                           onClick={() => {
-                            // TODO: Open recipe editor dialog
-                            toast.info(`Edit recipe for ${product.name}`);
+                            setSelectedRecipe({
+                              id: product.recipe_id,
+                              name: product.name,
+                              store_id: selectedStore
+                            });
+                            setRecipeDialogOpen(true);
                           }}
                         >
+                          <Edit className="h-4 w-4 mr-2" />
                           Edit Recipe
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline"
                           onClick={() => {
-                            // TODO: View recipe ingredients
-                            toast.info(`View ingredients for ${product.name}`);
+                            // View recipe details in read-only mode
+                            setSelectedRecipe({
+                              id: product.recipe_id,
+                              name: product.name,
+                              store_id: selectedStore,
+                              readOnly: true
+                            });
+                            setRecipeDialogOpen(true);
                           }}
                         >
-                          View Ingredients
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Recipe
                         </Button>
                       </div>
                     </div>
@@ -448,18 +469,42 @@ const RecipeManagement: React.FC = () => {
                           size="sm" 
                           variant="outline"
                           onClick={() => {
-                            toast.info(`Edit template: ${template.name}`);
+                            setSelectedTemplate(template);
+                            setTemplateDialogOpen(true);
                           }}
                         >
+                          <Edit className="h-4 w-4 mr-2" />
                           Edit Template
                         </Button>
                         <Button 
                           size="sm" 
                           variant="default"
-                          onClick={() => {
-                            toast.info(`Deploy ${template.name} to store`);
+                          onClick={async () => {
+                            if (!selectedStore) {
+                              toast.error('Please select a store first');
+                              return;
+                            }
+                            
+                            try {
+                              const { InventoryBasedRecipeService } = await import('@/services/inventoryBasedRecipeService');
+                              const result = await InventoryBasedRecipeService.deployTemplateToStore(template.id, selectedStore);
+                              
+                              if (result.success) {
+                                toast.success(result.message);
+                                queryClient.invalidateQueries({ queryKey: ['products'] });
+                              } else {
+                                toast.error(result.message);
+                                if (result.missingIngredients?.length) {
+                                  toast.error(`Missing: ${result.missingIngredients.join(', ')}`);
+                                }
+                              }
+                            } catch (error) {
+                              toast.error('Failed to deploy template');
+                            }
                           }}
+                          disabled={!selectedStore}
                         >
+                          <Zap className="h-4 w-4 mr-2" />
                           Deploy to Store
                         </Button>
                       </div>
@@ -474,10 +519,14 @@ const RecipeManagement: React.FC = () => {
                         Create a reusable recipe template for deployment to multiple stores
                       </p>
                       <Button 
+                        size="sm" 
+                        variant="default"
                         onClick={() => {
-                          toast.info('Opening template creator...');
+                          setSelectedTemplate(null);
+                          setTemplateDialogOpen(true);
                         }}
                       >
+                        <Plus className="h-4 w-4 mr-2" />
                         Create Template
                       </Button>
                     </div>
@@ -488,6 +537,27 @@ const RecipeManagement: React.FC = () => {
           </TabsContent>
         </Tabs>
       )}
+
+      {/* Recipe Edit Dialog */}
+      <RecipeEditDialog
+        isOpen={recipeDialogOpen}
+        onClose={() => {
+          setRecipeDialogOpen(false);
+          setSelectedRecipe(null);
+        }}
+        recipe={selectedRecipe}
+        storeId={selectedStore}
+      />
+
+      {/* Template Edit Dialog */}
+      <RecipeTemplateEditDialog
+        isOpen={templateDialogOpen}
+        onClose={() => {
+          setTemplateDialogOpen(false);
+          setSelectedTemplate(null);
+        }}
+        template={selectedTemplate}
+      />
     </div>
   );
 };
