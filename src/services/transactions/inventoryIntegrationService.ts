@@ -1,11 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { deductIngredientsForProduct } from "@/services/productCatalog/ingredientDeductionService";
+import { deductIngredientsWithTracking, AffectedInventoryItem } from "@/services/inventory/productInventoryTracker";
 import { toast } from "sonner";
 
 export interface InventoryUpdateResult {
   success: boolean;
   failures: string[];
   rollbackRequired: boolean;
+  affected_inventory_items?: AffectedInventoryItem[];
 }
 
 /**
@@ -22,29 +24,24 @@ export const handleTransactionInventoryUpdate = async (
     
     const failures: string[] = [];
     const processedItems: { productId: string; quantity: number }[] = [];
+    const allAffectedItems: AffectedInventoryItem[] = [];
     
-    // Process each item with proper validation
+    // Process each item with proper validation and tracking
     for (const item of items) {
       try {
-        // Validate stock availability before deduction
-        const validation = await validateItemAvailability(item.productId, item.quantity, storeId);
-        if (!validation.isValid) {
-          failures.push(`${item.name}: ${validation.error}`);
-          continue;
-        }
-        
-        // Perform ingredient deduction using existing service
-        const success = await deductIngredientsForProduct(
+        // Use the new tracking service for detailed inventory sync
+        const result = await deductIngredientsWithTracking(
           item.productId,
           item.quantity,
           transactionId
         );
         
-        if (success) {
+        if (result.success) {
           processedItems.push({ productId: item.productId, quantity: item.quantity });
-          console.log(`✅ Inventory updated for ${item.name}`);
+          allAffectedItems.push(...result.affected_inventory_items);
+          console.log(`✅ Inventory updated for ${item.name}:`, result.affected_inventory_items);
         } else {
-          failures.push(`Failed to deduct inventory for ${item.name}`);
+          failures.push(`Failed to deduct inventory for ${item.name}: ${result.error_details}`);
         }
       } catch (error) {
         console.error(`Error processing item ${item.productId}:`, error);
