@@ -5316,6 +5316,17 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_recipe_repair_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          orphaned_products: number
+          products_missing_recipes: number
+          products_with_recipes: number
+          recipes_missing_templates: number
+          recipes_with_templates: number
+          total_products: number
+        }[]
+      }
       get_sm_cron_jobs: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -5474,6 +5485,18 @@ export type Database = {
         Returns: {
           errors: string[]
           repaired_count: number
+        }[]
+      }
+      repair_recipe_template_links: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          action_type: string
+          error_message: string
+          product_name: string
+          recipe_id: string
+          success: boolean
+          template_id: string
+          template_name: string
         }[]
       }
       reset_user_rate_limit: {

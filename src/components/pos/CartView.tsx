@@ -138,7 +138,7 @@ export default function CartView({
     }
     
     try {
-      // First validate that cart items reference valid products
+      // Step 1: Clean up stale cart items first
       const cartItemsForValidation = cartItems.map(item => ({
         productId: item.productId,
         name: item.product.name,
@@ -146,21 +146,69 @@ export default function CartView({
       }));
       
       const { validateAndCleanCart } = await import('@/services/pos/cartCleanupService');
-      const cartIsValid = await validateAndCleanCart(cartItemsForValidation, currentStore.id);
+      const cleanupResult = await validateAndCleanCart(cartItemsForValidation, currentStore.id);
       
-      if (!cartIsValid) {
-        toast.error('Please refresh your cart and try again');
+      if (cleanupResult.removedItems?.length > 0) {
+        const suggestions = cleanupResult.removedItems
+          .map(removed => {
+            const alternatives = cleanupResult.suggestions?.[removed.id] || [];
+            return `${removed.name}${alternatives.length > 0 ? ` (Try: ${alternatives.slice(0, 2).map(a => a.name).join(', ')})` : ''}`;
+          })
+          .join(', ');
+
+        toast.error(`Removed unavailable items: ${suggestions}`);
+        return false; // Force user to review cart after cleanup
+      }
+
+      // Step 2: Attempt resilient inventory sync with repair
+      const { resilientInventoryService } = await import('@/services/pos/resilientInventoryService');
+      
+      const inventoryItems = cartItems.map(item => ({
+        productId: item.productId,
+        name: item.product.name,
+        quantity: item.quantity
+      }));
+
+      const tempTransactionId = `temp-${Date.now()}`;
+      const inventoryResult = await resilientInventoryService.syncInventoryWithResilience(
+        tempTransactionId,
+        currentStore.id,
+        inventoryItems,
+        {
+          repairOnFailure: true,     // Attempt to repair broken recipe/template links
+          allowPartialSync: true,    // Allow transaction with some inventory issues
+          skipOnFailure: false       // Don't completely skip inventory validation
+        }
+      );
+
+      // Step 3: Handle inventory sync results
+      if (inventoryResult.warnings.length > 0) {
+        console.warn('⚠️ Inventory sync warnings:', inventoryResult.warnings);
+        
+        // Show repair notifications to user
+        const repairWarnings = inventoryResult.warnings.filter(w => w.includes('Repaired:'));
+        if (repairWarnings.length > 0) {
+          toast.success(`Auto-repaired: ${repairWarnings.length} items fixed automatically`);
+        }
+        
+        const otherWarnings = inventoryResult.warnings.filter(w => !w.includes('Repaired:'));
+        if (otherWarnings.length > 0) {
+          toast.error(`Inventory issues: ${otherWarnings.slice(0, 2).join(', ')}`);
+        }
+      }
+
+      // Step 4: Check if transaction can proceed
+      if (!inventoryResult.canProceedWithTransaction) {
+        toast.error("Cannot process sale - inventory validation failed. Please try again or contact support.");
         return false;
       }
 
-      // Only validate inventory availability before payment - actual deduction happens in transaction
-      const validationSuccess = await validateCartItems(cartItems);
-      if (!validationSuccess) {
-        toast.error('Inventory validation failed - insufficient stock');
-        return false;
+      // Step 5: Log successful repair attempts
+      if (inventoryResult.repairAttempted) {
+        console.log('🔧 Recipe repair was attempted during checkout');
       }
 
-      // Proceed with payment - inventory deduction will happen automatically in transaction creation
+      // Step 6: Proceed with payment - enhanced inventory tracking in place
       const success = await handlePaymentComplete(
         paymentMethod, 
         amountTendered, 
@@ -169,13 +217,20 @@ export default function CartView({
         deliveryPlatform,
         deliveryOrderNumber
       );
+
       if (success) {
         setIsPaymentDialogOpen(false);
+        
+        // Show success message with any relevant repair info
+        if (inventoryResult.repairAttempted) {
+          toast.success("Payment completed! Some items were auto-repaired during checkout.");
+        }
       }
+      
       return success;
     } catch (error) {
       console.error('Error during payment validation:', error);
-      toast.error('Payment validation failed');
+      toast.error('Payment validation failed - please try again');
       return false;
     }
   };
