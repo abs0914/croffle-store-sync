@@ -118,7 +118,10 @@ export function EditCommissaryItemDialog({ open, onOpenChange, item, onSuccess }
             />
           </div>
           <div>
-            <Label htmlFor="unit_cost">Unit Cost</Label>
+            <Label htmlFor="unit_cost">
+              Purchase Cost (per unit)
+              <span className="text-xs text-muted-foreground ml-1">(Optional)</span>
+            </Label>
             <Input
               id="unit_cost"
               type="number"

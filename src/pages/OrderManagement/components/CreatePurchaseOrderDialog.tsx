@@ -154,12 +154,12 @@ export function CreatePurchaseOrderDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Create Purchase Order</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6 px-1">
           {/* Order Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -310,18 +310,18 @@ export function CreatePurchaseOrderDialog({
             </Card>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={loading || orderItems.length === 0}
-            >
-              {loading ? 'Creating...' : 'Create Purchase Order'}
-            </Button>
-          </div>
+        </div>
+
+        <div className="flex gap-2 justify-end pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading || orderItems.length === 0}
+          >
+            {loading ? 'Creating...' : 'Create Purchase Order'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
