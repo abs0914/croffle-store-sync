@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,10 +18,15 @@ import {
   Calculator,
   Package,
   AlertCircle,
-  BarChart3
+  Filter,
+  CheckCircle,
+  Clock,
+  ShoppingCart
 } from 'lucide-react';
 import { SimplifiedRecipeForm } from '@/components/recipe/SimplifiedRecipeForm';
 import { unifiedRecipeService, UnifiedRecipe as ServiceUnifiedRecipe } from '@/services/unifiedRecipeService';
+import { useRecipeProductIntegration } from '@/hooks/useRecipeProductIntegration';
+import { RecipeStatusIndicator } from '@/components/RecipeManagement/RecipeStatusIndicator';
 
 interface UnifiedRecipe {
   id: string;
@@ -44,12 +49,22 @@ interface UnifiedRecipe {
 const SimplifiedRecipeManagement: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<UnifiedRecipe | null>(null);
   
   const queryClient = useQueryClient();
+
+  // Recipe-Product Integration for status tracking
+  const {
+    productStatuses,
+    summary,
+    isLoading: statusLoading,
+    syncCatalog,
+    refetch: refetchStatuses
+  } = useRecipeProductIntegration(selectedStore || null);
 
   // Fetch stores
   const { data: stores = [] } = useQuery({
@@ -67,10 +82,21 @@ const SimplifiedRecipeManagement: React.FC = () => {
     enabled: !!selectedStore
   });
 
-  // Filter recipes based on search
-  const filteredRecipes = recipes.filter(recipe =>
-    recipe.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Get recipe status from product integration
+  const getRecipeStatus = (recipeId: string) => {
+    const productStatus = productStatuses.find(p => p.recipeId === recipeId);
+    return productStatus?.status || 'setup_needed';
+  };
+
+  // Filter recipes based on search and status
+  const filteredRecipes = recipes.filter(recipe => {
+    const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (statusFilter === 'all') return matchesSearch;
+    
+    const recipeStatus = getRecipeStatus(recipe.id);
+    return matchesSearch && recipeStatus === statusFilter;
+  });
 
   // Create recipe mutation
   const createRecipeMutation = useMutation({
@@ -188,14 +214,43 @@ const SimplifiedRecipeManagement: React.FC = () => {
         <>
           {/* Actions Bar */}
           <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search recipes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex items-center gap-4 flex-1">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search recipes..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Recipes</SelectItem>
+                  <SelectItem value="ready_to_sell">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Ready to Sell
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="setup_needed">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-yellow-500" />
+                      Setup Needed
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="direct_product">
+                    <div className="flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4 text-blue-500" />
+                      Direct Product
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -207,16 +262,30 @@ const SimplifiedRecipeManagement: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>Recipes ({filteredRecipes.length})</span>
-                {recipes.length > 0 && (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <Calculator className="h-3 w-3" />
-                    Total Value: ₱{recipes.reduce((sum, recipe) => sum + recipe.total_cost, 0).toFixed(2)}
-                  </Badge>
-                )}
+                <span>Recipes ({filteredRecipes.length}{filteredRecipes.length !== recipes.length ? ` of ${recipes.length}` : ''})</span>
+                <div className="flex items-center gap-2">
+                  {summary.total > 0 && (
+                    <>
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        {summary.readyToSell} Ready
+                      </Badge>
+                      <Badge variant="outline" className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-yellow-500" />
+                        {summary.setupNeeded} Setup Needed
+                      </Badge>
+                    </>
+                  )}
+                  {recipes.length > 0 && (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <Calculator className="h-3 w-3" />
+                      ₱{recipes.reduce((sum, recipe) => sum + recipe.total_cost, 0).toFixed(2)}
+                    </Badge>
+                  )}
+                </div>
               </CardTitle>
               <CardDescription>
-                Manage your store's recipes - now running on the unified system
+                Manage your store's recipes with real-time production status
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -236,64 +305,97 @@ const SimplifiedRecipeManagement: React.FC = () => {
                 </Alert>
               ) : (
                 <div className="space-y-4">
-                  {filteredRecipes.map((recipe) => (
-                    <div key={recipe.id} className="p-4 border rounded-lg space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
+                  {filteredRecipes.map((recipe) => {
+                    const recipeStatus = getRecipeStatus(recipe.id);
+                    const productData = productStatuses.find(p => p.recipeId === recipe.id);
+                    
+                    return (
+                      <div key={recipe.id} className="p-4 border rounded-lg space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-lg">{recipe.name}</h3>
+                              <RecipeStatusIndicator 
+                                status={recipeStatus}
+                                canProduce={productData?.canProduce || false}
+                                availableIngredients={productData?.availableIngredients || 0}
+                                totalIngredients={productData?.totalIngredients || 0}
+                              />
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Package className="h-3 w-3" />
+                                {recipe.ingredients?.length || 0} ingredients
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calculator className="h-3 w-3" />
+                                ₱{recipe.total_cost.toFixed(2)} total cost
+                              </span>
+                              {productData && (
+                                <span className="flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3" />
+                                  {productData.availableIngredients}/{productData.totalIngredients} available
+                                </span>
+                              )}
+                            </div>
+                          </div>
                           <div className="flex items-center gap-2">
-                            <h3 className="font-medium text-lg">{recipe.name}</h3>
-                            <Badge variant="default" className="text-xs">
-                              Unified System
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Package className="h-3 w-3" />
-                              {recipe.ingredients?.length || 0} ingredients
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Calculator className="h-3 w-3" />
-                              ₱{recipe.total_cost.toFixed(2)} total cost
-                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditDialog(recipe)}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeleteDialog(recipe)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditDialog(recipe)}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openDeleteDialog(recipe)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                       
+                        {/* Ingredients Summary */}
+                        {recipe.ingredients && recipe.ingredients.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {recipe.ingredients.slice(0, 5).map((ingredient) => (
+                              <Badge key={ingredient.id} variant="outline" className="text-xs">
+                                {ingredient.ingredient_name} ({ingredient.quantity} {ingredient.unit})
+                              </Badge>
+                            ))}
+                            {recipe.ingredients.length > 5 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{recipe.ingredients.length - 5} more
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Missing Ingredients Info */}
+                        {productData?.missingIngredients && productData.missingIngredients.length > 0 && (
+                          <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                            <p className="text-xs text-yellow-700 dark:text-yellow-300 font-medium mb-1">Missing ingredients:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {productData.missingIngredients.slice(0, 3).map((ingredient, index) => (
+                                <Badge key={index} variant="outline" className="text-xs bg-yellow-100 dark:bg-yellow-900/40">
+                                  {ingredient}
+                                </Badge>
+                              ))}
+                              {productData.missingIngredients.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{productData.missingIngredients.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      
-                      {/* Ingredients Summary */}
-                      {recipe.ingredients && recipe.ingredients.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {recipe.ingredients.slice(0, 5).map((ingredient) => (
-                            <Badge key={ingredient.id} variant="outline" className="text-xs">
-                              {ingredient.ingredient_name} ({ingredient.quantity} {ingredient.unit})
-                            </Badge>
-                          ))}
-                          {recipe.ingredients.length > 5 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{recipe.ingredients.length - 5} more
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

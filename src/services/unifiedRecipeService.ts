@@ -59,7 +59,7 @@ export const unifiedRecipeService = {
         `)
         .eq('store_id', storeId)
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .order('name', { ascending: true });
 
       if (unifiedError) throw unifiedError;
 
@@ -87,7 +87,7 @@ export const unifiedRecipeService = {
           )
         `)
         .eq('store_id', storeId)
-        .order('created_at', { ascending: false });
+        .order('name', { ascending: true });
 
       if (legacyError) {
         console.warn('Error fetching legacy recipes:', legacyError);
