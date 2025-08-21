@@ -34,29 +34,58 @@ export class CartCleanupService {
       // Get all product IDs from cart
       const cartProductIds = cartItems.map(item => item.productId);
       
-      // Check which products exist in database
-      const { data: existingProducts, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          is_active,
-          recipe_id,
-          recipes (
-            template_id,
-            recipe_templates (
-              id,
-              is_active
+      // Check which products exist in both products and product_catalog tables
+      const [productsResult, catalogResult] = await Promise.all([
+        // Check products table
+        supabase
+          .from('products')
+          .select(`
+            id,
+            name,
+            is_active,
+            recipe_id,
+            recipes (
+              template_id,
+              recipe_templates (
+                id,
+                is_active
+              )
             )
-          )
-        `)
-        .in('id', cartProductIds)
-        .eq('store_id', storeId);
+          `)
+          .in('id', cartProductIds)
+          .eq('store_id', storeId),
+        
+        // Check product_catalog table
+        supabase
+          .from('product_catalog')
+          .select(`
+            id,
+            product_name,
+            is_available,
+            recipe_id,
+            recipes (
+              template_id,
+              recipe_templates (
+                id,
+                is_active
+              )
+            )
+          `)
+          .in('id', cartProductIds)
+          .eq('store_id', storeId)
+      ]);
       
-      if (error) {
+      if (productsResult.error || catalogResult.error) {
+        const error = productsResult.error || catalogResult.error;
         console.error('Error validating cart items:', error);
         throw error;
       }
+      
+      // Combine results and normalize field names
+      const existingProducts = [
+        ...(productsResult.data || []).map(p => ({ ...p, name: p.name, is_active: p.is_active })),
+        ...(catalogResult.data || []).map(p => ({ ...p, name: p.product_name, is_active: p.is_available }))
+      ];
       
       const existingIds = new Set(existingProducts?.map(p => p.id) || []);
       
@@ -114,41 +143,71 @@ export class CartCleanupService {
       const cleanName = productName.toLowerCase().trim();
       const searchTerms = cleanName.split(/\s+/);
       
-      // Build a search query using ILIKE for fuzzy matching
-      let query = supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          recipe_id,
-          recipes (
-            template_id,
-            recipe_templates (
-              id,
-              is_active
-            )
-          )
-        `)
-        .eq('store_id', storeId)
-        .eq('is_active', true)
-        .neq('name', productName); // Exclude the exact same product name
-      
-      // Add name similarity search
-      if (searchTerms.length > 0) {
-        // Use the first significant term for ILIKE search
-        const mainTerm = searchTerms.find(term => term.length > 2) || searchTerms[0];
-        query = query.ilike('name', `%${mainTerm}%`);
+      if (searchTerms.length === 0) {
+        return [];
       }
+
+      // Search in both products and product_catalog tables
+      const mainTerm = searchTerms.find(term => term.length > 2) || searchTerms[0];
       
-      const { data: products, error } = await query.limit(limit + 2); // Get extra to account for filtering
+      const [productsResult, catalogResult] = await Promise.all([
+        // Search products table
+        supabase
+          .from('products')
+          .select(`
+            id,
+            name,
+            recipe_id,
+            recipes (
+              template_id,
+              recipe_templates (
+                id,
+                is_active
+              )
+            )
+          `)
+          .eq('store_id', storeId)
+          .eq('is_active', true)
+          .neq('name', productName)
+          .ilike('name', `%${mainTerm}%`)
+          .limit(limit + 2),
+        
+        // Search product_catalog table
+        supabase
+          .from('product_catalog')
+          .select(`
+            id,
+            product_name,
+            recipe_id,
+            recipes (
+              template_id,
+              recipe_templates (
+                id,
+                is_active
+              )
+            )
+          `)
+          .eq('store_id', storeId)
+          .eq('is_available', true)
+          .neq('product_name', productName)
+          .ilike('product_name', `%${mainTerm}%`)
+          .limit(limit + 2)
+      ]);
       
-      if (error) {
+      if (productsResult.error || catalogResult.error) {
+        const error = productsResult.error || catalogResult.error;
         console.error('Error finding similar products:', error);
         return [];
       }
       
+      // Combine and normalize results
+      const products = [
+        ...(productsResult.data || []).map(p => ({ ...p, name: p.name })),
+        ...(catalogResult.data || []).map(p => ({ ...p, name: p.product_name }))
+      ];
+      
       // Filter out products that are too similar to the original
-      const filteredProducts = (products || [])
+      const filteredProducts = products
         .filter(product => {
           const productNameLower = product.name.toLowerCase();
           // Don't suggest the exact same name or very similar names
@@ -207,34 +266,68 @@ export class CartCleanupService {
    */
   static async getValidProducts(storeId: string) {
     try {
-      const { data: products, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          price,
-          description,
-          image_url,
-          is_active,
-          recipe_id,
-          recipes (
-            template_id,
-            recipe_templates (
-              id,
-              is_active
+      // Get products from both tables
+      const [productsResult, catalogResult] = await Promise.all([
+        // Get from products table
+        supabase
+          .from('products')
+          .select(`
+            id,
+            name,
+            price,
+            description,
+            image_url,
+            is_active,
+            recipe_id,
+            recipes (
+              template_id,
+              recipe_templates (
+                id,
+                is_active
+              )
             )
-          )
-        `)
-        .eq('store_id', storeId)
-        .eq('is_active', true)
-        .order('name');
+          `)
+          .eq('store_id', storeId)
+          .eq('is_active', true)
+          .order('name'),
+        
+        // Get from product_catalog table
+        supabase
+          .from('product_catalog')
+          .select(`
+            id,
+            product_name,
+            price,
+            description,
+            image_url,
+            is_available,
+            recipe_id,
+            recipes (
+              template_id,
+              recipe_templates (
+                id,
+                is_active
+              )
+            )
+          `)
+          .eq('store_id', storeId)
+          .eq('is_available', true)
+          .order('product_name')
+      ]);
       
-      if (error) {
+      if (productsResult.error || catalogResult.error) {
+        const error = productsResult.error || catalogResult.error;
         console.error('Error fetching valid products:', error);
         return [];
       }
       
-      return products || [];
+      // Combine and normalize results
+      const allProducts = [
+        ...(productsResult.data || []).map(p => ({ ...p, name: p.name, is_active: p.is_active })),
+        ...(catalogResult.data || []).map(p => ({ ...p, name: p.product_name, is_active: p.is_available }))
+      ];
+      
+      return allProducts;
       
     } catch (error) {
       console.error('Error in getValidProducts:', error);
@@ -249,13 +342,40 @@ export class CartCleanupService {
 export const validateAndCleanCart = async (
   cartItems: Array<{ productId: string; name: string; quantity: number }>,
   storeId: string
-): Promise<boolean> => {
+): Promise<{
+  isValid: boolean;
+  removedItems: Array<{ id: string; name: string }>;
+  suggestions: Record<string, Array<{ id: string; name: string }>>;
+}> => {
   const validation = await CartCleanupService.validateCartItems(cartItems, storeId);
   
   if (validation.hasIssues) {
     CartCleanupService.notifyCartIssues(validation.staleItems);
-    return false;
+    
+    // Return in expected format for backward compatibility
+    const removedItems = validation.staleItems.map(item => ({
+      id: item.staleId,
+      name: item.productName
+    }));
+    
+    const suggestions: Record<string, Array<{ id: string; name: string }>> = {};
+    validation.staleItems.forEach(item => {
+      suggestions[item.staleId] = item.suggestedProducts.map(p => ({
+        id: p.id,
+        name: p.name
+      }));
+    });
+    
+    return {
+      isValid: false,
+      removedItems,
+      suggestions
+    };
   }
   
-  return true;
+  return {
+    isValid: true,
+    removedItems: [],
+    suggestions: {}
+  };
 };

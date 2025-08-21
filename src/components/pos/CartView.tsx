@@ -160,55 +160,11 @@ export default function CartView({
         return false; // Force user to review cart after cleanup
       }
 
-      // Step 2: Attempt resilient inventory sync with repair
-      const { resilientInventoryService } = await import('@/services/pos/resilientInventoryService');
-      
-      const inventoryItems = cartItems.map(item => ({
-        productId: item.productId,
-        name: item.product.name,
-        quantity: item.quantity
-      }));
-
-      const tempTransactionId = `temp-${Date.now()}`;
-      const inventoryResult = await resilientInventoryService.syncInventoryWithResilience(
-        tempTransactionId,
-        currentStore.id,
-        inventoryItems,
-        {
-          repairOnFailure: true,     // Attempt to repair broken recipe/template links
-          allowPartialSync: true,    // Allow transaction with some inventory issues
-          skipOnFailure: false       // Don't completely skip inventory validation
-        }
-      );
-
-      // Step 3: Handle inventory sync results
-      if (inventoryResult.warnings.length > 0) {
-        console.warn('⚠️ Inventory sync warnings:', inventoryResult.warnings);
-        
-        // Show repair notifications to user
-        const repairWarnings = inventoryResult.warnings.filter(w => w.includes('Repaired:'));
-        if (repairWarnings.length > 0) {
-          toast.success(`Auto-repaired: ${repairWarnings.length} items fixed automatically`);
-        }
-        
-        const otherWarnings = inventoryResult.warnings.filter(w => !w.includes('Repaired:'));
-        if (otherWarnings.length > 0) {
-          toast.error(`Inventory issues: ${otherWarnings.slice(0, 2).join(', ')}`);
-        }
-      }
-
-      // Step 4: Check if transaction can proceed
-      if (!inventoryResult.canProceedWithTransaction) {
-        toast.error("Cannot process sale - inventory validation failed. Please try again or contact support.");
+      if (!cleanupResult.isValid) {
         return false;
       }
-
-      // Step 5: Log successful repair attempts
-      if (inventoryResult.repairAttempted) {
-        console.log('🔧 Recipe repair was attempted during checkout');
-      }
-
-      // Step 6: Proceed with payment - enhanced inventory tracking in place
+      
+      // Proceed with payment
       const success = await handlePaymentComplete(
         paymentMethod, 
         amountTendered, 
@@ -220,11 +176,6 @@ export default function CartView({
 
       if (success) {
         setIsPaymentDialogOpen(false);
-        
-        // Show success message with any relevant repair info
-        if (inventoryResult.repairAttempted) {
-          toast.success("Payment completed! Some items were auto-repaired during checkout.");
-        }
       }
       
       return success;
