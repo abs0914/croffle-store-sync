@@ -60,6 +60,7 @@ const SimplifiedRecipeManagement: React.FC = () => {
   // Recipe-Product Integration for status tracking
   const {
     productStatuses,
+    recipeStatuses,
     summary,
     isLoading: statusLoading,
     syncCatalog,
@@ -82,10 +83,19 @@ const SimplifiedRecipeManagement: React.FC = () => {
     enabled: !!selectedStore
   });
 
-  // Get recipe status from product integration
+  // Get recipe status using recipe-first approach
   const getRecipeStatus = (recipeId: string) => {
-    const productStatus = productStatuses.find(p => p.recipeId === recipeId);
-    return productStatus?.status || 'setup_needed';
+    const recipeStatus = recipeStatuses.find(r => r.recipeId === recipeId);
+    if (recipeStatus) {
+      // Map recipe status to product status format for compatibility
+      return recipeStatus.status === 'missing_ingredients' ? 'setup_needed' : recipeStatus.status;
+    }
+    return 'setup_needed';
+  };
+
+  // Get recipe data for display
+  const getRecipeData = (recipeId: string) => {
+    return recipeStatuses.find(r => r.recipeId === recipeId);
   };
 
   // Filter recipes based on search and status
@@ -268,11 +278,11 @@ const SimplifiedRecipeManagement: React.FC = () => {
                     <>
                       <Badge variant="secondary" className="flex items-center gap-1">
                         <CheckCircle className="h-3 w-3 text-green-500" />
-                        {summary.readyToSell} Ready
+                        {summary.recipesReady} Ready
                       </Badge>
                       <Badge variant="outline" className="flex items-center gap-1">
                         <Clock className="h-3 w-3 text-yellow-500" />
-                        {summary.setupNeeded} Setup Needed
+                        {summary.recipesSetupNeeded} Setup Needed
                       </Badge>
                     </>
                   )}
@@ -307,7 +317,7 @@ const SimplifiedRecipeManagement: React.FC = () => {
                 <div className="space-y-4">
                   {filteredRecipes.map((recipe) => {
                     const recipeStatus = getRecipeStatus(recipe.id);
-                    const productData = productStatuses.find(p => p.recipeId === recipe.id);
+                    const recipeData = getRecipeData(recipe.id);
                     
                     return (
                       <div key={recipe.id} className="p-4 border rounded-lg space-y-3">
@@ -317,10 +327,16 @@ const SimplifiedRecipeManagement: React.FC = () => {
                               <h3 className="font-medium text-lg">{recipe.name}</h3>
                               <RecipeStatusIndicator 
                                 status={recipeStatus}
-                                canProduce={productData?.canProduce || false}
-                                availableIngredients={productData?.availableIngredients || 0}
-                                totalIngredients={productData?.totalIngredients || 0}
+                                canProduce={recipeData?.canProduce || false}
+                                availableIngredients={recipeData?.availableIngredients || 0}
+                                totalIngredients={recipeData?.totalIngredients || 0}
                               />
+                              {recipeData?.isLinkedToProduct && (
+                                <Badge variant="outline" className="text-xs">
+                                  <ShoppingCart className="h-3 w-3 mr-1" />
+                                  Linked to Product
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
@@ -331,10 +347,10 @@ const SimplifiedRecipeManagement: React.FC = () => {
                                 <Calculator className="h-3 w-3" />
                                 ₱{recipe.total_cost.toFixed(2)} total cost
                               </span>
-                              {productData && (
+                              {recipeData && (
                                 <span className="flex items-center gap-1">
                                   <CheckCircle className="h-3 w-3" />
-                                  {productData.availableIngredients}/{productData.totalIngredients} available
+                                  {recipeData.availableIngredients}/{recipeData.totalIngredients} available
                                 </span>
                               )}
                             </div>
@@ -376,18 +392,18 @@ const SimplifiedRecipeManagement: React.FC = () => {
                         )}
                         
                         {/* Missing Ingredients Info */}
-                        {productData?.missingIngredients && productData.missingIngredients.length > 0 && (
+                        {recipeData?.missingIngredients && recipeData.missingIngredients.length > 0 && (
                           <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                             <p className="text-xs text-yellow-700 dark:text-yellow-300 font-medium mb-1">Missing ingredients:</p>
                             <div className="flex flex-wrap gap-1">
-                              {productData.missingIngredients.slice(0, 3).map((ingredient, index) => (
+                              {recipeData.missingIngredients.slice(0, 3).map((ingredient, index) => (
                                 <Badge key={index} variant="outline" className="text-xs bg-yellow-100 dark:bg-yellow-900/40">
                                   {ingredient}
                                 </Badge>
                               ))}
-                              {productData.missingIngredients.length > 3 && (
+                              {recipeData.missingIngredients.length > 3 && (
                                 <Badge variant="outline" className="text-xs">
-                                  +{productData.missingIngredients.length - 3} more
+                                  +{recipeData.missingIngredients.length - 3} more
                                 </Badge>
                               )}
                             </div>

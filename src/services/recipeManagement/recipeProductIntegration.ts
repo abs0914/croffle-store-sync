@@ -19,6 +19,19 @@ export interface RecipeProductStatus {
   maxProduction: number;
 }
 
+export interface RecipeAvailabilityStatus {
+  recipeId: string;
+  recipeName: string;
+  status: 'ready_to_sell' | 'setup_needed' | 'missing_ingredients';
+  availableIngredients: number;
+  totalIngredients: number;
+  missingIngredients: string[];
+  canProduce: boolean;
+  maxProduction: number;
+  isLinkedToProduct: boolean;
+  productId?: string;
+}
+
 /**
  * Get comprehensive status for products based on recipe and inventory availability
  */
@@ -273,6 +286,119 @@ export const createMissingRecipes = async (storeId: string): Promise<number> => 
     console.error('Error creating missing recipes:', error);
     return 0;
   }
+};
+
+/**
+ * Get recipe availability status directly from recipes (recipe-first approach)
+ */
+export const getRecipeAvailabilityStatus = async (storeId: string): Promise<RecipeAvailabilityStatus[]> => {
+  try {
+    const { data: recipes, error } = await supabase
+      .from('unified_recipes')
+      .select(`
+        id,
+        name,
+        store_id,
+        unified_recipe_ingredients (
+          ingredient_name,
+          quantity,
+          unit,
+          inventory_stock_id,
+          inventory_stock!left (
+            stock_quantity,
+            item
+          )
+        )
+      `)
+      .eq('store_id', storeId)
+      .eq('is_active', true);
+
+    if (error) throw error;
+
+    const statusResults: RecipeAvailabilityStatus[] = [];
+
+    for (const recipe of recipes) {
+      // Check if recipe is linked to any product
+      const { data: linkedProduct } = await supabase
+        .from('product_catalog')
+        .select('id')
+        .eq('recipe_id', recipe.id)
+        .maybeSingle();
+
+      const status = await analyzeRecipeAvailability(recipe, linkedProduct?.id);
+      statusResults.push(status);
+    }
+
+    return statusResults;
+  } catch (error) {
+    console.error('Error getting recipe availability status:', error);
+    return [];
+  }
+};
+
+/**
+ * Analyze individual recipe availability
+ */
+const analyzeRecipeAvailability = async (recipe: any, productId?: string): Promise<RecipeAvailabilityStatus> => {
+  // Recipe exists but no ingredients - setup needed
+  if (!recipe.unified_recipe_ingredients || recipe.unified_recipe_ingredients.length === 0) {
+    return {
+      recipeId: recipe.id,
+      recipeName: recipe.name,
+      status: 'setup_needed',
+      availableIngredients: 0,
+      totalIngredients: 0,
+      missingIngredients: ['No ingredients configured for recipe'],
+      canProduce: false,
+      maxProduction: 0,
+      isLinkedToProduct: !!productId,
+      productId
+    };
+  }
+
+  // Analyze ingredient availability
+  const ingredients = recipe.unified_recipe_ingredients;
+  let availableCount = 0;
+  let maxProduction = Infinity;
+  const missingIngredients: string[] = [];
+
+  for (const ingredient of ingredients) {
+    const inventoryItem = ingredient.inventory_stock;
+    
+    if (!inventoryItem) {
+      missingIngredients.push(`${ingredient.ingredient_name} (not in inventory)`);
+      continue;
+    }
+
+    const available = inventoryItem.stock_quantity || 0;
+    const required = ingredient.quantity || 0;
+
+    if (available >= required) {
+      availableCount++;
+      if (required > 0) {
+        const possibleQuantity = Math.floor(available / required);
+        maxProduction = Math.min(maxProduction, possibleQuantity);
+      }
+    } else {
+      missingIngredients.push(`${ingredient.ingredient_name} (need ${required}, have ${available})`);
+    }
+  }
+
+  const canProduce = missingIngredients.length === 0;
+  const status: RecipeAvailabilityStatus['status'] = canProduce ? 'ready_to_sell' : 'missing_ingredients';
+
+  return {
+    recipeId: recipe.id,
+    recipeName: recipe.name,
+    status,
+    availableIngredients: availableCount,
+    totalIngredients: ingredients.length,
+    missingIngredients,
+    canProduce,
+    maxProduction: maxProduction === Infinity ? 999 : maxProduction,
+    isLinkedToProduct: !!productId,
+    productId
+  };
 };
 
 /**

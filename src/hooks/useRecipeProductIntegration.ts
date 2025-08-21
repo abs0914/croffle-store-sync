@@ -2,10 +2,12 @@ import { useState, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   getProductRecipeStatus,
+  getRecipeAvailabilityStatus,
   syncProductCatalogWithRecipes,
   createMissingRecipes,
   setupRecipeProductMonitoring,
-  type RecipeProductStatus
+  type RecipeProductStatus,
+  type RecipeAvailabilityStatus
 } from '@/services/recipeManagement/recipeProductIntegration';
 
 export const useRecipeProductIntegration = (storeId: string | null) => {
@@ -24,6 +26,20 @@ export const useRecipeProductIntegration = (storeId: string | null) => {
     enabled: !!storeId,
     refetchInterval: 30000, // Refresh every 30 seconds
     staleTime: 15000 // Consider data stale after 15 seconds
+  });
+
+  // Fetch recipe availability statuses (recipe-first approach)
+  const { 
+    data: recipeStatuses = [], 
+    isLoading: recipesLoading, 
+    error: recipesError,
+    refetch: refetchRecipes
+  } = useQuery({
+    queryKey: ['recipe-availability-status', storeId],
+    queryFn: () => storeId ? getRecipeAvailabilityStatus(storeId) : Promise.resolve([]),
+    enabled: !!storeId,
+    refetchInterval: 30000,
+    staleTime: 15000
   });
 
   // Sync product catalog with recipes
@@ -64,7 +80,7 @@ export const useRecipeProductIntegration = (storeId: string | null) => {
     return cleanup;
   }, [storeId]);
 
-  // Calculate summary metrics
+  // Calculate summary metrics based on both product and recipe data
   const summary = {
     total: productStatuses.length,
     readyToSell: productStatuses.filter(p => p.status === 'ready_to_sell').length,
@@ -74,18 +90,28 @@ export const useRecipeProductIntegration = (storeId: string | null) => {
     canProduce: productStatuses.filter(p => p.canProduce).length,
     needsAttention: productStatuses.filter(p => 
       p.status === 'setup_needed' || p.status === 'missing_template'
-    ).length
+    ).length,
+    // Recipe-specific metrics
+    recipesTotal: recipeStatuses.length,
+    recipesReady: recipeStatuses.filter(r => r.status === 'ready_to_sell').length,
+    recipesSetupNeeded: recipeStatuses.filter(r => r.status === 'setup_needed' || r.status === 'missing_ingredients').length,
+    recipesLinked: recipeStatuses.filter(r => r.isLinkedToProduct).length,
+    recipesUnlinked: recipeStatuses.filter(r => !r.isLinkedToProduct).length
   };
 
   return {
     productStatuses,
+    recipeStatuses,
     summary,
     isLoading,
+    isRecipesLoading: recipesLoading,
     error,
+    recipesError,
     isSync,
     lastSyncTime,
     syncCatalog,
     createRecipes,
-    refetch
+    refetch,
+    refetchRecipes
   };
 };
