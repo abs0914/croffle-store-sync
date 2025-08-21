@@ -5405,17 +5405,29 @@ export type Database = {
         Returns: boolean
       }
       log_bir_audit: {
-        Args: {
-          p_cashier_name?: string
-          p_event_data: Json
-          p_event_name: string
-          p_log_type: string
-          p_receipt_number?: string
-          p_store_id: string
-          p_terminal_id?: string
-          p_transaction_id?: string
-          p_user_id?: string
-        }
+        Args:
+          | {
+              p_cashier_name?: string
+              p_event_data: Json
+              p_event_name: string
+              p_log_type: string
+              p_receipt_number?: string
+              p_store_id: string
+              p_terminal_id?: string
+              p_transaction_id?: string
+              p_user_id?: string
+            }
+          | {
+              p_cashier_name?: string
+              p_event_data: Json
+              p_event_name: string
+              p_log_type: string
+              p_receipt_number?: string
+              p_store_id: string
+              p_terminal_id?: string
+              p_transaction_id?: string
+              p_user_id?: string
+            }
         Returns: string
       }
       log_inventory_sync_result: {
