@@ -8,6 +8,10 @@ export * from './crossSystem/transactionIntegrityService';
 export * from './realtime/dynamicAvailabilityEngine';
 export * from './predictive/availabilityForecasting';
 
+// Reliable Transaction Services (Simplified & Fixed)
+export * from './transactions/simplifiedTransactionService';
+export * from './pos/reliableTransactionService';
+
 // Legacy exports (maintained for compatibility)
 export * from './transactions/inventoryIntegrationService';
 export * from './inventory/directInventoryService';

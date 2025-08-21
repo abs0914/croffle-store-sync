@@ -197,7 +197,8 @@ export const deductInventoryForTransaction = async (
         }
 
         // Log inventory movement
-         // Log inventory movement with proper user ID
+        // Log inventory movement with current user
+         const { data: { user } } = await supabase.auth.getUser();
          const { error: movementError } = await supabase
            .from('inventory_movements')
            .insert({
@@ -207,7 +208,7 @@ export const deductInventoryForTransaction = async (
              previous_quantity: availableQuantity,
              new_quantity: newQuantity,
              notes: `Transaction ${transactionId} - ${cartItem.product_name} (${match.match_type} match: ${ingredient.ingredient_name} -> ${match.inventory_item_name})`,
-             created_by: null // Use null instead of 'system' string for UUID field
+             created_by: user?.id || 'system'
            });
 
          if (movementError) {

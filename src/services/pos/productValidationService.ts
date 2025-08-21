@@ -13,7 +13,7 @@ export interface POSProductValidation {
 
 /**
  * Validates products for POS system to prevent sync issues
- * Uses the comprehensive inventory sync fix validation
+ * Enhanced to check ingredient availability before allowing POS display
  */
 export const validateProductsForPOS = async (
   storeId: string
@@ -21,7 +21,7 @@ export const validateProductsForPOS = async (
   try {
     console.log(`🔍 Validating POS products for store: ${storeId}`);
     
-    // Get all active products from the store
+    // Get all active products with their recipe templates and ingredients
     const { data: products, error } = await supabase
       .from('products')
       .select(`
@@ -35,7 +35,12 @@ export const validateProductsForPOS = async (
           recipe_templates!inner (
             id,
             name,
-            is_active
+            is_active,
+            recipe_template_ingredients (
+              ingredient_name,
+              unit,
+              quantity
+            )
           )
         )
       `)
@@ -50,18 +55,55 @@ export const validateProductsForPOS = async (
 
     const validationResults: POSProductValidation[] = [];
 
-    // Validate each product using the comprehensive validation system
+    // Enhanced validation with ingredient availability check
     for (const product of products || []) {
-      const validation = await validateProductForInventory(product.id);
+      console.log(`🔍 Validating product: ${product.name}`);
+      
+      const recipe = Array.isArray(product.recipes) ? product.recipes[0] : product.recipes;
+      const template = recipe?.recipe_templates;
+      const ingredients = template?.recipe_template_ingredients || [];
+      
+      // Check if all ingredients exist in store inventory
+      let canSell = true;
+      let reason = '';
+      
+      if (ingredients.length === 0) {
+        canSell = false;
+        reason = 'No recipe ingredients defined';
+      } else {
+        // Check each ingredient exists in store inventory
+        for (const ingredient of ingredients) {
+          const { data: inventoryItem } = await supabase
+            .from('inventory_stock')
+            .select('id, stock_quantity, serving_ready_quantity')
+            .eq('store_id', storeId)
+            .eq('item', ingredient.ingredient_name)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          if (!inventoryItem) {
+            canSell = false;
+            reason = `Missing ingredient: ${ingredient.ingredient_name}`;
+            break;
+          }
+          
+          const availableQty = inventoryItem.serving_ready_quantity || inventoryItem.stock_quantity || 0;
+          if (availableQty < ingredient.quantity) {
+            canSell = false;
+            reason = `Insufficient ${ingredient.ingredient_name}: need ${ingredient.quantity}, have ${availableQty}`;
+            break;
+          }
+        }
+      }
       
       validationResults.push({
         productId: product.id,
         productName: product.name,
-        isValid: validation.isValid,
-        canSell: validation.canDeductInventory,
-        reason: validation.reason,
-        hasRecipeTemplate: validation.templateId ? true : false,
-        templateId: validation.templateId
+        isValid: canSell,
+        canSell: canSell,
+        reason: reason,
+        hasRecipeTemplate: template ? true : false,
+        templateId: template?.id
       });
     }
 

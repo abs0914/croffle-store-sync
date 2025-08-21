@@ -199,231 +199,65 @@ export const createTransaction = async (
       receiptNumber
     );
     
-     // Enhanced inventory deduction with comprehensive error handling
-     console.log('🔄 Starting enhanced inventory deduction for transaction:', data.id);
-     console.log('🔄 Transaction items for inventory processing:', transaction.items.map(item => ({
-       productId: item.productId,
-       name: item.name,
-       quantity: item.quantity
-     })));
-     
-     // Start monitoring for this transaction
-     const { startInventorySyncMonitoring } = await import('@/services/inventory/inventorySyncMonitor');
-     startInventorySyncMonitoring(data.id, transaction.storeId, transaction.items);
+     // Simplified inventory processing - single path, fail fast
+     console.log('🔄 Processing inventory for transaction:', data.id);
      
      try {
-       let inventoryResult: { success: boolean; errors: string[] } = { success: false, errors: [] };
+       const { deductInventoryForTransaction } = await import('@/services/inventory/enhancedInventoryDeduction');
        
-        // Use streamlined inventory processing
-        console.log('🔄 Using streamlined inventory processing');
-        const { deductInventoryForTransaction } = await import('@/services/inventory/enhancedInventoryDeduction');
-          
-        // Enhanced dual-table template lookup (products + product_catalog)
-        const itemsWithTemplateIds = await Promise.all(
-          transaction.items.map(async (item) => {
-            console.log(`🔍 Dual-table lookup for ${item.productId}: ${item.name}`);
-            
-            // Strategy 1: Check products table first
-            let { data: product } = await supabase
-              .from('products')
-              .select(`
-                name,
-                recipe_id,
-                recipes (
-                  template_id,
-                  recipe_templates (
-                    id,
-                    name,
-                    is_active
-                  )
-                )
-              `)
-              .eq('id', item.productId)
-              .maybeSingle();
+       // Simple template lookup - fail if no template found
+       const itemsWithTemplateIds = await Promise.all(
+         transaction.items.map(async (item) => {
+           const { data: product } = await supabase
+             .from('products')
+             .select(`
+               name,
+               recipes (
+                 recipe_templates (
+                   id,
+                   is_active
+                 )
+               )
+             `)
+             .eq('id', item.productId)
+             .eq('store_id', transaction.storeId)
+             .maybeSingle();
 
-            const recipe = Array.isArray(product?.recipes) ? product.recipes[0] : product?.recipes;
-            if (recipe?.recipe_templates?.id && recipe.recipe_templates.is_active) {
-              console.log(`✅ Found template in products table: ${item.name}`);
-              return {
-                product_name: product.name,
-                recipe_template_id: recipe.recipe_templates.id,
-                quantity: item.quantity
-              };
-            }
-
-            // Strategy 2: Check product_catalog table
-            const { data: catalogProduct } = await supabase
-              .from('product_catalog')
-              .select(`
-                product_name,
-                recipe_id,
-                recipes (
-                  template_id,
-                  recipe_templates (
-                    id,
-                    name,
-                    is_active
-                  )
-                )
-              `)
-              .eq('id', item.productId)
-              .maybeSingle();
-
-            const catalogRecipe = Array.isArray(catalogProduct?.recipes) ? catalogProduct.recipes[0] : catalogProduct?.recipes;
-            if (catalogRecipe?.recipe_templates?.id && catalogRecipe.recipe_templates.is_active) {
-              console.log(`✅ Found template in product_catalog: ${item.name}`);
-              return {
-                product_name: catalogProduct.product_name,
-                recipe_template_id: catalogRecipe.recipe_templates.id,
-                quantity: item.quantity
-              };
-            }
-
-            // Strategy 3: Find matching template by name
-            const productName = product?.name || catalogProduct?.product_name || item.name;
-            console.log(`🔧 Template lookup by name for: ${productName}`);
-            
-            const { data: template } = await supabase
-              .from('recipe_templates')
-              .select('id, name')
-              .ilike('name', productName)
-              .eq('is_active', true)
-              .maybeSingle();
-
-            if (template) {
-              console.log(`✅ Found matching template by name: ${template.name}`);
-              return {
-                product_name: productName,
-                recipe_template_id: template.id,
-                quantity: item.quantity
-              };
-            }
-            
-            // Strategy 4: Graceful handling - allow transaction without template
-            console.warn(`⚠️ No template found for ${productName} - continuing without inventory deduction`);
-            return {
-              product_name: productName,
-              recipe_template_id: null, // Allow null instead of empty string
-              quantity: item.quantity
-            };
-          })
-        );
-          
-          // Separate items with and without templates
-          const validItems = itemsWithTemplateIds.filter(item => item.recipe_template_id);
-          const itemsWithoutTemplates = itemsWithTemplateIds.filter(item => !item.recipe_template_id);
-          
-          if (itemsWithoutTemplates.length > 0) {
-            console.log('ℹ️ Some items without templates (will use legacy stock update):', 
-              itemsWithoutTemplates.map(i => i.product_name));
-          }
-          
-          if (validItems.length > 0) {
-            console.log(`🔄 Processing ${validItems.length} items with templates`);
-          
-            // Process items with templates
-            const deductionResult = await deductInventoryForTransaction(
-              data.id,
-              transaction.storeId,
-              validItems
-            );
+           const recipe = Array.isArray(product?.recipes) ? product.recipes[0] : product?.recipes;
+           const template = recipe?.recipe_templates;
            
-            inventoryResult = {
-              success: deductionResult.success,
-              errors: deductionResult.failedItems.map(f => f.reason)
-            };
-          } else {
-            // All items lack templates - use legacy approach but don't fail
-            console.log('ℹ️ No template-based items to process');
-            inventoryResult = { success: true, errors: [] };
-          }
-          
-          // Handle items without templates using legacy stock update
-          if (itemsWithoutTemplates.length > 0) {
-            console.log(`🔧 Processing ${itemsWithoutTemplates.length} items without templates (legacy)`);
-            try {
-              await legacyProductStockUpdate(
-                itemsWithoutTemplates.map(item => ({
-                  productId: transaction.items.find(txItem => txItem.name === item.product_name)?.productId,
-                  name: item.product_name,
-                  quantity: item.quantity
-                }))
-              );
-              console.log('✅ Legacy stock update completed');
-            } catch (legacyError) {
-              console.warn('⚠️ Legacy stock update failed:', legacyError);
-              // Don't fail transaction for legacy update failures
-            }
-          }
-          
-          console.log(`📊 Inventory processing completed:`, {
-            transactionId: data.id,
-            totalItems: itemsWithTemplateIds.length,
-            validTemplateItems: validItems.length,
-            legacyItems: itemsWithoutTemplates.length,
-            success: inventoryResult.success
-          });
-      
-      if (!inventoryResult.success && inventoryResult.errors.length > 0) {
-        // Only fail if there are actual critical errors
-        const criticalErrors = inventoryResult.errors.filter(error => 
-          !error.includes('template') && !error.includes('legacy')
-        );
-        
-        if (criticalErrors.length > 0) {
-          console.error('❌ Critical inventory errors:', criticalErrors);
-          
-          // Report sync failure to monitoring
-          const { reportInventorySyncFailure } = await import('@/services/inventory/inventorySyncMonitor');
-          await reportInventorySyncFailure(data.id, transaction.storeId, criticalErrors, transaction.items);
-          
-          // Enhanced rollback with audit logging
-          await rollbackTransactionWithAudit(data.id, criticalErrors, transaction.storeId, transaction.userId);
-          
-          toast.error(`Critical inventory error: ${criticalErrors[0]}`);
-          return null;
-        } else {
-          // Just warnings about templates - proceed with transaction
-          console.warn('⚠️ Non-critical inventory warnings:', inventoryResult.errors);
-        }
-      }
-      
-      console.log('✅ Inventory processing completed for transaction:', data.id);
-      
-      // Report sync success to monitoring
-      const { reportInventorySyncSuccess } = await import('@/services/inventory/inventorySyncMonitor');
-      reportInventorySyncSuccess(data.id);
-      
-      // Log successful inventory sync for monitoring
-      await logInventorySyncSuccess(data.id, transaction.items.length, transaction.storeId);
+           if (!template || !template.is_active) {
+             throw new Error(`Product ${item.name} has no active recipe template`);
+           }
+           
+           return {
+             product_name: product.name,
+             recipe_template_id: template.id,
+             quantity: item.quantity
+           };
+         })
+       );
+       
+       // Process inventory deduction
+       const deductionResult = await deductInventoryForTransaction(
+         data.id,
+         transaction.storeId,
+         itemsWithTemplateIds
+       );
+       
+       if (!deductionResult.success) {
+         throw new Error(`Inventory deduction failed: ${deductionResult.failedItems[0]?.reason || 'Unknown error'}`);
+       }
+       
+       console.log('✅ Inventory processing completed successfully');
       
     } catch (inventoryError) {
-      console.error('❌ Critical inventory processing error:', {
-        error: inventoryError,
-        transactionId: data.id,
-        storeId: transaction.storeId,
-        itemCount: transaction.items.length,
-        timestamp: new Date().toISOString()
-      });
+      console.error('❌ Inventory processing error:', inventoryError);
       
-      // Report critical failure to monitoring
-      const { reportInventorySyncFailure } = await import('@/services/inventory/inventorySyncMonitor');
-      await reportInventorySyncFailure(
-        data.id, 
-        transaction.storeId, 
-        [`Critical error: ${inventoryError instanceof Error ? inventoryError.message : String(inventoryError)}`], 
-        transaction.items
-      );
+      // Rollback transaction
+      await supabase.from('transactions').delete().eq('id', data.id);
       
-      // Enhanced rollback with comprehensive error logging
-      await rollbackTransactionWithAudit(
-        data.id, 
-        [`Critical error: ${inventoryError instanceof Error ? inventoryError.message : String(inventoryError)}`], 
-        transaction.storeId, 
-        transaction.userId
-      );
-      
-      toast.error('Transaction failed - critical inventory processing error');
+      toast.error(`Transaction failed: ${inventoryError instanceof Error ? inventoryError.message : 'Inventory error'}`);
       return null;
     }
     
