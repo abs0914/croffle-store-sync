@@ -247,6 +247,8 @@ const RecipeManagement: React.FC = () => {
             <TabsTrigger value="status">Status Overview</TabsTrigger>
             <TabsTrigger value="unlinked">Unlinked Products</TabsTrigger>
             <TabsTrigger value="linked">Linked Products</TabsTrigger>
+            <TabsTrigger value="templates">Recipe Templates</TabsTrigger>
+            <TabsTrigger value="recipes">Individual Recipes</TabsTrigger>
           </TabsList>
 
           <TabsContent value="status" className="space-y-4">
@@ -361,6 +363,125 @@ const RecipeManagement: React.FC = () => {
                       No linked products yet. Run sync to create recipe links.
                     </p>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="recipes" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ChefHat className="h-5 w-5" />
+                  Individual Recipe Management
+                </CardTitle>
+                <CardDescription>
+                  Edit specific recipes for this store. Changes here won't affect other stores.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {linkedProducts.map((product: any) => (
+                    <div key={product.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <p className="font-medium">{product.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Recipe ID: {product.recipe_id} | Template: {(product as any).recipes?.recipe_templates?.name || 'Custom'}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            // TODO: Open recipe editor dialog
+                            toast.info(`Edit recipe for ${product.name}`);
+                          }}
+                        >
+                          Edit Recipe
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            // TODO: View recipe ingredients
+                            toast.info(`View ingredients for ${product.name}`);
+                          }}
+                        >
+                          View Ingredients
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {linkedProducts.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No recipes available. Link some products first using the sync function.
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="templates" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Recipe Templates
+                </CardTitle>
+                <CardDescription>
+                  Global recipe templates that can be deployed to any store.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {templates.map((template: any) => (
+                    <div key={template.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <p className="font-medium">{template.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {template.description || 'No description'}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            toast.info(`Edit template: ${template.name}`);
+                          }}
+                        >
+                          Edit Template
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          onClick={() => {
+                            toast.info(`Deploy ${template.name} to store`);
+                          }}
+                        >
+                          Deploy to Store
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <div className="mt-4 p-4 border-2 border-dashed rounded-lg">
+                    <div className="text-center">
+                      <Package className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="font-medium">Create New Template</p>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Create a reusable recipe template for deployment to multiple stores
+                      </p>
+                      <Button 
+                        onClick={() => {
+                          toast.info('Opening template creator...');
+                        }}
+                      >
+                        Create Template
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
