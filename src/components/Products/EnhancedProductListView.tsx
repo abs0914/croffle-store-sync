@@ -44,7 +44,6 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
-  const [healthFilter, setHealthFilter] = useState<string>('all');
   
   const canEditPrices = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
 
@@ -117,37 +116,25 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
     const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
     
     const matchesStock = stockFilter === 'all' || 
-      (stockFilter === 'in_stock' && product.stock_status === 'in_stock') ||
-      (stockFilter === 'low_stock' && product.stock_status === 'low_stock') ||
-      (stockFilter === 'out_of_stock' && product.stock_status === 'out_of_stock') ||
-      (stockFilter === 'missing_inventory' && product.stock_status === 'missing_inventory') ||
       (stockFilter === 'pos_ready' && product.pos_ready) ||
       (stockFilter === 'needs_attention' && !product.pos_ready);
     
-    const matchesHealth = healthFilter === 'all' ||
-      (healthFilter === 'healthy' && product.health_score >= 80) ||
-      (healthFilter === 'issues' && product.health_score < 80) ||
-      (healthFilter === 'critical' && product.health_score < 50);
-    
-    return matchesSearch && matchesCategory && matchesStock && matchesHealth;
+    return matchesSearch && matchesCategory && matchesStock;
   });
 
-  // Helper functions for status badges and icons
-  const getStockStatusBadge = (status: EnhancedProductCatalog['stock_status']) => {
-    switch (status) {
-      case 'in_stock':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">In Stock</Badge>;
-      case 'low_stock':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Low Stock</Badge>;
-      case 'out_of_stock':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">Out of Stock</Badge>;
-      case 'missing_inventory':
-        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">Missing Inventory</Badge>;
-      case 'direct_product':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Direct Product</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
+  // Helper functions for simplified status badges
+  const getSimpleStatusBadge = (product: EnhancedProductCatalog) => {
+    // Determine overall status priority: POS Ready > Setup Needed > Direct Product
+    if (product.pos_ready) {
+      return <Badge className="bg-green-100 text-green-800 border-green-200">Ready to Sell</Badge>;
     }
+    
+    if (product.stock_status === 'direct_product') {
+      return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Direct Product</Badge>;
+    }
+    
+    // Any other status means setup is needed
+    return <Badge className="bg-orange-100 text-orange-800 border-orange-200">Setup Needed</Badge>;
   };
 
   const getHealthScoreColor = (score: number) => {
@@ -249,7 +236,7 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
       {/* Search and Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -279,28 +266,12 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
 
             <Select value={stockFilter} onValueChange={setStockFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Stock Status" />
+                <SelectValue placeholder="Availability" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Stock Status</SelectItem>
-                <SelectItem value="pos_ready">POS Ready</SelectItem>
-                <SelectItem value="needs_attention">Needs Attention</SelectItem>
-                <SelectItem value="in_stock">In Stock</SelectItem>
-                <SelectItem value="low_stock">Low Stock</SelectItem>
-                <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                <SelectItem value="missing_inventory">Missing Inventory</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={healthFilter} onValueChange={setHealthFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Health Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Health Levels</SelectItem>
-                <SelectItem value="healthy">Healthy (80%+)</SelectItem>
-                <SelectItem value="issues">Has Issues (&lt;80%)</SelectItem>
-                <SelectItem value="critical">Critical (&lt;50%)</SelectItem>
+                <SelectItem value="all">All Products</SelectItem>
+                <SelectItem value="pos_ready">Ready to Sell</SelectItem>
+                <SelectItem value="needs_attention">Setup Needed</SelectItem>
               </SelectContent>
             </Select>
 
@@ -311,7 +282,6 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
           </div>
         </CardContent>
       </Card>
-
       {/* Products List View */}
       <Card>
         <CardHeader>
@@ -323,7 +293,7 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
               <p className="text-muted-foreground">
-                {searchTerm || selectedCategory !== 'all' || stockFilter !== 'all' || healthFilter !== 'all'
+                {searchTerm || selectedCategory !== 'all' || stockFilter !== 'all'
                   ? 'Try adjusting your search terms or filters.'
                   : 'No products have been deployed to this store yet.'
                 }
@@ -376,21 +346,9 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
                     </Badge>
                   </div>
 
-                  {/* Stock Status */}
+                  {/* Simplified Status */}
                   <div className="hidden md:block">
-                    {getStockStatusBadge(product.stock_status)}
-                  </div>
-
-                  {/* Template Status */}
-                  <div className="hidden lg:block">
-                    <Badge 
-                      variant={product.has_recipe_template ? 'default' : 'destructive'}
-                      className="text-xs"
-                    >
-                      {product.template_status === 'missing' ? 'No Template' :
-                       product.template_status === 'inactive' ? 'Template Inactive' :
-                       product.stock_status === 'direct_product' ? 'Direct' : 'Template OK'}
-                    </Badge>
+                    {getSimpleStatusBadge(product)}
                   </div>
 
                   {/* Price */}
@@ -398,11 +356,9 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
                     <div className="font-semibold text-green-600">
                       {formatCurrency(product.price || 0)}
                     </div>
-                    {product.stock_count !== undefined && (
-                      <div className="text-xs text-muted-foreground">
-                        Stock: {product.stock_count}
-                      </div>
-                    )}
+                    <div className="text-xs text-muted-foreground">
+                      Ingredient-Based
+                    </div>
                   </div>
 
                   {/* POS Ready Status */}
