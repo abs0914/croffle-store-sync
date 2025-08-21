@@ -146,7 +146,7 @@ export class InventoryRollbackService {
         .from('inventory_movements')
         .insert({
           inventory_stock_id: ingredient.inventory_stock_id,
-          movement_type: 'rollback',
+          movement_type: 'adjustment',
           quantity_change: restoreQuantity,
           previous_quantity: currentStock,
           new_quantity: newStock,
