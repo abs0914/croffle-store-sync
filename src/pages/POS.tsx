@@ -8,6 +8,7 @@ import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import { useAutomaticAvailability } from "@/hooks/useAutomaticAvailability";
 import { useLargeOrderDiagnostics } from "@/hooks/useLargeOrderDiagnostics";
 import { realTimeNotificationService } from "@/services/notifications/realTimeNotificationService";
+import { quickCheckoutValidation } from "@/services/pos/lightweightValidationService";
 
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
@@ -129,6 +130,17 @@ export default function POS() {
     
     try {
       console.log("POS: Processing payment with enhanced inventory validation...");
+      
+      // Quick validation as safety net (proactive validation is primary)
+      const validationResult = await quickCheckoutValidation(items, currentStore.id);
+      if (!validationResult.isValid) {
+        toast.error(`Cannot process payment: ${validationResult.message}`);
+        return false;
+      }
+      
+      if (validationResult.invalidProducts.length > 0) {
+        console.warn('Some items failed validation but proceeding:', validationResult.invalidProducts);
+      }
       
     // Convert cart items to the format expected by the transaction handler
     const cartItemsForTransaction = items.map(item => ({

@@ -19,7 +19,8 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
         )
       `)
       .eq("store_id", storeId)
-      .eq("is_available", true)
+      // Remove is_available filter to include products marked unavailable by automatic service
+      // We'll filter in the UI based on product_status and is_available together
       .order("display_order", { ascending: true });
 
     // If that fails for any reason, attempt a minimal fallback query

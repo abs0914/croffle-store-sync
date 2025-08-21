@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Info } from "lucide-react";
+import { Plus, Info, AlertTriangle, XCircle } from "lucide-react";
+import { ProductStatusIndicator } from "@/components/pos/ProductStatusIndicator";
 
 interface ProductCardProps {
   product: Product;
@@ -22,20 +23,27 @@ export default function ProductCard({
 }: ProductCardProps) {
   const isActive = product.is_active || product.isActive;
   const stockQuantity = product.stock_quantity || product.stockQuantity || 0;
+  
+  // Check ingredient availability from automatic service
+  const isIngredientAvailable = product.product_status !== 'out_of_stock' && 
+                                product.product_status !== 'temporarily_unavailable' &&
+                                (product.is_available !== false);
+  
+  const canSell = isActive && isIngredientAvailable;
 
   const categoryName = product.category
     ? (typeof product.category === 'string' ? product.category : product.category.name)
     : getCategoryName(product.category_id);
 
   const handleClick = () => {
-    if (isShiftActive && isActive) {
+    if (isShiftActive && canSell) {
       onClick(product);
     }
   };
 
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isShiftActive && isActive) {
+    if (isShiftActive && canSell) {
       onClick(product);
     }
   };
@@ -45,13 +53,14 @@ export default function ProductCard({
       onClick={handleClick}
       className={`
         relative overflow-hidden transition-all duration-200 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md group cursor-pointer
-        ${isShiftActive && isActive
+        ${isShiftActive && canSell
           ? 'hover:shadow-lg hover:border-blue-300'
           : isShiftActive
             ? 'opacity-50 cursor-not-allowed'
             : 'cursor-default'
         }
-        ${!isActive ? 'opacity-60' : ''}
+        ${!canSell ? 'opacity-60' : ''}
+        ${!isIngredientAvailable ? 'border-red-200 bg-red-50' : ''}
       `}
     >
       {/* Product Image */}
@@ -80,20 +89,30 @@ export default function ProductCard({
               Inactive
             </Badge>
           )}
-          {stockQuantity <= 5 && stockQuantity > 0 && (
+          {!isIngredientAvailable && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="destructive" className="text-xs font-medium px-1 py-0 flex items-center gap-1">
+                    <XCircle className="w-2 h-2" />
+                    Out of Stock
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Insufficient ingredients to make this item</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {stockQuantity <= 5 && stockQuantity > 0 && isIngredientAvailable && (
             <Badge variant="destructive" className="text-xs font-medium px-1 py-0">
               Low
-            </Badge>
-          )}
-          {stockQuantity === 0 && (
-            <Badge variant="destructive" className="text-xs font-medium px-1 py-0">
-              Out
             </Badge>
           )}
         </div>
 
         {/* Add Button */}
-        {isShiftActive && isActive && (
+        {isShiftActive && canSell && (
           <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
             <Button
               size="sm"
