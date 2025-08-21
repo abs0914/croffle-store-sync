@@ -48,9 +48,21 @@ export const AdminAppRoutes = () => {
         }
       />
 
-      {/* Simple Recipe Management */}
+      {/* Recipe Management - Unified Route */}
       <Route
         path="/admin/recipe-management"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout>
+              <RecipeManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Redirect old recipes route to new unified recipe management */}
+      <Route
+        path="/admin/recipes"
         element={
           <AdminProtectedRoute>
             <AdminLayout>
