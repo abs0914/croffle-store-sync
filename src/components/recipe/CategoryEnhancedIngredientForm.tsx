@@ -97,12 +97,17 @@ export const CategoryEnhancedIngredientForm: React.FC<CategoryEnhancedIngredient
     return groups;
   }, [inventoryItems]);
 
-  const handleInventoryItemSelect = (inventoryStockId: string) => {
-    const selectedItem = inventoryItems.find(item => item.id === inventoryStockId);
+  const handleInventoryItemSelect = (value: string) => {
+    // Skip if selecting the legacy ingredient placeholder
+    if (value.startsWith('legacy-')) {
+      return;
+    }
+    
+    const selectedItem = inventoryItems.find(item => item.id === value);
     if (selectedItem) {
       onUpdate(index, {
         ...ingredient,
-        inventory_stock_id: inventoryStockId,
+        inventory_stock_id: value,
         ingredient_name: selectedItem.item,
         unit: selectedItem.unit,
         cost_per_unit: selectedItem.cost || 0
@@ -126,6 +131,10 @@ export const CategoryEnhancedIngredientForm: React.FC<CategoryEnhancedIngredient
 
   const totalCost = ingredient.quantity * ingredient.cost_per_unit;
   const selectedItem = inventoryItems.find(item => item.id === ingredient.inventory_stock_id);
+  
+  // Create a legacy value for existing ingredients without inventory_stock_id
+  const legacyValue = `legacy-${index}`;
+  const selectValue = ingredient.inventory_stock_id || (ingredient.ingredient_name ? legacyValue : undefined);
 
   if (loading && !ingredient.ingredient_name) {
     return (
@@ -169,15 +178,26 @@ export const CategoryEnhancedIngredientForm: React.FC<CategoryEnhancedIngredient
         <div className="space-y-2">
           <Label htmlFor={`ingredient-${index}`}>Select Ingredient</Label>
           <Select
-            value={ingredient.inventory_stock_id || undefined}
+            value={selectValue}
             onValueChange={handleInventoryItemSelect}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Choose an ingredient...">
-                {ingredient.ingredient_name || undefined}
-              </SelectValue>
+              <SelectValue placeholder="Choose an ingredient..." />
             </SelectTrigger>
             <SelectContent className="max-h-60">
+              {/* Show existing ingredient as legacy if it has name but no inventory_stock_id */}
+              {ingredient.ingredient_name && !ingredient.inventory_stock_id && (
+                <SelectItem value={legacyValue} disabled>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <span>{ingredient.ingredient_name}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {ingredient.unit}
+                    </Badge>
+                    <span className="text-xs">(Legacy ingredient)</span>
+                  </div>
+                </SelectItem>
+              )}
+              
               {/* Show existing ingredient if not found in current inventory */}
               {ingredient.ingredient_name && ingredient.inventory_stock_id && !selectedItem && !loading && (
                 <SelectItem value={ingredient.inventory_stock_id} disabled>
