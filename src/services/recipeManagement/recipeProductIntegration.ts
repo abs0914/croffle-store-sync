@@ -31,21 +31,17 @@ export const getProductRecipeStatus = async (storeId: string): Promise<RecipePro
         product_name,
         is_available,
         recipe_id,
-        recipes!left (
+        unified_recipes!left (
           id,
-          template_id,
-          recipe_templates!left (
-            id,
-            name,
-            recipe_template_ingredients (
-              ingredient_name,
-              quantity,
-              unit,
-              inventory_stock_id,
-              inventory_stock!left (
-                stock_quantity,
-                item
-              )
+          name,
+          unified_recipe_ingredients (
+            ingredient_name,
+            quantity,
+            unit,
+            inventory_stock_id,
+            inventory_stock!left (
+              stock_quantity,
+              item
             )
           )
         )
@@ -73,7 +69,7 @@ export const getProductRecipeStatus = async (storeId: string): Promise<RecipePro
  */
 const analyzeProductStatus = async (product: any, storeId: string): Promise<RecipeProductStatus> => {
   // No recipe - direct product
-  if (!product.recipe_id || !product.recipes) {
+  if (!product.recipe_id || !product.unified_recipes) {
     return {
       productId: product.id,
       productName: product.product_name,
@@ -86,11 +82,10 @@ const analyzeProductStatus = async (product: any, storeId: string): Promise<Reci
     };
   }
 
-  const recipe = product.recipes;
-  const template = recipe.recipe_templates;
+  const recipe = product.unified_recipes;
 
-  // Recipe exists but no template - setup needed
-  if (!template || !template.recipe_template_ingredients) {
+  // Recipe exists but no ingredients - setup needed
+  if (!recipe.unified_recipe_ingredients || recipe.unified_recipe_ingredients.length === 0) {
     return {
       productId: product.id,
       productName: product.product_name,
@@ -98,14 +93,14 @@ const analyzeProductStatus = async (product: any, storeId: string): Promise<Reci
       recipeId: recipe.id,
       availableIngredients: 0,
       totalIngredients: 0,
-      missingIngredients: ['Recipe template not found'],
+      missingIngredients: ['No ingredients configured for recipe'],
       canProduce: false,
       maxProduction: 0
     };
   }
 
   // Analyze ingredient availability
-  const ingredients = template.recipe_template_ingredients;
+  const ingredients = recipe.unified_recipe_ingredients;
   let availableCount = 0;
   let maxProduction = Infinity;
   const missingIngredients: string[] = [];
@@ -140,7 +135,6 @@ const analyzeProductStatus = async (product: any, storeId: string): Promise<Reci
     productName: product.product_name,
     status,
     recipeId: recipe.id,
-    templateId: template.id,
     availableIngredients: availableCount,
     totalIngredients: ingredients.length,
     missingIngredients,
@@ -227,7 +221,7 @@ export const createMissingRecipes = async (storeId: string): Promise<number> => 
   try {
     console.log('🔧 Creating missing recipes for store:', storeId);
 
-    // Find products without recipes that have matching templates
+    // Find products without recipes
     const { data: orphanedProducts, error } = await supabase
       .from('product_catalog')
       .select(`
@@ -243,41 +237,29 @@ export const createMissingRecipes = async (storeId: string): Promise<number> => 
     let createdCount = 0;
 
     for (const product of orphanedProducts) {
-      // Find matching template
-      const { data: template } = await supabase
-        .from('recipe_templates')
-        .select('id')
-        .ilike('name', product.product_name)
-        .eq('is_active', true)
-        .limit(1)
+      // Create basic unified recipe for this product
+      const { data: newRecipe, error: recipeError } = await supabase
+        .from('unified_recipes')
+        .insert({
+          name: product.product_name,
+          store_id: storeId,
+          is_active: true,
+          serving_size: 1,
+          total_cost: 0,
+          cost_per_serving: 0,
+          instructions: `Auto-generated recipe for ${product.product_name}. Please add ingredients.`
+        })
+        .select()
         .single();
 
-      if (template) {
-        // Create recipe for this product
-        const { data: newRecipe, error: recipeError } = await supabase
-          .from('recipes')
-          .insert({
-            name: product.product_name,
-            store_id: storeId,
-            template_id: template.id,
-            is_active: true,
-            serving_size: 1,
-            total_cost: 0,
-            cost_per_serving: 0,
-            instructions: `Auto-generated recipe from template for ${product.product_name}`
-          })
-          .select()
-          .single();
+      if (!recipeError && newRecipe) {
+        // Link product to recipe
+        await supabase
+          .from('product_catalog')
+          .update({ recipe_id: newRecipe.id })
+          .eq('id', product.id);
 
-        if (!recipeError && newRecipe) {
-          // Link product to recipe
-          await supabase
-            .from('product_catalog')
-            .update({ recipe_id: newRecipe.id })
-            .eq('id', product.id);
-
-          createdCount++;
-        }
+        createdCount++;
       }
     }
 
@@ -317,18 +299,36 @@ export const setupRecipeProductMonitoring = (storeId: string): (() => void) => {
     )
     .subscribe();
 
-  // Monitor recipe template changes
-  const templateChannel = supabase
-    .channel('template-changes')
+  // Monitor unified recipe changes
+  const recipeChannel = supabase
+    .channel('recipe-changes')
     .on(
       'postgres_changes',
       {
         event: '*',
         schema: 'public',
-        table: 'recipe_templates'
+        table: 'unified_recipes',
+        filter: `store_id=eq.${storeId}`
       },
       async () => {
-        console.log('📋 Recipe template change detected, syncing products...');
+        console.log('📋 Recipe change detected, syncing products...');
+        await syncProductCatalogWithRecipes(storeId);
+      }
+    )
+    .subscribe();
+
+  // Monitor recipe ingredient changes
+  const ingredientChannel = supabase
+    .channel('ingredient-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'unified_recipe_ingredients'
+      },
+      async () => {
+        console.log('🥘 Recipe ingredient change detected, syncing products...');
         await syncProductCatalogWithRecipes(storeId);
       }
     )
@@ -336,6 +336,7 @@ export const setupRecipeProductMonitoring = (storeId: string): (() => void) => {
 
   return () => {
     supabase.removeChannel(inventoryChannel);
-    supabase.removeChannel(templateChannel);
+    supabase.removeChannel(recipeChannel);
+    supabase.removeChannel(ingredientChannel);
   };
 };
