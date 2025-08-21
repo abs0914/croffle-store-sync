@@ -3,6 +3,9 @@ import { TemplateRecipeSyncEngine } from "../recipeSync/templateRecipeSyncEngine
 import { IntelligentValidationService } from "../inventory/intelligentValidationService";
 import { AutoRepairService } from "../selfHealing/autoRepairService";
 import { TransactionIntegrityService } from "../crossSystem/transactionIntegrityService";
+import { DynamicAvailabilityEngine } from "../realtime/dynamicAvailabilityEngine";
+import { AvailabilityForecastingService } from "../predictive/availabilityForecasting";
+import { IntelligentIngredientMatcher } from "../inventory/intelligentIngredientMatcher";
 import { toast } from "sonner";
 
 /**
@@ -18,10 +21,13 @@ export class MasterControlService {
     try {
       console.log('🏗️ Initializing comprehensive architecture...');
       
-      // Phase 1: Start automatic health monitoring
+      // Phase 1: Initialize real-time availability engine
+      await DynamicAvailabilityEngine.initialize();
+      
+      // Phase 2: Start automatic health monitoring
       await AutoRepairService.scheduleAutomaticHealthChecks();
       
-      // Phase 2: Run initial system repair
+      // Phase 3: Run initial system repair
       const initialRepair = await AutoRepairService.runSystemHealthCheck();
       
       if (initialRepair.totalIssues > 0) {
@@ -31,6 +37,9 @@ export class MasterControlService {
           toast.warning(`System initialized but ${initialRepair.failed} issues need manual attention`);
         }
       }
+      
+      // Phase 4: Initialize predictive services
+      console.log('📈 Initializing predictive services...');
       
       console.log('✅ Architecture initialization complete');
       return true;
@@ -176,25 +185,122 @@ export class MasterControlService {
   }
   
   /**
-   * Get comprehensive system health report
+   * Get comprehensive system health report including predictive analytics
    */
   static async getSystemHealthReport(storeId?: string) {
-    console.log('📊 Generating system health report...');
+    console.log('📊 Generating comprehensive system health report...');
     
     const healthReport = await AutoRepairService.runSystemHealthCheck(storeId);
     
-    // Also get validation summary if store specified
+    // Get validation summary if store specified
     let validationSummary = null;
+    let availabilityStatus = null;
+    let forecastData = null;
+    
     if (storeId) {
       const products = await IntelligentValidationService.getSellableProducts(storeId);
       validationSummary = products.validationSummary;
+      
+      // Get real-time availability status
+      availabilityStatus = await DynamicAvailabilityEngine.getRealtimeAvailabilityStatus(storeId);
+      
+      // Get forecasting data
+      forecastData = await AvailabilityForecastingService.forecastIngredientNeeds(storeId);
     }
     
     return {
       healthReport,
       validationSummary,
+      availabilityStatus,
+      forecastData,
       timestamp: new Date().toISOString()
     };
+  }
+  
+  /**
+   * Enhanced ingredient matching and auto-creation
+   */
+  static async enhanceIngredientMatching(ingredientName: string, storeId: string): Promise<{
+    matchFound: boolean;
+    match?: any;
+    created: boolean;
+    confidence?: number;
+  }> {
+    console.log('🔍 Enhanced ingredient matching for:', ingredientName);
+    
+    // Try intelligent matching first
+    const matchResult = await IntelligentIngredientMatcher.findMatchingInventoryItem(
+      ingredientName, 'pieces', storeId
+    );
+    
+    if (matchResult.match) {
+      return {
+        matchFound: true,
+        match: matchResult.match,
+        created: false,
+        confidence: matchResult.confidence
+      };
+    }
+    
+    // If no match, try to create from commissary
+    const createResult = await IntelligentIngredientMatcher.createFromCommissary(
+      ingredientName, 'pieces', storeId
+    );
+    
+    return {
+      matchFound: createResult.success,
+      match: createResult.item,
+      created: createResult.success,
+      confidence: createResult.success ? 1.0 : 0
+    };
+  }
+  
+  /**
+   * Trigger predictive reordering for a store
+   */
+  static async triggerPredictiveReordering(storeId: string) {
+    console.log('📈 Triggering predictive reordering...');
+    
+    // Get forecasting data
+    const forecast = await AvailabilityForecastingService.forecastIngredientNeeds(storeId);
+    
+    // Trigger proactive transfers
+    const transfers = await AvailabilityForecastingService.triggerProactiveTransfers(storeId);
+    
+    // Update reorder points
+    const reorderUpdate = await AvailabilityForecastingService.calculateSmartReorderPoints(storeId);
+    
+    const summary = {
+      criticalItems: forecast.summary.criticalItems,
+      transfersTriggered: transfers.transfersTriggered,
+      reorderPointsUpdated: reorderUpdate.updated,
+      estimatedDeliveryTime: transfers.estimatedDeliveryTime
+    };
+    
+    if (summary.criticalItems > 0) {
+      toast.warning(`${summary.criticalItems} critical items need attention`);
+    }
+    
+    if (summary.transfersTriggered > 0) {
+      toast.success(`${summary.transfersTriggered} automatic transfers initiated`);
+    }
+    
+    return summary;
+  }
+  
+  /**
+   * Real-time availability refresh
+   */
+  static async refreshAvailability(storeId?: string) {
+    console.log('🔄 Refreshing real-time availability...');
+    
+    if (storeId) {
+      await DynamicAvailabilityEngine.emergencyRefresh(storeId);
+    } else {
+      await DynamicAvailabilityEngine.syncAllProductAvailability();
+    }
+    
+    toast.success('Product availability refreshed');
   }
 }
 
