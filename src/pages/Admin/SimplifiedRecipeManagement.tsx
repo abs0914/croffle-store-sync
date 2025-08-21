@@ -21,9 +21,25 @@ import {
   BarChart3
 } from 'lucide-react';
 import { SimplifiedRecipeForm } from '@/components/recipe/SimplifiedRecipeForm';
-import { unifiedRecipeRouter, NormalizedRecipe } from '@/services/recipeManagement/unifiedRecipeRouter';
-import { RecipeSystemStatus } from '@/components/Admin/components/RecipeSystemStatus';
-import { RecipeAnalysisDashboard } from '@/components/Admin/components/RecipeAnalysisDashboard';
+import { unifiedRecipeService, UnifiedRecipe as ServiceUnifiedRecipe } from '@/services/unifiedRecipeService';
+
+interface UnifiedRecipe {
+  id: string;
+  name: string;
+  store_id: string;
+  total_cost: number;
+  cost_per_serving: number;
+  serving_size: number;
+  is_active: boolean;
+  ingredients?: Array<{
+    id: string;
+    ingredient_name: string;
+    quantity: number;
+    unit: string;
+    cost_per_unit: number;
+    inventory_stock_id: string;
+  }>;
+}
 
 const SimplifiedRecipeManagement: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string>('');
@@ -31,8 +47,7 @@ const SimplifiedRecipeManagement: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedRecipe, setSelectedRecipe] = useState<NormalizedRecipe | null>(null);
-  const [showAnalysisDashboard, setShowAnalysisDashboard] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<UnifiedRecipe | null>(null);
   
   const queryClient = useQueryClient();
 
@@ -45,10 +60,10 @@ const SimplifiedRecipeManagement: React.FC = () => {
     }
   });
 
-  // Fetch recipes for selected store (both systems)
+  // Fetch recipes for selected store (unified system only)
   const { data: recipes = [], isLoading: recipesLoading } = useQuery({
-    queryKey: ['all_recipes', selectedStore],
-    queryFn: () => unifiedRecipeRouter.getRecipesByStore(selectedStore),
+    queryKey: ['unified_recipes', selectedStore],
+    queryFn: () => unifiedRecipeService.getRecipesByStore(selectedStore),
     enabled: !!selectedStore
   });
 
@@ -59,37 +74,48 @@ const SimplifiedRecipeManagement: React.FC = () => {
 
   // Create recipe mutation
   const createRecipeMutation = useMutation({
-    mutationFn: (data: { name: string; ingredients: any[]; target_system?: 'unified' | 'legacy' }) => 
-      unifiedRecipeRouter.createRecipe({
+    mutationFn: (data: { name: string; ingredients: any[] }) => 
+      unifiedRecipeService.createRecipe({
         name: data.name,
         store_id: selectedStore,
-        ingredients: data.ingredients,
-        target_system: data.target_system || 'unified'
+        ingredients: data.ingredients
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all_recipes', selectedStore] });
+      queryClient.invalidateQueries({ queryKey: ['unified_recipes', selectedStore] });
       setCreateDialogOpen(false);
+      toast.success('Recipe created successfully');
+    },
+    onError: () => {
+      toast.error('Failed to create recipe');
     }
   });
 
   // Update recipe mutation
   const updateRecipeMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: { name: string; ingredients: any[] } }) =>
-      unifiedRecipeRouter.updateRecipe(id, data),
+      unifiedRecipeService.updateRecipe(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all_recipes', selectedStore] });
+      queryClient.invalidateQueries({ queryKey: ['unified_recipes', selectedStore] });
       setEditDialogOpen(false);
       setSelectedRecipe(null);
+      toast.success('Recipe updated successfully');
+    },
+    onError: () => {
+      toast.error('Failed to update recipe');
     }
   });
 
   // Delete recipe mutation
   const deleteRecipeMutation = useMutation({
-    mutationFn: (id: string) => unifiedRecipeRouter.deleteRecipe(id),
+    mutationFn: (id: string) => unifiedRecipeService.deleteRecipe(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all_recipes', selectedStore] });
+      queryClient.invalidateQueries({ queryKey: ['unified_recipes', selectedStore] });
       setDeleteDialogOpen(false);
       setSelectedRecipe(null);
+      toast.success('Recipe deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete recipe');
     }
   });
 
@@ -109,12 +135,12 @@ const SimplifiedRecipeManagement: React.FC = () => {
     }
   };
 
-  const openEditDialog = (recipe: NormalizedRecipe) => {
+  const openEditDialog = (recipe: UnifiedRecipe) => {
     setSelectedRecipe(recipe);
     setEditDialogOpen(true);
   };
 
-  const openDeleteDialog = (recipe: NormalizedRecipe) => {
+  const openDeleteDialog = (recipe: UnifiedRecipe) => {
     setSelectedRecipe(recipe);
     setDeleteDialogOpen(true);
   };
@@ -160,155 +186,118 @@ const SimplifiedRecipeManagement: React.FC = () => {
 
       {selectedStore && (
         <>
-          {/* Navigation Tabs */}
-          <Tabs defaultValue="recipes" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="recipes">Recipe Management</TabsTrigger>
-              <TabsTrigger value="analysis">Migration Analysis</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="recipes" className="space-y-6">
-              {/* Recipe System Status */}
-              <RecipeSystemStatus 
-                storeId={selectedStore} 
-                showFullBreakdown={false}
+          {/* Actions Bar */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search recipes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
               />
+            </div>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Recipe
+            </Button>
+          </div>
 
-              {/* Actions Bar */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search recipes..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+          {/* Recipes List */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Recipes ({filteredRecipes.length})</span>
+                {recipes.length > 0 && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <Calculator className="h-3 w-3" />
+                    Total Value: ₱{recipes.reduce((sum, recipe) => sum + recipe.total_cost, 0).toFixed(2)}
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Manage your store's recipes - now running on the unified system
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {recipesLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading recipes...
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline"
-                    onClick={() => setShowAnalysisDashboard(true)}
-                  >
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Migration Analysis
-                  </Button>
-                  <Button onClick={() => setCreateDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Recipe
-                  </Button>
-                </div>
-              </div>
-
-              {/* Recipes List */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Recipes ({filteredRecipes.length})</span>
-                    {recipes.length > 0 && (
-                      <Badge variant="secondary" className="flex items-center gap-1">
-                        <Calculator className="h-3 w-3" />
-                        Total Value: ₱{recipes.reduce((sum, recipe) => sum + recipe.total_cost, 0).toFixed(2)}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription>
-                    Manage your store's recipes and ingredient combinations
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {recipesLoading ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Loading recipes...
+              ) : filteredRecipes.length === 0 ? (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {searchTerm 
+                      ? `No recipes found matching "${searchTerm}"` 
+                      : 'No recipes created yet. Click "Create Recipe" to get started.'
+                    }
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-4">
+                  {filteredRecipes.map((recipe) => (
+                    <div key={recipe.id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-lg">{recipe.name}</h3>
+                            <Badge variant="default" className="text-xs">
+                              Unified System
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Package className="h-3 w-3" />
+                              {recipe.ingredients?.length || 0} ingredients
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calculator className="h-3 w-3" />
+                              ₱{recipe.total_cost.toFixed(2)} total cost
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(recipe)}
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDeleteDialog(recipe)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Ingredients Summary */}
+                      {recipe.ingredients && recipe.ingredients.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {recipe.ingredients.slice(0, 5).map((ingredient) => (
+                            <Badge key={ingredient.id} variant="outline" className="text-xs">
+                              {ingredient.ingredient_name} ({ingredient.quantity} {ingredient.unit})
+                            </Badge>
+                          ))}
+                          {recipe.ingredients.length > 5 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{recipe.ingredients.length - 5} more
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ) : filteredRecipes.length === 0 ? (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        {searchTerm 
-                          ? `No recipes found matching "${searchTerm}"` 
-                          : 'No recipes created yet. Click "Create Recipe" to get started.'
-                        }
-                      </AlertDescription>
-                    </Alert>
-                  ) : (
-                    <div className="space-y-4">
-                      {filteredRecipes.map((recipe) => (
-                        <div key={recipe.id} className="p-4 border rounded-lg space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-medium text-lg">{recipe.name}</h3>
-                                <Badge 
-                                  variant={recipe.system_type === 'unified' ? 'default' : 'secondary'}
-                                  className="text-xs"
-                                >
-                                  {recipe.system_type === 'unified' ? 'New System' : 'Legacy'}
-                                </Badge>
-                              </div>
-                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                               <span className="flex items-center gap-1">
-                                 <Package className="h-3 w-3" />
-                                 {recipe.ingredients?.length || 0} ingredients
-                               </span>
-                                <span className="flex items-center gap-1">
-                                  <Calculator className="h-3 w-3" />
-                                  ₱{recipe.total_cost.toFixed(2)} total cost
-                                </span>
-                             </div>
-                           </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openEditDialog(recipe)}
-                              >
-                                <Edit className="h-3 w-3 mr-1" />
-                                Edit
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => openDeleteDialog(recipe)}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                         </div>
-                         
-                         {/* Ingredients Summary */}
-                         {recipe.ingredients && recipe.ingredients.length > 0 && (
-                           <div className="flex flex-wrap gap-2">
-                             {recipe.ingredients.slice(0, 5).map((ingredient) => (
-                               <Badge key={ingredient.id} variant="outline" className="text-xs">
-                                 {ingredient.ingredient_name} ({ingredient.quantity} {ingredient.unit})
-                               </Badge>
-                             ))}
-                             {recipe.ingredients.length > 5 && (
-                               <Badge variant="outline" className="text-xs">
-                                 +{recipe.ingredients.length - 5} more
-                               </Badge>
-                             )}
-                           </div>
-                         )}
-                       </div>
-                     ))}
-                   </div>
-                 )}
-               </CardContent>
-             </Card>
-            </TabsContent>
-
-            <TabsContent value="analysis">
-              <RecipeAnalysisDashboard 
-                onStartMigration={(phase) => {
-                  console.log(`Starting migration phase ${phase}`);
-                  // TODO: Implement migration phase starter
-                }}
-              />
-            </TabsContent>
-          </Tabs>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
 
