@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,10 +17,15 @@ import {
   Zap,
   Edit,
   Eye,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { RecipeEditDialog } from '@/components/recipe/RecipeEditDialog';
 import { RecipeTemplateEditDialog } from '@/components/recipe/RecipeTemplateEditDialog';
+import { DeleteRecipeDialog } from '@/components/recipe/DeleteRecipeDialog';
+import { DeleteRecipeTemplateDialog } from '@/pages/Admin/components/DeleteRecipeTemplateDialog';
+import { RecipeFilters } from '@/components/recipe/RecipeFilters';
+import { UnlinkedProductActions } from '@/components/recipe/UnlinkedProductActions';
 
 interface Product {
   id: string;
@@ -40,8 +45,19 @@ const RecipeManagement: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string>('');
   const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [deleteRecipeDialogOpen, setDeleteRecipeDialogOpen] = useState(false);
+  const [deleteTemplateDialogOpen, setDeleteTemplateDialogOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  
+  // Filter states
+  const [recipeSearchTerm, setRecipeSearchTerm] = useState('');
+  const [recipeCategory, setRecipeCategory] = useState('');
+  const [recipeType, setRecipeType] = useState('');
+  const [templateSearchTerm, setTemplateSearchTerm] = useState('');
+  const [templateCategory, setTemplateCategory] = useState('');
+  const [templateType, setTemplateType] = useState('');
+  
   const queryClient = useQueryClient();
 
   // Fetch stores
@@ -83,6 +99,24 @@ const RecipeManagement: React.FC = () => {
         .eq('is_active', true);
       return data || [];
     }
+  });
+
+  // Fetch individual recipes for selected store
+  const { data: storeRecipes = [] } = useQuery({
+    queryKey: ['store_recipes', selectedStore],
+    queryFn: async () => {
+      if (!selectedStore) return [];
+      const { data } = await supabase
+        .from('recipes')
+        .select(`
+          *,
+          recipe_templates(name, recipe_type, category_name)
+        `)
+        .eq('store_id', selectedStore)
+        .eq('is_active', true);
+      return data || [];
+    },
+    enabled: !!selectedStore
   });
 
   // Direct sync mutation
@@ -194,6 +228,75 @@ const RecipeManagement: React.FC = () => {
   const unlinkedProducts = products.filter(p => !p.recipe_id);
   const linkedProducts = products.filter(p => p.recipe_id);
 
+  // Filter logic
+  const filteredRecipes = useMemo(() => {
+    return storeRecipes.filter(recipe => {
+      const matchesSearch = !recipeSearchTerm || 
+        recipe.name.toLowerCase().includes(recipeSearchTerm.toLowerCase());
+      const matchesCategory = !recipeCategory || 
+        recipe.recipe_templates?.category_name === recipeCategory;
+      const matchesType = !recipeType || 
+        recipe.recipe_templates?.recipe_type === recipeType;
+      
+      return matchesSearch && matchesCategory && matchesType;
+    });
+  }, [storeRecipes, recipeSearchTerm, recipeCategory, recipeType]);
+
+  const filteredTemplates = useMemo(() => {
+    return templates.filter(template => {
+      const matchesSearch = !templateSearchTerm || 
+        template.name.toLowerCase().includes(templateSearchTerm.toLowerCase());
+      const matchesCategory = !templateCategory || 
+        template.category_name === templateCategory;
+      const matchesType = !templateType || 
+        template.recipe_type === templateType;
+      
+      return matchesSearch && matchesCategory && matchesType;
+    });
+  }, [templates, templateSearchTerm, templateCategory, templateType]);
+
+  // Get unique categories and types for filters
+  const availableRecipeCategories = useMemo(() => {
+    const categories = new Set(storeRecipes
+      .map(r => r.recipe_templates?.category_name)
+      .filter(Boolean));
+    return Array.from(categories);
+  }, [storeRecipes]);
+
+  const availableRecipeTypes = useMemo(() => {
+    const types = new Set(storeRecipes
+      .map(r => r.recipe_templates?.recipe_type)
+      .filter(Boolean));
+    return Array.from(types);
+  }, [storeRecipes]);
+
+  const availableTemplateCategories = useMemo(() => {
+    const categories = new Set(templates
+      .map(t => t.category_name)
+      .filter(Boolean));
+    return Array.from(categories);
+  }, [templates]);
+
+  const availableTemplateTypes = useMemo(() => {
+    const types = new Set(templates
+      .map(t => t.recipe_type)
+      .filter(Boolean));
+    return Array.from(types);
+  }, [templates]);
+
+  // Clear filters functions
+  const clearRecipeFilters = () => {
+    setRecipeSearchTerm('');
+    setRecipeCategory('');
+    setRecipeType('');
+  };
+
+  const clearTemplateFilters = () => {
+    setTemplateSearchTerm('');
+    setTemplateCategory('');
+    setTemplateType('');
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -204,7 +307,7 @@ const RecipeManagement: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold">Recipe Management</h1>
           <p className="text-muted-foreground">
-            Direct recipe and inventory management - simplified approach
+            Comprehensive recipe and template management with filtering and actions
           </p>
         </div>
       </div>
@@ -256,8 +359,8 @@ const RecipeManagement: React.FC = () => {
             <TabsTrigger value="status">Status Overview</TabsTrigger>
             <TabsTrigger value="unlinked">Unlinked Products</TabsTrigger>
             <TabsTrigger value="linked">Linked Products</TabsTrigger>
-            <TabsTrigger value="templates">Recipe Templates</TabsTrigger>
             <TabsTrigger value="recipes">Individual Recipes</TabsTrigger>
+            <TabsTrigger value="templates">Recipe Templates</TabsTrigger>
           </TabsList>
 
           <TabsContent value="status" className="space-y-4">
@@ -317,20 +420,36 @@ const RecipeManagement: React.FC = () => {
                   Products Needing Recipe Links
                 </CardTitle>
                 <CardDescription>
-                  These products don't have recipes yet. Sync will create them automatically.
+                  These products don't have recipes yet. You can link them to templates or create new recipes.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className="space-y-4">
                   {unlinkedProducts.map((product: any) => (
-                    <div key={product.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Will be matched with existing template or create new one
-                        </p>
+                    <div key={product.id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Not linked to any recipe yet
+                          </p>
+                        </div>
+                        <Badge variant="outline">Unlinked</Badge>
                       </div>
-                      <Badge variant="outline">Unlinked</Badge>
+                      
+                      <UnlinkedProductActions
+                        product={product}
+                        availableTemplates={templates}
+                        storeId={selectedStore}
+                        onCreateTemplate={() => {
+                          setSelectedTemplate({ name: product.name });
+                          setTemplateDialogOpen(true);
+                        }}
+                        onCreateRecipe={() => {
+                          setSelectedRecipe({ name: product.name, store_id: selectedStore });
+                          setRecipeDialogOpen(true);
+                        }}
+                      />
                     </div>
                   ))}
                   {unlinkedProducts.length === 0 && (
@@ -376,25 +495,53 @@ const RecipeManagement: React.FC = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="recipes" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ChefHat className="h-5 w-5" />
-                  Individual Recipe Management
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ChefHat className="h-5 w-5" />
+                    Individual Recipe Management
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setSelectedRecipe(null);
+                      setRecipeDialogOpen(true);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Recipe
+                  </Button>
                 </CardTitle>
                 <CardDescription>
                   Edit specific recipes for this store. Changes here won't affect other stores.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <RecipeFilters
+                  searchTerm={recipeSearchTerm}
+                  onSearchChange={setRecipeSearchTerm}
+                  selectedCategory={recipeCategory}
+                  onCategoryChange={setRecipeCategory}
+                  selectedType={recipeType}
+                  onTypeChange={setRecipeType}
+                  availableCategories={availableRecipeCategories}
+                  availableTypes={availableRecipeTypes}
+                  totalCount={storeRecipes.length}
+                  filteredCount={filteredRecipes.length}
+                  onClearFilters={clearRecipeFilters}
+                />
+                
                 <div className="space-y-2">
-                  {linkedProducts.map((product: any) => (
-                    <div key={product.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  {filteredRecipes.map((recipe: any) => (
+                    <div key={recipe.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex-1">
-                        <p className="font-medium">{product.name}</p>
+                        <p className="font-medium">{recipe.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          Recipe ID: {product.recipe_id} | Template: {(product as any).recipes?.recipe_templates?.name || 'Custom'}
+                          Cost: ₱{recipe.cost_per_serving?.toFixed(2) || '0.00'} per serving | 
+                          Template: {recipe.recipe_templates?.name || 'Custom'}
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -402,38 +549,44 @@ const RecipeManagement: React.FC = () => {
                           size="sm" 
                           variant="outline"
                           onClick={() => {
-                            setSelectedRecipe({
-                              id: product.recipe_id,
-                              name: product.name,
-                              store_id: selectedStore
-                            });
+                            setSelectedRecipe(recipe);
                             setRecipeDialogOpen(true);
                           }}
                         >
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit Recipe
+                          Edit
                         </Button>
                         <Button 
                           size="sm" 
                           variant="outline"
                           onClick={() => {
-                            // View recipe details in read-only mode
-                            setSelectedRecipe({
-                              id: product.recipe_id,
-                              name: product.name,
-                              store_id: selectedStore,
-                              readOnly: true
-                            });
+                            setSelectedRecipe({...recipe, readOnly: true});
                             setRecipeDialogOpen(true);
                           }}
                         >
                           <Eye className="h-4 w-4 mr-2" />
-                          View Recipe
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedRecipe(recipe);
+                            setDeleteRecipeDialogOpen(true);
+                          }}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
                   ))}
-                  {linkedProducts.length === 0 && (
+                  {filteredRecipes.length === 0 && storeRecipes.length > 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No recipes match your current filters.
+                    </p>
+                  )}
+                  {storeRecipes.length === 0 && (
                     <p className="text-center text-muted-foreground py-8">
                       No recipes available. Link some products first using the sync function.
                     </p>
@@ -446,20 +599,56 @@ const RecipeManagement: React.FC = () => {
           <TabsContent value="templates" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Recipe Templates
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Recipe Templates
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setSelectedTemplate(null);
+                      setTemplateDialogOpen(true);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Template
+                  </Button>
                 </CardTitle>
                 <CardDescription>
                   Global recipe templates that can be deployed to any store.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <RecipeFilters
+                  searchTerm={templateSearchTerm}
+                  onSearchChange={setTemplateSearchTerm}
+                  selectedCategory={templateCategory}
+                  onCategoryChange={setTemplateCategory}
+                  selectedType={templateType}
+                  onTypeChange={setTemplateType}
+                  availableCategories={availableTemplateCategories}
+                  availableTypes={availableTemplateTypes}
+                  totalCount={templates.length}
+                  filteredCount={filteredTemplates.length}
+                  onClearFilters={clearTemplateFilters}
+                />
+                
                 <div className="space-y-2">
-                  {templates.map((template: any) => (
+                  {filteredTemplates.map((template: any) => (
                     <div key={template.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex-1">
                         <p className="font-medium">{template.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {template.recipe_type}
+                          </Badge>
+                          {template.category_name && (
+                            <Badge variant="secondary" className="text-xs">
+                              {template.category_name}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {template.description || 'No description'}
                         </p>
@@ -474,63 +663,43 @@ const RecipeManagement: React.FC = () => {
                           }}
                         >
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit Template
+                          Edit
                         </Button>
                         <Button 
                           size="sm" 
-                          variant="default"
-                          onClick={async () => {
-                            if (!selectedStore) {
-                              toast.error('Please select a store first');
-                              return;
-                            }
-                            
-                            try {
-                              const { InventoryBasedRecipeService } = await import('@/services/inventoryBasedRecipeService');
-                              const result = await InventoryBasedRecipeService.deployTemplateToStore(template.id, selectedStore);
-                              
-                              if (result.success) {
-                                toast.success(result.message);
-                                queryClient.invalidateQueries({ queryKey: ['products'] });
-                              } else {
-                                toast.error(result.message);
-                                if (result.missingIngredients?.length) {
-                                  toast.error(`Missing: ${result.missingIngredients.join(', ')}`);
-                                }
-                              }
-                            } catch (error) {
-                              toast.error('Failed to deploy template');
-                            }
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedTemplate({...template, deployToStore: selectedStore});
+                            setTemplateDialogOpen(true);
                           }}
-                          disabled={!selectedStore}
                         >
-                          <Zap className="h-4 w-4 mr-2" />
-                          Deploy to Store
+                          <Package className="h-4 w-4 mr-2" />
+                          Deploy
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedTemplate(template);
+                            setDeleteTemplateDialogOpen(true);
+                          }}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
                   ))}
-                  
-                  <div className="mt-4 p-4 border-2 border-dashed rounded-lg">
-                    <div className="text-center">
-                      <Package className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                      <p className="font-medium">Create New Template</p>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Create a reusable recipe template for deployment to multiple stores
-                      </p>
-                      <Button 
-                        size="sm" 
-                        variant="default"
-                        onClick={() => {
-                          setSelectedTemplate(null);
-                          setTemplateDialogOpen(true);
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Template
-                      </Button>
-                    </div>
-                  </div>
+                  {filteredTemplates.length === 0 && templates.length > 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No templates match your current filters.
+                    </p>
+                  )}
+                  {templates.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No recipe templates available. Create some templates first.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -538,7 +707,7 @@ const RecipeManagement: React.FC = () => {
         </Tabs>
       )}
 
-      {/* Recipe Edit Dialog */}
+      {/* Dialogs */}
       <RecipeEditDialog
         isOpen={recipeDialogOpen}
         onClose={() => {
@@ -549,7 +718,6 @@ const RecipeManagement: React.FC = () => {
         storeId={selectedStore}
       />
 
-      {/* Template Edit Dialog */}
       <RecipeTemplateEditDialog
         isOpen={templateDialogOpen}
         onClose={() => {
@@ -557,6 +725,51 @@ const RecipeManagement: React.FC = () => {
           setSelectedTemplate(null);
         }}
         template={selectedTemplate}
+      />
+
+      <DeleteRecipeDialog
+        isOpen={deleteRecipeDialogOpen}
+        onClose={() => {
+          setDeleteRecipeDialogOpen(false);
+          setSelectedRecipe(null);
+        }}
+        recipe={selectedRecipe}
+      />
+
+      <DeleteRecipeTemplateDialog
+        isOpen={deleteTemplateDialogOpen}
+        onClose={() => {
+          setDeleteTemplateDialogOpen(false);
+          setSelectedTemplate(null);
+        }}
+        template={selectedTemplate}
+        onConfirm={async () => {
+          if (!selectedTemplate) return;
+          
+          try {
+            // Delete template ingredients first
+            await supabase
+              .from('recipe_template_ingredients')
+              .delete()
+              .eq('recipe_template_id', selectedTemplate.id);
+
+            // Delete the template
+            const { error } = await supabase
+              .from('recipe_templates')
+              .delete()
+              .eq('id', selectedTemplate.id);
+
+            if (error) throw error;
+
+            toast.success(`Template "${selectedTemplate.name}" deleted successfully`);
+            queryClient.invalidateQueries({ queryKey: ['recipe_templates'] });
+            setDeleteTemplateDialogOpen(false);
+            setSelectedTemplate(null);
+          } catch (error) {
+            console.error('Error deleting template:', error);
+            toast.error('Failed to delete template');
+          }
+        }}
       />
     </div>
   );
