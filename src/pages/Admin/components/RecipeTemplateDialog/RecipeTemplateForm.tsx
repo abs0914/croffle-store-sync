@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { RecipeTemplateBasicInfo } from './RecipeTemplateBasicInfo';
-import { RecipeTemplateImageUpload } from './RecipeTemplateImageUpload';
-import { RecipeTemplateYieldInfo } from './RecipeTemplateYieldInfo';
 import { RecipeTemplateIngredients } from './RecipeTemplateIngredients';
-import { RecipeTemplateInstructions } from './RecipeTemplateInstructions';
-import { RecipeTemplateAdvanced } from './RecipeTemplateAdvanced';
 import {
   createRecipeTemplate,
   updateRecipeTemplate,
@@ -27,21 +24,12 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
   onSuccess
 }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category_name: '',
-    instructions: '',
-    yield_quantity: 1,
-    serving_size: 1,
-    image_url: '',
-    price: 0
+    name: ''
   });
 
   const [ingredients, setIngredients] = useState<RecipeTemplateIngredientInput[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [activeTab, setActiveTab] = useState('basic');
 
   // Template categories are now predefined in RecipeTemplateBasicInfo component
 
@@ -51,14 +39,7 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
       console.log('Populating form with template:', template);
       
       const templateFormData = {
-        name: template.name || '',
-        description: template.description || '',
-        category_name: template.category_name || '',
-        instructions: template.instructions || '',
-        yield_quantity: Number(template.yield_quantity) || 1,
-        serving_size: Number(template.serving_size) || 1,
-        image_url: template.image_url || '',
-        price: Number(template.price) || 0
+        name: template.name || ''
       };
       
       console.log('Setting form data:', templateFormData);
@@ -125,6 +106,13 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
     try {
       const templateData: RecipeTemplateData = {
         ...formData,
+        description: '',
+        category_name: 'classic',
+        instructions: '',
+        yield_quantity: 1,
+        serving_size: 1,
+        image_url: '',
+        price: 0,
         created_by: (await supabase.auth.getUser()).data.user?.id || '',
         is_active: true,
         version: template?.version || 1
@@ -162,86 +150,25 @@ export const RecipeTemplateForm: React.FC<RecipeTemplateFormProps> = ({
   return (
     <div className="flex flex-col h-full">
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
-        {/* Tab Navigation */}
-        <div className="border-b px-6 py-2">
-          <nav className="flex space-x-8">
-            <button
-              type="button"
-              onClick={() => setActiveTab('basic')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'basic'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Basic Info
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('ingredients')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'ingredients'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Ingredients
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('advanced')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'advanced'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Advanced Features
-            </button>
-          </nav>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {activeTab === 'basic' && (
-            <div className="space-y-6">
-              <RecipeTemplateBasicInfo
-                formData={formData}
-                setFormData={setFormData}
-              />
-
-              <RecipeTemplateImageUpload
-                imageUrl={formData.image_url}
-                uploadingImage={uploadingImage}
-                setUploadingImage={setUploadingImage}
-                onImageChange={(url) => setFormData(prev => ({ ...prev, image_url: url }))}
-              />
-
-              <RecipeTemplateYieldInfo
-                formData={formData}
-                setFormData={setFormData}
-              />
-
-              <RecipeTemplateInstructions
-                instructions={formData.instructions}
-                onInstructionsChange={(instructions) => setFormData(prev => ({ ...prev, instructions }))}
-              />
-            </div>
-          )}
-
-          {activeTab === 'ingredients' && (
-            <RecipeTemplateIngredients
-              ingredients={ingredients}
-              setIngredients={setIngredients}
-              storeId={undefined} // Recipe templates are store-agnostic, use commissary inventory
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+          {/* Template Name */}
+          <div>
+            <Label htmlFor="name">Recipe Template Name *</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Enter recipe template name"
+              required
             />
-          )}
+          </div>
 
-          {activeTab === 'advanced' && (
-            <RecipeTemplateAdvanced
-              templateId={template?.id}
-              onDataChange={(data) => console.log('Advanced data changed:', data)}
-            />
-          )}
+          {/* Ingredients Section */}
+          <RecipeTemplateIngredients
+            ingredients={ingredients}
+            setIngredients={setIngredients}
+            storeId={undefined} // Recipe templates are store-agnostic, use commissary inventory
+          />
         </div>
         
         <div className="border-t bg-card/50 px-6 py-4">
