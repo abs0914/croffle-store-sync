@@ -138,29 +138,14 @@ export default function CartView({
     }
     
     try {
-      // Step 1: Clean up stale cart items first
-      const cartItemsForValidation = cartItems.map(item => ({
-        productId: item.productId,
-        name: item.product.name,
-        quantity: item.quantity
-      }));
+      // Step 1: Use lightweight validation for final check
+      console.log('💨 Quick checkout validation for', cartItems.length, 'items');
       
-      const { validateAndCleanCart } = await import('@/services/pos/cartCleanupService');
-      const cleanupResult = await validateAndCleanCart(cartItemsForValidation, currentStore.id);
+      const { quickCheckoutValidation } = await import('@/services/pos/lightweightValidationService');
+      const quickValidation = await quickCheckoutValidation(cartItems, currentStore.id);
       
-      if (cleanupResult.removedItems?.length > 0) {
-        const suggestions = cleanupResult.removedItems
-          .map(removed => {
-            const alternatives = cleanupResult.suggestions?.[removed.id] || [];
-            return `${removed.name}${alternatives.length > 0 ? ` (Try: ${alternatives.slice(0, 2).map(a => a.name).join(', ')})` : ''}`;
-          })
-          .join(', ');
-
-        toast.error(`Removed unavailable items: ${suggestions}`);
-        return false; // Force user to review cart after cleanup
-      }
-
-      if (!cleanupResult.isValid) {
+      if (!quickValidation.isValid) {
+        toast.error(`Cannot proceed: ${quickValidation.invalidProducts.join(', ')}`);
         return false;
       }
       
