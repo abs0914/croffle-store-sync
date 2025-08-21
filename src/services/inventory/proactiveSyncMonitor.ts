@@ -331,17 +331,47 @@ export class ProactiveSyncMonitor {
   // Helper methods
   private static async repairMissingRecipe(product: any, storeId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Find matching template
-      const { data: template } = await supabase
+      // Find matching template with exact name match first
+      let { data: template } = await supabase
         .from('recipe_templates')
-        .select('id')
+        .select('id, name')
         .ilike('name', product.name)
         .eq('is_active', true)
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      // If no exact match, try fuzzy matching for common variations
+      if (!template) {
+        const { data: templates } = await supabase
+          .from('recipe_templates')
+          .select('id, name')
+          .eq('is_active', true);
+
+        if (templates) {
+          // Try to find similar names (case insensitive partial matches)
+          const productNameLower = product.name.toLowerCase();
+          template = templates.find(t => {
+            const templateNameLower = t.name.toLowerCase();
+            return templateNameLower.includes(productNameLower) || 
+                   productNameLower.includes(templateNameLower) ||
+                   this.calculateSimilarity(productNameLower, templateNameLower) > 0.7;
+          });
+        }
+      }
 
       if (!template) {
-        return { success: false, error: 'No matching template found' };
+        // List available templates for debugging
+        const { data: availableTemplates } = await supabase
+          .from('recipe_templates')
+          .select('name')
+          .eq('is_active', true)
+          .limit(10);
+        
+        const availableNames = availableTemplates?.map(t => t.name).join(', ') || 'None';
+        return { 
+          success: false, 
+          error: `No matching template found for "${product.name}". Available templates: ${availableNames}` 
+        };
       }
 
       // Create recipe
@@ -381,17 +411,38 @@ export class ProactiveSyncMonitor {
 
   private static async repairMissingTemplate(product: any, recipe: any): Promise<{ success: boolean; error?: string }> {
     try {
-      // Find matching template
-      const { data: template } = await supabase
+      // Find matching template with exact name match first
+      let { data: template } = await supabase
         .from('recipe_templates')
-        .select('id')
+        .select('id, name')
         .ilike('name', product.name)
         .eq('is_active', true)
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      // If no exact match, try fuzzy matching
+      if (!template) {
+        const { data: templates } = await supabase
+          .from('recipe_templates')
+          .select('id, name')
+          .eq('is_active', true);
+
+        if (templates) {
+          const productNameLower = product.name.toLowerCase();
+          template = templates.find(t => {
+            const templateNameLower = t.name.toLowerCase();
+            return templateNameLower.includes(productNameLower) || 
+                   productNameLower.includes(templateNameLower) ||
+                   this.calculateSimilarity(productNameLower, templateNameLower) > 0.7;
+          });
+        }
+      }
 
       if (!template) {
-        return { success: false, error: 'No matching template found' };
+        return { 
+          success: false, 
+          error: `No matching template found for "${product.name}"` 
+        };
       }
 
       // Update recipe with template
@@ -413,13 +464,31 @@ export class ProactiveSyncMonitor {
   private static async repairInactiveTemplate(product: any, recipe: any): Promise<{ success: boolean; error?: string }> {
     try {
       // Find active template with same name
-      const { data: activeTemplate } = await supabase
+      let { data: activeTemplate } = await supabase
         .from('recipe_templates')
-        .select('id')
+        .select('id, name')
         .ilike('name', product.name)
         .eq('is_active', true)
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      // Try fuzzy matching if exact match not found
+      if (!activeTemplate) {
+        const { data: templates } = await supabase
+          .from('recipe_templates')
+          .select('id, name')
+          .eq('is_active', true);
+
+        if (templates) {
+          const productNameLower = product.name.toLowerCase();
+          activeTemplate = templates.find(t => {
+            const templateNameLower = t.name.toLowerCase();
+            return templateNameLower.includes(productNameLower) || 
+                   productNameLower.includes(templateNameLower) ||
+                   this.calculateSimilarity(productNameLower, templateNameLower) > 0.7;
+          });
+        }
+      }
 
       if (!activeTemplate) {
         return { success: false, error: 'No active template available' };
@@ -460,5 +529,35 @@ export class ProactiveSyncMonitor {
     if (metrics.length === 0) return 0;
     const total = metrics.reduce((sum, m) => sum + m.syncHealthPercentage, 0);
     return Math.round(total / metrics.length);
+  }
+
+  /**
+   * Calculate string similarity using Levenshtein distance
+   */
+  private static calculateSimilarity(str1: string, str2: string): number {
+    const len1 = str1.length;
+    const len2 = str2.length;
+    
+    if (len1 === 0) return len2 === 0 ? 1 : 0;
+    if (len2 === 0) return 0;
+    
+    const matrix = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(null));
+    
+    for (let i = 0; i <= len1; i++) matrix[i][0] = i;
+    for (let j = 0; j <= len2; j++) matrix[0][j] = j;
+    
+    for (let i = 1; i <= len1; i++) {
+      for (let j = 1; j <= len2; j++) {
+        const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost
+        );
+      }
+    }
+    
+    const maxLen = Math.max(len1, len2);
+    return 1 - (matrix[len1][len2] / maxLen);
   }
 }
