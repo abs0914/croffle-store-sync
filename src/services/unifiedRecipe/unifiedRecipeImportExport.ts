@@ -35,6 +35,25 @@ export const unifiedRecipeImportExport = {
     const headers = ['name', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
     const csvRows = [headers.join(',')];
 
+    // Get recipe categories from product catalog
+    const recipeIds = recipes.map(recipe => recipe.id);
+    const { data: productCatalogData } = await supabase
+      .from('product_catalog')
+      .select(`
+        recipe_id,
+        categories (
+          name
+        )
+      `)
+      .in('recipe_id', recipeIds);
+
+    const recipeCategoryMap = new Map(
+      productCatalogData?.map(item => [
+        item.recipe_id, 
+        item.categories?.name || 'Other'
+      ]) || []
+    );
+
     // Get inventory stock for category information
     const allInventoryIds = recipes
       .flatMap(recipe => recipe.ingredients || [])
@@ -51,11 +70,16 @@ export const unifiedRecipeImportExport = {
     );
 
     recipes.forEach(recipe => {
+      const recipeCategory = recipeCategoryMap.get(recipe.id);
+      const formattedRecipeName = recipeCategory 
+        ? `${recipe.name} - ${recipeCategory}` 
+        : recipe.name;
+
       if (recipe.ingredients && recipe.ingredients.length > 0) {
         recipe.ingredients.forEach(ingredient => {
           const category = categoryMap.get(ingredient.inventory_stock_id);
           const row = [
-            `"${normalizeText(recipe.name).replace(/"/g, '""')}"`,
+            `"${normalizeText(formattedRecipeName).replace(/"/g, '""')}"`,
             `"${normalizeText(ingredient.ingredient_name).replace(/"/g, '""')}"`,
             ingredient.quantity.toString(),
             `"${normalizeText(ingredient.unit).replace(/"/g, '""')}"`,
@@ -67,7 +91,7 @@ export const unifiedRecipeImportExport = {
       } else {
         // Recipe without ingredients
         const row = [
-          `"${normalizeText(recipe.name).replace(/"/g, '""')}"`,
+          `"${normalizeText(formattedRecipeName).replace(/"/g, '""')}"`,
           '""', // empty ingredient_name
           '0', // zero quantity
           '""', // empty unit
@@ -85,11 +109,11 @@ export const unifiedRecipeImportExport = {
   generateCSVTemplate: (): string => {
     const headers = ['name', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
     const exampleRows = [
-      ['Adobo Chicken', 'Chicken Thigh', '500', 'g', '15.50', 'Base Ingredient'],
-      ['Adobo Chicken', 'Soy Sauce', '100', 'ml', '2.25', 'Classic Sauce'],
-      ['Adobo Chicken', 'Vinegar', '50', 'ml', '1.80', 'Classic Sauce'],
-      ['Fried Rice', 'Rice', '200', 'g', '8.00', 'Base Ingredient'],
-      ['Fried Rice', 'Egg', '2', 'pcs', '6.00', 'Base Ingredient']
+      ['Adobo Chicken - Main Course', 'Chicken Thigh', '500', 'g', '15.50', 'Base Ingredient'],
+      ['Adobo Chicken - Main Course', 'Soy Sauce', '100', 'ml', '2.25', 'Classic Sauce'],
+      ['Adobo Chicken - Main Course', 'Vinegar', '50', 'ml', '1.80', 'Classic Sauce'],
+      ['Fried Rice - Main Course', 'Rice', '200', 'g', '8.00', 'Base Ingredient'],
+      ['Fried Rice - Main Course', 'Egg', '2', 'pcs', '6.00', 'Base Ingredient']
     ];
 
     const csvRows = [headers.join(',')];
