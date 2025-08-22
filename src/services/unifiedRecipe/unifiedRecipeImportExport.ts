@@ -1,6 +1,15 @@
 import { supabase } from '@/integrations/supabase/client';
 import { unifiedRecipeService, UnifiedRecipe, CreateRecipeData } from '@/services/unifiedRecipeService';
 
+// Normalize text to remove special characters and accents
+const normalizeText = (text: string): string => {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+    .trim();
+};
+
 export interface UnifiedRecipeCSVRow {
   name: string;
   ingredient_name: string;
@@ -19,10 +28,10 @@ export const unifiedRecipeImportExport = {
       if (recipe.ingredients && recipe.ingredients.length > 0) {
         recipe.ingredients.forEach(ingredient => {
           const row = [
-            `"${recipe.name.replace(/"/g, '""')}"`,
-            `"${ingredient.ingredient_name.replace(/"/g, '""')}"`,
+            `"${normalizeText(recipe.name).replace(/"/g, '""')}"`,
+            `"${normalizeText(ingredient.ingredient_name).replace(/"/g, '""')}"`,
             ingredient.quantity.toString(),
-            `"${ingredient.unit.replace(/"/g, '""')}"`,
+            `"${normalizeText(ingredient.unit).replace(/"/g, '""')}"`,
             ingredient.cost_per_unit.toString()
           ];
           csvRows.push(row.join(','));
@@ -30,7 +39,7 @@ export const unifiedRecipeImportExport = {
       } else {
         // Recipe without ingredients
         const row = [
-          `"${recipe.name.replace(/"/g, '""')}"`,
+          `"${normalizeText(recipe.name).replace(/"/g, '""')}"`,
           '""', // empty ingredient_name
           '0', // zero quantity
           '""', // empty unit

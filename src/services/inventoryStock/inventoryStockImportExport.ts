@@ -122,6 +122,15 @@ export const parseInventoryStockCSV = async (csvData: string, storeId: string): 
   return stockItems;
 };
 
+// Normalize text to remove special characters and accents
+const normalizeText = (text: string): string => {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+    .trim();
+};
+
 // Generate CSV from inventory stock items
 export const generateInventoryStockCSV = (stockItems: InventoryStock[]): string => {
   const headers = ['name', 'sku', 'measure', 'stock_quantity', 'cost'];
@@ -129,9 +138,9 @@ export const generateInventoryStockCSV = (stockItems: InventoryStock[]): string 
   
   stockItems.forEach(item => {
     const row = [
-      `"${item.item.replace(/"/g, '""')}"`,
-      `"${item.sku || ''}".replace(/"/g, '""')`,
-      `"${item.unit.replace(/"/g, '""')}"`,
+      `"${normalizeText(item.item).replace(/"/g, '""')}"`,
+      `"${(item.sku || '').replace(/"/g, '""')}"`,
+      `"${normalizeText(item.unit).replace(/"/g, '""')}"`,
       item.stock_quantity,
       item.cost || '0'
     ];
