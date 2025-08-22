@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { globalRecipeTemplateImportExport } from '@/services/recipeTemplates/globalRecipeTemplateImportExport';
 import { RecipeTemplate } from '@/services/recipeManagement/types';
 
-export const useGlobalRecipeTemplateImportExport = (templates: RecipeTemplate[]) => {
+export const useGlobalRecipeTemplateImportExport = (templates: RecipeTemplate[], onDataChange?: () => void) => {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const queryClient = useQueryClient();
@@ -59,6 +59,11 @@ export const useGlobalRecipeTemplateImportExport = (templates: RecipeTemplate[])
         // Invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: ['recipe-templates'] });
         queryClient.invalidateQueries({ queryKey: ['templates'] });
+        
+        // Call custom refresh callback if provided
+        if (onDataChange) {
+          onDataChange();
+        }
         
         toast.success(`Successfully imported ${importedTemplates.length} recipe templates`);
         

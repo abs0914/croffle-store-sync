@@ -48,9 +48,6 @@ const GlobalRecipeManagement: React.FC = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeployDialog, setShowDeployDialog] = useState(false);
 
-  // Import/Export functionality
-  const importExport = useGlobalRecipeTemplateImportExport(templates);
-
   useEffect(() => {
     loadTemplates();
   }, []);
@@ -68,6 +65,9 @@ const GlobalRecipeManagement: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Import/Export functionality
+  const importExport = useGlobalRecipeTemplateImportExport(templates, loadTemplates);
 
   // Get unique categories from templates
   const categories = Array.from(new Set(templates.map(t => t.category_name).filter(Boolean)));
