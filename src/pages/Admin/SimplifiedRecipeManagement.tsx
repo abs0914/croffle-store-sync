@@ -21,12 +21,19 @@ import {
   Filter,
   CheckCircle,
   Clock,
-  ShoppingCart
+  ShoppingCart,
+  Download,
+  Upload,
+  FileText,
+  MoreVertical
 } from 'lucide-react';
 import { SimplifiedRecipeForm } from '@/components/recipe/SimplifiedRecipeForm';
 import { unifiedRecipeService, UnifiedRecipe as ServiceUnifiedRecipe } from '@/services/unifiedRecipeService';
 import { useRecipeProductIntegration } from '@/hooks/useRecipeProductIntegration';
 import { RecipeStatusIndicator } from '@/components/RecipeManagement/RecipeStatusIndicator';
+import { useUnifiedRecipeImportExport } from '@/hooks/useUnifiedRecipeImportExport';
+import { useInventoryStockImportExport } from '@/pages/Inventory/components/inventoryStock/hooks/useInventoryStockImportExport';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface UnifiedRecipe {
   id: string;
@@ -57,16 +64,6 @@ const SimplifiedRecipeManagement: React.FC = () => {
   
   const queryClient = useQueryClient();
 
-  // Recipe-Product Integration for status tracking
-  const {
-    productStatuses,
-    recipeStatuses,
-    summary,
-    isLoading: statusLoading,
-    syncCatalog,
-    refetch: refetchStatuses
-  } = useRecipeProductIntegration(selectedStore || null);
-
   // Fetch stores
   const { data: stores = [] } = useQuery({
     queryKey: ['stores'],
@@ -82,6 +79,20 @@ const SimplifiedRecipeManagement: React.FC = () => {
     queryFn: () => unifiedRecipeService.getRecipesByStore(selectedStore),
     enabled: !!selectedStore
   });
+
+  // Recipe-Product Integration for status tracking
+  const {
+    productStatuses,
+    recipeStatuses,
+    summary,
+    isLoading: statusLoading,
+    syncCatalog,
+    refetch: refetchStatuses
+  } = useRecipeProductIntegration(selectedStore || null);
+
+  // Import/Export hooks
+  const recipeImportExport = useUnifiedRecipeImportExport(recipes, selectedStore);
+  const inventoryImportExport = useInventoryStockImportExport([]);
 
   // Get recipe status using recipe-first approach
   const getRecipeStatus = (recipeId: string) => {
@@ -287,10 +298,57 @@ const SimplifiedRecipeManagement: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Recipe
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Import/Export Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreVertical className="h-4 w-4 mr-2" />
+                    Import/Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={recipeImportExport.handleExportCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Recipes (CSV)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={recipeImportExport.handleExportJSON}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Recipes (JSON)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={recipeImportExport.handleImportCSV}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Recipes (CSV)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={recipeImportExport.handleImportJSON}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Recipes (JSON)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={recipeImportExport.handleDownloadTemplate}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Download Recipe Template
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={inventoryImportExport.handleExportCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Inventory (CSV)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={inventoryImportExport.handleImportClick}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Inventory (CSV)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={inventoryImportExport.handleDownloadTemplate}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Download Inventory Template
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Recipe
+              </Button>
+            </div>
           </div>
 
           {/* Recipes List */}
