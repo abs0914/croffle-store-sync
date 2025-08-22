@@ -43,24 +43,6 @@ export const unifiedRecipeImportExport = {
     return csvRows.join('\n');
   },
 
-  // Generate JSON from unified recipes
-  generateJSON: (recipes: UnifiedRecipe[]): string => {
-    const exportData = recipes.map(recipe => ({
-      name: recipe.name,
-      total_cost: recipe.total_cost,
-      cost_per_serving: recipe.cost_per_serving,
-      serving_size: recipe.serving_size,
-      ingredients: recipe.ingredients?.map(ingredient => ({
-        ingredient_name: ingredient.ingredient_name,
-        quantity: ingredient.quantity,
-        unit: ingredient.unit,
-        cost_per_unit: ingredient.cost_per_unit
-      })) || []
-    }));
-
-    return JSON.stringify(exportData, null, 2);
-  },
-
   // Generate CSV template
   generateCSVTemplate: (): string => {
     const headers = ['name', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit'];
@@ -171,74 +153,6 @@ export const unifiedRecipeImportExport = {
         };
 
         const createdRecipe = await unifiedRecipeService.createRecipe(recipeData);
-        if (createdRecipe) {
-          createdRecipes.push(createdRecipe);
-        }
-      }
-    }
-
-    return createdRecipes;
-  },
-
-  // Parse JSON and create unified recipes
-  parseJSON: async (jsonData: string, storeId: string): Promise<UnifiedRecipe[]> => {
-    let parsedData: any[];
-    
-    try {
-      parsedData = JSON.parse(jsonData);
-    } catch (error) {
-      throw new Error('Invalid JSON format');
-    }
-
-    if (!Array.isArray(parsedData)) {
-      throw new Error('JSON must contain an array of recipes');
-    }
-
-    // Get inventory stock for ingredient matching
-    const { data: inventoryStock, error: inventoryError } = await supabase
-      .from('inventory_stock')
-      .select('id, item, unit, cost')
-      .eq('store_id', storeId)
-      .eq('is_active', true);
-
-    if (inventoryError) throw new Error('Failed to fetch inventory data');
-
-    const createdRecipes: UnifiedRecipe[] = [];
-
-    for (const recipeData of parsedData) {
-      if (!recipeData.name || !recipeData.ingredients) continue;
-
-      const matchedIngredients: CreateRecipeData['ingredients'] = [];
-
-      for (const ingredient of recipeData.ingredients) {
-        if (!ingredient.ingredient_name) continue;
-
-        // Find matching inventory item
-        const inventoryItem = inventoryStock?.find(item => 
-          item.item.toLowerCase() === ingredient.ingredient_name.toLowerCase() ||
-          item.item.toLowerCase().includes(ingredient.ingredient_name.toLowerCase()) ||
-          ingredient.ingredient_name.toLowerCase().includes(item.item.toLowerCase())
-        );
-
-        if (inventoryItem) {
-          matchedIngredients.push({
-            inventory_stock_id: inventoryItem.id,
-            ingredient_name: ingredient.ingredient_name,
-            quantity: ingredient.quantity || 0,
-            unit: ingredient.unit || inventoryItem.unit,
-            cost_per_unit: ingredient.cost_per_unit || inventoryItem.cost || 0
-          });
-        }
-      }
-
-      if (matchedIngredients.length > 0) {
-        const createData: CreateRecipeData = {
-          name: recipeData.name,
-          store_id: storeId,
-          ingredients: matchedIngredients
-        };
-
-        const createdRecipe = await unifiedRecipeService.createRecipe(createData);
         if (createdRecipe) {
           createdRecipes.push(createdRecipe);
         }

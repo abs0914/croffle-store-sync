@@ -90,9 +90,24 @@ const SimplifiedRecipeManagement: React.FC = () => {
     refetch: refetchStatuses
   } = useRecipeProductIntegration(selectedStore || null);
 
+  // Fetch inventory for export
+  const { data: inventoryStock = [] } = useQuery({
+    queryKey: ['inventory-stock', selectedStore],
+    queryFn: async () => {
+      if (!selectedStore) return [];
+      const { data } = await supabase
+        .from('inventory_stock')
+        .select('*')
+        .eq('store_id', selectedStore)
+        .eq('is_active', true);
+      return data || [];
+    },
+    enabled: !!selectedStore
+  });
+
   // Import/Export hooks
   const recipeImportExport = useUnifiedRecipeImportExport(recipes, selectedStore);
-  const inventoryImportExport = useInventoryStockImportExport([]);
+  const inventoryImportExport = useInventoryStockImportExport(inventoryStock);
 
   // Get recipe status using recipe-first approach
   const getRecipeStatus = (recipeId: string) => {
@@ -312,17 +327,9 @@ const SimplifiedRecipeManagement: React.FC = () => {
                     <Download className="h-4 w-4 mr-2" />
                     Export Recipes (CSV)
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={recipeImportExport.handleExportJSON}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Recipes (JSON)
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={recipeImportExport.handleImportCSV}>
                     <Upload className="h-4 w-4 mr-2" />
                     Import Recipes (CSV)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={recipeImportExport.handleImportJSON}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Import Recipes (JSON)
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={recipeImportExport.handleDownloadTemplate}>
                     <FileText className="h-4 w-4 mr-2" />

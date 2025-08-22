@@ -32,31 +32,6 @@ export function useUnifiedRecipeImportExport(recipes: UnifiedRecipe[], storeId: 
     }
   }, [recipes]);
 
-  // Export recipes to JSON
-  const handleExportJSON = useCallback(async () => {
-    if (!recipes.length) {
-      toast.error("No recipes to export");
-      return;
-    }
-
-    try {
-      const jsonData = unifiedRecipeImportExport.generateJSON(recipes);
-      const blob = new Blob([jsonData], { type: "application/json" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.setAttribute("hidden", "");
-      a.setAttribute("href", url);
-      a.setAttribute("download", `unified-recipes-export-${new Date().toISOString().split('T')[0]}.json`);
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      toast.success("Recipes exported to JSON successfully");
-    } catch (error) {
-      console.error("JSON export error:", error);
-      toast.error("Failed to export recipes to JSON");
-    }
-  }, [recipes]);
-
   // Import recipes from CSV
   const handleImportCSV = useCallback(() => {
     if (!storeId) {
@@ -95,44 +70,6 @@ export function useUnifiedRecipeImportExport(recipes: UnifiedRecipe[], storeId: 
     input.click();
   }, [storeId, queryClient]);
 
-  // Import recipes from JSON
-  const handleImportJSON = useCallback(() => {
-    if (!storeId) {
-      toast.error("Please select a store first");
-      return;
-    }
-
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = ".json";
-    input.onchange = async (event: any) => {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = async (e: any) => {
-          try {
-            const jsonData = e.target.result;
-            toast.loading("Processing JSON recipe import...", { id: 'recipe-json-import' });
-            
-            const importedRecipes = await unifiedRecipeImportExport.parseJSON(jsonData, storeId);
-            
-            toast.dismiss('recipe-json-import');
-            toast.success(`Successfully imported ${importedRecipes.length} recipes from JSON`);
-            
-            // Refresh the recipe list
-            queryClient.invalidateQueries({ queryKey: ['unified_recipes', storeId] });
-          } catch (error) {
-            toast.dismiss('recipe-json-import');
-            console.error("JSON import error:", error);
-            toast.error(`Failed to import recipes from JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          }
-        };
-        reader.readAsText(file);
-      }
-    };
-    input.click();
-  }, [storeId, queryClient]);
-
   // Download CSV template
   const handleDownloadTemplate = useCallback(() => {
     try {
@@ -155,9 +92,7 @@ export function useUnifiedRecipeImportExport(recipes: UnifiedRecipe[], storeId: 
 
   return {
     handleExportCSV,
-    handleExportJSON,
     handleImportCSV,
-    handleImportJSON,
     handleDownloadTemplate
   };
 }
