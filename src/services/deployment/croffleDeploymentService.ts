@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { OptimizedBatchDeploymentService } from '../recipeManagement/optimizedBatchDeploymentService';
 
 interface DeploymentResult {
   success: boolean;
@@ -14,10 +15,11 @@ interface DeploymentResult {
 
 export const deployCrofflesToAllStores = async (): Promise<DeploymentResult> => {
   try {
-    console.log('🚀 Starting croffle deployment to all stores...');
+    console.log('🚀 Starting optimized croffle deployment to all stores...');
     
+    // Use the new edge function for faster deployment
     const { data, error } = await supabase.functions.invoke('deploy-croffles', {
-      body: {}
+      body: { useOptimizedBatch: true }
     });
 
     if (error) {

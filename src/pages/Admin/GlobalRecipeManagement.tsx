@@ -32,7 +32,7 @@ import {
   deleteRecipeTemplate
 } from '@/services/recipeManagement/recipeTemplateService';
 import { RecipeTemplateDialog } from './components/RecipeTemplateDialog';
-import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
+import { OptimizedRecipeDeploymentDialog } from '@/components/Admin/recipe/OptimizedRecipeDeploymentDialog';
 import { useGlobalRecipeTemplateImportExport } from '@/hooks/useGlobalRecipeTemplateImportExport';
 import { RecipeTemplate } from '@/services/recipeManagement/types';
 import { toast } from 'sonner';
@@ -456,19 +456,19 @@ const GlobalRecipeManagement: React.FC = () => {
       />
 
       {/* Deploy Template Dialog */}
-      <ConsolidatedRecipeDeploymentDialog
-        isOpen={showDeployDialog}
-        onClose={() => {
-          setShowDeployDialog(false);
-          setSelectedTemplate(null);
-        }}
-        template={selectedTemplate}
-        onSuccess={() => {
-          setShowDeployDialog(false);
-          setSelectedTemplate(null);
-          loadTemplates();
-        }}
-      />
+        <OptimizedRecipeDeploymentDialog
+          isOpen={showDeployDialog}
+          onClose={() => {
+            setShowDeployDialog(false);
+            setSelectedTemplate(null);
+          }}
+          template={selectedTemplate}
+          onSuccess={() => {
+            setShowDeployDialog(false);
+            setSelectedTemplate(null);
+            loadTemplates();
+          }}
+        />
     </div>
   );
 };

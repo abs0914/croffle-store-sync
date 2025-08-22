@@ -21,10 +21,10 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  deployRecipeToMultipleStores, 
+  OptimizedBatchDeploymentService, 
   DeploymentResult,
-  DeploymentOptions 
-} from '@/services/recipeManagement/recipeDeploymentService';
+  OptimizedDeploymentOptions 
+} from '@/services/recipeManagement/optimizedBatchDeploymentService';
 
 interface RecipeDeploymentManagerProps {
   template: any;
@@ -46,7 +46,7 @@ export const RecipeDeploymentManager: React.FC<RecipeDeploymentManagerProps> = (
   onSuccess
 }) => {
   const [stores, setStores] = useState<StoreInfo[]>([]);
-  const [deploymentOptions, setDeploymentOptions] = useState<DeploymentOptions>({
+  const [deploymentOptions, setDeploymentOptions] = useState<OptimizedDeploymentOptions>({
     priceMarkup: 0.5, // 50% default markup
     isActive: true
   });
@@ -142,8 +142,8 @@ export const RecipeDeploymentManager: React.FC<RecipeDeploymentManagerProps> = (
     try {
       const selectedStoreIds = selectedStores.map(store => store.id);
       
-      // Deploy to all selected stores
-      const results = await deployRecipeToMultipleStores(
+      // Deploy to all selected stores with optimized service
+      const results = await OptimizedBatchDeploymentService.deployRecipeToMultipleStoresOptimized(
         template.id, 
         selectedStoreIds, 
         deploymentOptions
