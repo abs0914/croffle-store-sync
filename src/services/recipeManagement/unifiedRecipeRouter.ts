@@ -42,29 +42,37 @@ export interface CreateRecipeRequest {
 
 export const unifiedRecipeRouter = {
   /**
-   * Get all recipes for a store from both systems, normalized
+   * Get all recipes for a store, prioritizing unified over legacy
    */
   async getRecipesByStore(storeId: string): Promise<NormalizedRecipe[]> {
     try {
-      const { unified, legacy } = await recipeSystemDetection.getAllRecipesByStore(storeId);
+      // Get unified recipes first (prioritized)
+      const unifiedRecipes = await unifiedRecipeService.getRecipesByStore(storeId);
+      
+      // Get legacy recipes
+      const { legacy } = await recipeSystemDetection.getAllRecipesByStore(storeId);
       
       const normalizedRecipes: NormalizedRecipe[] = [];
+      const recipeNames = new Set<string>();
 
-      // Normalize unified recipes
-      unified.forEach(recipe => {
+      // Add unified recipes first (they have priority)
+      unifiedRecipes.forEach(recipe => {
         normalizedRecipes.push({
           ...recipe,
           system_type: 'unified' as RecipeSystemType
         });
+        recipeNames.add(recipe.name.toLowerCase().trim());
       });
 
-      // Normalize legacy recipes
+      // Add legacy recipes only if they don't exist in unified system
       legacy.forEach(recipe => {
-        normalizedRecipes.push({
-          ...recipe,
-          system_type: 'legacy' as RecipeSystemType,
-          ingredients: recipe.recipe_ingredients || []
-        });
+        if (!recipeNames.has(recipe.name.toLowerCase().trim())) {
+          normalizedRecipes.push({
+            ...recipe,
+            system_type: 'legacy' as RecipeSystemType,
+            ingredients: recipe.recipe_ingredients || []
+          });
+        }
       });
 
       return normalizedRecipes.sort((a, b) => a.name.localeCompare(b.name));
@@ -230,7 +238,7 @@ export const unifiedRecipeRouter = {
   },
 
   /**
-   * Search recipes across both systems
+   * Search recipes across both systems, prioritizing unified
    */
   async searchRecipes(storeId: string, searchTerm: string): Promise<NormalizedRecipe[]> {
     try {
@@ -240,21 +248,25 @@ export const unifiedRecipeRouter = {
       ]);
 
       const normalizedResults: NormalizedRecipe[] = [];
+      const recipeNames = new Set<string>();
 
-      // Add unified results
+      // Add unified results first
       unifiedResults.forEach(recipe => {
         normalizedResults.push({
           ...recipe,
           system_type: 'unified' as RecipeSystemType
         });
+        recipeNames.add(recipe.name.toLowerCase().trim());
       });
 
-      // Add legacy results
+      // Add legacy results only if not already in unified
       legacyResults.forEach(recipe => {
-        normalizedResults.push({
-          ...recipe,
-          system_type: 'legacy' as RecipeSystemType
-        });
+        if (!recipeNames.has(recipe.name.toLowerCase().trim())) {
+          normalizedResults.push({
+            ...recipe,
+            system_type: 'legacy' as RecipeSystemType
+          });
+        }
       });
 
       return normalizedResults.sort((a, b) => a.name.localeCompare(b.name));

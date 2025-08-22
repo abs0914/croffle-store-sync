@@ -30,6 +30,8 @@ export interface RecipeAvailabilityStatus {
   maxProduction: number;
   isLinkedToProduct: boolean;
   productId?: string;
+  totalCost: number;
+  costPerServing: number;
 }
 
 /**
@@ -299,14 +301,19 @@ export const getRecipeAvailabilityStatus = async (storeId: string): Promise<Reci
         id,
         name,
         store_id,
+        total_cost,
+        cost_per_serving,
         unified_recipe_ingredients (
           ingredient_name,
           quantity,
           unit,
+          cost_per_unit,
           inventory_stock_id,
-          inventory_stock!left (
+          inventory_stock (
+            id,
             stock_quantity,
-            item
+            item,
+            unit
           )
         )
       `)
@@ -317,7 +324,7 @@ export const getRecipeAvailabilityStatus = async (storeId: string): Promise<Reci
 
     const statusResults: RecipeAvailabilityStatus[] = [];
 
-    for (const recipe of recipes) {
+    for (const recipe of recipes || []) {
       // Check if recipe is linked to any product
       const { data: linkedProduct } = await supabase
         .from('product_catalog')
@@ -352,7 +359,9 @@ const analyzeRecipeAvailability = async (recipe: any, productId?: string): Promi
       canProduce: false,
       maxProduction: 0,
       isLinkedToProduct: !!productId,
-      productId
+      productId,
+      totalCost: recipe.total_cost || 0,
+      costPerServing: recipe.cost_per_serving || 0
     };
   }
 
@@ -397,7 +406,9 @@ const analyzeRecipeAvailability = async (recipe: any, productId?: string): Promi
     canProduce,
     maxProduction: maxProduction === Infinity ? 999 : maxProduction,
     isLinkedToProduct: !!productId,
-    productId
+    productId,
+    totalCost: recipe.total_cost || 0,
+    costPerServing: recipe.cost_per_serving || 0
   };
 };
 

@@ -72,52 +72,8 @@ export const unifiedRecipeService = {
         })) || []
       })) || [];
 
-      // Get legacy recipes (old system)
-      const { data: legacyData, error: legacyError } = await supabase
-        .from('recipes')
-        .select(`
-          id,
-          name,
-          store_id,
-          created_at,
-          recipe_ingredients (
-            ingredient_name,
-            quantity,
-            unit
-          )
-        `)
-        .eq('store_id', storeId)
-        .order('name', { ascending: true });
-
-      if (legacyError) {
-        console.warn('Error fetching legacy recipes:', legacyError);
-      }
-
-      // Convert legacy recipes to unified format
-      const convertedLegacyRecipes: UnifiedRecipe[] = (legacyData || []).map(recipe => ({
-        id: recipe.id,
-        name: recipe.name,
-        store_id: recipe.store_id,
-        total_cost: 0, // Legacy recipes don't have cost calculation
-        cost_per_serving: 0,
-        serving_size: 1,
-        is_active: true,
-        created_at: recipe.created_at,
-        updated_at: recipe.created_at,
-        ingredients: (recipe.recipe_ingredients || []).map((ing: any, index: number) => ({
-          id: `legacy-${recipe.id}-${index}`,
-          recipe_id: recipe.id,
-          inventory_stock_id: '',
-          ingredient_name: ing.ingredient_name,
-          quantity: ing.quantity || 0,
-          unit: ing.unit || '',
-          cost_per_unit: 0,
-          total_cost: 0
-        }))
-      }));
-
-      // Combine and return both unified and legacy recipes
-      return [...unifiedRecipes, ...convertedLegacyRecipes];
+      // Return only unified recipes
+      return unifiedRecipes;
     } catch (error) {
       console.error('Error fetching recipes:', error);
       toast.error('Failed to fetch recipes');
