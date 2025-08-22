@@ -155,6 +155,22 @@ const SimplifiedRecipeManagement: React.FC = () => {
     }
   });
 
+  // Deploy recipe mutation
+  const deployRecipeMutation = useMutation({
+    mutationFn: async () => {
+      return await syncCatalog();
+    },
+    onSuccess: () => {
+      refetchStatuses();
+      queryClient.invalidateQueries({ queryKey: ['unified_recipes', selectedStore] });
+      toast.success('Recipe deployed to product catalog successfully');
+    },
+    onError: (error) => {
+      console.error('Deployment error:', error);
+      toast.error('Failed to deploy recipe to product catalog');
+    }
+  });
+
   const handleCreateRecipe = (data: { name: string; ingredients: any[] }) => {
     createRecipeMutation.mutate(data);
   };
@@ -179,6 +195,15 @@ const SimplifiedRecipeManagement: React.FC = () => {
   const openDeleteDialog = (recipe: UnifiedRecipe) => {
     setSelectedRecipe(recipe);
     setDeleteDialogOpen(true);
+  };
+
+  const handleDeployRecipe = () => {
+    deployRecipeMutation.mutate();
+  };
+
+  const isRecipeDeployed = (recipeId: string) => {
+    const recipeData = getRecipeData(recipeId);
+    return recipeData?.isLinkedToProduct || false;
   };
 
   return (
@@ -356,6 +381,41 @@ const SimplifiedRecipeManagement: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
+                            {/* Deploy Button */}
+                            {isRecipeDeployed(recipe.id) ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled
+                                className="text-green-600 border-green-200 bg-green-50 hover:bg-green-50"
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Deployed
+                              </Button>
+                            ) : recipeStatus === 'ready_to_sell' ? (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={handleDeployRecipe}
+                                disabled={deployRecipeMutation.isPending}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                <ShoppingCart className="h-3 w-3 mr-1" />
+                                {deployRecipeMutation.isPending ? 'Deploying...' : 'Deploy'}
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled
+                                className="text-muted-foreground"
+                                title="Fix missing ingredients to enable deployment"
+                              >
+                                <ShoppingCart className="h-3 w-3 mr-1" />
+                                Deploy
+                              </Button>
+                            )}
+                            
                             <Button
                               variant="outline"
                               size="sm"
