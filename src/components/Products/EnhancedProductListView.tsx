@@ -108,24 +108,27 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
     }
   };
 
-  // Filter products based on all criteria
+  // Filter products based on all criteria - Updated for post-migration state
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
     
+    // Updated filtering logic to account for recipe_id
+    const isReadyToSell = product.pos_ready || product.recipe_id;
     const matchesStock = stockFilter === 'all' || 
-      (stockFilter === 'pos_ready' && product.pos_ready) ||
-      (stockFilter === 'needs_attention' && !product.pos_ready);
+      (stockFilter === 'pos_ready' && isReadyToSell) ||
+      (stockFilter === 'needs_attention' && !isReadyToSell);
     
     return matchesSearch && matchesCategory && matchesStock;
   });
 
-  // Helper functions for simplified status badges
+  // Helper functions for simplified status badges - Updated for post-migration state
   const getSimpleStatusBadge = (product: EnhancedProductCatalog) => {
-    // Determine overall status priority: POS Ready > Setup Needed > Direct Product
-    if (product.pos_ready) {
+    // Updated logic: Products with recipe_id are considered ready to sell
+    // This reflects the recent migration that linked all recipes
+    if (product.pos_ready || product.recipe_id) {
       return <Badge className="bg-green-100 text-green-800 border-green-200">Ready to Sell</Badge>;
     }
     

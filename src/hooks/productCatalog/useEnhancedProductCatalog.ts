@@ -13,7 +13,7 @@ export function useEnhancedProductCatalog(storeId: string | null) {
   const [lastValidation, setLastValidation] = useState<Date | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch products with enhanced availability checking
+  // Fetch products with enhanced availability checking - Force fresh fetch after migration
   const { 
     data: products = [], 
     isLoading, 
@@ -23,7 +23,9 @@ export function useEnhancedProductCatalog(storeId: string | null) {
     queryKey: ['enhanced-product-catalog', storeId],
     queryFn: () => storeId ? EnhancedProductCatalogService.fetchProductsWithAvailability(storeId) : Promise.resolve([]),
     enabled: !!storeId,
-    staleTime: 30000, // 30 seconds
+    staleTime: 10000, // Reduced stale time to 10 seconds for fresh data after migration
+    refetchOnMount: true, // Always refetch on mount to get latest data
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   // Validate catalog consistency

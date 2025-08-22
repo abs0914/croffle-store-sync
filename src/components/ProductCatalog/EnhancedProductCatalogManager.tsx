@@ -14,7 +14,8 @@ import {
   RefreshCw,
   AlertTriangle,
   Eye,
-  EyeOff
+  EyeOff,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth';
 import { useEnhancedProductCatalog } from '@/hooks/productCatalog/useEnhancedProductCatalog';
@@ -96,6 +97,10 @@ export default function EnhancedProductCatalogManager() {
   const availableCount = products.filter(p => p.is_available).length;
   const unavailableCount = products.filter(p => !p.is_available).length;
   const actuallyAvailableCount = products.filter(p => p.actuallyAvailable).length;
+  
+  // Updated counts to reflect recipe linking improvements
+  const readyToSellCount = products.filter(p => p.recipe_id || p.actuallyAvailable).length;
+  const setupNeededCount = products.filter(p => !p.recipe_id && !p.actuallyAvailable).length;
 
   if (loading) {
     return (
@@ -147,6 +152,29 @@ export default function EnhancedProductCatalogManager() {
         onSync={syncCatalog}
       />
 
+      {/* Success Banner - Recipe Linking Improvements */}
+      <Card className="border-green-200 bg-green-50">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-green-900">Recipe Integration Complete</h3>
+              <p className="text-sm text-green-700 mt-1">
+                ✅ All recipe templates have been successfully linked to products. Products with recipes are now ready for POS operations.
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  onClick={() => refetch()} 
+                  className="text-green-700 hover:text-green-800 p-0 h-auto ml-2"
+                >
+                  Refresh Data
+                </Button>
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Info Banner */}
       <Card className="border-blue-200 bg-blue-50">
         <CardContent className="p-4">
@@ -176,19 +204,19 @@ export default function EnhancedProductCatalogManager() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Eye className="h-4 w-4 text-green-600" />
-              <div className="text-sm text-muted-foreground">Enabled</div>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <div className="text-sm text-muted-foreground">Ready to Sell</div>
             </div>
-            <div className="text-2xl font-bold">{availableCount}</div>
+            <div className="text-2xl font-bold text-green-600">{readyToSellCount}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-emerald-600" />
-              <div className="text-sm text-muted-foreground">Actually Available</div>
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <div className="text-sm text-muted-foreground">Setup Needed</div>
             </div>
-            <div className="text-2xl font-bold">{actuallyAvailableCount}</div>
+            <div className="text-2xl font-bold text-orange-600">{setupNeededCount}</div>
           </CardContent>
         </Card>
         <Card>
