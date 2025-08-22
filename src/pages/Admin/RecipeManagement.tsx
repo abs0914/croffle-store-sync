@@ -1,8 +1,8 @@
 import React from 'react';
-import SimplifiedRecipeManagement from './SimplifiedRecipeManagement';
+import GlobalRecipeManagement from './GlobalRecipeManagement';
 
 const RecipeManagement: React.FC = () => {
-  return <SimplifiedRecipeManagement />;
+  return <GlobalRecipeManagement />;
 };
 
 export default RecipeManagement;
