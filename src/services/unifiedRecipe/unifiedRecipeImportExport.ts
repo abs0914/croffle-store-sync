@@ -1,12 +1,21 @@
 import { supabase } from '@/integrations/supabase/client';
 import { unifiedRecipeService, UnifiedRecipe, CreateRecipeData } from '@/services/unifiedRecipeService';
 
-// Normalize text to remove special characters and accents
+// Normalize text to remove special characters and accents for better matching
 const normalizeText = (text: string): string => {
   return text
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
     .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+    .trim();
+};
+
+// Enhanced recipe name matching for imports
+const normalizeRecipeName = (name: string): string => {
+  return normalizeText(name)
+    .toLowerCase()
+    .replace(/\s*\([^)]*\)/g, '') // Remove parentheses and their content
+    .replace(/\s+/g, ' ') // Normalize multiple spaces to single space
     .trim();
 };
 
@@ -124,11 +133,30 @@ export const unifiedRecipeImportExport = {
       });
     }
 
-    // Create recipes
+    // Create recipes with improved duplicate detection
     const createdRecipes: UnifiedRecipe[] = [];
+    
+    // First, get existing recipes for this store to check for duplicates
+    const { data: existingRecipes } = await supabase
+      .from('unified_recipes')
+      .select('id, name')
+      .eq('store_id', storeId)
+      .eq('is_active', true);
     
     for (const [recipeName, ingredients] of Object.entries(recipeGroups)) {
       if (!recipeName.trim()) continue;
+
+      const normalizedNewName = normalizeRecipeName(recipeName);
+      
+      // Check if a recipe with similar name already exists
+      const existingRecipe = existingRecipes?.find(recipe => 
+        normalizeRecipeName(recipe.name) === normalizedNewName
+      );
+      
+      if (existingRecipe) {
+        console.log(`Skipping duplicate recipe: "${recipeName}" matches existing "${existingRecipe.name}"`);
+        continue;
+      }
 
       // Match ingredients to inventory
       const matchedIngredients: CreateRecipeData['ingredients'] = [];
