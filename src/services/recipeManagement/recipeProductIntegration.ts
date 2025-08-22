@@ -22,6 +22,7 @@ export interface RecipeProductStatus {
 export interface RecipeAvailabilityStatus {
   recipeId: string;
   recipeName: string;
+  storeId: string;
   status: 'ready_to_sell' | 'setup_needed' | 'missing_ingredients';
   availableIngredients: number;
   totalIngredients: number;
@@ -39,36 +40,37 @@ export interface RecipeAvailabilityStatus {
  */
 export const getProductRecipeStatus = async (storeId: string): Promise<RecipeProductStatus[]> => {
   try {
-    const { data: products, error } = await supabase
+    // Get all products for the store
+    const { data: products, error: productsError } = await supabase
       .from('product_catalog')
-      .select(`
-        id,
-        product_name,
-        is_available,
-        recipe_id,
-        unified_recipes!left (
-          id,
-          name,
-          unified_recipe_ingredients (
-            ingredient_name,
-            quantity,
-            unit,
-            inventory_stock_id,
-            inventory_stock!left (
-              stock_quantity,
-              item
-            )
-          )
-        )
-      `)
+      .select('id, product_name, is_available, recipe_id')
       .eq('store_id', storeId);
 
-    if (error) throw error;
+    if (productsError) throw productsError;
+    if (!products) return [];
+
+    // Get all unified recipes for the store
+    const { data: recipes, error: recipesError } = await supabase
+      .from('unified_recipes')
+      .select('id, name, unified_recipe_ingredients(*)')
+      .eq('store_id', storeId)
+      .eq('is_active', true);
+
+    if (recipesError) throw recipesError;
+
+    // Get inventory stock for the store
+    const { data: inventory, error: inventoryError } = await supabase
+      .from('inventory_stock')
+      .select('id, item, unit, stock_quantity, is_active')
+      .eq('store_id', storeId)
+      .eq('is_active', true);
+
+    if (inventoryError) throw inventoryError;
 
     const statusResults: RecipeProductStatus[] = [];
 
     for (const product of products) {
-      const status = await analyzeProductStatus(product, storeId);
+      const status = analyzeProductStatusWithData(product, recipes || [], inventory || []);
       statusResults.push(status);
     }
 
@@ -80,11 +82,11 @@ export const getProductRecipeStatus = async (storeId: string): Promise<RecipePro
 };
 
 /**
- * Analyze individual product status
+ * Analyze individual product status using pre-fetched data
  */
-const analyzeProductStatus = async (product: any, storeId: string): Promise<RecipeProductStatus> => {
+const analyzeProductStatusWithData = (product: any, recipes: any[], inventory: any[]): RecipeProductStatus => {
   // No recipe - direct product
-  if (!product.recipe_id || !product.unified_recipes) {
+  if (!product.recipe_id) {
     return {
       productId: product.id,
       productName: product.product_name,
@@ -97,7 +99,20 @@ const analyzeProductStatus = async (product: any, storeId: string): Promise<Reci
     };
   }
 
-  const recipe = product.unified_recipes;
+  const recipe = recipes.find(r => r.id === product.recipe_id);
+  
+  if (!recipe) {
+    return {
+      productId: product.id,
+      productName: product.product_name,
+      status: 'missing_template',
+      availableIngredients: 0,
+      totalIngredients: 0,
+      missingIngredients: ['Recipe not found'],
+      canProduce: false,
+      maxProduction: 0
+    };
+  }
 
   // Recipe exists but no ingredients - setup needed
   if (!recipe.unified_recipe_ingredients || recipe.unified_recipe_ingredients.length === 0) {
@@ -121,7 +136,7 @@ const analyzeProductStatus = async (product: any, storeId: string): Promise<Reci
   const missingIngredients: string[] = [];
 
   for (const ingredient of ingredients) {
-    const inventoryItem = ingredient.inventory_stock;
+    const inventoryItem = inventory.find(inv => inv.id === ingredient.inventory_stock_id);
     
     if (!inventoryItem) {
       missingIngredients.push(`${ingredient.ingredient_name} (not in inventory)`);
@@ -295,36 +310,37 @@ export const createMissingRecipes = async (storeId: string): Promise<number> => 
  */
 export const getRecipeAvailabilityStatus = async (storeId: string): Promise<RecipeAvailabilityStatus[]> => {
   try {
-    const { data: recipes, error } = await supabase
+    // First get all unified recipes for the store
+    const { data: recipes, error: recipesError } = await supabase
       .from('unified_recipes')
-      .select(`
-        id,
-        name,
-        store_id,
-        total_cost,
-        cost_per_serving,
-        unified_recipe_ingredients (
-          ingredient_name,
-          quantity,
-          unit,
-          cost_per_unit,
-          inventory_stock_id,
-          inventory_stock (
-            id,
-            stock_quantity,
-            item,
-            unit
-          )
-        )
-      `)
+      .select('id, name, store_id, total_cost, cost_per_serving, serving_size, is_active')
       .eq('store_id', storeId)
       .eq('is_active', true);
 
-    if (error) throw error;
+    if (recipesError) throw recipesError;
+    if (!recipes || recipes.length === 0) return [];
 
-    const statusResults: RecipeAvailabilityStatus[] = [];
+    // Get ingredients for all recipes
+    const { data: ingredients, error: ingredientsError } = await supabase
+      .from('unified_recipe_ingredients')
+      .select('*')
+      .in('recipe_id', recipes.map(r => r.id));
 
-    for (const recipe of recipes || []) {
+    if (ingredientsError) throw ingredientsError;
+
+    // Get inventory stock for the store
+    const { data: inventory, error: inventoryError } = await supabase
+      .from('inventory_stock')
+      .select('id, item, unit, stock_quantity, is_active')
+      .eq('store_id', storeId)
+      .eq('is_active', true);
+
+    if (inventoryError) throw inventoryError;
+
+    // Process recipes and match with inventory
+    const recipeStatuses: RecipeAvailabilityStatus[] = [];
+
+    for (const recipe of recipes) {
       // Check if recipe is linked to any product
       const { data: linkedProduct } = await supabase
         .from('product_catalog')
@@ -332,84 +348,68 @@ export const getRecipeAvailabilityStatus = async (storeId: string): Promise<Reci
         .eq('recipe_id', recipe.id)
         .maybeSingle();
 
-      const status = await analyzeRecipeAvailability(recipe, linkedProduct?.id);
-      statusResults.push(status);
+      const recipeIngredients = ingredients?.filter(ing => ing.recipe_id === recipe.id) || [];
+      
+      let availableCount = 0;
+      let maxProduction = Infinity;
+      const missingIngredients: string[] = [];
+      
+      for (const ingredient of recipeIngredients) {
+        // Find matching inventory item by inventory_stock_id
+        const inventoryItem = inventory?.find(inv => inv.id === ingredient.inventory_stock_id);
+        
+        if (!inventoryItem) {
+          missingIngredients.push(`${ingredient.ingredient_name} (not in inventory)`);
+          continue;
+        }
+
+        const available = inventoryItem.stock_quantity || 0;
+        const required = ingredient.quantity || 0;
+
+        if (available >= required) {
+          availableCount++;
+          if (required > 0) {
+            const possibleQuantity = Math.floor(available / required);
+            maxProduction = Math.min(maxProduction, possibleQuantity);
+          }
+        } else {
+          missingIngredients.push(`${ingredient.ingredient_name} (need ${required}, have ${available})`);
+        }
+      }
+
+      const canProduce = missingIngredients.length === 0 && recipeIngredients.length > 0;
+      
+      let status: RecipeAvailabilityStatus['status'] = 'setup_needed';
+      if (recipeIngredients.length === 0) {
+        status = 'setup_needed';
+      } else if (canProduce) {
+        status = 'ready_to_sell';
+      } else {
+        status = 'missing_ingredients';
+      }
+
+      recipeStatuses.push({
+        recipeId: recipe.id,
+        recipeName: recipe.name,
+        storeId: recipe.store_id,
+        status,
+        availableIngredients: availableCount,
+        totalIngredients: recipeIngredients.length,
+        missingIngredients,
+        canProduce,
+        maxProduction: maxProduction === Infinity ? 999 : maxProduction,
+        isLinkedToProduct: !!linkedProduct?.id,
+        productId: linkedProduct?.id,
+        totalCost: recipe.total_cost || 0,
+        costPerServing: recipe.cost_per_serving || 0
+      });
     }
 
-    return statusResults;
+    return recipeStatuses;
   } catch (error) {
     console.error('Error getting recipe availability status:', error);
     return [];
   }
-};
-
-/**
- * Analyze individual recipe availability
- */
-const analyzeRecipeAvailability = async (recipe: any, productId?: string): Promise<RecipeAvailabilityStatus> => {
-  // Recipe exists but no ingredients - setup needed
-  if (!recipe.unified_recipe_ingredients || recipe.unified_recipe_ingredients.length === 0) {
-    return {
-      recipeId: recipe.id,
-      recipeName: recipe.name,
-      status: 'setup_needed',
-      availableIngredients: 0,
-      totalIngredients: 0,
-      missingIngredients: ['No ingredients configured for recipe'],
-      canProduce: false,
-      maxProduction: 0,
-      isLinkedToProduct: !!productId,
-      productId,
-      totalCost: recipe.total_cost || 0,
-      costPerServing: recipe.cost_per_serving || 0
-    };
-  }
-
-  // Analyze ingredient availability
-  const ingredients = recipe.unified_recipe_ingredients;
-  let availableCount = 0;
-  let maxProduction = Infinity;
-  const missingIngredients: string[] = [];
-
-  for (const ingredient of ingredients) {
-    const inventoryItem = ingredient.inventory_stock;
-    
-    if (!inventoryItem) {
-      missingIngredients.push(`${ingredient.ingredient_name} (not in inventory)`);
-      continue;
-    }
-
-    const available = inventoryItem.stock_quantity || 0;
-    const required = ingredient.quantity || 0;
-
-    if (available >= required) {
-      availableCount++;
-      if (required > 0) {
-        const possibleQuantity = Math.floor(available / required);
-        maxProduction = Math.min(maxProduction, possibleQuantity);
-      }
-    } else {
-      missingIngredients.push(`${ingredient.ingredient_name} (need ${required}, have ${available})`);
-    }
-  }
-
-  const canProduce = missingIngredients.length === 0;
-  const status: RecipeAvailabilityStatus['status'] = canProduce ? 'ready_to_sell' : 'missing_ingredients';
-
-  return {
-    recipeId: recipe.id,
-    recipeName: recipe.name,
-    status,
-    availableIngredients: availableCount,
-    totalIngredients: ingredients.length,
-    missingIngredients,
-    canProduce,
-    maxProduction: maxProduction === Infinity ? 999 : maxProduction,
-    isLinkedToProduct: !!productId,
-    productId,
-    totalCost: recipe.total_cost || 0,
-    costPerServing: recipe.cost_per_serving || 0
-  };
 };
 
 /**
