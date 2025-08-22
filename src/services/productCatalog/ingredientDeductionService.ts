@@ -466,7 +466,7 @@ export const deductIngredientsForProduct = async (
       p_sync_status: 'failed',
       p_error_details: `Critical error: ${errorMessage}`,
       p_items_processed: 0,
-      p_sync_duration_ms: null
+      p_sync_duration_ms: 0
     });
     
     return false;
