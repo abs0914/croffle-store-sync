@@ -22,6 +22,7 @@ const normalizeRecipeName = (name: string): string => {
 
 export interface UnifiedRecipeCSVRow {
   name: string;
+  recipe_category?: string;
   ingredient_name: string;
   quantity: number;
   unit: string;
@@ -32,7 +33,7 @@ export interface UnifiedRecipeCSVRow {
 export const unifiedRecipeImportExport = {
   // Generate CSV from unified recipes
   generateCSV: async (recipes: UnifiedRecipe[]): Promise<string> => {
-    const headers = ['name', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
+    const headers = ['name', 'recipe_category', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
     const csvRows = [headers.join(',')];
 
     // Get recipe categories from product catalog
@@ -70,33 +71,32 @@ export const unifiedRecipeImportExport = {
     );
 
     recipes.forEach(recipe => {
-      const recipeCategory = recipeCategoryMap.get(recipe.id);
-      const formattedRecipeName = recipeCategory 
-        ? `${recipe.name} - ${recipeCategory}` 
-        : recipe.name;
+      const recipeCategory = recipeCategoryMap.get(recipe.id) || 'Other';
 
       if (recipe.ingredients && recipe.ingredients.length > 0) {
         recipe.ingredients.forEach(ingredient => {
-          const category = categoryMap.get(ingredient.inventory_stock_id);
+          const ingredientCategory = categoryMap.get(ingredient.inventory_stock_id);
           const row = [
-            `"${normalizeText(formattedRecipeName).replace(/"/g, '""')}"`,
+            `"${normalizeText(recipe.name).replace(/"/g, '""')}"`,
+            `"${recipeCategory}"`,
             `"${normalizeText(ingredient.ingredient_name).replace(/"/g, '""')}"`,
             ingredient.quantity.toString(),
             `"${normalizeText(ingredient.unit).replace(/"/g, '""')}"`,
             ingredient.cost_per_unit.toString(),
-            `"${formatCategory(category)}"`
+            `"${formatCategory(ingredientCategory)}"`
           ];
           csvRows.push(row.join(','));
         });
       } else {
         // Recipe without ingredients
         const row = [
-          `"${normalizeText(formattedRecipeName).replace(/"/g, '""')}"`,
+          `"${normalizeText(recipe.name).replace(/"/g, '""')}"`,
+          `"${recipeCategory}"`,
           '""', // empty ingredient_name
           '0', // zero quantity
           '""', // empty unit
           '0', // zero cost
-          '""' // empty category
+          '""' // empty ingredient category
         ];
         csvRows.push(row.join(','));
       }
@@ -107,13 +107,13 @@ export const unifiedRecipeImportExport = {
 
   // Generate CSV template
   generateCSVTemplate: (): string => {
-    const headers = ['name', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
+    const headers = ['name', 'recipe_category', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
     const exampleRows = [
-      ['Adobo Chicken - Main Course', 'Chicken Thigh', '500', 'g', '15.50', 'Base Ingredient'],
-      ['Adobo Chicken - Main Course', 'Soy Sauce', '100', 'ml', '2.25', 'Classic Sauce'],
-      ['Adobo Chicken - Main Course', 'Vinegar', '50', 'ml', '1.80', 'Classic Sauce'],
-      ['Fried Rice - Main Course', 'Rice', '200', 'g', '8.00', 'Base Ingredient'],
-      ['Fried Rice - Main Course', 'Egg', '2', 'pcs', '6.00', 'Base Ingredient']
+      ['Adobo Chicken', 'Main Course', 'Chicken Thigh', '500', 'g', '15.50', 'Base Ingredient'],
+      ['Adobo Chicken', 'Main Course', 'Soy Sauce', '100', 'ml', '2.25', 'Classic Sauce'],
+      ['Americano (Hot)', 'Espresso', 'Coffee', '18', 'g', '12.00', 'Base Ingredient'],
+      ['Biscoff Crushed', 'Add-on', 'Biscoff', '30', 'g', '8.50', 'Premium Topping'],
+      ['Blueberry Croffle', 'Fruity Croffle', 'Croffle Base', '1', 'pcs', '25.00', 'Base Ingredient']
     ];
 
     const csvRows = [headers.join(',')];
