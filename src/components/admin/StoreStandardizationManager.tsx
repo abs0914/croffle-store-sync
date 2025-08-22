@@ -16,6 +16,7 @@ import {
 } from '@/services/storeStandardization/targetedDeploymentService';
 import { Phase2CatalogStandardization } from './Phase2CatalogStandardization';
 import { Phase3DataValidation } from './Phase3DataValidation';
+import { Phase4StoreConfiguration } from './Phase4StoreConfiguration';
 
 export const StoreStandardizationManager: React.FC = () => {
   const [storesStatus, setStoresStatus] = useState<StoreStatus[]>([]);
@@ -143,10 +144,11 @@ export const StoreStandardizationManager: React.FC = () => {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="phase1">Phase 1: Templates</TabsTrigger>
           <TabsTrigger value="phase2">Phase 2: Catalogs</TabsTrigger>
           <TabsTrigger value="phase3">Phase 3: Validation</TabsTrigger>
+          <TabsTrigger value="phase4">Phase 4: Configuration</TabsTrigger>
         </TabsList>
 
         <TabsContent value="phase1">
@@ -289,6 +291,10 @@ export const StoreStandardizationManager: React.FC = () => {
 
         <TabsContent value="phase3">
           <Phase3DataValidation />
+        </TabsContent>
+
+        <TabsContent value="phase4">
+          <Phase4StoreConfiguration />
         </TabsContent>
       </Tabs>
     </div>
