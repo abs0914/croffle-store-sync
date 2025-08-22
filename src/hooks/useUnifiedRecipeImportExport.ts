@@ -15,7 +15,7 @@ export function useUnifiedRecipeImportExport(recipes: UnifiedRecipe[], storeId: 
     }
 
     try {
-      const csvData = unifiedRecipeImportExport.generateCSV(recipes);
+      const csvData = await unifiedRecipeImportExport.generateCSV(recipes);
       const blob = new Blob([csvData], { type: "text/csv" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");

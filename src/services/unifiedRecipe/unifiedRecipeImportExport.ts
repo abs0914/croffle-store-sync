@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { unifiedRecipeService, UnifiedRecipe, CreateRecipeData } from '@/services/unifiedRecipeService';
+import { formatCategory } from '@/utils/categoryFormatting';
 
 // Normalize text to remove special characters and accents for better matching
 const normalizeText = (text: string): string => {
@@ -25,23 +26,41 @@ export interface UnifiedRecipeCSVRow {
   quantity: number;
   unit: string;
   cost_per_unit: number;
+  ingredient_category?: string;
 }
 
 export const unifiedRecipeImportExport = {
   // Generate CSV from unified recipes
-  generateCSV: (recipes: UnifiedRecipe[]): string => {
-    const headers = ['name', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit'];
+  generateCSV: async (recipes: UnifiedRecipe[]): Promise<string> => {
+    const headers = ['name', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
     const csvRows = [headers.join(',')];
+
+    // Get inventory stock for category information
+    const allInventoryIds = recipes
+      .flatMap(recipe => recipe.ingredients || [])
+      .map(ingredient => ingredient.inventory_stock_id)
+      .filter(Boolean);
+    
+    const { data: inventoryStock } = await supabase
+      .from('inventory_stock')
+      .select('id, item_category')
+      .in('id', allInventoryIds);
+
+    const categoryMap = new Map(
+      inventoryStock?.map(item => [item.id, item.item_category]) || []
+    );
 
     recipes.forEach(recipe => {
       if (recipe.ingredients && recipe.ingredients.length > 0) {
         recipe.ingredients.forEach(ingredient => {
+          const category = categoryMap.get(ingredient.inventory_stock_id);
           const row = [
             `"${normalizeText(recipe.name).replace(/"/g, '""')}"`,
             `"${normalizeText(ingredient.ingredient_name).replace(/"/g, '""')}"`,
             ingredient.quantity.toString(),
             `"${normalizeText(ingredient.unit).replace(/"/g, '""')}"`,
-            ingredient.cost_per_unit.toString()
+            ingredient.cost_per_unit.toString(),
+            `"${formatCategory(category)}"`
           ];
           csvRows.push(row.join(','));
         });
@@ -52,7 +71,8 @@ export const unifiedRecipeImportExport = {
           '""', // empty ingredient_name
           '0', // zero quantity
           '""', // empty unit
-          '0' // zero cost
+          '0', // zero cost
+          '""' // empty category
         ];
         csvRows.push(row.join(','));
       }
@@ -63,13 +83,13 @@ export const unifiedRecipeImportExport = {
 
   // Generate CSV template
   generateCSVTemplate: (): string => {
-    const headers = ['name', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit'];
+    const headers = ['name', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
     const exampleRows = [
-      ['Adobo Chicken', 'Chicken Thigh', '500', 'g', '15.50'],
-      ['Adobo Chicken', 'Soy Sauce', '100', 'ml', '2.25'],
-      ['Adobo Chicken', 'Vinegar', '50', 'ml', '1.80'],
-      ['Fried Rice', 'Rice', '200', 'g', '8.00'],
-      ['Fried Rice', 'Egg', '2', 'pcs', '6.00']
+      ['Adobo Chicken', 'Chicken Thigh', '500', 'g', '15.50', 'Base Ingredient'],
+      ['Adobo Chicken', 'Soy Sauce', '100', 'ml', '2.25', 'Classic Sauce'],
+      ['Adobo Chicken', 'Vinegar', '50', 'ml', '1.80', 'Classic Sauce'],
+      ['Fried Rice', 'Rice', '200', 'g', '8.00', 'Base Ingredient'],
+      ['Fried Rice', 'Egg', '2', 'pcs', '6.00', 'Base Ingredient']
     ];
 
     const csvRows = [headers.join(',')];
@@ -99,7 +119,7 @@ export const unifiedRecipeImportExport = {
     // Get inventory stock for ingredient matching
     const { data: inventoryStock, error: inventoryError } = await supabase
       .from('inventory_stock')
-      .select('id, item, unit, cost')
+      .select('id, item, unit, cost, item_category')
       .eq('store_id', storeId)
       .eq('is_active', true);
 
