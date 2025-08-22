@@ -5165,12 +5165,35 @@ export type Database = {
         Args: { p_store_id: string; p_user_id?: string }
         Returns: string
       }
+      deploy_all_recipe_templates_to_all_stores: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          deployed_ingredients: number
+          deployed_products: number
+          deployed_recipes: number
+          execution_time_ms: number
+          skipped_existing: number
+          total_stores: number
+          total_templates: number
+        }[]
+      }
       deploy_products_to_all_stores: {
         Args: Record<PropertyKey, never>
         Returns: {
           deployed_count: number
           details: string[]
           error_count: number
+        }[]
+      }
+      deploy_recipe_template_to_all_stores: {
+        Args: { template_id_param: string }
+        Returns: {
+          deployed_ingredients: number
+          deployed_products: number
+          deployed_recipes: number
+          execution_time_ms: number
+          skipped_existing: number
+          total_stores: number
         }[]
       }
       export_transaction_details_csv: {

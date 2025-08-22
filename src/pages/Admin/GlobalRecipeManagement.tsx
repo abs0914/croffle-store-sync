@@ -24,7 +24,9 @@ import {
   Rocket,
   Copy,
   Grid3X3,
-  List
+  List,
+  Database,
+  Zap
 } from 'lucide-react';
 import { 
   fetchRecipeTemplates,
@@ -33,6 +35,7 @@ import {
 } from '@/services/recipeManagement/recipeTemplateService';
 import { RecipeTemplateDialog } from './components/RecipeTemplateDialog';
 import { OptimizedRecipeDeploymentDialog } from '@/components/Admin/recipe/OptimizedRecipeDeploymentDialog';
+import { BulkDeploymentDialog } from '@/components/Admin/recipe/BulkDeploymentDialog';
 import { useGlobalRecipeTemplateImportExport } from '@/hooks/useGlobalRecipeTemplateImportExport';
 import { RecipeTemplate } from '@/services/recipeManagement/types';
 import { toast } from 'sonner';
@@ -47,6 +50,7 @@ const GlobalRecipeManagement: React.FC = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeployDialog, setShowDeployDialog] = useState(false);
+  const [showSqlBulkDeployment, setShowSqlBulkDeployment] = useState(false);
 
   useEffect(() => {
     loadTemplates();
@@ -325,6 +329,16 @@ const GlobalRecipeManagement: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Bulk Deployment Actions */}
+          <Button 
+            onClick={() => setShowSqlBulkDeployment(true)}
+            className="gap-2"
+            variant="default"
+          >
+            <Database className="h-4 w-4" />
+            SQL Bulk Deploy (Fast)
+          </Button>
+          
           {/* View Mode Toggle */}
           <div className="flex border rounded-md p-1">
             <Button
@@ -456,19 +470,25 @@ const GlobalRecipeManagement: React.FC = () => {
       />
 
       {/* Deploy Template Dialog */}
-        <OptimizedRecipeDeploymentDialog
-          isOpen={showDeployDialog}
-          onClose={() => {
-            setShowDeployDialog(false);
-            setSelectedTemplate(null);
-          }}
-          template={selectedTemplate}
-          onSuccess={() => {
-            setShowDeployDialog(false);
-            setSelectedTemplate(null);
-            loadTemplates();
-          }}
-        />
+      <OptimizedRecipeDeploymentDialog
+        isOpen={showDeployDialog}
+        onClose={() => {
+          setShowDeployDialog(false);
+          setSelectedTemplate(null);
+        }}
+        template={selectedTemplate}
+        onSuccess={() => {
+          setShowDeployDialog(false);
+          setSelectedTemplate(null);
+          loadTemplates();
+        }}
+      />
+
+      {/* SQL Bulk Deployment Dialog */}
+      <BulkDeploymentDialog
+        isOpen={showSqlBulkDeployment}
+        onClose={() => setShowSqlBulkDeployment(false)}
+      />
     </div>
   );
 };
