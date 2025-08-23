@@ -79,22 +79,51 @@ export const correctTransactionInventory = async (
       for (const ingredient of recipeTemplate.recipe_template_ingredients) {
         const requiredQuantity = ingredient.quantity * item.quantity;
 
-        // Find matching inventory item with improved matching logic
-        // First try exact match, then try partial matches
+        // Find matching inventory item with improved matching logic including categories
+        // First try exact match, then try category-aware matching, then partial matches
         let { data: inventoryItem, error: inventoryError } = await supabase
           .from('inventory_stock')
-          .select('id, item, stock_quantity, serving_ready_quantity')
+          .select('id, item, stock_quantity, serving_ready_quantity, item_category')
           .eq('store_id', transaction.store_id)
           .eq('is_active', true)
           .eq('item', ingredient.ingredient_name)
           .limit(1)
           .maybeSingle();
 
-        // If no exact match, try partial matching
+        // If no exact match, try category-aware matching
+        if (!inventoryItem && !inventoryError) {
+          const ingredientParts = ingredient.ingredient_name.split(' ');
+          const baseIngredient = ingredientParts[0]; // e.g., "Peanut" from "Peanut Toppings"
+          const categoryHint = ingredientParts.slice(1).join(' ').toLowerCase(); // e.g., "toppings"
+          
+          // Determine expected inventory category based on ingredient name pattern
+          let expectedCategory = null;
+          if (categoryHint.includes('topping')) {
+            expectedCategory = ['base_ingredient', 'classic_topping', 'premium_topping'];
+          } else if (categoryHint.includes('sauce')) {
+            expectedCategory = ['classic_sauce', 'premium_sauce'];
+          }
+
+          if (expectedCategory) {
+            const { data: categoryMatch } = await supabase
+              .from('inventory_stock')
+              .select('id, item, stock_quantity, serving_ready_quantity, item_category')
+              .eq('store_id', transaction.store_id)
+              .eq('is_active', true)
+              .ilike('item', `%${baseIngredient}%`)
+              .in('item_category', expectedCategory)
+              .limit(1)
+              .maybeSingle();
+            
+            inventoryItem = categoryMatch;
+          }
+        }
+
+        // If still no match, try partial matching (fallback)
         if (!inventoryItem && !inventoryError) {
           const { data: partialMatch } = await supabase
             .from('inventory_stock')
-            .select('id, item, stock_quantity, serving_ready_quantity')
+            .select('id, item, stock_quantity, serving_ready_quantity, item_category')
             .eq('store_id', transaction.store_id)
             .eq('is_active', true)
             .ilike('item', `%${ingredient.ingredient_name.split(' ')[0]}%`) // Match first word
