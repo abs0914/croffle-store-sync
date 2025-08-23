@@ -24,16 +24,17 @@ export const correctTransactionInventory = async (
   };
 
   try {
-    // Get transaction details with proper table structure
+    // Get transaction details with proper table structure - search by receipt_number
     const { data: transaction, error: transactionError } = await supabase
       .from('transactions')
       .select(`
         id,
         store_id,
         items,
-        total
+        total,
+        receipt_number
       `)
-      .eq('id', transactionId)
+      .eq('receipt_number', transactionId)
       .single();
 
     if (transactionError || !transaction) {
@@ -98,7 +99,7 @@ export const correctTransactionInventory = async (
           .from('inventory_movements')
           .select('id')
           .eq('inventory_stock_id', inventoryItem.id)
-          .ilike('notes', `%${transactionId}%`)
+          .ilike('notes', `%${transaction.id}%`)
           .limit(1);
 
         if (existingMovement && existingMovement.length > 0) {
@@ -132,7 +133,7 @@ export const correctTransactionInventory = async (
             quantity_change: -requiredQuantity,
             previous_quantity: currentQuantity,
             new_quantity: newQuantity,
-            notes: `Manual correction for transaction ${transactionId} - Missing deduction for ${item.name}`,
+            notes: `Manual correction for transaction ${transaction.id} (${transactionId}) - Missing deduction for ${item.name}`,
             created_by: 'manual-correction'
           });
 
@@ -145,7 +146,7 @@ export const correctTransactionInventory = async (
     await supabase
       .from('inventory_sync_audit')
       .upsert({
-        transaction_id: transactionId,
+        transaction_id: transaction.id, // Use the actual transaction UUID
         sync_status: result.errors.length === 0 ? 'corrected' : 'partial_correction',
         error_details: result.errors.length > 0 ? JSON.stringify(result.errors) : null,
         items_processed: result.corrections_made
