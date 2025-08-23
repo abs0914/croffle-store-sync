@@ -7,7 +7,6 @@ import DashboardSummary from "@/components/dashboard/DashboardSummary";
 import EnhancedInventoryAlerts from "@/components/dashboard/EnhancedInventoryAlerts";
 import SalesDataSync from "@/components/dashboard/SalesDataSync";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
-import { ManualInventoryCorrection } from "@/components/Admin/ManualInventoryCorrection";
 
 export default function Dashboard() {
   console.log('Dashboard component rendering...');
@@ -40,7 +39,6 @@ export default function Dashboard() {
           <div className="lg:col-span-2 space-y-6">
             <DashboardSummary storeId={currentStore.id} />
             <QuickActions />
-            <ManualInventoryCorrection />
           </div>
           
           <div className="space-y-6">
