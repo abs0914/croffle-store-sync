@@ -35,7 +35,7 @@ export const correctTransactionInventory = async (
         receipt_number
       `)
       .eq('receipt_number', transactionId)
-      .single();
+      .maybeSingle();
 
     if (transactionError || !transaction) {
       result.success = false;
@@ -68,7 +68,7 @@ export const correctTransactionInventory = async (
         `)
         .ilike('name', `%${item.name}%`)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (recipeError || !recipeTemplate) {
         result.errors.push(`No recipe template found for ${item.name}`);
@@ -79,15 +79,30 @@ export const correctTransactionInventory = async (
       for (const ingredient of recipeTemplate.recipe_template_ingredients) {
         const requiredQuantity = ingredient.quantity * item.quantity;
 
-        // Find matching inventory item
-        const { data: inventoryItem, error: inventoryError } = await supabase
+        // Find matching inventory item with improved matching logic
+        // First try exact match, then try partial matches
+        let { data: inventoryItem, error: inventoryError } = await supabase
           .from('inventory_stock')
           .select('id, item, stock_quantity, serving_ready_quantity')
           .eq('store_id', transaction.store_id)
           .eq('is_active', true)
-          .or(`item.ilike.%${ingredient.ingredient_name}%,item.eq.${ingredient.ingredient_name}`)
+          .eq('item', ingredient.ingredient_name)
           .limit(1)
-          .single();
+          .maybeSingle();
+
+        // If no exact match, try partial matching
+        if (!inventoryItem && !inventoryError) {
+          const { data: partialMatch } = await supabase
+            .from('inventory_stock')
+            .select('id, item, stock_quantity, serving_ready_quantity')
+            .eq('store_id', transaction.store_id)
+            .eq('is_active', true)
+            .ilike('item', `%${ingredient.ingredient_name.split(' ')[0]}%`) // Match first word
+            .limit(1)
+            .maybeSingle();
+          
+          inventoryItem = partialMatch;
+        }
 
         if (inventoryError || !inventoryItem) {
           result.errors.push(`No inventory item found for ${ingredient.ingredient_name}`);
