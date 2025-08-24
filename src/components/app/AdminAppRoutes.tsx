@@ -12,7 +12,7 @@ import AdminReports from '@/pages/Admin/AdminReports';
 import AdminExpenses from '@/pages/Admin/AdminExpenses';
 import CommissaryManagement from '@/pages/Commissary/CommissaryManagement';
 import ProductionManagement from '@/pages/ProductionManagement';
-import RecipeManagement from '@/pages/Admin/RecipeManagement';
+import { RecipeManagement } from '@/pages/Admin/RecipeManagement';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
 import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
