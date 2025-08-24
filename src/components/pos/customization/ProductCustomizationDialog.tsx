@@ -300,11 +300,24 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     if (isCombo && type) {
       const isSelected = isComboItemSelected(type, addon.id);
       
+      // Convert AddonItem to AddOnItem format
+      const convertedAddon: AddOnItem = {
+        id: addon.id,
+        name: addon.name,
+        category: addon.category as any,
+        price: addon.price,
+        cost_per_unit: addon.cost_per_unit,
+        is_available: addon.is_active,
+        display_order: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
       return (
         <Card 
           key={addon.id} 
           className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
-          onClick={() => handleComboSelection(type, addon, !isSelected)}
+          onClick={() => handleComboSelection(type, convertedAddon, !isSelected)}
         >
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
