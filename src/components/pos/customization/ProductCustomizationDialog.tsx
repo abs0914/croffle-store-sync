@@ -135,26 +135,33 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
   };
 
   const getDynamicToppings = (): AddonItem[] => {
+    const sauces = getDynamicSauces();
     const toppings = dynamicAddons.filter(addon => {
       const name = addon.name.toLowerCase();
-      return name.includes('crushed') ||
-             name.includes('flakes') ||
-             name.includes('sprinkles') ||
-             name.includes('crumbs') ||
-             name.includes('powder') ||
-             name.includes('nuts') ||
-             name.includes('almond') ||
-             name.includes('pistachio') ||
-             name.includes('oreo') ||
-             !sauces.some(s => s.id === addon.id); // If not a sauce, consider it a topping
+      // First check if it's not a sauce
+      const isSauce = name.includes('sauce') || name.includes('spread') || 
+                     name.includes('jam') || name.includes('syrup') ||
+                     name.includes('chocolate') || name.includes('caramel') ||
+                     name.includes('strawberry') || name.includes('nutella');
+      
+      if (isSauce) return false;
+      
+      // Then check if it's a topping
+      return name.includes('crushed') || name.includes('flakes') || 
+             name.includes('sprinkles') || name.includes('crumbs') ||
+             name.includes('powder') || name.includes('nuts') ||
+             name.includes('almond') || name.includes('pistachio') ||
+             name.includes('oreo') || true; // Default to topping if not sauce
     });
     console.log('🍓 Filtered toppings:', toppings.map(t => t.name));
     return toppings;
   };
 
-  const sauces = getDynamicSauces();
-  const mixMatchSauces = sauces;
-  const mixMatchToppings = getDynamicToppings();
+  // Get unique items to avoid duplicates
+  const mixMatchSauces = getDynamicSauces();
+  const mixMatchToppings = getDynamicToppings().filter(t => 
+    !mixMatchSauces.some(s => s.id === t.id)
+  );
 
   // Debug logging
   console.log('🎯 ProductCustomizationDialog:', {
