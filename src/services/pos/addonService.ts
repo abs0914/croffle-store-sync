@@ -61,7 +61,13 @@ export const fetchAddonRecipes = async (storeId?: string): Promise<AddonItem[]> 
     // Filter products that are in addon categories
     const addonProducts = (allProducts || []).filter(product => {
       const categoryName = product.categories?.name?.toLowerCase() || '';
-      return categoryName.includes('addon') || categoryName.includes('add-on');
+      return categoryName.includes('addon') || 
+             categoryName.includes('add-on') || 
+             categoryName.includes('add-ons') ||
+             categoryName.includes('glaze') ||
+             categoryName.includes('premium') ||
+             categoryName.includes('topping') ||
+             categoryName.includes('sauce');
     });
 
     console.log('Filtered addon products:', addonProducts.length, 'addon products');
