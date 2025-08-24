@@ -5175,6 +5175,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_ingredient_inventory_mappings: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          mapping_details: Json
+          mappings_created: number
+          stores_processed: number
+        }[]
+      }
       create_test_shift: {
         Args: { p_store_id: string; p_user_id?: string }
         Returns: string
@@ -5269,6 +5277,14 @@ export type Database = {
       extract_pack_quantity: {
         Args: { order_description: string }
         Returns: number
+      }
+      fix_all_incomplete_recipes: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          execution_details: Json
+          ingredients_added: number
+          recipes_fixed: number
+        }[]
       }
       format_promo_details: {
         Args: { promo_name: string; promo_ref: string }
@@ -5668,6 +5684,14 @@ export type Database = {
           error_message: string
           is_valid: boolean
           missing_ingredients: string[]
+        }[]
+      }
+      validate_recipe_inventory_readiness: {
+        Args: { recipe_id_param: string }
+        Returns: {
+          can_produce: boolean
+          insufficient_stock: string[]
+          missing_mappings: string[]
         }[]
       }
       validate_user_input: {
