@@ -27,6 +27,7 @@ import {
 } from '@/services/pos/addonService';
 import { MixMatchRule, AddOnItem } from '@/types/productVariations';
 import { toast } from 'sonner';
+import { useStore } from '@/contexts/StoreContext';
 
 export type CroffleType = 'regular' | 'overload' | 'mini';
 
@@ -52,6 +53,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
   comboRules,
   onAddToCart
 }) => {
+  const { currentStore } = useStore();
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
   const [comboSelection, setComboSelection] = useState<ComboSelection>({
     toppings: [],
@@ -88,11 +90,22 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     try {
       setIsLoadingAddons(true);
       console.log('🔄 Fetching dynamic addons from product_catalog...');
-      // Use product's store_id for filtering if available
-      const storeId = product?.store_id;
-      const addons = await fetchAddonRecipes(storeId);
-      console.log('✅ Dynamic addons loaded:', addons.length, 'items for store:', storeId);
-      console.log('📝 Addon names:', addons.map(a => a.name));
+      
+      // Use current store ID first, then fallback to product store_id or no filter
+      const storeId = currentStore?.id || product?.store_id;
+      console.log('📍 Using store ID:', storeId, 'from currentStore:', currentStore?.id, 'productStore:', product?.store_id);
+      
+      let addons = await fetchAddonRecipes(storeId);
+      console.log('✅ Store-specific addons:', addons.length, 'items');
+      
+      // If no addons found with store filter, try without store filter as fallback
+      if (addons.length === 0 && storeId) {
+        console.log('🔄 No store-specific addons found, trying all stores...');
+        addons = await fetchAddonRecipes();
+        console.log('✅ All-store addons:', addons.length, 'items');
+      }
+      
+      console.log('📝 Final addon names:', addons.map(a => a.name));
       setDynamicAddons(addons);
     } catch (error) {
       console.error('❌ Error fetching dynamic addons:', error);
