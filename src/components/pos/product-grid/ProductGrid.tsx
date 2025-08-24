@@ -166,19 +166,26 @@ export default function ProductGrid({
       return;
     }
 
-    // Get the category name to determine if it's a Mix & Match product
+    // Check if this product needs customization based on name, not just category
+    const productName = product.name.toLowerCase();
+    const needsCustomization = productName.includes('mini') || productName.includes('overload');
+    
+    // Get the category name for Mix & Match category products
     const categoryName = getCategoryName(product.category_id);
-    const isMixMatchProduct = categoryName.toLowerCase() === 'mix & match';
+    const isMixMatchCategory = categoryName.toLowerCase() === 'mix & match';
+    
+    // Products that need customization: Mix & Match category OR Mini/Overload products
+    const shouldCustomize = isMixMatchCategory || needsCustomization;
 
-    // For non-Mix & Match products, add directly to cart (skip all customization flows)
-    if (!isMixMatchProduct) {
-      console.log("ProductGrid: Non-Mix & Match product - adding directly to cart:", product.name);
+    // For products that don't need customization, add directly to cart
+    if (!shouldCustomize) {
+      console.log("ProductGrid: Regular product - adding directly to cart:", product.name);
       addItemToCart(product);
       return;
     }
 
-    // For Mix & Match products, continue with the existing customization flow
-    console.log("ProductGrid: Mix & Match product - showing customization options:", product.name);
+    // For products that need customization, show customization flow
+    console.log("ProductGrid: Product needs customization:", product.name, { isMixMatchCategory, needsCustomization });
 
     // First check if this product has a customizable recipe with enhanced matching
     const customizableRecipe = customizableRecipes.find(recipe => {
@@ -213,7 +220,7 @@ export default function ProductGrid({
 
     // If no customizable recipe found, check for enhanced customization (croffles)
     if (shouldShowEnhancedCustomization(product)) {
-      console.log("ProductGrid: Showing enhanced customization for croffle:", product.name);
+      console.log("ProductGrid: ✅ Showing ProductCustomizationDialog for:", product.name);
       setSelectedProductForCustomization(product);
       setIsEnhancedCustomizationOpen(true);
       return;
@@ -351,6 +358,13 @@ export default function ProductGrid({
   const shouldShowEnhancedCustomization = (product: Product): boolean => {
     const productName = product.name.toLowerCase();
     const categoryName = getCategoryName(product.category_id).toLowerCase();
+    
+    console.log('🎯 shouldShowEnhancedCustomization check:', {
+      productName,
+      categoryName,
+      containsCroffle: productName.includes('croffle'),
+      willShowCustomization: productName.includes('croffle')
+    });
     
     // Show enhanced customization for all croffle products (including Mix & Match croffles)
     if (productName.includes('croffle')) {
