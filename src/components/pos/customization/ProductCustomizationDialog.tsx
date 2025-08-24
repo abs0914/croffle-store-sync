@@ -24,7 +24,8 @@ import {
   validateAddonSelection,
   SelectedAddon
 } from '@/services/pos/addonService';
-import { MixMatchRule } from '@/types/productVariations';
+import { MixMatchRule, AddOnItem } from '@/types/productVariations';
+import { fetchAddOnItems } from '@/services/productVariations/productVariationsService';
 import { toast } from 'sonner';
 
 export type CroffleType = 'regular' | 'overload' | 'mini_overload';
@@ -57,6 +58,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     sauces: []
   });
   const [activeTab, setActiveTab] = useState<string>('toppings');
+  const [dynamicAddons, setDynamicAddons] = useState<AddOnItem[]>([]);
 
   // Determine croffle type from product name
   const getCroffleType = (productName: string): CroffleType => {
@@ -73,14 +75,25 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
   const croffleType = product ? getCroffleType(product.name) : 'regular';
 
-  // Reset selections when dialog opens
+  // Reset selections when dialog opens and fetch dynamic addons
   useEffect(() => {
     if (isOpen) {
       setSelectedAddons([]);
       setComboSelection({ toppings: [], sauces: [] });
       setActiveTab('toppings');
+      fetchDynamicAddons();
     }
   }, [isOpen]);
+
+  const fetchDynamicAddons = async () => {
+    try {
+      const addons = await fetchAddOnItems();
+      setDynamicAddons(addons);
+    } catch (error) {
+      console.error('Error fetching dynamic addons:', error);
+      toast.error('Failed to load addon options');
+    }
+  };
 
   // Get relevant combo rules for current product
   const getRelevantComboRules = (): MixMatchRule[] => {
@@ -99,21 +112,23 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     return category?.items || [];
   };
 
-  // Define fixed sauce and topping options for Mix & Match
-  const mixMatchSauces = [
-    { id: 'chocolate', name: 'Chocolate', price: 0 },
-    { id: 'caramel', name: 'Caramel', price: 0 },
-    { id: 'tiramisu', name: 'Tiramisu', price: 0 }
-  ];
+  // Get dynamic sauce and topping options for Mix & Match
+  const getDynamicSauces = (): AddOnItem[] => {
+    return dynamicAddons.filter(addon => 
+      addon.category === 'classic_sauce' || addon.category === 'premium_sauce'
+    );
+  };
 
-  const mixMatchToppings = [
-    { id: 'colored_sprinkles', name: 'Colored Sprinkles', price: 0 },
-    { id: 'marshmallow', name: 'Marshmallow', price: 0 },
-    { id: 'chocolate_flakes', name: 'Chocolate Flakes', price: 0 },
-    { id: 'peanuts', name: 'Peanuts', price: 0 }
-  ];
+  const getDynamicToppings = (): AddOnItem[] => {
+    return dynamicAddons.filter(addon => 
+      addon.category === 'classic_topping' || addon.category === 'premium_topping'
+    );
+  };
 
-  // Get addons from categories for regular croffles
+  const mixMatchSauces = getDynamicSauces();
+  const mixMatchToppings = getDynamicToppings();
+
+  // For regular croffles, use addon categories (simplified)
   const classicToppings = croffleType === 'regular' ? getAddonsByCategory('basic_toppings') : [];
   const premiumToppings = croffleType === 'regular' ? getAddonsByCategory('premium_toppings') : [];
   const classicSauces = croffleType === 'regular' ? getAddonsByCategory('premium_spreads') : [];
@@ -143,27 +158,30 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     });
   };
 
-  // Handle combo selection for overload variants
-  const handleComboSelection = (type: 'toppings' | 'sauces', addon: AddonItem, selected: boolean) => {
+  // Handle combo selection for overload variants (simplified)
+  const handleComboSelection = (type: 'toppings' | 'sauces', addon: AddOnItem, selected: boolean) => {
     setComboSelection(prev => {
       const currentSelection = prev[type];
       if (selected) {
-        // Check limits based on croffle type
-        const maxToppings = croffleType === 'overload' ? 3 : 2;
-        const maxSauces = croffleType === 'overload' ? 1 : (croffleType === 'mini_overload' ? 2 : 0);
+        // Simplified limits - allow up to 3 items of each type
+        if (currentSelection.length >= 3) {
+          toast.error(`Maximum 3 ${type} allowed`);
+          return prev;
+        }
         
-        if (type === 'toppings' && currentSelection.length >= maxToppings) {
-          toast.error(`Maximum ${maxToppings} toppings allowed`);
-          return prev;
-        }
-        if (type === 'sauces' && currentSelection.length >= maxSauces) {
-          toast.error(`Maximum ${maxSauces} sauces allowed`);
-          return prev;
-        }
+        // Convert AddOnItem to AddonItem for compatibility
+        const compatibleAddon: AddonItem = {
+          id: addon.id,
+          name: addon.name,
+          price: addon.price || 0,
+          cost_per_unit: addon.cost_per_unit || 0,
+          category: addon.category,
+          is_active: addon.is_available
+        };
         
         return {
           ...prev,
-          [type]: [...currentSelection, { addon, quantity: 1 }]
+          [type]: [...currentSelection, { addon: compatibleAddon, quantity: 1 }]
         };
       } else {
         return {
@@ -211,27 +229,20 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     return toppingsCost + saucesCost;
   };
 
-  // Check if selection is valid
+  // Check if selection is valid (simplified)
   const isSelectionValid = (): boolean => {
     if (croffleType === 'regular') {
       return true; // Regular can have any addons or none
-    } else if (croffleType === 'overload') {
-      return comboSelection.toppings.length >= 1; // At least 1 topping required
-    } else if (croffleType === 'mini_overload') {
-      return comboSelection.sauces.length >= 1 && comboSelection.toppings.length >= 1; // At least 1 sauce AND 1 topping required
     }
-    return false;
+    // For Mix & Match products, at least one selection is required
+    return comboSelection.toppings.length > 0 || comboSelection.sauces.length > 0;
   };
 
   const handleAddToCart = () => {
     if (!product) return;
 
     if (!isSelectionValid()) {
-      if (croffleType === 'overload') {
-        toast.error('Please select one topping for Croffle Overload');
-      } else if (croffleType === 'mini_overload') {
-        toast.error('Please select at least 1 sauce and 1 topping for Mini Croffle');
-      }
+      toast.error('Please select at least one sauce or topping for Mix & Match products');
       return;
     }
 
@@ -299,7 +310,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 <h4 className="font-medium text-sm">{addon.name}</h4>
-                <p className="text-xs text-muted-foreground">₱{addon.price}</p>
+                <p className="text-xs text-muted-foreground">₱{addon.price || 0}</p>
               </div>
               {isSelected && (
                 <CheckCircle className="h-5 w-5 text-primary" />
@@ -318,7 +329,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 <h4 className="font-medium text-sm">{addon.name}</h4>
-                <p className="text-xs text-muted-foreground">₱{addon.price}</p>
+                <p className="text-xs text-muted-foreground">₱{addon.price || 0}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -346,7 +357,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
             </div>
             {quantity > 0 && (
               <div className="text-xs text-green-600 font-medium">
-                Subtotal: ₱{(addon.price * quantity).toFixed(2)}
+                Subtotal: ₱{((addon.price || 0) * quantity).toFixed(2)}
               </div>
             )}
           </CardContent>
@@ -355,38 +366,33 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     }
   };
 
-  // Render mix & match cards for fixed sauce/topping options
-  const renderMixMatchCard = (item: { id: string; name: string; price: number }, type: 'toppings' | 'sauces') => {
+  // Render mix & match cards for dynamic addon options
+  const renderMixMatchCard = (item: AddOnItem, type: 'toppings' | 'sauces') => {
     const isSelected = comboSelection[type].some(selected => selected.addon.id === item.id);
-    
-    // Create a temporary addon object for compatibility
-    const addonItem: AddonItem = {
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      cost_per_unit: 0,
-      category: type === 'sauces' ? 'classic_sauce' : 'classic_topping',
-      is_active: true
-    };
     
     return (
       <div 
         key={item.id} 
-        className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
-        onClick={() => handleComboSelection(type, addonItem, !isSelected)}
+        className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
+        onClick={() => handleComboSelection(type, item, !isSelected)}
       >
         <Checkbox
           id={`${type}-${item.id}`}
           checked={isSelected}
           onCheckedChange={() => {}} // Handled by parent onClick
-          className="h-3 w-3"
+          className="h-4 w-4"
         />
         <Label 
           htmlFor={`${type}-${item.id}`}
-          className="flex-1 cursor-pointer text-sm"
+          className="flex-1 cursor-pointer text-sm font-medium"
         >
           {item.name}
         </Label>
+        {item.price && item.price > 0 && (
+          <span className="text-xs text-muted-foreground">
+            ₱{(item.price || 0).toFixed(2)}
+          </span>
+        )}
       </div>
     );
   };
@@ -402,9 +408,10 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
             Customize {product.name}
           </DialogTitle>
           <DialogDescription>
-            {croffleType === 'regular' && 'Select add-ons to enhance your croffle'}
-            {croffleType === 'overload' && 'Mix and match selections are no additional charge'}
-            {croffleType === 'mini_overload' && 'Mix and match selections are no additional charge'}
+            {croffleType === 'regular' 
+              ? 'Select add-ons to enhance your croffle'
+              : 'Choose your favorite sauces and toppings for your Mix & Match croffle'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -416,9 +423,10 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
                 <div>
                   <h3 className="font-medium">{product.name}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {croffleType === 'overload' ? 'Fixed Price: ₱99' : 
-                     croffleType === 'mini_overload' ? 'Fixed Price: ₱65' : 
-                     `Base Price: ₱${product.price}`}
+                    {croffleType !== 'regular' 
+                      ? `Fixed Price: ₱${product.price}` 
+                      : `Base Price: ₱${product.price}`
+                    }
                   </p>
                 </div>
                 <Badge variant="outline" className="capitalize">
@@ -463,88 +471,48 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
               </TabsContent>
             </Tabs>
           ) : (
-            /* Combo Croffles - Show combo selection */
+            /* Mix & Match Croffles - Show sauce and topping selection */
             <div className="space-y-6">
-              {croffleType === 'overload' ? (
-                /* Croffle Overload - Only toppings required (single selection) */
-                <div>
-                  <h4 className="font-medium mb-3">
-                    Toppings Selection <span className="text-destructive">*</span>
-                  </h4>
-                  <p className="text-sm text-muted-foreground mb-3">Select one option</p>
-                  <div className="space-y-2">
-                    {mixMatchToppings.map(topping => {
-                      const isSelected = comboSelection.toppings.some(selected => selected.addon.id === topping.id);
-                      const addonItem: AddonItem = {
-                        id: topping.id,
-                        name: topping.name,
-                        price: topping.price,
-                        cost_per_unit: 0,
-                        category: 'classic_topping',
-                        is_active: true
-                      };
-                      
-                      return (
-                        <div 
-                          key={topping.id} 
-                          className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
-                          onClick={() => {
-                            // For overload, clear other selections and select only this one
-                            setComboSelection(prev => ({
-                              ...prev,
-                              toppings: isSelected ? [] : [{ addon: addonItem, quantity: 1 }]
-                            }));
-                          }}
-                        >
-                          <input
-                            type="radio"
-                            id={`topping-${topping.id}`}
-                            name="overload-topping"
-                            checked={isSelected}
-                            onChange={() => {}} // Handled by parent onClick
-                            className="h-3 w-3"
-                          />
-                          <Label 
-                            htmlFor={`topping-${topping.id}`}
-                            className="flex-1 cursor-pointer text-sm"
-                          >
-                            {topping.name} 1 Portion
-                          </Label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {comboSelection.toppings.length === 0 && (
-                    <p className="text-sm text-destructive mt-2">Please select one topping</p>
-                  )}
-                </div>
-              ) : (
-                /* Mini Croffle - Sauces and Toppings */
-                <>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="toppings">Toppings</TabsTrigger>
+                  <TabsTrigger value="sauces">Sauces</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="toppings" className="space-y-4">
                   <div>
-                    <h4 className="font-medium mb-3">
-                      Sauce Selection <span className="text-destructive">*</span>
-                    </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
-                    </div>
-                    {comboSelection.sauces.length === 0 && (
-                      <p className="text-sm text-destructive mt-2">Please select at least one sauce</p>
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-3">
-                      Toppings Selection <span className="text-destructive">*</span>
-                    </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <h4 className="font-medium mb-3">Select Toppings</h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Choose up to 3 toppings for your croffle
+                    </p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
                       {mixMatchToppings.map(topping => renderMixMatchCard(topping, 'toppings'))}
+                      {mixMatchToppings.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Loading toppings...
+                        </p>
+                      )}
                     </div>
-                    {comboSelection.toppings.length === 0 && (
-                      <p className="text-sm text-destructive mt-2">Please select at least one topping</p>
-                    )}
                   </div>
-                </>
-              )}
+                </TabsContent>
+                
+                <TabsContent value="sauces" className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-3">Select Sauces</h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Choose up to 3 sauces for your croffle
+                    </p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
+                      {mixMatchSauces.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Loading sauces...
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+               </Tabs>
             </div>
           )}
 
@@ -597,30 +565,29 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
                         ))}
                       </div>
                     )}
-                 </>
-               )}
+                  </>
+                )}
              </div>
-            
-            <Separator />
-            
-            <div className="flex justify-between items-center font-bold text-lg">
-              <span>Total:</span>
-              <span>₱{calculateTotal().toFixed(2)}</span>
-            </div>
-            
-            <p className="text-sm text-muted-foreground">{generateCustomizedName()}</p>
+             
+             <Separator />
+             
+             <div className="flex justify-between font-medium text-lg">
+               <span>Total</span>
+               <span>₱{calculateTotal().toFixed(2)}</span>
+             </div>
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-3">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button 
             onClick={handleAddToCart}
             disabled={!isSelectionValid()}
-            className="min-w-[120px]"
+            className="flex items-center gap-2"
           >
+            <ShoppingCart className="h-4 w-4" />
             Add to Cart - ₱{calculateTotal().toFixed(2)}
           </Button>
         </DialogFooter>
