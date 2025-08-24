@@ -66,19 +66,26 @@ export const fetchAddonRecipes = async (storeId?: string): Promise<AddonItem[]> 
 
     console.log('Filtered addon products:', addonProducts.length, 'addon products');
 
-    // Transform the data into AddonItem format
-    const addonItems: AddonItem[] = addonProducts.map(product => {
-      return {
-        id: product.id,
-        name: product.product_name,
-        description: undefined,
-        price: product.price || 6, // Default price if not set
-        cost_per_unit: (product.price || 6) * 0.6, // Estimate cost as 60% of price
-        category: product.categories?.name || 'addon',
-        is_active: product.is_available,
-        image_url: undefined
-      };
+    // Transform the data into AddonItem format and ensure uniqueness by ID
+    const uniqueAddonItems = new Map<string, AddonItem>();
+    
+    addonProducts.forEach(product => {
+      // Only add if not already exists (prevents duplicates by ID)
+      if (!uniqueAddonItems.has(product.id)) {
+        uniqueAddonItems.set(product.id, {
+          id: product.id,
+          name: product.product_name,
+          description: undefined,
+          price: product.price || 6, // Default price if not set
+          cost_per_unit: (product.price || 6) * 0.6, // Estimate cost as 60% of price
+          category: product.categories?.name || 'addon',
+          is_active: product.is_available,
+          image_url: undefined
+        });
+      }
     });
+
+    const addonItems: AddonItem[] = Array.from(uniqueAddonItems.values());
 
     console.log('Processed addon items:', addonItems);
     return addonItems;

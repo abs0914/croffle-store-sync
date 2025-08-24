@@ -135,23 +135,26 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
   };
 
   const getDynamicToppings = (): AddonItem[] => {
-    const sauces = getDynamicSauces();
     const toppings = dynamicAddons.filter(addon => {
       const name = addon.name.toLowerCase();
-      // First check if it's not a sauce
+      
+      // Explicit sauce keywords - if it contains these, it's NOT a topping
       const isSauce = name.includes('sauce') || name.includes('spread') || 
                      name.includes('jam') || name.includes('syrup') ||
-                     name.includes('chocolate') || name.includes('caramel') ||
-                     name.includes('strawberry') || name.includes('nutella');
+                     name.includes('chocolate') && (name.includes('sauce') || name.includes('syrup')) ||
+                     name.includes('caramel') && (name.includes('sauce') || name.includes('syrup')) ||
+                     name.includes('strawberry') && (name.includes('sauce') || name.includes('syrup')) ||
+                     name.includes('nutella');
       
       if (isSauce) return false;
       
-      // Then check if it's a topping
+      // Explicit topping keywords - only classify as topping if it matches these
       return name.includes('crushed') || name.includes('flakes') || 
              name.includes('sprinkles') || name.includes('crumbs') ||
              name.includes('powder') || name.includes('nuts') ||
              name.includes('almond') || name.includes('pistachio') ||
-             name.includes('oreo') || true; // Default to topping if not sauce
+             name.includes('oreo') || name.includes('cookie') ||
+             name.includes('biscuit') || name.includes('wafer');
     });
     console.log('🍓 Filtered toppings:', toppings.map(t => t.name));
     return toppings;
