@@ -85,10 +85,13 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
   const fetchDynamicAddons = async () => {
     try {
+      console.log('🔄 Fetching dynamic addons...');
       const addons = await fetchAddOnItems();
+      console.log('✅ Dynamic addons loaded:', addons.length, 'items');
+      console.log('📝 Addon categories:', [...new Set(addons.map(a => a.category))]);
       setDynamicAddons(addons);
     } catch (error) {
-      console.error('Error fetching dynamic addons:', error);
+      console.error('❌ Error fetching dynamic addons:', error);
       toast.error('Failed to load addon options');
     }
   };
@@ -125,6 +128,15 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
   const mixMatchSauces = getDynamicSauces();
   const mixMatchToppings = getDynamicToppings();
+
+  // Debug logging
+  console.log('🎯 ProductCustomizationDialog:', {
+    productName: product?.name,
+    detectedType: croffleType,
+    dynamicAddonsCount: dynamicAddons.length,
+    sauces: mixMatchSauces.length,
+    toppings: mixMatchToppings.length
+  });
 
   // For regular croffles, use addon categories (simplified)
   const classicToppings = croffleType === 'regular' ? getAddonsByCategory('basic_toppings') : [];

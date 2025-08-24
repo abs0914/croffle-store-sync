@@ -220,13 +220,18 @@ export function ComboSelectionDialog({
   // This will be logged above in the enhanced debug section
 
   const handleCroffleSelect = (croffle: Product) => {
+    console.log("Selected croffle:", croffle.name);
     setSelectedCroffle(croffle);
     
-    // Check if it's a Mini Croffle that needs customization
-    const isMiniCroffle = croffle.name.toLowerCase().includes("mini");
-    if (isMiniCroffle) {
+    // Check if it's a product that needs customization (Mini Croffle or Croffle Overload)
+    const needsCustomization = croffle.name.toLowerCase().includes("mini") || 
+                              croffle.name.toLowerCase().includes("overload");
+    
+    if (needsCustomization) {
+      console.log("Product needs customization, going to customize step");
       setStep("customize");
     } else {
+      console.log("Regular croffle, going to espresso step");
       setStep("espresso");
     }
   };
@@ -244,10 +249,12 @@ export function ComboSelectionDialog({
     // Debug category mapping
     const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
     
-    // Fix category mapping for Mini Croffle
+    // Fix category mapping for Mini Croffle and Croffle Overload
     let categoryForPricing = croffleCategory;
     if (selectedCroffle?.name.toLowerCase().includes("mini")) {
       categoryForPricing = "Mini Croffle";
+    } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
+      categoryForPricing = "Mix & Match";
     }
 
     // Map espresso product name to espresso type for pricing
@@ -288,8 +295,9 @@ export function ComboSelectionDialog({
   const handleBack = () => {
     if (step === "espresso") {
       // If we came from customization, go back to customization
-      const isMiniCroffle = selectedCroffle?.name.toLowerCase().includes("mini");
-      setStep(isMiniCroffle ? "customize" : "croffle");
+      const needsCustomization = selectedCroffle?.name.toLowerCase().includes("mini") ||
+                                 selectedCroffle?.name.toLowerCase().includes("overload");
+      setStep(needsCustomization ? "customize" : "croffle");
     } else if (step === "customize") {
       setStep("croffle");
     }
@@ -534,10 +542,12 @@ export function ComboSelectionDialog({
                     .map((espresso) => {
                       const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
                       
-                      // Fix category mapping for Mini Croffle in display
+                      // Fix category mapping for Mini Croffle and Croffle Overload in display
                       let categoryForPricing = croffleCategory;
                       if (selectedCroffle?.name.toLowerCase().includes("mini")) {
                         categoryForPricing = "Mini Croffle";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
+                        categoryForPricing = "Mix & Match";
                       }
                       
                       const espressoType = "Hot Espresso";
@@ -573,10 +583,12 @@ export function ComboSelectionDialog({
                     .map((espresso) => {
                       const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
                       
-                      // Fix category mapping for Mini Croffle in display
+                      // Fix category mapping for Mini Croffle and Croffle Overload in display
                       let categoryForPricing = croffleCategory;
                       if (selectedCroffle?.name.toLowerCase().includes("mini")) {
                         categoryForPricing = "Mini Croffle";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
+                        categoryForPricing = "Mix & Match";
                       }
                       
                       const espressoType = "Cold Espresso";
