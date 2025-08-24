@@ -66,13 +66,15 @@ export const fetchAddonRecipes = async (storeId?: string): Promise<AddonItem[]> 
 
     console.log('Filtered addon products:', addonProducts.length, 'addon products');
 
-    // Transform the data into AddonItem format and ensure uniqueness by ID
+    // Transform the data into AddonItem format and ensure uniqueness by product_name
     const uniqueAddonItems = new Map<string, AddonItem>();
     
     addonProducts.forEach(product => {
-      // Only add if not already exists (prevents duplicates by ID)
-      if (!uniqueAddonItems.has(product.id)) {
-        uniqueAddonItems.set(product.id, {
+      const normalizedName = product.product_name.toLowerCase().trim();
+      
+      // Only add if not already exists (prevents duplicates by product name)
+      if (!uniqueAddonItems.has(normalizedName)) {
+        uniqueAddonItems.set(normalizedName, {
           id: product.id,
           name: product.product_name,
           description: undefined,
