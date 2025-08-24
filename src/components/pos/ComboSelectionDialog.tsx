@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 import { Product, Category } from "@/types";
 import { useComboService } from "@/hooks/pos/useComboService";
 import { useComboDataValidation } from "@/hooks/pos/useComboDataValidation";
-import { MiniCroffleComboDialog } from "./MiniCroffleComboDialog";
+import { ProductCustomizationDialog } from "./customization/ProductCustomizationDialog";
 import { AddonCategory } from "@/services/pos/addonService";
 import { MixMatchRule } from "@/types/productVariations";
 
@@ -639,14 +639,22 @@ export function ComboSelectionDialog({
           </ScrollArea>
         </div>
 
-        {/* MiniCroffleComboDialog for Mini Croffle */}
+        {/* ProductCustomizationDialog for Mini Croffle and Croffle Overload */}
         {step === "customize" && selectedCroffle && (
-          <MiniCroffleComboDialog
-            open={step === "customize"}
-            onOpenChange={(open) => !open && setStep("croffle")}
+          <ProductCustomizationDialog
+            isOpen={step === "customize"}
+            onClose={() => setStep("croffle")}
             product={selectedCroffle}
-            onNext={handleMiniCroffleNext}
-            onBack={() => setStep("croffle")}
+            addonCategories={addonCategories || []}
+            comboRules={comboRules || []}
+            onAddToCart={(items) => {
+              handleMiniCroffleNext({
+                sauce: '', // These will be handled by the unified dialog
+                toppings: [],
+                price: items[0]?.price || 0,
+                customizedProduct: items[0]?.product || selectedCroffle
+              });
+            }}
           />
         )}
 
