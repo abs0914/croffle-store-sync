@@ -5119,6 +5119,20 @@ export type Database = {
         Args: { user_email: string }
         Returns: boolean
       }
+      audit_recipe_completeness: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          missing_ingredients: string[]
+          recipe_id: string
+          recipe_ingredients_count: number
+          recipe_name: string
+          status: string
+          store_id: string
+          store_name: string
+          template_id: string
+          template_ingredients_count: number
+        }[]
+      }
       calculate_recipe_cost: {
         Args: { recipe_id: number }
         Returns: number
@@ -5172,6 +5186,19 @@ export type Database = {
           deployed_products: number
           deployed_recipes: number
           execution_time_ms: number
+          skipped_existing: number
+          total_stores: number
+          total_templates: number
+        }[]
+      }
+      deploy_and_fix_recipe_templates_to_all_stores: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          deployed_ingredients: number
+          deployed_products: number
+          deployed_recipes: number
+          execution_time_ms: number
+          fixed_recipes: number
           skipped_existing: number
           total_stores: number
           total_templates: number

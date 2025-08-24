@@ -1,8 +1,14 @@
 import React from 'react';
-import GlobalRecipeManagement from './GlobalRecipeManagement';
+import { RecipeCompleteness } from "./RecipeCompleteness";
 
-const RecipeManagement: React.FC = () => {
-  return <GlobalRecipeManagement />;
+export const RecipeManagement: React.FC = () => {
+  return (
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Recipe Management</h1>
+        <p className="text-muted-foreground">Fix incomplete recipe deployments and inventory issues</p>
+      </div>
+      <RecipeCompleteness />
+    </div>
+  );
 };
-
-export default RecipeManagement;

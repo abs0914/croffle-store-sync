@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { deployAndFixAllRecipeTemplates } from "@/services/recipeManagement/enhancedDeploymentService";
 
 export interface BulkDeploymentResult {
   deployed_recipes: number;
