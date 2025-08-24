@@ -59,6 +59,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
   });
   const [activeTab, setActiveTab] = useState<string>('toppings');
   const [dynamicAddons, setDynamicAddons] = useState<AddOnItem[]>([]);
+  const [isLoadingAddons, setIsLoadingAddons] = useState(false);
 
   // Determine croffle type from product name
   const getCroffleType = (productName: string): CroffleType => {
@@ -85,6 +86,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
   const fetchDynamicAddons = async () => {
     try {
+      setIsLoadingAddons(true);
       console.log('🔄 Fetching dynamic addons...');
       const addons = await fetchAddOnItems();
       console.log('✅ Dynamic addons loaded:', addons.length, 'items');
@@ -93,6 +95,8 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     } catch (error) {
       console.error('❌ Error fetching dynamic addons:', error);
       toast.error('Failed to load addon options');
+    } finally {
+      setIsLoadingAddons(false);
     }
   };
 
@@ -115,15 +119,23 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
   // Get dynamic sauce and topping options for Mix & Match
   const getDynamicSauces = (): AddOnItem[] => {
-    return dynamicAddons.filter(addon => 
-      addon.category === 'classic_sauce' || addon.category === 'premium_sauce'
+    const sauces = dynamicAddons.filter(addon => 
+      addon.category?.toLowerCase().includes('sauce') || 
+      addon.category?.toLowerCase().includes('spread') ||
+      addon.category?.toLowerCase().includes('jam')
     );
+    console.log('🥫 Filtered sauces:', sauces.map(s => `${s.name} (${s.category})`));
+    return sauces;
   };
 
   const getDynamicToppings = (): AddOnItem[] => {
-    return dynamicAddons.filter(addon => 
-      addon.category === 'classic_topping' || addon.category === 'premium_topping'
+    const toppings = dynamicAddons.filter(addon => 
+      addon.category?.toLowerCase().includes('topping') ||
+      addon.category?.toLowerCase().includes('nut') ||
+      addon.category?.toLowerCase().includes('fruit')
     );
+    console.log('🍓 Filtered toppings:', toppings.map(t => `${t.name} (${t.category})`));
+    return toppings;
   };
 
   const mixMatchSauces = getDynamicSauces();
@@ -134,8 +146,10 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     productName: product?.name,
     detectedType: croffleType,
     dynamicAddonsCount: dynamicAddons.length,
+    isLoading: isLoadingAddons,
     sauces: mixMatchSauces.length,
-    toppings: mixMatchToppings.length
+    toppings: mixMatchToppings.length,
+    allCategories: [...new Set(dynamicAddons.map(a => a.category))]
   });
 
   // For regular croffles, use addon categories (simplified)
@@ -534,11 +548,20 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
                       }
                     </p>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {mixMatchToppings.map(topping => renderMixMatchCard(topping, 'toppings'))}
-                      {mixMatchToppings.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          Loading toppings...
-                        </p>
+                      {isLoadingAddons ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                          <p className="text-sm text-muted-foreground mt-2">Loading toppings...</p>
+                        </div>
+                      ) : mixMatchToppings.length > 0 ? (
+                        mixMatchToppings.map(topping => renderMixMatchCard(topping, 'toppings'))
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-sm text-muted-foreground">No toppings available</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Available categories: {[...new Set(dynamicAddons.map(a => a.category))].join(', ')}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -554,11 +577,20 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
                       }
                     </p>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
-                      {mixMatchSauces.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          Loading sauces...
-                        </p>
+                      {isLoadingAddons ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+                          <p className="text-sm text-muted-foreground mt-2">Loading sauces...</p>
+                        </div>
+                      ) : mixMatchSauces.length > 0 ? (
+                        mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-sm text-muted-foreground">No sauces available</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Available categories: {[...new Set(dynamicAddons.map(a => a.category))].join(', ')}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
