@@ -28,7 +28,7 @@ import { MixMatchRule, AddOnItem } from '@/types/productVariations';
 import { fetchAddOnItems } from '@/services/productVariations/productVariationsService';
 import { toast } from 'sonner';
 
-export type CroffleType = 'regular' | 'overload' | 'mini_overload';
+export type CroffleType = 'regular' | 'overload' | 'mini';
 
 interface ProductCustomizationDialogProps {
   isOpen: boolean;
@@ -63,12 +63,10 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
   // Determine croffle type from product name
   const getCroffleType = (productName: string): CroffleType => {
     const name = productName.toLowerCase();
-    if (name.includes('mini') && name.includes('overload')) {
-      return 'mini_overload';
-    } else if (name.includes('overload')) {
+    if (name.includes('overload')) {
       return 'overload';
     } else if (name.includes('mini')) {
-      return 'mini_overload'; // Treat Mini Croffle as mix & match
+      return 'mini';
     }
     return 'regular';
   };
@@ -158,14 +156,23 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     });
   };
 
-  // Handle combo selection for overload variants (simplified)
+  // Handle combo selection based on product type
   const handleComboSelection = (type: 'toppings' | 'sauces', addon: AddOnItem, selected: boolean) => {
     setComboSelection(prev => {
       const currentSelection = prev[type];
       if (selected) {
-        // Simplified limits - allow up to 3 items of each type
-        if (currentSelection.length >= 3) {
-          toast.error(`Maximum 3 ${type} allowed`);
+        // Apply different limits based on croffle type and selection type
+        let maxLimit = 3; // Default
+        
+        if (croffleType === 'overload' && type === 'toppings') {
+          maxLimit = 1; // Croffle Overload: exactly 1 topping
+        } else if (croffleType === 'mini' && type === 'sauces') {
+          maxLimit = 1; // Mini Croffle: exactly 1 sauce
+        }
+        
+        if (currentSelection.length >= maxLimit) {
+          const limitText = maxLimit === 1 ? '1' : `${maxLimit}`;
+          toast.error(`Maximum ${limitText} ${type} allowed for this product`);
           return prev;
         }
         
@@ -203,11 +210,9 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
   // Calculate pricing
   const calculateTotal = (): number => {
-    // Fixed prices for Mix & Match products
-    if (croffleType === 'overload') {
-      return 99; // Fixed price for Croffle Overload
-    } else if (croffleType === 'mini_overload') {
-      return 65; // Fixed price for Mini Croffle
+    // Fixed prices for Mix & Match products - use product database price
+    if (croffleType === 'overload' || croffleType === 'mini') {
+      return product?.price || 0; // Get price from database
     }
     
     // For regular croffles, use base price + addons
@@ -229,20 +234,31 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     return toppingsCost + saucesCost;
   };
 
-  // Check if selection is valid (simplified)
+  // Check if selection is valid based on product type
   const isSelectionValid = (): boolean => {
     if (croffleType === 'regular') {
       return true; // Regular can have any addons or none
+    } else if (croffleType === 'mini') {
+      // Mini Croffle: Must have 1 sauce + at least 1 topping
+      return comboSelection.sauces.length === 1 && comboSelection.toppings.length > 0;
+    } else if (croffleType === 'overload') {
+      // Croffle Overload: Must have exactly 1 topping
+      return comboSelection.toppings.length === 1;
     }
-    // For Mix & Match products, at least one selection is required
-    return comboSelection.toppings.length > 0 || comboSelection.sauces.length > 0;
+    return false;
   };
 
   const handleAddToCart = () => {
     if (!product) return;
 
     if (!isSelectionValid()) {
-      toast.error('Please select at least one sauce or topping for Mix & Match products');
+      if (croffleType === 'mini') {
+        toast.error('Please select exactly 1 sauce and at least 1 topping for Mini Croffle');
+      } else if (croffleType === 'overload') {
+        toast.error('Please select exactly 1 topping for Croffle Overload');
+      } else {
+        toast.error('Please make a valid selection');
+      }
       return;
     }
 
@@ -423,7 +439,9 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
           <DialogDescription>
             {croffleType === 'regular' 
               ? 'Select add-ons to enhance your croffle'
-              : 'Choose your favorite sauces and toppings for your Mix & Match croffle'
+              : croffleType === 'mini'
+              ? 'Select exactly 1 sauce and multiple toppings for your Mini Croffle'
+              : 'Select exactly 1 topping for your Croffle Overload'
             }
           </DialogDescription>
         </DialogHeader>
@@ -496,7 +514,12 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
                   <div>
                     <h4 className="font-medium mb-3">Select Toppings</h4>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Choose up to 3 toppings for your croffle
+                      {croffleType === 'overload' 
+                        ? 'Choose exactly 1 topping for your Croffle Overload'
+                        : croffleType === 'mini'
+                        ? 'Choose multiple toppings for your Mini Croffle'
+                        : 'Choose up to 3 toppings for your croffle'
+                      }
                     </p>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {mixMatchToppings.map(topping => renderMixMatchCard(topping, 'toppings'))}
@@ -513,7 +536,10 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
                   <div>
                     <h4 className="font-medium mb-3">Select Sauces</h4>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Choose up to 3 sauces for your croffle
+                      {croffleType === 'mini' 
+                        ? 'Choose exactly 1 sauce for your Mini Croffle'
+                        : 'Choose up to 3 sauces for your croffle'
+                      }
                     </p>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))}
