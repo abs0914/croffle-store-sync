@@ -187,6 +187,14 @@ export default function ProductGrid({
     // For products that need customization, show customization flow
     console.log("ProductGrid: Product needs customization:", product.name, { isMixMatchCategory, needsCustomization });
 
+    // Check for enhanced customization first (croffles) - prioritize over recipe customization
+    if (shouldShowEnhancedCustomization(product)) {
+      console.log("ProductGrid: ✅ Showing ProductCustomizationDialog for:", product.name);
+      setSelectedProductForCustomization(product);
+      setIsEnhancedCustomizationOpen(true);
+      return;
+    }
+
     // First check if this product has a customizable recipe with enhanced matching
     const customizableRecipe = customizableRecipes.find(recipe => {
       const recipeName = recipe.name.toLowerCase().replace(/[^\w\s]/g, '').trim();
@@ -215,14 +223,6 @@ export default function ProductGrid({
       console.log("ProductGrid: Found customizable recipe for Mix & Match product:", customizableRecipe);
       setSelectedCustomizableRecipe(customizableRecipe);
       setIsRecipeCustomizationOpen(true);
-      return;
-    }
-
-    // If no customizable recipe found, check for enhanced customization (croffles)
-    if (shouldShowEnhancedCustomization(product)) {
-      console.log("ProductGrid: ✅ Showing ProductCustomizationDialog for:", product.name);
-      setSelectedProductForCustomization(product);
-      setIsEnhancedCustomizationOpen(true);
       return;
     }
 
