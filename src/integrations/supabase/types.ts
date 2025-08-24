@@ -3297,6 +3297,58 @@ export type Database = {
           },
         ]
       }
+      recipe_ingredient_mappings: {
+        Row: {
+          conversion_factor: number
+          created_at: string
+          id: string
+          ingredient_name: string
+          inventory_stock_id: string
+          recipe_id: string
+          updated_at: string
+        }
+        Insert: {
+          conversion_factor?: number
+          created_at?: string
+          id?: string
+          ingredient_name: string
+          inventory_stock_id: string
+          recipe_id: string
+          updated_at?: string
+        }
+        Update: {
+          conversion_factor?: number
+          created_at?: string
+          id?: string
+          ingredient_name?: string
+          inventory_stock_id?: string
+          recipe_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredient_mappings_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredient_mappings_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_usage_analytics"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredient_mappings_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_ingredient_substitutions: {
         Row: {
           conversion_factor: number | null
@@ -3363,6 +3415,7 @@ export type Database = {
           recipe_id: string
           recipe_unit: string | null
           unit: Database["public"]["Enums"]["inventory_unit"]
+          updated_at: string | null
         }
         Insert: {
           commissary_item_id?: string | null
@@ -3382,6 +3435,7 @@ export type Database = {
           recipe_id: string
           recipe_unit?: string | null
           unit: Database["public"]["Enums"]["inventory_unit"]
+          updated_at?: string | null
         }
         Update: {
           commissary_item_id?: string | null
@@ -3401,6 +3455,7 @@ export type Database = {
           recipe_id?: string
           recipe_unit?: string | null
           unit?: Database["public"]["Enums"]["inventory_unit"]
+          updated_at?: string | null
         }
         Relationships: [
           {
