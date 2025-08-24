@@ -22,10 +22,10 @@ import {
   AddonCategory,
   calculateAddonTotal,
   validateAddonSelection,
-  SelectedAddon
+  SelectedAddon,
+  fetchAddonRecipes
 } from '@/services/pos/addonService';
 import { MixMatchRule, AddOnItem } from '@/types/productVariations';
-import { fetchAddOnItems } from '@/services/productVariations/productVariationsService';
 import { toast } from 'sonner';
 
 export type CroffleType = 'regular' | 'overload' | 'mini';
@@ -58,7 +58,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     sauces: []
   });
   const [activeTab, setActiveTab] = useState<string>('toppings');
-  const [dynamicAddons, setDynamicAddons] = useState<AddOnItem[]>([]);
+  const [dynamicAddons, setDynamicAddons] = useState<AddonItem[]>([]);
   const [isLoadingAddons, setIsLoadingAddons] = useState(false);
 
   // Determine croffle type from product name
@@ -87,10 +87,10 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
   const fetchDynamicAddons = async () => {
     try {
       setIsLoadingAddons(true);
-      console.log('🔄 Fetching dynamic addons...');
-      const addons = await fetchAddOnItems();
+      console.log('🔄 Fetching dynamic addons from product_catalog...');
+      const addons = await fetchAddonRecipes();
       console.log('✅ Dynamic addons loaded:', addons.length, 'items');
-      console.log('📝 Addon categories:', [...new Set(addons.map(a => a.category))]);
+      console.log('📝 Addon names:', addons.map(a => a.name));
       setDynamicAddons(addons);
     } catch (error) {
       console.error('❌ Error fetching dynamic addons:', error);
@@ -118,27 +118,42 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
   };
 
   // Get dynamic sauce and topping options for Mix & Match
-  const getDynamicSauces = (): AddOnItem[] => {
-    const sauces = dynamicAddons.filter(addon => 
-      addon.category?.toLowerCase().includes('sauce') || 
-      addon.category?.toLowerCase().includes('spread') ||
-      addon.category?.toLowerCase().includes('jam')
-    );
-    console.log('🥫 Filtered sauces:', sauces.map(s => `${s.name} (${s.category})`));
+  const getDynamicSauces = (): AddonItem[] => {
+    const sauces = dynamicAddons.filter(addon => {
+      const name = addon.name.toLowerCase();
+      return name.includes('sauce') || 
+             name.includes('spread') ||
+             name.includes('jam') ||
+             name.includes('syrup') ||
+             name.includes('chocolate') ||
+             name.includes('caramel') ||
+             name.includes('strawberry') ||
+             name.includes('nutella');
+    });
+    console.log('🥫 Filtered sauces:', sauces.map(s => s.name));
     return sauces;
   };
 
-  const getDynamicToppings = (): AddOnItem[] => {
-    const toppings = dynamicAddons.filter(addon => 
-      addon.category?.toLowerCase().includes('topping') ||
-      addon.category?.toLowerCase().includes('nut') ||
-      addon.category?.toLowerCase().includes('fruit')
-    );
-    console.log('🍓 Filtered toppings:', toppings.map(t => `${t.name} (${t.category})`));
+  const getDynamicToppings = (): AddonItem[] => {
+    const toppings = dynamicAddons.filter(addon => {
+      const name = addon.name.toLowerCase();
+      return name.includes('crushed') ||
+             name.includes('flakes') ||
+             name.includes('sprinkles') ||
+             name.includes('crumbs') ||
+             name.includes('powder') ||
+             name.includes('nuts') ||
+             name.includes('almond') ||
+             name.includes('pistachio') ||
+             name.includes('oreo') ||
+             !sauces.some(s => s.id === addon.id); // If not a sauce, consider it a topping
+    });
+    console.log('🍓 Filtered toppings:', toppings.map(t => t.name));
     return toppings;
   };
 
-  const mixMatchSauces = getDynamicSauces();
+  const sauces = getDynamicSauces();
+  const mixMatchSauces = sauces;
   const mixMatchToppings = getDynamicToppings();
 
   // Debug logging
@@ -149,7 +164,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     isLoading: isLoadingAddons,
     sauces: mixMatchSauces.length,
     toppings: mixMatchToppings.length,
-    allCategories: [...new Set(dynamicAddons.map(a => a.category))]
+    allAddonNames: dynamicAddons.map(a => a.name)
   });
 
   // For regular croffles, use addon categories (simplified)
@@ -183,7 +198,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
   };
 
   // Handle combo selection based on product type
-  const handleComboSelection = (type: 'toppings' | 'sauces', addon: AddOnItem, selected: boolean) => {
+  const handleComboSelection = (type: 'toppings' | 'sauces', addon: AddonItem, selected: boolean) => {
     setComboSelection(prev => {
       const currentSelection = prev[type];
       if (selected) {
@@ -202,19 +217,11 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
           return prev;
         }
         
-        // Convert AddOnItem to AddonItem for compatibility
-        const compatibleAddon: AddonItem = {
-          id: addon.id,
-          name: addon.name,
-          price: addon.price || 0,
-          cost_per_unit: addon.cost_per_unit || 0,
-          category: addon.category,
-          is_active: addon.is_available
-        };
+        // Addon is already in AddonItem format from product_catalog
         
         return {
           ...prev,
-          [type]: [...currentSelection, { addon: compatibleAddon, quantity: 1 }]
+          [type]: [...currentSelection, { addon, quantity: 1 }]
         };
       } else {
         return {
@@ -342,24 +349,11 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     if (isCombo && type) {
       const isSelected = isComboItemSelected(type, addon.id);
       
-      // Convert AddonItem to AddOnItem format
-      const convertedAddon: AddOnItem = {
-        id: addon.id,
-        name: addon.name,
-        category: addon.category as any,
-        price: addon.price,
-        cost_per_unit: addon.cost_per_unit,
-        is_available: addon.is_active,
-        display_order: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
       return (
         <Card 
           key={addon.id} 
           className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:shadow-md'}`}
-          onClick={() => handleComboSelection(type, convertedAddon, !isSelected)}
+          onClick={() => handleComboSelection(type, addon, !isSelected)}
         >
           <CardContent className="p-4">
             <div className="flex justify-between items-start mb-2">
@@ -422,7 +416,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
   };
 
   // Render mix & match cards for dynamic addon options
-  const renderMixMatchCard = (item: AddOnItem, type: 'toppings' | 'sauces') => {
+  const renderMixMatchCard = (item: AddonItem, type: 'toppings' | 'sauces') => {
     const isSelected = comboSelection[type].some(selected => selected.addon.id === item.id);
     
     return (
