@@ -15,6 +15,9 @@ import {
   Package,
   Store
 } from 'lucide-react';
+// Debug import to ensure module loads properly
+console.log('🔄 Importing recipeAuditService...');
+
 import { 
   auditRecipeTemplateConsistency,
   syncRecipesWithTemplates,
@@ -22,6 +25,8 @@ import {
   getAuditSummary,
   RecipeAuditResult
 } from '@/services/recipeManagement/recipeAuditService';
+
+console.log('✅ Successfully imported recipeAuditService');
 import { toast } from 'sonner';
 
 interface RecipeAuditDialogProps {

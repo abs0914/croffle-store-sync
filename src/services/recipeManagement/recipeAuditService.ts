@@ -1,6 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Force module re-evaluation for hot reload
+console.log('🔄 Loading recipeAuditService module...');
+
 export interface RecipeAuditResult {
   template_name: string;
   store_name: string;
@@ -55,6 +58,8 @@ export const auditRecipeTemplateConsistency = async (): Promise<RecipeAuditResul
     throw error;
   }
 };
+
+console.log('✅ auditRecipeTemplateConsistency exported');
 
 export const syncRecipesWithTemplates = async (templateIds?: string[]): Promise<RecipeSyncResult> => {
   try {
@@ -223,6 +228,13 @@ export const getAuditSummary = (auditData: RecipeAuditResult[]) => {
     stores_count: summary.stores_affected.size
   };
 };
+
+console.log('✅ All exports ready:', {
+  auditRecipeTemplateConsistency: typeof auditRecipeTemplateConsistency,
+  syncRecipesWithTemplates: typeof syncRecipesWithTemplates,
+  exportRecipeAuditReport: typeof exportRecipeAuditReport,
+  getAuditSummary: typeof getAuditSummary
+});
 
 // Legacy function signatures for backward compatibility
 export const repairIncompleteRecipe = async (recipeId: string, templateId: string, storeId: string): Promise<RecipeSyncResult> => {
