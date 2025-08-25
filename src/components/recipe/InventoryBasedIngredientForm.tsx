@@ -124,12 +124,16 @@ export const InventoryBasedIngredientForm: React.FC<InventoryBasedIngredientForm
             value={ingredient.inventory_stock_id}
             onValueChange={handleInventoryItemSelect}
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Select inventory item..." />
+            <SelectTrigger className="bg-background border border-input">
+              <SelectValue 
+                placeholder="Select inventory item..."
+              >
+                {ingredient.ingredient_name || "Select inventory item..."}
+              </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-popover border border-border shadow-md z-50">
               {inventoryItems.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
+                <SelectItem key={item.id} value={item.id} className="hover:bg-accent">
                   <div className="flex justify-between items-center w-full">
                     <span>{item.item}</span>
                     <span className="text-xs text-muted-foreground ml-2">

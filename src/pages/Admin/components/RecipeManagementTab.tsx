@@ -155,87 +155,85 @@ export const RecipeManagementTab: React.FC = () => {
         />
       </div>
 
-      {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTemplates.map((template) => (
-          <Card key={template.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">{template.name}</CardTitle>
-                <Badge variant="secondary">
-                  v{template.version || 1}
-                </Badge>
-              </div>
-              {template.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {template.description}
-                </p>
-              )}
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-blue-600">
-                    {template.yield_quantity || 0}
+      {/* Templates List */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="space-y-0">
+            {filteredTemplates.map((template, index) => (
+              <div 
+                key={template.id} 
+                className={`flex items-center justify-between p-4 hover:bg-muted/50 transition-colors ${
+                  index !== filteredTemplates.length - 1 ? 'border-b' : ''
+                }`}
+              >
+                {/* Template Info */}
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-lg">{template.name}</h3>
+                    <Badge variant="secondary" className="text-xs">
+                      v{template.version || 1}
+                    </Badge>
+                    {template.category_name && (
+                      <Badge variant="outline" className="text-xs">
+                        {template.category_name}
+                      </Badge>
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground">Yield</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-green-600">
-                    {template.ingredients?.length || 0}
+                  {template.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-1">
+                      {template.description}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Package className="h-3 w-3" />
+                      {template.ingredients?.length || 0} ingredients
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      Yield: {template.yield_quantity || 0}
+                    </span>
                   </div>
-                  <div className="text-xs text-muted-foreground">Ingredients</div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleDeploy(template)}
+                  >
+                    <Rocket className="h-4 w-4 mr-1" />
+                    Deploy
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEdit(template)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleDuplicate(template)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleDelete(template.id)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-
-              {/* Category */}
-              {template.category_name && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Category</span>
-                  <Badge variant="outline">
-                    {template.category_name}
-                  </Badge>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleDeploy(template)}
-                >
-                  <Rocket className="h-4 w-4 mr-1" />
-                  Deploy
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleEdit(template)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleDuplicate(template)}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleDelete(template.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {filteredTemplates.length === 0 && (
         <div className="text-center py-12">
