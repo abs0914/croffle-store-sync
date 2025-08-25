@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
@@ -17,7 +18,8 @@ import {
   TrendingUp,
   DollarSign,
   Users,
-  Rocket
+  Rocket,
+  Filter
 } from 'lucide-react';
 import { 
   fetchRecipeTemplates,
@@ -25,6 +27,8 @@ import {
   deleteRecipeTemplate,
   RecipeTemplateWithMetrics
 } from '@/services/recipeManagement/recipeTemplateService';
+import { fetchCategories } from '@/services/category/categoryFetch';
+import { Category } from '@/types';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
 import { formatCurrency } from '@/utils/format';
@@ -32,8 +36,10 @@ import { toast } from 'sonner';
 
 export const RecipeManagementTab: React.FC = () => {
   const [templates, setTemplates] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -41,6 +47,7 @@ export const RecipeManagementTab: React.FC = () => {
 
   useEffect(() => {
     loadTemplates();
+    loadCategories();
   }, []);
 
   const loadTemplates = async () => {
@@ -54,6 +61,34 @@ export const RecipeManagementTab: React.FC = () => {
       toast.error('Failed to load recipe templates');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      // Get all unique categories from templates since this is admin view
+      const data = await fetchRecipeTemplates();
+      const uniqueCategories = new Set<string>();
+      
+      data?.forEach(template => {
+        if (template.category_name) {
+          uniqueCategories.add(template.category_name);
+        }
+      });
+
+      // Convert to Category objects for consistency
+      const categoryList: Category[] = Array.from(uniqueCategories).map(name => ({
+        id: name.toLowerCase().replace(/\s+/g, '_'),
+        name,
+        is_active: true,
+        isActive: true,
+        store_id: '',
+        storeId: ''
+      }));
+
+      setCategories(categoryList);
+    } catch (error) {
+      console.error('Error loading categories:', error);
     }
   };
 
@@ -115,10 +150,17 @@ export const RecipeManagementTab: React.FC = () => {
     }
   };
 
-  const filteredTemplates = templates.filter(template =>
-    template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (template.description && template.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredTemplates = templates.filter(template => {
+    // Search filter
+    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (template.description && template.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    // Category filter
+    const matchesCategory = selectedCategory === 'all' || 
+      template.category_name === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
 
   if (loading) {
     return (
@@ -144,15 +186,31 @@ export const RecipeManagementTab: React.FC = () => {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search templates..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and Filter */}
+      <div className="flex gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search templates..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-48">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Filter by category" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover border border-border shadow-md z-50">
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map(category => (
+              <SelectItem key={category.id} value={category.name}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Templates List */}
