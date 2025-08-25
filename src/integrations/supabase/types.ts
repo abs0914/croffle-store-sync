@@ -5606,6 +5606,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_store_inventory_from_recipes: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          execution_details: Json
+          items_created: number
+          stores_processed: number
+        }[]
+      }
       get_all_users: {
         Args: Record<PropertyKey, never>
         Returns: {
