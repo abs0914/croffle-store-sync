@@ -1829,6 +1829,78 @@ export type Database = {
           },
         ]
       }
+      inventory_stock_backup: {
+        Row: {
+          conversion_ratio: number | null
+          cost: number | null
+          created_at: string | null
+          id: string | null
+          is_active: boolean | null
+          is_fractional_supported: boolean | null
+          item: string | null
+          item_category:
+            | Database["public"]["Enums"]["inventory_item_category"]
+            | null
+          minimum_threshold: number | null
+          normalized_unit: string | null
+          order_quantity: number | null
+          order_unit: string | null
+          recipe_compatible: boolean | null
+          serving_ready_quantity: number | null
+          sku: string | null
+          stock_quantity: number | null
+          store_id: string | null
+          unit: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          conversion_ratio?: number | null
+          cost?: number | null
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_fractional_supported?: boolean | null
+          item?: string | null
+          item_category?:
+            | Database["public"]["Enums"]["inventory_item_category"]
+            | null
+          minimum_threshold?: number | null
+          normalized_unit?: string | null
+          order_quantity?: number | null
+          order_unit?: string | null
+          recipe_compatible?: boolean | null
+          serving_ready_quantity?: number | null
+          sku?: string | null
+          stock_quantity?: number | null
+          store_id?: string | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          conversion_ratio?: number | null
+          cost?: number | null
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_fractional_supported?: boolean | null
+          item?: string | null
+          item_category?:
+            | Database["public"]["Enums"]["inventory_item_category"]
+            | null
+          minimum_threshold?: number | null
+          normalized_unit?: string | null
+          order_quantity?: number | null
+          order_unit?: string | null
+          recipe_compatible?: boolean | null
+          serving_ready_quantity?: number | null
+          sku?: string | null
+          stock_quantity?: number | null
+          store_id?: string | null
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       inventory_sync_audit: {
         Row: {
           affected_inventory_items: Json | null
@@ -2790,7 +2862,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
-          inventory_stock_id: string
+          inventory_stock_id: string | null
           purchase_order_id: string
           quantity: number
           specifications: string | null
@@ -2799,7 +2871,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
-          inventory_stock_id: string
+          inventory_stock_id?: string | null
           purchase_order_id: string
           quantity: number
           specifications?: string | null
@@ -2808,7 +2880,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
-          inventory_stock_id?: string
+          inventory_stock_id?: string | null
           purchase_order_id?: string
           quantity?: number
           specifications?: string | null
@@ -2830,6 +2902,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      purchase_order_items_backup: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          inventory_stock_id: string | null
+          purchase_order_id: string | null
+          quantity: number | null
+          specifications: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          inventory_stock_id?: string | null
+          purchase_order_id?: string | null
+          quantity?: number | null
+          specifications?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          inventory_stock_id?: string | null
+          purchase_order_id?: string | null
+          quantity?: number | null
+          specifications?: string | null
+          unit_price?: number | null
+        }
+        Relationships: []
       }
       purchase_orders: {
         Row: {
@@ -3437,7 +3539,7 @@ export type Database = {
           ingredient_group_id: string | null
           ingredient_group_name: string | null
           ingredient_name: string | null
-          inventory_stock_id: string
+          inventory_stock_id: string | null
           is_optional: boolean | null
           notes: string | null
           purchase_unit: string | null
@@ -3457,7 +3559,7 @@ export type Database = {
           ingredient_group_id?: string | null
           ingredient_group_name?: string | null
           ingredient_name?: string | null
-          inventory_stock_id: string
+          inventory_stock_id?: string | null
           is_optional?: boolean | null
           notes?: string | null
           purchase_unit?: string | null
@@ -3477,7 +3579,7 @@ export type Database = {
           ingredient_group_id?: string | null
           ingredient_group_name?: string | null
           ingredient_name?: string | null
-          inventory_stock_id?: string
+          inventory_stock_id?: string | null
           is_optional?: boolean | null
           notes?: string | null
           purchase_unit?: string | null
@@ -3517,6 +3619,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      recipe_ingredients_backup: {
+        Row: {
+          commissary_item_id: string | null
+          cost_per_unit: number | null
+          created_at: string | null
+          display_order: number | null
+          group_selection_type: string | null
+          id: string | null
+          ingredient_group_id: string | null
+          ingredient_group_name: string | null
+          ingredient_name: string | null
+          inventory_stock_id: string | null
+          is_optional: boolean | null
+          notes: string | null
+          purchase_unit: string | null
+          quantity: number | null
+          recipe_id: string | null
+          recipe_unit: string | null
+          unit: Database["public"]["Enums"]["inventory_unit"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          commissary_item_id?: string | null
+          cost_per_unit?: number | null
+          created_at?: string | null
+          display_order?: number | null
+          group_selection_type?: string | null
+          id?: string | null
+          ingredient_group_id?: string | null
+          ingredient_group_name?: string | null
+          ingredient_name?: string | null
+          inventory_stock_id?: string | null
+          is_optional?: boolean | null
+          notes?: string | null
+          purchase_unit?: string | null
+          quantity?: number | null
+          recipe_id?: string | null
+          recipe_unit?: string | null
+          unit?: Database["public"]["Enums"]["inventory_unit"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          commissary_item_id?: string | null
+          cost_per_unit?: number | null
+          created_at?: string | null
+          display_order?: number | null
+          group_selection_type?: string | null
+          id?: string | null
+          ingredient_group_id?: string | null
+          ingredient_group_name?: string | null
+          ingredient_name?: string | null
+          inventory_stock_id?: string | null
+          is_optional?: boolean | null
+          notes?: string | null
+          purchase_unit?: string | null
+          quantity?: number | null
+          recipe_id?: string | null
+          recipe_unit?: string | null
+          unit?: Database["public"]["Enums"]["inventory_unit"] | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       recipe_pricing_matrix: {
         Row: {
@@ -4137,6 +4302,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      standardized_ingredients: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          ingredient_name: string
+          standardized_name: string
+          standardized_unit: Database["public"]["Enums"]["inventory_unit"]
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          ingredient_name: string
+          standardized_name: string
+          standardized_unit: Database["public"]["Enums"]["inventory_unit"]
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          ingredient_name?: string
+          standardized_name?: string
+          standardized_unit?: Database["public"]["Enums"]["inventory_unit"]
+        }
+        Relationships: []
       }
       stock_order_items: {
         Row: {
