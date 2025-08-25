@@ -10,17 +10,15 @@ import {
   Eye, 
   EyeOff, 
   RefreshCw,
-  AlertCircle,
-  CheckCircle,
-  Clock,
   Edit3,
   Filter,
-  AlertTriangle,
-  X,
+  CheckCircle,
   Zap,
   Package2,
-  Activity
+  AlertTriangle,
+  X
 } from 'lucide-react';
+import { ProductEditDialog } from './ProductEditDialog';
 import { formatCurrency } from '@/utils/format';
 import { fetchCategories } from '@/services/category/categoryFetch';
 import { 
@@ -44,6 +42,7 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
+  const [editingProduct, setEditingProduct] = useState<EnhancedProductCatalog | null>(null);
   
   const canEditPrices = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
 
@@ -106,6 +105,19 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
       console.error('Error toggling availability:', error);
       toast.error('Failed to update product availability');
     }
+  };
+
+  const handleEditProduct = (product: EnhancedProductCatalog) => {
+    setEditingProduct(product);
+  };
+
+  const handleCloseEdit = () => {
+    setEditingProduct(null);
+  };
+
+  const handleUpdateSuccess = () => {
+    refetchProducts();
+    refetchHealthSummary();
   };
 
   // Filter products based on all criteria - Updated for post-migration state
@@ -333,12 +345,6 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
                           {product.description || 'No description'}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className={`text-sm font-semibold ${getHealthScoreColor(product.health_score)}`}>
-                          {product.health_score}%
-                        </span>
-                        <Activity className={`h-4 w-4 ${getHealthScoreColor(product.health_score)}`} />
-                      </div>
                     </div>
                   </div>
 
@@ -359,26 +365,17 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
                     <div className="font-semibold text-green-600">
                       {formatCurrency(product.price || 0)}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Ingredient-Based
-                    </div>
-                  </div>
-
-                  {/* POS Ready Status */}
-                  <div className="flex items-center gap-1">
-                    {product.pos_ready ? (
-                      <div title="POS Ready">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      </div>
-                    ) : (
-                      <div title={`POS Issues: ${product.pos_issues?.join(', ')}`}>
-                        <AlertCircle className="h-4 w-4 text-red-600" />
-                      </div>
-                    )}
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => handleEditProduct(product)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </Button>
                     <Button
                       onClick={() => handleToggleAvailability(product.id, product.is_available || false)}
                       variant={product.is_available ? "outline" : "default"}
@@ -394,45 +391,14 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
         </CardContent>
       </Card>
 
-      {/* Health Issues Summary */}
-      {products.some(p => p.health_issues.length > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
-              Products Needing Attention
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {products
-                .filter(p => p.health_issues.length > 0)
-                .slice(0, 10) // Show top 10 issues
-                .map(product => (
-                  <div key={product.id} className="flex items-start justify-between p-3 border rounded-lg">
-                    <div>
-                      <div className="font-medium">{product.product_name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Issues: {product.health_issues.join(', ')}
-                      </div>
-                      {product.pos_issues && product.pos_issues.length > 0 && (
-                        <div className="text-xs text-red-600 mt-1">
-                          POS Issues: {product.pos_issues.join(', ')}
-                        </div>
-                      )}
-                    </div>
-                    <Badge 
-                      className={getHealthScoreColor(product.health_score).replace('text-', 'border-')}
-                      variant="outline"
-                    >
-                      {product.health_score}%
-                    </Badge>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Product Edit Dialog */}
+      <ProductEditDialog
+        product={editingProduct}
+        isOpen={!!editingProduct}
+        onClose={handleCloseEdit}
+        onUpdate={handleUpdateSuccess}
+        categories={categories}
+      />
     </div>
   );
 }
