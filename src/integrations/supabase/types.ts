@@ -1765,6 +1765,7 @@ export type Database = {
           normalized_unit: string | null
           order_quantity: number | null
           order_unit: string | null
+          recipe_compatible: boolean | null
           serving_ready_quantity: number | null
           sku: string | null
           stock_quantity: number
@@ -1787,6 +1788,7 @@ export type Database = {
           normalized_unit?: string | null
           order_quantity?: number | null
           order_unit?: string | null
+          recipe_compatible?: boolean | null
           serving_ready_quantity?: number | null
           sku?: string | null
           stock_quantity?: number
@@ -1809,6 +1811,7 @@ export type Database = {
           normalized_unit?: string | null
           order_quantity?: number | null
           order_unit?: string | null
+          recipe_compatible?: boolean | null
           serving_ready_quantity?: number | null
           sku?: string | null
           stock_quantity?: number
