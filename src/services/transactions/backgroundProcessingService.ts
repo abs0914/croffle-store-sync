@@ -3,7 +3,6 @@ import { processProductSale } from "@/services/productCatalog/inventoryIntegrati
 import { Transaction } from "@/types";
 import { BackgroundQueue } from "@/services/processing/backgroundQueue";
 import { InventoryCacheService } from "@/services/cache/inventoryCacheService";
-import { EnhancedBackgroundInventoryService } from "./enhancedBackgroundInventoryService";
 
 /**
  * Enhanced background processing service with queue management
@@ -12,29 +11,39 @@ export class BackgroundProcessingService {
   private static queue = BackgroundQueue.getInstance();
 
   /**
-   * Process inventory deductions using simple network-resilient service
+   * Process inventory deductions using both simple and enhanced approaches
    */
   static async processInventoryInBackground(
     transactionId: string,
     items: any[],
     storeId: string
   ): Promise<string> {
-    console.log('🚀 Using simple network-resilient inventory processing for:', transactionId);
+    console.log('🚀 Processing inventory with fallback strategy for:', transactionId);
     
-    // Import and use the simple service
+    // First try the simple network-resilient approach for direct inventory items
     const { SimpleNetworkResilientInventoryService } = await import('./simpleNetworkResilientInventoryService');
     
-    // Process in background without blocking
-    SimpleNetworkResilientInventoryService.processInventoryWithNetworkResilience(
-      transactionId,
-      items,
-      storeId
-    ).catch(error => {
-      console.error('Simple inventory processing error:', error);
+    // Then process any remaining recipe-based items with the enhanced tracker
+    const { deductIngredientsWithTracking } = await import('../inventory/productInventoryTracker');
+    
+    // Run both approaches in background without blocking
+    Promise.all([
+      SimpleNetworkResilientInventoryService.processInventoryWithNetworkResilience(
+        transactionId,
+        items,
+        storeId
+      ),
+      // Also try with the enhanced tracker for recipe-based products
+      ...items.map(item => 
+        deductIngredientsWithTracking(item.productId, item.quantity, transactionId)
+          .catch(error => console.warn(`Item ${item.productId} enhanced processing failed:`, error))
+      )
+    ]).catch(error => {
+      console.error('Combined inventory processing error:', error);
     });
 
     // Return transaction ID as job ID for compatibility
-    return `simple_${transactionId}`;
+    return `combined_${transactionId}`;
   }
 
   private static async executeInventoryProcessing(

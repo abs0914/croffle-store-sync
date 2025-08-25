@@ -30,69 +30,31 @@ export const deductIngredientsWithTracking = async (
   try {
     console.log('🔄 Starting tracked ingredient deduction for product:', { productId, quantity, transactionId });
 
-    // Network-aware Supabase client with timeout and retry logic
-    const makeSupabaseCall = async <T>(operation: () => Promise<T>, operationName: string, retries = 3): Promise<T> => {
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Request timeout')), 10000)
-          );
-          
-          const result = await Promise.race([operation(), timeoutPromise]) as T;
-          return result;
-        } catch (error) {
-          const isNetworkError = error instanceof TypeError && error.message.includes('Failed to fetch') ||
-                                error instanceof Error && (
-                                  error.message.includes('timeout') ||
-                                  error.message.includes('network') ||
-                                  error.message.includes('fetch')
-                                );
-          
-          if (isNetworkError && attempt < retries) {
-            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-            console.warn(`⚠️ Network error in ${operationName}, retry ${attempt}/${retries} in ${delay}ms:`, error.message);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          }
-          
-          console.error(`❌ ${operationName} failed after ${attempt} attempts:`, error);
-          throw error;
-        }
-      }
-      throw new Error(`Failed after ${retries} attempts`);
-    };
-
-    // Get product information with network resilience
+    // Get product information
     let productInfo: any = null;
     
     // Try product_catalog first
-    const catalogResult = await makeSupabaseCall(
-      () => supabase
-        .from('product_catalog')
-        .select('product_name, recipe_id, store_id')
-        .eq('id', productId)
-        .maybeSingle(),
-      'fetch product catalog'
-    );
-    
-    if (catalogResult.data) {
-      productInfo = catalogResult.data;
+    const { data: catalogInfo } = await supabase
+      .from('product_catalog')
+      .select('product_name, recipe_id, store_id')
+      .eq('id', productId)
+      .maybeSingle();
+
+    if (catalogInfo) {
+      productInfo = catalogInfo;
     } else {
       // Try products table
-      const directProductResult = await makeSupabaseCall(
-        () => supabase
-          .from('products')
-          .select('name, recipe_id, store_id')
-          .eq('id', productId)
-          .maybeSingle(),
-        'fetch product info'
-      );
+      const { data: directProductInfo } = await supabase
+        .from('products')
+        .select('name, recipe_id, store_id')
+        .eq('id', productId)
+        .maybeSingle();
       
-      if (directProductResult.data) {
+      if (directProductInfo) {
         productInfo = { 
-          product_name: directProductResult.data.name, 
-          recipe_id: directProductResult.data.recipe_id,
-          store_id: directProductResult.data.store_id
+          product_name: directProductInfo.name, 
+          recipe_id: directProductInfo.recipe_id,
+          store_id: directProductInfo.store_id
         };
       }
     }
@@ -100,35 +62,31 @@ export const deductIngredientsWithTracking = async (
     if (!productInfo) {
       const errorDetails = `Product not found: ${productId}`;
       
-      await makeSupabaseCall(
-        () => supabase.rpc('log_inventory_sync_result', {
+      try {
+        await supabase.rpc('log_inventory_sync_result', {
           p_transaction_id: transactionId,
           p_sync_status: 'failed',
           p_error_details: errorDetails,
           p_items_processed: 0,
           p_sync_duration_ms: Date.now() - syncStartTime,
           p_affected_inventory_items: JSON.stringify([])
-        }),
-        'log sync result'
-      ).catch(logError => console.warn('Failed to log sync result:', logError));
+        });
+      } catch (logError) {
+        console.warn('Failed to log sync result:', logError);
+      }
       
       return { success: false, affected_inventory_items: [], error_details: errorDetails };
     }
 
     // Check for direct inventory mapping first
-    const directInventoryResult = await makeSupabaseCall(
-      () => supabase
-        .from('inventory_stock')
-        .select('id, item, stock_quantity, serving_ready_quantity, unit, store_id')
-        .eq('store_id', productInfo.store_id)
-        .eq('is_active', true)
-        .or(`item.ilike.${productInfo.product_name},item.ilike.%${productInfo.product_name}%`)
-        .limit(1)
-        .maybeSingle(),
-      'fetch direct inventory item'
-    );
-    
-    const directInventoryItem = directInventoryResult.data;
+    const { data: directInventoryItem } = await supabase
+      .from('inventory_stock')
+      .select('id, item, stock_quantity, serving_ready_quantity, unit, store_id')
+      .eq('store_id', productInfo.store_id)
+      .eq('is_active', true)
+      .or(`item.ilike.${productInfo.product_name},item.ilike.%${productInfo.product_name}%`)
+      .limit(1)
+      .maybeSingle();
 
     // Handle direct inventory products
     if (directInventoryItem) {
