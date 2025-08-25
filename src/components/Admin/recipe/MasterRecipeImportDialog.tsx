@@ -15,7 +15,8 @@ import {
   Database,
   Zap,
   Package,
-  TrendingUp
+  TrendingUp,
+  Trash2
 } from 'lucide-react';
 import { 
   MasterRecipeImportService, 
@@ -23,6 +24,7 @@ import {
   IngredientMapping, 
   MasterRecipeImportResult 
 } from '@/services/recipeManagement/masterRecipeImportService';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface MasterRecipeImportDialogProps {
@@ -45,6 +47,7 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
   const [importResult, setImportResult] = useState<MasterRecipeImportResult | null>(null);
   const [progress, setProgress] = useState(0);
   const [inventoryCoverage, setInventoryCoverage] = useState<any>(null);
+  const [isClearing, setIsClearing] = useState(false);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -135,8 +138,42 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
     setImportResult(null);
     setProgress(0);
     setInventoryCoverage(null);
+    setIsClearing(false);
     onClose();
   }, [onClose]);
+
+  const handleClearAllTemplates = useCallback(async () => {
+    if (!window.confirm('⚠️ This will delete ALL existing recipe templates and their ingredients. This action cannot be undone. Are you sure?')) {
+      return;
+    }
+
+    setIsClearing(true);
+    try {
+      // Delete all recipe template ingredients first
+      const { error: ingredientsError } = await supabase
+        .from('recipe_template_ingredients')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+
+      if (ingredientsError) throw ingredientsError;
+
+      // Then delete all recipe templates
+      const { error: templatesError } = await supabase
+        .from('recipe_templates')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+
+      if (templatesError) throw templatesError;
+
+      toast.success('All recipe templates have been cleared successfully');
+      onSuccess?.(); // Refresh the parent component
+    } catch (error) {
+      console.error('Clear templates error:', error);
+      toast.error(`Failed to clear templates: ${error}`);
+    } finally {
+      setIsClearing(false);
+    }
+  }, [onSuccess]);
 
   const renderUploadStage = () => (
     <div className="space-y-6">
@@ -195,6 +232,15 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
       )}
 
       <div className="flex gap-2">
+        <Button 
+          variant="destructive" 
+          onClick={handleClearAllTemplates} 
+          disabled={isClearing}
+          className="flex-1"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          {isClearing ? 'Clearing...' : 'Clear All Templates'}
+        </Button>
         <Button variant="outline" onClick={handleClose} className="flex-1">
           Cancel
         </Button>
