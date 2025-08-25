@@ -3244,6 +3244,33 @@ export type Database = {
         }
         Relationships: []
       }
+      recipe_ingredient_categories: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_category: Database["public"]["Enums"]["inventory_item_category"]
+          product_category: string
+          required_ingredients: string[]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_category: Database["public"]["Enums"]["inventory_item_category"]
+          product_category: string
+          required_ingredients?: string[]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_category?: Database["public"]["Enums"]["inventory_item_category"]
+          product_category?: string
+          required_ingredients?: string[]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       recipe_ingredient_groups: {
         Row: {
           created_at: string
