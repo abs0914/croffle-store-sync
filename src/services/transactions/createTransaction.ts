@@ -41,6 +41,15 @@ export const createTransaction = async (
   cartItems?: any[]
 ): Promise<Transaction | null> => {
   try {
+    console.log('🚀 Creating transaction - START', {
+      storeId: transaction.storeId,
+      userId: transaction.userId,
+      itemCount: transaction.items.length,
+      total: transaction.total,
+      paymentMethod: transaction.paymentMethod,
+      timestamp: new Date().toISOString()
+    });
+    
     console.log('🔍 Using lightweight checkout validation...');
     
     // Use lightweight validation that trusts proactive validation
@@ -157,6 +166,12 @@ export const createTransaction = async (
       promo_details: promoDetails
     };
     
+    console.log('💾 Inserting transaction to database', {
+      receiptNumber,
+      sequenceNumber,
+      timestamp: now.toISOString()
+    });
+    
     // Insert main transaction record
     const { data, error } = await supabase
       .from("transactions")
@@ -165,8 +180,20 @@ export const createTransaction = async (
       .single();
     
     if (error) {
+      console.error('❌ Database insert error:', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        receiptNumber
+      });
       throw new Error(error.message);
     }
+    
+    console.log('✅ Transaction inserted successfully', {
+      transactionId: data.id,
+      receiptNumber: data.receipt_number
+    });
 
     // Insert detailed transaction items with category information
     if (cartItems && cartItems.length > 0) {
@@ -344,16 +371,24 @@ export const createTransaction = async (
     
     // Enhanced error reporting for debugging large orders
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
     const isLargeOrder = transaction.items.length > 5;
     
     console.error("📋 Transaction error details:", {
       error: errorMessage,
+      stack: errorStack,
       storeId: transaction.storeId,
       userId: transaction.userId,
       itemCount: transaction.items.length,
       isLargeOrder,
       timestamp: new Date().toISOString(),
-      items: transaction.items.map(item => ({ name: item.name, quantity: item.quantity }))
+      items: transaction.items.map(item => ({ name: item.name, quantity: item.quantity })),
+      transactionData: {
+        subtotal: transaction.subtotal,
+        total: transaction.total,
+        paymentMethod: transaction.paymentMethod,
+        discountType: transaction.discountType
+      }
     });
     
     // Show specific error message to user based on error type and order size
