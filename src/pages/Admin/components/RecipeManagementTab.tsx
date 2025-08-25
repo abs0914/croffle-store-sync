@@ -21,7 +21,8 @@ import {
   Rocket,
   Filter,
   FileBarChart,
-  Download
+  Download,
+  BookOpen
 } from 'lucide-react';
 import { 
   fetchRecipeTemplates,
@@ -34,6 +35,7 @@ import { Category } from '@/types';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
 import { RecipeAuditDialog } from '@/components/Admin/RecipeAuditDialog';
+import { MasterRecipeImportDialog } from '@/components/Admin/recipe/MasterRecipeImportDialog';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
@@ -48,6 +50,7 @@ export const RecipeManagementTab: React.FC = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeployDialog, setShowDeployDialog] = useState(false);
   const [showAuditDialog, setShowAuditDialog] = useState(false);
+  const [showMasterImport, setShowMasterImport] = useState(false);
 
   useEffect(() => {
     loadTemplates();
@@ -185,6 +188,10 @@ export const RecipeManagementTab: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setShowMasterImport(true)}>
+            <BookOpen className="h-4 w-4 mr-2" />
+            Import Master Recipes
+          </Button>
           <Button variant="outline" onClick={() => setShowAuditDialog(true)}>
             <FileBarChart className="h-4 w-4 mr-2" />
             Audit & Sync
@@ -365,6 +372,16 @@ export const RecipeManagementTab: React.FC = () => {
       <RecipeAuditDialog
         isOpen={showAuditDialog}
         onClose={() => setShowAuditDialog(false)}
+      />
+
+      {/* Master Recipe Import Dialog */}
+      <MasterRecipeImportDialog
+        isOpen={showMasterImport}
+        onClose={() => setShowMasterImport(false)}
+        onSuccess={() => {
+          setShowMasterImport(false);
+          loadTemplates();
+        }}
       />
     </div>
   );
