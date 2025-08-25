@@ -48,40 +48,55 @@ export class MasterRecipeImportService {
     }
 
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    console.log('CSV Headers:', headers);
+    
     const recipes: MasterRecipeData[] = [];
     let currentRecipe: MasterRecipeData | null = null;
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      console.log('Processing row:', values);
       
       // Check if this is a new recipe (recipe name is not empty)
-      const recipeName = values[0];
+      const recipeName = values[0]; // name column
       if (recipeName && recipeName !== currentRecipe?.name) {
         // Save previous recipe if exists
         if (currentRecipe) {
           recipes.push(currentRecipe);
         }
         
-        // Start new recipe
+        // Start new recipe - matching your CSV format
         currentRecipe = {
           name: recipeName,
-          description: values[1] || '',
-          category_name: values[2] || 'General',
-          instructions: values[3] || 'Follow standard preparation procedures',
-          yield_quantity: parseInt(values[4]) || 1,
-          serving_size: parseInt(values[5]) || 1,
+          description: '',
+          category_name: values[1] || 'General', // recipe_category
+          instructions: 'Follow standard preparation procedures',
+          yield_quantity: 1,
+          serving_size: 1,
           ingredients: []
         };
       }
 
-      // Add ingredient to current recipe
-      if (currentRecipe && values[6]) { // ingredient_name column
+      // Add ingredient to current recipe - matching your CSV format
+      if (currentRecipe && values[4]) { // ingredient_name column (index 4)
+        const quantityUnit = values[5] || '1 piece'; // quantity_unit column
+        const parts = quantityUnit.split(' ');
+        const quantity = parseFloat(parts[0]) || 1;
+        const unit = parts.slice(1).join(' ') || 'piece';
+        const costPerUnit = parseFloat(values[6]) || 0; // cost_per_unit column (index 6)
+        
+        console.log(`Ingredient: ${values[4]}, Quantity: ${quantity}, Unit: ${unit}, Cost: ${costPerUnit}`);
+        
+        if (costPerUnit === 0) {
+          console.warn(`Zero cost detected for ingredient: ${values[4]} in recipe: ${recipeName}`);
+        }
+        
         currentRecipe.ingredients.push({
-          ingredient_name: values[6],
-          quantity: parseFloat(values[7]) || 1,
-          unit: values[8] || 'piece',
-          cost_per_unit: parseFloat(values[9]) || 0,
-          notes: values[10] || ''
+          ingredient_name: values[4], // ingredient_name
+          quantity: quantity,
+          unit: unit,
+          cost_per_unit: costPerUnit,
+          notes: values[7] || '' // ingredient_category as notes
         });
       }
     }
@@ -91,6 +106,7 @@ export class MasterRecipeImportService {
       recipes.push(currentRecipe);
     }
 
+    console.log('Parsed recipes:', recipes);
     return recipes;
   }
 
