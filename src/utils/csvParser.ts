@@ -225,8 +225,16 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     const quantity = parseFloat(row['quantity used'] || row['quantity']) || 0;
     
     // More flexible cost parsing with better error handling
-    const costValue = row['cost per unit'] || row['cost_per_unit'] || row['unit cost'] || row['cost'];
-    const cost = costValue ? parseFloat(costValue) : 0;
+    const costValue = row['cost_per_unit'] || row['cost per unit'] || row['unit cost'] || row['cost'];
+    const cost = parseFloat(costValue) || 0;
+    
+    // Debug log for cost parsing
+    console.log(`Line ${i + 1} cost parsing:`, {
+      ingredientName,
+      costValue,
+      parsedCost: cost,
+      availableKeys: Object.keys(row).filter(k => k.includes('cost'))
+    });
     
     // Log detailed info about cost parsing
     if (!costValue || costValue.trim() === '') {
