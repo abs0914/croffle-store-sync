@@ -143,23 +143,57 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
   }, [onClose]);
 
   const handleClearAllTemplates = useCallback(async () => {
-    if (!window.confirm('⚠️ This will delete ALL existing recipe templates and their ingredients. This action cannot be undone. Are you sure?')) {
+    if (!window.confirm('⚠️ This will delete ALL existing recipe templates, their ingredients, and any recipes that depend on them. This action cannot be undone. Are you sure?')) {
       return;
     }
 
     setIsClearing(true);
     try {
-      // Delete all recipe template ingredients first
-      const { error: ingredientsError } = await supabase
+      // Step 1: Get all recipe IDs that reference templates
+      const { data: recipesWithTemplates, error: fetchError } = await supabase
+        .from('recipes')
+        .select('id')
+        .not('template_id', 'is', null);
+
+      if (fetchError) {
+        throw new Error(`Failed to fetch recipes with templates: ${fetchError.message}`);
+      }
+
+      const recipeIds = recipesWithTemplates?.map(r => r.id) || [];
+
+      // Step 2: Delete recipe ingredients for those recipes
+      if (recipeIds.length > 0) {
+        const { error: recipeIngredientsError } = await supabase
+          .from('recipe_ingredients')
+          .delete()
+          .in('recipe_id', recipeIds);
+
+        if (recipeIngredientsError) {
+          throw new Error(`Failed to delete recipe ingredients: ${recipeIngredientsError.message}`);
+        }
+      }
+
+      // Step 3: Delete recipes that reference templates
+      const { error: recipesError } = await supabase
+        .from('recipes')
+        .delete()
+        .not('template_id', 'is', null);
+
+      if (recipesError) {
+        throw new Error(`Failed to delete recipes: ${recipesError.message}`);
+      }
+
+      // Step 4: Delete all recipe template ingredients
+      const { error: templateIngredientsError } = await supabase
         .from('recipe_template_ingredients')
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
 
-      if (ingredientsError) {
-        throw new Error(`Failed to delete ingredients: ${ingredientsError.message}`);
+      if (templateIngredientsError) {
+        throw new Error(`Failed to delete template ingredients: ${templateIngredientsError.message}`);
       }
 
-      // Then delete all recipe templates
+      // Step 5: Delete all recipe templates
       const { error: templatesError } = await supabase
         .from('recipe_templates')
         .delete()
@@ -169,7 +203,7 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
         throw new Error(`Failed to delete templates: ${templatesError.message}`);
       }
 
-      toast.success('All recipe templates have been cleared successfully');
+      toast.success('All recipe templates, recipes, and ingredients have been cleared successfully');
       onSuccess?.(); // Refresh the parent component
     } catch (error: any) {
       console.error('Clear templates error:', error);
