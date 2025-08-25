@@ -223,9 +223,19 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     const ingredientName = row['ingredient name'];
     const uom = row['uom'] || row['unit of measure'] || row['unit'];
     const quantity = parseFloat(row['quantity used'] || row['quantity']) || 0;
-    const cost = parseFloat(row['cost per unit']) || 0;
+    
+    // More flexible cost parsing with better error handling
+    const costValue = row['cost per unit'] || row['cost_per_unit'] || row['unit cost'] || row['cost'];
+    const cost = costValue ? parseFloat(costValue) : 0;
+    
+    // Log detailed info about cost parsing
+    if (!costValue || costValue.trim() === '') {
+      console.warn(`⚠️  Line ${i + 1}: Empty cost for "${ingredientName}" in "${recipeName}"`);
+    } else if (isNaN(cost)) {
+      console.warn(`⚠️  Line ${i + 1}: Invalid cost "${costValue}" for "${ingredientName}" in "${recipeName}"`);
+    }
 
-    console.log(`Processing line ${i + 1}:`, { recipeName, category, ingredientName, uom, quantity, cost });
+    console.log(`Processing line ${i + 1}:`, { recipeName, category, ingredientName, uom, quantity, cost, originalCostValue: costValue });
 
     if (!recipeName || !ingredientName || !uom || quantity <= 0) {
       console.log(`Skipping line ${i + 1}: missing required fields`);
