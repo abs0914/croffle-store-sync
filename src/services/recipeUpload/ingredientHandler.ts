@@ -108,7 +108,7 @@ const findOrCreateStoreInventoryItem = async (
       store_id: storeId,
       item: itemName,
       unit: itemUnit,
-      item_category: itemCategory,
+      item_category: itemCategory as 'packaging' | 'base_ingredient' | 'classic_sauce' | 'premium_sauce' | 'classic_topping' | 'premium_topping' | 'biscuit',
       stock_quantity: 0,
       cost: ingredient.cost_per_unit || commissaryItem.unit_cost || 0,
       is_active: true,
