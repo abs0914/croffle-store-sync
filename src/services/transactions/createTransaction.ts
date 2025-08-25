@@ -210,41 +210,73 @@ export const createTransaction = async (
      try {
        const { deductInventoryForTransaction } = await import('@/services/inventory/enhancedInventoryDeduction');
        
-       // Simple template lookup - fail if no template found
-       const itemsWithTemplateIds = await Promise.all(
-         transaction.items.map(async (item) => {
-           const { data: product } = await supabase
-             .from('products')
-             .select(`
-               name,
-               recipes (
-                 recipe_templates (
-                   id,
-                   is_active
-                 )
-               )
-             `)
-             .eq('id', item.productId)
-             .eq('store_id', transaction.storeId)
-             .maybeSingle();
+        // Simple template lookup - fail if no template found
+        const itemsWithTemplateIds = await Promise.all(
+          transaction.items.map(async (item) => {
+            try {
+              // Try to get recipe template ID directly from product_catalog first
+              const { data: catalogProduct } = await supabase
+                .from('product_catalog')
+                .select('recipe_id')
+                .eq('id', item.productId)
+                .eq('store_id', transaction.storeId)
+                .maybeSingle();
 
-           const recipe = Array.isArray(product?.recipes) ? product.recipes[0] : product?.recipes;
-           const template = recipe?.recipe_templates;
-           
-           if (!template || !template.is_active) {
-             console.warn(`⚠️ Product ${item.name} has no active recipe template - proceeding without inventory deduction`);
-             return {
-               product_name: product?.name || item.name,
-               recipe_template_id: null,
-               quantity: item.quantity
-             };
-           }
-           
-           return {
-             product_name: product.name,
-             recipe_template_id: template.id,
-             quantity: item.quantity
-           };
+              let templateId = null;
+              
+              if (catalogProduct?.recipe_id) {
+                // Get template ID from recipe
+                const { data: recipe } = await supabase
+                  .from('recipes')
+                  .select('template_id')
+                  .eq('id', catalogProduct.recipe_id)
+                  .eq('is_active', true)
+                  .maybeSingle();
+                
+                templateId = recipe?.template_id;
+              }
+
+              // Fallback: try products table if catalog lookup failed
+              if (!templateId) {
+                const { data: product } = await supabase
+                  .from('products')
+                  .select('name')
+                  .eq('id', item.productId)
+                  .eq('store_id', transaction.storeId)
+                  .maybeSingle();
+                
+                if (!product) {
+                  console.warn(`⚠️ Product ${item.name} not found - proceeding without inventory deduction`);
+                  return {
+                    product_name: item.name,
+                    recipe_template_id: null,
+                    quantity: item.quantity
+                  };
+                }
+              }
+            
+            if (!templateId) {
+              console.warn(`⚠️ Product ${item.name} has no active recipe template - proceeding without inventory deduction`);
+              return {
+                product_name: item.name,
+                recipe_template_id: null,
+                quantity: item.quantity
+              };
+            }
+            
+            return {
+              product_name: item.name,
+              recipe_template_id: templateId,
+              quantity: item.quantity
+            };
+            } catch (itemError) {
+              console.error(`❌ Error processing item ${item.name}:`, itemError);
+              return {
+                product_name: item.name,
+                recipe_template_id: null,
+                quantity: item.quantity
+              };
+            }
          })
        );
        
