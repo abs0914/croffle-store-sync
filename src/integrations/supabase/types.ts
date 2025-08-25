@@ -5739,6 +5739,15 @@ export type Database = {
         Args: { txt: string }
         Returns: Json
       }
+      update_cumulative_sales: {
+        Args: {
+          p_receipt_number?: string
+          p_store_id: string
+          p_terminal_id?: string
+          p_transaction_total: number
+        }
+        Returns: undefined
+      }
       user_has_store_access: {
         Args: { store_id: string; user_id: string }
         Returns: boolean
