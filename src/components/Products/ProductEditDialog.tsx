@@ -15,6 +15,7 @@ import { Upload, X } from 'lucide-react';
 import { EnhancedProductCatalog } from '@/services/productCatalog/enhancedCatalogService';
 import { Category } from '@/types';
 import { updateProduct } from '@/services/productCatalog/productCatalogService';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface ProductEditDialogProps {
@@ -74,24 +75,69 @@ export function ProductEditDialog({
     setFormData(prev => ({ ...prev, image_url: '' }));
   };
 
+  const uploadImageToStorage = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${product?.id}-${Date.now()}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      console.log('🖼️ Uploading image to storage:', filePath);
+
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) {
+        console.error('❌ Storage upload error:', error);
+        throw error;
+      }
+
+      // Get the public URL for the uploaded image
+      const { data: urlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      console.log('✅ Image uploaded successfully:', urlData.publicUrl);
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('❌ Error uploading image:', error);
+      toast.error('Failed to upload image');
+      return null;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product) return;
 
     setIsLoading(true);
     try {
-      // For now, we'll just update the basic product info
-      // Image upload to storage would need to be implemented separately
+      let imageUrl = formData.image_url;
+
+      // Upload new image if selected
+      if (imageFile) {
+        console.log('🖼️ New image file detected, uploading to storage...');
+        const uploadedUrl = await uploadImageToStorage(imageFile);
+        if (uploadedUrl) {
+          imageUrl = uploadedUrl;
+          console.log('✅ Image uploaded, new URL:', uploadedUrl);
+        } else {
+          toast.error('Failed to upload image. Proceeding without image update.');
+        }
+      }
+
       const updates = {
         product_name: formData.product_name,
         description: formData.description,
         price: parseFloat(formData.price) || 0,
         category_id: formData.category_id || null,
-        // If we have a new image file, we'd upload it to Supabase storage first
-        // For now, keep existing image_url if no new file selected
-        image_url: imageFile ? imagePreview : formData.image_url
+        image_url: imageUrl
       };
 
+      console.log('📝 Updating product with:', updates);
       await updateProduct(product.id, updates);
       toast.success('Product updated successfully');
       onUpdate();
