@@ -74,38 +74,56 @@ const findOrCreateStoreInventoryItem = async (
   commissaryItem: any,
   storeInventoryMap: Map<string, any>,
   unitMapping: Record<string, string>,
-  storeId: string // Add storeId parameter
+  storeId: string
 ): Promise<any> => {
-  const existingItem = storeInventoryMap.get(ingredient.commissary_item_name.toLowerCase());
-  
+  // First check if we have a standardized version of this ingredient
+  const { data: standardizedIngredient } = await supabase
+    .from('standardized_ingredients')
+    .select('*')
+    .eq('ingredient_name', ingredient.commissary_item_name.toLowerCase())
+    .single();
+
+  // Use standardized values if available, otherwise fallback to original
+  const itemName = standardizedIngredient?.standardized_name || ingredient.commissary_item_name;
+  const itemUnit = standardizedIngredient?.standardized_unit || (unitMapping[ingredient.uom.toLowerCase()] || ingredient.uom);
+  const itemCategory = standardizedIngredient?.category || 'base_ingredient';
+
+  // Check if item already exists in store
+  const existingItem = storeInventoryMap.get(itemName.toLowerCase());
   if (existingItem) {
     return existingItem;
   }
 
-  // Create new store inventory item
-  const mappedUnit = unitMapping[ingredient.uom.toLowerCase()] || ingredient.uom; // Use uom instead of unit
-  
-  console.log('Creating inventory stock item with store_id:', storeId);
+  // Create new store inventory item with standardized values
+  console.log('Creating standardized inventory stock item:', {
+    store_id: storeId,
+    item: itemName,
+    unit: itemUnit,
+    category: itemCategory
+  });
   
   const { data: newStoreItem, error: storeItemError } = await supabase
     .from('inventory_stock')
     .insert({
-      store_id: storeId, // Use the passed storeId parameter
-      item: ingredient.commissary_item_name,
-      unit: mappedUnit,
+      store_id: storeId,
+      item: itemName,
+      unit: itemUnit,
+      item_category: itemCategory,
       stock_quantity: 0,
       cost: ingredient.cost_per_unit || commissaryItem.unit_cost || 0,
-      is_active: true
+      is_active: true,
+      recipe_compatible: true
     })
     .select()
     .single();
 
   if (storeItemError) {
-    console.error(`Error creating store inventory item for ${ingredient.commissary_item_name}:`, storeItemError);
+    console.error(`Error creating store inventory item for ${itemName}:`, storeItemError);
     return null;
   }
   
-  storeInventoryMap.set(ingredient.commissary_item_name.toLowerCase(), newStoreItem);
+  // Add to map using standardized name
+  storeInventoryMap.set(itemName.toLowerCase(), newStoreItem);
   return newStoreItem;
 };
 
