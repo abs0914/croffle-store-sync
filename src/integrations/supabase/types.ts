@@ -5554,7 +5554,7 @@ export type Database = {
         Returns: boolean
       }
       is_store_accessible: {
-        Args: { store: string }
+        Args: { p_store_id: string }
         Returns: boolean
       }
       is_user_admin_or_owner: {
@@ -5790,6 +5790,14 @@ export type Database = {
           can_produce: boolean
           insufficient_stock: string[]
           missing_mappings: string[]
+        }[]
+      }
+      validate_store_operational_status: {
+        Args: { p_store_id?: string }
+        Returns: {
+          check_name: string
+          details: string
+          status: string
         }[]
       }
       validate_user_input: {
