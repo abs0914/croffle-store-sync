@@ -81,6 +81,10 @@ export const InventoryBasedIngredientForm: React.FC<InventoryBasedIngredientForm
     }
   };
 
+  // Find the currently selected inventory item for display
+  const selectedInventoryItem = inventoryItems.find(item => item.id === ingredient.inventory_stock_id);
+  const displayName = selectedInventoryItem ? selectedInventoryItem.item : ingredient.ingredient_name;
+
   const handleQuantityChange = (quantity: string) => {
     const numQuantity = parseFloat(quantity) || 0;
     onUpdate(index, { ...ingredient, quantity: numQuantity });
@@ -128,7 +132,7 @@ export const InventoryBasedIngredientForm: React.FC<InventoryBasedIngredientForm
               <SelectValue 
                 placeholder="Select inventory item..."
               >
-                {ingredient.ingredient_name || "Select inventory item..."}
+                {displayName || "Select inventory item..."}
               </SelectValue>
             </SelectTrigger>
             <SelectContent className="bg-popover border border-border shadow-md z-50">
