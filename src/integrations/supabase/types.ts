@@ -228,7 +228,7 @@ export type Database = {
           {
             foreignKeyName: "bir_cumulative_sales_store_id_fkey"
             columns: ["store_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
