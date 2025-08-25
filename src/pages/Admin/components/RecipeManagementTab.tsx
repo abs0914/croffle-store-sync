@@ -167,8 +167,8 @@ export const RecipeManagementTab: React.FC = () => {
                 }`}
               >
                 {/* Template Info */}
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1">
                     <h3 className="font-semibold text-lg">{template.name}</h3>
                     <Badge variant="secondary" className="text-xs">
                       v{template.version || 1}
@@ -180,36 +180,37 @@ export const RecipeManagementTab: React.FC = () => {
                     )}
                   </div>
                   {template.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-1">
+                    <p className="text-sm text-muted-foreground mb-2">
                       {template.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Package className="h-3 w-3" />
+                  <div className="flex items-center gap-3">
+                    <Badge variant="destructive" className="text-xs">
                       {template.ingredients?.length || 0} ingredients
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />
-                      Yield: {template.yield_quantity || 0}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      Yield: {template.yield_quantity || 1}
                     </span>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <Button 
-                    variant="outline" 
+                    variant="ghost" 
                     size="sm"
                     onClick={() => handleDeploy(template)}
+                    className="h-8 w-8 p-0"
+                    title="Deploy"
                   >
-                    <Rocket className="h-4 w-4 mr-1" />
-                    Deploy
+                    <Rocket className="h-4 w-4" />
                   </Button>
                   <Button 
                     variant="ghost" 
                     size="sm"
                     onClick={() => handleEdit(template)}
+                    className="h-8 w-8 p-0"
+                    title="Edit"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -217,6 +218,8 @@ export const RecipeManagementTab: React.FC = () => {
                     variant="ghost" 
                     size="sm"
                     onClick={() => handleDuplicate(template)}
+                    className="h-8 w-8 p-0"
+                    title="Duplicate"
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -224,7 +227,8 @@ export const RecipeManagementTab: React.FC = () => {
                     variant="ghost" 
                     size="sm"
                     onClick={() => handleDelete(template.id)}
-                    className="text-destructive hover:text-destructive"
+                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                    title="Delete"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
