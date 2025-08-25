@@ -5245,6 +5245,15 @@ export type Database = {
         Args: { p_store_id: string; p_user_id?: string }
         Returns: boolean
       }
+      complete_recipe_ingredients: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          categories_processed: string[]
+          execution_details: Json
+          ingredients_added: number
+          recipes_updated: number
+        }[]
+      }
       create_app_user: {
         Args: {
           p_first_name: string
