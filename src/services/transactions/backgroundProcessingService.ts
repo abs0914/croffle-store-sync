@@ -3,6 +3,7 @@ import { processProductSale } from "@/services/productCatalog/inventoryIntegrati
 import { Transaction } from "@/types";
 import { BackgroundQueue } from "@/services/processing/backgroundQueue";
 import { InventoryCacheService } from "@/services/cache/inventoryCacheService";
+import { EnhancedBackgroundInventoryService } from "./enhancedBackgroundInventoryService";
 
 /**
  * Enhanced background processing service with queue management
@@ -11,27 +12,29 @@ export class BackgroundProcessingService {
   private static queue = BackgroundQueue.getInstance();
 
   /**
-   * Process inventory deductions in the background with queue management
+   * Process inventory deductions using simple network-resilient service
    */
   static async processInventoryInBackground(
     transactionId: string,
     items: any[],
     storeId: string
   ): Promise<string> {
-    console.log('🚀 Queuing inventory processing for:', transactionId);
+    console.log('🚀 Using simple network-resilient inventory processing for:', transactionId);
     
-    const jobId = this.queue.addJob({
-      type: 'inventory_sync',
-      data: { transactionId, items, storeId },
-      priority: 'high',
-      maxRetries: 3,
-      processor: async (data) => {
-        return this.executeInventoryProcessing(data.transactionId, data.items, data.storeId);
-      }
+    // Import and use the simple service
+    const { SimpleNetworkResilientInventoryService } = await import('./simpleNetworkResilientInventoryService');
+    
+    // Process in background without blocking
+    SimpleNetworkResilientInventoryService.processInventoryWithNetworkResilience(
+      transactionId,
+      items,
+      storeId
+    ).catch(error => {
+      console.error('Simple inventory processing error:', error);
     });
 
-    // Don't wait for completion, return job ID for tracking
-    return jobId;
+    // Return transaction ID as job ID for compatibility
+    return `simple_${transactionId}`;
   }
 
   private static async executeInventoryProcessing(
