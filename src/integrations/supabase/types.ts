@@ -5450,6 +5450,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_recipe_ingredient_availability: {
+        Args: { recipe_id_param: string; store_id_param: string }
+        Returns: boolean
+      }
       cleanup_test_data: {
         Args: { p_store_id: string; p_user_id?: string }
         Returns: boolean
