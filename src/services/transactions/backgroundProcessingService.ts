@@ -20,30 +20,41 @@ export class BackgroundProcessingService {
   ): Promise<string> {
     console.log('🚀 Processing inventory with fallback strategy for:', transactionId);
     
-    // First try the simple network-resilient approach for direct inventory items
-    const { SimpleNetworkResilientInventoryService } = await import('./simpleNetworkResilientInventoryService');
-    
-    // Then process any remaining recipe-based items with the enhanced tracker
-    const { deductIngredientsWithTracking } = await import('../inventory/productInventoryTracker');
-    
-    // Run both approaches in background without blocking
-    Promise.all([
-      SimpleNetworkResilientInventoryService.processInventoryWithNetworkResilience(
-        transactionId,
-        items,
-        storeId
-      ),
-      // Also try with the enhanced tracker for recipe-based products
-      ...items.map(item => 
-        deductIngredientsWithTracking(item.productId, item.quantity, transactionId)
-          .catch(error => console.warn(`Item ${item.productId} enhanced processing failed:`, error))
-      )
-    ]).catch(error => {
-      console.error('Combined inventory processing error:', error);
-    });
+    try {
+      // First try the simple network-resilient approach for direct inventory items
+      const { SimpleNetworkResilientInventoryService } = await import('./simpleNetworkResilientInventoryService');
+      
+      // Then process any remaining recipe-based items with the enhanced tracker
+      const { deductIngredientsWithTracking } = await import('../inventory/productInventoryTracker');
+      
+      // CRITICAL FIX: Actually await the Promise.all to catch failures
+      await Promise.all([
+        SimpleNetworkResilientInventoryService.processInventoryWithNetworkResilience(
+          transactionId,
+          items,
+          storeId
+        ),
+        // Also try with the enhanced tracker for recipe-based products
+        ...items.map(item => 
+          deductIngredientsWithTracking(item.productId, item.quantity, transactionId)
+            .catch(error => {
+              console.warn(`Item ${item.productId} enhanced processing failed:`, error);
+              // Don't throw here to allow partial success
+              return null;
+            })
+        )
+      ]);
 
-    // Return transaction ID as job ID for compatibility
-    return `combined_${transactionId}`;
+      console.log('✅ Combined inventory processing completed for:', transactionId);
+      
+      // Return transaction ID as job ID for compatibility
+      return `combined_${transactionId}`;
+      
+    } catch (error) {
+      console.error('❌ Combined inventory processing failed:', error);
+      // Throw the error so calling code knows the operation failed
+      throw new Error(`Inventory processing failed: ${error.message}`);
+    }
   }
 
   private static async executeInventoryProcessing(
