@@ -5691,6 +5691,13 @@ export type Database = {
         }
         Returns: string
       }
+      sync_missing_app_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          error_details: string
+          synced_count: number
+        }[]
+      }
       sync_template_images_to_products: {
         Args: Record<PropertyKey, never>
         Returns: {
