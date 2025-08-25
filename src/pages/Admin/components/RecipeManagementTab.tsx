@@ -19,7 +19,9 @@ import {
   DollarSign,
   Users,
   Rocket,
-  Filter
+  Filter,
+  FileBarChart,
+  Download
 } from 'lucide-react';
 import { 
   fetchRecipeTemplates,
@@ -31,6 +33,7 @@ import { fetchCategories } from '@/services/category/categoryFetch';
 import { Category } from '@/types';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
+import { RecipeAuditDialog } from '@/components/Admin/RecipeAuditDialog';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
@@ -44,6 +47,7 @@ export const RecipeManagementTab: React.FC = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeployDialog, setShowDeployDialog] = useState(false);
+  const [showAuditDialog, setShowAuditDialog] = useState(false);
 
   useEffect(() => {
     loadTemplates();
@@ -180,10 +184,16 @@ export const RecipeManagementTab: React.FC = () => {
             Create and manage recipe templates for deployment to stores
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Template
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowAuditDialog(true)}>
+            <FileBarChart className="h-4 w-4 mr-2" />
+            Audit & Sync
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Template
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filter */}
@@ -349,6 +359,12 @@ export const RecipeManagementTab: React.FC = () => {
           setSelectedTemplate(null);
           loadTemplates();
         }}
+      />
+
+      {/* Recipe Audit Dialog */}
+      <RecipeAuditDialog
+        isOpen={showAuditDialog}
+        onClose={() => setShowAuditDialog(false)}
       />
     </div>
   );

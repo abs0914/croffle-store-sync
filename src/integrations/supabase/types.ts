@@ -5215,6 +5215,20 @@ export type Database = {
           template_ingredients_count: number
         }[]
       }
+      audit_recipe_template_consistency: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          deployed_quantity: number
+          deployed_unit: string
+          ingredient_name: string
+          issue_type: string
+          status: string
+          store_name: string
+          template_name: string
+          template_quantity: number
+          template_unit: string
+        }[]
+      }
       calculate_recipe_cost: {
         Args: { recipe_id: number }
         Returns: number
@@ -5696,6 +5710,15 @@ export type Database = {
         Returns: {
           error_details: string
           synced_count: number
+        }[]
+      }
+      sync_recipes_with_templates: {
+        Args: { p_template_ids?: string[] }
+        Returns: {
+          ingredients_updated: number
+          recipes_updated: number
+          stores_affected: number
+          sync_details: Json
         }[]
       }
       sync_template_images_to_products: {
