@@ -116,6 +116,13 @@ export function useOptimizedTransaction() {
     const operationId = `optimized_transaction_${Date.now()}`;
     PerformanceMonitor.startTimer(operationId);
     
+    console.log('🚀 OPTIMIZED TRANSACTION - START', {
+      itemCount: items.length,
+      storeId,
+      operationId,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       setState(prev => ({ ...prev, isProcessing: true, error: undefined }));
       
@@ -140,9 +147,24 @@ export function useOptimizedTransaction() {
       // Step 2: Payment Processing
       updateStep('payment', 'processing');
       
+      console.log('💳 OPTIMIZED TRANSACTION - Payment Processing', {
+        operationId,
+        timestamp: new Date().toISOString()
+      });
+      
       const paymentSuccess = await onPaymentComplete();
       
+      console.log('💳 OPTIMIZED TRANSACTION - Payment Result', {
+        operationId,
+        paymentSuccess,
+        timestamp: new Date().toISOString()
+      });
+      
       if (!paymentSuccess) {
+        console.error('❌ OPTIMIZED TRANSACTION - Payment Failed', {
+          operationId,
+          timestamp: new Date().toISOString()
+        });
         updateStep('payment', 'failed', 'Payment processing failed');
         return false;
       }
@@ -197,7 +219,15 @@ export function useOptimizedTransaction() {
       return true;
       
     } catch (error) {
-      console.error('Optimized transaction failed:', error);
+      console.error('❌ OPTIMIZED TRANSACTION - Critical Error:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        operationId,
+        storeId,
+        itemCount: items.length,
+        timestamp: new Date().toISOString(),
+        items: items.map(item => ({ name: item.name, quantity: item.quantity }))
+      });
       
       const currentStep = state.steps.find(s => s.status === 'processing')?.id || 'unknown';
       updateStep(currentStep, 'failed', error instanceof Error ? error.message : 'Unknown error');

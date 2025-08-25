@@ -275,14 +275,25 @@ export function useTransactionHandler(storeId: string) {
     };
     
     // Call the service to create the transaction with cart items for enrichment
-    console.log("🔄 Creating transaction with enhanced error handling...", {
+    console.log("🔄 HANDLER - Creating transaction with enhanced error handling...", {
       itemCount: items.length,
       storeId: currentStore.id,
       total: transaction.total,
-      paymentMethod: finalPaymentMethod
+      paymentMethod: finalPaymentMethod,
+      timestamp: new Date().toISOString(),
+      operationId
     });
     
     const result = await createTransaction(transaction, items);
+    
+    console.log("🔍 HANDLER - CreateTransaction result:", {
+      success: !!result,
+      resultType: typeof result,
+      transactionId: result?.id,
+      receiptNumber: result?.receiptNumber,
+      operationId,
+      timestamp: new Date().toISOString()
+    });
     
     if (result) {
       console.log("🎯 Transaction created successfully, implementing optimistic navigation:", {
@@ -354,13 +365,29 @@ export function useTransactionHandler(storeId: string) {
       const isLargeOrder = items.length > 5;
       const errorMsg = `Transaction creation failed${isLargeOrder ? ` (${items.length} items)` : ''}`;
       
-      console.log("❌ Transaction creation failed - detailed logging:", {
+      console.error("❌ HANDLER - Transaction creation failed - detailed logging:", {
+        operationId,
         itemCount: items.length,
         isLargeOrder,
         storeId: currentStore.id,
         shiftId: currentShift.id,
+        userId: currentShift.userId,
         total: transaction.total,
-        paymentMethod: finalPaymentMethod
+        subtotal,
+        tax,
+        discount,
+        paymentMethod: finalPaymentMethod,
+        customerId: selectedCustomer?.id,
+        orderType,
+        deliveryPlatform,
+        timestamp: new Date().toISOString(),
+        transactionStructure: {
+          hasShiftId: !!transaction.shiftId,
+          hasStoreId: !!transaction.storeId,
+          hasUserId: !!transaction.userId,
+          itemsLength: transaction.items.length,
+          hasValidTotal: transaction.total > 0
+        }
       });
       
       toast.error(isLargeOrder ? 
