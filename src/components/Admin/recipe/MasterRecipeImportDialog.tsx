@@ -155,7 +155,9 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
 
-      if (ingredientsError) throw ingredientsError;
+      if (ingredientsError) {
+        throw new Error(`Failed to delete ingredients: ${ingredientsError.message}`);
+      }
 
       // Then delete all recipe templates
       const { error: templatesError } = await supabase
@@ -163,13 +165,15 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
         .delete()
         .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
 
-      if (templatesError) throw templatesError;
+      if (templatesError) {
+        throw new Error(`Failed to delete templates: ${templatesError.message}`);
+      }
 
       toast.success('All recipe templates have been cleared successfully');
       onSuccess?.(); // Refresh the parent component
-    } catch (error) {
+    } catch (error: any) {
       console.error('Clear templates error:', error);
-      toast.error(`Failed to clear templates: ${error}`);
+      toast.error(`Failed to clear templates: ${error.message || 'Unknown error'}`);
     } finally {
       setIsClearing(false);
     }
