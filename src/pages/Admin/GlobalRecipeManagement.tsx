@@ -26,7 +26,8 @@ import {
   Grid3X3,
   List,
   Database,
-  Zap
+  Zap,
+  BookOpen
 } from 'lucide-react';
 import { 
   fetchRecipeTemplates,
@@ -36,6 +37,7 @@ import {
 import { RecipeTemplateDialog } from './components/RecipeTemplateDialog';
 import { OptimizedRecipeDeploymentDialog } from '@/components/Admin/recipe/OptimizedRecipeDeploymentDialog';
 import { BulkDeploymentDialog } from '@/components/Admin/recipe/BulkDeploymentDialog';
+import { MasterRecipeImportDialog } from '@/components/Admin/recipe/MasterRecipeImportDialog';
 import { useGlobalRecipeTemplateImportExport } from '@/hooks/useGlobalRecipeTemplateImportExport';
 import { RecipeTemplate } from '@/services/recipeManagement/types';
 import { toast } from 'sonner';
@@ -51,6 +53,7 @@ const GlobalRecipeManagement: React.FC = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeployDialog, setShowDeployDialog] = useState(false);
   const [showSqlBulkDeployment, setShowSqlBulkDeployment] = useState(false);
+  const [showMasterImport, setShowMasterImport] = useState(false);
 
   useEffect(() => {
     loadTemplates();
@@ -329,6 +332,16 @@ const GlobalRecipeManagement: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Master Import Button */}
+          <Button 
+            onClick={() => setShowMasterImport(true)}
+            className="gap-2"
+            variant="secondary"
+          >
+            <BookOpen className="h-4 w-4" />
+            Import Master Recipes
+          </Button>
+          
           {/* Bulk Deployment Actions */}
           <Button 
             onClick={() => setShowSqlBulkDeployment(true)}
@@ -488,6 +501,16 @@ const GlobalRecipeManagement: React.FC = () => {
       <BulkDeploymentDialog
         isOpen={showSqlBulkDeployment}
         onClose={() => setShowSqlBulkDeployment(false)}
+      />
+
+      {/* Master Recipe Import Dialog */}
+      <MasterRecipeImportDialog
+        isOpen={showMasterImport}
+        onClose={() => setShowMasterImport(false)}
+        onSuccess={() => {
+          setShowMasterImport(false);
+          loadTemplates();
+        }}
       />
     </div>
   );
