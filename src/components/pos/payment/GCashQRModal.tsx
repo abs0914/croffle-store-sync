@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatCurrency } from "@/utils/format";
-import gcashQRImage from "@/assets/gcash-qr.png";
+import { QRCodeSVG } from 'qrcode.react';
 
 interface GCashQRModalProps {
   isOpen: boolean;
@@ -39,10 +39,11 @@ export function GCashQRModal({ isOpen, onClose, total, storeName }: GCashQRModal
           </div>
           
           <div className="flex justify-center bg-gray-50 p-4 rounded-lg">
-            <img 
-              src={gcashQRImage} 
-              alt="GCash QR Code" 
-              className="w-56 h-56 object-contain"
+            <QRCodeSVG 
+              value={`GCash Payment - ${formatCurrency(total)} - ${storeName || "Merchant"}`}
+              size={224}
+              level="M"
+              className="w-56 h-56"
             />
           </div>
           
