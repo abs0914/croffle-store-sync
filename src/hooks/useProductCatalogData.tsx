@@ -64,6 +64,6 @@ export function useProductCatalogData(storeId: string | null) {
     setActiveTab,
     lastSync,
     isConnected,
-    refetch: manualRefetch
+    refreshProducts: manualRefetch // Renamed for POS consistency
   };
 }

@@ -10,6 +10,13 @@ export function useProductFetch(storeId: string | null) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Add refresh function for external calls
+  const refreshProducts = () => {
+    console.log('🔄 Manually refreshing products...');
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -22,7 +29,7 @@ export function useProductFetch(storeId: string | null) {
           return;
         }
 
-        console.log("useProductFetch: Loading data for store:", storeId);
+        console.log("useProductFetch: Loading data for store:", storeId, "trigger:", refreshTrigger);
         setIsLoading(true);
         setError(null);
         
@@ -56,7 +63,7 @@ export function useProductFetch(storeId: string | null) {
     }
     
     loadData();
-  }, [storeId]);
+  }, [storeId, refreshTrigger]);
 
-  return { products, categories, isLoading, error };
+  return { products, categories, isLoading, error, refreshProducts };
 }

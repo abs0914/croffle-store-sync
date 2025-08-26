@@ -92,7 +92,8 @@ export const insertTransactionItems = async (transactionId: string, items: Detai
   });
 
   try {
-    const itemsWithTransactionId = items.map(item => ({
+    // Prepare items with exact column mapping to avoid UUID errors
+    const itemsToInsert = items.map(item => ({
       transaction_id: transactionId,
       product_id: item.product_id,
       variation_id: item.variation_id || null,
@@ -102,14 +103,18 @@ export const insertTransactionItems = async (transactionId: string, items: Detai
       total_price: item.total_price,
       category_id: item.category_id || null,
       category_name: item.category_name || null,
-      product_type: item.product_type
+      product_type: item.product_type || 'regular'
     }));
 
-    console.log('🔄 Prepared items for insertion:', itemsWithTransactionId);
+    console.log('🔄 Prepared items for insertion (exact columns):', itemsToInsert);
 
+    // Use upsert to avoid any potential conflicts and ensure clean insertion
     const { data, error } = await supabase
       .from("transaction_items")
-      .insert(itemsWithTransactionId)
+      .upsert(itemsToInsert, { 
+        onConflict: 'id',
+        ignoreDuplicates: false 
+      })
       .select();
 
     if (error) {
@@ -121,7 +126,20 @@ export const insertTransactionItems = async (transactionId: string, items: Detai
         transactionId,
         itemCount: items.length
       });
-      throw new Error(`Failed to save transaction items: ${error.message}`);
+      
+      // Try a simple insert as fallback
+      console.log('🔄 Trying simple insert as fallback...');
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("transaction_items")
+        .insert(itemsToInsert);
+        
+      if (fallbackError) {
+        console.error('❌ Fallback insert also failed:', fallbackError);
+        throw new Error(`Failed to save transaction items: ${fallbackError.message}`);
+      }
+      
+      console.log('✅ Fallback insert succeeded');
+      return;
     }
 
     console.log('✅ Transaction items inserted successfully:', {

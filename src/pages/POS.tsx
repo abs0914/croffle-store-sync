@@ -58,11 +58,37 @@ export default function POS() {
     activeCategory,
     setActiveCategory,
     lastSync,
-    isConnected
+    isConnected,
+    refreshProducts
   } = useProductCatalogData(currentStore?.id || null);
 
   // Set up automatic availability monitoring
   useAutomaticAvailability(currentStore?.id || null, !!currentStore?.id);
+  
+  // Set up price refresh listening
+  useEffect(() => {
+    if (!refreshProducts || !currentStore?.id) return;
+    
+    const setupPriceRefresh = async () => {
+      const { priceRefreshService } = await import('@/services/pos/priceRefreshService');
+      const cleanup = priceRefreshService.addRefreshListener(() => {
+        console.log('🔄 POS received price update notification, refreshing products...');
+        refreshProducts();
+      });
+      
+      return cleanup;
+    };
+    
+    let cleanupFn: (() => void) | null = null;
+    
+    setupPriceRefresh().then(cleanup => {
+      cleanupFn = cleanup;
+    });
+    
+    return () => {
+      if (cleanupFn) cleanupFn();
+    };
+  }, [refreshProducts, currentStore?.id]);
 
   // Set up real-time notifications
   useEffect(() => {

@@ -161,9 +161,18 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
       return result;
     },
     {
-      onSuccess: () => {
+      onSuccess: async () => {
         setEditingProduct(null);
         toast.success('Price updated successfully');
+        
+        // Notify POS to refresh product data
+        try {
+          const { priceRefreshService } = await import('@/services/pos/priceRefreshService');
+          priceRefreshService.triggerRefresh();
+          console.log('🔄 Triggered POS price refresh after catalog update');
+        } catch (error) {
+          console.error('Failed to trigger POS refresh:', error);
+        }
       },
       onError: (error) => {
         console.error('Error updating price:', error);

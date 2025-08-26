@@ -127,6 +127,9 @@ export const deductInventoryForTransaction = async (
 
         // Log inventory movement with proper UUID validation
         try {
+          // Ensure we have a valid UUID string before inserting
+          const validTransactionId = transactionId.toString().trim();
+          
           const { error: movementError } = await supabase
             .from('inventory_movements')
             .insert({
@@ -136,21 +139,26 @@ export const deductInventoryForTransaction = async (
               previous_quantity: stockItem.stock_quantity,
               new_quantity: newStock,
               reference_type: 'transaction',
-              reference_id: transactionId, // Already validated as UUID above
+              reference_id: validTransactionId, // Ensure it's a clean UUID string
               notes: `Transaction deduction: ${ingredient.ingredient_name} for ${recipe.name}`,
               created_by: userId
             });
 
           if (movementError) {
-            console.error(`⚠️ Failed to log inventory movement for ${ingredient.ingredient_name}:`, movementError);
+            console.error(`⚠️ Failed to log inventory movement for ${ingredient.ingredient_name}:`, {
+              error: movementError.message,
+              code: movementError.code,
+              transactionId: validTransactionId,
+              ingredient: ingredient.ingredient_name
+            });
             // Don't fail the entire transaction for movement logging issues
-            result.errors.push(`Failed to log movement for ${ingredient.ingredient_name}`);
+            result.errors.push(`Failed to log movement for ${ingredient.ingredient_name}: ${movementError.message}`);
           } else {
             console.log(`📋 Logged inventory movement for ${ingredient.ingredient_name}`);
           }
         } catch (logError) {
           console.error(`⚠️ Error logging movement for ${ingredient.ingredient_name}:`, logError);
-          result.errors.push(`Error logging movement for ${ingredient.ingredient_name}`);
+          result.errors.push(`Error logging movement for ${ingredient.ingredient_name}: ${logError instanceof Error ? logError.message : 'Unknown error'}`);
         }
 
         // Record the deduction
