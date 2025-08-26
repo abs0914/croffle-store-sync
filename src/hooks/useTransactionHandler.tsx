@@ -5,9 +5,9 @@ import { createTransaction } from "@/services/transactions";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { SeniorDiscount as CartSeniorDiscount, OtherDiscount as CartOtherDiscount } from "@/services/cart/CartCalculationService";
-import { BackgroundProcessingService } from "@/services/transactions/backgroundProcessingService";
 import { PerformanceMonitor } from "@/services/performance/performanceMonitor";
 import { deductIngredientsForProduct } from "@/services/productCatalog/ingredientDeductionService";
+import { deductInventoryForTransaction } from '@/services/inventory/simpleInventoryService';
 
 export interface SeniorDiscount {
   id: string;
@@ -139,38 +139,26 @@ export function useTransactionHandler(storeId: string) {
         throw new Error('Failed to create transaction - no ID returned');
       }
 
-      // Process inventory updates in background with enhanced error handling
-      const jobId = await BackgroundProcessingService.processInventoryInBackground(
+      // Process inventory deduction using the new simple service
+      console.log("📦 Processing inventory deduction for transaction items...");
+      
+      const inventoryItems = transactionData.items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }));
+      
+      const deductionResult = await deductInventoryForTransaction(
         transaction.id,
-        transactionData.items,
-        transactionData.storeId
+        transactionData.storeId,
+        inventoryItems
       );
-
-      console.log('🔄 Background inventory processing started:', jobId);
-
-      // Add to retry queue if initial processing fails
-      const { InventorySyncRetryService } = await import('@/services/inventory/inventorySyncRetryService');
-      const retryService = InventorySyncRetryService.getInstance();
-
-      // Monitor job completion and add to retry if needed
-      const jobSuccess = await BackgroundProcessingService.waitForJob(jobId, 10000); // Wait max 10 seconds
-      if (!jobSuccess) {
-        console.warn('⚠️ Background job may have failed, adding to retry queue');
-        await retryService.addRetryJob(
-          transaction.id,
-          transactionData.items,
-          transactionData.storeId,
-          'Initial background processing timeout or failure'
-        );
+      
+      if (deductionResult.success) {
+        console.log(`✅ Inventory deduction completed: ${deductionResult.deductedItems.length} items deducted`);
+      } else {
+        console.warn(`⚠️ Inventory deduction failed: ${deductionResult.errors.join(', ')}`);
+        toast.warning(`Transaction completed but inventory sync failed: ${deductionResult.errors.join(', ')}`);
       }
-
-      // Update store metrics
-      await BackgroundProcessingService.processAnalyticsInBackground({
-        transactionId: transaction.id,
-        storeId: transactionData.storeId,
-        total: transactionData.total,
-        itemCount: transactionData.items.length
-      });
 
       return transaction;
     } catch (error) {
@@ -304,41 +292,27 @@ export function useTransactionHandler(storeId: string) {
         itemCount: items.length
       });
       
-      // Process inventory deduction immediately (synchronously) for each item
+      // Process inventory deduction immediately using the new simple service
       console.log("📦 Processing inventory deduction for transaction items...");
-      let inventorySuccess = true;
-      let processedItems = 0;
       
-      for (const item of items) {
-        console.log(`🔄 Deducting inventory for ${item.product.name}, quantity: ${item.quantity}`);
-        
-        try {
-          const deductionResult = await deductIngredientsForProduct(
-            item.productId,
-            item.quantity,
-            result.id
-          );
-          
-          if (deductionResult) {
-            processedItems++;
-            console.log(`✅ Successfully deducted inventory for ${item.product.name}`);
-          } else {
-            console.error(`❌ Failed to deduct inventory for ${item.product.name}`);
-            inventorySuccess = false;
-            break;
-          }
-        } catch (error) {
-          console.error(`❌ Error deducting inventory for ${item.product.name}:`, error);
-          inventorySuccess = false;
-          break;
-        }
-      }
+      const inventoryItems = items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }));
       
-      if (!inventorySuccess) {
-        console.warn(`⚠️ Inventory deduction incomplete: ${processedItems}/${items.length} items processed`);
-        toast.warning(`Transaction completed but inventory sync failed for some items (${processedItems}/${items.length} processed)`);
+      const deductionResult = await deductInventoryForTransaction(
+        result.id,
+        currentStore.id,
+        inventoryItems
+      );
+      
+      let inventoryStatusText = "Inventory updated";
+      if (deductionResult.success) {
+        console.log(`✅ Inventory deduction completed: ${deductionResult.deductedItems.length} items deducted`);
       } else {
-        console.log(`✅ Inventory deduction completed: ${processedItems}/${items.length} items processed`);
+        console.warn(`⚠️ Inventory deduction failed: ${deductionResult.errors.join(', ')}`);
+        inventoryStatusText = "Inventory sync issues";
+        toast.warning(`Transaction completed but inventory sync failed: ${deductionResult.errors.join(', ')}`);
       }
       
       // Clear the cart immediately for better UX
@@ -354,32 +328,11 @@ export function useTransactionHandler(storeId: string) {
         replace: true
       });
       
-      // Process receipt generation in background
-      const receiptJobId = await BackgroundProcessingService.processReceiptInBackground(result);
-      
-      // Process analytics in background
-      const analyticsJobId = await BackgroundProcessingService.processAnalyticsInBackground({
-        transactionId: result.id,
-        storeId: currentStore.id,
-        total: result.total,
-        itemCount: items.length
-      });
-      
-      // Show performance feedback with inventory status
+      // Show success message with inventory status
       const isLargeOrder = items.length > 5;
-      const inventoryStatusText = inventorySuccess ? "Inventory updated" : "Inventory sync issues";
-      toast.success(`Transaction completed!${isLargeOrder ? ` (${items.length} items)` : ''} ${inventoryStatusText}.`, {
-        description: `Receipt: ${receiptJobId?.slice(-8)}, Analytics: ${analyticsJobId?.slice(-8)}`
-      });
+      toast.success(`Transaction completed!${isLargeOrder ? ` (${items.length} items)` : ''} ${inventoryStatusText}.`);
       
-      console.log(`📋 Background jobs queued:`, {
-        receipt: receiptJobId,
-        analytics: analyticsJobId,
-        inventoryProcessed: processedItems,
-        inventorySuccess
-      });
-      
-      console.log("✅ Transaction flow completed with frontend inventory deduction");
+      console.log("✅ Transaction flow completed with simple inventory deduction");
       
       // Record performance metrics
       PerformanceMonitor.endTimer(
@@ -389,9 +342,7 @@ export function useTransactionHandler(storeId: string) {
           itemCount: items.length,
           paymentMethod: finalPaymentMethod,
           total: total - discount,
-          inventoryProcessed: processedItems,
-          inventorySuccess,
-          backgroundJobs: 2 // Receipt and analytics only
+          inventorySuccess: deductionResult.success
         }
       );
       

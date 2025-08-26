@@ -434,22 +434,19 @@ const enhancedUpdateInventoryStockForTransaction = async (
       quantity: item.quantity 
     })));
 
-    // Import the actual inventory service
-    const { processProductSale } = await import('@/services/productCatalog/inventoryIntegrationService');
-
-    // Process each item with enhanced error tracking
+    // Process each item with the new simple inventory service
     for (const item of items) {
       try {
         console.log(`🔍 Processing item: ${item.name} (${item.productId}) - Qty: ${item.quantity}`);
         
-        const success = await processProductSale(
-          item.productId,
-          item.quantity,
+        const { deductInventoryForTransaction } = await import('@/services/inventory/simpleInventoryService');
+        const result = await deductInventoryForTransaction(
           transactionId,
-          storeId
+          storeId,
+          [{productId: item.productId, quantity: item.quantity}]
         );
         
-        if (!success) {
+        if (!result.success) {
           const errorMsg = `Failed to process inventory for ${item.name} (${item.productId})`;
           console.error(`❌ ${errorMsg}`);
           errors.push(errorMsg);

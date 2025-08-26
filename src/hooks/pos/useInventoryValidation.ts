@@ -1,7 +1,12 @@
 
 import { useState, useCallback } from 'react';
-import { validateProductAvailability, InventoryValidationResult } from '@/services/productCatalog/inventoryIntegrationService';
+import { validateInventoryAvailability } from '@/services/inventory/simpleInventoryService';
 import { CartItem } from '@/types';
+
+interface InventoryValidationResult {
+  isValid: boolean;
+  insufficientItems?: string[];
+}
 
 export const useInventoryValidation = (storeId: string) => {
   const [isValidating, setIsValidating] = useState(false);
@@ -15,12 +20,23 @@ export const useInventoryValidation = (storeId: string) => {
     let allValid = true;
 
     try {
+      // Convert cart items to the format expected by the new service
+      const validationItems = items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }));
+
+      const { available, insufficientItems } = await validateInventoryAvailability(storeId, validationItems);
+      
+      // Create validation results for each item
       for (const item of items) {
         const key = `${item.productId}-${item.variationId || 'default'}`;
-        const result = await validateProductAvailability(item.productId, item.quantity);
-        results.set(key, result);
+        results.set(key, {
+          isValid: available,
+          insufficientItems: insufficientItems
+        });
         
-        if (!result.isValid) {
+        if (!available) {
           allValid = false;
         }
       }
@@ -34,7 +50,6 @@ export const useInventoryValidation = (storeId: string) => {
       setIsValidating(false);
     }
   }, [storeId]);
-
 
   const getItemValidation = useCallback((productId: string, variationId?: string): InventoryValidationResult | null => {
     const key = `${productId}-${variationId || 'default'}`;
