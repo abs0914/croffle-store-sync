@@ -197,13 +197,13 @@ export const deductInventoryForTransaction = async (
         }
 
         // Log inventory movement
-        // Log inventory movement with current user
+         // Log inventory movement with current user
          const { data: { user } } = await supabase.auth.getUser();
          const { error: movementError } = await supabase
            .from('inventory_movements')
            .insert({
              inventory_stock_id: match.inventory_item_id,
-             movement_type: 'deduction',
+             movement_type: 'sale',
              quantity_change: -finalQuantity,
              previous_quantity: availableQuantity,
              new_quantity: newQuantity,
