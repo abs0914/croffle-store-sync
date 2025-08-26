@@ -2,7 +2,7 @@
 import React from "react";
 import { Category } from "@/types";
 import { Button } from "@/components/ui/button";
-import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
+import { shouldDisplayCategoryInPOS, sortCategoriesForPOS } from "@/utils/categoryOrdering";
 
 interface ProductCategoryTabsProps {
   categories: Category[];
@@ -23,6 +23,9 @@ export default function ProductCategoryTabs({
     (shouldDisplayCategoryInPOS(category.name) || category.name === "Combo")
   );
 
+  // Sort categories using custom POS ordering
+  const sortedCategories = sortCategoriesForPOS(filteredCategories);
+
   const handleCategoryClick = (categoryId: string) => {
     if (onCategorySelect) {
       onCategorySelect(categoryId);
@@ -41,7 +44,7 @@ export default function ProductCategoryTabs({
       >
         All Items
       </Button>
-      {filteredCategories.map(category => (
+      {sortedCategories.map(category => (
         <Button
           key={category.id}
           onClick={() => handleCategoryClick(category.id)}

@@ -2,15 +2,24 @@ import { Category } from "@/types";
 
 /**
  * Custom category ordering for POS interface
- * Order: Classic, Combo, Espresso, Beverages, then alphabetical for others
+ * Order: Croffle categories first, then Espresso, then Beverages, then others
  */
 export const CATEGORY_ORDER = [
+  // Croffle Categories First
   'Classic',
+  'Premium', 
+  'Fruity',
   'Glaze',
-  'Combo', 
+  'Cold',
+  'Blended',
+  'Mix & Match',
+  // Then Coffee Categories
   'Espresso',
+  // Then Beverages
   'Beverages',
-  'Add-ons'
+  // Then Additional Items
+  'Add-ons',
+  'Combo'
 ];
 
 /**
