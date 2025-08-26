@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useCart } from "@/contexts/cart/CartContext";
 import { Customer, Transaction } from "@/types";
-import { createTransaction } from "@/services/transactions";
+import { streamlinedTransactionService, StreamlinedTransactionData } from "@/services/transactions/streamlinedTransactionService";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { SeniorDiscount as CartSeniorDiscount, OtherDiscount as CartOtherDiscount } from "@/services/cart/CartCalculationService";
 import { PerformanceMonitor } from "@/services/performance/performanceMonitor";
-// Removed deductIngredientsForProduct - using simpleInventoryService only
-import { deductInventoryForTransaction } from '@/services/inventory/simpleInventoryService';
 
 export interface SeniorDiscount {
   id: string;
@@ -111,10 +109,10 @@ export function useTransactionHandler(storeId: string) {
   
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const processTransaction = async (transactionData: any) => {
+  const processTransaction = async (transactionData: StreamlinedTransactionData) => {
     try {
       setIsProcessing(true);
-      console.log('🚀 Starting transaction processing...', transactionData);
+      console.log('🚀 Using streamlined transaction processing...', transactionData);
 
       // Import sync validator
       const { InventorySyncValidator } = await import('@/services/inventory/inventorySyncValidator');
@@ -126,43 +124,27 @@ export function useTransactionHandler(storeId: string) {
         throw new Error(`Sales temporarily disabled: ${syncCheck.reason}`);
       }
 
-      // Validate items have required data
-      if (!transactionData.items || transactionData.items.length === 0) {
-        throw new Error('No items to process');
+      // Phase 1: Pre-payment validation
+      const validation = await streamlinedTransactionService.validateBeforePayment(
+        transactionData.storeId,
+        transactionData.items
+      );
+
+      if (!validation.canProceed) {
+        throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
       }
 
-      // Create transaction record first
-      const transaction = await createTransaction(transactionData);
-      console.log('✅ Transaction created:', transaction);
+      // Phase 2: Process transaction with the streamlined service
+      const transaction = await streamlinedTransactionService.processTransaction(transactionData);
 
       if (!transaction?.id) {
         throw new Error('Failed to create transaction - no ID returned');
       }
 
-      // Process inventory deduction using the simple service
-      console.log("📦 Processing inventory deduction for transaction items...");
-      
-      const inventoryItems = transactionData.items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity
-      }));
-      
-      const deductionResult = await deductInventoryForTransaction(
-        transaction.id,
-        transactionData.storeId,
-        inventoryItems
-      );
-      
-      if (deductionResult.success) {
-        console.log(`✅ Inventory deduction completed: ${deductionResult.deductedItems.length} items deducted`);
-      } else {
-        console.warn(`⚠️ Inventory deduction failed: ${deductionResult.errors.join(', ')}`);
-        toast.warning(`Transaction completed but inventory sync failed: ${deductionResult.errors.join(', ')}`);
-      }
-
+      console.log('✅ Streamlined transaction completed:', transaction.id);
       return transaction;
     } catch (error) {
-      console.error('❌ Transaction processing failed:', error);
+      console.error('❌ Streamlined transaction processing failed:', error);
       throw error;
     } finally {
       setIsProcessing(false);
@@ -197,7 +179,7 @@ export function useTransactionHandler(storeId: string) {
     const operationId = `transaction_${Date.now()}`;
     PerformanceMonitor.startTimer(operationId);
     
-    // Create transaction objects
+    // Create streamlined transaction items
     const transactionItems = items.map(item => ({
       productId: item.productId,
       variationId: item.variationId,
@@ -239,12 +221,11 @@ export function useTransactionHandler(storeId: string) {
       console.log(`✅ Delivery payment method set to: ${finalPaymentMethod} via ${paymentDetails?.eWalletProvider}`);
     }
     
-    const transaction: Omit<Transaction, "id" | "createdAt" | "receiptNumber"> = {
-      shiftId: currentShift.id,
+    const streamlinedData: StreamlinedTransactionData = {
       storeId: currentStore.id,
       userId: currentShift.userId,
+      shiftId: currentShift.id,
       customerId: selectedCustomer?.id,
-      customer: selectedCustomer || undefined,
       items: transactionItems,
       subtotal,
       tax,
@@ -256,24 +237,22 @@ export function useTransactionHandler(storeId: string) {
       change: finalChange,
       paymentMethod: finalPaymentMethod,
       paymentDetails,
-      status: 'completed',
-      // Add delivery order information
       orderType: orderType as any,
       deliveryPlatform: deliveryPlatform as any,
       deliveryOrderNumber: deliveryOrderNumber
     };
     
-    // Call the service to create the transaction with cart items for enrichment
-    console.log("🔄 HANDLER - Creating transaction with enhanced error handling...", {
+    // Use streamlined transaction service
+    console.log("🔄 HANDLER - Using streamlined transaction processing...", {
       itemCount: items.length,
       storeId: currentStore.id,
-      total: transaction.total,
+      total: streamlinedData.total,
       paymentMethod: finalPaymentMethod,
       timestamp: new Date().toISOString(),
       operationId
     });
     
-    const result = await createTransaction(transaction, items);
+    const result = await streamlinedTransactionService.processTransaction(streamlinedData, items);
     
     console.log("🔍 HANDLER - CreateTransaction result:", {
       success: !!result,
@@ -340,7 +319,7 @@ export function useTransactionHandler(storeId: string) {
         storeId: currentStore.id,
         shiftId: currentShift.id,
         userId: currentShift.userId,
-        total: transaction.total,
+        total: streamlinedData.total,
         subtotal,
         tax,
         discount,
@@ -350,11 +329,11 @@ export function useTransactionHandler(storeId: string) {
         deliveryPlatform,
         timestamp: new Date().toISOString(),
         transactionStructure: {
-          hasShiftId: !!transaction.shiftId,
-          hasStoreId: !!transaction.storeId,
-          hasUserId: !!transaction.userId,
-          itemsLength: transaction.items.length,
-          hasValidTotal: transaction.total > 0
+          hasShiftId: !!streamlinedData.shiftId,
+          hasStoreId: !!streamlinedData.storeId,
+          hasUserId: !!streamlinedData.userId,
+          itemsLength: streamlinedData.items.length,
+          hasValidTotal: streamlinedData.total > 0
         }
       });
       
