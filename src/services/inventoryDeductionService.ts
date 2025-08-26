@@ -42,13 +42,18 @@ export async function deductInventoryForTransaction(
     warnings: []
   };
 
-  console.log(`🔄 Deducting inventory for transaction: ${transactionId}`);
+  console.log(`🔄 STARTING INVENTORY DEDUCTION`);
+  console.log(`   Transaction ID: ${transactionId}`);
+  console.log(`   Store ID: ${storeId}`);
+  console.log(`   Items to process: ${transactionItems.length}`);
+  console.log(`   Items:`, transactionItems.map(item => `${item.name} (qty: ${item.quantity})`));
 
   try {
     for (const item of transactionItems) {
-      console.log(`Processing item: ${item.name} (quantity: ${item.quantity})`);
+      console.log(`\n🔍 PROCESSING ITEM: ${item.name} (quantity: ${item.quantity})`);
 
       // Get recipe template for this product
+      console.log(`   📋 Looking up recipe template for: ${item.name}`);
       const { data: recipe, error: recipeError } = await supabase
         .from('recipe_templates')
         .select('id, name')
@@ -57,28 +62,39 @@ export async function deductInventoryForTransaction(
         .single();
 
       if (recipeError || !recipe) {
-        result.warnings.push(`Recipe not found for product: ${item.name}`);
+        const warningMsg = `Recipe not found for product: ${item.name} (Error: ${recipeError?.message || 'Not found'})`;
+        console.log(`   ❌ ${warningMsg}`);
+        result.warnings.push(warningMsg);
         continue;
       }
 
+      console.log(`   ✅ Recipe found: ${recipe.name} (ID: ${recipe.id})`);
+
       // Get recipe ingredients
+      console.log(`   🧪 Getting ingredients for recipe: ${recipe.id}`);
       const { data: ingredients, error: ingredientsError } = await supabase
         .from('recipe_template_ingredients')
         .select('*')
         .eq('recipe_template_id', recipe.id);
 
       if (ingredientsError || !ingredients) {
-        result.errors.push(`Failed to get ingredients for ${item.name}: ${ingredientsError?.message}`);
+        const errorMsg = `Failed to get ingredients for ${item.name}: ${ingredientsError?.message}`;
+        console.log(`   ❌ ${errorMsg}`);
+        result.errors.push(errorMsg);
         continue;
       }
+
+      console.log(`   ✅ Found ${ingredients.length} ingredients`);
 
       // Process each ingredient
       for (const ingredient of ingredients) {
         const requiredQuantity = ingredient.quantity * item.quantity;
-        
-        console.log(`  Processing ingredient: ${ingredient.ingredient_name} (required: ${requiredQuantity} ${ingredient.unit})`);
+
+        console.log(`\n      🔍 Processing ingredient: ${ingredient.ingredient_name}`);
+        console.log(`         Required: ${requiredQuantity} ${ingredient.unit} (${ingredient.quantity} × ${item.quantity})`);
 
         // Get current inventory
+        console.log(`         📦 Looking up inventory for: ${ingredient.ingredient_name}`);
         const { data: inventory, error: inventoryError } = await supabase
           .from('inventory_stock')
           .select('*')
@@ -88,7 +104,9 @@ export async function deductInventoryForTransaction(
           .single();
 
         if (inventoryError || !inventory) {
-          result.errors.push(`Inventory not found for ${ingredient.ingredient_name} at store ${storeId}`);
+          const errorMsg = `Inventory not found for ${ingredient.ingredient_name} at store ${storeId} (Error: ${inventoryError?.message || 'Not found'})`;
+          console.log(`         ❌ ${errorMsg}`);
+          result.errors.push(errorMsg);
           continue;
         }
 

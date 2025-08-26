@@ -168,7 +168,8 @@ class StreamlinedTransactionService {
       await this.insertTransactionItems(transaction.id, transactionData.items, cartItems);
       console.log('✅ Transaction items saved');
 
-      // Step 3: Process inventory deduction
+      // Step 3: Process inventory deduction (CRITICAL)
+      console.log('🔄 Processing inventory deduction...');
       const inventoryResult = await this.processInventoryDeduction(
         transaction.id,
         transactionData.storeId,
@@ -176,10 +177,25 @@ class StreamlinedTransactionService {
       );
 
       if (!inventoryResult.success) {
-        console.warn('⚠️ Inventory deduction failed, but transaction completed');
-        toast.warning(`Transaction completed but inventory update failed: ${inventoryResult.errors.join(', ')}`);
+        console.error('❌ CRITICAL: Inventory deduction failed for transaction:', transaction.id);
+        console.error('❌ Inventory errors:', inventoryResult.errors);
+
+        // Log the failure for monitoring
+        await transactionErrorLogger.logError(
+          'INVENTORY_DEDUCTION_FAILED',
+          new Error(`Inventory deduction failed: ${inventoryResult.errors.join(', ')}`),
+          {
+            ...context,
+            transactionId: transaction.id,
+            inventoryErrors: inventoryResult.errors
+          }
+        );
+
+        toast.error(`⚠️ Transaction completed but inventory was NOT updated! Please check manually.`);
+        console.warn('⚠️ Transaction completed but inventory deduction failed - MANUAL INTERVENTION REQUIRED');
       } else {
-        console.log('✅ Inventory deduction completed');
+        console.log('✅ Inventory deduction completed successfully');
+        toast.success('✅ Transaction and inventory updated successfully');
       }
 
       // Step 4: Log BIR compliance (non-critical)
@@ -336,13 +352,17 @@ class StreamlinedTransactionService {
   }
 
   /**
-   * Process inventory deduction
+   * Process inventory deduction with comprehensive logging
    */
   private async processInventoryDeduction(
     transactionId: string,
     storeId: string,
     items: StreamlinedTransactionItem[]
   ): Promise<{ success: boolean; errors: string[] }> {
+    console.log(`🔄 Starting inventory deduction for transaction: ${transactionId}`);
+    console.log(`📍 Store ID: ${storeId}`);
+    console.log(`📦 Items to process: ${items.length}`);
+
     try {
       const transactionItems = items.map(item => ({
         name: item.name,
@@ -351,21 +371,37 @@ class StreamlinedTransactionService {
         total_price: item.totalPrice
       }));
 
+      console.log(`📋 Transaction items:`, transactionItems);
+
       const result = await deductInventoryForTransaction(
         transactionId,
         storeId,
         transactionItems
       );
 
+      console.log(`📊 Inventory deduction result:`, {
+        success: result.success,
+        deductedItems: result.deductedItems?.length || 0,
+        errors: result.errors?.length || 0,
+        warnings: result.warnings?.length || 0
+      });
+
+      if (!result.success) {
+        console.error(`❌ Inventory deduction failed for transaction ${transactionId}:`, result.errors);
+      } else {
+        console.log(`✅ Inventory deduction successful for transaction ${transactionId}`);
+      }
+
       return {
         success: result.success,
-        errors: result.errors
+        errors: result.errors || []
       };
     } catch (error) {
-      console.error('❌ Inventory deduction error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Inventory deduction failed';
+      console.error(`❌ Inventory deduction error for transaction ${transactionId}:`, error);
       return {
         success: false,
-        errors: [error instanceof Error ? error.message : 'Inventory deduction failed']
+        errors: [errorMessage]
       };
     }
   }
