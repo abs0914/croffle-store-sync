@@ -120,8 +120,8 @@ export function useUnifiedProducts({
       );
     }
 
-    // Apply category filter
-    if (filters.categoryId) {
+    // Apply category filter - handle "all" as null
+    if (filters.categoryId && filters.categoryId !== 'all') {
       filtered = filtered.filter(product => 
         product.category_id === filters.categoryId
       );

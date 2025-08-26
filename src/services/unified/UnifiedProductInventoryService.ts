@@ -102,10 +102,10 @@ class UnifiedProductInventoryService {
         } as UnifiedProductData;
       });
 
-      // Extract unique categories
+      // Extract unique ACTIVE categories only
       const categoriesMap = new Map<string, Category>();
       productsData?.forEach(product => {
-        if (product.categories && !categoriesMap.has(product.categories.id)) {
+        if (product.categories && product.categories.is_active && !categoriesMap.has(product.categories.id)) {
           categoriesMap.set(product.categories.id, {
             id: product.categories.id,
             name: product.categories.name,
@@ -118,7 +118,9 @@ class UnifiedProductInventoryService {
         }
       });
 
-      const categories = Array.from(categoriesMap.values());
+      const categories = Array.from(categoriesMap.values()).sort(
+        (a, b) => a.name.localeCompare(b.name)
+      );
 
       // Calculate statistics
       const stats = {

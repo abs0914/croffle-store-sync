@@ -62,12 +62,12 @@ export default function POS() {
     autoRefresh: true
   });
 
-  // Local state for active category filter
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  // Local state for active category filter - initialize to "all" to show all products
+  const [activeCategory, setActiveCategory] = useState<string | null>("all");
 
-  // Sync category filter with unified products
+  // Sync category filter with unified products - handle "all" as null
   useEffect(() => {
-    updateCategoryFilter(activeCategory);
+    updateCategoryFilter(activeCategory === "all" ? null : activeCategory);
   }, [activeCategory, updateCategoryFilter]);
 
   // Real-time notifications removed - using simplified toast system
