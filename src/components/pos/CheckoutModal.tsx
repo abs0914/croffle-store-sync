@@ -9,8 +9,9 @@ import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift";
 import { toast } from "sonner";
 import { streamlinedTransactionService } from "@/services/transactions/streamlinedTransactionService";
+import { transactionHealthMonitor } from "@/services/transactions/transactionHealthMonitor";
 import { Transaction } from "@/types";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -54,13 +55,41 @@ export function CheckoutModal({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [canProceedWithPayment, setCanProceedWithPayment] = useState(false);
+  const [systemHealth, setSystemHealth] = useState<'checking' | 'healthy' | 'degraded' | 'critical'>('checking');
 
-  // Pre-payment validation on modal open
+  // Pre-payment validation and health check on modal open
   useEffect(() => {
     if (isOpen && currentStore?.id && cartItems.length > 0) {
-      performPrePaymentValidation();
+      checkSystemHealthAndValidate();
     }
   }, [isOpen, currentStore?.id, cartItems]);
+
+  const checkSystemHealthAndValidate = async () => {
+    // First check system health
+    setSystemHealth('checking');
+    try {
+      const healthCheck = await transactionHealthMonitor.canProcessTransactions();
+      if (!healthCheck.allowed) {
+        setSystemHealth('critical');
+        setValidationErrors([`System unavailable: ${healthCheck.reason}`]);
+        setCanProceedWithPayment(false);
+        return;
+      }
+      
+      const health = await transactionHealthMonitor.getCurrentHealth();
+      setSystemHealth(health.systemStatus);
+      
+      // If system is healthy, proceed with validation
+      if (health.systemStatus !== 'critical') {
+        await performPrePaymentValidation();
+      }
+    } catch (error) {
+      console.error('Health check failed:', error);
+      setSystemHealth('critical');
+      setValidationErrors(['System health check failed']);
+      setCanProceedWithPayment(false);
+    }
+  };
 
   const performPrePaymentValidation = async () => {
     if (!currentStore?.id) return;
@@ -239,13 +268,53 @@ export function CheckoutModal({
             </CardContent>
           </Card>
 
+          {/* System Health Status */}
+          {systemHealth === 'checking' && (
+            <Card className="border-blue-200 bg-blue-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Checking system health...</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {systemHealth === 'critical' && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium text-red-800">System Critical</span>
+                </div>
+                <p className="text-sm text-red-600 mt-1">
+                  Transaction system is experiencing issues. Please contact support.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {systemHealth === 'degraded' && (
+            <Card className="border-yellow-200 bg-yellow-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <span className="text-sm font-medium text-yellow-800">System Degraded</span>
+                </div>
+                <p className="text-sm text-yellow-600 mt-1">
+                  Transaction system is experiencing reduced performance.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Pre-payment validation display */}
-          {isValidating && (
+          {isValidating && systemHealth === 'healthy' && (
             <Card className="border-yellow-200 bg-yellow-50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Validating products for sale...</span>
+                  <span className="text-sm">Validating products for sale with real inventory checks...</span>
                 </div>
               </CardContent>
             </Card>
@@ -261,12 +330,12 @@ export function CheckoutModal({
                   ))}
                 </ul>
                 <Button 
-                  onClick={handleRetryValidation}
+                  onClick={checkSystemHealthAndValidate}
                   size="sm" 
                   variant="outline" 
                   className="mt-2"
                 >
-                  Retry Validation
+                  Retry System Check
                 </Button>
               </CardContent>
             </Card>
@@ -285,8 +354,8 @@ export function CheckoutModal({
             </Card>
           )}
 
-          {/* Payment Section - Only show if validation passes */}
-          {canProceedWithPayment && !isValidating && (
+          {/* Payment Section - Only show if validation passes and system is healthy */}
+          {canProceedWithPayment && !isValidating && systemHealth !== 'critical' && (
             <PaymentProcessor
               total={finalTotal}
               itemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}

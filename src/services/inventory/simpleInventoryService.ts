@@ -54,7 +54,7 @@ export const deductInventoryForTransaction = async (
     for (const item of items) {
       console.log(`📦 Processing item: ${item.productId} x${item.quantity}`);
       
-      // Get recipe for this product
+      // Get recipe for this product - enhanced query with better error handling
       const { data: recipe, error: recipeError } = await supabase
         .from('recipes')
         .select(`
@@ -125,23 +125,29 @@ export const deductInventoryForTransaction = async (
           continue;
         }
 
-        // Log inventory movement with proper UUID validation
+        // Log inventory movement with enhanced error handling and type safety
         try {
-          // Use transactionId directly - it's already a validated UUID string
+          // Ensure all numeric values are properly typed and validated
+          const movementData = {
+            inventory_stock_id: ingredient.inventory_stock_id,
+            movement_type: 'sale' as const,
+            quantity_change: Number(-totalDeduction),
+            previous_quantity: Number(stockItem.stock_quantity),
+            new_quantity: Number(newStock),
+            reference_type: 'transaction' as const,
+            reference_id: transactionId, // Already validated UUID
+            notes: `Transaction deduction: ${ingredient.ingredient_name} for ${recipe.name}`,
+            created_by: userId || null
+          };
+
+          // Validate numeric fields before insert
+          if (isNaN(movementData.quantity_change) || isNaN(movementData.previous_quantity) || isNaN(movementData.new_quantity)) {
+            throw new Error(`Invalid numeric values in inventory movement: ${JSON.stringify(movementData)}`);
+          }
           
           const { error: movementError } = await supabase
             .from('inventory_movements')
-            .insert({
-              inventory_stock_id: ingredient.inventory_stock_id,
-              movement_type: 'sale',
-              quantity_change: -totalDeduction,
-              previous_quantity: stockItem.stock_quantity,
-              new_quantity: newStock,
-              reference_type: 'transaction',
-              reference_id: transactionId, // Use validated UUID directly
-              notes: `Transaction deduction: ${ingredient.ingredient_name} for ${recipe.name}`,
-              created_by: userId
-            });
+            .insert(movementData);
 
           if (movementError) {
             console.error(`⚠️ Failed to log inventory movement for ${ingredient.ingredient_name}:`, {

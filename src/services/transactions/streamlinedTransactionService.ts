@@ -10,6 +10,7 @@ import { unifiedProductInventoryService } from "@/services/unified/UnifiedProduc
 import { deductInventoryForTransaction } from "@/services/inventory/simpleInventoryService";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { enrichCartItemsWithCategories, insertTransactionItems } from "./transactionItemsService";
+import { transactionErrorLogger } from "./transactionErrorLogger";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -59,10 +60,19 @@ class StreamlinedTransactionService {
     storeId: string,
     items: StreamlinedTransactionItem[]
   ): Promise<TransactionValidationResult> {
-    console.log('🔍 Pre-payment validation started', { storeId, itemCount: items.length });
+    const operationId = `validation_${Date.now()}`;
+    console.log('🔍 Pre-payment validation started', { storeId, itemCount: items.length, operationId });
+
+    const context = {
+      storeId,
+      step: 'pre_payment_validation',
+      operationId,
+      itemCount: items.length,
+      timestamp: new Date().toISOString()
+    };
 
     try {
-      // Use unified service for comprehensive validation
+      // Use unified service for comprehensive validation with REAL inventory checks
       const validation = await unifiedProductInventoryService.validateProductsForSale(
         storeId,
         items.map(item => ({
@@ -77,8 +87,18 @@ class StreamlinedTransactionService {
         isValid: validation.isValid,
         errors: validation.errors.length,
         warnings: validation.warnings.length,
-        canProceed
+        canProceed,
+        operationId
       });
+
+      // Log validation result
+      if (!validation.isValid) {
+        await transactionErrorLogger.logValidationError(
+          'pre_payment_check',
+          validation.errors,
+          context
+        );
+      }
 
       return {
         isValid: validation.isValid,
@@ -88,9 +108,17 @@ class StreamlinedTransactionService {
       };
     } catch (error) {
       console.error('❌ Pre-payment validation failed:', error);
+      
+      await transactionErrorLogger.logError(
+        'VALIDATION_SYSTEM_ERROR',
+        error instanceof Error ? error : 'Unknown validation error',
+        context,
+        'system_validation'
+      );
+
       return {
         isValid: false,
-        errors: [`Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        errors: [`Validation system error: ${error instanceof Error ? error.message : 'Unknown error'}`],
         warnings: [],
         canProceed: false
       };
@@ -105,11 +133,24 @@ class StreamlinedTransactionService {
     transactionData: StreamlinedTransactionData,
     cartItems?: any[]
   ): Promise<Transaction | null> {
+    const operationId = `transaction_${Date.now()}`;
     console.log('🚀 Starting atomic transaction processing', {
       storeId: transactionData.storeId,
       total: transactionData.total,
-      itemCount: transactionData.items.length
+      itemCount: transactionData.items.length,
+      operationId
     });
+
+    const context = {
+      storeId: transactionData.storeId,
+      userId: transactionData.userId,
+      step: 'transaction_processing',
+      operationId,
+      itemCount: transactionData.items.length,
+      totalAmount: transactionData.total,
+      paymentMethod: transactionData.paymentMethod,
+      timestamp: new Date().toISOString()
+    };
 
     let createdTransactionId: string | null = null;
 
@@ -151,6 +192,18 @@ class StreamlinedTransactionService {
 
     } catch (error) {
       console.error('❌ Atomic transaction processing failed:', error);
+
+      // Log the error with full context
+      await transactionErrorLogger.logError(
+        'TRANSACTION_PROCESSING_ERROR',
+        error instanceof Error ? error : 'Unknown transaction error',
+        {
+          ...context,
+          transactionId: createdTransactionId || undefined,
+          step: 'transaction_processing_failed'
+        },
+        'transaction_rollback'
+      );
 
       // Rollback transaction if it was created
       if (createdTransactionId) {

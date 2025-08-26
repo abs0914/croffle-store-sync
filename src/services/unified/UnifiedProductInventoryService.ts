@@ -71,16 +71,17 @@ class UnifiedProductInventoryService {
 
       if (inventoryError) throw inventoryError;
 
-      // Skip recipe integration for now - use simplified approach
-      const unifiedProducts: UnifiedProductData[] = (productsData || []).map(product => {
-        // Simplified availability calculation without recipes for now
-        const availableQuantity = 999; // Default available
-        const availabilityStatus: UnifiedProductData['availability_status'] = 'available';
+      // Real inventory calculation based on recipes and stock
+      const unifiedProducts: UnifiedProductData[] = await Promise.all((productsData || []).map(async product => {
+        // Get actual inventory availability for this product
+        const availability = await this.calculateRealAvailability(product.id, storeId, inventoryData);
+        const availableQuantity = availability.quantity;
+        const availabilityStatus = availability.status;
 
         return {
           ...product,
           available_quantity: availableQuantity,
-          recipe_requirements: [], // Empty for now
+          recipe_requirements: availability.requirements,
           availability_status: availabilityStatus,
           last_availability_check: new Date().toISOString(),
           // Map database fields to Product interface
@@ -100,7 +101,7 @@ class UnifiedProductInventoryService {
           created_at: product.created_at,
           updated_at: product.updated_at
         } as UnifiedProductData;
-      });
+      }));
 
       // Extract unique ACTIVE categories only
       const categoriesMap = new Map<string, Category>();
@@ -282,38 +283,180 @@ class UnifiedProductInventoryService {
   }
 
   /**
+   * Calculate real availability based on recipes and inventory stock
+   */
+  private async calculateRealAvailability(
+    productId: string, 
+    storeId: string, 
+    inventoryData: any[]
+  ): Promise<{
+    quantity: number;
+    status: UnifiedProductData['availability_status'];
+    requirements: Array<{
+      inventory_item_id: string;
+      item_name: string;
+      required_quantity: number;
+      available_quantity: number;
+      is_sufficient: boolean;
+    }>;
+  }> {
+    try {
+      // Get recipe for this product
+      const { data: recipe, error: recipeError } = await supabase
+        .from('recipes')
+        .select(`
+          id,
+          name,
+           recipe_ingredients (
+             ingredient_name,
+             quantity,
+             inventory_stock_id,
+             inventory_stock (
+               id,
+               item,
+               stock_quantity
+             )
+           )
+        `)
+        .eq('product_id', productId)
+        .eq('store_id', storeId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (recipeError || !recipe) {
+        // No recipe found - check if product is direct sale
+        console.log(`No recipe found for product ${productId}, treating as direct sale`);
+        return {
+          quantity: 1, // Allow 1 unit for direct sale products
+          status: 'available',
+          requirements: []
+        };
+      }
+
+      const requirements: Array<{
+        inventory_item_id: string;
+        item_name: string;
+        required_quantity: number;
+        available_quantity: number;
+        is_sufficient: boolean;
+      }> = [];
+
+      let minAvailableQuantity = Infinity;
+      let hasInsufficientStock = false;
+      let hasLowStock = false;
+
+      // Check each ingredient
+      for (const ingredient of recipe.recipe_ingredients || []) {
+        if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
+          console.warn(`Ingredient ${ingredient.ingredient_name} not mapped to inventory`);
+          continue;
+        }
+
+        const stock = ingredient.inventory_stock;
+        const availableStock = stock.stock_quantity; // Remove fractional_stock reference
+        const requiredPerUnit = ingredient.quantity;
+        const possibleUnits = Math.floor(availableStock / requiredPerUnit);
+
+        requirements.push({
+          inventory_item_id: stock.id,
+          item_name: stock.item,
+          required_quantity: requiredPerUnit,
+          available_quantity: availableStock,
+          is_sufficient: availableStock >= requiredPerUnit
+        });
+
+        if (possibleUnits <= 0) {
+          hasInsufficientStock = true;
+          minAvailableQuantity = 0;
+        } else {
+          minAvailableQuantity = Math.min(minAvailableQuantity, possibleUnits);
+          if (possibleUnits <= 5) { // Low stock threshold
+            hasLowStock = true;
+          }
+        }
+      }
+
+      // Determine status
+      let status: UnifiedProductData['availability_status'];
+      if (hasInsufficientStock || minAvailableQuantity === 0) {
+        status = 'out_of_stock';
+        minAvailableQuantity = 0;
+      } else if (hasLowStock || minAvailableQuantity <= 5) {
+        status = 'low_stock';
+      } else {
+        status = 'available';
+      }
+
+      return {
+        quantity: minAvailableQuantity === Infinity ? 0 : minAvailableQuantity,
+        status,
+        requirements
+      };
+    } catch (error) {
+      console.error(`Error calculating availability for product ${productId}:`, error);
+      return {
+        quantity: 0,
+        status: 'out_of_stock',
+        requirements: []
+      };
+    }
+  }
+
+  /**
    * Validate if products can be sold (for pre-payment validation)
    */
   async validateProductsForSale(
     storeId: string, 
     items: Array<{ productId: string; quantity: number }>
   ): Promise<{ isValid: boolean; errors: string[]; warnings: string[] }> {
-    const data = await this.getUnifiedData(storeId);
+    console.log('🔍 Validating products for sale with REAL inventory checks:', {
+      storeId,
+      itemCount: items.length
+    });
+
     const errors: string[] = [];
     const warnings: string[] = [];
 
     for (const item of items) {
-      const product = data.products.find(p => p.id === item.productId);
-      
-      if (!product) {
-        errors.push(`Product not found: ${item.productId}`);
-        continue;
-      }
+      try {
+        // Get real availability for this specific product
+        const { data: inventoryData } = await supabase
+          .from('inventory_stock')
+          .select('*')
+          .eq('store_id', storeId);
 
-      if (product.availability_status === 'out_of_stock') {
-        errors.push(`${product.name} is out of stock`);
-      } else if (product.available_quantity < item.quantity) {
-        errors.push(`Insufficient ${product.name}: need ${item.quantity}, available ${product.available_quantity}`);
-      } else if (product.availability_status === 'low_stock') {
-        warnings.push(`${product.name} is low in stock (${product.available_quantity} remaining)`);
+        const availability = await this.calculateRealAvailability(item.productId, storeId, inventoryData || []);
+        
+        if (availability.status === 'out_of_stock') {
+          errors.push(`Product is out of stock (insufficient ingredients)`);
+        } else if (availability.quantity < item.quantity) {
+          errors.push(`Insufficient quantity: need ${item.quantity}, can make ${availability.quantity}`);
+        } else if (availability.status === 'low_stock') {
+          warnings.push(`Low stock warning: only ${availability.quantity} units can be made`);
+        }
+
+        // Log detailed availability info
+        console.log(`📊 Product ${item.productId} availability:`, {
+          requested: item.quantity,
+          available: availability.quantity,
+          status: availability.status,
+          requirements: availability.requirements.length
+        });
+
+      } catch (error) {
+        console.error(`Error validating product ${item.productId}:`, error);
+        errors.push(`Failed to validate product availability`);
       }
     }
 
-    return {
+    const result = {
       isValid: errors.length === 0,
       errors,
       warnings
     };
+
+    console.log('✅ Product validation completed:', result);
+    return result;
   }
 }
 
