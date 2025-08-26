@@ -7,7 +7,7 @@ import { useProductCatalogData } from "@/hooks/useProductCatalogData";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import { useAutomaticAvailability } from "@/hooks/useAutomaticAvailability";
 import { useLargeOrderDiagnostics } from "@/hooks/useLargeOrderDiagnostics";
-import { realTimeNotificationService } from "@/services/notifications/realTimeNotificationService";
+// Real-time notification service removed - using simplified toast notifications
 import { quickCheckoutValidation } from "@/services/pos/lightweightValidationService";
 
 import POSContent from "@/components/pos/POSContent";
@@ -90,13 +90,7 @@ export default function POS() {
     };
   }, [refreshProducts, currentStore?.id]);
 
-  // Set up real-time notifications
-  useEffect(() => {
-    if (!currentStore?.id) return;
-
-    const cleanup = realTimeNotificationService.setupRealTimeListeners(currentStore.id);
-    return cleanup;
-  }, [currentStore?.id]);
+  // Real-time notifications removed - using simplified toast system
 
   
   // Check the product activation status - for debugging
