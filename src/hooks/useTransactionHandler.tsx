@@ -139,7 +139,7 @@ export function useTransactionHandler(storeId: string) {
         throw new Error('Failed to create transaction - no ID returned');
       }
 
-      // Process inventory deduction using the new simple service
+      // Process inventory deduction using the simple service
       console.log("📦 Processing inventory deduction for transaction items...");
       
       const inventoryItems = transactionData.items.map(item => ({
@@ -292,28 +292,9 @@ export function useTransactionHandler(storeId: string) {
         itemCount: items.length
       });
       
-      // Process inventory deduction immediately using the new simple service
-      console.log("📦 Processing inventory deduction for transaction items...");
-      
-      const inventoryItems = items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity
-      }));
-      
-      const deductionResult = await deductInventoryForTransaction(
-        result.id,
-        currentStore.id,
-        inventoryItems
-      );
-      
+      // Inventory deduction was already handled during transaction creation
+      console.log("✅ Transaction created with inventory deduction completed");
       let inventoryStatusText = "Inventory updated";
-      if (deductionResult.success) {
-        console.log(`✅ Inventory deduction completed: ${deductionResult.deductedItems.length} items deducted`);
-      } else {
-        console.warn(`⚠️ Inventory deduction failed: ${deductionResult.errors.join(', ')}`);
-        inventoryStatusText = "Inventory sync issues";
-        toast.warning(`Transaction completed but inventory sync failed: ${deductionResult.errors.join(', ')}`);
-      }
       
       // Clear the cart immediately for better UX
       clearCart();
@@ -342,7 +323,7 @@ export function useTransactionHandler(storeId: string) {
           itemCount: items.length,
           paymentMethod: finalPaymentMethod,
           total: total - discount,
-          inventorySuccess: deductionResult.success
+          inventorySuccess: true
         }
       );
       

@@ -33,6 +33,8 @@ interface TransactionRow {
   receipt_number: string;
 }
 
+import { validateTransactionData, validateTransactionItemsStructure } from './transactionValidator';
+
 /**
  * Creates a new transaction in the database
  */
@@ -49,6 +51,27 @@ export const createTransaction = async (
       paymentMethod: transaction.paymentMethod,
       timestamp: new Date().toISOString()
     });
+    
+    // Validate transaction data structure
+    if (!validateTransactionItemsStructure(transaction.items)) {
+      toast.error('Invalid transaction items structure');
+      return null;
+    }
+
+    // Validate transaction data against database
+    const validation = await validateTransactionData(transaction.storeId, transaction.items);
+    
+    if (!validation.isValid) {
+      const errorMessage = `Transaction validation failed: ${validation.errors.join(', ')}`;
+      toast.error(errorMessage);
+      console.error('❌ Transaction validation failed:', validation.errors);
+      return null;
+    }
+
+    if (validation.warnings.length > 0) {
+      console.warn('⚠️ Transaction validation warnings:', validation.warnings);
+      validation.warnings.forEach(warning => console.warn(`  - ${warning}`));
+    }
     
     console.log('🔍 Using lightweight checkout validation...');
     
@@ -195,15 +218,78 @@ export const createTransaction = async (
       receiptNumber: data.receipt_number
     });
 
-    // Insert detailed transaction items with category information
+    // Insert detailed transaction items with category information (CRITICAL: Always save transaction items)
+    console.log('💾 Ensuring transaction items are saved for audit trail...');
+    
     if (cartItems && cartItems.length > 0) {
       try {
         const enrichedItems = await enrichCartItemsWithCategories(cartItems);
         await insertTransactionItems(data.id, enrichedItems);
+        console.log(`✅ Transaction items saved: ${enrichedItems.length} items`);
       } catch (itemsError) {
-        console.warn('Failed to insert enriched transaction items:', itemsError);
-        // Don't fail the entire transaction for this
+        console.error('❌ CRITICAL: Failed to insert transaction items:', itemsError);
+        // This is critical - transaction items must be saved for audit purposes
+        toast.error('Failed to save transaction items - rolling back transaction');
+        
+        // Rollback the transaction
+        await supabase.from('transactions').delete().eq('id', data.id);
+        return null;
       }
+    } else {
+      // Fallback: create basic transaction items from transaction.items
+      try {
+        const basicItems = transaction.items.map(item => ({
+          product_id: item.productId,
+          variation_id: item.variationId || undefined,
+          name: item.name,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.totalPrice || (item.unitPrice * item.quantity),
+          category_id: undefined,
+          category_name: 'Unknown',
+          product_type: 'direct'
+        }));
+        
+        await insertTransactionItems(data.id, basicItems);
+        console.log(`✅ Basic transaction items saved: ${basicItems.length} items`);
+      } catch (itemsError) {
+        console.error('❌ CRITICAL: Failed to insert basic transaction items:', itemsError);
+        toast.error('Failed to save transaction items - rolling back transaction');
+        
+        // Rollback the transaction
+        await supabase.from('transactions').delete().eq('id', data.id);
+        return null;
+      }
+    }
+
+    // Process inventory deduction using the simple service
+    console.log('🔄 Processing inventory deduction...');
+    
+    try {
+      const { deductInventoryForTransaction } = await import('@/services/inventory/simpleInventoryService');
+      
+      const inventoryItems = transaction.items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }));
+      
+      const deductionResult = await deductInventoryForTransaction(
+        data.id,
+        transaction.storeId,
+        inventoryItems
+      );
+      
+      if (deductionResult.success) {
+        console.log(`✅ Inventory deduction completed: ${deductionResult.deductedItems.length} items deducted`);
+      } else {
+        console.warn(`⚠️ Inventory deduction failed: ${deductionResult.errors.join(', ')}`);
+        // Don't fail the transaction for inventory issues - show warning instead
+        toast.warning(`Transaction completed but inventory deduction failed: ${deductionResult.errors.join(', ')}`);
+      }
+    } catch (inventoryError) {
+      console.error('❌ Inventory deduction error:', inventoryError);
+      // Don't fail the transaction for inventory issues
+      toast.warning(`Transaction completed but inventory processing failed: ${inventoryError instanceof Error ? inventoryError.message : 'Unknown error'}`);
     }
     
     toast.success("Transaction completed successfully");
@@ -231,115 +317,8 @@ export const createTransaction = async (
       // Continue with transaction - don't fail for audit logging issues
     }
     
-     // Simplified inventory processing - single path, fail fast
-     console.log('🔄 Processing inventory for transaction:', data.id);
-     
-     try {
-       const { deductInventoryForTransaction } = await import('@/services/inventory/enhancedInventoryDeduction');
-       
-        // Simple template lookup - fail if no template found
-        const itemsWithTemplateIds = await Promise.all(
-          transaction.items.map(async (item) => {
-            try {
-              // Try to get recipe template ID directly from product_catalog first
-              const { data: catalogProduct } = await supabase
-                .from('product_catalog')
-                .select('recipe_id')
-                .eq('id', item.productId)
-                .eq('store_id', transaction.storeId)
-                .maybeSingle();
-
-              let templateId = null;
-              
-              if (catalogProduct?.recipe_id) {
-                // Get template ID from recipe
-                const { data: recipe } = await supabase
-                  .from('recipes')
-                  .select('template_id')
-                  .eq('id', catalogProduct.recipe_id)
-                  .eq('is_active', true)
-                  .maybeSingle();
-                
-                templateId = recipe?.template_id;
-              }
-
-              // Fallback: try products table if catalog lookup failed
-              if (!templateId) {
-                const { data: product } = await supabase
-                  .from('products')
-                  .select('name')
-                  .eq('id', item.productId)
-                  .eq('store_id', transaction.storeId)
-                  .maybeSingle();
-                
-                if (!product) {
-                  console.warn(`⚠️ Product ${item.name} not found - proceeding without inventory deduction`);
-                  return {
-                    product_name: item.name,
-                    recipe_template_id: null,
-                    quantity: item.quantity
-                  };
-                }
-              }
-            
-            if (!templateId) {
-              console.warn(`⚠️ Product ${item.name} has no active recipe template - proceeding without inventory deduction`);
-              return {
-                product_name: item.name,
-                recipe_template_id: null,
-                quantity: item.quantity
-              };
-            }
-            
-            return {
-              product_name: item.name,
-              recipe_template_id: templateId,
-              quantity: item.quantity
-            };
-            } catch (itemError) {
-              console.error(`❌ Error processing item ${item.name}:`, itemError);
-              return {
-                product_name: item.name,
-                recipe_template_id: null,
-                quantity: item.quantity
-              };
-            }
-         })
-       );
-       
-       // Process inventory deduction - allow partial success
-       const validItems = itemsWithTemplateIds.filter(item => item.recipe_template_id);
-       const itemsWithoutTemplates = itemsWithTemplateIds.filter(item => !item.recipe_template_id);
-       
-       if (itemsWithoutTemplates.length > 0) {
-         console.log(`ℹ️ ${itemsWithoutTemplates.length} items without templates - skipping inventory deduction:`, 
-           itemsWithoutTemplates.map(i => i.product_name));
-       }
-       
-       if (validItems.length > 0) {
-         console.log(`🔄 Processing ${validItems.length} items with templates`);
-         const deductionResult = await deductInventoryForTransaction(
-           data.id,
-           transaction.storeId,
-           validItems
-         );
-         
-         if (!deductionResult.success) {
-           console.warn('⚠️ Inventory deduction had issues but continuing transaction:', deductionResult.failedItems);
-         }
-       }
-       
-       console.log('✅ Inventory processing completed successfully');
-      
-    } catch (inventoryError) {
-      console.error('❌ Inventory processing error:', inventoryError);
-      
-      // Rollback transaction
-      await supabase.from('transactions').delete().eq('id', data.id);
-      
-      toast.error(`Transaction failed: ${inventoryError instanceof Error ? inventoryError.message : 'Inventory error'}`);
-      return null;
-    }
+     // Log successful transaction creation - inventory will be handled by caller
+      console.log('✅ Transaction created successfully - inventory processing delegated to caller');
     
     // Cast the returned data to our custom type
     const transactionData = data as unknown as TransactionRow;
