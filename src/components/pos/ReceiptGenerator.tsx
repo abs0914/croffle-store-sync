@@ -116,9 +116,6 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
     printWindow.close();
   };
 
-<<<<<<< HEAD
-
-=======
   const handleThermalPrint = async () => {
     if (!isConnected) {
       toast.error('No thermal printer connected');
@@ -137,7 +134,6 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
       currency: 'PHP'
     }).format(amount);
   };
->>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
 
   // Generate QR code content with error handling
   const qrContent = React.useMemo(() => {

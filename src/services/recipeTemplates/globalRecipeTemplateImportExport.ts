@@ -3,8 +3,10 @@ import { toast } from "sonner";
 import { RecipeTemplate, RecipeTemplateIngredientInput } from "@/services/recipeManagement/types";
 
 export interface RecipeTemplateCSVRow {
-  name: string;
+  recipe_name: string;
   recipe_category?: string;
+  combo_main?: string;
+  combo_add_on?: string;
   ingredient_name: string;
   quantity: number;
   unit: string;
@@ -15,7 +17,7 @@ export interface RecipeTemplateCSVRow {
 export const globalRecipeTemplateImportExport = {
   // Generate CSV from recipe templates
   generateCSV: async (templates: RecipeTemplate[]): Promise<string> => {
-    const headers = ['name', 'recipe_category', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
+    const headers = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
     const csvRows = [headers.join(',')];
 
     // Format category helper
@@ -30,9 +32,16 @@ export const globalRecipeTemplateImportExport = {
           // We'll use a generic ingredient category or derive from ingredient name
           const ingredientCategory = deriveIngredientCategory(ingredient.ingredient_name);
           
+          // Determine if this is a combo recipe based on category
+          const isCombo = recipeCategory.toLowerCase().includes('combo');
+          const comboMain = isCombo ? detectComboMain(template.name) : '';
+          const comboAddOn = isCombo ? detectComboAddOn(template.name) : '';
+          
           const row = [
             `"${normalizeText(template.name).replace(/"/g, '""')}"`,
             `"${recipeCategory}"`,
+            `"${comboMain}"`,
+            `"${comboAddOn}"`,
             `"${normalizeText(ingredient.ingredient_name).replace(/"/g, '""')}"`,
             ingredient.quantity.toString(),
             `"${normalizeText(ingredient.unit).replace(/"/g, '""')}"`,
@@ -43,9 +52,15 @@ export const globalRecipeTemplateImportExport = {
         });
       } else {
         // Template without ingredients
+        const isCombo = recipeCategory.toLowerCase().includes('combo');
+        const comboMain = isCombo ? detectComboMain(template.name) : '';
+        const comboAddOn = isCombo ? detectComboAddOn(template.name) : '';
+        
         const row = [
           `"${normalizeText(template.name).replace(/"/g, '""')}"`,
           `"${recipeCategory}"`,
+          `"${comboMain}"`,
+          `"${comboAddOn}"`,
           '""', // empty ingredient_name
           '0', // zero quantity
           '""', // empty unit
@@ -61,15 +76,16 @@ export const globalRecipeTemplateImportExport = {
 
   // Generate CSV template
   generateCSVTemplate: (): string => {
-    const headers = ['name', 'recipe_category', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
+    const headers = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
     const exampleRows = [
-      ['Americano (Hot)', 'Espresso', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient'],
-      ['Americano (Hot)', 'Espresso', 'Water', '120', 'ml', '0.50', 'Base Ingredient'],
-      ['Cappuccino (Hot)', 'Espresso', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient'],
-      ['Cappuccino (Hot)', 'Espresso', 'Milk', '150', 'ml', '8.00', 'Base Ingredient'],
-      ['Blueberry Croffle', 'Fruity Croffle', 'Croffle Base', '1', 'pcs', '25.00', 'Base Ingredient'],
-      ['Blueberry Croffle', 'Fruity Croffle', 'Blueberry Sauce', '30', 'ml', '15.00', 'Premium Topping'],
-      ['Biscoff Crushed', 'Add-on', 'Biscoff Cookies', '30', 'g', '8.50', 'Premium Topping']
+      ['Americano (Hot)', 'Espresso', '', '', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient'],
+      ['Americano (Hot)', 'Espresso', '', '', 'Water', '120', 'ml', '0.50', 'Base Ingredient'],
+      ['Mini Croffle + Hot Americano', 'Combo', 'Mini Croffle', 'Hot Americano', 'Croffle Base', '1', 'pcs', '25.00', 'Base Ingredient'],
+      ['Mini Croffle + Hot Americano', 'Combo', 'Mini Croffle', 'Hot Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient'],
+      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Croffle Base', '1', 'pcs', '30.00', 'Base Ingredient'],
+      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Glaze Sauce', '20', 'ml', '8.00', 'Premium Topping'],
+      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient'],
+      ['Biscoff Crushed', 'Add-on', '', '', 'Biscoff Cookies', '30', 'g', '8.50', 'Premium Topping']
     ];
 
     const csvRows = [headers.join(',')];
@@ -91,11 +107,20 @@ export const globalRecipeTemplateImportExport = {
 
     // Parse header
     const headerLine = lines[0];
-    const expectedHeaders = ['name', 'recipe_category', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
+    const expectedHeaders = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
     const headers = headerLine.split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
     
-    // Validate headers
-    const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+    // Support legacy 'name' header as well
+    const hasLegacyName = headers.includes('name');
+    const hasNewRecipeName = headers.includes('recipe_name');
+    
+    if (!hasLegacyName && !hasNewRecipeName) {
+      throw new Error('Missing required header: recipe_name (or legacy name)');
+    }
+    
+    // Check for other required headers
+    const requiredHeaders = ['ingredient_name', 'quantity', 'unit', 'cost_per_unit'];
+    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
     if (missingHeaders.length > 0) {
       throw new Error(`Missing required headers: ${missingHeaders.join(', ')}`);
     }
@@ -127,10 +152,24 @@ export const globalRecipeTemplateImportExport = {
         row[header] = values[index]?.replace(/"/g, '').trim() || '';
       });
 
-      const recipeName = row.name;
+      const recipeName = row.recipe_name || row.name; // Support both new and legacy headers
       if (!recipeName) {
         console.warn(`Skipping row ${i + 1}: missing recipe name`);
         continue;
+      }
+
+      // Handle combo information
+      const comboMain = row.combo_main || '';
+      const comboAddOn = row.combo_add_on || '';
+      const isCombo = comboMain || comboAddOn || recipeName.toLowerCase().includes('combo');
+      
+      // Generate combo description if this is a combo recipe
+      let description = `Imported recipe: ${recipeName}`;
+      let instructions = 'Please add preparation instructions.';
+      
+      if (isCombo && comboMain && comboAddOn) {
+        description = `Combo recipe featuring ${comboMain} with ${comboAddOn}`;
+        instructions = `1. Prepare ${comboMain}\n2. Prepare ${comboAddOn}\n3. Serve together as combo meal`;
       }
 
       // Get or create recipe entry
@@ -138,15 +177,18 @@ export const globalRecipeTemplateImportExport = {
         recipeMap.set(recipeName, {
           template: {
             name: recipeName,
-            category_name: row.recipe_category || 'Other',
-            description: `Imported recipe: ${recipeName}`,
-            instructions: 'Please add preparation instructions.',
+            category_name: isCombo ? 'Combo' : (row.recipe_category || 'Other'),
+            description: description,
+            instructions: instructions,
             yield_quantity: 1,
             serving_size: 1,
             created_by: user.id,
             is_active: true,
             version: 1,
-            ingredients: []
+            ingredients: [],
+            // Store combo info for potential future use
+            combo_main: comboMain,
+            combo_add_on: comboAddOn
           },
           ingredients: []
         });
@@ -293,4 +335,30 @@ function deriveIngredientCategory(ingredientName: string): string {
   }
   
   return 'Base Ingredient';
+}
+
+// Helper functions for combo detection
+function detectComboMain(recipeName: string): string {
+  const name = recipeName.toLowerCase();
+  
+  // Detect croffle types
+  if (name.includes('mini croffle')) return 'Mini Croffle';
+  if (name.includes('glaze croffle')) return 'Glaze Croffle';
+  if (name.includes('regular croffle')) return 'Regular Croffle';
+  
+  // Add more main item patterns as needed
+  return '';
+}
+
+function detectComboAddOn(recipeName: string): string {
+  const name = recipeName.toLowerCase();
+  
+  // Detect espresso types
+  if (name.includes('hot americano') || name.includes('hot espresso')) return 'Hot Americano';
+  if (name.includes('ice americano') || name.includes('iced americano') || name.includes('ice espresso')) return 'Ice Americano';
+  if (name.includes('hot cappuccino')) return 'Hot Cappuccino';
+  if (name.includes('ice cappuccino') || name.includes('iced cappuccino')) return 'Ice Cappuccino';
+  
+  // Add more add-on patterns as needed
+  return '';
 }
