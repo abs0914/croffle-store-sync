@@ -6,13 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, Receipt, User, Clock, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 import { format } from "date-fns";
-import { VoidTransactionData } from "@/services/transactions/voidTransactionService";
+import { VoidTransactionData, VoidRequestData } from "@/services/transactions/voidTransactionService";
 
 interface VoidTransactionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   transaction: any | null;
-  onConfirmVoid: (data: Omit<VoidTransactionData, 'voidedBy'>) => Promise<void>;
+  onConfirmVoid: (data: VoidRequestData) => Promise<void>;
   isVoiding: boolean;
 }
 

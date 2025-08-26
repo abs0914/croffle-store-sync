@@ -19,8 +19,16 @@ export interface VoidTransactionData {
   discount_type?: string;
 }
 
-export const voidTransaction = async (transactionData: VoidTransactionData, additionalData?: any) => {
-  console.log('Voiding transaction:', transactionData, additionalData);
+export interface VoidRequestData {
+  transactionId: string;
+  reason: string;
+  reasonCategory?: string;
+  notes?: string;
+  voidedBy?: string;
+}
+
+export const voidTransaction = async (voidData: VoidRequestData) => {
+  console.log('Voiding transaction:', voidData);
   
   return { 
     success: true, 

@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Receipt, Clock, DollarSign, User, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 import { format } from "date-fns";
-import { getVoidableTransactions, voidTransaction, VoidTransactionData } from "@/services/transactions/voidTransactionService";
+import { getVoidableTransactions, voidTransaction, VoidTransactionData, VoidRequestData } from "@/services/transactions/voidTransactionService";
 import { VoidTransactionDialog } from "./VoidTransactionDialog";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
@@ -36,13 +36,16 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
     setIsVoidDialogOpen(true);
   };
 
-  const handleConfirmVoid = async (data: Omit<VoidTransactionData, 'voidedBy'>) => {
+  const handleConfirmVoid = async (data: VoidRequestData) => {
     if (!user?.id) return;
 
     setIsVoiding(true);
     try {
       const success = await voidTransaction({
-        ...data,
+        transactionId: data.transactionId,
+        reason: data.reason || 'Transaction voided',
+        reasonCategory: data.reasonCategory,
+        notes: data.notes,
         voidedBy: user.id
       });
 
