@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { SeniorDiscount as CartSeniorDiscount, OtherDiscount as CartOtherDiscount } from "@/services/cart/CartCalculationService";
 import { BackgroundProcessingService } from "@/services/transactions/backgroundProcessingService";
 import { PerformanceMonitor } from "@/services/performance/performanceMonitor";
+import { deductIngredientsForProduct } from "@/services/productCatalog/ingredientDeductionService";
 
 export interface SeniorDiscount {
   id: string;
@@ -296,17 +297,55 @@ export function useTransactionHandler(storeId: string) {
     });
     
     if (result) {
-      console.log("🎯 Transaction created successfully, implementing optimistic navigation:", {
+      console.log("🎯 Transaction created successfully, processing inventory deduction:", {
         transactionId: result.id,
         receiptNumber: result.receiptNumber,
-        customer: selectedCustomer?.name || 'No customer'
+        customer: selectedCustomer?.name || 'No customer',
+        itemCount: items.length
       });
+      
+      // Process inventory deduction immediately (synchronously) for each item
+      console.log("📦 Processing inventory deduction for transaction items...");
+      let inventorySuccess = true;
+      let processedItems = 0;
+      
+      for (const item of items) {
+        console.log(`🔄 Deducting inventory for ${item.product.name}, quantity: ${item.quantity}`);
+        
+        try {
+          const deductionResult = await deductIngredientsForProduct(
+            item.productId,
+            item.quantity,
+            result.id
+          );
+          
+          if (deductionResult) {
+            processedItems++;
+            console.log(`✅ Successfully deducted inventory for ${item.product.name}`);
+          } else {
+            console.error(`❌ Failed to deduct inventory for ${item.product.name}`);
+            inventorySuccess = false;
+            break;
+          }
+        } catch (error) {
+          console.error(`❌ Error deducting inventory for ${item.product.name}:`, error);
+          inventorySuccess = false;
+          break;
+        }
+      }
+      
+      if (!inventorySuccess) {
+        console.warn(`⚠️ Inventory deduction incomplete: ${processedItems}/${items.length} items processed`);
+        toast.warning(`Transaction completed but inventory sync failed for some items (${processedItems}/${items.length} processed)`);
+      } else {
+        console.log(`✅ Inventory deduction completed: ${processedItems}/${items.length} items processed`);
+      }
       
       // Clear the cart immediately for better UX
       clearCart();
       
-      // Navigate immediately for optimistic UX (don't wait for inventory processing)
-      console.log("🚀 Optimistic navigation to invoice page...");
+      // Navigate immediately after inventory processing
+      console.log("🚀 Navigation to invoice page...");
       navigate(`/invoice/${result.id}`, {
         state: {
           transaction: result,
@@ -314,13 +353,6 @@ export function useTransactionHandler(storeId: string) {
         },
         replace: true
       });
-      
-      // Process inventory updates in background for better performance
-      const inventoryJobId = await BackgroundProcessingService.processInventoryInBackground(
-        result.id,
-        items,
-        currentStore.id
-      );
       
       // Process receipt generation in background
       const receiptJobId = await BackgroundProcessingService.processReceiptInBackground(result);
@@ -333,19 +365,21 @@ export function useTransactionHandler(storeId: string) {
         itemCount: items.length
       });
       
-      // Show performance feedback with large order indication
+      // Show performance feedback with inventory status
       const isLargeOrder = items.length > 5;
-      toast.success(`Transaction completed!${isLargeOrder ? ` (${items.length} items)` : ''} Background processing queued.`, {
-        description: `Jobs: ${inventoryJobId?.slice(-8)}, ${receiptJobId?.slice(-8)}, ${analyticsJobId?.slice(-8)}`
+      const inventoryStatusText = inventorySuccess ? "Inventory updated" : "Inventory sync issues";
+      toast.success(`Transaction completed!${isLargeOrder ? ` (${items.length} items)` : ''} ${inventoryStatusText}.`, {
+        description: `Receipt: ${receiptJobId?.slice(-8)}, Analytics: ${analyticsJobId?.slice(-8)}`
       });
       
       console.log(`📋 Background jobs queued:`, {
-        inventory: inventoryJobId,
         receipt: receiptJobId,
-        analytics: analyticsJobId
+        analytics: analyticsJobId,
+        inventoryProcessed: processedItems,
+        inventorySuccess
       });
       
-      console.log("✅ Optimistic transaction flow completed");
+      console.log("✅ Transaction flow completed with frontend inventory deduction");
       
       // Record performance metrics
       PerformanceMonitor.endTimer(
@@ -355,7 +389,9 @@ export function useTransactionHandler(storeId: string) {
           itemCount: items.length,
           paymentMethod: finalPaymentMethod,
           total: total - discount,
-          backgroundJobs: 3
+          inventoryProcessed: processedItems,
+          inventorySuccess,
+          backgroundJobs: 2 // Receipt and analytics only
         }
       );
       
