@@ -2,9 +2,8 @@
 // Single-responsibility services that actually work
 
 // Core Transaction Services (CLEAN PATH)
-export * from './transactions/createTransaction';
-export * from './transactions/transactionItemsService'; 
-export * from './transactions/transactionValidator';
+export * from './transactions/streamlinedTransactionService';
+export * from './transactions/transactionItemsService';
 
 // Simple Inventory Service (SINGLE SOURCE OF TRUTH)
 export * from './inventory/simpleInventoryService';
