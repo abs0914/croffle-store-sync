@@ -18,16 +18,11 @@
     "mobile:build": "npm run build && npx cap sync && npx cap build android"
   },
   "dependencies": {
-<<<<<<< HEAD
+    "@capacitor-community/bluetooth-le": "^7.1.1",
     "@capacitor/android": "^7.4.1",
+    "@capacitor/app": "^7.0.1",
     "@capacitor/cli": "^7.4.1",
     "@capacitor/core": "^7.4.1",
-=======
-    "@capacitor-community/bluetooth-le": "^7.1.1",
-    "@capacitor/android": "^7.3.0",
-    "@capacitor/app": "^7.0.1",
-    "@capacitor/cli": "^7.3.0",
-    "@capacitor/core": "^7.3.0",
     "@capacitor/device": "^7.0.1",
     "@capacitor/haptics": "^7.0.1",
     "@capacitor/ios": "^7.3.0",
@@ -35,7 +30,6 @@
     "@capacitor/network": "^7.0.1",
     "@capacitor/splash-screen": "^7.0.1",
     "@capacitor/status-bar": "^7.0.1",
->>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
