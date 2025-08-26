@@ -5,7 +5,7 @@
  * It ensures that inventory levels are properly maintained and tracked.
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface TransactionItem {
   name: string;
@@ -133,13 +133,14 @@ export async function deductInventoryForTransaction(
             .from('inventory_transactions')
             .insert({
               store_id: storeId,
-              item: ingredient.ingredient_name, // Use 'item' instead of 'item_name'
+              product_id: inventory.id, // Use inventory item ID as product_id
               transaction_type: 'sale',
               quantity: -requiredQuantity,
               previous_quantity: previousStock,
               new_quantity: newStock,
               reference_id: transactionId,
               notes: `Automatic deduction for transaction ${transactionId}`,
+              created_by: 'system',
               created_at: new Date().toISOString()
             });
 
