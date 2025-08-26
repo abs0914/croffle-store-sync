@@ -7,10 +7,10 @@ export interface RecipeTemplateCSVRow {
   recipe_category?: string;
   combo_main?: string;
   combo_add_on?: string;
-  ingredient_name: string;
-  quantity: number;
-  unit: string;
-  cost_per_unit: number;
+  ingredient_name?: string;
+  quantity?: number;
+  unit?: string;
+  cost_per_unit?: number;
   ingredient_category?: string;
   suggested_price?: number;
 }
@@ -79,25 +79,22 @@ export const globalRecipeTemplateImportExport = {
 
   // Generate CSV template
   generateCSVTemplate: (): string => {
-    const headers = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category', 'suggested_price'];
+    const headers = ['recipe_name', 'recipe_category', 'suggested_price'];
     const exampleRows = [
-      ['Americano (Hot)', 'Espresso', '', '', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '65'],
-      ['Americano (Hot)', 'Espresso', '', '', 'Water', '120', 'ml', '0.50', 'Base Ingredient', '65'],
-      ['Mini Croffle + Hot Americano', 'Combo', 'Mini Croffle', 'Hot Americano', 'Croffle Base', '1', 'pcs', '25.00', 'Base Ingredient', '110'],
-      ['Mini Croffle + Hot Americano', 'Combo', 'Mini Croffle', 'Hot Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '110'],
-      ['Mini Croffle + Ice Americano', 'Combo', 'Mini Croffle', 'Ice Americano', 'Croffle Base', '1', 'pcs', '25.00', 'Base Ingredient', '115'],
-      ['Mini Croffle + Ice Americano', 'Combo', 'Mini Croffle', 'Ice Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '115'],
-      ['Glaze Croffle + Hot Americano', 'Combo', 'Glaze Croffle', 'Hot Americano', 'Croffle Base', '1', 'pcs', '30.00', 'Base Ingredient', '125'],
-      ['Glaze Croffle + Hot Americano', 'Combo', 'Glaze Croffle', 'Hot Americano', 'Glaze Sauce', '20', 'ml', '8.00', 'Premium Topping', '125'],
-      ['Glaze Croffle + Hot Americano', 'Combo', 'Glaze Croffle', 'Hot Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '125'],
-      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Croffle Base', '1', 'pcs', '30.00', 'Base Ingredient', '130'],
-      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Glaze Sauce', '20', 'ml', '8.00', 'Premium Topping', '130'],
-      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '130'],
-      ['Regular Croffle + Hot Americano', 'Combo', 'Regular Croffle', 'Hot Americano', 'Croffle Base', '1', 'pcs', '40.00', 'Base Ingredient', '170'],
-      ['Regular Croffle + Hot Americano', 'Combo', 'Regular Croffle', 'Hot Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '170'],
-      ['Regular Croffle + Ice Americano', 'Combo', 'Regular Croffle', 'Ice Americano', 'Croffle Base', '1', 'pcs', '40.00', 'Base Ingredient', '175'],
-      ['Regular Croffle + Ice Americano', 'Combo', 'Regular Croffle', 'Ice Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '175'],
-      ['Biscoff Crushed', 'Add-on', '', '', 'Biscoff Cookies', '30', 'g', '8.50', 'Premium Topping', '15']
+      ['16Oz Hot Cups', 'Add-on', '0'],
+      ['Biscoff Crushed', 'Add-on', '10'],
+      ['Caramel Sauce', 'Add-on', '6'],
+      ['Bottled Water', 'Beverages', '20'],
+      ['Matcha Blended', 'Blended', '90'],
+      ['Caramel Delight Croffle', 'Classic', '125'],
+      ['Iced Tea', 'Cold', '60'],
+      ['Americano Hot', 'Espresso', '65'],
+      ['Americano Iced', 'Espresso', '70'],
+      ['Blueberry Croffle', 'Fruity', '125'],
+      ['Glaze Croffle', 'Glaze', '79'],
+      ['Mini Croffle', 'Mix & Match', '65'],
+      ['Croffle Overload', 'Mix & Match', '99'],
+      ['Biscoff Croffle', 'Premium', '125']
     ];
 
     const csvRows = [headers.join(',')];
@@ -119,8 +116,12 @@ export const globalRecipeTemplateImportExport = {
 
     // Parse header
     const headerLine = lines[0];
-    const expectedHeaders = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category', 'suggested_price'];
     const headers = headerLine.split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
+    
+    // Support both simple format (recipe_name, recipe_category, suggested_price) 
+    // and complex format (with ingredients)
+    const hasSimpleFormat = headers.includes('recipe_name') && headers.includes('recipe_category') && headers.includes('suggested_price') && !headers.includes('ingredient_name');
+    const hasComplexFormat = headers.includes('ingredient_name') && headers.includes('quantity') && headers.includes('unit');
     
     // Support legacy 'name' header as well
     const hasLegacyName = headers.includes('name');
@@ -130,11 +131,23 @@ export const globalRecipeTemplateImportExport = {
       throw new Error('Missing required header: recipe_name (or legacy name)');
     }
     
-    // Check for other required headers
-    const requiredHeaders = ['ingredient_name', 'quantity', 'unit', 'cost_per_unit'];
-    const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-    if (missingHeaders.length > 0) {
-      throw new Error(`Missing required headers: ${missingHeaders.join(', ')}`);
+    // Validate required headers based on format
+    if (hasSimpleFormat) {
+      const requiredHeaders = ['recipe_name', 'recipe_category', 'suggested_price'];
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+      if (missingHeaders.length > 0) {
+        throw new Error(`Missing required headers for simple format: ${missingHeaders.join(', ')}`);
+      }
+      console.log('📋 Detected simple CSV format (products only)');
+    } else if (hasComplexFormat) {
+      const requiredHeaders = ['ingredient_name', 'quantity', 'unit', 'cost_per_unit'];
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+      if (missingHeaders.length > 0) {
+        throw new Error(`Missing required headers for complex format: ${missingHeaders.join(', ')}`);
+      }
+      console.log('📋 Detected complex CSV format (with ingredients)');
+    } else {
+      throw new Error('Invalid CSV format. Expected either simple format (recipe_name, recipe_category, suggested_price) or complex format (with ingredients)');
     }
 
     // Get current user for created_by field
@@ -170,7 +183,34 @@ export const globalRecipeTemplateImportExport = {
         continue;
       }
 
-      // Handle combo information
+      // Handle simple format (product catalog only)
+      if (hasSimpleFormat) {
+        const suggestedPrice = parseFloat(row.suggested_price) || 0;
+        const category = row.recipe_category || 'Other';
+        
+        // Create a simple product template without ingredients
+        const recipeData = {
+          template: {
+            name: recipeName,
+            category_name: category,
+            description: `${category} product: ${recipeName}`,
+            instructions: 'Product template - no preparation required',
+            yield_quantity: 1,
+            serving_size: 1,
+            created_by: user.id,
+            is_active: true,
+            version: 1,
+            ingredients: [],
+            suggested_price: suggestedPrice
+          },
+          ingredients: []
+        };
+        
+        recipeMap.set(recipeName, recipeData);
+        continue; // Skip ingredient processing for simple format
+      }
+
+      // Handle complex format (with ingredients) - existing logic
       const comboMain = row.combo_main || '';
       const comboAddOn = row.combo_add_on || '';
       const isCombo = comboMain || comboAddOn || recipeName.toLowerCase().includes('combo');
@@ -207,7 +247,7 @@ export const globalRecipeTemplateImportExport = {
         });
       }
 
-      // Add ingredient if provided
+      // Add ingredient if provided (only for complex format)
       const ingredientName = row.ingredient_name;
       if (ingredientName) {
         const quantity = parseFloat(row.quantity) || 0;
@@ -254,7 +294,7 @@ export const globalRecipeTemplateImportExport = {
           continue;
         }
 
-        // Create ingredients if any
+        // Create ingredients if any (skip for simple format)
         if (recipeData.ingredients.length > 0) {
           const ingredientData = recipeData.ingredients.map(ingredient => ({
             recipe_template_id: template.id,
