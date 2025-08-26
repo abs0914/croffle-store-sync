@@ -32,7 +32,7 @@ export const MasterDataWorkflowDialog: React.FC<MasterDataWorkflowDialogProps> =
     }
     
     setHasStarted(true);
-    await executeWorkflow(sampleMasterRecipes);
+    await executeWorkflow();
   };
 
   const handleClose = () => {
@@ -70,13 +70,13 @@ export const MasterDataWorkflowDialog: React.FC<MasterDataWorkflowDialogProps> =
               <div className="p-6 bg-muted/50 rounded-lg">
                 <h3 className="font-semibold mb-2">Database Reset Complete</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Ready to import master recipes and set up the complete system workflow.
+                  Complete the system setup after importing recipes through Admin → Recipe Management.
                 </p>
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div className="text-left">
                     <p className="font-medium">What will happen:</p>
                     <ul className="mt-1 space-y-1 text-muted-foreground">
-                      <li>• Import {sampleMasterRecipes.length} master recipes</li>
+                      <li>• Verify existing recipe templates</li>
                       <li>• Map ingredients to inventory</li>
                       <li>• Deploy to all stores</li>
                       <li>• Update product catalog</li>
@@ -95,14 +95,14 @@ export const MasterDataWorkflowDialog: React.FC<MasterDataWorkflowDialogProps> =
                 </div>
               </div>
               
-              <Button 
+                <Button 
                 onClick={handleStart} 
                 disabled={isRunning}
                 size="lg"
                 className="w-full"
               >
                 <Play className="h-4 w-4 mr-2" />
-                Start Complete Workflow
+                Complete System Setup
               </Button>
             </div>
           ) : (

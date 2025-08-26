@@ -15,7 +15,7 @@ export const WorkflowLaunchButton: React.FC = () => {
         className="gap-2"
       >
         <Database className="h-4 w-4" />
-        Launch Master Data Workflow
+        Complete System Setup
       </Button>
 
       <MasterDataWorkflowDialog 

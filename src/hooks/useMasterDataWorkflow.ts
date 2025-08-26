@@ -12,14 +12,14 @@ export const useMasterDataWorkflow = () => {
     setSteps(newOrchestrator.getSteps());
   }, []);
 
-  const executeWorkflow = useCallback(async (masterRecipes: MasterRecipe[]) => {
+  const executeWorkflow = useCallback(async () => {
     if (!orchestrator) {
       throw new Error('Workflow not initialized');
     }
 
     setIsRunning(true);
     try {
-      const success = await orchestrator.executeWorkflow(masterRecipes);
+      const success = await orchestrator.executeWorkflow();
       return success;
     } finally {
       setIsRunning(false);

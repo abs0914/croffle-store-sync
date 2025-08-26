@@ -27,7 +27,7 @@ export interface MasterRecipe {
 
 export class MasterDataOrchestrator {
   private steps: WorkflowStep[] = [
-    { id: 'import', name: 'Import Master Recipes', status: 'pending', progress: 0 },
+    { id: 'verify', name: 'Verify Recipe Templates', status: 'pending', progress: 0 },
     { id: 'mapping', name: 'Map Ingredients to Inventory', status: 'pending', progress: 0 },
     { id: 'deploy', name: 'Deploy to All Stores', status: 'pending', progress: 0 },
     { id: 'catalog', name: 'Update Product Catalog', status: 'pending', progress: 0 },
@@ -48,12 +48,12 @@ export class MasterDataOrchestrator {
     }
   }
 
-  async executeWorkflow(masterRecipes: MasterRecipe[]): Promise<boolean> {
+  async executeWorkflow(): Promise<boolean> {
     try {
-      console.log('🚀 Starting Master Data Workflow with', masterRecipes.length, 'recipes');
+      console.log('🚀 Starting Master Data Workflow (post-recipe import)');
 
-      // Step 1: Import Master Recipes
-      const templateIds = await this.importMasterRecipes(masterRecipes);
+      // Step 1: Verify Recipe Templates exist
+      const templateIds = await this.verifyRecipeTemplates();
       if (!templateIds.length) return false;
 
       // Step 2: Map Ingredients to Inventory
@@ -61,7 +61,7 @@ export class MasterDataOrchestrator {
       if (!mappingSuccess) return false;
 
       // Step 3: Deploy to All Stores
-      const deploySuccess = await this.deployToAllStores(templateIds);
+      const deploySuccess = await this.deployToAllStores();
       if (!deploySuccess) return false;
 
       // Step 4: Update Product Catalog
@@ -82,68 +82,41 @@ export class MasterDataOrchestrator {
     }
   }
 
-  private async importMasterRecipes(recipes: MasterRecipe[]): Promise<string[]> {
-    this.updateStep('import', { status: 'running', message: 'Creating recipe templates...' });
+  private async verifyRecipeTemplates(): Promise<string[]> {
+    this.updateStep('verify', { status: 'running', message: 'Checking existing recipe templates...' });
     
     try {
-      const templateIds: string[] = [];
-      const total = recipes.length;
+      // Use basic query approach to avoid type recursion
+      const result = await (supabase as any)
+        .from('recipe_templates')
+        .select('id, name')
+        .eq('is_active', true)
+        .eq('is_approved', true);
 
-      for (let i = 0; i < total; i++) {
-        const recipe = recipes[i];
-        
-        // Create recipe template
-        const { data: template, error: templateError } = await supabase
-          .from('recipe_templates')
-          .insert({
-            name: recipe.name,
-            description: recipe.description,
-            instructions: recipe.instructions,
-            category_name: recipe.category_name,
-            serving_size: recipe.serving_size,
-            recipe_type: recipe.recipe_type,
-            is_active: true,
-            is_approved: true
-          })
-          .select()
-          .single();
+      const { data: templates, error } = result;
 
-        if (templateError) throw templateError;
+      if (error) throw error;
 
-        // Add ingredients
-        const ingredientInserts = recipe.ingredients.map(ing => ({
-          recipe_template_id: template.id,
-          ingredient_name: ing.ingredient_name,
-          quantity: ing.quantity,
-          unit: ing.unit,
-          cost_per_unit: ing.cost_per_unit
-        }));
+      const templateIds: string[] = templates?.map((t: any) => t.id) || [];
 
-        const { error: ingredientError } = await supabase
-          .from('recipe_template_ingredients')
-          .insert(ingredientInserts);
-
-        if (ingredientError) throw ingredientError;
-
-        templateIds.push(template.id);
-        
-        const progress = Math.round(((i + 1) / total) * 100);
-        this.updateStep('import', { 
-          progress, 
-          message: `Created ${i + 1}/${total} templates` 
+      if (templateIds.length === 0) {
+        this.updateStep('verify', { 
+          status: 'error', 
+          error: 'No recipe templates found. Please import recipes through Admin → Recipe Management first.' 
         });
+        throw new Error('No recipe templates found');
       }
 
-      this.updateStep('import', { 
+      this.updateStep('verify', { 
         status: 'completed', 
         progress: 100, 
-        message: `Created ${templateIds.length} recipe templates` 
+        message: `Found ${templateIds.length} recipe templates ready for deployment` 
       });
 
       return templateIds;
 
     } catch (error) {
-      this.updateStep('import', { 
+      this.updateStep('verify', { 
         status: 'error', 
         error: (error as Error).message 
       });
@@ -156,10 +129,12 @@ export class MasterDataOrchestrator {
 
     try {
       // Get all active stores
-      const { data: stores } = await supabase
+      const storesResult = await (supabase as any)
         .from('stores')
         .select('id, name')
         .eq('is_active', true);
+
+      const { data: stores } = storesResult;
 
       if (!stores?.length) throw new Error('No active stores found');
 
@@ -169,24 +144,26 @@ export class MasterDataOrchestrator {
         const store = stores[storeIndex];
 
         // Get unique ingredients from templates
-        const { data: ingredients } = await supabase
+        const ingredientsResult = await (supabase as any)
           .from('recipe_template_ingredients')
           .select('ingredient_name, unit')
           .in('recipe_template_id', templateIds);
+
+        const { data: ingredients } = ingredientsResult;
 
         if (!ingredients?.length) continue;
 
         // Create standardized inventory items
         const uniqueIngredients = Array.from(
-          new Map(ingredients.map(ing => [
+          new Map(ingredients.map((ing: any) => [
             `${ing.ingredient_name}_${ing.unit}`, 
             { name: ing.ingredient_name, unit: ing.unit }
           ])).values()
-        );
+        ) as Array<{ name: string; unit: string }>;
 
         for (const ingredient of uniqueIngredients) {
           // Create inventory stock item
-          const { data: inventoryItem, error: inventoryError } = await supabase
+          const inventoryResult = await (supabase as any)
             .from('inventory_stock')
             .insert({
               store_id: store.id,
@@ -198,8 +175,10 @@ export class MasterDataOrchestrator {
               is_active: true,
               recipe_compatible: true
             })
-            .select()
+            .select('id')
             .single();
+
+          const { error: inventoryError } = inventoryResult;
 
           if (inventoryError) {
             console.warn(`Failed to create inventory item for ${ingredient.name}:`, inventoryError);
@@ -233,12 +212,12 @@ export class MasterDataOrchestrator {
     }
   }
 
-  private async deployToAllStores(templateIds: string[]): Promise<boolean> {
+  private async deployToAllStores(): Promise<boolean> {
     this.updateStep('deploy', { status: 'running', message: 'Deploying recipes to stores...' });
 
     try {
       // Use existing deployment function
-      const { data, error } = await supabase.rpc('deploy_and_fix_recipe_templates_to_all_stores');
+      const { data, error } = await (supabase as any).rpc('deploy_and_fix_recipe_templates_to_all_stores');
 
       if (error) throw error;
 
@@ -264,16 +243,12 @@ export class MasterDataOrchestrator {
 
     try {
       // Sync recipes with product catalog
-      const { data: recipes } = await supabase
+      const recipesResult = await (supabase as any)
         .from('recipes')
-        .select(`
-          id,
-          name,
-          store_id,
-          total_cost,
-          stores!inner(name)
-        `)
+        .select('id, name, store_id, total_cost')
         .eq('is_active', true);
+
+      const { data: recipes } = recipesResult;
 
       if (!recipes?.length) {
         this.updateStep('catalog', { 
@@ -290,16 +265,18 @@ export class MasterDataOrchestrator {
         const recipe = recipes[i];
 
         // Check if catalog entry exists
-        const { data: existing } = await supabase
+        const existingResult = await (supabase as any)
           .from('product_catalog')
           .select('id')
           .eq('recipe_id', recipe.id)
           .eq('store_id', recipe.store_id)
           .single();
 
+        const { data: existing } = existingResult;
+
         if (!existing) {
           // Create catalog entry
-          const { error } = await supabase
+          const { error } = await (supabase as any)
             .from('product_catalog')
             .insert({
               store_id: recipe.store_id,
@@ -342,10 +319,12 @@ export class MasterDataOrchestrator {
 
     try {
       // Ensure all inventory items have standardized units
-      const { data: inventoryItems } = await supabase
+      const inventoryResult = await (supabase as any)
         .from('inventory_stock')
         .select('id, item, unit')
         .eq('is_active', true);
+
+      const { data: inventoryItems } = inventoryResult;
 
       if (!inventoryItems?.length) {
         this.updateStep('inventory', { 
@@ -377,7 +356,7 @@ export class MasterDataOrchestrator {
             standardUnit = 'pieces';
           }
 
-          const { error } = await supabase
+          const { error } = await (supabase as any)
             .from('inventory_stock')
             .update({ unit: standardUnit })
             .eq('id', item.id);
