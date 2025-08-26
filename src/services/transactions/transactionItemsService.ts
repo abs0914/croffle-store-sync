@@ -104,17 +104,15 @@ export const insertTransactionItems = async (transactionId: string, items: Detai
       category_id: item.category_id || null,
       category_name: item.category_name || null,
       product_type: item.product_type || 'regular'
+      // Removed reference_id field that was causing UUID type error
     }));
 
     console.log('🔄 Prepared items for insertion (exact columns):', itemsToInsert);
 
-    // Use upsert to avoid any potential conflicts and ensure clean insertion
+    // Use insert instead of upsert to avoid conflicts - table has auto-generated id
     const { data, error } = await supabase
       .from("transaction_items")
-      .upsert(itemsToInsert, { 
-        onConflict: 'id',
-        ignoreDuplicates: false 
-      })
+      .insert(itemsToInsert)
       .select();
 
     if (error) {
