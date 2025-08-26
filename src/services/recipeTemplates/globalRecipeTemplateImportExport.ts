@@ -314,7 +314,7 @@ export const globalRecipeTemplateImportExport = {
         created_by: recipeData.template.created_by!,
         is_active: recipeData.template.is_active!,
         version: recipeData.template.version!,
-        suggested_price: recipeData.template.suggested_price // Preserve exact price including 0
+        suggested_price: recipeData.template.suggested_price || 0 // FIX: Ensure price is preserved
       });
     }
 
