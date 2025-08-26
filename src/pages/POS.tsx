@@ -3,12 +3,9 @@ import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
 import { useCart } from "@/contexts/cart/CartContext";
-import { useProductCatalogData } from "@/hooks/useProductCatalogData";
+import { useUnifiedProducts } from "@/hooks/unified/useUnifiedProducts";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
-import { useAutomaticAvailability } from "@/hooks/useAutomaticAvailability";
 import { useLargeOrderDiagnostics } from "@/hooks/useLargeOrderDiagnostics";
-// Real-time notification service removed - using simplified toast notifications
-import { quickCheckoutValidation } from "@/services/pos/lightweightValidationService";
 
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
@@ -49,46 +46,29 @@ export default function POS() {
   // Large order diagnostics for debugging failures
   const { logOrderAttempt } = useLargeOrderDiagnostics();
 
-  // Load product data from product_catalog using consolidated hook
+  // Unified product and inventory data
   const {
     products,
-    allProducts, // Unfiltered products for combo dialog
+    allProducts,
     categories,
     isLoading,
-    activeCategory,
-    setActiveCategory,
-    lastSync,
+    error,
     isConnected,
-    refreshProducts
-  } = useProductCatalogData(currentStore?.id || null);
+    filters,
+    updateCategoryFilter,
+    refresh: refreshProducts
+  } = useUnifiedProducts({
+    storeId: currentStore?.id || null,
+    autoRefresh: true
+  });
 
-  // Set up automatic availability monitoring
-  useAutomaticAvailability(currentStore?.id || null, !!currentStore?.id);
-  
-  // Set up price refresh listening
+  // Local state for active category filter
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  // Sync category filter with unified products
   useEffect(() => {
-    if (!refreshProducts || !currentStore?.id) return;
-    
-    const setupPriceRefresh = async () => {
-      const { priceRefreshService } = await import('@/services/pos/priceRefreshService');
-      const cleanup = priceRefreshService.addRefreshListener(() => {
-        console.log('🔄 POS received price update notification, refreshing products...');
-        refreshProducts();
-      });
-      
-      return cleanup;
-    };
-    
-    let cleanupFn: (() => void) | null = null;
-    
-    setupPriceRefresh().then(cleanup => {
-      cleanupFn = cleanup;
-    });
-    
-    return () => {
-      if (cleanupFn) cleanupFn();
-    };
-  }, [refreshProducts, currentStore?.id]);
+    updateCategoryFilter(activeCategory);
+  }, [activeCategory, updateCategoryFilter]);
 
   // Real-time notifications removed - using simplified toast system
 
@@ -149,18 +129,10 @@ export default function POS() {
     }
     
     try {
-      console.log("POS: Processing payment with enhanced inventory validation...");
+      console.log("POS: Processing payment with streamlined transaction service...");
       
-      // Quick validation as safety net (proactive validation is primary)
-      const validationResult = await quickCheckoutValidation(items, currentStore.id);
-      if (!validationResult.isValid) {
-        toast.error(`Cannot process payment: ${validationResult.message}`);
-        return false;
-      }
-      
-      if (validationResult.invalidProducts.length > 0) {
-        console.warn('Some items failed validation but proceeding:', validationResult.invalidProducts);
-      }
+      // Enhanced validation is now handled in CheckoutModal before payment begins
+      // This provides a simpler, more reliable transaction flow
       
     // Convert cart items to the format expected by the transaction handler
     const cartItemsForTransaction = items.map(item => ({

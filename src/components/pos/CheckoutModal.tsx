@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CartItem } from "@/types/productVariations";
 import { PaymentProcessor } from "./payment/PaymentProcessor";
-import { Receipt } from "@/components/pos/payment/Receipt";
-import { useCurrentStore } from "@/hooks/store/useCurrentStore";
-import { useActiveShift } from "@/hooks/shifts/useActiveShift";
+import ReceiptGenerator from "./ReceiptGenerator";
+import { useStore } from "@/contexts/StoreContext";
+import { useShift } from "@/contexts/shift";
 import { toast } from "sonner";
 import { streamlinedTransactionService } from "@/services/transactions/streamlinedTransactionService";
 import { Transaction } from "@/types";
@@ -46,8 +46,8 @@ export function CheckoutModal({
   const [showReceipt, setShowReceipt] = useState(false);
   const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const { currentStore } = useCurrentStore();
-  const { activeShift } = useActiveShift();
+  const { currentStore } = useStore();
+  const { currentShift } = useShift();
 
   // Pre-payment validation state
   const [isValidating, setIsValidating] = useState(false);
@@ -110,7 +110,7 @@ export function CheckoutModal({
     amountTendered: number,
     paymentDetails?: any
   ): Promise<boolean> => {
-    if (!currentStore || !activeShift) {
+    if (!currentStore || !currentShift) {
       toast.error("No active store or shift found");
       return false;
     }
@@ -126,8 +126,8 @@ export function CheckoutModal({
     try {
       const transactionData = {
         storeId: currentStore.id,
-        userId: activeShift.cashier_id,
-        shiftId: activeShift.id,
+        userId: currentShift.cashier_id,
+        shiftId: currentShift.id,
         customerId: customerId || undefined,
         items: cartItems.map(item => ({
           productId: item.product.id,
@@ -187,12 +187,17 @@ export function CheckoutModal({
 
   if (showReceipt && completedTransaction) {
     return (
-      <Receipt
-        isOpen={showReceipt}
-        onClose={handleReceiptClose}
-        transaction={completedTransaction}
-        cartItems={cartItems}
-      />
+      <Dialog open={showReceipt} onOpenChange={handleReceiptClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Receipt</DialogTitle>
+          </DialogHeader>
+          <ReceiptGenerator 
+            transaction={completedTransaction}
+            customer={undefined}
+          />
+        </DialogContent>
+      </Dialog>
     );
   }
 
