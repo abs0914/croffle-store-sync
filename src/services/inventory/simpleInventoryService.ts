@@ -127,8 +127,7 @@ export const deductInventoryForTransaction = async (
 
         // Log inventory movement with proper UUID validation
         try {
-          // Ensure we have a valid UUID string before inserting
-          const validTransactionId = transactionId.toString().trim();
+          // Use transactionId directly - it's already a validated UUID string
           
           const { error: movementError } = await supabase
             .from('inventory_movements')
@@ -139,7 +138,7 @@ export const deductInventoryForTransaction = async (
               previous_quantity: stockItem.stock_quantity,
               new_quantity: newStock,
               reference_type: 'transaction',
-              reference_id: validTransactionId, // Ensure it's a clean UUID string
+              reference_id: transactionId, // Use validated UUID directly
               notes: `Transaction deduction: ${ingredient.ingredient_name} for ${recipe.name}`,
               created_by: userId
             });
@@ -148,7 +147,7 @@ export const deductInventoryForTransaction = async (
             console.error(`⚠️ Failed to log inventory movement for ${ingredient.ingredient_name}:`, {
               error: movementError.message,
               code: movementError.code,
-              transactionId: validTransactionId,
+              transactionId: transactionId,
               ingredient: ingredient.ingredient_name
             });
             // Don't fail the entire transaction for movement logging issues

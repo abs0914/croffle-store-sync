@@ -1,18 +1,15 @@
-// Comprehensive Architectural Services Export
-export * from './architecture/masterControlService';
-export * from './recipeSync/templateRecipeSyncEngine';
-export * from './inventory/intelligentValidationService';
-export * from './inventory/intelligentIngredientMatcher';
-export * from './selfHealing/autoRepairService';
-export * from './realtime/dynamicAvailabilityEngine';
-export * from './predictive/availabilityForecasting';
+// CLEAN TRANSACTION SERVICES - SINGLE PATH ONLY
+// Only these services should be used for transactions to prevent conflicts
 
-// Reliable Transaction Services (Simplified & Fixed)
-export * from './transactions/simplifiedTransactionService';
-export * from './pos/reliableTransactionService';
+// Core Transaction Service (SINGLE SOURCE OF TRUTH)
+export * from './transactions/createTransaction';
+export * from './transactions/transactionItemsService'; 
+export * from './transactions/transactionValidator';
 
-// Simple Inventory Service
+// Simple Inventory Service (SINGLE INVENTORY PROCESSOR)
 export * from './inventory/simpleInventoryService';
 
-// Legacy exports (maintained for compatibility)
-export * from './inventory/directInventoryService';
+// DISABLED SERVICES - DO NOT USE
+// export * from './transactions/simplifiedTransactionService'; // DISABLED - causes UUID conflicts
+// export * from './pos/reliableTransactionService'; // DISABLED - uses conflicting services
+// export * from './inventory/directInventoryService'; // DISABLED - legacy

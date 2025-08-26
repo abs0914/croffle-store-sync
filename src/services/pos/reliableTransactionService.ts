@@ -1,10 +1,10 @@
-import { createSimplifiedTransaction } from '@/services/transactions/simplifiedTransactionService';
+import { createTransaction } from '@/services/transactions/createTransaction';
 import { getValidPOSProducts } from '@/services/pos/productValidationService';
 import { Transaction } from '@/types';
 
 /**
- * Reliable transaction service that ensures inventory sync
- * Uses pre-validated products and simplified transaction flow
+ * UPDATED: Now uses clean createTransaction path instead of problematic simplified service
+ * Ensures inventory sync with proper UUID handling
  */
 
 export const processReliableTransaction = async (
@@ -30,21 +30,21 @@ export const processReliableTransaction = async (
       };
     }
     
-    // Process transaction with simplified service
-    const result = await createSimplifiedTransaction(transaction);
+    // Process transaction with clean createTransaction service
+    const result = await createTransaction(transaction);
     
-    if (!result.success) {
+    if (!result) {
       return {
         success: false,
-        error: result.error
+        error: 'Transaction creation failed'
       };
     }
     
-    console.log('✅ Reliable transaction completed:', result.transaction?.id);
+    console.log('✅ Reliable transaction completed:', result.id);
     
     return {
       success: true,
-      transaction: result.transaction
+      transaction: result
     };
     
   } catch (error) {
