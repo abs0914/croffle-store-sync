@@ -1,140 +1,115 @@
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { useShift } from "@/contexts/shift";
-import PaymentMethods from "./PaymentMethods";
-import { formatCurrency } from "@/utils/format";
+import React, { useState } from 'react';
+import { formatCurrency } from '@/utils/format';
+import PaymentMethods from './PaymentMethods';
 
 interface PaymentProcessorProps {
   total: number;
+  itemCount: number;
   onPaymentComplete: (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
     amountTendered: number,
-    paymentDetails?: {
-      cardType?: string;
-      cardNumber?: string;
-      eWalletProvider?: string;
-      eWalletReferenceNumber?: string;
-    }
-  ) => void;
+    paymentDetails?: any
+  ) => Promise<boolean>;
 }
 
-export default function PaymentProcessor({ total, onPaymentComplete }: PaymentProcessorProps) {
-  const { currentShift } = useShift();
-  const [isOpen, setIsOpen] = useState(false);
+export const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
+  total,
+  itemCount,
+  onPaymentComplete
+}) => {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'e-wallet'>('cash');
-  const [amountTendered, setAmountTendered] = useState<number>(0);
-  
-  // Card payment details
+  const [cashAmountTendered, setCashAmountTendered] = useState<number>(0);
   const [cardType, setCardType] = useState<string>('');
   const [cardNumber, setCardNumber] = useState<string>('');
-  
-  // E-wallet payment details
   const [eWalletProvider, setEWalletProvider] = useState<string>('');
-  const [eWalletReferenceNumber, setEWalletReferenceNumber] = useState<string>('');
-  
-  const handlePayment = () => {
-    // Validate payment
-    if (!currentShift) {
-      toast.error("No active shift. Please start a shift before processing payments.");
-      return;
-    }
-    
-    if (paymentMethod === 'cash') {
-      if (amountTendered < total) {
-        toast.error("Cash amount must be equal to or greater than the total.");
-        return;
-      }
+  const [eWalletReference, setEWalletReference] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handlePayment = async () => {
+    setIsProcessing(true);
+    try {
+      const paymentDetails: any = {};
       
-      onPaymentComplete(paymentMethod, amountTendered);
-      
-    } else if (paymentMethod === 'card') {
-      if (!cardType) {
-        toast.error("Please select a card type.");
-        return;
+      if (paymentMethod === 'cash') {
+        paymentDetails.amountTendered = cashAmountTendered;
+        paymentDetails.change = cashAmountTendered - total;
+      } else if (paymentMethod === 'card') {
+        paymentDetails.cardType = cardType;
+        paymentDetails.cardNumber = cardNumber;
+      } else if (paymentMethod === 'e-wallet') {
+        paymentDetails.provider = eWalletProvider;
+        paymentDetails.reference = eWalletReference;
       }
-      if (!cardNumber || cardNumber.length < 4) {
-        toast.error("Please enter at least the last 4 digits of the card.");
-        return;
-      }
-      
-      onPaymentComplete(
-        paymentMethod, 
-        total, 
-        { cardType, cardNumber: cardNumber.slice(-4) }
-      );
-      
-    } else if (paymentMethod === 'e-wallet') {
-      if (!eWalletProvider) {
-        toast.error("Please select an e-wallet provider.");
-        return;
-      }
-      if (!eWalletReferenceNumber) {
-        toast.error("Please enter the reference number.");
-        return;
-      }
-      
-      onPaymentComplete(
+
+      const success = await onPaymentComplete(
         paymentMethod,
-        total,
-        { eWalletProvider, eWalletReferenceNumber }
+        paymentMethod === 'cash' ? cashAmountTendered : total,
+        paymentDetails
       );
+
+      if (success) {
+        // Reset form
+        setCashAmountTendered(0);
+        setCardType('');
+        setCardNumber('');
+        setEWalletProvider('');
+        setEWalletReference('');
+      }
+    } catch (error) {
+      console.error('Payment processing error:', error);
+    } finally {
+      setIsProcessing(false);
     }
-    
-    // Close dialog
-    setIsOpen(false);
-    
-    // Reset state
-    setAmountTendered(0);
-    setCardType('');
-    setCardNumber('');
-    setEWalletProvider('');
-    setEWalletReferenceNumber('');
+  };
+
+  const canProceed = () => {
+    if (paymentMethod === 'cash') {
+      return cashAmountTendered >= total;
+    } else if (paymentMethod === 'card') {
+      return cardType && cardNumber;
+    } else if (paymentMethod === 'e-wallet') {
+      return eWalletProvider && eWalletReference;
+    }
+    return false;
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button
-          className="w-full mt-4 bg-green-600 hover:bg-green-700 text-lg py-6"
-          disabled={total <= 0 || !currentShift}
+    <div className="p-6">
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-2">Payment</h2>
+        <div className="flex justify-between text-lg">
+          <span>Total ({itemCount} items):</span>
+          <span className="font-bold">{formatCurrency(total)}</span>
+        </div>
+      </div>
+
+      <PaymentMethods
+        total={total}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
+        amountTendered={cashAmountTendered}
+        setAmountTendered={setCashAmountTendered}
+        cardType={cardType}
+        setCardType={setCardType}
+        cardNumber={cardNumber}
+        setCardNumber={setCardNumber}
+        eWalletProvider={eWalletProvider}
+        setEWalletProvider={setEWalletProvider}
+        eWalletReferenceNumber={eWalletReference}
+        setEWalletReferenceNumber={setEWalletReference}
+      />
+
+      <div className="mt-6 flex gap-3">
+        <button
+          onClick={handlePayment}
+          disabled={!canProceed() || isProcessing}
+          className="flex-1 bg-primary text-primary-foreground py-3 px-4 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90"
         >
-          Pay {formatCurrency(total)}
-        </Button>
-      </DialogTrigger>
-      
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Payment: {formatCurrency(total)}</DialogTitle>
-        </DialogHeader>
-        
-        <PaymentMethods
-          total={total}
-          paymentMethod={paymentMethod}
-          setPaymentMethod={setPaymentMethod}
-          amountTendered={amountTendered}
-          setAmountTendered={setAmountTendered}
-          cardType={cardType}
-          setCardType={setCardType}
-          cardNumber={cardNumber}
-          setCardNumber={setCardNumber}
-          eWalletProvider={eWalletProvider}
-          setEWalletProvider={setEWalletProvider}
-          eWalletReferenceNumber={eWalletReferenceNumber}
-          setEWalletReferenceNumber={setEWalletReferenceNumber}
-        />
-        
-        <DialogFooter>
-          <Button onClick={() => setIsOpen(false)} variant="outline">
-            Cancel
-          </Button>
-          <Button onClick={handlePayment}>
-            Complete Payment
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          {isProcessing ? 'Processing...' : `Complete Payment - ${formatCurrency(total)}`}
+        </button>
+      </div>
+    </div>
   );
-}
+};
+
+export default PaymentProcessor;

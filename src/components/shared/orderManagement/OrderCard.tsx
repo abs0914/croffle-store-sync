@@ -75,7 +75,7 @@ export function OrderCard({
                 </Button>
               )}
               
-              {order.status === 'approved' && onFulfill && (userRole === 'admin' || userRole === 'owner') && (
+              {(order.status === 'approved' || order.status === 'in_progress') && onFulfill && (userRole === 'admin' || userRole === 'owner' || userRole === 'manager' || userRole === 'stock_user') && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -83,7 +83,7 @@ export function OrderCard({
                   className="flex-1 sm:flex-none"
                 >
                   <Package className="h-4 w-4 sm:mr-0 mr-2" />
-                  <span className="sm:hidden">Fulfill</span>
+                  <span className="sm:hidden">{order.status === 'in_progress' ? 'Continue' : 'Fulfill'}</span>
                 </Button>
               )}
             </div>

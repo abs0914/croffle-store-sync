@@ -3,27 +3,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Coffee, IceCream, RefreshCw, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2 } from "lucide-react";
-import { Product, Category } from "@/types/product";
+import { Product, Category } from "@/types";
 import { useComboService } from "@/hooks/pos/useComboService";
 import { useComboDataValidation } from "@/hooks/pos/useComboDataValidation";
-import { MiniCroffleComboDialog } from "./MiniCroffleComboDialog";
-import { UnifiedProduct } from "@/services/product/unifiedProductService";
+import { ProductCustomizationDialog } from "./customization/ProductCustomizationDialog";
 import { AddonCategory } from "@/services/pos/addonService";
 import { MixMatchRule } from "@/types/productVariations";
 
 interface ComboSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  products: UnifiedProduct[];
+  products: Product[];
   categories: Category[];
   addonCategories?: AddonCategory[];
   comboRules?: MixMatchRule[];
   onAddToCart: (comboData: {
-    croffle: UnifiedProduct;
-    espresso: UnifiedProduct;
+    croffle: Product;
+    espresso: Product;
     comboPrice: number;
     comboName: string;
     customization?: any;
@@ -44,7 +44,7 @@ export function ComboSelectionDialog({
   const [step, setStep] = useState<"croffle" | "customize" | "espresso">("croffle");
   const [selectedCategory, setSelectedCategory] = useState<string>("Classic");
   const [isChangingCategory, setIsChangingCategory] = useState<boolean>(false);
-  const [selectedCroffle, setSelectedCroffle] = useState<UnifiedProduct | null>(null);
+  const [selectedCroffle, setSelectedCroffle] = useState<Product | null>(null);
   const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
   const [miniCroffleCustomization, setMiniCroffleCustomization] = useState<any>(null);
   
@@ -61,7 +61,7 @@ export function ComboSelectionDialog({
   } = useComboDataValidation(products, categories);
 
   // Enhanced getCategoryProducts with error handling and caching
-  const getCategoryProducts = useCallback((categoryName: string): UnifiedProduct[] => {
+  const getCategoryProducts = useCallback((categoryName: string): Product[] => {
     try {
       console.log(`Getting products for category: "${categoryName}"`);
       
@@ -219,14 +219,19 @@ export function ComboSelectionDialog({
 
   // This will be logged above in the enhanced debug section
 
-  const handleCroffleSelect = (croffle: UnifiedProduct) => {
+  const handleCroffleSelect = (croffle: Product) => {
+    console.log("Selected croffle:", croffle.name);
     setSelectedCroffle(croffle);
     
-    // Check if it's a Mini Croffle that needs customization
-    const isMiniCroffle = croffle.name.toLowerCase().includes("mini");
-    if (isMiniCroffle) {
+    // Check if it's a product that needs customization (Mini Croffle or Croffle Overload)
+    const needsCustomization = croffle.name.toLowerCase().includes("mini") || 
+                              croffle.name.toLowerCase().includes("overload");
+    
+    if (needsCustomization) {
+      console.log("Product needs customization, going to customize step");
       setStep("customize");
     } else {
+      console.log("Regular croffle, going to espresso step");
       setStep("espresso");
     }
   };
@@ -237,17 +242,19 @@ export function ComboSelectionDialog({
     setStep("espresso");
   };
 
-  const handleEspressoSelect = (espresso: UnifiedProduct) => {
+  const handleEspressoSelect = (espresso: Product) => {
     const croffleToUse = customizedCroffle || selectedCroffle;
     if (!croffleToUse) return;
 
     // Debug category mapping
     const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
     
-    // Fix category mapping for Mini Croffle
+    // Fix category mapping for Mini Croffle and Croffle Overload
     let categoryForPricing = croffleCategory;
     if (selectedCroffle?.name.toLowerCase().includes("mini")) {
       categoryForPricing = "Mini Croffle";
+    } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
+      categoryForPricing = "Mix & Match";
     }
 
     // Map espresso product name to espresso type for pricing
@@ -288,8 +295,9 @@ export function ComboSelectionDialog({
   const handleBack = () => {
     if (step === "espresso") {
       // If we came from customization, go back to customization
-      const isMiniCroffle = selectedCroffle?.name.toLowerCase().includes("mini");
-      setStep(isMiniCroffle ? "customize" : "croffle");
+      const needsCustomization = selectedCroffle?.name.toLowerCase().includes("mini") ||
+                                 selectedCroffle?.name.toLowerCase().includes("overload");
+      setStep(needsCustomization ? "customize" : "croffle");
     } else if (step === "customize") {
       setStep("croffle");
     }
@@ -314,11 +322,11 @@ export function ComboSelectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">
             {step === "croffle" && "Select Your Croffle"}
-            {step === "customize" && "Customize Your Mini Croffle"}
+            {step === "customize" && `Customize Your ${selectedCroffle?.name || "Croffle"}`}
             {step === "espresso" && "Select Your Espresso"}
           </DialogTitle>
           {(step === "espresso" || step === "customize") && selectedCroffle && (
@@ -329,7 +337,8 @@ export function ComboSelectionDialog({
           )}
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1">
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-[50vh] md:h-[65vh] lg:h-[60vh] tablet-scroll-optimized">
           {/* Progressive Loading State */}
           {(!isDataLoaded || !isDataReady) && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -520,7 +529,7 @@ export function ComboSelectionDialog({
           {isDataLoaded && isDataReady && hasAnyValidProducts && step === "espresso" && (
             <div className="space-y-6">
               {/* Espresso Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-6 md:grid md:grid-cols-2 md:gap-8 md:space-y-0">
                 {/* Hot Espresso Column */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-center text-orange-600 border-b pb-2">
@@ -533,10 +542,12 @@ export function ComboSelectionDialog({
                     .map((espresso) => {
                       const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
                       
-                      // Fix category mapping for Mini Croffle in display
+                      // Fix category mapping for Mini Croffle and Croffle Overload in display
                       let categoryForPricing = croffleCategory;
                       if (selectedCroffle?.name.toLowerCase().includes("mini")) {
                         categoryForPricing = "Mini Croffle";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
+                        categoryForPricing = "Mix & Match";
                       }
                       
                       const espressoType = "Hot Espresso";
@@ -572,10 +583,12 @@ export function ComboSelectionDialog({
                     .map((espresso) => {
                       const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
                       
-                      // Fix category mapping for Mini Croffle in display
+                      // Fix category mapping for Mini Croffle and Croffle Overload in display
                       let categoryForPricing = croffleCategory;
                       if (selectedCroffle?.name.toLowerCase().includes("mini")) {
                         categoryForPricing = "Mini Croffle";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
+                        categoryForPricing = "Mix & Match";
                       }
                       
                       const espressoType = "Cold Espresso";
@@ -601,36 +614,59 @@ export function ComboSelectionDialog({
               </div>
 
               {espressoProducts.length === 0 && (
-                <div className="text-center py-8 space-y-3">
-                  <p className="text-muted-foreground">No espresso products available</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className="gap-2"
-                  >
-                    {isRefreshing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-4 w-4" />
-                    )}
-                    Refresh
-                  </Button>
+                <div className="text-center py-8 space-y-4">
+                  <div className="text-4xl">☕</div>
+                  <div>
+                    <p className="text-muted-foreground font-medium">No espresso products available</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Missing: Americano, Cafe Latte, Caramel Latte and other espresso drinks
+                    </p>
+                  </div>
+                  <div className="flex gap-2 justify-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleRefresh}
+                      disabled={isRefreshing}
+                      className="gap-2"
+                    >
+                      {isRefreshing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      Retry Loading
+                    </Button>
+                  </div>
+                  <div className="text-xs text-muted-foreground bg-muted/50 rounded p-3 max-w-md mx-auto">
+                    <p className="font-medium mb-1">Debug Info:</p>
+                    <p>Categories found: {categories.length}</p>
+                    <p>Products loaded: {products.length}</p>
+                    <p>Espresso category exists: {categories.some(c => c.name === "Espresso") ? "Yes" : "No"}</p>
+                  </div>
                 </div>
               )}
-            </div>
-          )}
+             </div>
+           )}
+          </ScrollArea>
         </div>
 
-        {/* MiniCroffleComboDialog for Mini Croffle */}
+        {/* ProductCustomizationDialog for Mini Croffle and Croffle Overload */}
         {step === "customize" && selectedCroffle && (
-          <MiniCroffleComboDialog
-            open={step === "customize"}
-            onOpenChange={(open) => !open && setStep("croffle")}
+          <ProductCustomizationDialog
+            isOpen={step === "customize"}
+            onClose={() => setStep("croffle")}
             product={selectedCroffle}
-            onNext={handleMiniCroffleNext}
-            onBack={() => setStep("croffle")}
+            addonCategories={addonCategories || []}
+            comboRules={comboRules || []}
+            onAddToCart={(items) => {
+              handleMiniCroffleNext({
+                sauce: '', // These will be handled by the unified dialog
+                toppings: [],
+                price: items[0]?.price || 0,
+                customizedProduct: items[0]?.product || selectedCroffle
+              });
+            }}
           />
         )}
 

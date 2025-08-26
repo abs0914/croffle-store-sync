@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Spinner } from '@/components/ui/spinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Image } from 'lucide-react';
-import { updateProduct } from '@/services/productCatalog/productCatalogService';
+import { unifiedProductService } from '@/services/product/unifiedProductService';
 import { uploadProductImage, deleteProductImage } from '@/services/productCatalog/productImageService';
 import { ProductCatalog } from '@/services/productCatalog/types';
 import { fetchCategories } from '@/services/category/categoryFetch';
@@ -127,20 +127,24 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         imageUrl = await uploadProductImage(selectedFile, product.id);
       }
 
-      const updates: Partial<ProductCatalog> = {
-        product_name: formData.product_name,
+      const updates = {
+        name: formData.product_name,
         description: formData.description || undefined,
         price: formData.price,
-        is_available: formData.is_available,
+        is_active: formData.is_available,
         display_order: formData.display_order,
-        category_id: formData.category_id || null
+        category_id: formData.category_id || null,
+        image_url: imageUrl || undefined
       };
 
-      const success = await updateProduct(product.id, updates);
+      const result = await unifiedProductService.updateProduct(product.id, updates);
       
-      if (success) {
+      if (result.success) {
+        toast.success('Product updated successfully');
         onProductUpdated();
         handleClose();
+      } else {
+        throw new Error(result.error || 'Update failed');
       }
     } catch (error) {
       console.error('Error updating product:', error);

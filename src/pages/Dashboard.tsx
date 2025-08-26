@@ -4,7 +4,8 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { StoreInfo } from "@/components/dashboard/StoreInfo";
 import QuickActions from "@/components/dashboard/QuickActions";
 import DashboardSummary from "@/components/dashboard/DashboardSummary";
-import InventoryAlerts from "@/components/dashboard/InventoryAlerts";
+import EnhancedInventoryAlerts from "@/components/dashboard/EnhancedInventoryAlerts";
+import SalesDataSync from "@/components/dashboard/SalesDataSync";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 
 export default function Dashboard() {
@@ -31,16 +32,21 @@ export default function Dashboard() {
     <div className="container mx-auto p-6 space-y-6">
       <DashboardHeader />
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <DashboardSummary storeId={currentStore.id} />
-          <QuickActions />
-        </div>
+
+      <div className="space-y-4">
         
-        <div className="space-y-6">
-          <StoreInfo />
-          <InventoryAlerts storeId={currentStore.id} />
-          <RecentTransactions storeId={currentStore.id} />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
+            <DashboardSummary storeId={currentStore.id} />
+            <QuickActions />
+          </div>
+          
+          <div className="space-y-6">
+            <StoreInfo />
+            <EnhancedInventoryAlerts storeId={currentStore.id} />
+            <SalesDataSync storeId={currentStore.id} />
+            <RecentTransactions storeId={currentStore.id} />
+          </div>
         </div>
       </div>
     </div>

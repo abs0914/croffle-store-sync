@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Search, 
   Package, 
@@ -23,6 +24,7 @@ import { formatCurrency } from '@/utils/format';
 import { fetchProductCatalog, updateProduct } from '@/services/productCatalog/productCatalogService';
 import { ProductCatalog } from '@/services/productCatalog/types';
 import { EditProductDialog } from '@/pages/ProductCatalog/components/EditProductDialog';
+import { EnhancedProductListView } from './EnhancedProductListView';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
@@ -38,6 +40,7 @@ interface StoreCatalogTabProps {
 export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
   const { user, hasPermission } = useAuth();
   const queryClient = useQueryClient();
+  // Removed viewMode state - using Enhanced List View only
   const [searchTerm, setSearchTerm] = useState('');
   const [showUnavailableOnly, setShowUnavailableOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -140,8 +143,6 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
     setShowEditDialog(true);
   };
 
-
-
   const handleEditDialogClose = () => {
     setShowEditDialog(false);
     setSelectedProduct(null);
@@ -160,9 +161,18 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
       return result;
     },
     {
-      onSuccess: () => {
+      onSuccess: async () => {
         setEditingProduct(null);
         toast.success('Price updated successfully');
+        
+        // Notify POS to refresh product data
+        try {
+          const { priceRefreshService } = await import('@/services/pos/priceRefreshService');
+          priceRefreshService.triggerRefresh();
+          console.log('🔄 Triggered POS price refresh after catalog update');
+        } catch (error) {
+          console.error('Failed to trigger POS refresh:', error);
+        }
       },
       onError: (error) => {
         console.error('Error updating price:', error);
@@ -214,8 +224,6 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
     };
   };
 
-
-
   const availableCount = products.filter(p => p.is_available).length;
   const lowStockCount = 0; // Not applicable for product catalog
   const unavailableCount = products.filter(p => !p.is_available).length;
@@ -242,199 +250,8 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-blue-600" />
-              <div className="text-sm text-muted-foreground">Total Products</div>
-            </div>
-            <div className="text-2xl font-bold">{products.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <div className="text-sm text-muted-foreground">Available</div>
-            </div>
-            <div className="text-2xl font-bold">{availableCount}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <div className="text-sm text-muted-foreground">Unavailable</div>
-            </div>
-            <div className="text-2xl font-bold">{unavailableCount}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">₱</span>
-              <div className="text-sm text-muted-foreground">Avg Price</div>
-            </div>
-            <div className="text-2xl font-bold">{formatCurrency(avgPrice)}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex gap-4 items-center flex-wrap">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-[180px]">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <SelectValue placeholder="All Categories" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <Button
-          variant={showUnavailableOnly ? "default" : "outline"}
-          onClick={() => setShowUnavailableOnly(!showUnavailableOnly)}
-          size="sm"
-        >
-          Unavailable Only
-        </Button>
-        <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['product-catalog', storeId] })} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
-
-      {/* Products Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-        {filteredProducts.map((product) => (
-          <Card key={product.id} className="overflow-hidden">
-            <div className="aspect-square bg-muted relative">
-              {product.image_url ? (
-                <img
-                  src={product.image_url}
-                  alt={product.product_name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <Package className="h-8 w-8 text-muted-foreground" />
-                </div>
-              )}
-              <div className="absolute top-1 right-1">
-                {getAvailabilityIcon(product.is_available)}
-              </div>
-            </div>
-            
-            <CardContent className="p-2">
-              <div className="space-y-1">
-                <div className="flex items-start justify-between">
-                  <h3 className="text-sm font-medium line-clamp-1">{product.product_name}</h3>
-                </div>
-                
-                <p className="text-xs text-muted-foreground line-clamp-1">
-                  {product.description}
-                </p>
-                
-                <Badge variant="outline" className="text-xs h-5 text-[10px]">
-                  {getCategoryName(product.category_id)}
-                </Badge>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <div className="text-sm font-bold text-green-600">
-                      {formatCurrency(product.price || 0)}
-                    </div>
-                    {canEditPrices && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditPrice(product)}
-                        className="h-5 w-5 p-0"
-                      >
-                        <Edit3 className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                  <Badge variant={product.recipe_id ? 'secondary' : 'outline'} className="text-[10px] h-4">
-                    {product.recipe_id ? 'Recipe' : 'Direct'}
-                  </Badge>
-                </div>
-
-                {product.ingredients && product.ingredients.length > 0 && (
-                  <div className="text-[10px] text-muted-foreground">
-                    Ingredients: {product.ingredients.length}
-                  </div>
-                )}
-                
-                <div className="flex gap-1">
-                  <Button
-                    onClick={() => handleEditProduct(product)}
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 h-6 text-xs"
-                  >
-                    <Pen className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    onClick={() => handleToggleAvailability(product.id, product.is_available || false)}
-                    variant={product.is_available ? "outline" : "default"}
-                    size="sm"
-                    className="flex-1 h-6 text-xs"
-                  >
-                    {product.is_available ? (
-                      <>
-                        <EyeOff className="h-3 w-3 mr-1" />
-                        Hide
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="h-3 w-3 mr-1" />
-                        Show
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredProducts.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Products Found</h3>
-            <p className="text-muted-foreground">
-              {searchTerm ? 'Try adjusting your search terms.' : 'No products have been deployed to this store yet.'}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Product Catalog - Enhanced View Only */}
+      <EnhancedProductListView storeId={storeId} />
 
       {/* Price Edit Dialog */}
       <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>

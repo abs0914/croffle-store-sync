@@ -240,10 +240,10 @@ export class BIREJournalService {
         auditTrail: auditLogs,
         generatedAt: new Date().toISOString(),
         birCompliance: {
-          nonResettableGrandTotal: cumulativeSales?.grand_total_sales || 0,
-          totalTransactions: cumulativeSales?.grand_total_transactions || 0,
-          lastTransactionDate: cumulativeSales?.last_transaction_date,
-          lastReceiptNumber: cumulativeSales?.last_receipt_number
+          nonResettableGrandTotal: cumulativeSales?.grandTotalSales || 0,
+          totalTransactions: cumulativeSales?.grandTotalTransactions || 0,
+          lastTransactionDate: cumulativeSales?.lastTransactionDate,
+          lastReceiptNumber: cumulativeSales?.lastReceiptNumber
         }
       };
     } catch (error) {

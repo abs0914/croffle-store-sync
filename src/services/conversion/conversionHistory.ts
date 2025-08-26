@@ -35,7 +35,7 @@ export const fetchAvailableRawMaterials = async (): Promise<CommissaryInventoryI
     const { data, error } = await supabase
       .from('commissary_inventory')
       .select('*')
-      .in('item_type', ['raw_material', 'supply'])
+      .eq('item_type', 'raw_material')
       .eq('is_active', true)
       .gt('current_stock', 0)
       .order('name');

@@ -46,7 +46,7 @@ export const createAppUser = async (data: AppUserFormData): Promise<AppUser | nu
         last_name: data.lastName,
         email: data.email,
         contact_number: data.contactNumber,
-        role: data.role,
+        role: data.role as any,
         store_ids: storeIds,
         is_active: data.isActive,
         custom_permissions: data.customPermissions || null
@@ -117,7 +117,7 @@ export const updateAppUser = async (data: AppUserFormData): Promise<AppUser | nu
         last_name: data.lastName,
         email: data.email,
         contact_number: data.contactNumber,
-        role: data.role,
+        role: data.role as any,
         store_ids: data.storeIds,
         is_active: data.isActive,
         custom_permissions: data.customPermissions || null

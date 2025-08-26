@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
@@ -17,7 +18,11 @@ import {
   TrendingUp,
   DollarSign,
   Users,
-  Rocket
+  Rocket,
+  Filter,
+  FileBarChart,
+  Download,
+  BookOpen
 } from 'lucide-react';
 import { 
   fetchRecipeTemplates,
@@ -25,22 +30,31 @@ import {
   deleteRecipeTemplate,
   RecipeTemplateWithMetrics
 } from '@/services/recipeManagement/recipeTemplateService';
+import { fetchCategories } from '@/services/category/categoryFetch';
+import { Category } from '@/types';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
+import { RecipeAuditDialog } from '@/components/Admin/RecipeAuditDialog';
+import { MasterRecipeImportDialog } from '@/components/Admin/recipe/MasterRecipeImportDialog';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
 export const RecipeManagementTab: React.FC = () => {
   const [templates, setTemplates] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeployDialog, setShowDeployDialog] = useState(false);
+  const [showAuditDialog, setShowAuditDialog] = useState(false);
+  const [showMasterImport, setShowMasterImport] = useState(false);
 
   useEffect(() => {
     loadTemplates();
+    loadCategories();
   }, []);
 
   const loadTemplates = async () => {
@@ -54,6 +68,34 @@ export const RecipeManagementTab: React.FC = () => {
       toast.error('Failed to load recipe templates');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      // Get all unique categories from templates since this is admin view
+      const data = await fetchRecipeTemplates();
+      const uniqueCategories = new Set<string>();
+      
+      data?.forEach(template => {
+        if (template.category_name) {
+          uniqueCategories.add(template.category_name);
+        }
+      });
+
+      // Convert to Category objects for consistency
+      const categoryList: Category[] = Array.from(uniqueCategories).map(name => ({
+        id: name.toLowerCase().replace(/\s+/g, '_'),
+        name,
+        is_active: true,
+        isActive: true,
+        store_id: '',
+        storeId: ''
+      }));
+
+      setCategories(categoryList);
+    } catch (error) {
+      console.error('Error loading categories:', error);
     }
   };
 
@@ -115,10 +157,17 @@ export const RecipeManagementTab: React.FC = () => {
     }
   };
 
-  const filteredTemplates = templates.filter(template =>
-    template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (template.description && template.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredTemplates = templates.filter(template => {
+    // Search filter
+    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (template.description && template.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    // Category filter
+    const matchesCategory = selectedCategory === 'all' || 
+      template.category_name === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
 
   if (loading) {
     return (
@@ -138,104 +187,132 @@ export const RecipeManagementTab: React.FC = () => {
             Create and manage recipe templates for deployment to stores
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Template
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setShowMasterImport(true)}>
+            <BookOpen className="h-4 w-4 mr-2" />
+            Import Master Recipes
+          </Button>
+          <Button variant="outline" onClick={() => setShowAuditDialog(true)}>
+            <FileBarChart className="h-4 w-4 mr-2" />
+            Audit & Sync
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Template
+          </Button>
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search templates..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and Filter */}
+      <div className="flex gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search templates..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-48">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Filter by category" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover border border-border shadow-md z-50">
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map(category => (
+              <SelectItem key={category.id} value={category.name}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTemplates.map((template) => (
-          <Card key={template.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">{template.name}</CardTitle>
-                <Badge variant="secondary">
-                  v{template.version || 1}
-                </Badge>
-              </div>
-              {template.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {template.description}
-                </p>
-              )}
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              {/* Basic Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-blue-600">
-                    {template.yield_quantity || 0}
+      {/* Templates List */}
+      <Card>
+        <CardContent className="p-0">
+          <div className="space-y-0">
+            {filteredTemplates.map((template, index) => (
+              <div 
+                key={template.id} 
+                className={`flex items-center justify-between p-4 hover:bg-muted/50 transition-colors ${
+                  index !== filteredTemplates.length - 1 ? 'border-b' : ''
+                }`}
+              >
+                {/* Template Info */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h3 className="font-semibold text-lg">{template.name}</h3>
+                    <Badge variant="secondary" className="text-xs">
+                      v{template.version || 1}
+                    </Badge>
+                    {template.category_name && (
+                      <Badge variant="outline" className="text-xs">
+                        {template.category_name}
+                      </Badge>
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground">Yield</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-green-600">
-                    {template.ingredients?.length || 0}
+                  {template.description && (
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {template.description}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <Badge variant="destructive" className="text-xs">
+                      {template.ingredients?.length || 0} ingredients
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      Yield: {template.yield_quantity || 1}
+                    </span>
                   </div>
-                  <div className="text-xs text-muted-foreground">Ingredients</div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleDeploy(template)}
+                    className="h-8 w-8 p-0"
+                    title="Deploy"
+                  >
+                    <Rocket className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEdit(template)}
+                    className="h-8 w-8 p-0"
+                    title="Edit"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleDuplicate(template)}
+                    className="h-8 w-8 p-0"
+                    title="Duplicate"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleDelete(template.id)}
+                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-
-              {/* Category */}
-              {template.category_name && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Category</span>
-                  <Badge variant="outline">
-                    {template.category_name}
-                  </Badge>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleDeploy(template)}
-                >
-                  <Rocket className="h-4 w-4 mr-1" />
-                  Deploy
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleEdit(template)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleDuplicate(template)}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleDelete(template.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {filteredTemplates.length === 0 && (
         <div className="text-center py-12">
@@ -287,6 +364,22 @@ export const RecipeManagementTab: React.FC = () => {
         onSuccess={() => {
           setShowDeployDialog(false);
           setSelectedTemplate(null);
+          loadTemplates();
+        }}
+      />
+
+      {/* Recipe Audit Dialog */}
+      <RecipeAuditDialog
+        isOpen={showAuditDialog}
+        onClose={() => setShowAuditDialog(false)}
+      />
+
+      {/* Master Recipe Import Dialog */}
+      <MasterRecipeImportDialog
+        isOpen={showMasterImport}
+        onClose={() => setShowMasterImport(false)}
+        onSuccess={() => {
+          setShowMasterImport(false);
           loadTemplates();
         }}
       />

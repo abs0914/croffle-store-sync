@@ -1,22 +1,52 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { CalendarIcon, Camera, Clock, DollarSign, TrendingUp, Users } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { useStore } from "@/contexts/StoreContext";
+import { useShift } from "@/contexts/shift";
 import { fetchCashierShiftReport, CashierDailyReport } from "@/services/reports/cashierShiftReportService";
 import { formatCurrency } from "@/utils/format";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { ShiftTransactionsTab } from "@/components/pos/void/ShiftTransactionsTab";
 
-export default function CashierShiftReportView() {
+interface CashierShiftReportViewProps {
+  dateRange?: {
+    from: Date | undefined;
+    to: Date | undefined;
+  };
+}
+
+export default function CashierShiftReportView({ dateRange: propDateRange }: CashierShiftReportViewProps) {
   const { user } = useAuth();
   const { currentStore } = useStore();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const { currentShift } = useShift();
+  const [activeTab, setActiveTab] = useState("overview");
+  
+  // Use the dateRange from props if available, otherwise default to yesterday
+  const getInitialDate = () => {
+    if (propDateRange?.from) {
+      return propDateRange.from;
+    }
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday;
+  };
+  
+  const [selectedDate, setSelectedDate] = useState<Date>(getInitialDate);
+
+  // Update selectedDate when propDateRange changes
+  useEffect(() => {
+    if (propDateRange?.from) {
+      setSelectedDate(propDateRange.from);
+    }
+  }, [propDateRange?.from]);
 
   const { data: reportData, isLoading, error } = useQuery({
     queryKey: ["cashier-shift-report", user?.id, currentStore?.id, selectedDate],
@@ -72,12 +102,12 @@ export default function CashierShiftReportView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h2 className="text-2xl font-bold">My Daily Shift Report</h2>
         
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
+            <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal">
               <CalendarIcon className="mr-2 h-4 w-4" />
               {format(selectedDate, "PPP")}
             </Button>
@@ -93,7 +123,14 @@ export default function CashierShiftReportView() {
         </Popover>
       </div>
 
-      {/* Key Metrics */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="w-full mb-4 flex flex-wrap">
+          <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
+          <TabsTrigger value="void-transactions" className="flex-1">Void Orders</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          {/* Original report content */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
@@ -207,39 +244,107 @@ export default function CashierShiftReportView() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <DollarSign className="h-5 w-5 mr-2" />
-              Payment Breakdown
+              Sales Summary
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <div className="flex justify-between">
               <span className="font-medium">Cash Sales:</span>
               <span>{formatCurrency(sales.cashSales)}</span>
             </div>
             
             <div className="flex justify-between">
-              <span className="font-medium">Card/Digital Sales:</span>
+              <span className="font-medium">Card Sales:</span>
               <span>{formatCurrency(sales.cardSales)}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="font-medium">GCash Sales:</span>
+              <span>{formatCurrency(sales.gcashSales)}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="font-medium">Discounts:</span>
+              <span className="text-red-600">-{formatCurrency(sales.discountAmount)}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="font-medium">Refunds:</span>
+              <span className="text-red-600">-{formatCurrency(sales.refundAmount)}</span>
             </div>
             
             <div className="flex justify-between border-t pt-2">
               <span className="font-medium">Total Sales:</span>
               <span className="font-bold">{formatCurrency(sales.totalSales)}</span>
             </div>
-
-            <div className="flex justify-between">
-              <span className="font-medium">Expected Cash:</span>
-              <span>{formatCurrency(shift.startingCash + sales.cashSales)}</span>
-            </div>
-
-            {shift.endingCash !== null && (
-              <div className="flex justify-between">
-                <span className="font-medium">Actual Cash:</span>
-                <span>{formatCurrency(shift.endingCash)}</span>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Cash Drawer Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <DollarSign className="h-5 w-5 mr-2" />
+            Cash Drawer Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="font-medium">Starting Cash:</span>
+                <span>{formatCurrency(shift.startingCash)}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="font-medium">Cash Sales:</span>
+                <span>{formatCurrency(sales.cashSales)}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="font-medium">Paid In:</span>
+                <span className="text-green-600">+{formatCurrency(sales.paidInAmount)}</span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="font-medium">Paid Out:</span>
+                <span className="text-red-600">-{formatCurrency(sales.paidOutAmount)}</span>
+              </div>
+
+              <div className="flex justify-between border-t pt-2">
+                <span className="font-medium">Expected Cash:</span>
+                <span className="font-bold">{formatCurrency(shift.startingCash + sales.cashSales + sales.paidInAmount - sales.paidOutAmount)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {shift.endingCash !== null && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Actual Cash:</span>
+                    <span>{formatCurrency(shift.endingCash)}</span>
+                  </div>
+
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="font-medium">Cash Variance:</span>
+                    <span className={`font-bold ${cashVariance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {cashVariance >= 0 ? '+' : ''}{formatCurrency(cashVariance)}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {previousShiftEndingCash !== null && (
+                <div className="flex justify-between">
+                  <span className="font-medium">Previous Shift End:</span>
+                  <span>{formatCurrency(previousShiftEndingCash)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Hourly Sales Chart */}
       <Card>
@@ -304,6 +409,24 @@ export default function CashierShiftReportView() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+
+        <TabsContent value="void-transactions">
+          {currentShift && currentStore ? (
+            <ShiftTransactionsTab 
+              shiftId={currentShift.id} 
+              storeId={currentStore.id} 
+            />
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No active shift found.</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                You need an active shift to view and void transactions.
+              </p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

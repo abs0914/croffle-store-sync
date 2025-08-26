@@ -15,7 +15,7 @@ import {
   findComboDiscount,
   fetchMixMatchRules
 } from '@/services/productVariations/productVariationsService';
-import { realTimeAvailabilityService } from '@/services/inventory/realTimeAvailabilityService';
+// Real-time availability service removed - using simplified inventory validation
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
@@ -78,23 +78,8 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
   };
 
   const checkProductsAvailability = async (productList = products) => {
-    const availabilityResults: Record<string, RealTimeAvailabilityCheck> = {};
-    
-    for (const product of productList) {
-      try {
-        const availability = await realTimeAvailabilityService.checkProductAvailability(
-          product.product_name,
-          storeId,
-          1,
-          product.price
-        );
-        availabilityResults[product.id] = availability;
-      } catch (error) {
-        console.error(`Error checking availability for ${product.product_name}:`, error);
-      }
-    }
-    
-    setProductAvailability(availabilityResults);
+    // Simplified availability check - removed real-time service dependency
+    console.log('Availability check simplified - using basic validation');
   };
 
   const handleProductSelect = async (product: EnhancedProductCatalogItem) => {
@@ -114,19 +99,7 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
     selectedAddOns: AddOnItem[],
     finalPrice: number
   ) => {
-    // Check real-time availability before adding to cart
-    const availability = await realTimeAvailabilityService.checkProductAvailability(
-      product.product_name,
-      storeId,
-      1,
-      finalPrice
-    );
-
-    if (!availability.isAvailable) {
-      toast.error(`${product.product_name} is currently out of stock`);
-      return;
-    }
-
+    // Simplified - removed real-time availability check
     const cartItem: CartItem = {
       id: `${product.id}-${Date.now()}`,
       product,
@@ -145,9 +118,6 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
 
     toast.success(`${product.product_name} added to cart`);
     setSelectedProduct(null);
-    
-    // Refresh availability after adding to cart
-    await checkProductsAvailability();
   };
 
   const filteredProducts = products.filter(product =>

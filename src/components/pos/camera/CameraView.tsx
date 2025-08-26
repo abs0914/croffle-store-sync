@@ -52,11 +52,11 @@ export default function CameraView({
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
       <div className="w-full h-full flex items-center justify-center">
-        {/* Using 3:4 aspect ratio to make it taller for better face visibility */}
-        <AspectRatio ratio={3/4} className="w-full max-h-full">
+        {/* Using 9:16 aspect ratio for mobile portrait orientation */}
+        <AspectRatio ratio={9/16} className="w-full max-h-full">
           <video 
             ref={videoRef}
-            className="w-full h-full object-cover transform scale-90" /* Scale down to 90% to "zoom out" slightly */
+            className="w-full h-full object-contain" 
             autoPlay
             playsInline
             muted

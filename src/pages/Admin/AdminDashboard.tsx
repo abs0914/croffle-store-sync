@@ -14,11 +14,14 @@ import {
   TrendingDown,
   AlertTriangle,
   Building2,
-  Handshake
+  Handshake,
+  Wrench
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/utils/format';
+import { ProductIntegrityDashboard } from '@/components/Admin/ProductIntegrityDashboard';
+import { ProductTemplateAssociationDashboard } from '@/components/Admin/ProductTemplateAssociationDashboard';
 
 interface StoreMetrics {
   totalStores: number;
@@ -433,6 +436,12 @@ export default function AdminDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Product Catalog Integrity */}
+      <ProductIntegrityDashboard />
+
+      {/* Product Template Associations */}
+      <ProductTemplateAssociationDashboard />
 
       {/* Quick Actions */}
       <Card>

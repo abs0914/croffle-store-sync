@@ -136,6 +136,8 @@ export const useInventoryStockMutations = (
       updates: {
         item: stockItem.item,
         unit: stockItem.unit,
+        cost: stockItem.cost,
+        item_category: stockItem.item_category,
         is_active: stockItem.is_active
       }
     });

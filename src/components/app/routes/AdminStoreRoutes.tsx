@@ -6,6 +6,7 @@ import AdminStores from "@/pages/Admin/AdminStores";
 import AdminStoreForm from "@/pages/Admin/components/AdminStoreForm";
 import AdminStoreQR from "@/pages/Admin/components/AdminStoreQR";
 import AdminStoreSettings from "@/pages/Admin/components/AdminStoreSettings";
+import { StoreStandardizationManager } from "@/components/admin/StoreStandardizationManager";
 
 export function AdminStoreRoutes() {
   console.log('🔵 AdminStoreRoutes component loading...');
@@ -52,6 +53,13 @@ export function AdminStoreRoutes() {
         <AdminProtectedRoute>
           <AdminLayout>
             <AdminStoreSettings />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+      <Route path="/admin/stores/standardization" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <StoreStandardizationManager />
           </AdminLayout>
         </AdminProtectedRoute>
       } />

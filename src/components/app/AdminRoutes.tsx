@@ -4,12 +4,13 @@ import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import AdminDashboard from "@/pages/Admin/AdminDashboard";
 import AdminStores from "@/pages/Admin/AdminStores";
-import AdminRecipes from "@/pages/Admin/AdminRecipes";
+
 import AdminCustomers from "@/pages/Admin/AdminCustomers";
 import AdminReports from "@/pages/Admin/AdminReports";
 import AdminExpenses from "@/pages/Admin/AdminExpenses";
 import AdminOrders from "@/pages/Admin/AdminOrders";
 import CommissaryManagement from "@/pages/Commissary/CommissaryManagement";
+import { AddOnsPage } from "@/pages/Admin/AddOnsPage";
 
 // Import modular route components
 import { AdminInventoryRoutes } from "./routes/AdminInventoryRoutes";
@@ -31,13 +32,6 @@ export function AdminRoutes() {
       } />
       
       
-      <Route path="/admin/recipes" element={
-        <AdminProtectedRoute>
-          <AdminLayout>
-            <AdminRecipes />
-          </AdminLayout>
-        </AdminProtectedRoute>
-      } />
       
       <Route path="/admin/customers" element={
         <AdminProtectedRoute>
@@ -77,6 +71,14 @@ export function AdminRoutes() {
         <AdminProtectedRoute>
           <AdminLayout>
             <CommissaryManagement />
+          </AdminLayout>
+        </AdminProtectedRoute>
+      } />
+
+      <Route path="/admin/add-ons" element={
+        <AdminProtectedRoute>
+          <AdminLayout>
+            <AddOnsPage />
           </AdminLayout>
         </AdminProtectedRoute>
       } />

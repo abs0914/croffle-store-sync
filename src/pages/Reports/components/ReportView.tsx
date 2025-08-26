@@ -27,7 +27,7 @@ interface ReportViewProps {
 export function ReportView({ reportType, data, storeId, selectedStoreId, isAllStores, dateRange }: ReportViewProps) {
   switch (reportType) {
     case 'sales':
-      return <SalesReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
+      return <SalesReportView data={data} dateRange={dateRange} isAllStores={isAllStores} storeId={selectedStoreId} />;
     case 'expense':
       return <ExpenseReportView data={data} dateRange={dateRange} isAllStores={isAllStores} storeId={storeId} selectedStoreId={selectedStoreId} />;
     case 'profit_loss':
@@ -51,7 +51,7 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
         dateRange={dateRange} 
       />;
     case 'daily_shift':
-      return <CashierShiftReportView />;
+      return <CashierShiftReportView dateRange={dateRange} />;
     case 'inventory_status':
       return <CashierInventoryReportView />;
     default:

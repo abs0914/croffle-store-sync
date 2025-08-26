@@ -37,19 +37,29 @@ export function useDashboardStats() {
         // Get today's date and format it
         const today = format(new Date(), "yyyy-MM-dd");
         
-        // Fetch today's sales
-        const { data: salesData, error: salesError } = await supabase
-          .from("transactions")
-          .select("total")
+        // First try to get data from store_metrics (real sales data)
+        const { data: metricsData } = await supabase
+          .from("store_metrics")
+          .select("total_sales, total_orders")
           .eq("store_id", currentStore.id)
-          .eq("status", "completed")
-          .gte("created_at", `${today}T00:00:00`)
-          .lte("created_at", `${today}T23:59:59`);
+          .eq("metric_date", today)
+          .single();
+
+        // Fallback to transaction data if metrics not available
+        let dailySales = metricsData?.total_sales || 0;
         
-        if (salesError) throw salesError;
-        
-        // Calculate total sales for today
-        const dailySales = salesData?.reduce((sum, tx) => sum + (tx.total || 0), 0) || 0;
+        if (!metricsData) {
+          const { data: salesData, error: salesError } = await supabase
+            .from("transactions")
+            .select("total")
+            .eq("store_id", currentStore.id)
+            .eq("status", "completed")
+            .gte("created_at", `${today}T00:00:00`)
+            .lte("created_at", `${today}T23:59:59`);
+          
+          if (salesError) throw salesError;
+          dailySales = salesData?.reduce((sum, tx) => sum + (tx.total || 0), 0) || 0;
+        }
         
         // Fetch active product count
         const { count: productsCount, error: productsError } = await supabase

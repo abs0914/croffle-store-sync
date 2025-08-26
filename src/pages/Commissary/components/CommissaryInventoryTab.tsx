@@ -12,6 +12,7 @@ import { AddCommissaryItemDialog } from "@/pages/Inventory/components/AddCommiss
 import { InventoryItemCard } from "@/pages/CommissaryInventory/components/InventoryItemCard";
 import { EditCommissaryItemDialog } from "@/pages/Inventory/components/EditCommissaryItemDialog";
 import { StockAdjustmentDialog } from "@/pages/CommissaryInventory/components/StockAdjustmentDialog";
+import { DeleteCommissaryItemDialog } from "@/components/commissary/DeleteCommissaryItemDialog";
 import { deleteCommissaryInventoryItem } from "@/services/inventoryManagement/commissaryInventoryService";
 import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
 import { CommissaryInventoryFiltersComponent } from "@/pages/CommissaryInventory/components/CommissaryInventoryFilters";
@@ -46,8 +47,10 @@ export function CommissaryInventoryTab() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showStockDialog, setShowStockDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editItem, setEditItem] = useState<CommissaryInventoryItem | null>(null);
   const [adjustItem, setAdjustItem] = useState<CommissaryInventoryItem | null>(null);
+  const [deleteItem, setDeleteItem] = useState<CommissaryInventoryItem | null>(null);
 
   // Filter items based on current filters
   const getFilteredItems = () => {
@@ -159,15 +162,15 @@ export function CommissaryInventoryTab() {
     setShowStockDialog(true);
   };
 
-  const handleDelete = async (item: CommissaryInventoryItem) => {
-    if (!window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
-      return;
-    }
+  const handleDelete = (item: CommissaryInventoryItem) => {
+    setDeleteItem(item);
+    setShowDeleteDialog(true);
+  };
 
-    const success = await handleDeleteItem(item.id);
-    if (success) {
-      await loadData();
-    }
+  const handleDeleteSuccess = () => {
+    loadData();
+    setShowDeleteDialog(false);
+    setDeleteItem(null);
   };
 
   const handleAddSuccess = () => {
@@ -335,6 +338,13 @@ export function CommissaryInventoryTab() {
         onOpenChange={setShowStockDialog}
         item={adjustItem}
         onSuccess={handleAdjustSuccess}
+      />
+      
+      <DeleteCommissaryItemDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        item={deleteItem}
+        onSuccess={handleDeleteSuccess}
       />
     </div>
   );

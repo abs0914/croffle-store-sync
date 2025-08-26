@@ -2,7 +2,7 @@
 import React from "react";
 import { Category } from "@/types";
 import { Button } from "@/components/ui/button";
-import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
+import { shouldDisplayCategoryInPOS, sortCategoriesForPOS } from "@/utils/categoryOrdering";
 
 interface ProductCategoryTabsProps {
   categories: Category[];
@@ -17,11 +17,14 @@ export default function ProductCategoryTabs({
   setActiveCategory,
   onCategorySelect
 }: ProductCategoryTabsProps) {
-  // Filter out categories that shouldn't appear in main menu, but include Combo
-  // Note: Categories are already sorted by the categoryFetch service
+  // Filter out inactive categories and categories that shouldn't appear in main menu
   const filteredCategories = categories.filter(category =>
-    shouldDisplayCategoryInPOS(category.name) || category.name === "Combo"
+    category.is_active && 
+    (shouldDisplayCategoryInPOS(category.name) || category.name === "Combo")
   );
+
+  // Sort categories using custom POS ordering
+  const sortedCategories = sortCategoriesForPOS(filteredCategories);
 
   const handleCategoryClick = (categoryId: string) => {
     if (onCategorySelect) {
@@ -41,7 +44,7 @@ export default function ProductCategoryTabs({
       >
         All Items
       </Button>
-      {filteredCategories.map(category => (
+      {sortedCategories.map(category => (
         <Button
           key={category.id}
           onClick={() => handleCategoryClick(category.id)}

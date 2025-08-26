@@ -8,9 +8,10 @@ export interface SeniorDiscount {
 }
 
 export interface OtherDiscount {
-  type: 'pwd' | 'employee' | 'loyalty' | 'promo';
+  type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary';
   amount: number;
   idNumber?: string;
+  justification?: string;
 }
 
 export interface CartCalculations {
@@ -54,8 +55,18 @@ export class CartCalculationService {
     otherDiscount?: OtherDiscount | null,
     totalDiners: number = 1
   ): CartCalculations {
+    console.log("🧮 CartCalculationService: Starting calculation", {
+      itemsCount: items.length,
+      items: items.map(i => ({ price: i.price, qty: i.quantity, total: i.price * i.quantity })),
+      seniorDiscountsCount: seniorDiscounts.length,
+      otherDiscount,
+      totalDiners
+    });
+    
     // Basic calculations - amounts are VAT-inclusive (standard POS behavior)
     const grossSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    console.log("🧮 CartCalculationService: Gross subtotal calculated", grossSubtotal);
     
     const numberOfSeniors = seniorDiscounts.length;
     const effectiveTotalDiners = Math.max(totalDiners, numberOfSeniors);
@@ -114,6 +125,9 @@ export class CartCalculationService {
         case 'promo':
           otherDiscountAmount = otherDiscount.amount;
           break;
+        case 'complimentary':
+          otherDiscountAmount = discountSubtotal; // 100% discount
+          break;
       }
     }
     
@@ -123,7 +137,7 @@ export class CartCalculationService {
     const totalDiscountAmount = seniorDiscountAmount + otherDiscountAmount;
     const finalTotal = grossSubtotal - vatExemption - seniorDiscountAmount - otherDiscountAmount;
     
-    return {
+    const result = {
       grossSubtotal,
       netAmount,
       standardVAT,
@@ -139,6 +153,9 @@ export class CartCalculationService {
       totalDiners: effectiveTotalDiners,
       numberOfSeniors
     };
+    
+    console.log("🧮 CartCalculationService: Final result", result);
+    return result;
   }
 
   static distributeSeniorDiscounts(

@@ -59,7 +59,7 @@ export function InventoryItemCard({ item, onEdit, onStockAdjustment, onDelete }:
               {item.unit_cost && (
                 <div>
                   <p className="text-muted-foreground">Unit Cost</p>
-                  <p className="font-medium">₱{item.unit_cost.toFixed(2)}</p>
+                  <p className="font-medium">₱{item.unit_cost.toFixed(2)} per {item.uom}</p>
                 </div>
               )}
               {item.sku && (

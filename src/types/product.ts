@@ -27,6 +27,8 @@ export interface Product {
   inventory_stock_id?: string | null; // for direct inventory products
   selling_quantity?: number; // how many inventory units per product sale
   product_type?: 'recipe' | 'direct'; // product type indicator
+  // Availability tracking from automatic service
+  is_available?: boolean; // availability based on ingredient validation
   // Legacy/compatibility properties
   barcode?: string;
   cost?: number;

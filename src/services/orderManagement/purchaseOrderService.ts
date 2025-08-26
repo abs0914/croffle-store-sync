@@ -46,17 +46,10 @@ export const fetchPurchaseOrders = async (storeId: string): Promise<PurchaseOrde
 
 export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): Promise<PurchaseOrder | null> => {
   try {
-    // Generate order number
-    const orderNumber = `PO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    console.log('Creating purchase order with order number:', orderNumber);
-    console.log('Order data:', orderData);
-    
     // Create purchase order
     const { data: purchaseOrder, error: orderError } = await supabase
       .from('purchase_orders')
       .insert({
-        order_number: orderNumber,
         store_id: orderData.store_id,
         created_by: orderData.created_by,
         status: orderData.status,
@@ -65,7 +58,7 @@ export const createPurchaseOrder = async (orderData: CreatePurchaseOrderData): P
         delivery_scheduled_date: orderData.delivery_scheduled_date,
         delivery_notes: orderData.delivery_notes,
         notes: orderData.notes
-      })
+      } as any)
       .select()
       .single();
 

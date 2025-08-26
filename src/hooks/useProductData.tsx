@@ -7,6 +7,12 @@ export function useProductData(storeId: string | null) {
   // Fetch base product data
   const { products, categories, isLoading, error } = useProductFetch(storeId);
   
+  // Filter out products without valid recipe templates for inventory sync
+  const validProducts = products.filter(product => {
+    // Only include products that have recipe_id (indicating proper template association)
+    return product.recipe_id && product.is_active;
+  });
+  
   // Filter functionality with search term and category filter
   const { 
     searchTerm, 
@@ -14,7 +20,7 @@ export function useProductData(storeId: string | null) {
     activeCategory, 
     setActiveCategory, 
     filteredProducts: categoryFilteredProducts 
-  } = useProductFilters(products);
+  } = useProductFilters(validProducts);
   
   // Tab filtering (active, inactive, low-stock)
   const [activeTab, setActiveTab] = useState("all");

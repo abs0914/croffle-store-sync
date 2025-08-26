@@ -102,6 +102,15 @@ export default function CustomerRegisterDialog({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="tin">TIN (Tax Identification Number)</Label>
+            <Input 
+              id="tin"
+              {...register("tin")}
+              placeholder="Optional"
+            />
+          </div>
+
           <div className="flex justify-end gap-2 pt-4">
             <Button 
               type="button"

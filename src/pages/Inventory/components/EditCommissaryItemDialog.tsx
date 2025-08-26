@@ -166,7 +166,10 @@ export function EditCommissaryItemDialog({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="unit_cost">Unit Cost</Label>
+              <Label htmlFor="unit_cost">
+                Purchase Cost (per unit)
+                <span className="text-xs text-muted-foreground ml-1">(Optional)</span>
+              </Label>
               <Input
                 id="unit_cost"
                 type="number"

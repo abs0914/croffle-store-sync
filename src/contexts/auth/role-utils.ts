@@ -14,6 +14,7 @@ export const mapUserRole = (email: string): UserRole => {
   if (email.includes('manager') || email === 'rbsons.north.manager@croffle.com') return 'manager';
   if (email.includes('stock') || email.match(/\.stock@/)) return 'stock_user';
   if (email.includes('production') || email.match(/\.production@/)) return 'production_user';
+  if (email.includes('commissary') || email.match(/\.commissary@/)) return 'commissary_user';
   
   // Specific user mappings
   if (email === 'marasabaras@croffle.com' || email === 'robinsons.north@croffle.com') return 'cashier';
@@ -28,8 +29,9 @@ export const checkPermission = (userRole: UserRole | undefined, requiredRole: Us
   if (!userRole) return false;
   
   const roleHierarchy: Record<UserRole, number> = {
-    admin: 6,
-    owner: 5,
+    admin: 7,
+    owner: 6,
+    commissary_user: 5,
     stock_user: 4,
     manager: 3,
     production_user: 2,
@@ -50,6 +52,7 @@ export const ROUTE_PATHS = {
   
   // Store-Level Routes (Role-based access)
   POS: '/pos',
+  INVOICE: '/invoice', // Invoice page for completed transactions
   PRODUCTS: '/products', // Unified product management for stores
   INVENTORY: '/inventory', // Store inventory management
   ORDER_MANAGEMENT: '/order-management', // Store order management
@@ -72,6 +75,7 @@ export const ROUTE_PATHS = {
   ADMIN_CASHIERS: '/admin/cashiers',
   ADMIN_REPORTS: '/admin/reports',
   ADMIN_EXPENSES: '/admin/expenses',
+  ADMIN_ADDONS: '/admin/add-ons',
   SM_ACCREDITATION_TESTING: '/sm-accreditation-testing'
 } as const;
 
@@ -81,6 +85,7 @@ export const ROUTE_PATHS = {
 const STORE_ROUTES = [
   ROUTE_PATHS.DASHBOARD,
   ROUTE_PATHS.POS,
+  ROUTE_PATHS.INVOICE,
   ROUTE_PATHS.PRODUCTS,
   ROUTE_PATHS.INVENTORY,
   ROUTE_PATHS.ORDER_MANAGEMENT,
@@ -104,6 +109,7 @@ const ADMIN_ROUTES = [
   ROUTE_PATHS.ADMIN_CASHIERS,
   ROUTE_PATHS.ADMIN_REPORTS,
   ROUTE_PATHS.ADMIN_EXPENSES,
+  ROUTE_PATHS.ADMIN_ADDONS,
   ROUTE_PATHS.SM_ACCREDITATION_TESTING
 ];
 
@@ -132,6 +138,12 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
   const roleRoutes: Record<UserRole, string[]> = {
     admin: [...STORE_ROUTES, ...ADMIN_ROUTES], // Admin gets everything
     owner: [...STORE_ROUTES, ...ADMIN_ROUTES], // Owner gets everything
+    commissary_user: [
+      ROUTE_PATHS.DASHBOARD,
+      ROUTE_PATHS.ADMIN_COMMISSARY,
+      ROUTE_PATHS.ADMIN_PRODUCTION,
+      ROUTE_PATHS.ADMIN_ORDER_MANAGEMENT
+    ],
     stock_user: [
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.INVENTORY,
@@ -145,6 +157,7 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
     manager: [
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
+      ROUTE_PATHS.INVOICE,
       ROUTE_PATHS.PRODUCTS,
       ROUTE_PATHS.INVENTORY,
       ROUTE_PATHS.ORDER_MANAGEMENT,
@@ -157,9 +170,11 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
     cashier: [
       ROUTE_PATHS.DASHBOARD,
       ROUTE_PATHS.POS,
+      ROUTE_PATHS.INVOICE,
       ROUTE_PATHS.PRODUCTS,
       ROUTE_PATHS.CUSTOMERS,
-      ROUTE_PATHS.EXPENSES
+      ROUTE_PATHS.EXPENSES,
+      ROUTE_PATHS.REPORTS
     ]
   };
   
@@ -172,10 +187,14 @@ export const checkRouteAccess = (userRole: UserRole | undefined, route: string |
 };
 
 /**
- * Check if a user can access admin panel
+ * Check if a user can access admin panel (updated with new permissions)
  */
 export const canAccessAdminPanel = (userRole: UserRole | undefined): boolean => {
-  return userRole === 'admin' || userRole === 'owner';
+  if (!userRole) return false;
+  
+  // Define roles that can access admin panel (avoiding circular dependency)
+  const adminRoles: UserRole[] = ['admin', 'owner', 'manager', 'stock_user', 'production_user', 'commissary_user'];
+  return adminRoles.includes(userRole);
 };
 
 /**
@@ -193,17 +212,25 @@ export const canAccessRecipeManagement = (userRole: UserRole | undefined): boole
 };
 
 /**
- * Check if a user can access commissary inventory (admin-only)
+ * Check if a user can access commissary inventory (updated with new permissions)
  */
 export const canAccessCommissary = (userRole: UserRole | undefined): boolean => {
-  return userRole === 'admin' || userRole === 'owner';
+  if (!userRole) return false;
+  
+  // Define roles that can access commissary inventory
+  const commissaryRoles: UserRole[] = ['admin', 'owner', 'stock_user', 'production_user', 'commissary_user'];
+  return commissaryRoles.includes(userRole);
 };
 
 /**
- * Check if a user can access production management (admin-only)
+ * Check if a user can access production management (updated with new permissions)
  */
 export const canAccessProduction = (userRole: UserRole | undefined): boolean => {
-  return userRole === 'admin' || userRole === 'owner';
+  if (!userRole) return false;
+  
+  // Define roles that can access production management
+  const productionRoles: UserRole[] = ['admin', 'owner', 'production_user', 'stock_user', 'commissary_user'];
+  return productionRoles.includes(userRole);
 };
 
 /**
@@ -228,6 +255,7 @@ export const getRouteAccessDescription = (route: string): string => {
     [ROUTE_PATHS.ROOT]: 'All authenticated users',
     [ROUTE_PATHS.DASHBOARD]: 'All authenticated users',
     [ROUTE_PATHS.POS]: 'All authenticated users with store access',
+    [ROUTE_PATHS.INVOICE]: 'All authenticated users with store access',
     [ROUTE_PATHS.PRODUCTS]: 'All authenticated users with store access',
     [ROUTE_PATHS.STOCK_ORDERS]: 'Managers and above with store access',
     [ROUTE_PATHS.INVENTORY]: 'Managers and above with store access',
@@ -248,6 +276,7 @@ export const getRouteAccessDescription = (route: string): string => {
     [ROUTE_PATHS.ADMIN_CASHIERS]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_REPORTS]: 'Admin and owner only',
     [ROUTE_PATHS.ADMIN_EXPENSES]: 'Admin and owner only',
+    [ROUTE_PATHS.ADMIN_ADDONS]: 'Admin and owner only',
     [ROUTE_PATHS.SM_ACCREDITATION_TESTING]: 'Admin and owner only'
   };
   

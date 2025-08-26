@@ -2,15 +2,24 @@ import { Category } from "@/types";
 
 /**
  * Custom category ordering for POS interface
- * Order: Classic, Combo, Espresso, Beverages, then alphabetical for others
+ * Order: Croffle categories first, then Espresso, then Beverages, then others
  */
 export const CATEGORY_ORDER = [
+  // Croffle Categories First
   'Classic',
+  'Premium', 
+  'Fruity',
   'Glaze',
-  'Combo', 
+  'Cold',
+  'Blended',
+  'Mix & Match',
+  // Then Coffee Categories
   'Espresso',
+  // Then Beverages
   'Beverages',
-  'Add-ons'
+  // Then Additional Items
+  'Add-ons',
+  'Combo'
 ];
 
 /**
@@ -59,7 +68,7 @@ export const getCategoryOrderIndex = (categoryName: string): number => {
  * @returns True if category should be displayed
  */
 export const shouldDisplayCategoryInPOS = (categoryName: string): boolean => {
-  const hiddenCategories = ['desserts']; // Removed add-on variants since "Add-ons" should now be displayed
+  const hiddenCategories = ['desserts', 'other', 'others']; // Hide desserts and other/duplicate categories
   return !hiddenCategories.includes(categoryName.toLowerCase());
 };
 

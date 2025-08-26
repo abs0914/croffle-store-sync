@@ -2,6 +2,7 @@
 import { InventoryStock } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatCategory, parseCategory } from "@/utils/categoryFormatting";
 
 // Parse CSV and import inventory stock items
 export const parseInventoryStockCSV = async (csvData: string, storeId: string): Promise<any[]> => {
@@ -24,6 +25,13 @@ export const parseInventoryStockCSV = async (csvData: string, storeId: string): 
         // Map 'measure' field to 'unit' in database
         else if (header === 'measure') {
           stockItem['unit'] = values[i];
+        }
+        // Map 'category' field to 'item_category' in database
+        else if (header === 'category') {
+          const parsedCategory = parseCategory(values[i]);
+          if (parsedCategory) {
+            stockItem['item_category'] = parsedCategory;
+          }
         }
         // Convert numeric fields
         else if (header === 'stock_quantity') {
@@ -122,18 +130,28 @@ export const parseInventoryStockCSV = async (csvData: string, storeId: string): 
   return stockItems;
 };
 
+// Normalize text to remove special characters and accents
+const normalizeText = (text: string): string => {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+    .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+    .trim();
+};
+
 // Generate CSV from inventory stock items
 export const generateInventoryStockCSV = (stockItems: InventoryStock[]): string => {
-  const headers = ['name', 'sku', 'measure', 'stock_quantity', 'cost'];
+  const headers = ['name', 'sku', 'measure', 'stock_quantity', 'cost', 'category'];
   const csvRows = [headers.join(',')];
   
   stockItems.forEach(item => {
     const row = [
-      `"${item.item.replace(/"/g, '""')}"`,
-      `"${item.sku || ''}".replace(/"/g, '""')`,
-      `"${item.unit.replace(/"/g, '""')}"`,
+      `"${normalizeText(item.item).replace(/"/g, '""')}"`,
+      `"${(item.sku || '').replace(/"/g, '""')}"`,
+      `"${normalizeText(item.unit).replace(/"/g, '""')}"`,
       item.stock_quantity,
-      item.cost || '0'
+      item.cost || '0',
+      `"${formatCategory(item.item_category)}"`
     ];
     
     csvRows.push(row.join(','));
@@ -144,7 +162,7 @@ export const generateInventoryStockCSV = (stockItems: InventoryStock[]): string 
 
 // Generate inventory stock import template
 export const generateInventoryStockImportTemplate = (): string => {
-  const headers = ['name', 'sku', 'measure', 'stock_quantity', 'cost'];
+  const headers = ['name', 'sku', 'measure', 'stock_quantity', 'cost', 'category'];
   const csvContent = headers.join(',');
   
   const exampleRow1 = [
@@ -152,7 +170,8 @@ export const generateInventoryStockImportTemplate = (): string => {
     '"COFFEE-001"',
     '"kg"',
     '50',
-    '250'
+    '250',
+    '"Base Ingredient"'
   ].join(',');
   
   const exampleRow2 = [
@@ -160,7 +179,8 @@ export const generateInventoryStockImportTemplate = (): string => {
     '"MILK-001"',
     '"liter"',
     '100',
-    '80'
+    '80',
+    '"Base Ingredient"'
   ].join(',');
   
   return `${csvContent}\n${exampleRow1}\n${exampleRow2}`;

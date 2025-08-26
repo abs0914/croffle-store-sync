@@ -11,18 +11,18 @@
 | Cappuccino (Iced)    | Espresso | Espresso Shot   | Shot            | 1        | —             | 80    |
 | Cappuccino (Iced)    | Espresso | Cold Milk       | Ml              | 120      | —             | 80    |
 | Cappuccino (Iced)    | Espresso | Ice             | Cubes           | 5        | —             | 80    |
-| Café Latte (Hot)     | Espresso | Espresso Shot   | Shot            | 1        | —             | 75    |
-| Café Latte (Hot)     | Espresso | Steamed Milk    | Ml              | 180      | —             | 75    |
-| Café Latte (Iced)    | Espresso | Espresso Shot   | Shot            | 1        | —             | 80    |
-| Café Latte (Iced)    | Espresso | Cold Milk       | Ml              | 180      | —             | 80    |
-| Café Latte (Iced)    | Espresso | Ice             | Cubes           | 5        | —             | 80    |
-| Café Mocha (Hot)     | Espresso | Espresso Shot   | Shot            | 1        | —             | 80    |
-| Café Mocha (Hot)     | Espresso | Chocolate Syrup | Pump (15 ml)    | 1        | —             | 80    |
-| Café Mocha (Hot)     | Espresso | Steamed Milk    | Ml              | 150      | —             | 80    |
-| Café Mocha (Iced)    | Espresso | Espresso Shot   | Shot            | 1        | —             | 85    |
-| Café Mocha (Iced)    | Espresso | Chocolate Syrup | Pump (15 ml)    | 1        | —             | 85    |
-| Café Mocha (Iced)    | Espresso | Cold Milk       | Ml              | 150      | —             | 85    |
-| Café Mocha (Iced)    | Espresso | Ice             | Cubes           | 5        | —             | 85    |
+| Cafe Latte (Hot)     | Espresso | Espresso Shot   | Shot            | 1        | —             | 75    |
+| Cafe Latte (Hot)     | Espresso | Steamed Milk    | Ml              | 180      | —             | 75    |
+| Cafe Latte (Iced)    | Espresso | Espresso Shot   | Shot            | 1        | —             | 80    |
+| Cafe Latte (Iced)    | Espresso | Cold Milk       | Ml              | 180      | —             | 80    |
+| Cafe Latte (Iced)    | Espresso | Ice             | Cubes           | 5        | —             | 80    |
+| Cafe Mocha (Hot)     | Espresso | Espresso Shot   | Shot            | 1        | —             | 80    |
+| Cafe Mocha (Hot)     | Espresso | Chocolate Syrup | Pump (15 ml)    | 1        | —             | 80    |
+| Cafe Mocha (Hot)     | Espresso | Steamed Milk    | Ml              | 150      | —             | 80    |
+| Cafe Mocha (Iced)    | Espresso | Espresso Shot   | Shot            | 1        | —             | 85    |
+| Cafe Mocha (Iced)    | Espresso | Chocolate Syrup | Pump (15 ml)    | 1        | —             | 85    |
+| Cafe Mocha (Iced)    | Espresso | Cold Milk       | Ml              | 150      | —             | 85    |
+| Cafe Mocha (Iced)    | Espresso | Ice             | Cubes           | 5        | —             | 85    |
 | Caramel Latte (Hot)  | Espresso | Espresso Shot   | Shot            | 1        | —             | 80    |
 | Caramel Latte (Hot)  | Espresso | Caramel Syrup   | Pump (15 ml)    | 1        | —             | 80    |
 | Caramel Latte (Hot)  | Espresso | Steamed Milk    | Ml              | 150      | —             | 80    |

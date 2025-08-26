@@ -61,24 +61,39 @@ export const fetchAddonRecipes = async (storeId?: string): Promise<AddonItem[]> 
     // Filter products that are in addon categories
     const addonProducts = (allProducts || []).filter(product => {
       const categoryName = product.categories?.name?.toLowerCase() || '';
-      return categoryName.includes('addon') || categoryName.includes('add-on');
+      return categoryName.includes('addon') || 
+             categoryName.includes('add-on') || 
+             categoryName.includes('add-ons') ||
+             categoryName.includes('glaze') ||
+             categoryName.includes('premium') ||
+             categoryName.includes('topping') ||
+             categoryName.includes('sauce');
     });
 
     console.log('Filtered addon products:', addonProducts.length, 'addon products');
 
-    // Transform the data into AddonItem format
-    const addonItems: AddonItem[] = addonProducts.map(product => {
-      return {
-        id: product.id,
-        name: product.product_name,
-        description: undefined,
-        price: product.price || 6, // Default price if not set
-        cost_per_unit: (product.price || 6) * 0.6, // Estimate cost as 60% of price
-        category: product.categories?.name || 'addon',
-        is_active: product.is_available,
-        image_url: undefined
-      };
+    // Transform the data into AddonItem format and ensure uniqueness by product_name
+    const uniqueAddonItems = new Map<string, AddonItem>();
+    
+    addonProducts.forEach(product => {
+      const normalizedName = product.product_name.toLowerCase().trim();
+      
+      // Only add if not already exists (prevents duplicates by product name)
+      if (!uniqueAddonItems.has(normalizedName)) {
+        uniqueAddonItems.set(normalizedName, {
+          id: product.id,
+          name: product.product_name,
+          description: undefined,
+          price: product.price || 6, // Default price if not set
+          cost_per_unit: (product.price || 6) * 0.6, // Estimate cost as 60% of price
+          category: product.categories?.name || 'addon',
+          is_active: product.is_available,
+          image_url: undefined
+        });
+      }
     });
+
+    const addonItems: AddonItem[] = Array.from(uniqueAddonItems.values());
 
     console.log('Processed addon items:', addonItems);
     return addonItems;

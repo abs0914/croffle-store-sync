@@ -1,14 +1,14 @@
 import React from "react";
-import { UnifiedProduct } from "@/services/product/unifiedProductService";
+import { Product } from "@/types";
 
 import ProductCard from "./ProductCard";
 
 interface CategorySectionProps {
   title: string;
-  products: UnifiedProduct[];
+  products: Product[];
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
-  onClick: (product: UnifiedProduct) => void;
+  onClick: (product: Product) => void;
 }
 
 export default function CategorySection({

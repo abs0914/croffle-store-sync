@@ -25,7 +25,7 @@ import type {
 } from '@/types/advancedRecipe';
 import { RecipeTemplateIngredientGroups } from './RecipeTemplateIngredientGroups';
 import { RecipeTemplatePricingMatrix } from './RecipeTemplatePricingMatrix';
-import { AddOnManagement } from '@/components/Admin/recipe/AddOnManagement';
+import { AddOnsList } from '@/components/Admin/AddOnsList';
 
 interface RecipeTemplateAdvancedProps {
   templateId?: string;
@@ -271,7 +271,7 @@ export const RecipeTemplateAdvanced: React.FC<RecipeTemplateAdvancedProps> = ({
         </TabsContent>
 
         <TabsContent value="addons">
-          <AddOnManagement />
+          <AddOnsList />
         </TabsContent>
 
         <TabsContent value="groups">

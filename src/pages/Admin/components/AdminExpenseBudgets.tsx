@@ -239,12 +239,12 @@ export default function AdminExpenseBudgets() {
         <CardContent>
           <div className="flex items-center space-x-4">
             <div className="flex-1">
-              <Select value={selectedStore} onValueChange={setSelectedStore}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Stores" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">All Stores</SelectItem>
+            <Select value={selectedStore || "all"} onValueChange={(value) => setSelectedStore(value === "all" ? "" : value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Stores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stores</SelectItem>
                   {stores?.map(store => (
                     <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
                   ))}

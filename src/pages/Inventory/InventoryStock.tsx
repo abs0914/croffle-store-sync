@@ -9,6 +9,7 @@ import { AddStockItemForm } from "./components/inventoryStock/AddStockItemForm";
 import { EditStockItemForm } from "./components/inventoryStock/EditStockItemForm";
 import { StockAdjustmentModal } from "./components/inventoryStock/StockAdjustmentModal";
 import { StockTransferModal } from "./components/inventoryStock/StockTransferModal";
+import { CategoryUpdateButton } from "./components/inventoryStock/CategoryUpdateButton";
 // Removed ProactiveReorderingSystem import as it was deleted
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
@@ -135,12 +136,15 @@ export default function InventoryStock() {
               </TabsList>
             </Tabs>
           
-            <Button
-              onClick={() => setIsAddModalOpen(true)}
-              className="bg-croffle-accent hover:bg-croffle-accent/90"
-            >
-              <Plus className="mr-2 h-4 w-4" /> Add Inventory Item
-            </Button>
+            <div className="flex gap-2">
+              <CategoryUpdateButton />
+              <Button
+                onClick={() => setIsAddModalOpen(true)}
+                className="bg-croffle-accent hover:bg-croffle-accent/90"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Add Inventory Item
+              </Button>
+            </div>
           </div>
 
           <Card>

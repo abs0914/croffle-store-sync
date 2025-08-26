@@ -34,6 +34,9 @@ export default function RoleSelector({ value, onChange }: RoleSelectorProps) {
           {isAdmin && <SelectItem value="admin">Admin</SelectItem>}
           <SelectItem value="owner">Owner</SelectItem>
           <SelectItem value="manager">Manager</SelectItem>
+          <SelectItem value="commissary_user">Commissary User</SelectItem>
+          <SelectItem value="stock_user">Stock User</SelectItem>
+          <SelectItem value="production_user">Production User</SelectItem>
           <SelectItem value="cashier">Cashier</SelectItem>
         </SelectContent>
       </Select>

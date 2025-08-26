@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { updateCommissaryInventoryItem } from "@/services/inventoryManagement/commissaryInventoryService";
 import { CommissaryInventoryItem } from "@/types/inventoryManagement";
+import { UOMSelect } from "@/components/shared/UOMSelect";
 import { toast } from "sonner";
 
 interface EditCommissaryItemDialogProps {
@@ -99,6 +100,14 @@ export function EditCommissaryItemDialog({ open, onOpenChange, item, onSuccess }
             </Select>
           </div>
           <div>
+            <Label htmlFor="uom">Unit of Measure</Label>
+            <UOMSelect
+              value={formData.uom}
+              onChange={(value) => setFormData(prev => ({ ...prev, uom: value }))}
+              allowCustom={true}
+            />
+          </div>
+          <div>
             <Label htmlFor="minimum_threshold">Minimum Threshold</Label>
             <Input
               id="minimum_threshold"
@@ -109,7 +118,10 @@ export function EditCommissaryItemDialog({ open, onOpenChange, item, onSuccess }
             />
           </div>
           <div>
-            <Label htmlFor="unit_cost">Unit Cost</Label>
+            <Label htmlFor="unit_cost">
+              Purchase Cost (per unit)
+              <span className="text-xs text-muted-foreground ml-1">(Optional)</span>
+            </Label>
             <Input
               id="unit_cost"
               type="number"

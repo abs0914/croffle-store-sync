@@ -3,7 +3,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SalesReport } from "@/types/reports";
 import { formatCurrency } from "@/utils/format";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { TransactionDetailsTable } from "../TransactionDetailsTable";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
+import { fetchTransactionsWithFallback } from "@/services/reports/utils/transactionQueryUtils";
 
 interface SalesReportViewProps {
   data: SalesReport | null;
@@ -12,9 +17,53 @@ interface SalesReportViewProps {
     to: Date | undefined;
   };
   isAllStores?: boolean;
+  storeId: string;
 }
 
-export function SalesReportView({ data, dateRange, isAllStores }: SalesReportViewProps) {
+export function SalesReportView({ data, dateRange, isAllStores, storeId }: SalesReportViewProps) {
+  // Fetch detailed transactions for the table using the same robust utility
+  const { data: transactions } = useQuery({
+    queryKey: ['transactions', storeId, dateRange.from, dateRange.to],
+    queryFn: async () => {
+      if (!dateRange.from || !dateRange.to) return [];
+      
+      // Use Philippine timezone for proper date filtering
+      const PHILIPPINES_TZ = 'Asia/Manila';
+      const fromStr = formatInTimeZone(dateRange.from, PHILIPPINES_TZ, 'yyyy-MM-dd');
+      const toStr = formatInTimeZone(dateRange.to, PHILIPPINES_TZ, 'yyyy-MM-dd');
+      
+      console.log('Sales Report: Fetching transaction details with Philippine timezone');
+      console.log(`Date range: ${fromStr} to ${toStr} (Philippine time)`);
+      
+      // Use the same robust transaction query as the X-Reading and main sales report
+      const queryResult = await fetchTransactionsWithFallback({
+        storeId: storeId === 'all' ? undefined : storeId,
+        from: fromStr,
+        to: toStr,
+        status: "completed",
+        orderBy: "created_at",
+        ascending: false
+      });
+
+      const { data, error } = queryResult;
+      if (error) throw error;
+
+      console.log(`Sales Report: Found ${data?.length || 0} transaction details`);
+
+      return data?.map(tx => ({
+        ...tx,
+        cashier_name: 'N/A', // We'll enhance this when we have proper cashier data
+        customer_name: 'Walk-in' // Default customer name
+      })) || [];
+    },
+    enabled: !!dateRange.from && !!dateRange.to,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    staleTime: Infinity, // Data never becomes stale
+    gcTime: 10 * 60 * 1000 // Keep data in cache for 10 minutes
+  });
+
   if (!data) {
     return (
       <Card>
@@ -27,8 +76,9 @@ export function SalesReportView({ data, dateRange, isAllStores }: SalesReportVie
     );
   }
 
+  const PHILIPPINES_TZ = 'Asia/Manila';
   const dateRangeText = dateRange.from && dateRange.to
-    ? `${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}`
+    ? `${formatInTimeZone(dateRange.from, PHILIPPINES_TZ, 'MMM dd, yyyy')} - ${formatInTimeZone(dateRange.to, PHILIPPINES_TZ, 'MMM dd, yyyy')}`
     : 'Custom Range';
 
   return (
@@ -129,6 +179,11 @@ export function SalesReportView({ data, dateRange, isAllStores }: SalesReportVie
           </div>
         </CardContent>
       </Card>
+
+      {/* Transaction Details Table */}
+      {transactions && transactions.length > 0 && (
+        <TransactionDetailsTable transactions={transactions} />
+      )}
     </div>
   );
 }

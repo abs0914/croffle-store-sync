@@ -4,7 +4,7 @@ import { useStore } from '@/contexts/StoreContext';
 import { useAuth } from '@/contexts/auth';
 import { ReportHeader } from './components/ReportHeader';
 import { DateRangeSelector } from './components/DateRangeSelector';
-import { ReportsNavigation } from './components/ReportsNavigation';
+import { CollapsibleReportsNavigation } from './components/CollapsibleReportsNavigation';
 import { ReportContent } from './components/ReportContent';
 import { StoreSelector } from './components/StoreSelector';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,16 +32,16 @@ export default function Reports() {
   const isMobile = useIsMobile();
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
-  // Set initial store selection
+  // Set initial store selection only for non-admin users
   useEffect(() => {
-    if (currentStore && !selectedStoreId) {
+    if (currentStore && !selectedStoreId && !isAdmin) {
       console.log('🏪 Reports: Setting initial store selection:', { 
         storeId: currentStore.id.slice(0, 8), 
         storeName: currentStore.name 
       });
       setSelectedStoreId(currentStore.id);
     }
-  }, [currentStore]); // Remove selectedStoreId dependency to prevent re-initialization issues
+  }, [currentStore, isAdmin]);
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(prev => !prev);
@@ -93,10 +93,11 @@ export default function Reports() {
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Responsive sidebar with toggle for mobile */}
         <div className={`${isMobile && !isSidebarOpen ? 'hidden' : 'block'} 
-                         w-full lg:w-64 transition-all duration-300`}>
-          <ReportsNavigation 
+                         transition-all duration-300`}>
+          <CollapsibleReportsNavigation 
             activeReport={reportType} 
             onSelectReport={setReportType}
+            isMobile={isMobile}
           />
           
           {isMobile && (
@@ -131,7 +132,7 @@ export default function Reports() {
               {isAdmin && (
                 <div className="mb-4">
                   <h3 className="text-sm font-medium mb-2 text-muted-foreground">
-                    Select Store
+                    {selectedStoreId ? 'Change Store' : 'Select Store'}
                   </h3>
                   <StoreSelector
                     selectedStoreId={selectedStoreId}

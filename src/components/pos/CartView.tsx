@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CartItem, Customer } from '@/types';
-import { PaymentDialog } from './PaymentDialog';
+import PaymentProcessor from './payment/PaymentProcessor';
 import { CustomerSelector } from './CustomerSelector';
 import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
 import { OrderTypeSelector } from './OrderTypeSelector';
@@ -24,7 +24,14 @@ interface CartViewProps {
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
   handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }) => void;
-  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any) => void;
+  handlePaymentComplete: (
+    paymentMethod: 'cash' | 'card' | 'e-wallet', 
+    amountTendered: number, 
+    paymentDetails?: any,
+    orderType?: string,
+    deliveryPlatform?: string,
+    deliveryOrderNumber?: string
+  ) => Promise<boolean>;
   isShiftActive: boolean;
 }
 
@@ -61,10 +68,12 @@ export default function CartView({
   } = useCart();
 
   // Debug logging to track cart data
-  console.log('CartView: Cart data from context', {
+  console.log('🔍 CartView: Cart data from context', {
     itemCount: cartItems?.length || 0,
     orderType,
-    calculations: calculations.finalTotal,
+    calculations: calculations,
+    calculationsFinalTotal: calculations?.finalTotal,
+    calculationsType: typeof calculations,
     seniorDiscountsCount: seniorDiscounts?.length || 0,
     cartItemsRaw: cartItems,
     isOrderTypeTransitioning
@@ -96,7 +105,6 @@ export default function CartView({
   const { 
     isValidating, 
     validateCartItems, 
-    processCartSale, 
     getItemValidation 
   } = useInventoryValidation(currentStore?.id || '');
 
@@ -119,33 +127,47 @@ export default function CartView({
     validateCart();
   }, [cartItems, validateCartItems]);
 
-  const handlePaymentCompleteWithDeduction = async (
+  const handlePaymentCompleteWithInventoryValidation = async (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
     amountTendered: number,
     paymentDetails?: any
-  ) => {
+  ): Promise<boolean> => {
     if (!currentStore?.id) {
       toast.error('No store selected');
-      return;
+      return false;
     }
-
-    // Generate temporary transaction ID for tracking
-    const tempTransactionId = `temp-${Date.now()}`;
     
     try {
-      // Process inventory deductions first
-      const deductionSuccess = await processCartSale(cartItems, tempTransactionId);
-      if (!deductionSuccess) {
-        toast.error('Failed to process inventory deductions');
-        return;
+      // Step 1: Use lightweight validation for final check
+      console.log('💨 Quick checkout validation for', cartItems.length, 'items');
+      
+      const { quickCheckoutValidation } = await import('@/services/pos/lightweightValidationService');
+      const quickValidation = await quickCheckoutValidation(cartItems, currentStore.id);
+      
+      if (!quickValidation.isValid) {
+        toast.error(`Cannot proceed: ${quickValidation.invalidProducts.join(', ')}`);
+        return false;
       }
+      
+      // Proceed with payment
+      const success = await handlePaymentComplete(
+        paymentMethod, 
+        amountTendered, 
+        paymentDetails,
+        orderType,
+        deliveryPlatform,
+        deliveryOrderNumber
+      );
 
-      // If deductions successful, complete the payment
-      handlePaymentComplete(paymentMethod, amountTendered, paymentDetails);
-      setIsPaymentDialogOpen(false);
+      if (success) {
+        setIsPaymentDialogOpen(false);
+      }
+      
+      return success;
     } catch (error) {
-      console.error('Error processing payment with deductions:', error);
-      toast.error('Payment processing failed');
+      console.error('Error during payment validation:', error);
+      toast.error('Payment validation failed - please try again');
+      return false;
     }
   };
   
@@ -185,6 +207,7 @@ export default function CartView({
         items={cartItems || []}
         isTransitioning={isOrderTypeTransitioning}
         orderType={orderType}
+        deliveryPlatform={deliveryPlatform}
         updateQuantity={updateQuantity}
         updateItemPrice={updateItemPrice}
         removeItem={removeItem}
@@ -230,23 +253,59 @@ export default function CartView({
             deliveryPlatform={deliveryPlatform}
             deliveryOrderNumber={deliveryOrderNumber}
             onCheckout={() => {
-              if (calculations.finalTotal <= 0) {
+              console.log("🚀 Checkout attempt", {
+                calculationsObject: calculations,
+                finalTotal: calculations?.finalTotal,
+                cartItemsLength: cartItems?.length,
+                type: typeof calculations
+              });
+              
+              // Allow checkout if there are items in cart, even if total is 0 (complimentary)
+              if (!calculations || cartItems?.length === 0) {
+                console.error("❌ Checkout blocked - no items in cart", {
+                  calculations,
+                  finalTotal: calculations?.finalTotal,
+                  itemsInCart: cartItems?.length
+                });
                 toast.error('Cannot checkout with empty cart');
                 return;
               }
+              
+              // Allow ₱0 total for complimentary discounts
+              if (calculations.finalTotal < 0) {
+                console.error("❌ Checkout blocked - negative total", {
+                  finalTotal: calculations.finalTotal
+                });
+                toast.error('Invalid cart total');
+                return;
+              }
+              
               setIsPaymentDialogOpen(true);
             }}
           />
         </div>
       )}
 
-      {/* Dialogs */}
-      <PaymentDialog
-        isOpen={isPaymentDialogOpen}
-        onClose={() => setIsPaymentDialogOpen(false)}
-        total={calculations.finalTotal}
-        onPaymentComplete={handlePaymentCompleteWithDeduction}
-      />
+      {/* Payment Dialog */}
+      {isPaymentDialogOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-lg">
+            <PaymentProcessor
+              total={calculations.finalTotal}
+              itemCount={cartItems.length}
+              onPaymentComplete={handlePaymentCompleteWithInventoryValidation}
+            />
+            <div className="p-4 border-t">
+              <button
+                onClick={() => setIsPaymentDialogOpen(false)}
+                className="w-full py-2 px-4 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

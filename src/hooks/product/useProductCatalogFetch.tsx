@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Product, Category } from "@/types";
 import { fetchProductCatalogForPOS } from "@/services/productCatalog/productCatalogFetch";
 import { fetchCategories } from "@/services/category/categoryFetch";
+
 import { getOrCreatePOSCategories } from "@/services/pos/categoryMappingService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,11 +32,42 @@ export function useProductCatalogFetch(storeId: string | null) {
 
       console.log('🔍 useProductCatalogFetch: Fetching products and categories...');
       
-      // Fetch products from product_catalog and enhanced categories in parallel
-      const [productsData, categoriesData] = await Promise.all([
+      // 1) Fetch products and base categories in parallel
+      const [productsData, initialCategories] = await Promise.all([
         fetchProductCatalogForPOS(storeId),
-        getOrCreatePOSCategories(storeId) // Use enhanced category mapping
+        fetchCategories(storeId).catch((err) => {
+          console.warn('useProductCatalogFetch: fetchCategories failed, will fall back:', err);
+          return [] as Category[];
+        })
       ]);
+
+      let categoriesData: Category[] = initialCategories || [];
+
+      // 2) Fallback: if no categories returned from categories table, try enhanced mapping service
+      if (categoriesData.length === 0) {
+        categoriesData = await getOrCreatePOSCategories(storeId);
+      }
+
+      // 3) Final fallback: derive categories from products' category_ids and fetch them
+      if (categoriesData.length === 0) {
+        const categoryIds = Array.from(new Set((productsData || [])
+          .map(p => p.category_id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)));
+
+        if (categoryIds.length > 0) {
+          const { data: cats, error: catsError } = await supabase
+            .from('categories')
+            .select('*')
+            .in('id', categoryIds)
+            .eq('store_id', storeId);
+
+          if (catsError) {
+            console.warn('useProductCatalogFetch: categories query failed at final fallback:', catsError);
+          } else {
+            categoriesData = cats || [];
+          }
+        }
+      }
 
       console.log('🔍 useProductCatalogFetch: Fetched data:', {
         productsCount: productsData.length,

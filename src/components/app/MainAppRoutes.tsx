@@ -7,6 +7,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 // Lazy load components for better performance
 const Dashboard = React.lazy(() => import('@/pages/Dashboard'));
 const POS = React.lazy(() => import('@/pages/POS'));
+const Invoice = React.lazy(() => import('@/pages/Invoice'));
 const Products = React.lazy(() => import('@/pages/Products'));
 const ProductForm = React.lazy(() => import('@/pages/Inventory/ProductForm'));
 const Inventory = React.lazy(() => import('@/pages/Inventory'));
@@ -16,6 +17,7 @@ const Expenses = React.lazy(() => import('@/pages/Expenses'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
 const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
 const SMAccreditationTesting = React.lazy(() => import('@/pages/SMAccreditationTesting'));
+const CustomerManagement = React.lazy(() => import('@/pages/Customers/CustomerManagement'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -51,6 +53,20 @@ export const MainAppRoutes = () => {
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <POS />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Invoice Page - Accessible to all with store access */}
+      <Route
+        path="/invoice/:transactionId"
+        element={
+          <ProtectedRoute requireStoreAccess>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Invoice />
               </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
@@ -203,10 +219,7 @@ export const MainAppRoutes = () => {
           <ProtectedRoute requireStoreAccess>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
-                <div className="p-4">
-                  <h1 className="text-2xl font-bold">Customer Management</h1>
-                  <p className="text-gray-600 mt-2">Manage customer information and relationships.</p>
-                </div>
+                <CustomerManagement />
               </React.Suspense>
             </MainLayout>
           </ProtectedRoute>

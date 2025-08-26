@@ -1,5 +1,5 @@
-// Direct Inventory Services
-export * from './directInventoryService';
-export * from './stockOrderWorkflowService';
-
-// Legacy services removed - using new simplified direct inventory system
+export * from './inventorySyncMonitor';
+export * from './transactionValidator';
+export * from './simpleInventoryService';
+// Disabled enhanced inventory deduction to prevent UUID conflicts
+// export * from './enhancedInventoryDeduction';

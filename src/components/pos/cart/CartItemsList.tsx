@@ -1,12 +1,13 @@
 import React from 'react';
 import { CartItem } from '@/types';
 import { EditableCartItem } from '../EditableCartItem';
-import { OrderType } from '@/contexts/cart/CartContext';
+import { OrderType, DeliveryPlatform } from '@/contexts/cart/CartContext';
 
 interface CartItemsListProps {
   items: CartItem[];
   isTransitioning: boolean;
   orderType: OrderType;
+  deliveryPlatform?: DeliveryPlatform | null;
   updateQuantity: (index: number, quantity: number) => void;
   updateItemPrice: (index: number, price: number) => void;
   removeItem: (index: number) => void;
@@ -17,6 +18,7 @@ export function CartItemsList({
   items,
   isTransitioning,
   orderType,
+  deliveryPlatform,
   updateQuantity,
   updateItemPrice,
   removeItem,
@@ -68,7 +70,8 @@ export function CartItemsList({
                   onUpdateQuantity={updateQuantity}
                   onUpdatePrice={updateItemPrice}
                   onRemoveItem={removeItem}
-                  canEditPrice={orderType === 'online_delivery'}
+                  canEditPrice={orderType === 'online_delivery' && (deliveryPlatform === 'grab_food' || deliveryPlatform === 'food_panda')}
+                  deliveryPlatform={deliveryPlatform}
                   hasStockIssue={hasStockIssue}
                   validation={validation}
                 />

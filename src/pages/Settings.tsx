@@ -10,6 +10,7 @@ import { Settings as SettingsIcon, User, Printer, MoreVertical, Shield, LogOut, 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth";
 import { useNavigate } from "react-router-dom";
+import { canAccessAdminPanel } from "@/contexts/auth/role-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +25,7 @@ export default function Settings() {
   const { currentStore } = useStore();
   const navigate = useNavigate();
 
-  const canAccessAdmin = user?.role === 'admin' || user?.role === 'owner';
+  const canAccessAdmin = canAccessAdminPanel(user?.role);
 
   return (
     <div className="space-y-6">
@@ -95,11 +96,15 @@ export default function Settings() {
                     
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-11 w-11 p-0 touch-manipulation fast-tap md:h-11 md:w-11"
+                        >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuContent align="end" className="w-48 z-[100] tablet-optimized">
                         <DropdownMenuItem className="cursor-default">
                           <User className="mr-2 h-4 w-4" />
                           My Account

@@ -13,7 +13,9 @@ interface CashierReportGuardProps {
 const CASHIER_ALLOWED_REPORTS: ReportType[] = [
   'sales',           // Sales Report
   'daily_shift',     // My Daily Shift Report
-  'inventory_status' // Inventory Status
+  'inventory_status', // Inventory Status
+  'x_reading',       // X-Reading Report
+  'z_reading'        // Z-Reading Report
 ];
 
 export function CashierReportGuard({ children, reportType }: CashierReportGuardProps) {
@@ -34,7 +36,7 @@ export function CashierReportGuard({ children, reportType }: CashierReportGuardP
           <Info className="h-4 w-4" />
           <AlertTitle>Access Restricted</AlertTitle>
           <AlertDescription>
-            As a cashier, you have access to sales reports, inventory status, and your shift reports. 
+            As a cashier, you have access to sales reports, inventory status, shift reports, and reading reports. 
             Please contact your manager if you need access to other reports.
           </AlertDescription>
         </Alert>
@@ -47,6 +49,8 @@ export function CashierReportGuard({ children, reportType }: CashierReportGuardP
             <li>• Sales Report</li>
             <li>• My Daily Shift Report</li>
             <li>• Inventory Status</li>
+            <li>• X-Reading Report</li>
+            <li>• Z-Reading Report</li>
           </ul>
         </div>
       </div>

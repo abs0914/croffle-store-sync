@@ -94,27 +94,39 @@ export default function SMAccreditationTesting() {
         <CardContent className="space-y-4">
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <h3 className="font-semibold text-lg mb-3">Test Scenarios</h3>
+              <h3 className="font-semibold text-lg mb-3">Updated SM Test Requirements</h3>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
+                  <Badge variant="default">NEW</Badge>
+                  <span className="text-sm font-medium">1 business date = 1 scenario</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="default">NEW</Badge>
+                  <span className="text-sm font-medium">All scenarios in 1 CSV file</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="default">NEW</Badge>
+                  <span className="text-sm font-medium">File name: current month (MM_YYYY_transactions.csv)</span>
+                </div>
+                <div className="flex items-center gap-2">
                   <Badge variant="outline">Scenario 1</Badge>
-                  <span className="text-sm">Regular transactions with basic discounts</span>
+                  <span className="text-sm">Regular transactions (5 days ago)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">Scenario 2</Badge>
-                  <span className="text-sm">Senior citizen & PWD discounts (20% VATable)</span>
+                  <span className="text-sm">Senior citizen & PWD discounts (4 days ago)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">Scenario 3</Badge>
-                  <span className="text-sm">Multiple promotional campaigns & combos</span>
+                  <span className="text-sm">Multiple promotional campaigns (3 days ago)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">Scenario 4</Badge>
-                  <span className="text-sm">Returns, voids, and refunds</span>
+                  <span className="text-sm">Returns, voids, and refunds (2 days ago)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">Scenario 5</Badge>
-                  <span className="text-sm">Complex mixed transactions</span>
+                  <span className="text-sm">Complex mixed transactions (1 day ago)</span>
                 </div>
               </div>
             </div>
@@ -124,11 +136,19 @@ export default function SMAccreditationTesting() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  <span className="text-sm">File naming convention (MM_yyyy format)</span>
+                  <span className="text-sm">Correct file naming (MM_YYYY_transactions.csv)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span className="text-sm">CSV header structure compliance</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">One business date per scenario</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">All scenarios in single CSV file</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -157,9 +177,10 @@ export default function SMAccreditationTesting() {
           <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Important:</strong> The test will create temporary transaction data, 
-              export CSV files, validate against SM requirements, and clean up test data automatically. 
-              This process will not affect your production data.
+              <strong>Updated Guidelines:</strong> Following the new SM requirements, each test scenario 
+              uses exactly one business date, and all scenarios are exported to a single CSV file 
+              named with the current month format (e.g., 08_2025_transactions.csv). This ensures 
+              compliance with the latest SM accreditation standards.
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -262,14 +283,16 @@ export default function SMAccreditationTesting() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-2">Key Requirements</h4>
+            <h4 className="font-semibold mb-2">Updated Key Requirements</h4>
             <ul className="text-sm space-y-1 list-disc list-inside">
-              <li>Files must cover the last 30 rolling days of transaction data</li>
+              <li><strong>NEW:</strong> Each scenario uses exactly 1 business date (no mixed dates)</li>
+              <li><strong>NEW:</strong> All test scenarios combined into 1 CSV file only</li>
+              <li><strong>NEW:</strong> File naming: MM_YYYY_transactions.csv (e.g., 08_2025_transactions.csv)</li>
+              <li>Follow correct CSV format with proper columns & headers</li>
               <li>BIR compliant VAT and discount recording (12% VAT on VATable items)</li>
               <li>Senior citizen/PWD discount tracking (20% on VATable amount)</li>
               <li>Promo reference recording in format: [ref]=[name]::multiple_promos</li>
               <li>Proper handling of returns, voids, and refunds (negative quantities)</li>
-              <li>File naming: MM_yyyy_transactions.csv and MM_yyyy_transactiondetails.csv</li>
               <li>Directory structure: C:\SIA\ (Windows) or /opt/sia/ (Linux)</li>
             </ul>
           </div>

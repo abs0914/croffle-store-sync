@@ -20,6 +20,7 @@ export default function Inventory() {
   const { toast } = useToast();
   const { currentStore } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [stockLevelFilter, setStockLevelFilter] = useState<'all' | 'low-stock' | 'out-of-stock'>('all');
   const [inventoryStats, setInventoryStats] = useState({
     totalItems: 0,
     lowStockItems: 0,
@@ -72,11 +73,29 @@ export default function Inventory() {
     fetchInventoryStats();
   }, [currentStore?.id]);
 
-  // Filter items based on search term
-  const filteredStockItems = stockItems.filter(item =>
-    item.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.unit.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter items based on search term and stock level
+  const filteredStockItems = stockItems.filter(item => {
+    const matchesSearch = item.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.unit.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStockFilter = (() => {
+      switch (stockLevelFilter) {
+        case 'low-stock':
+          return item.stock_quantity > 0 && item.stock_quantity <= (item.minimum_threshold || 10);
+        case 'out-of-stock':
+          return item.stock_quantity === 0;
+        case 'all':
+        default:
+          return true;
+      }
+    })();
+    
+    return matchesSearch && matchesStockFilter;
+  });
+
+  const handleStockFilterClick = (filter: 'all' | 'low-stock' | 'out-of-stock') => {
+    setStockLevelFilter(stockLevelFilter === filter ? 'all' : filter);
+  };
 
   if (!currentStore) {
     return (
@@ -150,20 +169,40 @@ export default function Inventory() {
           </p>
           <p className="text-sm text-muted-foreground">Items in inventory</p>
         </div>
-        <div className="p-6 border rounded-lg">
+        <button 
+          className={`p-6 border rounded-lg text-left transition-all hover:shadow-md hover:scale-[1.02] cursor-pointer ${
+            stockLevelFilter === 'low-stock' 
+              ? 'border-orange-300 bg-orange-50 shadow-md' 
+              : 'hover:border-orange-200'
+          }`}
+          onClick={() => handleStockFilterClick('low-stock')}
+          disabled={inventoryStats.isLoading}
+        >
           <h3 className="text-lg font-semibold mb-2">Low Stock</h3>
           <p className="text-2xl font-bold text-orange-600">
             {inventoryStats.isLoading ? '...' : inventoryStats.lowStockItems}
           </p>
-          <p className="text-sm text-muted-foreground">Items below threshold</p>
-        </div>
-        <div className="p-6 border rounded-lg">
+          <p className="text-sm text-muted-foreground">
+            {stockLevelFilter === 'low-stock' ? 'Click to clear filter' : 'Items below threshold'}
+          </p>
+        </button>
+        <button 
+          className={`p-6 border rounded-lg text-left transition-all hover:shadow-md hover:scale-[1.02] cursor-pointer ${
+            stockLevelFilter === 'out-of-stock' 
+              ? 'border-red-300 bg-red-50 shadow-md' 
+              : 'hover:border-red-200'
+          }`}
+          onClick={() => handleStockFilterClick('out-of-stock')}
+          disabled={inventoryStats.isLoading}
+        >
           <h3 className="text-lg font-semibold mb-2">Out of Stock</h3>
           <p className="text-2xl font-bold text-red-600">
             {inventoryStats.isLoading ? '...' : inventoryStats.outOfStockItems}
           </p>
-          <p className="text-sm text-muted-foreground">Items unavailable</p>
-        </div>
+          <p className="text-sm text-muted-foreground">
+            {stockLevelFilter === 'out-of-stock' ? 'Click to clear filter' : 'Items unavailable'}
+          </p>
+        </button>
         <div className="p-6 border rounded-lg">
           <h3 className="text-lg font-semibold mb-2">Active Items</h3>
           <p className="text-2xl font-bold text-green-600">
@@ -201,8 +240,25 @@ export default function Inventory() {
                 className="pl-10"
               />
             </div>
-            <div className="text-sm text-muted-foreground">
-              {filteredStockItems.length} of {stockItems.length} items
+            <div className="flex items-center gap-4">
+              {stockLevelFilter !== 'all' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setStockLevelFilter('all')}
+                  className="text-xs"
+                >
+                  Clear Filters
+                </Button>
+              )}
+              <div className="text-sm text-muted-foreground">
+                {filteredStockItems.length} of {stockItems.length} items
+                {stockLevelFilter !== 'all' && (
+                  <span className="ml-1 text-primary font-medium">
+                    ({stockLevelFilter === 'low-stock' ? 'Low Stock' : 'Out of Stock'} filtered)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

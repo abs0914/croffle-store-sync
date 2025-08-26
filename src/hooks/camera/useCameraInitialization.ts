@@ -70,13 +70,14 @@ export function useCameraInitialization({
       const constraintSets = [];
       
       if (selectedCameraId) {
-        // Primary: Use selected camera with optimal settings
+        // Primary: Use selected camera with reasonable mobile settings
         constraintSets.push({
           video: { 
             deviceId: { exact: selectedCameraId },
-            width: { ideal: 1080 },
-            height: { ideal: 1440 },
-            aspectRatio: { ideal: 3/4 }
+            width: { ideal: 480, max: 720 },
+            height: { ideal: 640, max: 960 },
+            aspectRatio: { ideal: 9/16 }, // Prefer but don't force
+            facingMode: 'environment' // Prefer back camera for business use
           },
           audio: false
         });
@@ -89,22 +90,21 @@ export function useCameraInitialization({
           audio: false
         });
       } else {
-        // Original constraint sets when no specific camera selected
+        // Mobile-friendly constraint sets when no specific camera selected
         constraintSets.push(
           { 
             video: { 
-              facingMode: 'environment',
-              width: { ideal: 1080 },
-              height: { ideal: 1440 },
-              aspectRatio: { ideal: 3/4 }
+              facingMode: 'environment', // Back camera preferred for business
+              width: { ideal: 480, max: 720 },
+              height: { ideal: 640, max: 960 },
+              aspectRatio: { ideal: 9/16 } // Prefer portrait but don't force
             },
             audio: false
           },
           { 
             video: { 
-              width: { ideal: 720 },
-              height: { ideal: 960 },
-              aspectRatio: { ideal: 3/4 }
+              facingMode: 'environment',
+              aspectRatio: { ideal: 9/16 }
             },
             audio: false
           },

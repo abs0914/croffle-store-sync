@@ -56,7 +56,7 @@ const mapToValidUnit = (unit: string): string => {
   };
   
   const normalizedUnit = unit.toLowerCase().trim();
-  return unitMapping[normalizedUnit] || 'pieces'; // Default to pieces if not found
+  return unitMapping[normalizedUnit] || unit; // Return original unit if not found in mapping
 };
 
 export const fetchCommissaryInventory = async (filters?: any): Promise<CommissaryInventoryItem[]> => {
@@ -152,7 +152,7 @@ export const updateCommissaryInventoryItem = async (
     const { uom, ...otherUpdates } = updates;
     const dbUpdates = {
       ...otherUpdates,
-      ...(uom && { unit: mapToValidUnit(uom) }) // Map and include unit if uom is provided
+      ...(uom && { unit: uom }) // Use uom directly without mapping when updating
     };
     
     const { error } = await supabase

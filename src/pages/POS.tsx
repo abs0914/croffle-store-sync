@@ -3,14 +3,16 @@ import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
 import { useCart } from "@/contexts/cart/CartContext";
-import { useProductCatalogData } from "@/hooks/useProductCatalogData";
+import { useUnifiedProducts } from "@/hooks/unified/useUnifiedProducts";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
-import { useAutomaticAvailability } from "@/hooks/useAutomaticAvailability";
-import { realTimeNotificationService } from "@/services/notifications/realTimeNotificationService";
+import { useLargeOrderDiagnostics } from "@/hooks/useLargeOrderDiagnostics";
 
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
-import OptimizedPOSHeader from "@/components/pos/OptimizedPOSHeader";
+import { OptimizedPOSHeader } from "@/components/pos/OptimizedPOSHeader";
+
+import { QuickShiftAccess } from "@/components/pos/QuickShiftAccess";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { TransactionItem } from "@/types/transaction";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,10 +21,11 @@ import ReceiptGenerator from "@/components/pos/ReceiptGenerator";
 export default function POS() {
   const { currentStore } = useStore();
   const { currentShift } = useShift();
-  const { items, subtotal, tax, total, addItem } = useCart();
+  const { items, subtotal, tax, total, addItem, orderType, deliveryPlatform, deliveryOrderNumber } = useCart();
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [lastCompletedTransaction, setLastCompletedTransaction] = useState<any>(null);
   const [lastTransactionCustomer, setLastTransactionCustomer] = useState<any>(null);
+  
   
   // Enhanced transaction handler with direct inventory integration
   const {
@@ -40,28 +43,34 @@ export default function POS() {
     startNewSale
   } = useTransactionHandler(currentStore?.id || '');
 
-  // Load product data from product_catalog using consolidated hook
+  // Large order diagnostics for debugging failures
+  const { logOrderAttempt } = useLargeOrderDiagnostics();
+
+  // Unified product and inventory data
   const {
     products,
-    allProducts, // Unfiltered products for combo dialog
+    allProducts,
     categories,
     isLoading,
-    activeCategory,
-    setActiveCategory,
-    lastSync,
-    isConnected
-  } = useProductCatalogData(currentStore?.id || null);
+    error,
+    isConnected,
+    filters,
+    updateCategoryFilter,
+    refresh: refreshProducts
+  } = useUnifiedProducts({
+    storeId: currentStore?.id || null,
+    autoRefresh: true
+  });
 
-  // Set up automatic availability monitoring
-  useAutomaticAvailability(currentStore?.id || null, !!currentStore?.id);
+  // Local state for active category filter - initialize to "all" to show all products
+  const [activeCategory, setActiveCategory] = useState<string | null>("all");
 
-  // Set up real-time notifications
+  // Sync category filter with unified products - handle "all" as null
   useEffect(() => {
-    if (!currentStore?.id) return;
+    updateCategoryFilter(activeCategory === "all" ? null : activeCategory);
+  }, [activeCategory, updateCategoryFilter]);
 
-    const cleanup = realTimeNotificationService.setupRealTimeListeners(currentStore.id);
-    return cleanup;
-  }, [currentStore?.id]);
+  // Real-time notifications removed - using simplified toast system
 
   
   // Check the product activation status - for debugging
@@ -104,20 +113,26 @@ export default function POS() {
       cardNumber?: string;
       eWalletProvider?: string;
       eWalletReferenceNumber?: string;
-    }
+    },
+    orderType?: string,
+    deliveryPlatform?: string,
+    deliveryOrderNumber?: string
   ) => {
     if (!currentStore) {
       toast.error("Please select a store first");
-      return;
+      return false;
     }
     
     if (!currentShift) {
       toast.error("Please start a shift first");
-      return;
+      return false;
     }
     
     try {
-      console.log("POS: Processing payment with enhanced inventory validation...");
+      console.log("POS: Processing payment with streamlined transaction service...");
+      
+      // Enhanced validation is now handled in CheckoutModal before payment begins
+      // This provides a simpler, more reliable transaction flow
       
     // Convert cart items to the format expected by the transaction handler
     const cartItemsForTransaction = items.map(item => ({
@@ -126,7 +141,7 @@ export default function POS() {
       name: item.product?.name || 'Unknown Product'
     }));
 
-      await processPayment(
+      const success = await processPayment(
         currentStore, 
         currentShift, 
         cartItemsForTransaction, 
@@ -135,126 +150,73 @@ export default function POS() {
         total,
         paymentMethod,
         amountTendered,
-        paymentDetails
+        paymentDetails,
+        orderType,
+        deliveryPlatform,
+        deliveryOrderNumber
       );
+
+      return success;
     } catch (error) {
       console.error("Payment processing failed:", error);
       toast.error("Failed to process payment");
+      return false;
     }
   };
 
-  // Use useEffect to handle completed transaction state updates
+  // Note: Transaction completion now navigates to invoice page immediately
+  // The completedTransaction handling is disabled to prevent interference with navigation
+  
+  // Store completed transaction for receipt modal only (when explicitly requested)
   useEffect(() => {
-    if (completedTransaction) {
-      try {
-        console.log("POS: Processing completed transaction:", {
-          transaction: completedTransaction,
-          hasReceiptNumber: !!completedTransaction.receiptNumber,
-          hasItems: !!completedTransaction.items?.length,
-          hasCreatedAt: !!completedTransaction.createdAt,
-          selectedCustomer: selectedCustomer
-        });
+    if (completedTransaction && showReceiptModal) {
+      console.log("POS: Processing completed transaction for receipt modal only");
+      
+      // Convert for receipt display only
+      const transactionItems: TransactionItem[] = completedTransaction.items?.map((item, index) => ({
+        productId: item.productId || '',
+        variationId: item.variationId || undefined,
+        name: item.name || 'Unknown Item',
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || 0,
+        totalPrice: item.totalPrice || 0
+      })) || [];
 
-        // Validate required fields and handle errors asynchronously
-        if (!completedTransaction.receiptNumber) {
-          console.error("POS: Missing receipt number in completed transaction");
-          toast.error("Error: Missing receipt number");
-          setTimeout(() => startNewSale(), 100);
-          return;
-        }
+      const transactionForReceipt = {
+        ...completedTransaction,
+        shiftId: currentShift?.id || '',
+        storeId: currentStore?.id || '',
+        userId: currentShift?.userId || '',
+        paymentMethod: completedTransaction.paymentMethod || 'cash',
+        status: 'completed' as const,
+        items: transactionItems,
+        subtotal: completedTransaction.subtotal || 0,
+        tax: completedTransaction.tax || 0,
+        total: completedTransaction.total || 0,
+        discount: completedTransaction.discount || 0,
+        amountTendered: completedTransaction.amountTendered || 0,
+        change: completedTransaction.change || 0
+      };
 
-        if (!completedTransaction.items || completedTransaction.items.length === 0) {
-          console.error("POS: Missing items in completed transaction");
-          toast.error("Error: Missing transaction items");
-          setTimeout(() => startNewSale(), 100);
-          return;
-        }
-
-        if (!completedTransaction.createdAt) {
-          console.error("POS: Missing creation date in completed transaction");
-          toast.error("Error: Missing transaction date");
-          setTimeout(() => startNewSale(), 100);
-          return;
-        }
-
-        // Convert CartItems to TransactionItems for the receipt with error handling
-        const transactionItems: TransactionItem[] = completedTransaction.items.map((item, index) => {
-          if (!item.name || !item.productId) {
-            console.warn(`POS: Item ${index} missing required fields:`, item);
-          }
-          
-          return {
-            productId: item.productId || '',
-            variationId: item.variationId || undefined,
-            name: item.name || 'Unknown Item',
-            quantity: item.quantity || 1,
-            unitPrice: item.unitPrice || 0,
-            totalPrice: item.totalPrice || 0
-          };
-        });
-
-        // Convert CompletedTransaction to Transaction format for compatibility with safe defaults
-        const transactionForReceipt = {
-          ...completedTransaction,
-          shiftId: currentShift?.id || '',
-          storeId: currentStore?.id || '',
-          userId: currentShift?.userId || '',
-          paymentMethod: completedTransaction.paymentMethod || 'cash',
-          status: 'completed' as const,
-          createdAt: completedTransaction.createdAt,
-          receiptNumber: completedTransaction.receiptNumber,
-          items: transactionItems,
-          // Ensure all numeric fields have defaults
-          subtotal: completedTransaction.subtotal || 0,
-          tax: completedTransaction.tax || 0,
-          total: completedTransaction.total || 0,
-          discount: completedTransaction.discount || 0,
-          amountTendered: completedTransaction.amountTendered || 0,
-          change: completedTransaction.change || 0
-        };
-
-        console.log("POS: Transaction converted for receipt:", transactionForReceipt);
-
-        // Store last transaction for receipt viewing without causing re-renders
-        setLastCompletedTransaction(transactionForReceipt);
-        setLastTransactionCustomer(selectedCustomer);
-
-      } catch (error) {
-        console.error("POS: Error processing completed transaction:", error);
-        toast.error("Error displaying receipt. Starting new sale.");
-        setTimeout(() => startNewSale(), 100);
-      }
+      setLastCompletedTransaction(transactionForReceipt);
+      setLastTransactionCustomer(selectedCustomer);
     }
-  }, [completedTransaction?.id]); // Only depend on transaction ID to prevent loops
-
-  // If we have a completed transaction, show the receipt
-  if (completedTransaction && lastCompletedTransaction) {
-    return (
-      <CompletedTransaction
-        transaction={lastCompletedTransaction}
-        customer={selectedCustomer}
-        startNewSale={() => {
-          console.log("POS: Starting new sale from completed transaction");
-          startNewSale();
-        }}
-      />
-    );
-  }
+  }, [completedTransaction?.id, showReceiptModal]); // Only process when receipt modal is requested
 
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-background">
+
+
       {/* Header */}
       <div className="flex-shrink-0 bg-card border-b border-border shadow-sm">
         <OptimizedPOSHeader
-          currentStore={currentStore}
-          currentShift={currentShift}
-          selectedCustomer={selectedCustomer}
-          isConnected={isConnected}
-          lastSync={lastSync}
-          storeId={currentStore?.id}
-          lastTransaction={lastCompletedTransaction}
-          lastCustomer={lastTransactionCustomer}
-          onViewReceipt={() => setShowReceiptModal(true)}
+          storeName={currentStore?.name || 'POS System'}
+          shiftInfo={currentShift ? {
+            cashierName: currentShift.cashierName || 'Unknown Cashier',
+            startTime: new Date(currentShift.startTime).toLocaleTimeString()
+          } : undefined}
+          connectionStatus={isConnected ? 'online' : 'offline'}
+          onShowLastReceipt={() => setShowReceiptModal(true)}
         />
       </div>
 
@@ -272,7 +234,7 @@ export default function POS() {
           selectedCustomer={selectedCustomer}
           setSelectedCustomer={setSelectedCustomer}
           discount={discount}
-          discountType={discountType as 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | undefined}
+          discountType={discountType as 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | undefined}
           discountIdNumber={discountIdNumber}
           seniorDiscounts={seniorDiscounts}
           otherDiscount={otherDiscount}

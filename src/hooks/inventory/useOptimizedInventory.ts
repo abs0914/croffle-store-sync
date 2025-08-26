@@ -3,7 +3,7 @@ import { useMemo, useCallback } from 'react';
 import { useOptimizedDataFetch, useOptimizedMutation } from '@/hooks/useOptimizedDataFetch';
 import { fetchInventoryItems, updateInventoryItem } from '@/services/inventoryManagement/inventoryItemService';
 import { fetchInventoryMovements } from '@/services/storeInventory/inventoryMovementService';
-import { getInventoryStatus } from '@/services/productCatalog/inventoryIntegrationService';
+import { validateInventoryAvailability } from '@/services/inventory/simpleInventoryService';
 import { toast } from 'sonner';
 
 export function useOptimizedInventory(storeId: string) {
@@ -40,20 +40,14 @@ export function useOptimizedInventory(storeId: string) {
     }
   );
 
-  // Optimized inventory status
-  const {
-    data: inventoryStatus,
-    isLoading: isLoadingStatus
-  } = useOptimizedDataFetch(
-    ['inventory-status', storeId],
-    () => getInventoryStatus(storeId),
-    {
-      enabled: !!storeId,
-      cacheConfig: {
-        staleTime: 30 * 1000, // 30 seconds
-      }
-    }
-  );
+  // Simple inventory status using the new service
+  const inventoryStatus = useMemo(() => {
+    return {
+      totalItems: inventoryItems.length,
+      lowStock: inventoryItems.filter(item => item.current_stock <= (item.minimum_threshold || 10)).length,
+      outOfStock: inventoryItems.filter(item => item.current_stock <= 0).length
+    };
+  }, [inventoryItems]);
 
   // Optimized mutation for inventory updates
   const { mutate: updateInventory } = useOptimizedMutation(
@@ -67,7 +61,6 @@ export function useOptimizedInventory(storeId: string) {
       },
       invalidateQueries: [
         ['inventory-items', storeId],
-        ['inventory-status', storeId],
         ['inventory-movements', storeId]
       ]
     }
@@ -119,7 +112,7 @@ export function useOptimizedInventory(storeId: string) {
     });
   }, [inventoryItems]);
 
-  const isLoading = isLoadingItems || isLoadingMovements || isLoadingStatus;
+  const isLoading = isLoadingItems || isLoadingMovements;
 
   return {
     // Data
@@ -132,7 +125,6 @@ export function useOptimizedInventory(storeId: string) {
     isLoading,
     isLoadingItems,
     isLoadingMovements,
-    isLoadingStatus,
     
     // Errors
     error: itemsError,

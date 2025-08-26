@@ -188,7 +188,10 @@ export function AddCommissaryItemDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="unit_cost">Unit Cost</Label>
+              <Label htmlFor="unit_cost">
+                Purchase Cost (per unit)
+                <span className="text-xs text-muted-foreground ml-1">(Optional)</span>
+              </Label>
               <Input
                 id="unit_cost"
                 type="number"

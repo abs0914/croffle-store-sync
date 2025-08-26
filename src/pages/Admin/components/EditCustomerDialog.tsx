@@ -15,6 +15,7 @@ interface EditCustomerDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onCustomerUpdated: () => void;
+  onCustomerDeleted: () => void;
   stores: Store[];
 }
 
@@ -23,6 +24,7 @@ export const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
   isOpen,
   onOpenChange,
   onCustomerUpdated,
+  onCustomerDeleted,
   stores
 }) => {
   const [formData, setFormData] = useState({
@@ -98,6 +100,58 @@ export const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
     }
   };
 
+  const handleDelete = async () => {
+    if (!customer) return;
+
+    try {
+      // Check if customer has transactions
+      const { data: transactions, error: transactionError } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('customer_id', customer.id)
+        .limit(1);
+
+      if (transactionError) throw transactionError;
+
+      if (transactions && transactions.length > 0) {
+        // Show confirmation for customers with transactions
+        if (!confirm('This customer has transaction history. They will be marked as inactive instead of being permanently deleted. Continue?')) {
+          return;
+        }
+        
+        const { error: updateError } = await supabase
+          .from('customers')
+          .update({ 
+            is_active: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', customer.id);
+
+        if (updateError) throw updateError;
+        toast.success('Customer marked as inactive (has transaction history)');
+      } else {
+        // No transactions, confirm permanent deletion
+        if (!confirm('Are you sure you want to permanently delete this customer? This action cannot be undone.')) {
+          return;
+        }
+        
+        const { error: deleteError } = await supabase
+          .from('customers')
+          .delete()
+          .eq('id', customer.id);
+
+        if (deleteError) throw deleteError;
+        toast.success('Customer deleted successfully');
+      }
+
+      onCustomerDeleted();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Error deleting customer:', error);
+      toast.error('Failed to delete customer');
+    }
+  };
+
   if (!customer) return null;
 
   return (
@@ -146,12 +200,12 @@ export const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="store">Store</Label>
-                <Select value={formData.storeId} onValueChange={(value) => setFormData(prev => ({ ...prev, storeId: value }))}>
+                <Select value={formData.storeId || "none"} onValueChange={(value) => setFormData(prev => ({ ...prev, storeId: value === "none" ? "" : value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select store" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Store</SelectItem>
+                    <SelectItem value="none">No Store</SelectItem>
                     {stores.map((store) => (
                       <SelectItem key={store.id} value={store.id}>
                         {store.name}
@@ -177,17 +231,27 @@ export const EditCustomerDialog: React.FC<EditCustomerDialogProps> = ({
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex justify-between">
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isUpdating}
               >
-                Cancel
+                Delete Customer
               </Button>
-              <Button type="submit" disabled={isUpdating}>
-                {isUpdating ? 'Updating...' : 'Update Customer'}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isUpdating}>
+                  {isUpdating ? 'Updating...' : 'Update Customer'}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         )}

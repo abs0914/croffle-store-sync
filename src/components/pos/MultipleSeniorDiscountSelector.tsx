@@ -9,6 +9,8 @@ import { BadgePercent, Plus, X, Users } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { CartCalculationService, SeniorDiscount, OtherDiscount } from "@/services/cart/CartCalculationService";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/auth/AuthProvider";
 
 interface MultipleSeniorDiscountSelectorProps {
   subtotal: number;
@@ -28,11 +30,14 @@ export default function MultipleSeniorDiscountSelector({
   const [isOpen, setIsOpen] = useState(false);
   const [discountMode, setDiscountMode] = useState<'senior' | 'other'>('senior');
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>(currentSeniorDiscounts);
-  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo'>('pwd');
+  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary'>('pwd');
   const [otherIdNumber, setOtherIdNumber] = useState(currentOtherDiscount?.idNumber || '');
+  const [complimentaryReason, setComplimentaryReason] = useState('');
+  const [approverName, setApproverName] = useState('');
   const [totalDiners, setTotalDiners] = useState<number>(
     currentTotalDiners || Math.max(currentSeniorDiscounts.length, 1)
   );
+  const { user } = useAuth();
   
   // BIR mandated discounts
   const SENIOR_DISCOUNT_RATE = 0.20; // 20% for senior citizens
@@ -86,6 +91,18 @@ export default function MultipleSeniorDiscountSelector({
   };
 
   const handleApplyDiscounts = () => {
+    // Validate complimentary discount requirements
+    if (discountMode === 'other' && otherDiscountType === 'complimentary') {
+      if (!complimentaryReason.trim()) {
+        alert('Reason is required for complimentary discounts');
+        return;
+      }
+      if (!approverName.trim()) {
+        alert('Approver name is required for complimentary discounts');
+        return;
+      }
+    }
+
     let finalSeniorDiscounts: SeniorDiscount[] = [];
     let finalOtherDiscount: OtherDiscount | null = null;
 
@@ -96,10 +113,15 @@ export default function MultipleSeniorDiscountSelector({
         finalSeniorDiscounts = CartCalculationService.distributeSeniorDiscounts(preview.totalSeniorDiscount, validSeniorDiscounts);
       }
     } else if (discountMode === 'other') {
+      const justificationText = otherDiscountType === 'complimentary' 
+        ? `${complimentaryReason} | Approved by: ${approverName}`
+        : undefined;
+      
       finalOtherDiscount = {
         type: otherDiscountType,
         amount: 0, // Will be calculated by the service
-        idNumber: (otherDiscountType === 'pwd') ? otherIdNumber : undefined
+        idNumber: (otherDiscountType === 'pwd') ? otherIdNumber : undefined,
+        justification: justificationText
       };
     }
 
@@ -274,6 +296,10 @@ export default function MultipleSeniorDiscountSelector({
                     <RadioGroupItem value="promo" id="promo" />
                     <Label htmlFor="promo">Promo (Custom)</Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="complimentary" id="complimentary" />
+                    <Label htmlFor="complimentary">Complimentary (100%)</Label>
+                  </div>
                 </RadioGroup>
 
                 {otherDiscountType === 'pwd' && (
@@ -285,6 +311,34 @@ export default function MultipleSeniorDiscountSelector({
                       onChange={(e) => setOtherIdNumber(e.target.value)}
                       placeholder="Enter PWD ID number"
                     />
+                  </div>
+                )}
+
+                {otherDiscountType === 'complimentary' && (
+                  <div className="space-y-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="space-y-2">
+                      <Label htmlFor="complimentaryReason">Reason (Required)</Label>
+                      <Textarea
+                        id="complimentaryReason"
+                        value={complimentaryReason}
+                        onChange={(e) => setComplimentaryReason(e.target.value)}
+                        placeholder="Enter reason for complimentary discount..."
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="approverName">Approver Name (Required)</Label>
+                      <Input
+                        id="approverName"
+                        value={approverName}
+                        onChange={(e) => setApproverName(e.target.value)}
+                        placeholder="Enter name of manager/supervisor who approved this"
+                        required
+                      />
+                    </div>
+                    <div className="text-sm text-red-600 font-medium">
+                      ⚠️ This will apply a 100% discount (no charge)
+                    </div>
                   </div>
                 )}
               </div>

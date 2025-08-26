@@ -67,17 +67,17 @@ export const USER_ROLE_DEFINITIONS: Record<string, UserRoleDefinition> = {
     description: 'Inventory & Operations management with purchasing authority',
     permissions: {
       pos: false,
-      dashboard: false,
+      dashboard: true, // Updated: stock_user should have dashboard access
       inventory_management: false,
-      commissary_inventory: true,
-      production_management: true,
-      order_management: true,
-      expenses: true,
-      recipe_management: true,
-      reports: false,
+      commissary_inventory: true, // Already correct
+      production_management: true, // Already correct
+      order_management: true, // Already correct
+      expenses: true, // Already correct
+      recipe_management: true, // Already correct
+      reports: true, // Updated: stock_user should have reports access
       settings: false,
       user_management: false,
-      purchasing: true,
+      purchasing: true, // Already correct
     },
     color: 'bg-blue-100 text-blue-800 border-blue-200',
     hierarchy: 50,
@@ -87,13 +87,13 @@ export const USER_ROLE_DEFINITIONS: Record<string, UserRoleDefinition> = {
     description: 'Limited access to production and recipe management only',
     permissions: {
       pos: false,
-      dashboard: false,
+      dashboard: true, // Updated: production_user should have dashboard access
       inventory_management: false,
-      commissary_inventory: false,
-      production_management: true,
+      commissary_inventory: true, // Updated: production_user should have commissary access
+      production_management: true, // Already correct
       order_management: false,
       expenses: false,
-      recipe_management: true,
+      recipe_management: true, // Already correct
       reports: false,
       settings: false,
       user_management: false,

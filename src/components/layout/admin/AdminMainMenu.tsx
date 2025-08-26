@@ -34,9 +34,9 @@ const menuItems = [
     permission: 'settings' as const,
   },
   {
-    title: "Recipes",
+    title: "Recipe Management",
     icon: Receipt,
-    href: ROUTE_PATHS.ADMIN_RECIPES,
+    href: "/admin/recipe-management",
     permission: 'recipe_management' as const,
   },
   {
@@ -102,6 +102,12 @@ const menuItems = [
     href: ROUTE_PATHS.ADMIN_REPORTS,
     permission: 'reports' as const,
   },
+  {
+    title: "Add-ons",
+    icon: Package,
+    href: ROUTE_PATHS.ADMIN_ADDONS,
+    permission: 'recipe_management' as const,
+  },
 ];
 
 export function AdminMainMenu() {
@@ -130,6 +136,11 @@ export function AdminMainMenu() {
 
   // Filter menu items based on user permissions
   const visibleMenuItems = menuItems.filter(item => {
+    // Always show dashboard if user has dashboard permission
+    if (item.title === "Dashboard" && hasPermission('dashboard')) {
+      return true;
+    }
+    
     if (item.permission && !hasPermission(item.permission)) {
       return false;
     }
@@ -139,7 +150,7 @@ export function AdminMainMenu() {
         hasPermission(subItem.permission || 'dashboard')
       );
     }
-    return true;
+    return hasPermission(item.permission || 'dashboard');
   });
 
   return (

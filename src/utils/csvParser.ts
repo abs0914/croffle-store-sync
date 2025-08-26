@@ -204,6 +204,8 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
   const recipes: Map<string, RecipeUpload> = new Map();
 
   console.log('CSV headers:', headers);
+  console.log('Raw first line:', lines[0]);
+  console.log('Parsed headers:', headers);
 
   for (let i = 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
@@ -219,13 +221,44 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
     });
 
     const recipeName = row['name'] || row['recipe name'] || row['product'];
-    const category = row['category'];
-    const ingredientName = row['ingredient name'];
+    const category = row['recipe_category'] || row['category'];
+    const ingredientName = row['ingredient_name'] || row['ingredient name'];
     const uom = row['uom'] || row['unit of measure'] || row['unit'];
     const quantity = parseFloat(row['quantity used'] || row['quantity']) || 0;
-    const cost = parseFloat(row['cost per unit']) || 0;
+    
+    // More comprehensive cost parsing - handle exact column name from user's CSV
+    const costValue = row['cost_per_unit'] || row['cost per unit'] || row['unit cost'] || row['cost'];
+    let cost = 0;
+    
+    if (costValue && costValue.trim() !== '') {
+      const numericValue = parseFloat(costValue.toString().replace(/[^0-9.-]/g, ''));
+      if (!isNaN(numericValue)) {
+        cost = numericValue;
+      }
+    }
+    
+    // Enhanced debugging - show first few rows in detail
+    if (i <= 3) {
+      console.log(`🔍 Line ${i + 1} DETAILED DEBUG:`, {
+        recipeName,
+        ingredientName,
+        costValue: `"${costValue}"`,
+        parsedCost: cost,
+        allHeaders: headers,
+        allValues: values,
+        rowKeys: Object.keys(row),
+        costRelatedKeys: Object.keys(row).filter(k => k.toLowerCase().includes('cost'))
+      });
+    }
+    
+    // Log cost parsing issues
+    if (!costValue || costValue.trim() === '') {
+      console.warn(`⚠️  Line ${i + 1}: Empty cost for "${ingredientName}" in "${recipeName}"`);
+    } else if (cost === 0) {
+      console.warn(`⚠️  Line ${i + 1}: Zero cost parsed from "${costValue}" for "${ingredientName}" in "${recipeName}"`);
+    }
 
-    console.log(`Processing line ${i + 1}:`, { recipeName, category, ingredientName, uom, quantity, cost });
+    console.log(`Processing line ${i + 1}:`, { recipeName, category, ingredientName, uom, quantity, cost, originalCostValue: costValue });
 
     if (!recipeName || !ingredientName || !uom || quantity <= 0) {
       console.log(`Skipping line ${i + 1}: missing required fields`);

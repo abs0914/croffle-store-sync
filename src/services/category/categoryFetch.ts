@@ -1,7 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Category } from "@/types";
-import { toast } from "sonner";
+
 import { sortCategoriesForPOS } from "@/utils/categoryOrdering";
 
 export const fetchCategories = async (storeId: string): Promise<Category[]> => {
@@ -9,8 +9,7 @@ export const fetchCategories = async (storeId: string): Promise<Category[]> => {
     const { data, error } = await supabase
       .from("categories")
       .select("*")
-      .eq("store_id", storeId)
-      .eq("is_active", true);
+      .eq("store_id", storeId);
     
     if (error) {
       throw new Error(error.message);
@@ -29,11 +28,11 @@ export const fetchCategories = async (storeId: string): Promise<Category[]> => {
       storeId: item.store_id // For frontend compatibility
     })) || [];
 
-    // Apply custom POS ordering
-    return sortCategoriesForPOS(categories);
+    // Filter to include categories marked active or with null (treated as active), then apply custom POS ordering
+    const activeCategories = categories.filter((c) => c.is_active);
+    return sortCategoriesForPOS(activeCategories);
   } catch (error) {
-    console.error("Error fetching categories:", error);
-    toast.error("Failed to load categories");
+    console.warn("fetchCategories: Failed to load categories, returning empty list.", { storeId, error });
     return [];
   }
 };

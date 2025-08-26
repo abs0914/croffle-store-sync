@@ -45,8 +45,9 @@ export const searchCustomers = async (
       name: customer.name,
       email: customer.email || undefined,
       phone: customer.phone,
-      address: undefined, // Not in the database schema
-      loyaltyPoints: 0, // Not in the database schema yet
+      address: customer.address || undefined,
+      tin: customer.tin || undefined,
+      loyaltyPoints: customer.loyalty_points || 0,
       storeId: customer.store_id || undefined,
       storeName: customer.stores?.name || undefined
     }));
@@ -138,13 +139,14 @@ export const registerStoreCustomer = async (
       .eq("id", storeId)
       .single();
 
-    // Insert customer with store_id
     const { data, error } = await supabase
       .from("customers")
       .insert({
         name: customerData.name,
         email: customerData.email,
         phone: customerData.phone,
+        address: customerData.address,
+        tin: customerData.tin,
         store_id: storeId
       })
       .select()
@@ -159,8 +161,9 @@ export const registerStoreCustomer = async (
       name: data.name,
       email: data.email || undefined,
       phone: data.phone,
-      address: customerData.address,
-      loyaltyPoints: 0,
+      address: data.address || undefined,
+      tin: data.tin || undefined,
+      loyaltyPoints: data.loyalty_points || 0,
       storeId: storeId,
       storeName: storeData?.name
     };

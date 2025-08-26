@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Receipt } from "lucide-react";
+import { Clock, Receipt, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/utils/format";
 import { format } from "date-fns";
@@ -74,7 +74,11 @@ export default function RecentTransactions({ storeId }: RecentTransactionsProps)
       </CardHeader>
       <CardContent>
         {transactions.length === 0 ? (
-          <p className="text-muted-foreground">No recent transactions</p>
+          <div className="text-center py-6">
+            <Package className="h-12 w-12 text-green-500 mx-auto mb-3" />
+            <p className="text-muted-foreground font-medium">Ready for today's sales!</p>
+            <p className="text-sm text-muted-foreground">Transactions will appear here once processing begins</p>
+          </div>
         ) : (
           <div className="space-y-3">
             {transactions.map((transaction) => (

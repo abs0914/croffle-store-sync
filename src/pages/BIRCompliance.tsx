@@ -172,13 +172,13 @@ export default function BIRCompliance() {
         <Card>
           <CardContent className="p-4">
             <div>
-              <p className="text-sm text-muted-foreground">Grand Total Sales</p>
-              <p className="text-lg font-semibold">
-                ₱{cumulativeSales?.grand_total_sales?.toLocaleString() || '0.00'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {cumulativeSales?.grand_total_transactions || 0} transactions
-              </p>
+                <p className="text-sm text-muted-foreground">Grand Total Sales</p>
+                <p className="text-lg font-semibold">
+                  ₱{cumulativeSales?.grandTotalSales?.toLocaleString() || '0.00'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {cumulativeSales?.grandTotalTransactions || 0} transactions
+                </p>
             </div>
           </CardContent>
         </Card>
@@ -186,9 +186,9 @@ export default function BIRCompliance() {
         <Card>
           <CardContent className="p-4">
             <div>
-              <p className="text-sm text-muted-foreground">Missing Fields</p>
+              <p className="text-sm text-muted-foreground">Missing Requirements</p>
               <p className="text-lg font-semibold">
-                {complianceStatus?.missingFields?.length || 0}
+                {complianceStatus?.missingRequirements?.length || 0}
               </p>
               <p className="text-xs text-muted-foreground">
                 {complianceStatus?.warnings?.length || 0} warnings
@@ -199,15 +199,15 @@ export default function BIRCompliance() {
       </div>
 
       {/* Alerts */}
-      {(complianceStatus?.missingFields?.length || 0) > 0 && (
+      {(complianceStatus?.missingRequirements?.length || 0) > 0 && (
         <Card className="border-red-200 bg-red-50">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
               <div>
-                <h3 className="font-semibold text-red-900">Missing Required Fields</h3>
+                <h3 className="font-semibold text-red-900">Missing Requirements</h3>
                 <ul className="text-sm text-red-700 mt-1 list-disc list-inside">
-                  {complianceStatus?.missingFields?.map((field, index) => (
+                  {complianceStatus?.missingRequirements?.map((field, index) => (
                     <li key={index}>{field}</li>
                   ))}
                 </ul>
@@ -351,27 +351,27 @@ export default function BIRCompliance() {
                     <div>
                       <Label>Total Sales</Label>
                       <p className="text-2xl font-bold">
-                        ₱{cumulativeSales.grand_total_sales.toLocaleString()}
+                        ₱{cumulativeSales.grandTotalSales.toLocaleString()}
                       </p>
                     </div>
                     <div>
                       <Label>Total Transactions</Label>
                       <p className="text-2xl font-bold">
-                        {cumulativeSales.grand_total_transactions.toLocaleString()}
+                        {cumulativeSales.grandTotalTransactions.toLocaleString()}
                       </p>
                     </div>
                     <div>
                       <Label>Last Transaction</Label>
                       <p className="text-sm">
-                        {cumulativeSales.last_transaction_date 
-                          ? format(new Date(cumulativeSales.last_transaction_date), 'MMM dd, yyyy HH:mm')
+                        {cumulativeSales.lastTransactionDate 
+                          ? format(new Date(cumulativeSales.lastTransactionDate), 'MMM dd, yyyy HH:mm')
                           : 'None'
                         }
                       </p>
                     </div>
                     <div>
                       <Label>Last Receipt</Label>
-                      <p className="text-sm">{cumulativeSales.last_receipt_number || 'None'}</p>
+                      <p className="text-sm">{cumulativeSales.lastReceiptNumber || 'None'}</p>
                     </div>
                   </div>
                 </div>

@@ -7,11 +7,12 @@ import AdminDashboard from '@/pages/Admin/AdminDashboard';
 import AdminStores from '@/pages/Admin/AdminStores';
 import AdminCustomers from '@/pages/Admin/AdminCustomers';
 import AdminOrders from '@/pages/Admin/AdminOrders';
-import AdminRecipes from '@/pages/Admin/AdminRecipes';
+
 import AdminReports from '@/pages/Admin/AdminReports';
 import AdminExpenses from '@/pages/Admin/AdminExpenses';
 import CommissaryManagement from '@/pages/Commissary/CommissaryManagement';
 import ProductionManagement from '@/pages/ProductionManagement';
+import { RecipeManagement } from '@/pages/Admin/RecipeManagement';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
 import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
@@ -34,25 +35,38 @@ export const AdminAppRoutes = () => {
       />
 
 
-      {/* Admin Recipe Management - Admin Only */}
-      <Route
-        path="/admin/recipes"
-        element={
-          <AdminProtectedRoute>
-            <AdminLayout>
-              <AdminRecipes />
-            </AdminLayout>
-          </AdminProtectedRoute>
-        }
-      />
 
       {/* Admin Commissary Inventory - Admin Only */}
       <Route
         path="/admin/commissary-inventory"
         element={
-          <AdminProtectedRoute>
+          <AdminProtectedRoute section="commissary-inventory">
             <AdminLayout>
               <CommissaryManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Recipe Management - Unified Route */}
+      <Route
+        path="/admin/recipe-management"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout>
+              <RecipeManagement />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Redirect old recipes route to new unified recipe management */}
+      <Route
+        path="/admin/recipes"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout>
+              <RecipeManagement />
             </AdminLayout>
           </AdminProtectedRoute>
         }
