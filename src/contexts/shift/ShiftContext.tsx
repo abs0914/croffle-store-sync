@@ -53,12 +53,18 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
 
   const startShift = async (
     startingCash: number,
-    startInventoryCount: Record<string, number>,
     startPhoto?: string,
-    cashierId?: string
+    cashierId?: string,
+    inventoryCounts?: Record<string, number>
   ): Promise<boolean> => {
     if (!user || !currentStore) {
       toast.error("Missing user or store information");
+      return false;
+    }
+
+    // Streamlined validation - require photo
+    if (!startPhoto) {
+      toast.error("Photo is required to start shift");
       return false;
     }
 
@@ -71,20 +77,23 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      console.log(`Starting shift for store: ${currentStore.id} with user: ${user.id}`);
+      console.log(`🚀 Starting streamlined shift for store: ${currentStore.id} with user: ${user.id}`, {
+        inventoryItemCount: inventoryCounts ? Object.keys(inventoryCounts).length : 0,
+        totalInventoryCount: inventoryCounts ? Object.values(inventoryCounts).reduce((sum, count) => sum + count, 0) : 0
+      });
 
       const shift = await createShift(
         user.id,
         currentStore.id,
         startingCash,
-        startInventoryCount,
-        startPhoto,
-        cashierId
+        startPhoto, // Required photo
+        cashierId,
+        inventoryCounts
       );
 
       if (shift) {
         setCurrentShift(shift);
-        toast.success("Shift started successfully");
+        toast.success("Shift started successfully! 🎉");
         return true;
       } else {
         toast.error("Failed to create shift - check your permissions");
@@ -112,11 +121,16 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
 
   const endShift = async (
     endingCash: number,
-    endInventoryCount: Record<string, number>,
     endPhoto?: string
   ): Promise<boolean> => {
     if (!currentShift) {
       toast.error("No active shift to end");
+      return false;
+    }
+
+    // Streamlined validation - require photo
+    if (!endPhoto) {
+      toast.error("Photo is required to end shift");
       return false;
     }
 
@@ -129,17 +143,18 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
+      console.log(`🏁 Ending streamlined shift with auto-generated inventory report`);
+
       const success = await closeShift(
         currentShift.id,
         endingCash,
-        endInventoryCount,
-        endPhoto,
+        endPhoto, // Required photo
         queryClient
       );
 
       if (success) {
         setCurrentShift(null);
-        toast.success("Shift ended successfully");
+        toast.success("Shift ended successfully! 📊 Inventory report generated automatically.");
         return true;
       } else {
         toast.error("Failed to end shift");

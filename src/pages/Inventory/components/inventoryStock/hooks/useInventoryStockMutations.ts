@@ -123,7 +123,7 @@ export const useInventoryStockMutations = (
     createMutation.mutate({
       ...newStockItem,
       store_id: currentStore.id,
-      stock_quantity: Number(newStockItem.stock_quantity || 0),
+      stock_quantity: parseFloat(String(newStockItem.stock_quantity || 0)),
       is_active: true
     } as Omit<InventoryStock, "id">);
   }, [currentStore, createMutation]);
@@ -154,8 +154,9 @@ export const useInventoryStockMutations = (
   }, [stockMutation]);
 
   const handleStockTransfer = useCallback((
-    sourceId: string,
-    targetStoreId: string,
+    fromStoreId: string,
+    toStoreId: string,
+    inventoryItemId: string,
     quantity: number,
     notes?: string
   ) => {
@@ -165,8 +166,8 @@ export const useInventoryStockMutations = (
     }
     
     transferMutation.mutate({
-      sourceId,
-      targetStoreId,
+      sourceId: inventoryItemId,
+      targetStoreId: toStoreId,
       quantity,
       notes
     });

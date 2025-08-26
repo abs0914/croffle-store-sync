@@ -1,105 +1,251 @@
 
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { CartItem, Customer } from "@/types";
-import { CustomerLookup } from "@/components/pos/customer";
-import DiscountSelector from "./DiscountSelector";
-import { CartItemList, CartSummary } from "./cart";
+import React, { useState, useEffect } from 'react';
+import { CartItem, Customer } from '@/types';
+import { PaymentDialog } from './PaymentDialog';
+import { CustomerSelector } from './CustomerSelector';
+import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
+import { OrderTypeSelector } from './OrderTypeSelector';
+import { Separator } from '@/components/ui/separator';
+import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
+import { useStore } from '@/contexts/StoreContext';
+import { useCart } from '@/contexts/cart/CartContext';
+import { toast } from 'sonner';
+import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
+import {
+  CartHeader,
+  CartValidationMessage,
+  CartItemsList,
+  CartSummary,
+  CartActions
+} from './cart';
 
 interface CartViewProps {
-  items: CartItem[];
-  subtotal: number;
-  tax: number;
-  total: number;
-  discount: number;
-  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
-  discountIdNumber?: string;
-  removeItem: (index: number) => void;
-  updateQuantity: (index: number, quantity: number) => void;
-  clearCart: () => void;
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
-  handlePaymentComplete: (
-    paymentMethod: 'cash' | 'card' | 'e-wallet',
-    amountTendered: number,
-    paymentDetails?: {
-      cardType?: string;
-      cardNumber?: string;
-      eWalletProvider?: string;
-      eWalletReferenceNumber?: string;
-    }
-  ) => void;
+  handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }) => void;
+  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any) => void;
   isShiftActive: boolean;
 }
 
 export default function CartView({
-  items,
-  subtotal,
-  tax,
-  total,
-  discount,
-  discountType,
-  discountIdNumber,
-  removeItem,
-  updateQuantity,
-  clearCart,
   selectedCustomer,
   setSelectedCustomer,
   handleApplyDiscount,
+  handleApplyMultipleDiscounts,
   handlePaymentComplete,
   isShiftActive
 }: CartViewProps) {
+  const { currentStore } = useStore();
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string>('');
+  const [isOrderTypeTransitioning, setIsOrderTypeTransitioning] = useState(false);
+  
+  // Use centralized cart calculations from context
+  const { 
+    calculations, 
+    items: cartItems, 
+    seniorDiscounts, 
+    otherDiscount,
+    orderType,
+    setOrderType,
+    deliveryPlatform,
+    setDeliveryPlatform,
+    deliveryOrderNumber,
+    setDeliveryOrderNumber,
+    updateItemPrice,
+    removeItem,
+    updateQuantity,
+    clearCart
+  } = useCart();
+
+  // Debug logging to track cart data
+  console.log('CartView: Cart data from context', {
+    itemCount: cartItems?.length || 0,
+    orderType,
+    calculations: calculations.finalTotal,
+    seniorDiscountsCount: seniorDiscounts?.length || 0,
+    cartItemsRaw: cartItems,
+    isOrderTypeTransitioning
+  });
+
+  // Debug logging for cart items
+  useEffect(() => {
+    console.log('CartView: Cart items changed', {
+      itemCount: cartItems?.length || 0,
+      orderType,
+      isTransitioning: isOrderTypeTransitioning,
+      items: cartItems?.map(item => ({ id: item.productId, name: item.product.name }))
+    });
+  }, [cartItems, orderType, isOrderTypeTransitioning]);
+
+  // Handle order type transitions with loading state
+  const handleOrderTypeChange = (newOrderType: any) => {
+    console.log('CartView: Order type changing', { from: orderType, to: newOrderType });
+    setIsOrderTypeTransitioning(true);
+    setOrderType(newOrderType);
+    
+    // Small delay to ensure context stability
+    setTimeout(() => {
+      setIsOrderTypeTransitioning(false);
+      console.log('CartView: Order type transition complete');
+    }, 100);
+  };
+
+  const { 
+    isValidating, 
+    validateCartItems, 
+    processCartSale, 
+    getItemValidation 
+  } = useInventoryValidation(currentStore?.id || '');
+
+  // Validate cart items when they change
+  useEffect(() => {
+    const validateCart = async () => {
+      if (cartItems.length === 0) {
+        setValidationMessage('');
+        return;
+      }
+
+      const isValid = await validateCartItems(cartItems);
+      if (!isValid) {
+        setValidationMessage('Some items have insufficient stock');
+      } else {
+        setValidationMessage('');
+      }
+    };
+
+    validateCart();
+  }, [cartItems, validateCartItems]);
+
+  const handlePaymentCompleteWithDeduction = async (
+    paymentMethod: 'cash' | 'card' | 'e-wallet',
+    amountTendered: number,
+    paymentDetails?: any
+  ) => {
+    if (!currentStore?.id) {
+      toast.error('No store selected');
+      return;
+    }
+
+    // Generate temporary transaction ID for tracking
+    const tempTransactionId = `temp-${Date.now()}`;
+    
+    try {
+      // Process inventory deductions first
+      const deductionSuccess = await processCartSale(cartItems, tempTransactionId);
+      if (!deductionSuccess) {
+        toast.error('Failed to process inventory deductions');
+        return;
+      }
+
+      // If deductions successful, complete the payment
+      handlePaymentComplete(paymentMethod, amountTendered, paymentDetails);
+      setIsPaymentDialogOpen(false);
+    } catch (error) {
+      console.error('Error processing payment with deductions:', error);
+      toast.error('Payment processing failed');
+    }
+  };
+  
+  // Calculate the actual total with proper BIR-compliant calculations
+  const actualTotal = calculations.finalTotal;
+  const adjustedVAT = calculations.adjustedVAT;
+  
+  // Validation for online delivery orders
+  const isDeliveryOrderValid = orderType === 'dine_in' || 
+    (orderType === 'online_delivery' && deliveryPlatform && deliveryOrderNumber.trim());
+  
+  const canCheckout = cartItems.length > 0 && isShiftActive && !isValidating && !Boolean(validationMessage) && isDeliveryOrderValid;
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-bold text-lg text-croffle-primary">Current Order</h2>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={clearCart}
-          className="text-croffle-accent hover:text-croffle-accent/90 hover:bg-croffle-background"
-          disabled={items.length === 0 || !isShiftActive}
-        >
-          Clear All
-        </Button>
-      </div>
-      
-      {/* Customer Selection */}
-      <div className="mb-4">
-        <CustomerLookup 
-          onSelectCustomer={setSelectedCustomer}
-          selectedCustomer={selectedCustomer}
-        />
-      </div>
-      
-      {/* Cart Items */}
-      <div className="mb-4 max-h-[calc(100vh-22rem)] overflow-y-auto">
-        <CartItemList 
-          items={items}
-          updateQuantity={updateQuantity}
-          removeItem={removeItem}
-          isShiftActive={isShiftActive}
-        />
-      </div>
-      
-      {/* Discount Selection */}
-      <DiscountSelector
-        subtotal={subtotal}
-        onApplyDiscount={handleApplyDiscount}
-        currentDiscount={discount}
-        currentDiscountType={discountType}
-        currentDiscountIdNumber={discountIdNumber}
+    <div className="flex flex-col h-full space-y-3 max-h-screen overflow-hidden">
+      <CartHeader 
+        itemCount={cartItems?.length || 0}
+        onClearCart={clearCart}
       />
-      
-      {/* Order Summary */}
-      <CartSummary
-        subtotal={subtotal}
-        tax={tax}
-        total={total}
-        discount={discount}
-        discountType={discountType}
-        handlePaymentComplete={handlePaymentComplete}
+
+      <CartValidationMessage message={validationMessage} />
+
+      {/* Order Type Selector */}
+      <div className="flex-shrink-0">
+        <OrderTypeSelector
+          orderType={orderType}
+          onOrderTypeChange={handleOrderTypeChange}
+          deliveryPlatform={deliveryPlatform}
+          onDeliveryPlatformChange={setDeliveryPlatform}
+          deliveryOrderNumber={deliveryOrderNumber}
+          onDeliveryOrderNumberChange={setDeliveryOrderNumber}
+        />
+      </div>
+
+      {/* Cart Items */}
+      <CartItemsList
+        items={cartItems || []}
+        isTransitioning={isOrderTypeTransitioning}
+        orderType={orderType}
+        updateQuantity={updateQuantity}
+        updateItemPrice={updateItemPrice}
+        removeItem={removeItem}
+        getItemValidation={getItemValidation}
+      />
+
+      {/* Bottom Section - Fixed with better spacing */}
+      {(cartItems?.length || 0) > 0 && (
+        <div className="flex-shrink-0 space-y-2 pb-3">
+          <Separator />
+          
+          {/* Customer Selection */}
+          <div className="space-y-2">
+            <CustomerSelector
+              selectedCustomer={selectedCustomer}
+              onCustomerSelect={setSelectedCustomer}
+            />
+          </div>
+
+          {/* Order Summary */}
+          <CartSummary
+            calculations={calculations}
+            seniorDiscounts={seniorDiscounts}
+            otherDiscount={otherDiscount}
+          />
+
+          {/* Multiple Discount Selector */}
+          <MultipleSeniorDiscountSelector
+            subtotal={calculations.grossSubtotal}
+            onApplyDiscounts={handleApplyMultipleDiscounts}
+            currentSeniorDiscounts={seniorDiscounts}
+            currentOtherDiscount={otherDiscount}
+            currentTotalDiners={calculations.totalDiners}
+          />
+
+          {/* Action Buttons */}
+          <CartActions
+            canCheckout={Boolean(canCheckout)}
+            isShiftActive={isShiftActive}
+            isValidating={isValidating}
+            validationMessage={validationMessage}
+            orderType={orderType}
+            deliveryPlatform={deliveryPlatform}
+            deliveryOrderNumber={deliveryOrderNumber}
+            onCheckout={() => {
+              if (calculations.finalTotal <= 0) {
+                toast.error('Cannot checkout with empty cart');
+                return;
+              }
+              setIsPaymentDialogOpen(true);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Dialogs */}
+      <PaymentDialog
+        isOpen={isPaymentDialogOpen}
+        onClose={() => setIsPaymentDialogOpen(false)}
+        total={calculations.finalTotal}
+        onPaymentComplete={handlePaymentCompleteWithDeduction}
       />
     </div>
   );

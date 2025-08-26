@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid;
+        }
+        .success { border-color: #4CAF50; background-color: #f8fff8; color: #2e7d32; }
+        .error { border-color: #f44336; background-color: #fff8f8; color: #c62828; }
+        .info { border-color: #2196F3; background-color: #f3f9ff; color: #1565c0; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .test-links {
+            margin: 20px 0;
+        }
+        .test-links a {
+            display: inline-block;
+            margin: 5px 10px;
+            padding: 10px 15px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .test-links a:hover { background: #218838; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Direct Authentication Test</h1>
+        <p>This page provides direct links to test the authentication system.</p>
+        
+        <div class="status info">
+            <strong>ℹ️ Test Instructions:</strong><br>
+            1. Click the links below to open the application in new tabs<br>
+            2. Try logging in with the test credentials<br>
+            3. Verify that protected routes redirect to login when not authenticated<br>
+            4. Check that login works and redirects to dashboard
+        </div>
+
+        <div class="test-links">
+            <h3>🔗 Test Links</h3>
+            <a href="http://localhost:5173/" target="_blank">🏠 Home Page (should redirect to login)</a>
+            <a href="http://localhost:5173/login" target="_blank">🔑 Login Page</a>
+            <a href="http://localhost:5173/pos" target="_blank">🛒 POS Page (protected)</a>
+            <a href="http://localhost:5173/inventory" target="_blank">📦 Inventory Page (protected)</a>
+            <a href="http://localhost:5173/settings" target="_blank">⚙️ Settings Page (protected)</a>
+        </div>
+
+        <div class="status info">
+            <h3>🧪 Test Credentials</h3>
+            <strong>Admin Account:</strong><br>
+            Email: <code>admin@example.com</code><br>
+            Password: <code>password123</code> (or any password - check Supabase for actual credentials)
+        </div>
+
+        <div class="status success">
+            <h3>✅ Expected Behavior</h3>
+            <ul>
+                <li><strong>Unauthenticated access:</strong> All protected routes should redirect to /login</li>
+                <li><strong>Login page:</strong> Should display login form with email and password fields</li>
+                <li><strong>Successful login:</strong> Should redirect to dashboard (/) and show main application</li>
+                <li><strong>Protected routes:</strong> Should be accessible after login</li>
+                <li><strong>Role-based access:</strong> Admin should have access to all features</li>
+            </ul>
+        </div>
+
+        <div class="status error">
+            <h3>❌ Troubleshooting</h3>
+            <p>If you encounter issues:</p>
+            <ul>
+                <li>Check browser console for JavaScript errors</li>
+                <li>Verify development server is running on localhost:5173</li>
+                <li>Ensure Supabase credentials are configured correctly</li>
+                <li>Check network tab for failed API requests</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button onclick="openAllTestPages()">🚀 Open All Test Pages</button>
+            <button onclick="checkServerStatus()">🔍 Check Server Status</button>
+        </div>
+
+        <div id="status-log" style="margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-family: monospace; white-space: pre-wrap;"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const statusLog = document.getElementById('status-log');
+            const timestamp = new Date().toLocaleTimeString();
+            statusLog.textContent += `[${timestamp}] ${message}\n`;
+            statusLog.scrollTop = statusLog.scrollHeight;
+        }
+
+        function openAllTestPages() {
+            log('Opening all test pages...');
+            const urls = [
+                'http://localhost:5173/',
+                'http://localhost:5173/login',
+                'http://localhost:5173/pos',
+                'http://localhost:5173/inventory'
+            ];
+            
+            urls.forEach((url, index) => {
+                setTimeout(() => {
+                    window.open(url, `_blank_${index}`);
+                    log(`Opened: ${url}`);
+                }, index * 500);
+            });
+        }
+
+        async function checkServerStatus() {
+            log('Checking server status...');
+            
+            try {
+                // Try to fetch the main page
+                const response = await fetch('http://localhost:5173/', { 
+                    method: 'HEAD',
+                    mode: 'no-cors'
+                });
+                log('✅ Server appears to be running (request sent successfully)');
+            } catch (error) {
+                log(`❌ Server check failed: ${error.message}`);
+            }
+            
+            // Also try to open the main page
+            window.open('http://localhost:5173/', '_blank');
+            log('Opened main page for manual verification');
+        }
+
+        // Auto-check server status on page load
+        window.onload = function() {
+            log('🔐 Authentication Test Page Loaded');
+            log('Click the test links above to verify authentication functionality');
+            setTimeout(checkServerStatus, 1000);
+        };
+    </script>
+</body>
+</html>

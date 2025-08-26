@@ -1,41 +1,57 @@
 
 import React from "react";
 import { Category } from "@/types";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
 
 interface ProductCategoryTabsProps {
   categories: Category[];
   activeCategory: string;
   setActiveCategory: (category: string) => void;
+  onCategorySelect?: (categoryId: string) => void;
 }
 
 export default function ProductCategoryTabs({ 
   categories, 
   activeCategory, 
-  setActiveCategory 
+  setActiveCategory,
+  onCategorySelect
 }: ProductCategoryTabsProps) {
-  // Filter out any "Desserts" category from the tabs
-  const filteredCategories = categories.filter(
-    category => category.name.toLowerCase() !== "desserts"
+  // Filter out categories that shouldn't appear in main menu, but include Combo
+  // Note: Categories are already sorted by the categoryFetch service
+  const filteredCategories = categories.filter(category =>
+    shouldDisplayCategoryInPOS(category.name) || category.name === "Combo"
   );
+
+  const handleCategoryClick = (categoryId: string) => {
+    if (onCategorySelect) {
+      onCategorySelect(categoryId);
+    } else {
+      setActiveCategory(categoryId);
+    }
+  };
   
   return (
-    <TabsList className="mb-4 bg-croffle-background overflow-x-auto flex w-full">
-      <TabsTrigger 
-        value="all" 
-        className="data-[state=active]:bg-croffle-primary data-[state=active]:text-white"
+    <div className="grid grid-cols-5 gap-3 md:gap-4 pb-2 px-1">
+      <Button
+        onClick={() => setActiveCategory("all")}
+        variant={activeCategory === "all" ? "default" : "outline"}
+        size="lg"
+        className="min-h-12 min-w-[100px] px-6 whitespace-nowrap font-medium text-sm md:text-base shrink-0 touch-manipulation"
       >
-        All
-      </TabsTrigger>
+        All Items
+      </Button>
       {filteredCategories.map(category => (
-        <TabsTrigger 
-          key={category.id} 
-          value={category.id}
-          className="data-[state=active]:bg-croffle-primary data-[state=active]:text-white whitespace-nowrap"
+        <Button
+          key={category.id}
+          onClick={() => handleCategoryClick(category.id)}
+          variant={activeCategory === category.id ? "default" : "outline"}
+          size="lg"
+          className="min-h-12 min-w-[100px] px-6 whitespace-nowrap font-medium text-sm md:text-base shrink-0 touch-manipulation"
         >
           {category.name}
-        </TabsTrigger>
+        </Button>
       ))}
-    </TabsList>
+    </div>
   );
 }

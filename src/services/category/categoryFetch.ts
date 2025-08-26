@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Category } from "@/types";
 import { toast } from "sonner";
+import { sortCategoriesForPOS } from "@/utils/categoryOrdering";
 
 export const fetchCategories = async (storeId: string): Promise<Category[]> => {
   try {
@@ -9,14 +10,14 @@ export const fetchCategories = async (storeId: string): Promise<Category[]> => {
       .from("categories")
       .select("*")
       .eq("store_id", storeId)
-      .order("name");
+      .eq("is_active", true);
     
     if (error) {
       throw new Error(error.message);
     }
     
     // Map database fields to our TypeScript interface
-    return data?.map(item => ({
+    const categories = data?.map(item => ({
       id: item.id,
       name: item.name,
       description: item.description || undefined,
@@ -27,6 +28,9 @@ export const fetchCategories = async (storeId: string): Promise<Category[]> => {
       store_id: item.store_id,
       storeId: item.store_id // For frontend compatibility
     })) || [];
+
+    // Apply custom POS ordering
+    return sortCategoriesForPOS(categories);
   } catch (error) {
     console.error("Error fetching categories:", error);
     toast.error("Failed to load categories");

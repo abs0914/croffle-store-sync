@@ -1,116 +1,97 @@
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { User, Session } from "./types";
-import { mapSupabaseUser } from "./utils";
+import { toast } from "sonner";
 
-export function useAuthState() {
+export const useAuthState = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const authErrorHandledRef = useRef(false);
-  
-  // Setup token refresh and session handling
-  const setupTokenRefresh = (currentSession: Session | null) => {
-    // Clear any existing timeout
+
+  const setupTokenRefresh = (session: Session) => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+
+    if (session.expires_at) {
+      const refreshTime = (session.expires_at * 1000) - Date.now() - 60000; // Refresh 1 minute before expiry
+      if (refreshTime > 0) {
+        refreshTimeoutRef.current = setTimeout(async () => {
+          try {
+            const { data, error } = await supabase.auth.refreshSession();
+            if (error) throw error;
+            if (data.session) {
+              setSession(data.session);
+              setupTokenRefresh(data.session);
+            }
+          } catch (error) {
+            console.error("Token refresh failed:", error);
+            toast.error("Session expired. Please log in again.");
+            logout();
+          }
+        }, refreshTime);
+      }
+    }
+  };
+
+  const login = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
+
+  const register = async (email: string, password: string, name: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name,
+        },
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
+
+  const logout = async () => {
     if (refreshTimeoutRef.current) {
       clearTimeout(refreshTimeoutRef.current);
     }
     
-    if (currentSession?.expires_at) {
-      const expiresAt = currentSession.expires_at * 1000; // Convert to milliseconds
-      const now = Date.now();
-      
-      // Calculate time until token needs refresh (5 minutes before expiry)
-      const timeUntilRefresh = Math.max(0, expiresAt - now - 5 * 60 * 1000);
-      
-      console.log(`Session token will refresh in ${Math.floor(timeUntilRefresh / 60000)} minutes`);
-      
-      // Set timeout to refresh token before it expires
-      refreshTimeoutRef.current = setTimeout(async () => {
-        console.log('Refreshing auth token...');
-        try {
-          const { data, error } = await supabase.auth.refreshSession();
-          
-          if (error) {
-            console.error('Error refreshing token:', error);
-            if (!authErrorHandledRef.current) {
-              authErrorHandledRef.current = true;
-              toast.error('Your session has expired. Please log in again.');
-              setSession(null);
-              setUser(null);
-            }
-          } else if (data.session) {
-            console.log('Token refreshed successfully');
-            setSession(data.session);
-            setupTokenRefresh(data.session);
-          }
-        } catch (err) {
-          console.error('Exception during token refresh:', err);
-        }
-      }, timeUntilRefresh);
-    }
-  };
-
-  // Login function
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (data.user) {
-        const mappedUser = await mapSupabaseUser(data.user);
-        setUser(mappedUser);
-        setSession(data.session);
-        
-        // Setup token refresh
-        setupTokenRefresh(data.session);
-      }
-    } catch (error: any) {
-      console.error("Login error:", error);
-      toast.error(error.message || "Failed to login");
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Logout function
-  const logout = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
-      
-      // Clear any token refresh timeout
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-        refreshTimeoutRef.current = null;
-      }
-      
+      // Clear local state immediately to prevent UI issues
       setUser(null);
       setSession(null);
       
-      // Reset error handling flag on logout
-      authErrorHandledRef.current = false;
+      // Attempt to sign out from Supabase
+      const { error } = await supabase.auth.signOut();
       
+      // Don't treat "session not found" as an error since we're logging out anyway
+      if (error && !error.message.includes('session not found') && !error.message.includes('Session not found')) {
+        console.error("Logout error:", error);
+        toast.error("Error logging out");
+      } else {
+        toast.success("Logged out successfully");
+      }
     } catch (error: any) {
       console.error("Logout error:", error);
-      toast.error(error.message || "Failed to logout");
-      throw error;
-    } finally {
-      setIsLoading(false);
+      // Don't show error toast for session not found errors during logout
+      if (!error.message?.includes('session not found') && !error.message?.includes('Session not found')) {
+        toast.error("Error logging out");
+      } else {
+        toast.success("Logged out successfully");
+      }
     }
   };
 
@@ -125,6 +106,7 @@ export function useAuthState() {
     authErrorHandledRef,
     setupTokenRefresh,
     login,
+    register,
     logout
   };
-}
+};

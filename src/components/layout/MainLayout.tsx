@@ -1,11 +1,13 @@
 
 import { ReactNode, useEffect } from "react";
-import Sidebar from "./sidebar";
 import { useAuth } from "@/contexts/auth";
 import { Spinner } from "../ui/spinner";
 import { useNavigate } from "react-router-dom";
 import { verifyDesignCompliance } from "@/utils/design";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useMobileExpenseFeatures } from "@/hooks/useMobileExpenseFeatures";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -15,6 +17,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { isOnline, offlineQueue } = useMobileExpenseFeatures();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -47,13 +50,34 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Render main layout if authenticated
   return (
-    <div className="flex h-screen bg-background" data-component="main-layout">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className={`flex-1 overflow-y-auto p-4 md:p-6 bg-croffle-background/30 ${isMobile ? 'pt-16' : ''}`}>
-          {children}
-        </main>
+    <SidebarProvider defaultOpen={false} open={undefined}>
+      <div className="flex h-screen w-full bg-background" data-component="main-layout">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Header with sidebar trigger - only for non-POS pages */}
+          {!window.location.pathname.includes('/pos') && (
+            <header className="h-12 flex items-center border-b bg-background px-4">
+              <SidebarTrigger className="mr-2" />
+              <div className="flex-1" />
+              {/* Mobile offline indicator */}
+              {isMobile && !isOnline && (
+                <div className="bg-amber-500 text-white px-3 py-1 text-sm rounded flex items-center gap-2">
+                  <span>Offline</span>
+                  {offlineQueue.length > 0 && (
+                    <span className="text-xs bg-amber-600 px-2 py-1 rounded">
+                      {offlineQueue.length}
+                    </span>
+                  )}
+                </div>
+              )}
+            </header>
+          )}
+          
+          <main className={`flex-1 overflow-hidden ${window.location.pathname.includes('/pos') ? '' : 'p-4 md:p-6 bg-croffle-background/30 overflow-y-auto'}`}>
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

@@ -22,6 +22,10 @@ export function useProductFormState({ product, isEditing }: {
     stockQuantity: 0,
     categoryId: "uncategorized",
     isActive: true,
+    product_type: null,
+    inventory_stock_id: null,
+    selling_quantity: 1,
+    recipe_id: null,
   });
 
   // Image state
@@ -58,6 +62,10 @@ export function useProductFormState({ product, isEditing }: {
         stockQuantity: product.stockQuantity,
         categoryId: product.categoryId || "uncategorized",
         isActive: product.isActive,
+        product_type: product.product_type || (product.recipe_id ? 'recipe' : 'direct'),
+        inventory_stock_id: product.inventory_stock_id || null,
+        selling_quantity: product.selling_quantity || 1,
+        recipe_id: product.recipe_id || null,
       });
 
       if (product.image) {

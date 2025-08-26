@@ -1,191 +1,164 @@
 
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
-import { CartItem, Product, ProductVariation } from "@/types";
-import { toast } from "sonner";
-import { useStore } from "./StoreContext";
+import React, { createContext, useContext, useReducer, useCallback } from 'react';
+
+export interface CartItem {
+  id: string;
+  productId: string;
+  variationId?: string;
+  name: string;
+  price: number;
+  quantity: number;
+  subtotal: number;
+  notes?: string;
+}
 
 interface CartState {
   items: CartItem[];
-  addItem: (product: Product, quantity?: number, variation?: ProductVariation) => void;
-  removeItem: (itemIndex: number) => void;
-  updateQuantity: (itemIndex: number, quantity: number) => void;
-  clearCart: () => void;
-  subtotal: number;
-  tax: number;
   total: number;
   itemCount: number;
-  storeId: string | null;
 }
 
-const initialState: CartState = {
-  items: [],
-  addItem: () => {},
-  removeItem: () => {},
-  updateQuantity: () => {},
-  clearCart: () => {},
-  subtotal: 0,
-  tax: 0,
-  total: 0,
-  itemCount: 0,
-  storeId: null,
+type CartAction =
+  | { type: 'ADD_ITEM'; payload: Omit<CartItem, 'subtotal'> }
+  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
+  | { type: 'REMOVE_ITEM'; payload: { id: string } }
+  | { type: 'CLEAR_CART' }
+  | { type: 'UPDATE_NOTES'; payload: { id: string; notes: string } };
+
+const cartReducer = (state: CartState, action: CartAction): CartState => {
+  switch (action.type) {
+    case 'ADD_ITEM': {
+      const existingItemIndex = state.items.findIndex(item => 
+        item.productId === action.payload.productId && 
+        item.variationId === action.payload.variationId
+      );
+
+      let newItems: CartItem[];
+      
+      if (existingItemIndex >= 0) {
+        newItems = state.items.map((item, index) => 
+          index === existingItemIndex
+            ? { 
+                ...item, 
+                quantity: item.quantity + action.payload.quantity,
+                subtotal: (item.quantity + action.payload.quantity) * item.price
+              }
+            : item
+        );
+      } else {
+        const newItem: CartItem = {
+          ...action.payload,
+          subtotal: action.payload.price * action.payload.quantity
+        };
+        newItems = [...state.items, newItem];
+      }
+
+      const total = newItems.reduce((sum, item) => sum + item.subtotal, 0);
+      const itemCount = newItems.reduce((count, item) => count + item.quantity, 0);
+
+      return { items: newItems, total, itemCount };
+    }
+
+    case 'UPDATE_QUANTITY': {
+      if (action.payload.quantity <= 0) {
+        const newItems = state.items.filter(item => item.id !== action.payload.id);
+        const total = newItems.reduce((sum, item) => sum + item.subtotal, 0);
+        const itemCount = newItems.reduce((count, item) => count + item.quantity, 0);
+        return { items: newItems, total, itemCount };
+      }
+
+      const newItems = state.items.map(item =>
+        item.id === action.payload.id
+          ? { 
+              ...item, 
+              quantity: action.payload.quantity,
+              subtotal: action.payload.quantity * item.price
+            }
+          : item
+      );
+
+      const total = newItems.reduce((sum, item) => sum + item.subtotal, 0);
+      const itemCount = newItems.reduce((count, item) => count + item.quantity, 0);
+
+      return { items: newItems, total, itemCount };
+    }
+
+    case 'REMOVE_ITEM': {
+      const newItems = state.items.filter(item => item.id !== action.payload.id);
+      const total = newItems.reduce((sum, item) => sum + item.subtotal, 0);
+      const itemCount = newItems.reduce((count, item) => count + item.quantity, 0);
+      return { items: newItems, total, itemCount };
+    }
+
+    case 'UPDATE_NOTES': {
+      const newItems = state.items.map(item =>
+        item.id === action.payload.id
+          ? { ...item, notes: action.payload.notes }
+          : item
+      );
+      return { ...state, items: newItems };
+    }
+
+    case 'CLEAR_CART':
+      return { items: [], total: 0, itemCount: 0 };
+
+    default:
+      return state;
+  }
 };
 
-const TAX_RATE = 0.12; // 12% VAT (Philippines) - using VAT-inclusive pricing
+interface CartContextType {
+  state: CartState;
+  addItem: (item: Omit<CartItem, 'subtotal'>) => void;
+  updateQuantity: (id: string, quantity: number) => void;
+  removeItem: (id: string) => void;
+  updateNotes: (id: string, notes: string) => void;
+  clearCart: () => void;
+}
 
-const CartContext = createContext<CartState>(initialState);
+const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: ReactNode }) {
-  const { currentStore } = useStore();
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [subtotal, setSubtotal] = useState(0);
-  const [tax, setTax] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [itemCount, setItemCount] = useState(0);
-  const [storeId, setStoreId] = useState<string | null>(null);
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0, itemCount: 0 });
 
-  // Update storeId when currentStore changes
-  useEffect(() => {
-    if (currentStore?.id) {
-      setStoreId(currentStore.id);
-      console.log("Current store set in CartContext:", currentStore.id);
-    }
-  }, [currentStore]);
+  const addItem = useCallback((item: Omit<CartItem, 'subtotal'>) => {
+    dispatch({ type: 'ADD_ITEM', payload: item });
+  }, []);
 
-  useEffect(() => {
-    // Recalculate totals when items change
-    // Treat prices as VAT-inclusive (Philippine standard)
-    const newTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const updateQuantity = useCallback((id: string, quantity: number) => {
+    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
+  }, []);
 
-    // Calculate net amount (price without VAT) and VAT amount from VAT-inclusive total
-    const newNetAmount = newTotal / (1 + TAX_RATE); // Total / 1.12
-    const newTax = newTotal - newNetAmount; // VAT amount embedded in the total
+  const removeItem = useCallback((id: string) => {
+    dispatch({ type: 'REMOVE_ITEM', payload: { id } });
+  }, []);
 
-    setSubtotal(newTotal); // This is actually the VAT-inclusive total
-    setTax(newTax);
-    setTotal(newTotal); // Total remains the same as subtotal for VAT-inclusive pricing
-    setItemCount(items.reduce((sum, item) => sum + item.quantity, 0));
+  const updateNotes = useCallback((id: string, notes: string) => {
+    dispatch({ type: 'UPDATE_NOTES', payload: { id, notes } });
+  }, []);
 
-    // Debug log to check if items are being updated
-    console.log("Cart items updated in CartContext (VAT-inclusive):", {
-      items: items.length,
-      vatInclusiveTotal: newTotal,
-      netAmount: newNetAmount,
-      vatAmount: newTax
-    });
-  }, [items]);
-
-  const addItem = (product: Product, quantity = 1, variation?: ProductVariation) => {
-    // Check if we have a store selected
-    if (!currentStore?.id) {
-      toast.error("Please select a store first");
-      return;
-    }
-
-    const itemPrice = variation ? variation.price : product.price;
-
-    // Debug log to verify data
-    console.log("CartContext: Adding item to cart:", {
-      product: product.name,
-      quantity,
-      price: itemPrice,
-      variation: variation ? variation.name : "none"
-    });
-
-    // Check if the item already exists in cart with the same variation or lack thereof
-    const existingItemIndex = items.findIndex(item => {
-      if (variation) {
-        return item.productId === product.id && item.variationId === variation.id;
-      }
-      return item.productId === product.id && !item.variationId;
-    });
-
-    if (existingItemIndex !== -1) {
-      // Update quantity if item exists
-      const newItems = [...items];
-      newItems[existingItemIndex].quantity += quantity;
-      setItems(newItems);
-
-      const displayName = variation ?
-        `${product.name} (${variation.name})` :
-        product.name;
-
-      toast.success(`Updated quantity for ${displayName}`);
-      console.log("CartContext: Updated existing item in cart", displayName);
-    } else {
-      // Add new item
-      const newItem: CartItem = {
-        productId: product.id,
-        product: {
-          ...product,
-          is_active: product.is_active || product.isActive || true,
-          stock_quantity: product.stock_quantity || product.stockQuantity || 0
-        },
-        quantity,
-        price: itemPrice,
-      };
-
-      if (variation) {
-        newItem.variationId = variation.id;
-        newItem.variation = variation;
-      }
-
-      // Use functional update to guarantee we're working with latest state
-      setItems(prevItems => [...prevItems, newItem]);
-
-      const displayName = variation ?
-        `${product.name} (${variation.name})` :
-        product.name;
-
-      toast.success(`${displayName} added to cart`);
-      console.log("CartContext: Added new item to cart", displayName);
-    }
-  };
-
-  const removeItem = (itemIndex: number) => {
-    const newItems = [...items];
-    const removedItem = newItems[itemIndex];
-    newItems.splice(itemIndex, 1);
-    setItems(newItems);
-    toast.info(`${removedItem.product.name} removed from cart`);
-    console.log("CartContext: Removed item from cart", removedItem.product.name);
-  };
-
-  const updateQuantity = (itemIndex: number, quantity: number) => {
-    if (quantity < 1) return;
-
-    const newItems = [...items];
-    newItems[itemIndex].quantity = quantity;
-    setItems(newItems);
-    console.log("CartContext: Updated quantity for item", {
-      product: newItems[itemIndex].product.name,
-      newQuantity: quantity
-    });
-  };
-
-  const clearCart = () => {
-    setItems([]);
-    toast.info('Cart cleared');
-    console.log("CartContext: Cart cleared");
-  };
+  const clearCart = useCallback(() => {
+    dispatch({ type: 'CLEAR_CART' });
+  }, []);
 
   return (
-    <CartContext.Provider
-      value={{
-        items,
-        addItem,
-        removeItem,
-        updateQuantity,
-        clearCart,
-        subtotal,
-        tax,
-        total,
-        itemCount,
-        storeId,
-      }}
-    >
+    <CartContext.Provider value={{
+      state,
+      addItem,
+      updateQuantity,
+      removeItem,
+      updateNotes,
+      clearCart
+    }}>
       {children}
     </CartContext.Provider>
   );
-}
+};
 
-export const useCart = () => useContext(CartContext);
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (context === undefined) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
+};

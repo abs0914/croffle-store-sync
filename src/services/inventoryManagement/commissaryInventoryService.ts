@@ -1,68 +1,97 @@
 import { supabase } from "@/integrations/supabase/client";
-import { CommissaryInventoryItem, CommissaryInventoryFilters } from "@/types/inventoryManagement";
+import { CommissaryInventoryItem } from "@/types/commissary";
 import { toast } from "sonner";
 
-export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilters): Promise<CommissaryInventoryItem[]> => {
+// Helper function to map units to valid database units
+const mapToValidUnit = (unit: string): string => {
+  const unitMapping: Record<string, string> = {
+    // Weight units
+    'kg': 'kg',
+    'kilo': 'kg',
+    'kilogram': 'kg',
+    'kilograms': 'kg',
+    'g': 'g',
+    'gram': 'g',
+    'grams': 'g',
+    
+    // Volume units
+    'l': 'liters',
+    'liter': 'liters',
+    'liters': 'liters',
+    'litre': 'liters',
+    'litres': 'liters',
+    'ml': 'ml',
+    'milliliter': 'ml',
+    'milliliters': 'ml',
+    'millilitre': 'ml',
+    'millilitres': 'ml',
+    
+    // Count units
+    'piece': 'pieces',
+    'pieces': 'pieces',
+    'pcs': 'pieces',
+    'pc': 'pieces',
+    'item': 'pieces',
+    'items': 'pieces',
+    'unit': 'pieces',
+    'units': 'pieces',
+    
+    // Package units
+    'box': 'boxes',
+    'boxes': 'boxes',
+    'pack': 'packs',
+    'packs': 'packs',
+    'package': 'packs',
+    'packages': 'packs',
+    
+    // Special units
+    'serving': 'serving',
+    'servings': 'serving',
+    'portion': 'portion',
+    'portions': 'portion',
+    'scoop': 'scoop',
+    'scoops': 'scoop',
+    'pair': 'pair',
+    'pairs': 'pair'
+  };
+  
+  const normalizedUnit = unit.toLowerCase().trim();
+  return unitMapping[normalizedUnit] || 'pieces'; // Default to pieces if not found
+};
+
+export const fetchCommissaryInventory = async (filters?: any): Promise<CommissaryInventoryItem[]> => {
   try {
     let query = supabase
-      .from('inventory_items')
-      .select(`
-        *,
-        supplier:suppliers(*)
-      `)
+      .from('commissary_inventory')
+      .select('*')
       .eq('is_active', true)
       .order('name');
 
-    // Apply filters
+    // Apply filters if provided
     if (filters?.category && filters.category !== 'all') {
-      // Map commissary categories to inventory_items categories
-      const categoryMap = {
-        'raw_materials': 'ingredients',
-        'packaging_materials': 'packaging',
-        'supplies': 'supplies'
-      };
-      const dbCategory = categoryMap[filters.category as keyof typeof categoryMap];
-      if (dbCategory) {
-        query = query.eq('category', dbCategory as 'ingredients' | 'packaging' | 'supplies');
-      }
+      query = query.eq('category', filters.category);
     }
-
+    if (filters?.search) {
+      query = query.ilike('name', `%${filters.search}%`);
+    }
     if (filters?.supplier) {
       query = query.eq('supplier_id', filters.supplier);
     }
-
-    if (filters?.search) {
-      query = query.or(`name.ilike.%${filters.search}%,sku.ilike.%${filters.search}%`);
-    }
-
-    // Apply stock level filter
-    if (filters?.stockLevel && filters.stockLevel !== 'all') {
-      switch (filters.stockLevel) {
-        case 'out':
-          query = query.eq('current_stock', 0);
-          break;
-        case 'low':
-          query = query.filter('current_stock', 'lte', 'minimum_threshold');
-          break;
-        case 'good':
-          query = query.filter('current_stock', 'gt', 'minimum_threshold');
-          break;
-      }
+    if (filters?.item_type && filters.item_type !== 'all') {
+      query = query.eq('item_type', filters.item_type);
     }
 
     const { data, error } = await query;
 
     if (error) throw error;
-
-    // Transform the data to match CommissaryInventoryItem interface
-    const transformedData: CommissaryInventoryItem[] = (data || []).map(item => ({
+    
+    // Cast the data to ensure proper typing, mapping unit to uom
+    return (data || []).map(item => ({
       ...item,
-      category: item.category === 'ingredients' ? 'raw_materials' : 
-                item.category === 'packaging' ? 'packaging_materials' : 
-                'supplies' as const
+      uom: item.unit || 'units', // Map unit to uom with fallback
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
     }));
-
-    return transformedData;
   } catch (error) {
     console.error('Error fetching commissary inventory:', error);
     toast.error('Failed to fetch commissary inventory');
@@ -70,117 +99,90 @@ export const fetchCommissaryInventory = async (filters?: CommissaryInventoryFilt
   }
 };
 
-export const createCommissaryInventoryItem = async (
-  item: Omit<CommissaryInventoryItem, 'id' | 'created_at' | 'updated_at' | 'supplier'>
-): Promise<CommissaryInventoryItem | null> => {
+export const createCommissaryInventoryItem = async (item: Omit<CommissaryInventoryItem, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
   try {
-    // Transform category back to database format
-    const dbCategory = item.category === 'raw_materials' ? 'ingredients' : 
-                      item.category === 'packaging_materials' ? 'packaging' : 
-                      'supplies';
-
-    // Use a default store_id for commissary items (you might want to create a special commissary store)
-    const DEFAULT_COMMISSARY_STORE_ID = '00000000-0000-0000-0000-000000000000';
-
+    console.log('Creating commissary item:', item);
+    
+    // Map uom to valid unit for database compatibility
+    const dbItem = {
+      name: item.name,
+      category: item.category,
+      item_type: item.item_type,
+      current_stock: item.current_stock,
+      minimum_threshold: item.minimum_threshold,
+      unit: mapToValidUnit(item.uom), // Store mapped unit in database
+      unit_cost: item.unit_cost,
+      supplier_id: item.supplier_id,
+      sku: item.sku,
+      barcode: item.barcode,
+      expiry_date: item.expiry_date,
+      storage_location: item.storage_location,
+      is_active: item.is_active
+    };
+    
+    console.log('Mapped database item:', dbItem);
+    
     const { data, error } = await supabase
-      .from('inventory_items')
-      .insert({
-        name: item.name,
-        category: dbCategory as 'ingredients' | 'packaging' | 'supplies',
-        current_stock: item.current_stock,
-        minimum_threshold: item.minimum_threshold,
-        unit: item.unit,
-        unit_cost: item.unit_cost,
-        supplier_id: item.supplier_id,
-        sku: item.sku,
-        barcode: item.barcode,
-        expiry_date: item.expiry_date,
-        store_id: DEFAULT_COMMISSARY_STORE_ID,
-        is_active: true,
-        last_updated: new Date().toISOString()
-      })
-      .select(`
-        *,
-        supplier:suppliers(*)
-      `)
+      .from('commissary_inventory')
+      .insert(dbItem)
+      .select()
       .single();
 
-    if (error) throw error;
-
-    const transformedData: CommissaryInventoryItem = {
-      ...data,
-      category: data.category === 'ingredients' ? 'raw_materials' : 
-                data.category === 'packaging' ? 'packaging_materials' : 
-                'supplies' as const
-    };
-
-    toast.success('Commissary inventory item created successfully');
-    return transformedData;
+    if (error) {
+      console.error('Database error:', error);
+      throw error;
+    }
+    
+    console.log('Successfully created item:', data);
+    toast.success('Commissary item created successfully');
+    return true;
   } catch (error) {
-    console.error('Error creating commissary inventory item:', error);
-    toast.error('Failed to create commissary inventory item');
-    return null;
+    console.error('Error creating commissary item:', error);
+    toast.error('Failed to create commissary item');
+    return false;
   }
 };
 
 export const updateCommissaryInventoryItem = async (
-  id: string,
-  updates: Partial<CommissaryInventoryItem>
-): Promise<CommissaryInventoryItem | null> => {
+  id: string, 
+  updates: Partial<Omit<CommissaryInventoryItem, 'id' | 'created_at' | 'updated_at'>>
+): Promise<boolean> => {
   try {
-    // Transform category if it exists in updates
-    const dbUpdates: any = { ...updates };
-    if (updates.category) {
-      dbUpdates.category = updates.category === 'raw_materials' ? 'ingredients' : 
-                          updates.category === 'packaging_materials' ? 'packaging' : 
-                          'supplies';
-    }
-
-    // Remove properties that don't exist in the database schema
-    delete dbUpdates.supplier;
-
-    const { data, error } = await supabase
-      .from('inventory_items')
+    // Map uom to unit for database compatibility and exclude uom from database update
+    const { uom, ...otherUpdates } = updates;
+    const dbUpdates = {
+      ...otherUpdates,
+      ...(uom && { unit: mapToValidUnit(uom) }) // Map and include unit if uom is provided
+    };
+    
+    const { error } = await supabase
+      .from('commissary_inventory')
       .update(dbUpdates)
-      .eq('id', id)
-      .select(`
-        *,
-        supplier:suppliers(*)
-      `)
-      .single();
+      .eq('id', id);
 
     if (error) throw error;
-
-    const transformedData: CommissaryInventoryItem = {
-      ...data,
-      category: data.category === 'ingredients' ? 'raw_materials' : 
-                data.category === 'packaging' ? 'packaging_materials' : 
-                'supplies' as const
-    };
-
-    toast.success('Commissary inventory item updated successfully');
-    return transformedData;
+    toast.success('Commissary item updated successfully');
+    return true;
   } catch (error) {
-    console.error('Error updating commissary inventory item:', error);
-    toast.error('Failed to update commissary inventory item');
-    return null;
+    console.error('Error updating commissary item:', error);
+    toast.error('Failed to update commissary item');
+    return false;
   }
 };
 
 export const deleteCommissaryInventoryItem = async (id: string): Promise<boolean> => {
   try {
     const { error } = await supabase
-      .from('inventory_items')
+      .from('commissary_inventory')
       .update({ is_active: false })
       .eq('id', id);
 
     if (error) throw error;
-
-    toast.success('Commissary inventory item deleted successfully');
+    toast.success('Commissary item deleted successfully');
     return true;
   } catch (error) {
-    console.error('Error deleting commissary inventory item:', error);
-    toast.error('Failed to delete commissary inventory item');
+    console.error('Error deleting commissary item:', error);
+    toast.error('Failed to delete commissary item');
     return false;
   }
 };
@@ -192,50 +194,199 @@ export const adjustCommissaryInventoryStock = async (
   userId: string
 ): Promise<boolean> => {
   try {
-    // Get current stock
-    const { data: currentItem, error: fetchError } = await supabase
-      .from('inventory_items')
-      .select('current_stock')
-      .eq('id', id)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const previousStock = currentItem.current_stock;
-
-    // Update stock
-    const { error: updateError } = await supabase
-      .from('inventory_items')
+    const { error } = await supabase
+      .from('commissary_inventory')
       .update({ 
         current_stock: newStock,
-        last_updated: new Date().toISOString()
+        updated_at: new Date().toISOString()
       })
       .eq('id', id);
 
-    if (updateError) throw updateError;
-
-    toast.success('Commissary inventory stock adjusted successfully');
+    if (error) throw error;
+    toast.success('Stock adjusted successfully');
     return true;
   } catch (error) {
-    console.error('Error adjusting commissary inventory stock:', error);
-    toast.error('Failed to adjust commissary inventory stock');
+    console.error('Error adjusting stock:', error);
+    toast.error('Failed to adjust stock');
     return false;
   }
 };
 
-// Get stock level status
 export const getCommissaryStockLevel = (item: CommissaryInventoryItem): 'good' | 'low' | 'out' => {
-  if (item.current_stock === 0) return 'out';
+  if (item.current_stock <= 0) return 'out';
   if (item.current_stock <= item.minimum_threshold) return 'low';
   return 'good';
 };
 
-// Get stock level color for UI
 export const getCommissaryStockLevelColor = (level: 'good' | 'low' | 'out'): string => {
   switch (level) {
     case 'good': return 'text-green-600';
     case 'low': return 'text-yellow-600';
     case 'out': return 'text-red-600';
     default: return 'text-gray-600';
+  }
+};
+
+export const removeDuplicateCommissaryItems = async (): Promise<boolean> => {
+  try {
+    console.log('Starting duplicate removal process...');
+    
+    // First, get all commissary inventory items
+    const { data: allItems, error: fetchError } = await supabase
+      .from('commissary_inventory')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true }); // Keep oldest items
+
+    if (fetchError) throw fetchError;
+
+    if (!allItems || allItems.length === 0) {
+      toast.info('No items found to check for duplicates');
+      return true;
+    }
+
+    console.log('Found items to check:', allItems.length);
+
+    // Group items by name and category to find duplicates
+    const itemGroups = new Map<string, any[]>();
+    
+    allItems.forEach(item => {
+      const key = `${item.name.toLowerCase().trim()}-${item.category}`;
+      if (!itemGroups.has(key)) {
+        itemGroups.set(key, []);
+      }
+      itemGroups.get(key)!.push(item);
+    });
+
+    // Find duplicates and mark for deletion
+    const itemsToDelete: string[] = [];
+    let duplicatesFound = 0;
+
+    itemGroups.forEach((items, key) => {
+      if (items.length > 1) {
+        console.log(`Found ${items.length} duplicates for: ${key}`, items.map(i => ({ id: i.id, name: i.name, unit: i.unit, stock: i.current_stock })));
+        
+        // Keep the first item (oldest), mark others for deletion
+        const itemsToKeep = items.slice(0, 1);
+        const itemsToRemove = items.slice(1);
+        
+        // Combine stock from duplicates into the item we're keeping
+        const totalStock = items.reduce((sum, item) => sum + (item.current_stock || 0), 0);
+        const keepItem = itemsToKeep[0];
+        
+        // Update the kept item with combined stock
+        if (totalStock !== keepItem.current_stock) {
+          console.log(`Combining stock for ${keepItem.name}: ${keepItem.current_stock} + ${totalStock - keepItem.current_stock} = ${totalStock}`);
+        }
+
+        // Mark duplicates for deletion
+        itemsToRemove.forEach(item => {
+          itemsToDelete.push(item.id);
+          duplicatesFound++;
+        });
+      }
+    });
+
+    if (itemsToDelete.length === 0) {
+      toast.info('No duplicates found');
+      return true;
+    }
+
+    console.log(`Removing ${itemsToDelete.length} duplicate items...`, itemsToDelete);
+
+    // Delete duplicates from database
+    const { error: deleteError } = await supabase
+      .from('commissary_inventory')
+      .update({ is_active: false })
+      .in('id', itemsToDelete);
+
+    if (deleteError) throw deleteError;
+
+    toast.success(`Successfully removed ${duplicatesFound} duplicate items`);
+    return true;
+    
+  } catch (error) {
+    console.error('Error removing duplicates:', error);
+    toast.error('Failed to remove duplicates');
+    return false;
+  }
+};
+
+export const fetchOrderableItems = async (): Promise<CommissaryInventoryItem[]> => {
+  try {
+    console.log('Fetching orderable items...');
+    
+    // First, let's check what data exists in the table with minimal filtering
+    const { data: allData, error: allError } = await supabase
+      .from('commissary_inventory')
+      .select('*')
+      .order('name');
+
+    if (allError) {
+      console.error('Error fetching all commissary items:', allError);
+    } else {
+      console.log('ALL commissary items (no filters):', allData);
+      console.log('Sample item structure:', allData?.[0]);
+    }
+
+    // Now try the specific query for orderable items
+    const { data, error } = await supabase
+      .from('commissary_inventory')
+      .select('*')
+      .eq('is_active', true)
+      .eq('item_type', 'orderable_item')
+      .gte('current_stock', 0)
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching orderable items:', error);
+      throw error;
+    }
+    
+    console.log('Raw orderable items from DB:', data);
+    console.log('Query used: is_active = true, item_type = orderable_item, current_stock >= 0');
+    
+    if (!data || data.length === 0) {
+      console.log('No orderable items found. Checking all commissary items...');
+      
+      // Enhanced debug query to see ALL items regardless of filters
+      const { data: debugItems } = await supabase
+        .from('commissary_inventory')
+        .select('id, name, item_type, is_active, current_stock, category')
+        .order('name');
+      
+      console.log('DEBUG - All items in commissary_inventory:', debugItems);
+      
+      if (debugItems && debugItems.length > 0) {
+        console.log('Items by is_active status:');
+        console.log('- Active items:', debugItems.filter(item => item.is_active === true));
+        console.log('- Inactive items:', debugItems.filter(item => item.is_active === false));
+        
+        console.log('Items by item_type:');
+        const itemTypes = [...new Set(debugItems.map(item => item.item_type))];
+        itemTypes.forEach(type => {
+          console.log(`- ${type}:`, debugItems.filter(item => item.item_type === type));
+        });
+        
+        console.log('Items with stock >= 0:', debugItems.filter(item => item.current_stock >= 0));
+        console.log('Items with stock < 0:', debugItems.filter(item => item.current_stock < 0));
+      }
+    }
+    
+    const processedItems = (data || []).map(item => ({
+      ...item,
+      uom: item.unit || 'units',
+      category: item.category as 'raw_materials' | 'packaging_materials' | 'supplies',
+      item_type: item.item_type as 'raw_material' | 'supply' | 'orderable_item'
+    }));
+    
+    console.log('Processed orderable items:', processedItems);
+    console.log('Total orderable items found:', processedItems.length);
+    
+    return processedItems;
+  } catch (error) {
+    console.error('Error fetching orderable items:', error);
+    toast.error('Failed to fetch orderable items');
+    return [];
   }
 };

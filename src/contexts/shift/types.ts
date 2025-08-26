@@ -1,5 +1,5 @@
 
-import { ShiftType } from "@/types";
+import { Shift } from "@/types/shift";
 
 // This is our custom type for shifts table rows
 export interface ShiftRow {
@@ -20,17 +20,16 @@ export interface ShiftRow {
 }
 
 export interface ShiftState {
-  currentShift: ShiftType | null;
+  currentShift: Shift | null;
   isLoading: boolean;
   startShift: (
-    startingCash: number, 
-    startInventoryCount: Record<string, number>,
+    startingCash: number,
     startPhoto?: string,
-    cashierId?: string
+    cashierId?: string,
+    inventoryCounts?: Record<string, number>
   ) => Promise<boolean>;
   endShift: (
-    endingCash: number, 
-    endInventoryCount: Record<string, number>,
+    endingCash: number,
     endPhoto?: string
   ) => Promise<boolean>;
   fetchActiveShift: () => Promise<void>;

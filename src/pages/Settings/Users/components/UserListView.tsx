@@ -4,7 +4,7 @@ import UsersTable from "./UsersTable";
 import EmptyUsersView from "./EmptyUsersView";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusIcon, RefreshCwIcon } from "lucide-react";
+import { PlusIcon, RefreshCwIcon, Users } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 
 interface UserListViewProps {
@@ -89,33 +89,48 @@ export default function UserListView({
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>User Management</CardTitle>
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
-            <RefreshCwIcon className="h-4 w-4 mr-1" />
-            Refresh
-          </Button>
-          
-          {canManageUsers && onSyncUsers && (
-            <Button variant="outline" size="sm" onClick={onSyncUsers} disabled={isLoading}>
+    <div className="space-y-4">
+      {/* Header with Add User Button */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            User Management
+          </CardTitle>
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
               <RefreshCwIcon className="h-4 w-4 mr-1" />
-              Sync Users
+              Refresh
             </Button>
-          )}
-          
-          {canManageUsers && (
-            <Button size="sm" onClick={onAddUser} disabled={isLoading}>
-              <PlusIcon className="h-4 w-4 mr-1" />
-              Add User
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {renderContent()}
-      </CardContent>
-    </Card>
+            
+            {canManageUsers && onSyncUsers && (
+              <Button variant="outline" size="sm" onClick={onSyncUsers} disabled={isLoading}>
+                <RefreshCwIcon className="h-4 w-4 mr-1" />
+                Sync Users
+              </Button>
+            )}
+            
+            {canManageUsers && (
+              <Button 
+                size="sm" 
+                onClick={onAddUser} 
+                disabled={isLoading} 
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <PlusIcon className="h-4 w-4 mr-1" />
+                Add New User
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Content */}
+      <Card>
+        <CardContent className="p-6">
+          {renderContent()}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

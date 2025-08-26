@@ -1,14 +1,17 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Trash2, ChefHat, Calculator } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Search, Edit, Trash2, ChefHat, Calculator, Download, Upload, FileText, FileJson } from "lucide-react";
 import { fetchRecipes, deleteRecipe, calculateRecipeCost } from "@/services/inventoryManagement/recipeService";
 import { Recipe } from "@/types/inventoryManagement";
 import { AddRecipeDialog } from "./AddRecipeDialog";
 import { EditRecipeDialog } from "./EditRecipeDialog";
+import { useRecipeImportExport } from "@/hooks/recipe/useRecipeImportExport";
+import { toast } from "sonner";
 
 interface RecipesListProps {
   storeId: string;
@@ -20,21 +23,41 @@ export function RecipesList({ storeId }: RecipesListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [selectedStore] = useState<string | null>(storeId);
 
-  const loadRecipes = async () => {
+  const {
+    handleExportCSV,
+    handleExportJSON,
+    handleImportCSV,
+    handleImportJSON,
+    handleDownloadTemplate
+  } = useRecipeImportExport(recipes, storeId, () => loadRecipes());
+
+  const loadRecipes = useCallback(async () => {
+    if (!selectedStore) return;
+    
     setLoading(true);
-    const data = await fetchRecipes(storeId);
-    setRecipes(data);
-    setLoading(false);
-  };
+    try {
+      const data = await fetchRecipes(selectedStore);
+      // Ensure data is an array, fallback to empty array if not
+      setRecipes(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error loading recipes:', error);
+      toast.error('Failed to load recipes');
+      setRecipes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedStore]);
 
   useEffect(() => {
     loadRecipes();
-  }, [storeId]);
+  }, [loadRecipes]);
 
   const handleDeleteRecipe = async (recipe: Recipe) => {
     if (!confirm(`Are you sure you want to delete the recipe "${recipe.name}"?`)) return;
     
+    // Pass just the recipe ID as a string
     const success = await deleteRecipe(recipe.id);
     if (success) {
       loadRecipes();
@@ -52,12 +75,46 @@ export function RecipesList({ storeId }: RecipesListProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <ChefHat className="h-5 w-5" />
-            Recipes
+            Recipes (Legacy - Use Admin Panel)
           </CardTitle>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Recipe
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Import/Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Import/Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownloadTemplate}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Download CSV Template
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleImportCSV}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import from CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleImportJSON}>
+                  <FileJson className="h-4 w-4 mr-2" />
+                  Import from JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV} disabled={recipes.length === 0}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export to CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportJSON} disabled={recipes.length === 0}>
+                  <FileJson className="h-4 w-4 mr-2" />
+                  Export to JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button onClick={() => setShowAddDialog(true)} disabled>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Recipe (Use Admin Panel)
+            </Button>
+          </div>
         </div>
         
         <div className="relative">
@@ -72,6 +129,15 @@ export function RecipesList({ storeId }: RecipesListProps) {
       </CardHeader>
       
       <CardContent>
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="font-semibold text-blue-800 mb-2">Recipe Management Has Moved</h3>
+          <p className="text-sm text-blue-700">
+            Recipe creation and management is now centralized in the <strong>Admin panel</strong>. 
+            This view shows existing store recipes for reference only. Create new recipes in the Admin panel 
+            and deploy them to stores as needed.
+          </p>
+        </div>
+
         {loading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -86,6 +152,9 @@ export function RecipesList({ storeId }: RecipesListProps) {
             <p className="text-muted-foreground">
               {searchTerm ? 'No recipes found matching your search' : 'No recipes created yet'}
             </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Use the Admin panel to create and deploy recipes to this store.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -98,6 +167,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
                       <Badge variant="outline">
                         Yield: {recipe.yield_quantity}
                       </Badge>
+                      <Badge variant="secondary">Read Only</Badge>
                     </div>
                     {recipe.description && (
                       <p className="text-sm text-muted-foreground">{recipe.description}</p>
@@ -109,6 +179,8 @@ export function RecipesList({ storeId }: RecipesListProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => setEditingRecipe(recipe)}
+                      disabled
+                      title="Edit in Admin panel"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -116,6 +188,8 @@ export function RecipesList({ storeId }: RecipesListProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDeleteRecipe(recipe)}
+                      disabled
+                      title="Delete in Admin panel"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -128,7 +202,7 @@ export function RecipesList({ storeId }: RecipesListProps) {
                     <div className="space-y-1">
                       {recipe.ingredients?.map((ingredient) => (
                         <div key={ingredient.id} className="text-sm flex justify-between">
-                          <span>{ingredient.inventory_stock?.item}</span>
+                          <span>{ingredient.inventory_stock?.item || 'Unknown item'}</span>
                           <span>{ingredient.quantity} {ingredient.unit}</span>
                         </div>
                       )) || <span className="text-sm text-muted-foreground">No ingredients</span>}
@@ -149,16 +223,16 @@ export function RecipesList({ storeId }: RecipesListProps) {
       </CardContent>
       
       <AddRecipeDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        isOpen={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
         storeId={storeId}
         onSuccess={loadRecipes}
       />
       
       {editingRecipe && (
         <EditRecipeDialog
-          open={!!editingRecipe}
-          onOpenChange={(open) => !open && setEditingRecipe(null)}
+          isOpen={!!editingRecipe}
+          onClose={() => setEditingRecipe(null)}
           recipe={editingRecipe}
           storeId={storeId}
           onSuccess={loadRecipes}

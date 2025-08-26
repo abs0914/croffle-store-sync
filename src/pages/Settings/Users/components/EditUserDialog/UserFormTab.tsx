@@ -1,4 +1,3 @@
-
 import { AppUserFormData } from "@/types/appUser";
 import { Store } from "@/types/store";
 import UserFormFields from "../UserFormFields";
@@ -11,12 +10,12 @@ interface UserFormTabProps {
 
 export default function UserFormTab({ formData, onChange, stores }: UserFormTabProps) {
   return (
-    <form id="user-form">
-      <UserFormFields
-        formData={formData}
-        onChange={onChange}
-        stores={stores}
-      />
-    </form>
+    <UserFormFields
+      formData={formData}
+      onChange={onChange}
+      stores={stores}
+      includePassword={false}
+      showPermissionOverrides={true}
+    />
   );
 }

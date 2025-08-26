@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, X } from "lucide-react";
-import { createPurchaseOrder, addPurchaseOrderItem, generatePurchaseOrderNumber } from "@/services/orderManagement/purchaseOrderService";
-import { fetchSuppliers } from "@/services/inventoryManagement/supplierService";
-import { fetchInventoryStock } from "@/services/inventoryManagement/recipeService";
-import { Supplier, InventoryStock } from "@/types/orderManagement";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Minus, AlertCircle, RefreshCw } from "lucide-react";
+import { CommissaryInventoryItem } from "@/types/inventoryManagement";
+import { fetchOrderableItems } from "@/services/inventoryManagement/commissaryInventoryService";
+import { createPurchaseOrder } from "@/services/orderManagement/purchaseOrderService";
 import { useAuth } from "@/contexts/auth";
+import { toast } from "sonner";
 
 interface CreatePurchaseOrderDialogProps {
   open: boolean;
@@ -20,10 +21,11 @@ interface CreatePurchaseOrderDialogProps {
 }
 
 interface OrderItem {
-  inventory_stock_id: string;
+  commissary_item_id: string;
+  item_name: string;
   quantity: number;
   unit_price: number;
-  specifications: string;
+  specifications?: string;
 }
 
 export function CreatePurchaseOrderDialog({
@@ -33,108 +35,121 @@ export function CreatePurchaseOrderDialog({
 }: CreatePurchaseOrderDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [inventoryStock, setInventoryStock] = useState<InventoryStock[]>([]);
-  const [formData, setFormData] = useState({
-    order_number: '',
-    supplier_id: '',
-    requested_delivery_date: '',
-    notes: ''
-  });
-  const [items, setItems] = useState<OrderItem[]>([]);
+  const [orderableItems, setOrderableItems] = useState<CommissaryInventoryItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [notes, setNotes] = useState('');
+  const [requestedDeliveryDate, setRequestedDeliveryDate] = useState('');
+
+  const loadOrderableItems = async () => {
+    console.log('Loading orderable items for user:', user?.email, 'role:', user?.role);
+    setLoadingItems(true);
+    try {
+      const items = await fetchOrderableItems();
+      console.log('Loaded orderable items:', items.length, items);
+      setOrderableItems(items);
+    } catch (error) {
+      console.error('Error loading orderable items:', error);
+      toast.error('Failed to load available products');
+    } finally {
+      setLoadingItems(false);
+    }
+  };
 
   useEffect(() => {
     if (open) {
-      loadData();
-      generateOrderNumber();
+      loadOrderableItems();
     }
   }, [open]);
 
-  const loadData = async () => {
-    if (!user?.storeIds?.[0]) return;
+  const addOrderItem = (item: CommissaryInventoryItem) => {
+    const existingIndex = orderItems.findIndex(oi => oi.commissary_item_id === item.id);
     
-    const [suppliersData, stockData] = await Promise.all([
-      fetchSuppliers(),
-      fetchInventoryStock(user.storeIds[0])
-    ]);
-    
-    setSuppliers(suppliersData);
-    setInventoryStock(stockData);
-  };
-
-  const generateOrderNumber = async () => {
-    const orderNumber = await generatePurchaseOrderNumber();
-    setFormData(prev => ({ ...prev, order_number: orderNumber }));
-  };
-
-  const addItem = () => {
-    setItems([...items, {
-      inventory_stock_id: '',
-      quantity: 0,
-      unit_price: 0,
-      specifications: ''
-    }]);
-  };
-
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
-
-  const updateItem = (index: number, field: keyof OrderItem, value: any) => {
-    const updated = [...items];
-    updated[index] = { ...updated[index], [field]: value };
-    setItems(updated);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user?.storeIds?.[0]) return;
-    
-    setLoading(true);
-
-    try {
-      const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-      
-      const purchaseOrder = await createPurchaseOrder({
-        ...formData,
-        store_id: user.storeIds[0],
-        created_by: user.id,
-        total_amount: totalAmount,
-        status: 'pending'
-      });
-
-      if (purchaseOrder) {
-        for (const item of items) {
-          if (item.inventory_stock_id && item.quantity > 0) {
-            await addPurchaseOrderItem({
-              purchase_order_id: purchaseOrder.id,
-              inventory_stock_id: item.inventory_stock_id,
-              quantity: item.quantity,
-              unit_price: item.unit_price,
-              specifications: item.specifications
-            });
-          }
-        }
-
-        onSuccess();
-        onOpenChange(false);
-        resetForm();
-      }
-    } catch (error) {
-      console.error('Error creating purchase order:', error);
-    } finally {
-      setLoading(false);
+    if (existingIndex >= 0) {
+      const updated = [...orderItems];
+      updated[existingIndex].quantity += 1;
+      setOrderItems(updated);
+    } else {
+      setOrderItems([...orderItems, {
+        commissary_item_id: item.id,
+        item_name: item.name,
+        quantity: 1,
+        unit_price: item.unit_cost || 0,
+        specifications: ''
+      }]);
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      order_number: '',
-      supplier_id: '',
-      requested_delivery_date: '',
-      notes: ''
-    });
-    setItems([]);
+  const updateOrderItemQuantity = (index: number, quantity: number) => {
+    if (quantity <= 0) {
+      setOrderItems(orderItems.filter((_, i) => i !== index));
+    } else {
+      const updated = [...orderItems];
+      updated[index].quantity = quantity;
+      setOrderItems(updated);
+    }
+  };
+
+  const updateOrderItemPrice = (index: number, price: number) => {
+    const updated = [...orderItems];
+    updated[index].unit_price = price;
+    setOrderItems(updated);
+  };
+
+  const updateOrderItemSpecs = (index: number, specs: string) => {
+    const updated = [...orderItems];
+    updated[index].specifications = specs;
+    setOrderItems(updated);
+  };
+
+  const totalAmount = orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+
+  const handleSubmit = async () => {
+    if (!user?.storeIds?.[0]) {
+      toast.error('No store assigned to user');
+      return;
+    }
+
+    if (orderItems.length === 0) {
+      toast.error('Please add at least one item to the order');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const orderData = {
+        store_id: user.storeIds[0],
+        created_by: user.id,
+        status: 'pending' as const,
+        total_amount: totalAmount,
+        requested_delivery_date: requestedDeliveryDate || undefined,
+        notes: notes || undefined,
+        items: orderItems.map(item => ({
+          // Pass the commissary item ID as inventory_stock_id (the service will handle the mapping)
+          inventory_stock_id: item.commissary_item_id,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          specifications: item.specifications
+        }))
+      };
+
+      console.log('Creating purchase order with data:', orderData);
+      const result = await createPurchaseOrder(orderData);
+      if (result) {
+        toast.success('Purchase order created successfully');
+        onSuccess();
+        onOpenChange(false);
+        // Reset form
+        setOrderItems([]);
+        setNotes('');
+        setRequestedDeliveryDate('');
+      }
+    } catch (error) {
+      console.error('Error creating purchase order:', error);
+      toast.error('Failed to create purchase order');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -144,141 +159,170 @@ export function CreatePurchaseOrderDialog({
           <DialogTitle>Create Purchase Order</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="order_number">Order Number *</Label>
+        <div className="space-y-6">
+          {/* Order Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="delivery-date">Requested Delivery Date</Label>
               <Input
-                id="order_number"
-                value={formData.order_number}
-                onChange={(e) => setFormData(prev => ({ ...prev, order_number: e.target.value }))}
-                required
-                readOnly
+                id="delivery-date"
+                type="date"
+                value={requestedDeliveryDate}
+                onChange={(e) => setRequestedDeliveryDate(e.target.value)}
               />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="supplier_id">Supplier *</Label>
-              <Select
-                value={formData.supplier_id}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, supplier_id: value }))}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map((supplier) => (
-                    <SelectItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Order notes or special instructions..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="requested_delivery_date">Requested Delivery Date</Label>
-            <Input
-              id="requested_delivery_date"
-              type="date"
-              value={formData.requested_delivery_date}
-              onChange={(e) => setFormData(prev => ({ ...prev, requested_delivery_date: e.target.value }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Items</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            </div>
-            
-            <div className="space-y-2">
-              {items.map((item, index) => (
-                <div key={index} className="grid grid-cols-6 gap-2 items-end">
-                  <div className="col-span-2">
-                    <Select
-                      value={item.inventory_stock_id}
-                      onValueChange={(value) => updateItem(index, 'inventory_stock_id', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select item" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {inventoryStock.map((stock) => (
-                          <SelectItem key={stock.id} value={stock.id}>
-                            {stock.item} ({stock.unit})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Quantity"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
-                  />
-                  
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="Unit Price"
-                    value={item.unit_price}
-                    onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                  />
-                  
-                  <Input
-                    placeholder="Specifications"
-                    value={item.specifications}
-                    onChange={(e) => updateItem(index, 'specifications', e.target.value)}
-                  />
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeItem(index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+          {/* Available Products */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Available Products</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadOrderableItems}
+                  disabled={loadingItems}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingItems ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingItems ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-croffle-accent mx-auto"></div>
+                  <p className="text-muted-foreground mt-2">Loading available products...</p>
                 </div>
-              ))}
-            </div>
-          </div>
+              ) : orderableItems.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No finished products available for ordering</h3>
+                  <p className="text-muted-foreground mb-4">
+                    There are no products currently marked as orderable in the commissary inventory.
+                  </p>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>Debug info:</p>
+                    <p>User: {user?.email}</p>
+                    <p>Role: {user?.role}</p>
+                    <p>Store IDs: {user?.storeIds?.join(', ')}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-60 overflow-y-auto">
+                  {orderableItems.map((item) => (
+                    <div key={item.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm">{item.name}</h4>
+                        <Badge variant="secondary" className="text-xs">
+                          {item.current_stock} {item.uom}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Cost: ₱{item.unit_cost?.toFixed(2) || '0.00'} per {item.uom}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addOrderItem(item)}
+                        className="w-full"
+                        disabled={item.current_stock <= 0}
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add to Order
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
+          {/* Order Items */}
+          {orderItems.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Order Items ({orderItems.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {orderItems.map((item, index) => (
+                    <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.item_name}</h4>
+                        <Input
+                          placeholder="Specifications (optional)"
+                          value={item.specifications || ''}
+                          onChange={(e) => updateOrderItemSpecs(index, e.target.value)}
+                          className="mt-2"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateOrderItemQuantity(index, item.quantity - 1)}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-12 text-center">{item.quantity}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateOrderItemQuantity(index, item.quantity + 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="w-32">
+                        <Label className="text-xs">Unit Price</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updateOrderItemPrice(index, parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="w-24 text-right">
+                        <div className="text-sm font-medium">
+                          ₱{(item.quantity * item.unit_price).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center pt-4 border-t">
+                    <span className="text-lg font-semibold">Total Amount:</span>
+                    <span className="text-lg font-semibold">₱{totalAmount.toFixed(2)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button
+              onClick={handleSubmit}
+              disabled={loading || orderItems.length === 0}
+            >
               {loading ? 'Creating...' : 'Create Purchase Order'}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

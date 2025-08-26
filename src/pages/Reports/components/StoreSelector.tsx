@@ -55,7 +55,19 @@ export function StoreSelector({
             
           if (!error && data) {
             console.log('🏪 Available stores for admin:', data.map(s => ({ id: s.id.slice(0, 8), name: s.name })));
-            setAvailableStores(data);
+            
+            // Cast the data to proper Store types
+            const typedStores = data.map(store => ({
+              ...store,
+              ownership_type: (store.ownership_type as 'company_owned' | 'franchisee') || 'company_owned',
+              franchisee_contact_info: store.franchisee_contact_info ? 
+                (typeof store.franchisee_contact_info === 'object' ? 
+                  store.franchisee_contact_info as { name?: string; email?: string; phone?: string; address?: string; } : 
+                  { name: "", email: "", phone: "", address: "" }
+                ) : undefined
+            })) as StoreType[];
+            
+            setAvailableStores(typedStores);
           }
         } catch (error) {
           console.error('Error fetching stores:', error);

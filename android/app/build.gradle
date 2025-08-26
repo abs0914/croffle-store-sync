@@ -1,6 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
+<<<<<<< HEAD
     namespace "com.croffle.storesync"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
@@ -10,17 +11,62 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+=======
+    namespace "com.crofflestore.pos"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.crofflestore.pos.kiosk"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 2
+        versionName "2.0.0-kiosk"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // Kiosk-specific configuration
+        resConfigs "en", "xxhdpi"
+
+>>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+<<<<<<< HEAD
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+=======
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            debuggable true
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // Signing configuration for release builds
+            // Note: Configure signing in gradle.properties or use Android Studio
+        }
+    }
+
+    // Optimize for kiosk performance
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    // Enable hardware acceleration
+    buildFeatures {
+        buildConfig true
+>>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
     }
 }
 

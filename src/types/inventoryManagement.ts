@@ -33,41 +33,66 @@ export interface Supplier {
 
 export interface Recipe {
   id: string;
-  product_id: string;
-  variation_id?: string;
-  store_id: string;
   name: string;
   description?: string;
-  yield_quantity: number;
   instructions?: string;
-  version: number;
+  yield_quantity: number;
+  serving_size?: number;
+  store_id: string;
+  product_id: string;
+  variation_id?: string;
   is_active: boolean;
+  version: number;
   created_at: string;
   updated_at: string;
-  ingredients: RecipeIngredient[];
+  category_name?: string;
+  total_cost?: number;
+  cost_per_serving?: number;
+  approval_status?: 'draft' | 'pending_approval' | 'approved' | 'rejected';
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+  ingredients?: RecipeIngredient[];
+  stores?: { name: string };
 }
 
 export interface RecipeIngredient {
   id: string;
   recipe_id: string;
   inventory_stock_id: string;
+  commissary_item_id?: string;
   quantity: number;
-  unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
+  unit: string;
+  cost_per_unit?: number;
   created_at: string;
-  inventory_stock?: InventoryStock;
+  inventory_stock?: {
+    id: string;
+    item: string;
+    unit: string;
+    cost?: number;
+    stock_quantity: number;
+  };
 }
 
 export interface InventoryStock {
   id: string;
-  store_id: string;
   item: string;
   unit: string;
+  cost: number;
+  store_id: string;
   stock_quantity: number;
-  cost?: number;
   sku?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // New bulk-to-serving fields
+  bulk_unit?: string;
+  bulk_quantity?: number;
+  serving_unit?: string;
+  serving_quantity?: number;
+  breakdown_ratio?: number;
+  cost_per_serving?: number;
+  fractional_stock?: number;
 }
 
 export interface StockTransaction {
@@ -124,14 +149,15 @@ export interface InventoryFilters {
   search?: string;
 }
 
-// Commissary Inventory Types (Admin-level raw materials)
+// Updated Commissary Inventory Types to match commissary.ts
 export interface CommissaryInventoryItem {
   id: string;
   name: string;
-  category: 'raw_materials' | 'packaging_materials' | 'supplies';
+  category: 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
+  item_type: 'raw_material' | 'supply' | 'orderable_item';
   current_stock: number;
   minimum_threshold: number;
-  unit: 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs';
+  uom: string;
   unit_cost?: number;
   supplier_id?: string;
   sku?: string;
@@ -229,10 +255,14 @@ export interface ConversionRecipeIngredientForm {
   quantity: number;
 }
 
-// Filters for commissary inventory
+// Enhanced filters for commissary inventory
 export interface CommissaryInventoryFilters {
-  category?: 'raw_materials' | 'packaging_materials' | 'supplies' | 'all';
-  stockLevel?: StockLevel | 'all';
+  stockLevel?: 'all' | 'good' | 'low' | 'out';  
   supplier?: string;
+  category?: 'all' | 'raw_materials' | 'packaging_materials' | 'supplies' | 'finished_goods';
   search?: string;
+  item_type?: 'all' | 'raw_material' | 'orderable_item';
+  expiring?: 'all' | 'expiring_soon' | 'expired'; // Items expiring within 30 days or already expired
+  sortBy?: 'name' | 'stock' | 'expiry_date' | 'updated_at';
+  sortOrder?: 'asc' | 'desc';
 }

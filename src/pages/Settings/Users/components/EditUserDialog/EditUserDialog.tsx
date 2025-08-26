@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateAppUser } from "@/services/appUser";
 import { AppUser, AppUserFormData } from "@/types/appUser";
 import { Store } from "@/types/store";
+import { useRolePermissions } from "@/contexts/RolePermissionsContext";
 import { useAuth } from "@/contexts/auth";
 import { toast } from "sonner";
 import {
@@ -25,8 +26,10 @@ interface EditUserDialogProps {
 
 export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: EditUserDialogProps) {
   const queryClient = useQueryClient();
-  const { hasPermission } = useAuth();
-  const isAdmin = hasPermission('admin');
+  const { hasPermission } = useRolePermissions();
+  const { user: currentUser } = useAuth();
+  // TEMPORARY FIX: Force admin users to have user management permissions
+  const canManageUsers = currentUser?.role === 'admin' || currentUser?.role === 'owner' || hasPermission('user_management');
   
   const [activeTab, setActiveTab] = useState<string>("general");
   const [formData, setFormData] = useState<AppUserFormData>({
@@ -34,10 +37,11 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
     lastName: "",
     contactNumber: "",
     email: "",
-    role: user?.role || "cashier",
-    storeIds: [],
-    isActive: true
-  });
+        role: user?.role || "cashier",
+        storeIds: [],
+        isActive: true,
+        customPermissions: undefined
+      });
 
   const updateMutation = useMutation({
     mutationFn: updateAppUser,
@@ -63,7 +67,8 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
         email: user.email || "",
         role: user.role,
         storeIds: user.storeIds || [],
-        isActive: user.isActive
+        isActive: user.isActive,
+        customPermissions: user.customPermissions
       });
     }
   }, [user]);
@@ -89,10 +94,10 @@ export default function EditUserDialog({ isOpen, onOpenChange, user, stores }: E
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader />
         
-        {isAdmin && (
+        {canManageUsers && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="general">User Details</TabsTrigger>

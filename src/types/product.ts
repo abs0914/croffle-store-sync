@@ -1,44 +1,57 @@
 
-import { Recipe } from './recipe';
-
-export type ProductSize = 'regular' | 'mini' | 'croffle-overload' | 'small' | 'medium' | 'large';
+export type ProductStatus =
+  | 'available'
+  | 'out_of_stock'
+  | 'temporarily_unavailable'
+  | 'discontinued';
 
 export interface Product {
   id: string;
   name: string;
   description?: string;
   price: number;
-  category_id?: string;
-  categoryId?: string; // For frontend compatibility
-  category?: Category; // Add full category object
+  category_id: string;
+  store_id: string;
   image_url?: string;
-  image?: string; // For frontend compatibility
   is_active: boolean;
-  isActive?: boolean; // For frontend compatibility
-  variations?: ProductVariation[];
-  store_id?: string;
-  storeId?: string; // For frontend compatibility
+  product_status?: ProductStatus;
+  created_at?: string;
+  updated_at?: string;
+  product_variations?: ProductVariation[];
   sku: string;
+  stock_quantity: number;
+  category?: Category | string; // Support both Category object and string
+  image?: string;
+  // Direct inventory product fields
+  recipe_id?: string | null; // null for direct inventory products
+  inventory_stock_id?: string | null; // for direct inventory products
+  selling_quantity?: number; // how many inventory units per product sale
+  product_type?: 'recipe' | 'direct'; // product type indicator
+  // Legacy/compatibility properties
   barcode?: string;
   cost?: number;
-  stock_quantity: number;
-  stockQuantity?: number; // For frontend compatibility
-  recipe?: Recipe; // Optional recipe connection
+  stockQuantity?: number;
+  categoryId?: string;
+  isActive?: boolean;
+  storeId?: string;
+  variations?: ProductVariation[];
 }
 
 export interface ProductVariation {
   id: string;
+  product_id: string;
   name: string;
   price: number;
-  is_active: boolean;
-  isActive?: boolean; // For frontend compatibility
   stock_quantity: number;
-  stockQuantity?: number; // For frontend compatibility
-  product_id: string;
-  productId?: string; // For frontend compatibility
-  sku: string;
-  size?: ProductSize; // Add size field
-  recipe?: Recipe; // Optional recipe connection
+  size?: ProductSize;
+  sku?: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  // Legacy/compatibility properties
+  productId?: string;
+  stockQuantity?: number;
+  isActive?: boolean;
 }
 
 export interface Category {
@@ -46,9 +59,14 @@ export interface Category {
   name: string;
   description?: string;
   image_url?: string;
-  image?: string; // For frontend compatibility
+  store_id: string;
   is_active: boolean;
-  isActive?: boolean; // For frontend compatibility
-  store_id?: string;
-  storeId?: string; // For frontend compatibility
+  created_at?: string;
+  updated_at?: string;
+  // Legacy/compatibility properties
+  image?: string;
+  isActive?: boolean;
+  storeId?: string;
 }
+
+export type ProductSize = 'regular' | 'mini' | 'croffle-overload';

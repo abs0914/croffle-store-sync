@@ -5,8 +5,17 @@ import { useCameraCleanup } from "./useCameraCleanup";
 import { useCameraCapture } from "./useCameraCapture";
 import { useCameraInitialization } from "./useCameraInitialization";
 import { useCameraDebug } from "./useCameraDebug";
+import { useCameraSelection } from "../useCameraSelection";
 
-export function useCamera(): UseCameraResult {
+export function useCamera(): UseCameraResult & {
+  // Camera selection properties
+  availableCameras: ReturnType<typeof useCameraSelection>['availableCameras'];
+  selectedCameraId: string;
+  selectCamera: (deviceId: string) => void;
+  getSelectedCamera: ReturnType<typeof useCameraSelection>['getSelectedCamera'];
+  isLoadingCameras: boolean;
+  refetchCameras: () => Promise<void>;
+} {
   // Set up camera state and refs
   const {
     showCamera,
@@ -26,6 +35,16 @@ export function useCamera(): UseCameraResult {
     retryTimeoutRef
   } = useCameraState();
   
+  // Set up camera selection
+  const {
+    availableCameras,
+    selectedCameraId,
+    selectCamera,
+    getSelectedCamera,
+    isLoading: isLoadingCameras,
+    refetchCameras
+  } = useCameraSelection();
+  
   // Set up camera cleanup functions
   const { resetCameraState, stopCamera } = useCameraCleanup({
     mediaStreamRef,
@@ -44,7 +63,7 @@ export function useCamera(): UseCameraResult {
     stopCamera
   });
   
-  // Set up camera initialization function
+  // Set up camera initialization function with device selection
   const { startCamera } = useCameraInitialization({
     videoRef,
     mediaStreamRef,
@@ -54,7 +73,8 @@ export function useCamera(): UseCameraResult {
     setShowCamera,
     setCameraError,
     setCameraInitialized,
-    setIsStartingCamera
+    setIsStartingCamera,
+    selectedCameraId
   });
   
   // Set up camera debug function
@@ -78,7 +98,14 @@ export function useCamera(): UseCameraResult {
     setCameraError,
     cameraInitialized,
     isStartingCamera,
-    capturePhoto
+    capturePhoto,
+    // Camera selection
+    availableCameras,
+    selectedCameraId,
+    selectCamera,
+    getSelectedCamera,
+    isLoadingCameras,
+    refetchCameras
   };
 }
 

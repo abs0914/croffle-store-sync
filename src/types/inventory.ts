@@ -1,27 +1,39 @@
 
 export interface InventoryStock {
   id: string;
-  store_id: string;
   item: string;
-  sku?: string;
   unit: string;
   stock_quantity: number;
+  minimum_threshold?: number;
+  maximum_capacity?: number;
   cost?: number;
-  is_active: boolean;
+  sku?: string;
+  store_id: string;
+  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
+  last_restocked?: string;
+  // New bulk-to-serving fields
+  bulk_unit?: string;
+  bulk_quantity?: number;
+  serving_unit?: string;
+  serving_quantity?: number;
+  breakdown_ratio?: number;
+  cost_per_serving?: number;
+  fractional_stock?: number;
 }
 
 export interface Ingredient {
   id: string;
   name: string;
-  unit_type: 'pieces' | 'portion' | 'serving' | 'scoop' | 'grams' | 'milliliters';
-  store_id: string;
-  stock_quantity: number;
-  cost_per_unit?: number;
-  category_id?: string;
-  sku?: string;
-  is_active: boolean;
+  unit: string;
+  cost_per_unit: number;
+  supplier?: string;
+  category?: string;
+  unit_type?: string; // Legacy/compatibility property, maps to unit
+  stock_quantity?: number;
+  is_active?: boolean;
+  store_id?: string;
   created_at?: string;
   updated_at?: string;
 }

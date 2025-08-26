@@ -1,7 +1,7 @@
-
-import React, { useState, useMemo, memo } from "react";
+import React, { useState, useMemo, memo, useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 import { Product, Category, ProductVariation } from "@/types";
+import { fetchPOSInventoryStatus, POSInventoryStatus } from "@/services/pos/posInventoryIntegrationService";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -16,6 +16,8 @@ import OptimizedProductSearch from "./OptimizedProductSearch";
 import ProductCategoryTabs from "./ProductCategoryTabs";
 import OptimizedProductCard from "./OptimizedProductCard";
 import ProductVariationsList from "./ProductVariationsList";
+import { RecipeCustomizationDialog } from "../customization/RecipeCustomizationDialog";
+import { fetchCustomizableRecipes } from "@/services/pos/customizableRecipeService";
 
 interface OptimizedProductGridProps {
   products: Product[];
@@ -25,6 +27,7 @@ interface OptimizedProductGridProps {
   addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
   isShiftActive: boolean;
   isLoading: boolean;
+  storeId?: string;
 }
 
 const OptimizedProductGrid = memo(function OptimizedProductGrid({
@@ -34,13 +37,42 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
   setActiveCategory,
   addItemToCart,
   isShiftActive,
-  isLoading
+  isLoading,
+  storeId
 }: OptimizedProductGridProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productVariations, setProductVariations] = useState<ProductVariation[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoadingVariations, setIsLoadingVariations] = useState(false);
+  const [inventoryStatusMap, setInventoryStatusMap] = useState<Map<string, POSInventoryStatus>>(new Map());
+  
+  // Recipe customization states
+  const [customizableRecipes, setCustomizableRecipes] = useState<any[]>([]);
+  const [selectedCustomizableRecipe, setSelectedCustomizableRecipe] = useState<any>(null);
+  const [isCustomizationDialogOpen, setIsCustomizationDialogOpen] = useState(false);
+  
+  // Fetch inventory status for POS integration
+  useEffect(() => {
+    if (products.length > 0 && storeId) {
+      fetchPOSInventoryStatus(products, storeId).then(setInventoryStatusMap);
+    }
+  }, [products, storeId]);
+  
+  // Load customizable recipes on component mount
+  useEffect(() => {
+    const loadCustomizableRecipes = async () => {
+      try {
+        const recipes = await fetchCustomizableRecipes();
+        setCustomizableRecipes(recipes);
+        console.log('Loaded customizable recipes:', recipes);
+      } catch (error) {
+        console.error('Error loading customizable recipes:', error);
+      }
+    };
+
+    loadCustomizableRecipes();
+  }, []);
   
   // Debounce search term to reduce filtering operations
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -71,7 +103,28 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
 
   // Handle product selection with memoized callback
   const handleProductClick = React.useCallback(async (product: Product) => {
+    console.log("OptimizedProductGrid: Product clicked", {
+      productName: product.name,
+      productId: product.id,
+      isShiftActive,
+      isActive: product.is_active || product.isActive
+    });
+
     if (!isShiftActive || !(product.is_active || product.isActive)) return;
+    
+    // Check if this product has a customizable recipe
+    const customizableRecipe = customizableRecipes.find(recipe =>
+      recipe.name.toLowerCase() === product.name.toLowerCase() ||
+      recipe.name.toLowerCase().includes(product.name.toLowerCase()) ||
+      product.name.toLowerCase().includes(recipe.name.toLowerCase())
+    );
+
+    if (customizableRecipe) {
+      console.log("OptimizedProductGrid: Found customizable recipe for product:", customizableRecipe);
+      setSelectedCustomizableRecipe(customizableRecipe);
+      setIsCustomizationDialogOpen(true);
+      return;
+    }
     
     setSelectedProduct(product);
 
@@ -91,7 +144,7 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
     } finally {
       setIsLoadingVariations(false);
     }
-  }, [isShiftActive, addItemToCart]);
+  }, [isShiftActive, addItemToCart, customizableRecipes]);
 
   // Handle variation selection with memoized callback
   const handleVariationSelect = React.useCallback((variation: ProductVariation) => {
@@ -107,6 +160,13 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
       setIsDialogOpen(false);
     }
   }, [selectedProduct, addItemToCart]);
+
+  // Handle customized recipe add to cart
+  const handleCustomizedAddToCart = React.useCallback((customizedItem: any) => {
+    console.log("OptimizedProductGrid: Adding customized item to cart:", customizedItem);
+    addItemToCart(customizedItem);
+    setIsCustomizationDialogOpen(false);
+  }, [addItemToCart]);
 
   return (
     <>
@@ -137,7 +197,7 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
               <p>Loading products...</p>
             </div>
           ) : filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
               {filteredProducts.map(product => (
                 <OptimizedProductCard
                   key={product.id}
@@ -145,6 +205,7 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
                   isShiftActive={isShiftActive}
                   getCategoryName={getCategoryName}
                   onClick={handleProductClick}
+                  inventoryStatus={inventoryStatusMap.get(product.id)}
                 />
               ))}
             </div>
@@ -175,6 +236,14 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
           />
         </DialogContent>
       </Dialog>
+
+      {/* Recipe Customization Dialog */}
+      <RecipeCustomizationDialog
+        isOpen={isCustomizationDialogOpen}
+        onClose={() => setIsCustomizationDialogOpen(false)}
+        recipe={selectedCustomizableRecipe}
+        onAddToCart={handleCustomizedAddToCart}
+      />
     </>
   );
 });

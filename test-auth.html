@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .success { border-color: #4CAF50; background-color: #f8fff8; }
+        .error { border-color: #f44336; background-color: #fff8f8; }
+        .warning { border-color: #ff9800; background-color: #fffaf0; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Authentication System Test</h1>
+        <p>This page tests the authentication functionality of the croffle-store-sync application.</p>
+        
+        <div class="test-section">
+            <h3>📋 Test Results</h3>
+            <div id="test-results">
+                <p>Click "Run Tests" to start testing...</p>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Manual Login Test</h3>
+            <div>
+                <input type="email" id="email" placeholder="Email" value="admin@example.com">
+                <input type="password" id="password" placeholder="Password" value="password123">
+                <button onclick="testLogin()">Test Login</button>
+                <button onclick="testLogout()">Test Logout</button>
+            </div>
+            <div id="login-result" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 System Checks</h3>
+            <button onclick="runSystemChecks()">Run System Checks</button>
+            <div id="system-checks" class="log"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Application Status</h3>
+            <button onclick="checkAppStatus()">Check Application Status</button>
+            <div id="app-status" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            element.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            element.scrollTop = element.scrollHeight;
+        }
+
+        function clearLog(elementId) {
+            document.getElementById(elementId).textContent = '';
+        }
+
+        async function testLogin() {
+            clearLog('login-result');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            log('login-result', `Testing login with email: ${email}`);
+
+            try {
+                // Test if the application is accessible
+                const response = await fetch('http://localhost:5173/login', {
+                    method: 'GET',
+                    mode: 'no-cors'
+                });
+                log('login-result', 'Login page request sent successfully', 'success');
+                log('login-result', 'Note: Due to CORS, cannot read response status from external page', 'warning');
+                log('login-result', 'Please check the browser tab to verify login page loads', 'info');
+
+                // Open the login page in a new tab for manual verification
+                window.open('http://localhost:5173/login', '_blank');
+
+            } catch (error) {
+                log('login-result', `Error accessing login page: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogout() {
+            clearLog('login-result');
+            log('login-result', 'Testing logout functionality...');
+            // This would test logout if we had access to the auth context
+            log('login-result', 'Logout test requires application context', 'warning');
+        }
+
+        async function runSystemChecks() {
+            clearLog('system-checks');
+            log('system-checks', 'Running system checks...');
+            
+            // Check if development server is running
+            try {
+                const response = await fetch('http://localhost:5173/');
+                if (response.ok) {
+                    log('system-checks', 'Development server is running', 'success');
+                } else {
+                    log('system-checks', `Server returned status: ${response.status}`, 'warning');
+                }
+            } catch (error) {
+                log('system-checks', `Development server not accessible: ${error.message}`, 'error');
+            }
+
+            // Check if login page loads
+            try {
+                const response = await fetch('http://localhost:5173/login');
+                if (response.ok) {
+                    log('system-checks', 'Login page loads successfully', 'success');
+                } else {
+                    log('system-checks', `Login page error: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log('system-checks', `Login page not accessible: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkAppStatus() {
+            clearLog('app-status');
+            log('app-status', 'Checking application status...');
+            
+            // Check main application routes
+            const routes = ['/', '/login', '/pos', '/inventory', '/settings'];
+            
+            for (const route of routes) {
+                try {
+                    const response = await fetch(`http://localhost:5173${route}`);
+                    if (response.ok) {
+                        log('app-status', `Route ${route}: OK`, 'success');
+                    } else {
+                        log('app-status', `Route ${route}: ${response.status}`, 'warning');
+                    }
+                } catch (error) {
+                    log('app-status', `Route ${route}: Error - ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Auto-run system checks on page load
+        window.onload = function() {
+            setTimeout(runSystemChecks, 1000);
+        };
+    </script>
+</body>
+</html>

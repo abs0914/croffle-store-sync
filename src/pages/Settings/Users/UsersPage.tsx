@@ -2,10 +2,12 @@
 import { Link } from "react-router-dom";
 import { useStore } from "@/contexts/StoreContext";
 import { useAuth } from "@/contexts/auth";
+import { useRolePermissions } from "@/contexts/RolePermissionsContext";
 import { UserListView, ErrorView, LoadingView } from "./components";
 import { useUserDebug, useUsersData, useUserDialogs } from "./hooks";
 import UserAccessView from "./components/UserAccessView";
 import UserDialogs from "./components/UserDialogs";
+import { SecurityAuditPanel } from "@/components/security/SecurityAuditPanel";
 import { syncAuthWithAppUsers, updateAppUsersFromAuthMetadata } from "@/services/appUser/sync";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,29 +15,18 @@ import { ArrowLeftIcon } from "lucide-react";
 
 export default function UsersPage() {
   const { currentStore, stores } = useStore();
-  const { hasPermission, user } = useAuth();
-  const isAdmin = hasPermission('admin');
-  const isOwner = hasPermission('owner');
-  const isManager = user?.role === 'manager';
-  const canManageUsers = isAdmin || isOwner;
+  const { user } = useAuth();
+  const { hasPermission, userRole } = useRolePermissions();
+  // TEMPORARY FIX: Force admin users to have user management permissions
+  const canManageUsers = user?.role === 'admin' || user?.role === 'owner' || hasPermission('user_management');
+  
+  // Debug logging for permission state
+  console.log('🔐 UsersPage - canManageUsers:', canManageUsers);
+  console.log('🔐 UsersPage - user from auth:', user);
+  console.log('🔐 UsersPage - userRole from permissions:', userRole);
 
-  // Route protection: Only admin and owner can access this page
-  if (user && !canManageUsers && !isManager) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900">Access Denied</h2>
-        <p className="text-gray-600 text-center max-w-md">
-          You don't have permission to access user management. Only administrators and owners can manage users.
-        </p>
-        <Button asChild variant="outline">
-          <Link to="/dashboard">
-            <ArrowLeftIcon className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Link>
-        </Button>
-      </div>
-    );
-  }
+  // Note: Route protection is handled by RoleBasedRouteGuard in the routing configuration
+  // No need for redundant permission check here
 
   // Custom hooks
   const { users, isLoading, error, refetch } = useUsersData();
@@ -49,7 +40,7 @@ export default function UsersPage() {
   } = useUserDialogs();
 
   // Debug hook
-  useUserDebug({ user, isAdmin, isOwner, canManageUsers, currentStore });
+  useUserDebug({ user, canManageUsers, currentStore });
 
   // Function to handle user synchronization
   const handleSyncUsers = async () => {
@@ -107,13 +98,13 @@ export default function UsersPage() {
     );
   }
 
-  // Handle restricted access views for managers or errors
-  if (isManager && !canManageUsers || error) {
+  // Handle error cases
+  if (error) {
     return (
       <UserAccessView
-        isManager={isManager && !canManageUsers}
+        isManager={false}
         isLoading={isLoading}
-        error={error ? (error as Error) : null}
+        error={error as Error}
         currentStoreExists={!!currentStore || canManageUsers}
         users={users}
         currentUserEmail={user?.email}
@@ -139,6 +130,11 @@ export default function UsersPage() {
         onRefresh={refetch}
         onSyncUsers={handleSyncUsers}
       />
+
+      {/* Security Audit Panel - Only show to admin/owner users */}
+      {canManageUsers && ['admin', 'owner'].includes(user?.role || '') && (
+        <SecurityAuditPanel />
+      )}
 
       {/* Dialogs - Only render for users with management permissions */}
       {canManageUsers && (

@@ -5,19 +5,18 @@ import { Store } from "@/types/store";
 
 interface UseUserDebugProps {
   user: User | null;
-  isAdmin: boolean;
-  isOwner: boolean;
   canManageUsers: boolean;
   currentStore: Store | null;
 }
 
 export default function useUserDebug({ 
   user, 
-  isAdmin, 
-  isOwner, 
   canManageUsers, 
   currentStore 
 }: UseUserDebugProps) {
+  const isAdmin = user?.role === 'admin';
+  const isOwner = user?.role === 'owner';
+  
   useEffect(() => {
     console.log("=== Users Page Authentication Debug ===");
     console.log("Current user:", user);

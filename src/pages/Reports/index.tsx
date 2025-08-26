@@ -14,7 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 
-export type ReportType = 'sales' | 'inventory' | 'profit_loss' | 'x_reading' | 'z_reading' | 'daily_summary' | 'vat' | 'cashier' | 'stock';
+export type ReportType = 'sales' | 'expense' | 'profit_loss' | 'x_reading' | 'z_reading' | 'bir_ejournal' | 'bir_backup' | 'vat' | 'cashier' | 'daily_shift' | 'inventory_status';
 
 export default function Reports() {
   const { currentStore, isLoading: storeLoading } = useStore();
@@ -35,13 +35,13 @@ export default function Reports() {
   // Set initial store selection
   useEffect(() => {
     if (currentStore && !selectedStoreId) {
-      console.log('🏪 Setting initial store selection:', { 
+      console.log('🏪 Reports: Setting initial store selection:', { 
         storeId: currentStore.id.slice(0, 8), 
         storeName: currentStore.name 
       });
       setSelectedStoreId(currentStore.id);
     }
-  }, [currentStore, selectedStoreId]);
+  }, [currentStore]); // Remove selectedStoreId dependency to prevent re-initialization issues
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(prev => !prev);

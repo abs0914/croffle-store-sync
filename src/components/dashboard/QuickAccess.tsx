@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Package, Users, Settings, FileBarChart, Receipt, FileCheck } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/auth";
+import { checkRouteAccess } from "@/contexts/auth/role-utils";
 
 // Icon components
 export function ShoppingCart(props: React.SVGProps<SVGSVGElement>) {
@@ -50,6 +52,68 @@ export function FileText(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export function QuickAccess() {
+  const { user } = useAuth();
+
+  // Phase 5: Define quick access items based on user role
+  const quickAccessItems = [
+    {
+      to: "/pos",
+      icon: ShoppingCart,
+      label: "New Sale",
+      color: "text-croffle-accent",
+      roles: ['admin', 'owner', 'manager', 'cashier']
+    },
+    {
+      to: "/inventory",
+      icon: Package,
+      label: "Inventory",
+      color: "text-croffle-primary",
+      roles: ['admin', 'owner', 'manager']
+    },
+    {
+      to: "/reports?type=x_reading",
+      icon: Receipt,
+      label: "X-Reading",
+      color: "text-green-500",
+      roles: ['admin', 'owner', 'manager']
+    },
+    {
+      to: "/reports?type=z_reading",
+      icon: FileCheck,
+      label: "Z-Reading",
+      color: "text-red-500",
+      roles: ['admin', 'owner', 'manager']
+    },
+    {
+      to: "/customers",
+      icon: Users,
+      label: "Customers",
+      color: "text-blue-500",
+      roles: ['admin', 'owner', 'manager', 'cashier']
+    },
+    {
+      to: "/reports",
+      icon: FileBarChart,
+      label: "All Reports",
+      color: "text-purple-500",
+      roles: ['admin', 'owner', 'manager']
+    }
+  ];
+
+  // Filter items based on user role and route access
+  const filteredItems = quickAccessItems.filter(item => {
+    if (!user?.role) return false;
+    
+    // Check if user role is in allowed roles
+    const hasRoleAccess = item.roles.includes(user.role);
+    
+    // Check route-specific access
+    const route = item.to.split('?')[0]; // Remove query params for route check
+    const hasRouteAccess = checkRouteAccess(user.role, route);
+    
+    return hasRoleAccess && hasRouteAccess;
+  });
+
   return (
     <Card className="md:col-span-2 border-croffle-primary/20">
       <CardHeader>
@@ -58,42 +122,19 @@ export function QuickAccess() {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <Button variant="outline" className="h-24 flex flex-col gap-2 border-croffle-primary/20" asChild>
-            <Link to="/pos">
-              <ShoppingCart className="h-6 w-6 text-croffle-accent" />
-              <span>New Sale</span>
-            </Link>
-          </Button>
-          <Button variant="outline" className="h-24 flex flex-col gap-2 border-croffle-primary/20" asChild>
-            <Link to="/inventory">
-              <Package className="h-6 w-6 text-croffle-primary" />
-              <span>Inventory</span>
-            </Link>
-          </Button>
-          <Button variant="outline" className="h-24 flex flex-col gap-2 border-croffle-primary/20" asChild>
-            <Link to="/reports?type=x_reading">
-              <Receipt className="h-6 w-6 text-green-500" />
-              <span>X-Reading</span>
-            </Link>
-          </Button>
-          <Button variant="outline" className="h-24 flex flex-col gap-2 border-croffle-primary/20" asChild>
-            <Link to="/reports?type=z_reading">
-              <FileCheck className="h-6 w-6 text-red-500" />
-              <span>Z-Reading</span>
-            </Link>
-          </Button>
-          <Button variant="outline" className="h-24 flex flex-col gap-2 border-croffle-primary/20" asChild>
-            <Link to="/customers">
-              <Users className="h-6 w-6 text-blue-500" />
-              <span>Customers</span>
-            </Link>
-          </Button>
-          <Button variant="outline" className="h-24 flex flex-col gap-2 border-croffle-primary/20" asChild>
-            <Link to="/reports">
-              <FileBarChart className="h-6 w-6 text-purple-500" />
-              <span>All Reports</span>
-            </Link>
-          </Button>
+          {filteredItems.map((item, index) => (
+            <Button 
+              key={index}
+              variant="outline" 
+              className="h-24 flex flex-col gap-2 border-croffle-primary/20" 
+              asChild
+            >
+              <Link to={item.to}>
+                <item.icon className={`h-6 w-6 ${item.color}`} />
+                <span>{item.label}</span>
+              </Link>
+            </Button>
+          ))}
         </div>
       </CardContent>
     </Card>

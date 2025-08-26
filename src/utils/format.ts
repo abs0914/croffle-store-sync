@@ -1,4 +1,5 @@
 
+<<<<<<< HEAD
 /**
  * Formats a number as currency in Philippine Peso (₱)
  * Uses a fallback approach to ensure ₱ symbol is always displayed correctly
@@ -31,15 +32,35 @@ export function formatCurrency(amount: number): string {
     return `₱${numberFormatted}`;
   }
 }
+=======
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+>>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
 
-/**
- * Formats a date to a readable string
- */
-export function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-US', {
+export const formatNumber = (num: number): string => {
+  return new Intl.NumberFormat('en-US').format(num);
+};
+
+export const formatDate = (date: string | Date): string => {
+  return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
   });
-}
+};
+
+export const formatDateTime = (date: string | Date): string => {
+  return new Date(date).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};

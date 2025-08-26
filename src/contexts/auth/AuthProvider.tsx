@@ -2,8 +2,21 @@ import React, { createContext, useContext, ReactNode, useEffect, useRef } from "
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session, AuthState } from "./types";
 import { useAuthState } from "./useAuthState";
-import { checkPermission, checkStoreAccess, mapSupabaseUser } from "./utils";
+import { checkPermission, checkStoreAccess } from "./utils";
+import { mapSupabaseUser } from "./user-mapping-utils";
 import { UserRole } from "@/types";
+
+// Helper function to control logging based on environment
+const isDevelopment = process.env.NODE_ENV === 'development';
+const authLog = (message: string, ...args: any[]) => {
+  if (isDevelopment) {
+    console.log(`🔐 Auth Provider: ${message}`, ...args);
+  }
+};
+
+const authError = (message: string, error?: any) => {
+  console.error(`🔐 Auth Provider Error: ${message}`, error);
+};
 
 const initialState: AuthState = {
   user: null,
@@ -11,6 +24,7 @@ const initialState: AuthState = {
   isLoading: true,
   isAuthenticated: false,
   login: async () => {},
+  register: async () => {},
   logout: async () => {},
   hasPermission: () => false,
   hasStoreAccess: () => false,
@@ -30,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authErrorHandledRef,
     setupTokenRefresh,
     login,
+    register,
     logout
   } = useAuthState();
   
@@ -46,23 +61,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key?.includes('supabase.auth') && event.newValue !== event.oldValue) {
-        console.log('Auth state changed in another tab, synchronizing...');
+        authLog('Auth state changed in another tab, synchronizing...');
         
         // Refresh the session state from storage
         supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
           if (currentSession?.user) {
-            console.log('Session found in another tab, updating local state');
+            authLog('Session found in another tab, updating local state');
             const mappedUser = await mapSupabaseUser(currentSession.user);
             setSession(currentSession);
             setUser(mappedUser);
           } else if (session) {
             // User logged out in another tab
-            console.log('User logged out in another tab');
+            authLog('User logged out in another tab');
             setSession(null);
             setUser(null);
           }
         }).catch(error => {
-          console.error("Error syncing session across tabs:", error);
+          authError("Error syncing session across tabs:", error);
         });
       }
     };
@@ -81,10 +96,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authErrorHandledRef.current = false;
     setIsLoading(true);
     
+    authLog('Initializing authentication...');
+    
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
-        console.log(`Auth state changed: ${event}`);
+        authLog(`Auth state changed: ${event}`);
         
         // Only update session state synchronously
         setSession(newSession);
@@ -92,12 +109,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (newSession?.user) {
           // Use setTimeout to avoid recursive auth state changes
           setTimeout(async () => {
-            const mappedUser = await mapSupabaseUser(newSession.user);
-            setUser(mappedUser);
-            setIsLoading(false);
-            
-            // Setup token refresh for the new session
-            setupTokenRefresh(newSession);
+            try {
+              authLog('🔐 Mapping user in auth state change...');
+              const mappedUser = await mapSupabaseUser(newSession.user);
+              authLog('🔐 Mapped user result:', mappedUser);
+              authLog('🔐 Setting user in auth context...');
+              setUser(mappedUser);
+              authLog('🔐 User set in auth context successfully. User role:', mappedUser.role);
+              setIsLoading(false);
+              
+              // Setup token refresh for the new session
+              setupTokenRefresh(newSession);
+            } catch (error) {
+              authError('Error mapping user in auth state change:', error);
+              setIsLoading(false);
+            }
           }, 0);
         } else {
           setUser(null);
@@ -109,19 +135,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // THEN check for existing session
     supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       if (currentSession?.user) {
-        console.log('Existing session found');
-        const mappedUser = await mapSupabaseUser(currentSession.user);
-        setSession(currentSession);
-        setUser(mappedUser);
-        
-        // Setup token refresh
-        setupTokenRefresh(currentSession);
+        try {
+          authLog('Existing session found');
+          authLog('🔐 Mapping user from existing session...');
+          const mappedUser = await mapSupabaseUser(currentSession.user);
+          authLog('🔐 Mapped user from existing session:', mappedUser);
+          setSession(currentSession);
+          authLog('🔐 Setting user from existing session...');
+          setUser(mappedUser);
+          authLog('🔐 User set from existing session successfully. Role:', mappedUser.role);
+          
+          // Setup token refresh
+          setupTokenRefresh(currentSession);
+        } catch (error) {
+          authError("Error mapping user from existing session:", error);
+        }
       } else {
-        console.log('No existing session found');
+        authLog('No existing session found');
       }
       setIsLoading(false);
     }).catch(error => {
-      console.error("Error checking session:", error);
+      authError("Error checking session:", error);
       setIsLoading(false);
     });
 
@@ -137,11 +171,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Handle network status changes
   useEffect(() => {
     const handleOnline = () => {
-      console.log('Network connection restored');
+      authLog('Network connection restored');
       
       // Check if we have a user but need to refresh the session
       if (user && !session) {
-        console.log('Attempting to restore session after network reconnection');
+        authLog('Attempting to restore session after network reconnection');
         supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
           if (currentSession) {
             setSession(currentSession);
@@ -152,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     
     const handleOffline = () => {
-      console.log('Network connection lost');
+      authLog('Network connection lost');
       // We keep the current user/session state when offline
     };
     
@@ -173,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasStoreAccess = (storeId: string): boolean => {
     if (!user) return false;
-    return checkStoreAccess(user.storeIds, storeId);
+    return checkStoreAccess(user.storeIds, storeId, user.role);
   };
 
   return (
@@ -184,6 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        register,
         logout,
         hasPermission,
         hasStoreAccess,

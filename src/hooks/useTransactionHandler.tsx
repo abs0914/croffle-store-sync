@@ -1,16 +1,26 @@
-
 import { useState } from "react";
-import { useCart } from "@/contexts/CartContext";
+import { useCart } from "@/contexts/cart/CartContext";
 import { Customer, Transaction } from "@/types";
 import { createTransaction } from "@/services/transactions";
 import { toast } from "sonner";
 
-export function useTransactionHandler() {
+export interface SeniorDiscount {
+  id: string;
+  idNumber: string;
+  name: string;
+  discountAmount: number;
+  type?: 'senior' | 'pwd';
+  amount?: number;
+}
+
+export function useTransactionHandler(storeId: string) {
   const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [discount, setDiscount] = useState(0);
   const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | undefined>(undefined);
   const [discountIdNumber, setDiscountIdNumber] = useState<string | undefined>(undefined);
+  const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>([]);
+  const [otherDiscount, setOtherDiscount] = useState<{ type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | undefined>(undefined);
   
   const { clearCart } = useCart();
 
@@ -22,6 +32,27 @@ export function useTransactionHandler() {
     setDiscount(discountAmount);
     setDiscountType(type);
     setDiscountIdNumber(idNumber);
+  };
+
+  const handleApplyMultipleDiscounts = (
+    seniorDiscountsArray: SeniorDiscount[],
+    otherDiscountValue?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }
+  ) => {
+    setSeniorDiscounts(seniorDiscountsArray);
+    setOtherDiscount(otherDiscountValue);
+    
+    const totalSeniorDiscount = seniorDiscountsArray.reduce((sum, discount) => sum + (discount.amount || discount.discountAmount), 0);
+    const totalOtherDiscount = otherDiscountValue?.amount || 0;
+    const totalDiscount = totalSeniorDiscount + totalOtherDiscount;
+    
+    setDiscount(totalDiscount);
+    if (seniorDiscountsArray.length > 0) {
+      setDiscountType('senior');
+      setDiscountIdNumber(seniorDiscountsArray[0].idNumber);
+    } else if (otherDiscountValue) {
+      setDiscountType(otherDiscountValue.type);
+      setDiscountIdNumber(otherDiscountValue.idNumber);
+    }
   };
   
   const handlePaymentComplete = async (
@@ -75,8 +106,8 @@ export function useTransactionHandler() {
       status: 'completed'
     };
     
-    // Call the service to create the transaction
-    const result = await createTransaction(transaction);
+    // Call the service to create the transaction with cart items for enrichment
+    const result = await createTransaction(transaction, items);
     
     if (result) {
       setCompletedTransaction(result);
@@ -93,6 +124,8 @@ export function useTransactionHandler() {
     setDiscount(0);
     setDiscountType(undefined);
     setDiscountIdNumber(undefined);
+    setSeniorDiscounts([]);
+    setOtherDiscount(undefined);
     clearCart();
   };
   
@@ -103,7 +136,10 @@ export function useTransactionHandler() {
     discount,
     discountType,
     discountIdNumber,
+    seniorDiscounts,
+    otherDiscount,
     handleApplyDiscount,
+    handleApplyMultipleDiscounts,
     handlePaymentComplete,
     startNewSale
   };

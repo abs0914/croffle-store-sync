@@ -1,16 +1,25 @@
 
-export * from './user';
-export * from './product';
-export * from './store';
-// Explicitly re-export to avoid ambiguity with the Shift type
-export type { Shift as ShiftType } from './shift';
-export * from './transaction';
-export * from './inventory';
-export * from './recipe';
-export * from './reports';
+// Core types
+export type { UserRole, User } from './user';
+export type { Store, StoreSettings } from './store';
+export type { Product, ProductVariation, Category, ProductSize } from './product';
+export type { CartItem, Customer, Transaction, TransactionItem, Shift as ShiftType } from './transaction';
+export type { Recipe, RecipeIngredient } from './recipe';
+export type { Shift } from './shift';
+export type { Manager, ManagerFormData } from './manager';
+export type { Cashier, CashierFormData } from './cashier';
+export type { AppUser, AppUserFormData } from './appUser';
 
-// Common Supabase query result type to help with TypeScript inference
-export interface SupabaseQueryResult<T> {
-  data: T | null;
-  error: Error | null;
-}
+// Inventory types
+export type { InventoryStock, Ingredient } from './inventory';
+
+// Commissary types
+export type { CommissaryInventoryItem, RecipeUpload, RecipeIngredientUpload, RawIngredientUpload } from './commissary';
+export type { CommissaryPurchase, CommissaryPurchaseForm, PurchaseHistory } from './commissaryPurchases';
+export type { LocationType, LocationInfo } from './location';
+
+// Order management types
+export type { PurchaseOrder, PurchaseOrderItem } from './orderManagement';
+
+// Report types
+export * from './reports';

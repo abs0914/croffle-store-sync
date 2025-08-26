@@ -1,13 +1,14 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import { Printer, Download } from "lucide-react";
+import { Printer, Download, Bluetooth } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Transaction, Customer } from "@/types";
 import { useStore } from "@/contexts/StoreContext";
+import { useThermalPrinter } from "@/hooks/useThermalPrinter";
+import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { toast } from "sonner";
 import { formatCurrency } from "@/utils/format";
 
@@ -18,7 +19,37 @@ interface ReceiptGeneratorProps {
 
 export default function ReceiptGenerator({ transaction, customer }: ReceiptGeneratorProps) {
   const { currentStore } = useStore();
+  const { isAvailable, isConnected, printReceipt, isPrinting } = useThermalPrinter();
   const receiptRef = React.useRef<HTMLDivElement>(null);
+
+  // Add validation and logging
+  React.useEffect(() => {
+    console.log("ReceiptGenerator: Component mounted with:", {
+      transaction: {
+        receiptNumber: transaction?.receiptNumber,
+        createdAt: transaction?.createdAt,
+        itemsCount: transaction?.items?.length,
+        total: transaction?.total
+      },
+      customer: customer?.name,
+      currentStore: currentStore?.name
+    });
+
+    if (!transaction) {
+      console.error("ReceiptGenerator: No transaction provided");
+      return;
+    }
+
+    if (!transaction.receiptNumber) {
+      console.error("ReceiptGenerator: Missing receipt number");
+      return;
+    }
+
+    if (!transaction.items || transaction.items.length === 0) {
+      console.error("ReceiptGenerator: No items in transaction");
+      return;
+    }
+  }, [transaction, customer, currentStore]);
 
   const handlePrint = () => {
     const content = receiptRef.current;
@@ -85,24 +116,65 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
     printWindow.close();
   };
 
+<<<<<<< HEAD
 
+=======
+  const handleThermalPrint = async () => {
+    if (!isConnected) {
+      toast.error('No thermal printer connected');
+      return;
+    }
 
-  // Generate QR code content
-  const qrContent = `RECEIPT:${transaction.receiptNumber}|STORE:${currentStore?.name || ''}|DATE:${format(new Date(transaction.createdAt), 'yyyy-MM-dd HH:mm')}|TOTAL:${transaction.total}`;
+    const success = await printReceipt(transaction, customer, currentStore, 'Cashier');
+    if (success) {
+      toast.success('Receipt printed to thermal printer');
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP'
+    }).format(amount);
+  };
+>>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
+
+  // Generate QR code content with error handling
+  const qrContent = React.useMemo(() => {
+    try {
+      const receiptNum = transaction?.receiptNumber || 'UNKNOWN';
+      const storeName = currentStore?.name || 'Unknown Store';
+      const date = transaction?.createdAt ? format(new Date(transaction.createdAt), 'yyyy-MM-dd HH:mm') : 'Unknown Date';
+      const total = transaction?.total || 0;
+      return `RECEIPT:${receiptNum}|STORE:${storeName}|DATE:${date}|TOTAL:${total}`;
+    } catch (error) {
+      console.error("ReceiptGenerator: Error generating QR content:", error);
+      return `RECEIPT:${transaction?.receiptNumber || 'ERROR'}`;
+    }
+  }, [transaction, currentStore]);
 
   return (
     <div>
       {/* Receipt content */}
       <div ref={receiptRef} className="text-sm">
+        {/* Receipt header */}
         <div className="receipt-header text-center mb-4">
-          <h2 className="text-xl font-bold">{currentStore?.name || 'Store Name'}</h2>
+          <h2 className="text-xl font-bold">{currentStore?.business_name || currentStore?.name || 'Store Name'}</h2>
           <p className="text-xs">{currentStore?.address || 'Store Address'}</p>
           {currentStore?.phone && <p className="text-xs">Tel: {currentStore.phone}</p>}
+          {currentStore?.tin && <p className="text-xs">TIN: {currentStore.tin}</p>}
           
           <div className="mt-2">
             <h3 className="font-bold">SALES RECEIPT</h3>
             <p>Receipt #: {transaction.receiptNumber}</p>
-            <p>Date: {format(new Date(transaction.createdAt), 'MMM dd, yyyy h:mm a')}</p>
+            <p>Date: {transaction.createdAt ? format(new Date(transaction.createdAt), 'MMM dd, yyyy h:mm a') : 'Unknown Date'}</p>
+            {currentStore?.machine_accreditation_number && (
+              <p className="text-xs">Machine ACC: {currentStore.machine_accreditation_number}</p>
+            )}
+            {currentStore?.machine_serial_number && (
+              <p className="text-xs">SN: {currentStore.machine_serial_number}</p>
+            )}
+            <p className="text-xs">Terminal: {transaction.terminal_id || 'TERMINAL-01'}</p>
             
             {customer && (
               <div className="mt-2">
@@ -127,18 +199,22 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
           
           <Separator className="my-1" />
           
-          {transaction.items.map((item, index) => (
+          {transaction.items?.map((item, index) => (
             <div key={index} className="mb-1">
-              <div className="font-medium">{item.name}</div>
+              <div className="font-medium">{item.name || 'Unknown Item'}</div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">{formatCurrency(item.unitPrice)} each</span>
+                <span className="text-muted-foreground">{formatCurrency(item.unitPrice || 0)} each</span>
                 <div className="flex">
-                  <span className="w-16 text-center">{item.quantity}</span>
-                  <span className="w-20 text-right">{formatCurrency(item.totalPrice)}</span>
+                  <span className="w-16 text-center">{item.quantity || 0}</span>
+                  <span className="w-20 text-right">{formatCurrency(item.totalPrice || 0)}</span>
                 </div>
               </div>
             </div>
-          ))}
+          )) || (
+            <div className="text-center text-red-600">
+              No items found in transaction
+            </div>
+          )}
           
           <Separator className="my-2" />
           
@@ -147,23 +223,63 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
               <span>Subtotal:</span>
               <span>{formatCurrency(transaction.subtotal)}</span>
             </div>
-            {transaction.discount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Discount 
-                  {transaction.discountType && ` (${transaction.discountType})`}:
-                </span>
-                <span>-{formatCurrency(transaction.discount)}</span>
+            
+            {/* BIR-compliant VAT breakdown */}
+            <div className="flex justify-between">
+              <span>VATable Sales:</span>
+              <span>{formatCurrency((transaction.vat_sales || transaction.subtotal) - (transaction.discount || 0))}</span>
+            </div>
+            {transaction.vat_exempt_sales && transaction.vat_exempt_sales > 0 && (
+              <div className="flex justify-between">
+                <span>VAT-Exempt Sales:</span>
+                <span>{formatCurrency(transaction.vat_exempt_sales)}</span>
+              </div>
+            )}
+            {transaction.zero_rated_sales && transaction.zero_rated_sales > 0 && (
+              <div className="flex justify-between">
+                <span>Zero-Rated Sales:</span>
+                <span>{formatCurrency(transaction.zero_rated_sales)}</span>
               </div>
             )}
             <div className="flex justify-between">
-              <span>VAT (12%):</span>
+              <span>VAT Amount (12%):</span>
               <span>{formatCurrency(transaction.tax)}</span>
             </div>
+            
+            {/* BIR-compliant discount breakdown */}
+            {transaction.discount > 0 && (
+              <>
+                {transaction.discountType === 'senior' && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Senior Citizen Discount:</span>
+                    <span>-{formatCurrency(transaction.discount)}</span>
+                  </div>
+                )}
+                {transaction.discountType === 'pwd' && (
+                  <div className="flex justify-between text-green-600">
+                    <span>PWD Discount:</span>
+                    <span>-{formatCurrency(transaction.discount)}</span>
+                  </div>
+                )}
+                {transaction.discountType === 'employee' && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Employee Discount:</span>
+                    <span>-{formatCurrency(transaction.discount)}</span>
+                  </div>
+                )}
+                {(!transaction.discountType || !['senior', 'pwd', 'employee'].includes(transaction.discountType)) && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount:</span>
+                    <span>-{formatCurrency(transaction.discount)}</span>
+                  </div>
+                )}
+              </>
+            )}
             
             <Separator className="my-2" />
             
             <div className="flex justify-between font-bold">
-              <span>TOTAL:</span>
+              <span>AMOUNT DUE:</span>
               <span>{formatCurrency(transaction.total)}</span>
             </div>
             
@@ -205,22 +321,67 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
         
         <div className="mt-4 text-center">
           <div className="flex justify-center mb-2">
-            <QRCodeSVG value={qrContent} size={80} />
+            {qrContent ? (
+              <QRCodeSVG value={qrContent} size={80} />
+            ) : (
+              <div className="w-20 h-20 bg-gray-200 flex items-center justify-center text-xs">
+                QR Error
+              </div>
+            )}
           </div>
-          <p className="text-xs">{transaction.receiptNumber}</p>
-          <p className="text-xs mt-2">Thank you for your purchase!</p>
+          <p className="text-xs">{transaction.receiptNumber || 'No Receipt Number'}</p>
+          {transaction.sequence_number && (
+            <p className="text-xs">Seq: {transaction.sequence_number}</p>
+          )}
+          <div className="mt-2 border-t pt-2">
+            <p className="text-xs font-bold">THIS SERVES AS AN OFFICIAL RECEIPT</p>
+            <p className="text-xs">Thank you for your purchase!</p>
+            {currentStore?.pos_version && (
+              <p className="text-xs">POS Ver: {currentStore.pos_version}</p>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Print buttons */}
       <div className="mt-4 space-y-2">
-        <Button 
+        {/* Thermal printer button - show if available */}
+        {isAvailable && (
+          <Button
+            onClick={handleThermalPrint}
+            disabled={!isConnected || isPrinting}
+            className="w-full flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isPrinting ? (
+              <>
+                <Bluetooth className="mr-2 h-4 w-4 animate-pulse" />
+                Printing to Thermal...
+              </>
+            ) : isConnected ? (
+              <>
+                <Bluetooth className="mr-2 h-4 w-4" />
+                Print to Thermal Printer
+              </>
+            ) : (
+              <>
+                <Bluetooth className="mr-2 h-4 w-4" />
+                Connect Thermal Printer First
+              </>
+            )}
+          </Button>
+        )}
+
+        {/* Regular print button */}
+        <Button
           onClick={handlePrint}
+          variant={isAvailable ? "outline" : "default"}
           className="w-full flex items-center justify-center"
         >
           <Printer className="mr-2 h-4 w-4" />
-          Print Receipt
+          Print Receipt (Browser)
         </Button>
+
+        {/* Download button */}
         <Button 
           variant="outline" 
           className="w-full flex items-center justify-center"

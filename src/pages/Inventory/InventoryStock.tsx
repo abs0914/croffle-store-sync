@@ -1,8 +1,7 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, AlertTriangle } from "lucide-react";
 import InventoryHeader from "./components/InventoryHeader";
 import { useInventoryStockData } from "./components/inventoryStock/useInventoryStockData";
 import { InventoryStockList } from "./components/inventoryStock/InventoryStockList";
@@ -10,14 +9,11 @@ import { AddStockItemForm } from "./components/inventoryStock/AddStockItemForm";
 import { EditStockItemForm } from "./components/inventoryStock/EditStockItemForm";
 import { StockAdjustmentModal } from "./components/inventoryStock/StockAdjustmentModal";
 import { StockTransferModal } from "./components/inventoryStock/StockTransferModal";
+// Removed ProactiveReorderingSystem import as it was deleted
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 
 export default function InventoryStock() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  
   const {
     currentStore,
     stockItems,
@@ -59,6 +55,7 @@ export default function InventoryStock() {
   } = useInventoryStockData();
 
   const [filterTab, setFilterTab] = useState<"all" | "active" | "inactive" | "low-stock">("all");
+  const [activeTab, setActiveTab] = useState("inventory");
   
   const filteredStockItems = stockItems.filter(item => {
     switch (filterTab) {
@@ -73,18 +70,15 @@ export default function InventoryStock() {
     }
   });
 
-  const handleNavigationTabChange = (value: string) => {
-    if (value === "menu") {
-      navigate("/inventory");
-    } else if (value === "stock") {
-      navigate("/inventory/stock");
-    }
-  };
+  // Calculate reorder alerts count
+  const reorderAlertsCount = stockItems.filter(item => 
+    item.stock_quantity <= (item.minimum_threshold || 10)
+  ).length;
 
   if (!currentStore) {
     return (
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">Inventory Stock Management</h1>
+        <h1 className="text-2xl font-bold mb-4">Store Inventory Management</h1>
         <p>Please select a store first</p>
       </div>
     );
@@ -93,59 +87,83 @@ export default function InventoryStock() {
   return (
     <div className="space-y-6">
       <InventoryHeader
-        title="Store Inventory Stock Management"
-        description="Track and manage finished ingredients and supplies ready for use in menu items"
-        onExportCSV={handleExportCSV}
-        onImportClick={handleImportClick}
-        onDownloadTemplate={handleDownloadTemplate}
+        title="Store Inventory Management"
+        description="Manage operational inventory including raw materials, supplies, and finished goods for your store operations."
       />
 
-      <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-        <h3 className="font-semibold text-amber-800 mb-2">Store-Level Inventory</h3>
-        <p className="text-sm text-amber-700">
-          This inventory contains finished ingredients and supplies that are ready for use in menu items and recipes.
-          Raw materials are managed separately in the Commissary Inventory (admin access required).
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h3 className="font-semibold text-blue-800 mb-2">Operational Inventory</h3>
+        <p className="text-sm text-blue-700 mb-2">
+          Track inventory items needed for daily operations at {currentStore.name}. 
+          This includes:
+        </p>
+        <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
+          <li>Raw materials and ingredients</li>
+          <li>Packaging supplies and consumables</li>
+          <li>Finished goods ready for sale</li>
+          <li>Equipment and operational supplies</li>
+        </ul>
+        <p className="text-xs text-blue-600 mt-2 italic">
+          Note: Menu items and product catalog management is handled in the Admin Panel.
         </p>
       </div>
-      
-      <Tabs defaultValue="stock" value="stock" onValueChange={handleNavigationTabChange} className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="menu" className="flex-1 py-2">Menu Management</TabsTrigger>
-          <TabsTrigger value="stock" className="flex-1 py-2">Inventory Stock</TabsTrigger>
-        </TabsList>
-      </Tabs>
-      
-      <div className="flex justify-between items-center mb-4">
-        <Tabs defaultValue="all" value={filterTab} onValueChange={(v) => setFilterTab(v as any)}>
-          <TabsList>
-            <TabsTrigger value="all">All Items</TabsTrigger>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="inactive">Inactive</TabsTrigger>
-            <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      
-        <Button
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-croffle-accent hover:bg-croffle-accent/90"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Store Inventory Item
-        </Button>
-      </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <InventoryStockList 
-            stockItems={filteredStockItems}
-            isLoading={isLoading}
-            onEdit={openEditModal}
-            onStockAdjust={openStockModal}
-            onStockTransfer={hasMultipleStores ? openTransferModal : undefined}
-            onDelete={openDeleteConfirm}
-            hasMultipleStores={hasMultipleStores}
-          />
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="inventory">Inventory Stock</TabsTrigger>
+          <TabsTrigger value="reordering" className="flex items-center gap-2">
+            Reorder Alerts
+            {reorderAlertsCount > 0 && (
+              <div className="flex items-center gap-1">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                  {reorderAlertsCount}
+                </span>
+              </div>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="inventory" className="space-y-4">
+          <div className="flex justify-between items-center mb-4">
+            <Tabs defaultValue="all" value={filterTab} onValueChange={(v) => setFilterTab(v as any)}>
+              <TabsList>
+                <TabsTrigger value="all">All Items</TabsTrigger>
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="inactive">Inactive</TabsTrigger>
+                <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-croffle-accent hover:bg-croffle-accent/90"
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add Inventory Item
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="p-4">
+              <InventoryStockList 
+                stockItems={filteredStockItems}
+                isLoading={isLoading}
+                onEdit={openEditModal}
+                onStockAdjust={openStockModal}
+                onStockTransfer={hasMultipleStores ? openTransferModal : undefined}
+                onDelete={openDeleteConfirm}
+                hasMultipleStores={hasMultipleStores}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reordering">
+          <div className="text-center p-8 text-muted-foreground">
+            Proactive reordering system is not available in this simplified version.
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Add Inventory Item Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>

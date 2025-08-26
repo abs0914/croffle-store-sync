@@ -7,6 +7,21 @@ export interface CartItem {
   quantity: number;
   notes?: string;
   price: number;
+  customization?: {
+    recipe_id: string;
+    selected_choices: Array<{
+      choice_group_name: string;
+      selected_ingredient: {
+        id: string;
+        ingredient_name: string;
+        quantity: number;
+        unit: string;
+        cost_per_unit: number;
+      };
+    }>;
+    display_name: string;
+    final_price: number;
+  };
 }
 
 export interface Customer {
@@ -15,6 +30,7 @@ export interface Customer {
   email?: string;
   phone?: string;
   address?: string;
+  tin?: string; // TIN for BIR compliance
   loyaltyPoints?: number;
   storeId?: string;
   storeName?: string;
@@ -61,6 +77,18 @@ export interface Transaction {
   status: 'completed' | 'voided';
   createdAt: string;
   receiptNumber: string;
+  // Order type information
+  orderType?: 'dine_in' | 'online_delivery';
+  deliveryPlatform?: 'grab_food' | 'food_panda';
+  deliveryOrderNumber?: string;
+  // BIR Compliance Fields
+  vat_sales?: number;
+  vat_exempt_sales?: number;
+  zero_rated_sales?: number;
+  senior_citizen_discount?: number;
+  pwd_discount?: number;
+  sequence_number?: number;
+  terminal_id?: string;
 }
 
 export interface TransactionItem {

@@ -12,7 +12,6 @@ export const fetchSuppliers = async (): Promise<Supplier[]> => {
       .order('name');
 
     if (error) throw error;
-
     return data || [];
   } catch (error) {
     console.error('Error fetching suppliers:', error);
@@ -21,7 +20,9 @@ export const fetchSuppliers = async (): Promise<Supplier[]> => {
   }
 };
 
-export const createSupplier = async (supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>): Promise<Supplier | null> => {
+export const createSupplier = async (
+  supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>
+): Promise<Supplier | null> => {
   try {
     const { data, error } = await supabase
       .from('suppliers')
@@ -30,7 +31,6 @@ export const createSupplier = async (supplier: Omit<Supplier, 'id' | 'created_at
       .single();
 
     if (error) throw error;
-
     toast.success('Supplier created successfully');
     return data;
   } catch (error) {
@@ -40,7 +40,10 @@ export const createSupplier = async (supplier: Omit<Supplier, 'id' | 'created_at
   }
 };
 
-export const updateSupplier = async (id: string, updates: Partial<Supplier>): Promise<Supplier | null> => {
+export const updateSupplier = async (
+  id: string,
+  updates: Partial<Supplier>
+): Promise<Supplier | null> => {
   try {
     const { data, error } = await supabase
       .from('suppliers')
@@ -50,7 +53,6 @@ export const updateSupplier = async (id: string, updates: Partial<Supplier>): Pr
       .single();
 
     if (error) throw error;
-
     toast.success('Supplier updated successfully');
     return data;
   } catch (error) {
@@ -68,12 +70,11 @@ export const deleteSupplier = async (id: string): Promise<boolean> => {
       .eq('id', id);
 
     if (error) throw error;
-
-    toast.success('Supplier deleted successfully');
+    toast.success('Supplier deactivated successfully');
     return true;
   } catch (error) {
-    console.error('Error deleting supplier:', error);
-    toast.error('Failed to delete supplier');
+    console.error('Error deactivating supplier:', error);
+    toast.error('Failed to deactivate supplier');
     return false;
   }
 };

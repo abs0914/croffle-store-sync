@@ -51,15 +51,17 @@ export async function fetchCashierData(
     shiftsQuery = shiftsQuery.eq("store_id", storeId);
   }
 
-  // Use the same date approach for shifts
+  // Enhanced date logic for shifts to include active shifts that span the report period
   if (from === to) {
+    // For single day reports: include shifts that started on or before this day and ended on or after this day (or are still active)
     shiftsQuery = shiftsQuery
-      .gte("start_time", `${from}T00:00:00`)
-      .lt("start_time", `${from}T23:59:59`);
+      .lte("start_time", `${from}T23:59:59`)
+      .or(`end_time.gte.${from}T00:00:00,end_time.is.null`);
   } else {
+    // For date range reports: include shifts that overlap with the report period
     shiftsQuery = shiftsQuery
-      .gte("start_time", `${from}T00:00:00`)
-      .lte("start_time", `${to}T23:59:59`);
+      .lte("start_time", `${to}T23:59:59`)
+      .or(`end_time.gte.${from}T00:00:00,end_time.is.null`);
   }
 
   console.log('🔍 Executing shifts query...');

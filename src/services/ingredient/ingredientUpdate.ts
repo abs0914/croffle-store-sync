@@ -28,6 +28,7 @@ export const updateIngredient = async (id: string, updates: Partial<Ingredient>)
     const updatedIngredient: Ingredient = {
       id: data.id,
       name: data.name,
+      unit: updates.unit || 'pieces',
       unit_type: updates.unit_type || 'pieces',
       store_id: data.store_id,
       stock_quantity: data.stock_quantity || 0,

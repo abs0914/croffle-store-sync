@@ -1,10 +1,43 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { AppUser, AppUserFormData } from "@/types/appUser";
+import { RolePermissions } from "@/types/rolePermissions";
 import { toast } from "sonner";
 
 export const createAppUser = async (data: AppUserFormData): Promise<AppUser | null> => {
   try {
+    // Validate input data before proceeding
+    const { error: validationError } = await supabase.rpc('validate_user_input', {
+      p_email: data.email,
+      p_first_name: data.firstName,
+      p_last_name: data.lastName,
+      p_contact_number: data.contactNumber
+    });
+
+    if (validationError) {
+      console.error('Input validation failed:', validationError);
+      toast.error(`Invalid input: ${validationError.message}`);
+      return null;
+    }
+
+    // For admin and owner users, automatically assign all active stores if no stores are specified
+    let storeIds = data.storeIds;
+    if ((data.role === 'admin' || data.role === 'owner') && (!storeIds || storeIds.length === 0)) {
+      try {
+        const { data: stores, error: storeError } = await supabase
+          .from('stores')
+          .select('id')
+          .eq('is_active', true);
+        
+        if (!storeError && stores) {
+          storeIds = stores.map(store => store.id);
+          console.log(`Assigning all ${stores.length} stores to ${data.role} user:`, data.email);
+        }
+      } catch (error) {
+        console.error('Error fetching stores for admin/owner:', error);
+      }
+    }
+
     const { data: newUser, error } = await supabase
       .from('app_users')
       .insert({
@@ -14,8 +47,9 @@ export const createAppUser = async (data: AppUserFormData): Promise<AppUser | nu
         email: data.email,
         contact_number: data.contactNumber,
         role: data.role,
-        store_ids: data.storeIds,
-        is_active: data.isActive
+        store_ids: storeIds,
+        is_active: data.isActive,
+        custom_permissions: data.customPermissions || null
       })
       .select()
       .single();
@@ -30,20 +64,21 @@ export const createAppUser = async (data: AppUserFormData): Promise<AppUser | nu
     }
 
     toast.success('User created successfully');
-    return {
-      id: newUser.id,
-      userId: newUser.user_id,
-      firstName: newUser.first_name,
-      lastName: newUser.last_name,
-      fullName: `${newUser.first_name} ${newUser.last_name}`,
-      email: newUser.email,
-      contactNumber: newUser.contact_number,
-      role: newUser.role,
-      storeIds: newUser.store_ids || [],
-      isActive: newUser.is_active,
-      createdAt: newUser.created_at,
-      updatedAt: newUser.updated_at
-    };
+      return {
+        id: newUser.id,
+        userId: newUser.user_id,
+        firstName: newUser.first_name,
+        lastName: newUser.last_name,
+        fullName: `${newUser.first_name} ${newUser.last_name}`,
+        email: newUser.email,
+        contactNumber: newUser.contact_number,
+        role: newUser.role,
+        storeIds: newUser.store_ids || [],
+        isActive: newUser.is_active,
+        createdAt: newUser.created_at,
+        updatedAt: newUser.updated_at,
+        customPermissions: newUser.custom_permissions ? newUser.custom_permissions as Partial<RolePermissions> : undefined
+      };
   } catch (error: any) {
     console.error('Error in createAppUser:', error);
     // Only show toast for non-RLS policy errors to avoid duplicate creation noise
@@ -61,6 +96,20 @@ export const updateAppUser = async (data: AppUserFormData): Promise<AppUser | nu
       return null;
     }
 
+    // Validate input data before proceeding
+    const { error: validationError } = await supabase.rpc('validate_user_input', {
+      p_email: data.email,
+      p_first_name: data.firstName,
+      p_last_name: data.lastName,
+      p_contact_number: data.contactNumber
+    });
+
+    if (validationError) {
+      console.error('Input validation failed:', validationError);
+      toast.error(`Invalid input: ${validationError.message}`);
+      return null;
+    }
+
     const { data: updatedUser, error } = await supabase
       .from('app_users')
       .update({
@@ -70,7 +119,8 @@ export const updateAppUser = async (data: AppUserFormData): Promise<AppUser | nu
         contact_number: data.contactNumber,
         role: data.role,
         store_ids: data.storeIds,
-        is_active: data.isActive
+        is_active: data.isActive,
+        custom_permissions: data.customPermissions || null
       })
       .eq('id', data.id)
       .select()
@@ -95,7 +145,8 @@ export const updateAppUser = async (data: AppUserFormData): Promise<AppUser | nu
       storeIds: updatedUser.store_ids || [],
       isActive: updatedUser.is_active,
       createdAt: updatedUser.created_at,
-      updatedAt: updatedUser.updated_at
+      updatedAt: updatedUser.updated_at,
+      customPermissions: updatedUser.custom_permissions ? updatedUser.custom_permissions as Partial<RolePermissions> : undefined
     };
   } catch (error: any) {
     console.error('Error in updateAppUser:', error);

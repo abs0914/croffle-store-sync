@@ -1,80 +1,67 @@
-
-import { Separator } from "@/components/ui/separator";
-import PaymentProcessor from "../payment/PaymentProcessor";
-import { formatCurrency } from "@/utils/format";
+import React from 'react';
+import { Separator } from '@/components/ui/separator';
+import { CartCalculations, SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
 
 interface CartSummaryProps {
-  subtotal: number;
-  tax: number;
-  total: number;
-  discount: number;
-  discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
-  handlePaymentComplete: (
-    paymentMethod: 'cash' | 'card' | 'e-wallet',
-    amountTendered: number,
-    paymentDetails?: {
-      cardType?: string;
-      cardNumber?: string;
-      eWalletProvider?: string;
-      eWalletReferenceNumber?: string;
-    }
-  ) => void;
+  calculations: CartCalculations;
+  seniorDiscounts: SeniorDiscount[];
+  otherDiscount: OtherDiscount | null;
 }
 
-export default function CartSummary({
-  subtotal,
-  tax,
-  total,
-  discount,
-  discountType,
-  handlePaymentComplete
-}: CartSummaryProps) {
-  // For VAT-inclusive pricing:
-  // subtotal = VAT-inclusive total (e.g., ₱65.00)
-  // tax = VAT amount embedded in the total (calculated in CartContext)
-  // total = same as subtotal for VAT-inclusive pricing
-
-  // Calculate the net amount (price without VAT) from VAT-inclusive total
-  const netAmount = subtotal / 1.12;
-  // Use the VAT amount calculated in CartContext
-  const vatAmount = tax;
-
-  // Calculate final total after discount (VAT-inclusive)
-  const finalTotal = subtotal - discount;
-
+export function CartSummary({ calculations, seniorDiscounts, otherDiscount }: CartSummaryProps) {
   return (
-    <div className="space-y-2 pt-4">
-      <Separator className="bg-croffle-primary/20" />
-
-      <div className="flex justify-between">
-        <span className="text-muted-foreground">Net Amount</span>
-        <span className="font-medium">{formatCurrency(netAmount)}</span>
+    <div className="space-y-2">
+      <div className="flex justify-between text-sm">
+        <span>Subtotal</span>
+        <span>₱{calculations.grossSubtotal.toFixed(2)}</span>
       </div>
-
-      <div className="flex justify-between">
-        <span className="text-muted-foreground">VAT (12%)</span>
-        <span className="font-medium">{formatCurrency(vatAmount)}</span>
-      </div>
-
-      {discount > 0 && (
-        <div className="flex justify-between text-green-600">
-          <span>Discount</span>
-          <span>-{formatCurrency(discount)}</span>
+      
+      {/* VAT Exemption Display */}
+      {calculations.vatExemption > 0 && (
+        <div className="flex justify-between text-sm text-blue-600">
+          <span>VAT Exemption (Senior)</span>
+          <span>-₱{calculations.vatExemption.toFixed(2)}</span>
         </div>
       )}
-
-      <Separator className="bg-croffle-primary/20" />
-
-      <div className="flex justify-between text-lg font-bold">
-        <span className="text-croffle-primary">Total Price</span>
-        <span className="text-croffle-primary">{formatCurrency(finalTotal)}</span>
+      
+      {/* Multiple Senior Citizens Discount Display */}
+      {calculations.numberOfSeniors > 0 && (
+        <div className="space-y-1">
+          {seniorDiscounts.map((senior, index) => (
+            <div key={senior.id} className="flex justify-between text-sm text-green-600">
+              <span>Senior {index + 1} ({senior.idNumber})</span>
+              <span>-₱{senior.discountAmount.toFixed(2)}</span>
+            </div>
+          ))}
+          <div className="flex justify-between text-sm text-green-600 font-medium border-t border-green-200 pt-1">
+            <span>Total Senior Discount</span>
+            <span>-₱{calculations.seniorDiscountAmount.toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+      
+      {/* Other Discount Display */}
+      {calculations.otherDiscountAmount > 0 && (
+        <div className="flex justify-between text-sm text-green-600">
+          <span>
+            {otherDiscount?.type.toUpperCase()} Discount
+            {otherDiscount?.idNumber && ` - ${otherDiscount.idNumber}`}
+          </span>
+          <span>-₱{calculations.otherDiscountAmount.toFixed(2)}</span>
+        </div>
+      )}
+      
+      <div className="flex justify-between text-sm">
+        <span>VAT (12%)</span>
+        <span>₱{calculations.adjustedVAT.toFixed(2)}</span>
       </div>
-
-      {/* Payment Processor */}
-      <PaymentProcessor
-        total={finalTotal}
-        onPaymentComplete={handlePaymentComplete}
-      />
+      
+      <Separator />
+      
+      <div className="flex justify-between font-semibold">
+        <span>Total</span>
+        <span>₱{calculations.finalTotal.toFixed(2)}</span>
+      </div>
     </div>
   );
 }

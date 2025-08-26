@@ -1,152 +1,92 @@
 
-import { Link, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Store,
-  ShoppingBasket,
-  Users,
+import React from "react";
+import { useLocation, Link } from "react-router-dom";
+import { 
+  LayoutDashboard, 
+  ShoppingCart, 
+  Package, 
+  FileText, 
   Settings,
-  BarChart,
-  Package,
-  FileSpreadsheet,
-  UserCircle,
-  Utensils,
-  Boxes,
-  ShoppingCart,
-  Warehouse,
-  RefreshCw
+  DollarSign,
+  Users,
+  ClipboardList,
+  Archive
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/auth";
 
 const menuItems = [
   {
-    name: "Dashboard",
-    href: "/",
+    title: "Dashboard",
     icon: LayoutDashboard,
-    roles: ["admin", "owner", "manager", "cashier"]
+    href: "/dashboard",
   },
   {
-    name: "POS",
-    href: "/pos",
-    icon: ShoppingBasket,
-    roles: ["admin", "owner", "manager", "cashier"]
-  },
-  {
-    name: "Customers",
-    href: "/customers",
-    icon: Users,
-    roles: ["admin", "owner", "manager", "cashier"]
-  },
-  {
-    name: "Inventory",
-    href: "/inventory",
-    icon: Package,
-    roles: ["admin", "owner", "manager", "cashier"]
-  },
-  {
-    name: "Order Management",
-    href: "/order-management",
+    title: "POS",
     icon: ShoppingCart,
-    roles: ["admin", "owner", "manager"]
+    href: "/pos",
   },
   {
-    name: "Commissary Inventory",
-    href: "/commissary-inventory",
-    icon: Warehouse,
-    roles: ["admin", "owner"]
+    title: "Product Catalog",
+    icon: Package,
+    href: "/products",
   },
   {
-    name: "Inventory Conversion",
-    href: "/inventory-conversion",
-    icon: RefreshCw,
-    roles: ["admin", "owner"]
+    title: "Inventory",
+    icon: Archive,
+    href: "/inventory",
   },
   {
-    name: "Stores",
-    href: "/stores",
-    icon: Store,
-    roles: ["admin", "owner"]
+    title: "Order Management",
+    icon: ClipboardList,
+    href: "/order-management",
   },
   {
-    name: "Reports",
+    title: "Customers",
+    icon: Users,
+    href: "/customers",
+  },
+  {
+    title: "Expenses",
+    icon: DollarSign,
+    href: "/expenses",
+  },
+  {
+    title: "Reports",
+    icon: FileText,
     href: "/reports",
-    icon: BarChart,
-    roles: ["admin", "owner", "manager", "cashier"]
-  }
-];
-
-const settingsItems = [
+  },
   {
-    name: "Users",
-    href: "/settings/users",
-    icon: UserCircle,
-    roles: ["admin", "owner"]
-  }
+    title: "Settings",
+    icon: Settings,
+    href: "/settings",
+  },
 ];
 
 export function MainMenu() {
   const location = useLocation();
-  const { user, hasPermission } = useAuth();
 
-  const isActive = (href: string) => {
-    if (href === "/" && location.pathname === "/") {
-      return true;
-    }
-    return location.pathname.startsWith(href) && href !== "/";
+  const isActiveLink = (href: string) => {
+    return location.pathname === href || 
+           (href !== "/dashboard" && location.pathname.startsWith(href));
   };
 
-  // Filter menu items based on user role
-  const filteredMenuItems = menuItems.filter(item =>
-    !user?.role || item.roles.includes(user.role)
-  );
-
-  const filteredSettingsItems = settingsItems.filter(item =>
-    !user?.role || item.roles.includes(user.role)
-  );
-
   return (
-    <div className="flex flex-col space-y-1 px-2">
-      <nav className="space-y-1">
-        {filteredMenuItems.map((item) => (
-          <Link
-            key={item.name}
-            to={item.href}
-            className={cn(
-              "py-2 px-4 flex items-center space-x-2 rounded-lg text-sm transition-colors",
-              isActive(item.href)
-                ? "bg-croffle-dark/80 text-white font-medium"
-                : "hover:bg-croffle-dark/30 text-croffle-foreground"
-            )}
-          >
-            <item.icon className={cn("h-5 w-5", isActive(item.href) ? "text-white" : "text-croffle-foreground")} />
-            <span>{item.name}</span>
-          </Link>
-        ))}
-      </nav>
-
-      {filteredSettingsItems.length > 0 && (
-        <div className="pt-6 border-t border-gray-700 mt-4">
-          <p className="text-xs font-medium px-4 mb-2 text-muted-foreground">Settings</p>
-          <nav className="space-y-1">
-            {filteredSettingsItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={cn(
-                  "py-2 px-4 flex items-center space-x-2 rounded-lg text-sm transition-colors",
-                  isActive(item.href)
-                    ? "bg-croffle-dark/80 text-white font-medium"
-                    : "hover:bg-croffle-dark/30 text-croffle-foreground"
-                )}
-              >
-                <item.icon className={cn("h-5 w-5", isActive(item.href) ? "text-white" : "text-croffle-foreground")} />
-                <span>{item.name}</span>
-              </Link>
-            ))}
-          </nav>
-        </div>
-      )}
-    </div>
+    <nav className="space-y-2 px-2">
+      {menuItems.map((item) => (
+        <Link
+          key={item.href}
+          to={item.href}
+          className={cn(
+            "flex items-center gap-3 px-3 py-3 text-sm font-medium rounded-md transition-colors min-w-0",
+            isActiveLink(item.href)
+              ? "bg-croffle-accent text-white"
+              : "text-gray-700 hover:bg-gray-100"
+          )}
+        >
+          <item.icon className="h-5 w-5 flex-shrink-0" />
+          <span className="flex-1 min-w-0 truncate">{item.title}</span>
+        </Link>
+      ))}
+    </nav>
   );
 }

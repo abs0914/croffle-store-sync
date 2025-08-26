@@ -1,16 +1,20 @@
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import ShiftManager from "@/components/pos/ShiftManager";
+import { Button } from "@/components/ui/button";
 import CartView from "@/components/pos/CartView";
 import ProductGrid from "@/components/pos/product-grid";
-import { useCart } from "@/contexts/CartContext";
+import { useCart } from "@/contexts/cart/CartContext";
 import { Product, Category, Customer, ProductVariation } from "@/types";
-import { StoreNameDisplay } from "@/components/shared/StoreNameDisplay";
-import { useStoreDisplay } from "@/contexts/StoreDisplayContext";
+import { SeniorDiscount } from "@/hooks/useTransactionHandler";
+import MobileCartDrawer from "./MobileCartDrawer";
+import { useState } from "react";
+
 interface POSContentProps {
   activeCategory: string;
   setActiveCategory: (category: string) => void;
   products: Product[];
+  allProducts: Product[]; // Unfiltered products for combo dialog
   categories: Category[];
   isLoading: boolean;
   currentStore: any;
@@ -20,7 +24,10 @@ interface POSContentProps {
   discount: number;
   discountType?: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo';
   discountIdNumber?: string;
+  seniorDiscounts: SeniorDiscount[];
+  otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string } | null;
   handleApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
+  handleApplyMultipleDiscounts: (seniorDiscounts: SeniorDiscount[], otherDiscount?: { type: 'pwd' | 'employee' | 'loyalty' | 'promo', amount: number, idNumber?: string }) => void;
   handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: {
     cardType?: string;
     cardNumber?: string;
@@ -28,11 +35,14 @@ interface POSContentProps {
     eWalletReferenceNumber?: string;
   }) => void;
   addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
+  storeId?: string;
 }
+
 export default function POSContent({
   activeCategory,
   setActiveCategory,
   products,
+  allProducts,
   categories,
   isLoading,
   currentStore,
@@ -42,54 +52,75 @@ export default function POSContent({
   discount,
   discountType,
   discountIdNumber,
+  seniorDiscounts,
+  otherDiscount,
   handleApplyDiscount,
+  handleApplyMultipleDiscounts,
   handlePaymentComplete,
-  addItemToCart
+  addItemToCart,
+  storeId
 }: POSContentProps) {
   const {
     items,
     removeItem,
     updateQuantity,
     clearCart,
-    subtotal,
-    tax,
-    total
+    calculations
   } = useCart();
-  const {
-    config
-  } = useStoreDisplay();
-  return <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-4">
-        
-        <div className="flex items-center gap-2">
-          {currentStore && config.contentMode !== "hidden" && <StoreNameDisplay variant="badge" size="sm" showLogo={true} />}
-          {selectedCustomer && <Badge variant="secondary" className="text-sm">
-              Customer: {selectedCustomer.name}
-            </Badge>}
+  
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+
+  return (
+    <div className="flex h-full bg-muted/30 gap-3">
+      {/* Main Content Area */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Products Section */}
+        <div className="flex-1 bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+          <div className="p-3 md:p-4 h-full flex flex-col">
+            <ProductGrid
+              products={products} 
+              allProducts={allProducts}
+              categories={categories} 
+              activeCategory={activeCategory} 
+              setActiveCategory={setActiveCategory} 
+              addItemToCart={addItemToCart} 
+              isShiftActive={!!currentShift} 
+              isLoading={isLoading}
+              storeId={storeId}
+            />
+          </div>
         </div>
       </div>
-      
-      <div className="flex flex-col lg:flex-row gap-4 h-full">
-        {/* Product Selection Area */}
-        <div className="flex-1">
-          {/* Shift Manager */}
-          <ShiftManager />
-          
-          <Card className="h-full border-croffle-primary/20">
-            <CardContent className="p-4">
-              <ProductGrid products={products} categories={categories} activeCategory={activeCategory} setActiveCategory={setActiveCategory} addItemToCart={addItemToCart} isShiftActive={!!currentShift} isLoading={isLoading} />
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Cart Area */}
-        <div className="w-full lg:w-96">
-          <Card className="border-croffle-primary/20">
-            <CardContent className="p-4">
-              <CartView items={items} subtotal={subtotal} tax={tax} total={total} discount={discount} discountType={discountType} discountIdNumber={discountIdNumber} removeItem={removeItem} updateQuantity={updateQuantity} clearCart={clearCart} selectedCustomer={selectedCustomer} setSelectedCustomer={setSelectedCustomer} handleApplyDiscount={handleApplyDiscount} handlePaymentComplete={handlePaymentComplete} isShiftActive={!!currentShift} />
-            </CardContent>
-          </Card>
+
+      {/* Cart Sidebar - Tablet and Desktop */}
+      <div className="hidden md:flex w-80 lg:w-96 flex-shrink-0">
+        <div className="w-full bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+          <div className="p-3 md:p-4 h-full">
+            <CartView 
+              selectedCustomer={selectedCustomer} 
+              setSelectedCustomer={setSelectedCustomer} 
+              handleApplyDiscount={handleApplyDiscount} 
+              handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
+              handlePaymentComplete={handlePaymentComplete} 
+              isShiftActive={!!currentShift} 
+            />
+          </div>
         </div>
       </div>
-    </div>;
+
+      {/* Mobile Cart Drawer */}
+      <div className="md:hidden">
+        <MobileCartDrawer
+          selectedCustomer={selectedCustomer}
+          setSelectedCustomer={setSelectedCustomer}
+          handleApplyDiscount={handleApplyDiscount}
+          handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
+          handlePaymentComplete={handlePaymentComplete}
+          isShiftActive={!!currentShift}
+          open={isMobileCartOpen}
+          onOpenChange={setIsMobileCartOpen}
+        />
+      </div>
+    </div>
+  );
 }

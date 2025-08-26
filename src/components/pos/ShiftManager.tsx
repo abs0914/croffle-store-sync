@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useShift } from "@/contexts/shift"; 
@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import StartShiftDialog from "./dialogs/StartShiftDialog";
 import EndShiftDialog from "./dialogs/EndShiftDialog";
+import ActiveCashierDisplay from "./ActiveCashierDisplay";
 import { fetchCashierById } from "@/services/cashier";
 import { toast } from "sonner";
 
@@ -21,16 +22,16 @@ export default function ShiftManager() {
 
   // Fetch cashier details if available
   const { data: cashier } = useQuery({
-    queryKey: ["cashier", currentShift?.cashierId],
-    queryFn: () => currentShift?.cashierId ? fetchCashierById(currentShift.cashierId) : Promise.resolve(null),
-    enabled: !!currentShift?.cashierId
+    queryKey: ["cashier", currentShift?.cashier_id],
+    queryFn: () => currentShift?.cashier_id ? fetchCashierById(currentShift.cashier_id) : Promise.resolve(null),
+    enabled: !!currentShift?.cashier_id
   });
 
   const handleStartShift = async (
-    startingCash: number, 
-    startInventoryCount: Record<string, number>, 
+    startingCash: number,
     photo?: string,
-    cashierId?: string
+    cashierId?: string,
+    inventoryCounts?: Record<string, number>
   ) => {
     if (!currentStore) {
       toast.error("Please select a store first");
@@ -40,13 +41,14 @@ export default function ShiftManager() {
     try {
       setIsStartingShift(true);
       console.log("About to call startShift with", {
-        cashValue: startingCash, 
-        inventoryCount: Object.keys(startInventoryCount).length + " items",
+        cashValue: startingCash,
         hasPhoto: !!photo,
-        cashierId
+        cashierId,
+        inventoryItemCount: inventoryCounts ? Object.keys(inventoryCounts).length : 0,
+        totalInventoryCount: inventoryCounts ? Object.values(inventoryCounts).reduce((sum, count) => sum + count, 0) : 0
       });
       
-      const success = await startShift(startingCash, startInventoryCount, photo, cashierId);
+      const success = await startShift(startingCash, photo, cashierId, inventoryCounts);
       
       if (success) {
         setIsStartShiftOpen(false);
@@ -63,15 +65,15 @@ export default function ShiftManager() {
   };
 
   const handleEndShift = async (
-    endingCash: number, 
-    endInventoryCount: Record<string, number>, 
-    photo?: string
+    endingCash: number,
+    photo?: string,
+    inventoryCounts?: Record<string, number>
   ) => {
     if (!currentShift) return;
     
     try {
       setIsEndingShift(true);
-      const success = await endShift(endingCash, endInventoryCount, photo);
+      const success = await endShift(endingCash, photo);
       
       if (success) {
         setIsEndShiftOpen(false);
@@ -90,7 +92,15 @@ export default function ShiftManager() {
   return (
     <Card className="mb-4">
       <CardHeader>
-        <CardTitle className="text-lg">Shift Management</CardTitle>
+        <CardTitle className="text-lg flex items-center justify-between">
+          <span>Shift Management</span>
+          {currentShift && (
+            <ActiveCashierDisplay 
+              cashierId={currentShift.cashier_id} 
+              className="text-sm"
+            />
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {currentShift ? (

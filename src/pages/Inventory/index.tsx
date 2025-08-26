@@ -1,89 +1,171 @@
 
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, ChefHat, BarChart3, Plus, Warehouse, RefreshCw } from "lucide-react";
+import { useNavigate, Routes, Route } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { Package } from "lucide-react";
+import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import InventoryHeader from "./components/InventoryHeader";
+import { ProductsTable } from "./components/ProductsTable";
+import { SearchFilters } from "./components/SearchFilters";
+import { useProductData } from "./hooks/useProductData";
+import { deleteProduct } from "@/services/product/productDelete";
+import { Product } from "@/types";
 import ProductForm from "./ProductForm";
-import InventoryStock from "./InventoryStock";
-import Categories from "./Categories";
-import Ingredients from "./Ingredients";
-import InventoryHistory from "./InventoryHistory";
-import InventoryManagement from "./InventoryManagement";
-import { useAuth } from "@/contexts/auth";
 
 export default function Inventory() {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("management");
+  return (
+    <Routes>
+      <Route path="/" element={<InventoryMain />} />
+      <Route path="/product/new" element={<ProductForm />} />
+      <Route path="/product/:id" element={<ProductForm />} />
+    </Routes>
+  );
+}
 
-  const hasAdminAccess = user?.role === 'admin' || user?.role === 'owner';
+function InventoryMain() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { 
+    currentStore,
+    products, 
+    categories, 
+    filteredProducts,
+    isLoading,
+    searchTerm,
+    setSearchTerm,
+    activeCategory,
+    setActiveCategory,
+    activeTab,
+    setActiveTab,
+    error
+  } = useProductData();
+
+  // Delete product mutation
+  const deleteProductMutation = useMutation({
+    mutationFn: deleteProduct,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products', currentStore?.id] });
+      toast.success("Product deleted successfully");
+    },
+    onError: (error) => {
+      console.error("Error deleting product:", error);
+      toast.error("Failed to delete product");
+    }
+  });
+
+  const handleAddItem = () => {
+    navigate("/inventory/product/new");
+  };
+
+  const handleEditProduct = (product: Product) => {
+    navigate(`/inventory/product/${product.id}`);
+  };
+
+  const handleViewProduct = (product: Product) => {
+    navigate(`/inventory/product/${product.id}`);
+  };
+
+  const handleDeleteProduct = (product: Product) => {
+    if (!product.id) {
+      toast.error("Cannot delete product: invalid product ID");
+      return;
+    }
+    deleteProductMutation.mutate(product.id);
+  };
+
+  const handleStockAdjustment = (product: Product) => {
+    navigate(`/inventory/product/${product.id}`);
+  };
+
+  const handleStockUpdated = () => {
+    queryClient.invalidateQueries({ queryKey: ['products', currentStore?.id] });
+  };
+
+  if (!currentStore) {
+    return (
+      <div className="container mx-auto p-4">
+        <InventoryHeader
+          title="Store Product Management"
+          description="Manage your store's product catalog and stock levels for customer orders and sales."
+          onAddItem={handleAddItem}
+          showAddButton={false}
+        />
+        <div className="mt-8 text-center p-12 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/25">
+          <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+          <h3 className="text-xl font-semibold mb-2">No Store Selected</h3>
+          <p className="text-muted-foreground mb-4">
+            Please select a store from the sidebar to view and manage its products.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <InventoryHeader
+          title="Store Product Management"
+          description="Manage your store's product catalog and stock levels for customer orders and sales."
+          onAddItem={handleAddItem}
+          showAddButton={false}
+        />
+        <div className="text-center p-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading products...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Menu & Inventory Management</h1>
-        <p className="text-muted-foreground">
-          Manage your products, store inventory, recipes and menu items
+    <div className="space-y-6">
+      <InventoryHeader
+        title="Store Product Management"
+        description="Manage your store's product catalog and stock levels for customer orders and sales."
+        onAddItem={handleAddItem}
+        showAddButton={true}
+      />
+
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <h3 className="font-semibold text-blue-800 mb-2">Store-Level Products</h3>
+        <p className="text-sm text-blue-700">
+          Manage menu items and finished products available for sale in your store. This includes items that customers can purchase directly through your POS system.
         </p>
-        {hasAdminAccess && (
-          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Admin Access:</strong> You can also manage commissary inventory and conversions from the main navigation.
-            </p>
-          </div>
-        )}
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="management" className="flex items-center gap-2">
-            <ChefHat className="h-4 w-4" />
-            Recipes & Menu
-          </TabsTrigger>
-          <TabsTrigger value="products" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Products
-          </TabsTrigger>
-          <TabsTrigger value="stock" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Store Inventory
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Categories
-          </TabsTrigger>
-          <TabsTrigger value="ingredients" className="flex items-center gap-2">
-            <Warehouse className="h-4 w-4" />
-            Ingredients
-          </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            History
-          </TabsTrigger>
-        </TabsList>
+      {error && (
+        <div className="mb-4 p-4 bg-destructive/5 border border-destructive/20 rounded-lg">
+          <h3 className="font-semibold text-destructive mb-2">Error Loading Products</h3>
+          <p className="text-sm text-destructive/80 mb-3">{error.message}</p>
+        </div>
+      )}
 
-        <TabsContent value="management">
-          <InventoryManagement />
-        </TabsContent>
+      <SearchFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        categories={categories}
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
 
-        <TabsContent value="products">
-          <ProductForm />
-        </TabsContent>
-
-        <TabsContent value="stock">
-          <InventoryStock />
-        </TabsContent>
-
-        <TabsContent value="categories">
-          <Categories />
-        </TabsContent>
-
-        <TabsContent value="ingredients">
-          <Ingredients />
-        </TabsContent>
-
-        <TabsContent value="history">
-          <InventoryHistory />
-        </TabsContent>
-      </Tabs>
+      <Card>
+        <CardContent className="p-4">
+          <ProductsTable 
+            products={filteredProducts}
+            isLoading={isLoading}
+            onEdit={handleEditProduct}
+            onView={handleViewProduct}
+            onDelete={handleDeleteProduct}
+            onStockAdjust={handleStockAdjustment}
+            onStockUpdated={handleStockUpdated}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

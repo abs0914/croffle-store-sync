@@ -17,7 +17,7 @@ export const createIngredient = async (ingredient: Omit<Ingredient, "id">): Prom
         is_active: ingredient.is_active,
         sku: `ING-${Date.now()}`, // Generate a unique SKU
         price: 0, // Zero price for ingredients
-        description: `Ingredient: ${ingredient.unit_type}`
+        description: `Ingredient: ${ingredient.unit || ingredient.unit_type}`
       })
       .select()
       .single();
@@ -30,6 +30,7 @@ export const createIngredient = async (ingredient: Omit<Ingredient, "id">): Prom
     const createdIngredient: Ingredient = {
       id: data.id,
       name: data.name,
+      unit: ingredient.unit || ingredient.unit_type || 'pieces',
       unit_type: ingredient.unit_type,
       store_id: data.store_id,
       stock_quantity: data.stock_quantity || 0,

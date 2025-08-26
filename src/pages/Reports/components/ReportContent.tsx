@@ -27,48 +27,75 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   const from = dateRange.from?.toISOString().split('T')[0];
   const to = dateRange.to?.toISOString().split('T')[0];
 
+  // Check if this is a special cashier report that doesn't need data fetching
+  const isSpecialCashierReport = reportType === 'daily_shift' || reportType === 'inventory_status';
+
+  // Use selectedStoreId if available, fallback to storeId for data fetching
+  const effectiveStoreId = selectedStoreId || storeId;
+  
+  // Fetch data based on report type (but only for non-special reports)
+  const { data, dataSource, generatedAt, debugInfo, isLoading, error, refetch } = useReportData({
+    reportType,
+    storeId: effectiveStoreId,
+    isAllStores: effectiveStoreId === 'all',
+    from,
+    to
+  });
+
   // Log report parameters for debugging
   useEffect(() => {
     console.log('📊 ReportContent props:', {
       reportType,
       storeId: storeId.slice(0, 8),
-      selectedStoreId: selectedStoreId === 'all' ? 'ALL_STORES' : selectedStoreId.slice(0, 8),
-      isAllStores: selectedStoreId === 'all',
+      selectedStoreId: selectedStoreId === 'all' ? 'ALL_STORES' : selectedStoreId?.slice(0, 8) || 'EMPTY',
+      effectiveStoreId: effectiveStoreId === 'all' ? 'ALL_STORES' : effectiveStoreId?.slice(0, 8),
+      isAllStores: effectiveStoreId === 'all',
       dateRange: { from, to }
     });
-  }, [reportType, storeId, selectedStoreId, from, to]);
+  }, [reportType, storeId, selectedStoreId, effectiveStoreId, from, to]);
 
-  // Fetch data based on report type
-  const { data, dataSource, generatedAt, debugInfo, isLoading, error, refetch } = useReportData({
-    reportType,
-    storeId: selectedStoreId,
-    isAllStores: selectedStoreId === 'all',
-    from,
-    to
-  });
-
-  // Display toast notifications for success/failure
+  // Display toast notifications for success/failure (only for regular reports)
   useEffect(() => {
-    if (error) {
-      toast.error("Failed to load report data", {
-        description: "Please check your connection and try again",
-        duration: 4000,
-      });
-    } else if (data && !isLoading) {
-      if (dataSource === 'sample') {
-        toast.warning("Showing demo data", {
-          description: "This report contains sample data for demonstration.",
-          duration: 5000,
-          position: isMobile ? "top-center" : "top-right"
+    if (!isSpecialCashierReport) {
+      if (error) {
+        toast.error("Failed to load report data", {
+          description: "Please check your connection and try again",
+          duration: 4000,
         });
-      } else if (dataSource === 'real') {
-        toast.success("Report data loaded successfully", {
-          duration: 3000,
-          position: isMobile ? "top-center" : "top-right"
-        });
+      } else if (data && !isLoading) {
+        if (dataSource === 'sample') {
+          toast.warning("Showing demo data", {
+            description: "This report contains sample data for demonstration.",
+            duration: 5000,
+            position: isMobile ? "top-center" : "top-right"
+          });
+        } else if (dataSource === 'real') {
+          toast.success("Report data loaded successfully", {
+            duration: 3000,
+            position: isMobile ? "top-center" : "top-right"
+          });
+        }
       }
     }
-  }, [data, error, isLoading, dataSource, isMobile]);
+  }, [data, error, isLoading, dataSource, isMobile, isSpecialCashierReport]);
+
+  // Handle special cashier reports that don't use the standard data fetching
+  if (isSpecialCashierReport) {
+    return (
+      <div className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring space-y-4" tabIndex={0}>
+        <CashierReportGuard reportType={reportType}>
+          <ReportView
+            reportType={reportType}
+            data={null}
+            storeId={storeId}
+            selectedStoreId={effectiveStoreId}
+            isAllStores={effectiveStoreId === 'all'}
+            dateRange={dateRange}
+          />
+        </CashierReportGuard>
+      </div>
+    );
+  }
 
   // Handle report loading state
   if (isLoading) {
@@ -93,7 +120,7 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
             <div>
               <p className="font-medium text-lg">No data available</p>
               <p className="text-muted-foreground text-sm mt-2">
-                No {reportType} data found for {selectedStoreId === 'all' ? 'all stores' : 'the selected store'} in the date range {from} to {to}
+                No {reportType} data found for {effectiveStoreId === 'all' ? 'all stores' : 'the selected store'} in the date range {from} to {to}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Try adjusting your date range or selected store
@@ -120,8 +147,8 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
           reportType={reportType}
           data={data}
           storeId={storeId}
-          selectedStoreId={selectedStoreId}
-          isAllStores={selectedStoreId === 'all'}
+          selectedStoreId={effectiveStoreId}
+          isAllStores={effectiveStoreId === 'all'}
           dateRange={dateRange}
         />
       </CashierReportGuard>

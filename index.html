@@ -3,25 +3,93 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PVOSyncPOS - The Croffle Store</title>
-    <meta name="description" content="Point of Sale System for The Croffle Store" />
-    <meta name="author" content="PVOSyncPOS" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Croffle Store POS</title>
+    <meta name="description" content="Croffle Store Point of Sale Mobile Application" />
+    <meta name="author" content="Croffle Store" />
 
-    <meta property="og:title" content="PVOSyncPOS - The Croffle Store" />
-    <meta property="og:description" content="Point of Sale System for The Croffle Store" />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <!-- Mobile App Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Croffle Store POS" />
+    <meta name="theme-color" content="#ffffff" />
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <!-- Prevent zoom on mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <style>
+      /* Mobile-optimized loading screen */
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .loading-text {
+        color: #333;
+        font-size: 16px;
+        font-weight: 500;
+      }
+
+      /* Hide loading screen when app is ready */
+      .app-ready #loading-screen {
+        display: none;
+      }
+    </style>
   </head>
 
   <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <div class="spinner"></div>
+      <div class="loading-text">Loading Croffle Store POS...</div>
+    </div>
+
+    <!-- App Root -->
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+
+    <script>
+      // Hide loading screen when app is ready
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          document.body.classList.add('app-ready');
+        }, 1000);
+      });
+
+      // Redirect to target URL if this is accessed directly in mobile app
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('Running in development mode');
+      } else if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+        console.log('Running in Capacitor mobile app');
+        // The Capacitor config will handle the URL redirection
+      }
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

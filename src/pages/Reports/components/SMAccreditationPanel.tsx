@@ -1,0 +1,452 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { SMAccreditationService } from "@/services/exports/smAccreditationService";
+import { Download, Mail, Server, Play, TestTube, Clock, CheckCircle, AlertCircle } from "lucide-react";
+
+export function SMAccreditationPanel() {
+  const { toast } = useToast();
+  const smService = new SMAccreditationService();
+  
+  const [smStores, setSMStores] = useState<Array<{id: string, name: string}>>([]);
+  const [selectedStore, setSelectedStore] = useState<string>('');
+  const [config, setConfig] = useState({
+    enabled: false,
+    emailTo: 'sia_staging@sm.com.ph',
+    sftpHost: '',
+    sftpUsername: '',
+    staging: true
+  });
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastExport, setLastExport] = useState<any>(null);
+
+  // Load SM stores on component mount
+  useEffect(() => {
+    const loadSMStores = async () => {
+      try {
+        const stores = await smService.getSMStores();
+        setSMStores(stores);
+        
+        // Default to SM City Cebu if available
+        const smCityCebu = stores.find(store => store.name.includes('SM City Cebu'));
+        if (smCityCebu) {
+          setSelectedStore(smCityCebu.id);
+        } else if (stores.length > 0) {
+          setSelectedStore(stores[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to load SM stores:', error);
+      }
+    };
+
+    loadSMStores();
+  }, []);
+
+  const handleTestExport = async () => {
+    if (!selectedStore) {
+      toast({
+        title: "No Store Selected",
+        description: "Please select an SM store before testing",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const selectedStoreData = smStores.find(s => s.id === selectedStore);
+      const { data, error } = await supabase.functions.invoke('sm-accreditation-scheduler', {
+        body: { 
+          action: 'test', 
+          config: {
+            ...config,
+            storeId: selectedStore,
+            storeName: selectedStoreData?.name
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Test Export Completed",
+        description: `Found ${data.testResults.transactionRecords} transactions and ${data.testResults.detailRecords} details for ${selectedStoreData?.name}`,
+      });
+
+      setLastExport(data);
+    } catch (error) {
+      console.error('Test export failed:', error);
+      toast({
+        title: "Test Export Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRunExport = async () => {
+    if (!selectedStore) {
+      toast({
+        title: "No Store Selected",
+        description: "Please select an SM store before running export",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const selectedStoreData = smStores.find(s => s.id === selectedStore);
+      const { data, error } = await supabase.functions.invoke('sm-accreditation-scheduler', {
+        body: { 
+          action: 'run', 
+          config: {
+            ...config,
+            storeId: selectedStore,
+            storeName: selectedStoreData?.name
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "SM Accreditation Export Completed",
+        description: `Exported ${data.stats.transactionCount} transactions for ${selectedStoreData?.name}. Email: ${data.stats.emailSent ? 'Sent' : 'Not configured'}`,
+      });
+
+      setLastExport(data);
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast({
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleManualDownload = async () => {
+    if (!selectedStore) {
+      toast({
+        title: "No Store Selected",
+        description: "Please select an SM store before downloading",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const selectedStoreData = smStores.find(s => s.id === selectedStore);
+
+      // Generate CSV files for manual download
+      const { data: transactions, error: transError } = await supabase.rpc('export_transactions_csv_recent', {
+        store_id_param: selectedStore,
+        days_back: 30
+      });
+      const { data: details, error: detailError } = await supabase.rpc('export_transaction_details_csv_recent', {
+        store_id_param: selectedStore,
+        days_back: 30
+      });
+
+      if (transError) throw transError;
+      if (detailError) throw detailError;
+
+      // Get the CSV data directly from the database function result
+      const transactionsCSV = transactions?.[0]?.csv_data || 'receipt_number,business_date,transaction_time,gross_amount,discount_amount,net_amount,vat_amount,payment_method,discount_type,discount_id,promo_details,senior_discount,pwd_discount';
+      const detailsCSV = details?.[0]?.csv_data || 'receipt_number,item_sequence,item_description,quantity,unit_price,line_total,item_discount,vat_exempt_flag';
+
+      const filename = getFilename();
+      
+      // Download transactions file
+      downloadCSV(transactionsCSV, `${filename}_transactions.csv`);
+      
+      // Download details file with slight delay
+      setTimeout(() => {
+        downloadCSV(detailsCSV, `${filename}_transactiondetails.csv`);
+      }, 500);
+
+      toast({
+        title: "CSV Files Downloaded",
+        description: `Downloaded ${filename}_transactions.csv and ${filename}_transactiondetails.csv for ${selectedStoreData?.name}`,
+      });
+    } catch (error) {
+      console.error('Manual download failed:', error);
+      toast({
+        title: "Download Failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatCSVForDownload = (data: any[], headers: string[]): string => {
+    if (!data || data.length === 0) {
+      return headers.join(',');
+    }
+
+    const csvRows = [
+      headers.join(','),
+      ...data.map(row => 
+        headers.map(header => {
+          const value = row[header];
+          if (value === null || value === undefined) return '';
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return String(value);
+        }).join(',')
+      )
+    ];
+
+    return csvRows.join('\n');
+  };
+
+  const downloadCSV = (csvContent: string, filename: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const getFilename = (): string => {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = String(now.getFullYear());
+    return `${month}_${year}`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Server className="h-5 w-5" />
+            SM Accreditation Export System
+          </CardTitle>
+          <CardDescription>
+            Automated CSV export system for SM stores accreditation compliance. 
+            Generates transaction and detail reports for the last 30 days in BIR-compliant format.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Store Selection */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Store Selection</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="store">SM Store</Label>
+                <Select value={selectedStore} onValueChange={setSelectedStore}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select an SM store" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {smStores.map((store) => (
+                      <SelectItem key={store.id} value={store.id}>
+                        {store.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Configuration Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Configuration</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="emailTo">Email Address</Label>
+                <Input
+                  id="emailTo"
+                  value={config.emailTo}
+                  onChange={(e) => setConfig({...config, emailTo: e.target.value})}
+                  placeholder="sia_staging@sm.com.ph"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sftpHost">SFTP Host (Optional)</Label>
+                <Input
+                  id="sftpHost"
+                  value={config.sftpHost}
+                  onChange={(e) => setConfig({...config, sftpHost: e.target.value})}
+                  placeholder="staging.sm.com.ph"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sftpUsername">SFTP Username</Label>
+                <Input
+                  id="sftpUsername"
+                  value={config.sftpUsername}
+                  onChange={(e) => setConfig({...config, sftpUsername: e.target.value})}
+                  placeholder="pos_user"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="staging"
+                  checked={config.staging}
+                  onCheckedChange={(checked) => setConfig({...config, staging: checked})}
+                />
+                <Label htmlFor="staging">Staging Environment</Label>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Actions Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Actions</h3>
+            
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                onClick={handleManualDownload}
+                disabled={isLoading}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download CSV Files
+              </Button>
+
+              <Button 
+                onClick={handleTestExport}
+                disabled={isLoading}
+                variant="secondary"
+                className="flex items-center gap-2"
+              >
+                <TestTube className="h-4 w-4" />
+                Test Export
+              </Button>
+
+              <Button 
+                onClick={handleRunExport}
+                disabled={isLoading || !config.emailTo || !selectedStore}
+                className="flex items-center gap-2"
+              >
+                <Play className="h-4 w-4" />
+                Run Export & Send
+              </Button>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Status Section */}
+          {lastExport && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Last Export Status</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Status</span>
+                      <Badge variant={lastExport.success ? "default" : "destructive"}>
+                        {lastExport.success ? "Success" : "Failed"}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {lastExport.stats && (
+                  <>
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Transactions</span>
+                          <span className="text-lg font-bold">{lastExport.stats.transactionCount}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Details</span>
+                          <span className="text-lg font-bold">{lastExport.stats.detailCount}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
+              </div>
+
+              {lastExport.testResults && (
+                <div className="space-y-2">
+                  <h4 className="font-medium">Test Results</h4>
+                  <div className="text-sm space-y-1">
+                    <div>Transaction Records: {lastExport.testResults.transactionRecords}</div>
+                    <div>Detail Records: {lastExport.testResults.detailRecords}</div>
+                    <div>Email Config: {lastExport.testResults.configValid ? '✓' : '✗'}</div>
+                    <div>SFTP Config: {lastExport.testResults.sftpConfigured ? '✓' : '✗'}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Requirements Summary */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">SM Stores Accreditation Requirements</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="space-y-2">
+                <h4 className="font-medium">File Specifications:</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• Filename: MM_YYYY_transactions.csv</li>
+                  <li>• Filename: MM_YYYY_transactiondetails.csv</li>
+                  <li>• Content: Last 30 rolling days (selected store only)</li>
+                  <li>• Directory: C:\SIA (production)</li>
+                </ul>
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="font-medium">Automation:</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• Scheduler: Run hourly as Administrator</li>
+                  <li>• Email: Auto-send to sia_staging@sm.com.ph</li>
+                  <li>• SFTP: Upload to SM staging server</li>
+                  <li>• Stores: {smStores.map(s => s.name).join(', ')}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

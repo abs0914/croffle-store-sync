@@ -1,14 +1,16 @@
 
 import { ReportType } from "..";
 import { SalesReportView } from "./reports/SalesReportView";
-import { InventoryReportView } from "./reports/InventoryReportView";
+import { ExpenseReportView } from "./reports/ExpenseReportView";
 import { ProfitLossReportView } from "./reports/ProfitLossReportView";
 import { XReadingView } from "./reports/XReadingView";
 import { ZReadingView } from "./reports/ZReadingView";
-import { DailySummaryView } from "./reports/DailySummaryView";
+import { BIREJournalView } from "./reports/BIREJournalView";
+import { BIRDataBackupView } from "./reports/BIRDataBackupView";
 import { VATReportView } from "./reports/VATReportView";
 import { CashierReportView } from "./reports/CashierReportView";
-import { StockReportView } from "./reports/StockReportView";
+import CashierShiftReportView from "./reports/CashierShiftReportView";
+import CashierInventoryReportView from "./reports/CashierInventoryReportView";
 
 interface ReportViewProps {
   reportType: ReportType;
@@ -26,18 +28,18 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
   switch (reportType) {
     case 'sales':
       return <SalesReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
-    case 'inventory':
-      return <InventoryReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
-    case 'stock':
-      return <StockReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
+    case 'expense':
+      return <ExpenseReportView data={data} dateRange={dateRange} isAllStores={isAllStores} storeId={storeId} selectedStoreId={selectedStoreId} />;
     case 'profit_loss':
       return <ProfitLossReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
     case 'x_reading':
       return <XReadingView storeId={selectedStoreId} date={dateRange.from} />;
     case 'z_reading':
       return <ZReadingView storeId={selectedStoreId} date={dateRange.from} />;
-    case 'daily_summary':
-      return <DailySummaryView storeId={selectedStoreId} date={dateRange.from} />;
+    case 'bir_ejournal':
+      return <BIREJournalView storeId={selectedStoreId} date={dateRange.from} />;
+    case 'bir_backup':
+      return <BIRDataBackupView storeId={selectedStoreId} />;
     case 'vat':
       return <VATReportView storeId={selectedStoreId} dateRange={dateRange} />;
     case 'cashier':
@@ -48,6 +50,10 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
         isAllStores={isAllStores} 
         dateRange={dateRange} 
       />;
+    case 'daily_shift':
+      return <CashierShiftReportView />;
+    case 'inventory_status':
+      return <CashierInventoryReportView />;
     default:
       return null;
   }
