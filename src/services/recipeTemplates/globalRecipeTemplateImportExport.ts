@@ -161,10 +161,21 @@ export const globalRecipeTemplateImportExport = {
       template: Partial<RecipeTemplate>;
       ingredients: RecipeTemplateIngredientInput[];
     }>();
+    
+    // Track pricing validation for multi-ingredient products
+    const recipePriceMap = new Map<string, number>();
+    const priceWarnings: string[] = [];
+    const importStats = {
+      totalRows: 0,
+      uniqueRecipes: 0,
+      priceConflicts: 0
+    };
 
-    for (let i = 1; i < lines.length; i++) {
+      for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
+      
+      importStats.totalRows++;
 
       const values = parseCSVLine(line);
       if (values.length !== headers.length) {
@@ -182,31 +193,48 @@ export const globalRecipeTemplateImportExport = {
         console.warn(`Skipping row ${i + 1}: missing recipe name`);
         continue;
       }
+      
+      // Validate pricing consistency for the same recipe
+      const currentPrice = parseFloat(row.suggested_price) || 0;
+      if (recipePriceMap.has(recipeName)) {
+        const existingPrice = recipePriceMap.get(recipeName)!;
+        if (existingPrice !== currentPrice) {
+          const warningMsg = `Price conflict for "${recipeName}": Found ${existingPrice} and ${currentPrice}. Using first encountered price (${existingPrice}).`;
+          priceWarnings.push(warningMsg);
+          importStats.priceConflicts++;
+          console.warn(warningMsg);
+        }
+      } else {
+        recipePriceMap.set(recipeName, currentPrice);
+      }
 
       // Handle simple format (product catalog only)
       if (hasSimpleFormat) {
-        const suggestedPrice = parseFloat(row.suggested_price) || 0;
+        const suggestedPrice = recipePriceMap.get(recipeName)!; // Use validated price
         const category = row.recipe_category || 'Other';
         
-        // Create a simple product template without ingredients
-        const recipeData = {
-          template: {
-            name: recipeName,
-            category_name: category,
-            description: `${category} product: ${recipeName}`,
-            instructions: 'Product template - no preparation required',
-            yield_quantity: 1,
-            serving_size: 1,
-            created_by: user.id,
-            is_active: true,
-            version: 1,
-            ingredients: [],
-            suggested_price: suggestedPrice
-          },
-          ingredients: []
-        };
-        
-        recipeMap.set(recipeName, recipeData);
+        // Only create if not already processed (avoid duplicates)
+        if (!recipeMap.has(recipeName)) {
+          const recipeData = {
+            template: {
+              name: recipeName,
+              category_name: category,
+              description: `${category} product: ${recipeName}`,
+              instructions: 'Product template - no preparation required',
+              yield_quantity: 1,
+              serving_size: 1,
+              created_by: user.id,
+              is_active: true,
+              version: 1,
+              ingredients: [],
+              suggested_price: suggestedPrice
+            },
+            ingredients: []
+          };
+          
+          recipeMap.set(recipeName, recipeData);
+          importStats.uniqueRecipes++;
+        }
         continue; // Skip ingredient processing for simple format
       }
 
@@ -224,8 +252,8 @@ export const globalRecipeTemplateImportExport = {
         instructions = `1. Prepare ${comboMain}\n2. Prepare ${comboAddOn}\n3. Serve together as combo meal`;
       }
 
-      // Get suggested price for the recipe (same price for all ingredients in one recipe)
-      const suggestedPrice = parseFloat(row.suggested_price) || detectComboPrice(recipeName, comboMain, comboAddOn);
+      // Get suggested price for the recipe (use validated price or fallback to combo detection)
+      const suggestedPrice = recipePriceMap.get(recipeName) || detectComboPrice(recipeName, comboMain, comboAddOn);
 
       // Get or create recipe entry
       if (!recipeMap.has(recipeName)) {
@@ -245,6 +273,7 @@ export const globalRecipeTemplateImportExport = {
           },
           ingredients: []
         });
+        importStats.uniqueRecipes++;
       }
 
       // Add ingredient if provided (only for complex format)
@@ -329,6 +358,16 @@ export const globalRecipeTemplateImportExport = {
       }
     }
 
+    // Show import summary with warnings
+    console.log(`Import Summary: ${importStats.totalRows} rows processed, ${importStats.uniqueRecipes} unique recipes created`);
+    
+    if (priceWarnings.length > 0) {
+      console.warn(`⚠️  Price Validation Warnings (${importStats.priceConflicts}):`);
+      priceWarnings.forEach(warning => console.warn(warning));
+      toast.warning(`Import completed with ${importStats.priceConflicts} price conflicts. Check console for details.`);
+    }
+    
+    toast.success(`Successfully imported ${templates.length} recipe templates from ${importStats.totalRows} rows`);
     console.log(`Successfully imported ${templates.length} recipe templates`);
     return templates;
   }
