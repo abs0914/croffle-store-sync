@@ -185,10 +185,7 @@ export const globalRecipeTemplateImportExport = {
             created_by: user.id,
             is_active: true,
             version: 1,
-            ingredients: [],
-            // Store combo info for potential future use
-            combo_main: comboMain,
-            combo_add_on: comboAddOn
+            ingredients: []
           },
           ingredients: []
         });
