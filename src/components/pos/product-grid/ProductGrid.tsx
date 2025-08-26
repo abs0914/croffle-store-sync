@@ -36,7 +36,7 @@ import {
 } from "@/services/pos/addonService";
 import { fetchMixMatchRules } from "@/services/pos/mixMatchRulesService";
 import { MixMatchRule } from "@/types/productVariations";
-import { shouldDisplayCategoryInPOS } from "@/utils/categoryOrdering";
+import { shouldDisplayCategoryInPOS, sortCategoriesForPOS } from "@/utils/categoryOrdering";
 
 interface ProductGridProps {
   products: Product[];
@@ -548,9 +548,9 @@ export default function ProductGrid({
           ) : filteredProducts.length > 0 ? (
             activeCategory === "all" ? (
               // Group products by category when showing all (excluding addon categories)
-              // Note: Categories are already sorted and filtered by the categoryFetch service
+              // Apply the same category sorting as used in tabs
               <div className="space-y-8">
-                {categories.map(category => {
+                {sortCategoriesForPOS(categories).map(category => {
                   const categoryProducts = filteredProducts.filter(product =>
                     product.category_id === category.id
                   );

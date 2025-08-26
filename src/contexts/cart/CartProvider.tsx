@@ -6,6 +6,7 @@ import { useStore } from "../StoreContext";
 import { CartContext, OrderType, DeliveryPlatform } from "./CartContext";
 import { CartCalculationService, SeniorDiscount, OtherDiscount, CartCalculations } from "@/services/cart/CartCalculationService";
 import { CartValidationService } from "@/services/cart/CartValidationService";
+import { enhancedPricingService } from "@/services/pos/enhancedPricingService";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { currentStore } = useStore();
@@ -20,7 +21,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [deliveryPlatform, setDeliveryPlatform] = useState<DeliveryPlatform | null>(null);
   const [deliveryOrderNumber, setDeliveryOrderNumber] = useState('');
 
-  // Debug order type changes
+  // Debug order type changes and handle pricing conflicts
   const handleSetOrderType = (newOrderType: OrderType) => {
     console.log("CartContext: Order type changing", { 
       from: orderType, 
@@ -28,6 +29,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
       itemsCount: items.length,
       itemsData: items.map(i => ({ name: i.product.name, qty: i.quantity }))
     });
+    
+    // Clear pricing overrides when switching order types to prevent conflicts
+    if (orderType !== newOrderType && items.length > 0) {
+      console.log("🧹 CartContext: Clearing pricing overrides due to order type change");
+      const resetItems = enhancedPricingService.clearPricingOverrides(
+        items, 
+        `Order type changed from ${orderType} to ${newOrderType}`
+      );
+      setItems(resetItems);
+      enhancedPricingService.resetPricingHistory();
+    }
+    
     setOrderType(newOrderType);
   };
 
@@ -37,6 +50,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       console.log("CartContext: Current store set:", currentStore.id);
     }
   }, [currentStore]);
+
+  // Enable pricing debug mode in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      enhancedPricingService.enableDebug(true);
+    }
+  }, []);
 
   // Get calculations using the centralized service
   const getCartCalculations = (): CartCalculations => {
