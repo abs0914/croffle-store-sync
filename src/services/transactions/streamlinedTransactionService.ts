@@ -7,7 +7,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types";
 import { unifiedProductInventoryService } from "@/services/unified/UnifiedProductInventoryService";
-import { deductInventoryForTransaction } from "@/services/inventory/simpleInventoryService";
+import { deductInventoryForTransaction } from "@/services/inventoryDeductionService";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { enrichCartItemsWithCategories, insertTransactionItems } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
@@ -344,18 +344,23 @@ class StreamlinedTransactionService {
     items: StreamlinedTransactionItem[]
   ): Promise<{ success: boolean; errors: string[] }> {
     try {
-      const inventoryItems = items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity
+      const transactionItems = items.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.totalPrice
       }));
 
       const result = await deductInventoryForTransaction(
         transactionId,
         storeId,
-        inventoryItems
+        transactionItems
       );
 
-      return result;
+      return {
+        success: result.success,
+        errors: result.errors
+      };
     } catch (error) {
       console.error('❌ Inventory deduction error:', error);
       return {
