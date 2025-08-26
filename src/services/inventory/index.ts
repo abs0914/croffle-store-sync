@@ -1,3 +1,5 @@
 export * from './inventorySyncMonitor';
 export * from './transactionValidator';
-export * from './enhancedInventoryDeduction';
+export * from './simpleInventoryService';
+// Disabled enhanced inventory deduction to prevent UUID conflicts
+// export * from './enhancedInventoryDeduction';

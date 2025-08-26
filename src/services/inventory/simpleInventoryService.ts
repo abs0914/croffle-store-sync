@@ -20,6 +20,7 @@ export interface InventoryDeductionResult {
 /**
  * Deduct inventory for a completed transaction
  * Finds recipe ingredients and maps them to inventory stock items
+ * Enhanced with proper UUID validation and inventory movement logging
  */
 export const deductInventoryForTransaction = async (
   transactionId: string,
@@ -28,6 +29,17 @@ export const deductInventoryForTransaction = async (
 ): Promise<InventoryDeductionResult> => {
   console.log(`🔄 Starting inventory deduction for transaction ${transactionId}`);
   
+  // Validate transaction ID is a proper UUID
+  const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId);
+  if (!isValidUUID) {
+    console.error(`❌ Invalid transaction ID format: ${transactionId}`);
+    return {
+      success: false,
+      deductedItems: [],
+      errors: [`Invalid transaction ID format: ${transactionId}`]
+    };
+  }
+  
   const result: InventoryDeductionResult = {
     success: true,
     deductedItems: [],
@@ -35,6 +47,10 @@ export const deductInventoryForTransaction = async (
   };
 
   try {
+    // Get current user for audit trail
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+
     for (const item of items) {
       console.log(`📦 Processing item: ${item.productId} x${item.quantity}`);
       
@@ -107,6 +123,34 @@ export const deductInventoryForTransaction = async (
           result.errors.push(`Error updating stock for ${ingredient.ingredient_name}`);
           result.success = false;
           continue;
+        }
+
+        // Log inventory movement with proper UUID validation
+        try {
+          const { error: movementError } = await supabase
+            .from('inventory_movements')
+            .insert({
+              inventory_stock_id: ingredient.inventory_stock_id,
+              movement_type: 'sale',
+              quantity_change: -totalDeduction,
+              previous_quantity: stockItem.stock_quantity,
+              new_quantity: newStock,
+              reference_type: 'transaction',
+              reference_id: transactionId, // Already validated as UUID above
+              notes: `Transaction deduction: ${ingredient.ingredient_name} for ${recipe.name}`,
+              created_by: userId
+            });
+
+          if (movementError) {
+            console.error(`⚠️ Failed to log inventory movement for ${ingredient.ingredient_name}:`, movementError);
+            // Don't fail the entire transaction for movement logging issues
+            result.errors.push(`Failed to log movement for ${ingredient.ingredient_name}`);
+          } else {
+            console.log(`📋 Logged inventory movement for ${ingredient.ingredient_name}`);
+          }
+        } catch (logError) {
+          console.error(`⚠️ Error logging movement for ${ingredient.ingredient_name}:`, logError);
+          result.errors.push(`Error logging movement for ${ingredient.ingredient_name}`);
         }
 
         // Record the deduction

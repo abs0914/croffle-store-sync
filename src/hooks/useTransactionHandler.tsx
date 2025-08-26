@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { SeniorDiscount as CartSeniorDiscount, OtherDiscount as CartOtherDiscount } from "@/services/cart/CartCalculationService";
 import { PerformanceMonitor } from "@/services/performance/performanceMonitor";
-import { deductIngredientsForProduct } from "@/services/productCatalog/ingredientDeductionService";
+// Removed deductIngredientsForProduct - using simpleInventoryService only
 import { deductInventoryForTransaction } from '@/services/inventory/simpleInventoryService';
 
 export interface SeniorDiscount {
