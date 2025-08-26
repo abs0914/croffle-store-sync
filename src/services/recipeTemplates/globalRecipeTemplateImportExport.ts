@@ -12,12 +12,13 @@ export interface RecipeTemplateCSVRow {
   unit: string;
   cost_per_unit: number;
   ingredient_category?: string;
+  suggested_price?: number;
 }
 
 export const globalRecipeTemplateImportExport = {
   // Generate CSV from recipe templates
   generateCSV: async (templates: RecipeTemplate[]): Promise<string> => {
-    const headers = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
+    const headers = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category', 'suggested_price'];
     const csvRows = [headers.join(',')];
 
     // Format category helper
@@ -46,7 +47,8 @@ export const globalRecipeTemplateImportExport = {
             ingredient.quantity.toString(),
             `"${normalizeText(ingredient.unit).replace(/"/g, '""')}"`,
             ingredient.cost_per_unit.toString(),
-            `"${formatCategory(ingredientCategory)}"`
+            `"${formatCategory(ingredientCategory)}"`,
+            (template.suggested_price || 0).toString()
           ];
           csvRows.push(row.join(','));
         });
@@ -65,7 +67,8 @@ export const globalRecipeTemplateImportExport = {
           '0', // zero quantity
           '""', // empty unit
           '0', // zero cost
-          '""' // empty ingredient category
+          '""', // empty ingredient category
+          (template.suggested_price || 0).toString()
         ];
         csvRows.push(row.join(','));
       }
@@ -76,16 +79,25 @@ export const globalRecipeTemplateImportExport = {
 
   // Generate CSV template
   generateCSVTemplate: (): string => {
-    const headers = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
+    const headers = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category', 'suggested_price'];
     const exampleRows = [
-      ['Americano (Hot)', 'Espresso', '', '', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient'],
-      ['Americano (Hot)', 'Espresso', '', '', 'Water', '120', 'ml', '0.50', 'Base Ingredient'],
-      ['Mini Croffle + Hot Americano', 'Combo', 'Mini Croffle', 'Hot Americano', 'Croffle Base', '1', 'pcs', '25.00', 'Base Ingredient'],
-      ['Mini Croffle + Hot Americano', 'Combo', 'Mini Croffle', 'Hot Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient'],
-      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Croffle Base', '1', 'pcs', '30.00', 'Base Ingredient'],
-      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Glaze Sauce', '20', 'ml', '8.00', 'Premium Topping'],
-      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient'],
-      ['Biscoff Crushed', 'Add-on', '', '', 'Biscoff Cookies', '30', 'g', '8.50', 'Premium Topping']
+      ['Americano (Hot)', 'Espresso', '', '', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '65'],
+      ['Americano (Hot)', 'Espresso', '', '', 'Water', '120', 'ml', '0.50', 'Base Ingredient', '65'],
+      ['Mini Croffle + Hot Americano', 'Combo', 'Mini Croffle', 'Hot Americano', 'Croffle Base', '1', 'pcs', '25.00', 'Base Ingredient', '110'],
+      ['Mini Croffle + Hot Americano', 'Combo', 'Mini Croffle', 'Hot Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '110'],
+      ['Mini Croffle + Ice Americano', 'Combo', 'Mini Croffle', 'Ice Americano', 'Croffle Base', '1', 'pcs', '25.00', 'Base Ingredient', '115'],
+      ['Mini Croffle + Ice Americano', 'Combo', 'Mini Croffle', 'Ice Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '115'],
+      ['Glaze Croffle + Hot Americano', 'Combo', 'Glaze Croffle', 'Hot Americano', 'Croffle Base', '1', 'pcs', '30.00', 'Base Ingredient', '125'],
+      ['Glaze Croffle + Hot Americano', 'Combo', 'Glaze Croffle', 'Hot Americano', 'Glaze Sauce', '20', 'ml', '8.00', 'Premium Topping', '125'],
+      ['Glaze Croffle + Hot Americano', 'Combo', 'Glaze Croffle', 'Hot Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '125'],
+      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Croffle Base', '1', 'pcs', '30.00', 'Base Ingredient', '130'],
+      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Glaze Sauce', '20', 'ml', '8.00', 'Premium Topping', '130'],
+      ['Glaze Croffle + Ice Americano', 'Combo', 'Glaze Croffle', 'Ice Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '130'],
+      ['Regular Croffle + Hot Americano', 'Combo', 'Regular Croffle', 'Hot Americano', 'Croffle Base', '1', 'pcs', '40.00', 'Base Ingredient', '170'],
+      ['Regular Croffle + Hot Americano', 'Combo', 'Regular Croffle', 'Hot Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '170'],
+      ['Regular Croffle + Ice Americano', 'Combo', 'Regular Croffle', 'Ice Americano', 'Croffle Base', '1', 'pcs', '40.00', 'Base Ingredient', '175'],
+      ['Regular Croffle + Ice Americano', 'Combo', 'Regular Croffle', 'Ice Americano', 'Coffee Beans', '18', 'g', '12.00', 'Base Ingredient', '175'],
+      ['Biscoff Crushed', 'Add-on', '', '', 'Biscoff Cookies', '30', 'g', '8.50', 'Premium Topping', '15']
     ];
 
     const csvRows = [headers.join(',')];
@@ -107,7 +119,7 @@ export const globalRecipeTemplateImportExport = {
 
     // Parse header
     const headerLine = lines[0];
-    const expectedHeaders = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category'];
+    const expectedHeaders = ['recipe_name', 'recipe_category', 'combo_main', 'combo_add_on', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category', 'suggested_price'];
     const headers = headerLine.split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
     
     // Support legacy 'name' header as well
@@ -172,6 +184,9 @@ export const globalRecipeTemplateImportExport = {
         instructions = `1. Prepare ${comboMain}\n2. Prepare ${comboAddOn}\n3. Serve together as combo meal`;
       }
 
+      // Get suggested price for the recipe (same price for all ingredients in one recipe)
+      const suggestedPrice = parseFloat(row.suggested_price) || detectComboPrice(recipeName, comboMain, comboAddOn);
+
       // Get or create recipe entry
       if (!recipeMap.has(recipeName)) {
         recipeMap.set(recipeName, {
@@ -185,7 +200,8 @@ export const globalRecipeTemplateImportExport = {
             created_by: user.id,
             is_active: true,
             version: 1,
-            ingredients: []
+            ingredients: [],
+            suggested_price: suggestedPrice
           },
           ingredients: []
         });
@@ -227,7 +243,8 @@ export const globalRecipeTemplateImportExport = {
             serving_size: recipeData.template.serving_size,
             created_by: recipeData.template.created_by!,
             is_active: recipeData.template.is_active!,
-            version: recipeData.template.version!
+            version: recipeData.template.version!,
+            suggested_price: recipeData.template.suggested_price
           })
           .select()
           .single();
@@ -358,4 +375,79 @@ function detectComboAddOn(recipeName: string): string {
   
   // Add more add-on patterns as needed
   return '';
+}
+
+// Helper function to detect combo pricing based on combo components
+function detectComboPrice(recipeName: string, comboMain: string, comboAddOn: string): number {
+  // If explicit combo components are provided, use them for pricing
+  if (comboMain && comboAddOn) {
+    const main = comboMain.toLowerCase();
+    const addOn = comboAddOn.toLowerCase();
+    
+    // Mini Croffle combinations
+    if (main.includes('mini croffle')) {
+      if (addOn.includes('hot') && (addOn.includes('americano') || addOn.includes('espresso'))) {
+        return 110;
+      }
+      if ((addOn.includes('ice') || addOn.includes('iced')) && (addOn.includes('americano') || addOn.includes('espresso'))) {
+        return 115;
+      }
+    }
+    
+    // Glaze Croffle combinations
+    if (main.includes('glaze croffle')) {
+      if (addOn.includes('hot') && (addOn.includes('americano') || addOn.includes('espresso'))) {
+        return 125;
+      }
+      if ((addOn.includes('ice') || addOn.includes('iced')) && (addOn.includes('americano') || addOn.includes('espresso'))) {
+        return 130;
+      }
+    }
+    
+    // Regular Croffle combinations
+    if (main.includes('regular croffle')) {
+      if (addOn.includes('hot') && (addOn.includes('americano') || addOn.includes('espresso'))) {
+        return 170;
+      }
+      if ((addOn.includes('ice') || addOn.includes('iced')) && (addOn.includes('americano') || addOn.includes('espresso'))) {
+        return 175;
+      }
+    }
+  }
+  
+  // Fallback: detect from recipe name if no explicit combo components
+  const name = recipeName.toLowerCase();
+  
+  // Mini Croffle + Hot Espresso/Americano = 110
+  if (name.includes('mini croffle') && name.includes('hot') && (name.includes('americano') || name.includes('espresso'))) {
+    return 110;
+  }
+  
+  // Mini Croffle + Ice Espresso/Americano = 115
+  if (name.includes('mini croffle') && (name.includes('ice') || name.includes('iced')) && (name.includes('americano') || name.includes('espresso'))) {
+    return 115;
+  }
+  
+  // Glaze Croffle + Hot Espresso/Americano = 125
+  if (name.includes('glaze croffle') && name.includes('hot') && (name.includes('americano') || name.includes('espresso'))) {
+    return 125;
+  }
+  
+  // Glaze Croffle + Ice Espresso/Americano = 130
+  if (name.includes('glaze croffle') && (name.includes('ice') || name.includes('iced')) && (name.includes('americano') || name.includes('espresso'))) {
+    return 130;
+  }
+  
+  // Regular Croffle + Hot Espresso/Americano = 170
+  if (name.includes('regular croffle') && name.includes('hot') && (name.includes('americano') || name.includes('espresso'))) {
+    return 170;
+  }
+  
+  // Regular Croffle + Ice Espresso/Americano = 175
+  if (name.includes('regular croffle') && (name.includes('ice') || name.includes('iced')) && (name.includes('americano') || name.includes('espresso'))) {
+    return 175;
+  }
+  
+  // Default fallback for non-combo items or unknown combos
+  return 0;
 }
