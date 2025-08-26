@@ -295,67 +295,92 @@ export const globalRecipeTemplateImportExport = {
       }
     }
 
-    // Convert to template array and create in database
+    // Convert to template array and create in database using batch operations
+    console.log(`⚡ Starting batch import of ${recipeMap.size} recipe templates...`);
     const templates: RecipeTemplate[] = [];
     
+    // Prepare batch data for templates
+    const templateBatch = [];
+    const ingredientBatch = [];
+    
     for (const [recipeName, recipeData] of recipeMap.entries()) {
-      try {
-        // Create recipe template
-        const { data: template, error: templateError } = await supabase
-          .from('recipe_templates')
-          .insert({
-            name: recipeData.template.name!,
-            category_name: recipeData.template.category_name,
-            description: recipeData.template.description,
-            instructions: recipeData.template.instructions,
-            yield_quantity: recipeData.template.yield_quantity!,
-            serving_size: recipeData.template.serving_size,
-            created_by: recipeData.template.created_by!,
-            is_active: recipeData.template.is_active!,
-            version: recipeData.template.version!,
-            suggested_price: recipeData.template.suggested_price
-          })
-          .select()
-          .single();
+      templateBatch.push({
+        name: recipeData.template.name!,
+        category_name: recipeData.template.category_name,
+        description: recipeData.template.description,
+        instructions: recipeData.template.instructions,
+        yield_quantity: recipeData.template.yield_quantity!,
+        serving_size: recipeData.template.serving_size,
+        created_by: recipeData.template.created_by!,
+        is_active: recipeData.template.is_active!,
+        version: recipeData.template.version!,
+        suggested_price: recipeData.template.suggested_price // Preserve exact price including 0
+      });
+    }
 
-        if (templateError) {
-          console.error(`Error creating template ${recipeName}:`, templateError);
-          continue;
-        }
+    // Batch create templates
+    console.log(`⚡ Creating ${templateBatch.length} templates in batch...`);
+    const { data: createdTemplates, error: batchTemplateError } = await supabase
+      .from('recipe_templates')
+      .insert(templateBatch)
+      .select();
 
-        // Create ingredients if any (skip for simple format)
-        if (recipeData.ingredients.length > 0) {
-          const ingredientData = recipeData.ingredients.map(ingredient => ({
-            recipe_template_id: template.id,
-            ingredient_name: ingredient.ingredient_name,
-            quantity: ingredient.quantity,
-            unit: ingredient.unit,
-            cost_per_unit: ingredient.cost_per_unit,
-            location_type: ingredient.location_type || 'all',
-            uses_store_inventory: false // Global templates don't link to specific store inventory
-          }));
+    if (batchTemplateError) {
+      console.error('❌ Batch template creation failed:', batchTemplateError);
+      throw new Error(`Failed to create recipe templates: ${batchTemplateError.message}`);
+    }
 
-          const { error: ingredientError } = await supabase
-            .from('recipe_template_ingredients')
-            .insert(ingredientData);
+    console.log(`✅ Successfully created ${createdTemplates.length} templates`);
 
-          if (ingredientError) {
-            console.error(`Error creating ingredients for ${recipeName}:`, ingredientError);
-          }
-        }
-
-        templates.push({
-          ...template,
-          ingredients: recipeData.ingredients.map(ing => ({
-            ...ing,
-            recipe_template_id: template.id,
-            uses_store_inventory: false
-          }))
-        });
-
-      } catch (error) {
-        console.error(`Error processing recipe ${recipeName}:`, error);
+    // Prepare batch data for ingredients
+    let templateIndex = 0;
+    for (const [recipeName, recipeData] of recipeMap.entries()) {
+      const template = createdTemplates[templateIndex];
+      
+      if (recipeData.ingredients.length > 0) {
+        const ingredientData = recipeData.ingredients.map(ingredient => ({
+          recipe_template_id: template.id,
+          ingredient_name: ingredient.ingredient_name,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+          cost_per_unit: ingredient.cost_per_unit, // Preserve zero costs
+          location_type: ingredient.location_type || 'all',
+          uses_store_inventory: false
+        }));
+        
+        ingredientBatch.push(...ingredientData);
       }
+
+      // Build final template object
+      templates.push({
+        ...template,
+        ingredients: recipeData.ingredients.map(ing => ({
+          ...ing,
+          recipe_template_id: template.id,
+          uses_store_inventory: false
+        }))
+      });
+
+      templateIndex++;
+    }
+
+    // Batch create ingredients if any
+    if (ingredientBatch.length > 0) {
+      console.log(`⚡ Creating ${ingredientBatch.length} ingredients in batch...`);
+      const { error: batchIngredientError } = await supabase
+        .from('recipe_template_ingredients')
+        .insert(ingredientBatch);
+
+      if (batchIngredientError) {
+        console.error('❌ Batch ingredient creation failed:', batchIngredientError);
+        // Clean up created templates on ingredient failure
+        await supabase
+          .from('recipe_templates')
+          .delete()
+          .in('id', createdTemplates.map(t => t.id));
+        throw new Error(`Failed to create ingredients: ${batchIngredientError.message}`);
+      }
+      console.log(`✅ Successfully created ${ingredientBatch.length} ingredients`);
     }
 
     // Show import summary with warnings
