@@ -75,19 +75,62 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
  * Inserts transaction items into the database
  */
 export const insertTransactionItems = async (transactionId: string, items: DetailedTransactionItem[]): Promise<void> => {
-  if (items.length === 0) return;
+  if (items.length === 0) {
+    console.log('No items to insert for transaction:', transactionId);
+    return;
+  }
 
-  const itemsWithTransactionId = items.map(item => ({
-    ...item,
-    transaction_id: transactionId
-  }));
+  console.log('🔄 Inserting transaction items:', {
+    transactionId,
+    itemCount: items.length,
+    items: items.map(item => ({
+      product_id: item.product_id,
+      name: item.name,
+      quantity: item.quantity,
+      unit_price: item.unit_price
+    }))
+  });
 
-  const { error } = await supabase
-    .from("transaction_items")
-    .insert(itemsWithTransactionId);
+  try {
+    const itemsWithTransactionId = items.map(item => ({
+      transaction_id: transactionId,
+      product_id: item.product_id,
+      variation_id: item.variation_id || null,
+      name: item.name,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.total_price,
+      category_id: item.category_id || null,
+      category_name: item.category_name || null,
+      product_type: item.product_type
+    }));
 
-  if (error) {
-    console.error('Failed to insert transaction items:', error);
-    throw new Error('Failed to save transaction items');
+    console.log('🔄 Prepared items for insertion:', itemsWithTransactionId);
+
+    const { data, error } = await supabase
+      .from("transaction_items")
+      .insert(itemsWithTransactionId)
+      .select();
+
+    if (error) {
+      console.error('❌ Database error inserting transaction items:', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        transactionId,
+        itemCount: items.length
+      });
+      throw new Error(`Failed to save transaction items: ${error.message}`);
+    }
+
+    console.log('✅ Transaction items inserted successfully:', {
+      transactionId,
+      insertedCount: data?.length || items.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Critical error inserting transaction items:', error);
+    throw error instanceof Error ? error : new Error('Failed to save transaction items');
   }
 };
