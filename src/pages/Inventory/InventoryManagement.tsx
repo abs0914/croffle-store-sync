@@ -2,6 +2,7 @@
 import { useStore } from "@/contexts/StoreContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { InventoryStats } from "./components/inventoryManagement/InventoryStats";
+import { WorkflowLaunchButton } from "@/components/inventory/WorkflowLaunchButton";
 // Enhanced inventory dashboard removed - using simplified inventory components
 
 export default function InventoryManagement() {
@@ -30,6 +31,7 @@ export default function InventoryManagement() {
             View finished goods inventory for {currentStore.name}
           </p>
         </div>
+        <WorkflowLaunchButton />
       </div>
 
       <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
