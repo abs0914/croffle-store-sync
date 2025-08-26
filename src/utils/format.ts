@@ -1,5 +1,4 @@
 
-<<<<<<< HEAD
 /**
  * Formats a number as currency in Philippine Peso (₱)
  * Uses a fallback approach to ensure ₱ symbol is always displayed correctly
@@ -32,16 +31,6 @@ export function formatCurrency(amount: number): string {
     return `₱${numberFormatted}`;
   }
 }
-=======
-export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-PH', {
-    style: 'currency',
-    currency: 'PHP',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-};
->>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
 
 export const formatNumber = (num: number): string => {
   return new Intl.NumberFormat('en-US').format(num);
