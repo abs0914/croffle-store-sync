@@ -6,17 +6,19 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Upload, 
-  FileText, 
-  CheckCircle, 
-  AlertTriangle, 
+import {
+  Upload,
+  FileText,
+  CheckCircle,
+  AlertTriangle,
   XCircle,
   Database,
   Zap,
   Package,
   TrendingUp,
-  Trash2
+  Trash2,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
 import { 
   MasterRecipeImportService, 
@@ -26,6 +28,7 @@ import {
 } from '@/services/recipeManagement/masterRecipeImportService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { parseExcelFile, downloadExcelTemplate } from '@/utils/excelParser';
 
 interface MasterRecipeImportDialogProps {
   isOpen: boolean;
@@ -61,10 +64,36 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
 
     try {
       setProgress(10);
-      const csvContent = await file.text();
-      
-      setProgress(30);
-      const recipes = await MasterRecipeImportService.parseCSVContent(csvContent);
+
+      let recipes: MasterRecipeData[];
+
+      // Check file type and parse accordingly
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        // Parse Excel file
+        const excelData = await parseExcelFile(file);
+        setProgress(30);
+
+        // Convert Excel data to master recipe format
+        recipes = excelData.recipes.map((recipe: any) => ({
+          name: recipe.name,
+          description: recipe.description || `${recipe.category_name} recipe template`,
+          category_name: recipe.category_name,
+          instructions: recipe.instructions || 'Instructions to be added',
+          yield_quantity: recipe.yield_quantity || 1,
+          serving_size: recipe.serving_size || 1,
+          ingredients: recipe.ingredients.map((ing: any) => ({
+            ingredient_name: ing.ingredient_name,
+            quantity: ing.quantity,
+            unit: ing.unit,
+            cost_per_unit: ing.cost_per_unit || 0
+          }))
+        }));
+      } else {
+        // Parse CSV file
+        const csvContent = await file.text();
+        setProgress(30);
+        recipes = await MasterRecipeImportService.parseCSVContent(csvContent);
+      }
       
       setProgress(50);
       const validationErrors = MasterRecipeImportService.validateMasterRecipeFormat(recipes);
@@ -221,16 +250,45 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
         </div>
         <h3 className="text-lg font-semibold mb-2">Import Master Recipe Templates</h3>
         <p className="text-muted-foreground">
-          Upload your master recipe CSV file to create standardized recipe templates
+          Upload your master recipe CSV or Excel file to create standardized recipe templates
         </p>
+      </div>
+
+      {/* Template Download Buttons */}
+      <div className="flex gap-2 justify-center">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={downloadExcelTemplate}
+          className="flex items-center gap-2"
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          Download Excel Template
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            // Download CSV template (you can implement this if needed)
+            toast.info('CSV template download coming soon. Use Excel template for now.');
+          }}
+          className="flex items-center gap-2"
+        >
+          <FileText className="h-4 w-4" />
+          Download CSV Template
+        </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">CSV Format Requirements</CardTitle>
+          <CardTitle className="text-sm">File Format Requirements</CardTitle>
         </CardHeader>
         <CardContent className="text-sm space-y-2">
-          <p><strong>Columns:</strong> recipe_name, description, category, instructions, yield_qty, serving_size, ingredient_name, quantity, unit, cost_per_unit, notes</p>
+          <p><strong>Supported formats:</strong> CSV (.csv), Excel (.xlsx, .xls)</p>
+          <p><strong>Required columns:</strong> recipe_name, ingredient_name, quantity, unit</p>
+          <p><strong>Optional columns:</strong> recipe_category, cost_per_unit, description, instructions</p>
           <p><strong>Units:</strong> Must match standardized units (ml, grams, piece, portion, Scoop, serving)</p>
           <p><strong>Structure:</strong> One row per ingredient, recipe info repeated for each ingredient</p>
         </CardContent>
@@ -239,7 +297,7 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
       <div className="border-2 border-dashed border-border rounded-lg p-6">
         <input
           type="file"
-          accept=".csv"
+          accept=".csv,.xlsx,.xls"
           onChange={handleFileSelect}
           className="hidden"
           id="master-recipe-file"
@@ -248,7 +306,7 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
           <div className="text-center">
             <FileText className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-sm font-medium">
-              {file ? file.name : 'Click to upload CSV file'}
+              {file ? file.name : 'Click to upload CSV or Excel file'}
             </p>
             {file && (
               <p className="text-xs text-muted-foreground mt-1">
