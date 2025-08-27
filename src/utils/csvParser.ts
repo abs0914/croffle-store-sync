@@ -220,11 +220,11 @@ export const parseRecipesCSV = (csvText: string): RecipeUpload[] => {
       row[header] = values[index] || '';
     });
 
-    const recipeName = row['name'] || row['recipe name'] || row['product'];
+    const recipeName = row['recipe_name'] || row['name'] || row['recipe name'] || row['product'];
     const category = row['recipe_category'] || row['category'];
     const ingredientName = row['ingredient_name'] || row['ingredient name'];
-    const uom = row['uom'] || row['unit of measure'] || row['unit'];
-    const quantity = parseFloat(row['quantity used'] || row['quantity']) || 0;
+    const uom = row['unit'] || row['uom'] || row['unit of measure'];
+    const quantity = parseFloat(row['quantity'] || row['quantity used']) || 0;
     
     // More comprehensive cost parsing - handle exact column name from user's CSV
     const costValue = row['cost_per_unit'] || row['cost per unit'] || row['unit cost'] || row['cost'];
