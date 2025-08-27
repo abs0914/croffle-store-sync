@@ -37,19 +37,20 @@ const broadcastCacheInvalidation = async (productId: string, storeId: string, ev
 
 export const fetchProductCatalog = async (storeId: string): Promise<ProductCatalog[]> => {
   try {
+    // Use safe query without cross-table joins to avoid RLS issues
     const { data, error } = await supabase
       .from('product_catalog')
       .select(`
-        *,
-        ingredients:product_ingredients(
-          *,
-          inventory_item:inventory_stock(*)
-        )
+        id, product_name, description, price, category_id, store_id,
+        image_url, is_available, product_status, recipe_id, display_order,
+        created_at, updated_at
       `)
       .eq('store_id', storeId)
-      .order('display_order');
+      .order('display_order', { ascending: true, nullsLast: true });
 
     if (error) throw error;
+
+    console.log(`✅ fetchProductCatalog: Retrieved ${(data || []).length} products for store ${storeId}`);
     return (data || []) as any;
   } catch (error) {
     console.error('Error fetching product catalog:', error);

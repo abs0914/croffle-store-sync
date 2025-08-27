@@ -84,6 +84,16 @@ export default function StoreProductAvailability() {
   const availableCount = products.filter(p => p.is_available).length;
   const unavailableCount = products.filter(p => !p.is_available).length;
 
+  // Debug logging to help troubleshoot display issues
+  console.log('📊 Product Catalog Debug:', {
+    totalProducts: products.length,
+    availableCount,
+    unavailableCount,
+    filteredCount: filteredProducts.length,
+    searchTerm,
+    showUnavailableOnly
+  });
+
   if (loading) {
     return (
       <div className="space-y-6">
