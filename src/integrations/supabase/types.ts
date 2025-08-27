@@ -5845,6 +5845,17 @@ export type Database = {
         }
         Returns: string
       }
+      manual_deduct_inventory: {
+        Args: { p_transaction_id: string }
+        Returns: {
+          deducted_quantity: number
+          error_message: string
+          ingredient_name: string
+          new_quantity: number
+          previous_quantity: number
+          success: boolean
+        }[]
+      }
       migrate_product_catalog_to_products: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -5989,6 +6000,15 @@ export type Database = {
           count_items: number
           details: string
           status: string
+        }[]
+      }
+      validate_inventory_before_transaction: {
+        Args: { p_store_id: string; p_transaction_items: Json }
+        Returns: {
+          available_quantity: number
+          ingredient_name: string
+          required_quantity: number
+          sufficient: boolean
         }[]
       }
       validate_password_strength: {
