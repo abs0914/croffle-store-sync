@@ -1,0 +1,638 @@
+{
+  "progress": {
+    "phase": "Phase 1: Critical Priority",
+    "startTime": "2025-08-27T06:35:17.249Z",
+    "totalTargetProducts": 47,
+    "processedProducts": 47,
+    "successfulFixes": 23,
+    "failedFixes": 24,
+    "batches": [
+      {
+        "batchNumber": 1,
+        "products": [
+          {
+            "id": "e0801e30-fd4a-4585-9c4c-fef9ff3561a6",
+            "name": "Tiramisu Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "b070a099-16b4-4aa3-b812-8907a4f29099",
+            "name": "Choco Marshmallow Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "13a77ba7-6b9e-4404-ac52-9a9405a5f4c0",
+            "name": "Choco Nut Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "7e2db892-68d1-44fb-86b0-0f1b3d101520",
+            "name": "Caramel Delight  Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "fbb13091-ff24-4804-a6a0-8145ec4c6d7b",
+            "name": "Caramel Delight  Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "bb5c2306-8dc5-4703-b1bd-6501e7b3eece",
+            "name": "Choco Nut Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "86aba1cc-f557-41ed-9a07-99ae4fcd8ba7",
+            "name": "Choco Marshmallow Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "4c38d577-1e21-4e3b-aff1-e757ca41dac5",
+            "name": "Caramel Delight  Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "c3d1319e-e838-4a1c-be57-f8d3a2ecf393",
+            "name": "Tiramisu Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "c19304cf-8646-41cb-bca8-fab8fd45d0b6",
+            "name": "Caramel Delight  Croffle",
+            "category": "Croffle"
+          }
+        ],
+        "results": [
+          {
+            "productId": "e0801e30-fd4a-4585-9c4c-fef9ff3561a6",
+            "productName": "Tiramisu Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "b070a099-16b4-4aa3-b812-8907a4f29099",
+            "productName": "Choco Marshmallow Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "13a77ba7-6b9e-4404-ac52-9a9405a5f4c0",
+            "productName": "Choco Nut Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "7e2db892-68d1-44fb-86b0-0f1b3d101520",
+            "productName": "Caramel Delight  Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "fbb13091-ff24-4804-a6a0-8145ec4c6d7b",
+            "productName": "Caramel Delight  Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "bb5c2306-8dc5-4703-b1bd-6501e7b3eece",
+            "productName": "Choco Nut Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "86aba1cc-f557-41ed-9a07-99ae4fcd8ba7",
+            "productName": "Choco Marshmallow Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "4c38d577-1e21-4e3b-aff1-e757ca41dac5",
+            "productName": "Caramel Delight  Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "c3d1319e-e838-4a1c-be57-f8d3a2ecf393",
+            "productName": "Tiramisu Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "c19304cf-8646-41cb-bca8-fab8fd45d0b6",
+            "productName": "Caramel Delight  Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          }
+        ],
+        "successCount": 10,
+        "failureCount": 0,
+        "startTime": "2025-08-27T06:35:20.292Z",
+        "endTime": "2025-08-27T06:35:24.021Z"
+      },
+      {
+        "batchNumber": 2,
+        "products": [
+          {
+            "id": "f680c3ee-29ed-45a3-a267-3c3cbc5c71bc",
+            "name": "Tiramisu Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "83030571-3e00-44e7-8db7-a32dcd251f8b",
+            "name": "Choco Marshmallow Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "56b43451-a292-4067-835f-efd624abb19d",
+            "name": "Caramel Delight  Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "98367c8a-ceb3-448a-8361-60701831e6ee",
+            "name": "Choco Nut Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "29f3aa04-972f-42be-bb3f-eb002fa3f106",
+            "name": "Tiramisu Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "61652393-6fac-4bce-82d3-c332f00b714c",
+            "name": "Choco Marshmallow Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "9b5a757d-abdc-4786-b2e8-1a003679b2c3",
+            "name": "Choco Marshmallow Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "40750227-0403-4256-8b44-b56c6818558a",
+            "name": "Tiramisu Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "a5f9741f-3fa7-439d-b2a8-22294f25947f",
+            "name": "Caramel Delight  Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "66daabce-44d5-4bd8-98e1-486899999aaa",
+            "name": "Choco Nut Croffle",
+            "category": "Croffle"
+          }
+        ],
+        "results": [
+          {
+            "productId": "f680c3ee-29ed-45a3-a267-3c3cbc5c71bc",
+            "productName": "Tiramisu Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "83030571-3e00-44e7-8db7-a32dcd251f8b",
+            "productName": "Choco Marshmallow Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "56b43451-a292-4067-835f-efd624abb19d",
+            "productName": "Caramel Delight  Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "98367c8a-ceb3-448a-8361-60701831e6ee",
+            "productName": "Choco Nut Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "29f3aa04-972f-42be-bb3f-eb002fa3f106",
+            "productName": "Tiramisu Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "61652393-6fac-4bce-82d3-c332f00b714c",
+            "productName": "Choco Marshmallow Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "9b5a757d-abdc-4786-b2e8-1a003679b2c3",
+            "productName": "Choco Marshmallow Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "40750227-0403-4256-8b44-b56c6818558a",
+            "productName": "Tiramisu Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "a5f9741f-3fa7-439d-b2a8-22294f25947f",
+            "productName": "Caramel Delight  Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "66daabce-44d5-4bd8-98e1-486899999aaa",
+            "productName": "Choco Nut Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          }
+        ],
+        "successCount": 10,
+        "failureCount": 0,
+        "startTime": "2025-08-27T06:35:24.302Z",
+        "endTime": "2025-08-27T06:35:28.190Z"
+      },
+      {
+        "batchNumber": 3,
+        "products": [
+          {
+            "id": "7866e8bf-7789-4d5c-9e98-d250076851b2",
+            "name": "Tiramisu Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "aebfe006-c5ea-4ea6-8b0c-b54eb29345dd",
+            "name": "Caramel Delight  Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "e14cfc09-4c7d-46e8-b06c-093395099038",
+            "name": "Choco Marshmallow Croffle",
+            "category": "Croffle"
+          },
+          {
+            "id": "ad44934f-4454-4eb5-a46d-4ea42bef574a",
+            "name": "Oreo Strawberry Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "c64cdf50-1c02-4c73-91a4-a8fb246c42e6",
+            "name": "Strawberry Kiss Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "ce962b1b-f962-4634-be50-87d6397ed4a9",
+            "name": "Matcha Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "5d783e03-2d1c-4588-9c49-8e64d4c62367",
+            "name": "Strawberry Kiss Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "6cf4eed3-9723-4797-9c75-a0ebe14b9b7e",
+            "name": "Oreo Strawberry Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "70ef1f0f-92ff-41ea-9170-83c0e5e38c5c",
+            "name": "Matcha Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "cc3dee67-511f-4e87-9eaf-e3651987af7c",
+            "name": "Oreo Strawberry Blended",
+            "category": "Blended Drink"
+          }
+        ],
+        "results": [
+          {
+            "productId": "7866e8bf-7789-4d5c-9e98-d250076851b2",
+            "productName": "Tiramisu Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "aebfe006-c5ea-4ea6-8b0c-b54eb29345dd",
+            "productName": "Caramel Delight  Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "e14cfc09-4c7d-46e8-b06c-093395099038",
+            "productName": "Choco Marshmallow Croffle",
+            "success": true,
+            "mappingsCreated": 6,
+            "totalIngredients": 6
+          },
+          {
+            "productId": "ad44934f-4454-4eb5-a46d-4ea42bef574a",
+            "productName": "Oreo Strawberry Blended",
+            "success": false,
+            "error": "Only 6/8 ingredients could be mapped",
+            "partialMappings": 6
+          },
+          {
+            "productId": "c64cdf50-1c02-4c73-91a4-a8fb246c42e6",
+            "productName": "Strawberry Kiss Blended",
+            "success": false,
+            "error": "Only 5/7 ingredients could be mapped",
+            "partialMappings": 5
+          },
+          {
+            "productId": "ce962b1b-f962-4634-be50-87d6397ed4a9",
+            "productName": "Matcha Blended",
+            "success": false,
+            "error": "Only 4/6 ingredients could be mapped",
+            "partialMappings": 4
+          },
+          {
+            "productId": "5d783e03-2d1c-4588-9c49-8e64d4c62367",
+            "productName": "Strawberry Kiss Blended",
+            "success": false,
+            "error": "Only 5/7 ingredients could be mapped",
+            "partialMappings": 5
+          },
+          {
+            "productId": "6cf4eed3-9723-4797-9c75-a0ebe14b9b7e",
+            "productName": "Oreo Strawberry Blended",
+            "success": false,
+            "error": "Only 6/8 ingredients could be mapped",
+            "partialMappings": 6
+          },
+          {
+            "productId": "70ef1f0f-92ff-41ea-9170-83c0e5e38c5c",
+            "productName": "Matcha Blended",
+            "success": false,
+            "error": "Only 4/6 ingredients could be mapped",
+            "partialMappings": 4
+          },
+          {
+            "productId": "cc3dee67-511f-4e87-9eaf-e3651987af7c",
+            "productName": "Oreo Strawberry Blended",
+            "success": false,
+            "error": "Only 6/8 ingredients could be mapped",
+            "partialMappings": 6
+          }
+        ],
+        "successCount": 3,
+        "failureCount": 7,
+        "startTime": "2025-08-27T06:35:28.452Z",
+        "endTime": "2025-08-27T06:35:31.044Z"
+      },
+      {
+        "batchNumber": 4,
+        "products": [
+          {
+            "id": "053f837d-42a5-4eda-9c0e-cc5268d265ae",
+            "name": "Strawberry Kiss Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "7b98a7a7-eacc-4a53-b11f-dffa91237fbb",
+            "name": "Matcha Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "8ead94a2-706e-474d-a378-6f04c86d5a38",
+            "name": "Strawberry Kiss Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "6876948d-1ec6-4dbf-9010-9142de013d6e",
+            "name": "Oreo Strawberry Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "24913bc8-d86f-4b50-b358-4c37ffdb1847",
+            "name": "Matcha Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "6eef5381-4fbc-4c64-a267-eaaa8495ec5c",
+            "name": "Oreo Strawberry Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "1239f9c9-8e90-4a9c-b81f-15ae97484239",
+            "name": "Strawberry Kiss Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "9b308ac7-646d-4409-a038-db937ef1c660",
+            "name": "Matcha Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "21ee859a-e491-4047-bd92-951d0ff8cdeb",
+            "name": "Strawberry Kiss Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "34210738-19e7-4798-9285-3f35e9749dc6",
+            "name": "Oreo Strawberry Blended",
+            "category": "Blended Drink"
+          }
+        ],
+        "results": [
+          {
+            "productId": "053f837d-42a5-4eda-9c0e-cc5268d265ae",
+            "productName": "Strawberry Kiss Blended",
+            "success": false,
+            "error": "Only 5/7 ingredients could be mapped",
+            "partialMappings": 5
+          },
+          {
+            "productId": "7b98a7a7-eacc-4a53-b11f-dffa91237fbb",
+            "productName": "Matcha Blended",
+            "success": false,
+            "error": "Only 4/6 ingredients could be mapped",
+            "partialMappings": 4
+          },
+          {
+            "productId": "8ead94a2-706e-474d-a378-6f04c86d5a38",
+            "productName": "Strawberry Kiss Blended",
+            "success": false,
+            "error": "Only 5/7 ingredients could be mapped",
+            "partialMappings": 5
+          },
+          {
+            "productId": "6876948d-1ec6-4dbf-9010-9142de013d6e",
+            "productName": "Oreo Strawberry Blended",
+            "success": false,
+            "error": "Only 6/8 ingredients could be mapped",
+            "partialMappings": 6
+          },
+          {
+            "productId": "24913bc8-d86f-4b50-b358-4c37ffdb1847",
+            "productName": "Matcha Blended",
+            "success": false,
+            "error": "Only 4/6 ingredients could be mapped",
+            "partialMappings": 4
+          },
+          {
+            "productId": "6eef5381-4fbc-4c64-a267-eaaa8495ec5c",
+            "productName": "Oreo Strawberry Blended",
+            "success": false,
+            "error": "Only 6/8 ingredients could be mapped",
+            "partialMappings": 6
+          },
+          {
+            "productId": "1239f9c9-8e90-4a9c-b81f-15ae97484239",
+            "productName": "Strawberry Kiss Blended",
+            "success": false,
+            "error": "Only 5/7 ingredients could be mapped",
+            "partialMappings": 5
+          },
+          {
+            "productId": "9b308ac7-646d-4409-a038-db937ef1c660",
+            "productName": "Matcha Blended",
+            "success": false,
+            "error": "Only 4/6 ingredients could be mapped",
+            "partialMappings": 4
+          },
+          {
+            "productId": "21ee859a-e491-4047-bd92-951d0ff8cdeb",
+            "productName": "Strawberry Kiss Blended",
+            "success": false,
+            "error": "Only 5/7 ingredients could be mapped",
+            "partialMappings": 5
+          },
+          {
+            "productId": "34210738-19e7-4798-9285-3f35e9749dc6",
+            "productName": "Oreo Strawberry Blended",
+            "success": false,
+            "error": "Only 6/8 ingredients could be mapped",
+            "partialMappings": 6
+          }
+        ],
+        "successCount": 0,
+        "failureCount": 10,
+        "startTime": "2025-08-27T06:35:31.347Z",
+        "endTime": "2025-08-27T06:35:33.520Z"
+      },
+      {
+        "batchNumber": 5,
+        "products": [
+          {
+            "id": "1cf35d92-2d20-421b-83cc-2df440fa8916",
+            "name": "Matcha Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "709a929d-717e-4851-abcc-ab52690ee51d",
+            "name": "Strawberry Kiss Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "59bb676a-0fbc-4ce2-821f-a0165780d122",
+            "name": "Oreo Strawberry Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "7976001d-9e61-4ae2-a552-771b542a2b24",
+            "name": "Matcha Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "ec2f4f22-6055-4b3c-bc06-0090838191e8",
+            "name": "Oreo Strawberry Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "64b456a1-4a43-4bd5-8f1e-07a058bff4dc",
+            "name": "Strawberry Kiss Blended",
+            "category": "Blended Drink"
+          },
+          {
+            "id": "9fb2d4de-dc78-4783-b16a-5d4c14815890",
+            "name": "Matcha Blended",
+            "category": "Blended Drink"
+          }
+        ],
+        "results": [
+          {
+            "productId": "1cf35d92-2d20-421b-83cc-2df440fa8916",
+            "productName": "Matcha Blended",
+            "success": false,
+            "error": "Only 4/6 ingredients could be mapped",
+            "partialMappings": 4
+          },
+          {
+            "productId": "709a929d-717e-4851-abcc-ab52690ee51d",
+            "productName": "Strawberry Kiss Blended",
+            "success": false,
+            "error": "Only 5/7 ingredients could be mapped",
+            "partialMappings": 5
+          },
+          {
+            "productId": "59bb676a-0fbc-4ce2-821f-a0165780d122",
+            "productName": "Oreo Strawberry Blended",
+            "success": false,
+            "error": "Only 6/8 ingredients could be mapped",
+            "partialMappings": 6
+          },
+          {
+            "productId": "7976001d-9e61-4ae2-a552-771b542a2b24",
+            "productName": "Matcha Blended",
+            "success": false,
+            "error": "Only 4/6 ingredients could be mapped",
+            "partialMappings": 4
+          },
+          {
+            "productId": "ec2f4f22-6055-4b3c-bc06-0090838191e8",
+            "productName": "Oreo Strawberry Blended",
+            "success": false,
+            "error": "Only 6/8 ingredients could be mapped",
+            "partialMappings": 6
+          },
+          {
+            "productId": "64b456a1-4a43-4bd5-8f1e-07a058bff4dc",
+            "productName": "Strawberry Kiss Blended",
+            "success": false,
+            "error": "Only 5/7 ingredients could be mapped",
+            "partialMappings": 5
+          },
+          {
+            "productId": "9fb2d4de-dc78-4783-b16a-5d4c14815890",
+            "productName": "Matcha Blended",
+            "success": false,
+            "error": "Only 4/6 ingredients could be mapped",
+            "partialMappings": 4
+          }
+        ],
+        "successCount": 0,
+        "failureCount": 7,
+        "startTime": "2025-08-27T06:35:33.521Z",
+        "endTime": "2025-08-27T06:35:35.187Z"
+      }
+    ],
+    "currentBatch": 5
+  },
+  "stats": {
+    "crofflesFixed": 23,
+    "blendedDrinksFixed": 0,
+    "keyIngredientsFixed": 0,
+    "packagingFixed": 0
+  }
+}
