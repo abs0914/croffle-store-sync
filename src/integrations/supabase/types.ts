@@ -5516,6 +5516,14 @@ export type Database = {
           total_templates: number
         }[]
       }
+      deploy_catalog_products_only: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          execution_time_ms: number
+          products_added: number
+          stores_processed: number
+        }[]
+      }
       deploy_missing_products_to_catalog: {
         Args: Record<PropertyKey, never>
         Returns: {
