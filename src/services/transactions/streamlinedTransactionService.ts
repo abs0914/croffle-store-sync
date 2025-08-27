@@ -181,13 +181,13 @@ class StreamlinedTransactionService {
         console.error('❌ Inventory errors:', inventoryResult.errors);
 
         // Log the failure for monitoring
-        await transactionErrorLogger.logError(
-          'INVENTORY_DEDUCTION_FAILED',
+        await transactionErrorLogger.logInventoryError(
+          'deduction_failed',
           new Error(`Inventory deduction failed: ${inventoryResult.errors.join(', ')}`),
           {
             ...context,
             transactionId: transaction.id,
-            inventoryErrors: inventoryResult.errors
+            affectedItems: inventoryResult.errors
           }
         );
 

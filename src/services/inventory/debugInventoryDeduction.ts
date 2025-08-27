@@ -5,7 +5,7 @@
  * to help identify why the system is not working properly.
  */
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface DebugTransactionItem {
   name: string;
@@ -163,13 +163,14 @@ export async function debugInventoryDeduction(
           .from('inventory_transactions')
           .insert({
             store_id: storeId,
-            item: ingredient.ingredient_name,
+            product_id: inventory.id, // Use inventory ID as product reference
             transaction_type: 'sale',
             quantity: -requiredQuantity,
             previous_quantity: previousStock,
             new_quantity: newStock,
             reference_id: transactionId,
             notes: `Debug deduction for transaction ${transactionId}`,
+            created_by: '00000000-0000-0000-0000-000000000000', // System user
             created_at: new Date().toISOString()
           });
 
