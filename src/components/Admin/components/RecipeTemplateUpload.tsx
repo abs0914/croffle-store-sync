@@ -40,7 +40,15 @@ export const RecipeTemplateUpload: React.FC = () => {
         message: 'Reading file...'
       });
 
-      const text = await file.text();
+      // Use enhanced file reading with retry logic
+      const { safeReadFile } = await import('@/utils/fileUploadUtils');
+      const result = await safeReadFile(file, { retries: 3, delay: 500 });
+
+      if (!result.success || !result.content) {
+        throw new Error(result.error || 'Failed to read file');
+      }
+
+      const text = result.content;
       let data;
 
       if (file.name.endsWith('.csv')) {
@@ -50,9 +58,19 @@ export const RecipeTemplateUpload: React.FC = () => {
       }
 
       await processUpload(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing file:', error);
-      toast.error('Failed to process file');
+      const errorMessage = error.message || 'Failed to process file';
+
+      // Provide specific guidance for common errors
+      if (error.name === 'NotReadableError' || errorMessage.includes('permission')) {
+        toast.error('File access error. Please close the file in other applications and try again.');
+      } else if (errorMessage.includes('JSON')) {
+        toast.error('Invalid JSON format. Please check your file structure.');
+      } else {
+        toast.error(errorMessage);
+      }
+
       setUploadProgress(null);
     }
   };
