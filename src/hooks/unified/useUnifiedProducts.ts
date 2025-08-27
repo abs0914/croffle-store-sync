@@ -60,6 +60,7 @@ export function useUnifiedProducts({
    */
   const loadData = useCallback(async () => {
     if (!storeId) {
+      console.log('🚫 No storeId provided, clearing data');
       setData({
         products: [],
         categories: [],
@@ -74,6 +75,7 @@ export function useUnifiedProducts({
     }
 
     try {
+      console.log('🔄 Loading unified data for store:', storeId);
       setIsLoading(true);
       setError(null);
       
@@ -84,7 +86,8 @@ export function useUnifiedProducts({
       console.log('✅ Unified products loaded:', {
         storeId,
         totalProducts: unifiedData.totalProducts,
-        availableProducts: unifiedData.availableProducts
+        availableProducts: unifiedData.availableProducts,
+        productsCount: unifiedData.products.length
       });
     } catch (err) {
       console.error('❌ Error loading unified products:', err);
@@ -216,10 +219,11 @@ export function useUnifiedProducts({
     return unifiedProductInventoryService.validateProductsForSale(storeId, items);
   }, [storeId]);
 
-  // Initial data load
+  // Initial data load and store change handling
   useEffect(() => {
+    console.log('🔄 Store changed, loading data for:', storeId);
     loadData();
-  }, [loadData]);
+  }, [loadData, storeId]); // Add storeId dependency to ensure reload on store change
 
   // Set up real-time subscriptions
   useEffect(() => {
@@ -242,7 +246,7 @@ export function useUnifiedProducts({
     const unsubscribeRealtime = unifiedProductInventoryService.subscribeToUpdates(storeId);
 
     return () => {
-      console.log('🧹 Cleaning up unified products subscriptions');
+      console.log('🧹 Cleaning up unified products subscriptions for store:', storeId);
       unsubscribeListener();
       unsubscribeRealtime();
     };
