@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Users, 
-  Store, 
-  Package, 
-  ClipboardList, 
+import {
+  Users,
+  Store,
+  Package,
+  ClipboardList,
   ChefHat,
   Factory,
   ArrowRightLeft,
@@ -14,14 +14,12 @@ import {
   TrendingDown,
   AlertTriangle,
   Building2,
-  Handshake,
-  Wrench
+  Handshake
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/utils/format';
-import { ProductIntegrityDashboard } from '@/components/Admin/ProductIntegrityDashboard';
-import { ProductTemplateAssociationDashboard } from '@/components/Admin/ProductTemplateAssociationDashboard';
+
 
 interface StoreMetrics {
   totalStores: number;
@@ -437,11 +435,7 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* Product Catalog Integrity */}
-      <ProductIntegrityDashboard />
 
-      {/* Product Template Associations */}
-      <ProductTemplateAssociationDashboard />
 
       {/* Quick Actions */}
       <Card>
