@@ -34,8 +34,7 @@ export function TableRecipeUpload() {
 
   const sampleTableData = `| Product             | category | Ingredient Name     | Unit of Measure | Quantity | Cost per Unit | price |
 |---------------------|----------|---------------------|-----------------|----------|---------------|-------|
-| Tiramisu            | Classic  | REGULAR CROISSANT   | piece           | 1        | 30            | 125   |
-| Tiramisu            | Classic  | WHIPPED CREAM       | serving         | 1        | 8             | 125   |`;
+| Sample Product      | Classic  | Sample Ingredient   | piece           | 1        | 0             | 0     |`;
 
   return (
     <Card>

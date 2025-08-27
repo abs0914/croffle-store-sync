@@ -41,6 +41,14 @@ export class InventoryCacheService {
   }
 
   /**
+   * Clear all cache entries and reset for fresh system start
+   */
+  static resetForFreshStart(): void {
+    this.cache.clear();
+    console.log('🔄 Inventory cache reset for fresh system start');
+  }
+
+  /**
    * Get cached data or fetch if not available
    */
   private static async getCached<T>(

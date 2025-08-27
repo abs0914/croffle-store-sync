@@ -1,13 +1,9 @@
 import { parseMarkdownTable, ParsedRecipeFile } from './markdownRecipeParser';
 
 // Recipe file contents (these would normally be loaded from the file system)
-const RECIPE_FILES = {
-  'croffleRecipe.md': `| Product           | Category | Ingredient Name   | Unit of Measure | Quantity | Cost per Unit | Price |
-| ----------------- | -------- | ----------------- | --------------- | -------- | ------------- | ----- |
-| Tiramisu          | Classic  | Regular Croissant | Piece           | 1        | 30            | 125   |
-| Tiramisu          | Classic  | Whipped Cream     | Serving         | 1        | 8             | 125   |
-| Tiramisu          | Classic  | Tiramisu          | Portion         | 1        | 3.5           | 125   |
-| Tiramisu          | Classic  | Choco Flakes      | Portion         | 1        | 2.5           | 125   |
+// CLEANED: Removed hardcoded sample data for fresh system reset
+const RECIPE_FILES: Record<string, string> = {
+  // Files will be loaded dynamically when uploaded through the UI
 | Tiramisu          | Classic  | Chopstick         | Pair            | 1        | 0.6           | 125   |
 | Tiramisu          | Classic  | Wax Paper         | Piece           | 1        | 0.7           | 125   |
 | Choco Nut         | Classic  | Regular Croissant | Piece           | 1        | 30            | 125   |
