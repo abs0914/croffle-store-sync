@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-08-27T06:00:48.970Z",
+  "status": "warning",
+  "metrics": {
+    "mapping_completion": "15.1",
+    "low_stock_items": 0,
+    "total_alerts": 1
+  },
+  "alerts": [
+    {
+      "type": "missing_mappings",
+      "severity": "high",
+      "message": "258 products missing ingredient mappings",
+      "action": "Review and create missing mappings"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "Complete ingredient mappings",
+      "description": "258 products need ingredient mappings",
+      "estimated_time": "2-4 hours"
+    },
+    {
+      "priority": "medium",
+      "action": "Schedule regular mapping audits",
+      "description": "Set up weekly audits to catch new products without mappings",
+      "estimated_time": "30 minutes setup"
+    }
+  ]
+}
