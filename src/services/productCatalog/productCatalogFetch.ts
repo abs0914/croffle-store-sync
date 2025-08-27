@@ -12,15 +12,10 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
     let { data, error } = await supabase
       .from("product_catalog")
       .select(`
-        id, product_name, description, price, category_id, store_id, image_url, is_available, product_status, recipe_id,
-        ingredients:product_ingredients(
-          *,
-          inventory_item:inventory_stock(*)
-        )
+        id, product_name, description, price, category_id, store_id, image_url, is_available, product_status, recipe_id
       `)
       .eq("store_id", storeId)
-      // Remove is_available filter to include products marked unavailable by automatic service
-      // We'll filter in the UI based on product_status and is_available together
+      // Do NOT filter by availability here; UI handles status/availability
       .order("display_order", { ascending: true });
 
     // If that fails for any reason, attempt a minimal fallback query
@@ -30,7 +25,7 @@ export const fetchProductCatalogForPOS = async (storeId: string): Promise<Produc
         .from("product_catalog")
         .select("id, product_name, description, price, category_id, store_id, image_url, is_available, product_status, recipe_id")
         .eq("store_id", storeId)
-        .eq("is_available", true)
+        // Do not hide unavailable products in fallback either; UI will indicate status
         .order("display_order", { ascending: true });
       data = minimal.data as any;
       error = minimal.error as any;
