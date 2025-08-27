@@ -39,43 +39,53 @@ export interface ProductHealthSummary {
 export const fetchEnhancedProductCatalog = async (storeId: string): Promise<EnhancedProductCatalog[]> => {
   try {
     console.log('🔍 Fetching enhanced product catalog for store:', storeId);
-    
-    // Fetch products with recipe template and ingredient information
+
+    // Use safe query without cross-table joins to avoid RLS issues
     const { data: products, error } = await supabase
       .from('product_catalog')
       .select(`
-        *,
-        recipe:recipes(
-          id,
-          template_id,
-          name,
-          is_active,
-          template:recipe_templates(
-            id,
-            name,
-            is_active
-          )
-        ),
-        ingredients:product_ingredients(
-          *,
-          inventory_item:inventory_stock(
-            id,
-            item,
-            unit,
-            stock_quantity,
-            minimum_threshold,
-            is_active
-          )
-        )
+        id, product_name, description, price, category_id, store_id,
+        image_url, is_available, product_status, recipe_id, display_order,
+        created_at, updated_at
       `)
       .eq('store_id', storeId)
-      .order('display_order', { nullsFirst: false });
+      .order('display_order', { ascending: true, nullsLast: true });
 
     if (error) throw error;
 
     if (!products) return [];
 
     console.log('📊 Processing', products.length, 'products for enhanced status');
+
+    // Fetch additional data separately to avoid RLS issues
+    const recipeIds = products.filter(p => p.recipe_id).map(p => p.recipe_id);
+    let recipes: any[] = [];
+    let ingredients: any[] = [];
+
+    if (recipeIds.length > 0) {
+      // Fetch recipes separately
+      const { data: recipesData } = await supabase
+        .from('recipes')
+        .select(`
+          id, template_id, name, is_active,
+          template:recipe_templates(id, name, is_active)
+        `)
+        .in('id', recipeIds);
+
+      recipes = recipesData || [];
+
+      // Fetch ingredients separately
+      const { data: ingredientsData } = await supabase
+        .from('product_ingredients')
+        .select(`
+          *, inventory_item:inventory_stock(
+            id, item, unit, stock_quantity, minimum_threshold, is_active
+          )
+        `)
+        .in('product_catalog_id', products.map(p => p.id));
+
+      ingredients = ingredientsData || [];
+    }
 
     // Process each product to determine enhanced status
     const enhancedProducts: EnhancedProductCatalog[] = products.map(product => {
@@ -88,20 +98,24 @@ export const fetchEnhancedProductCatalog = async (storeId: string): Promise<Enha
         health_score: 0,
         health_issues: []
       };
-      
+
       // Initialize health tracking
       let healthScore = 100;
       const healthIssues: string[] = [];
       const posIssues: string[] = [];
 
+      // Find recipe data for this product
+      const recipe = recipes.find(r => r.id === product.recipe_id);
+      const productIngredients = ingredients.filter(i => i.product_catalog_id === product.id);
+
       // Check recipe template status - Updated logic after recipe linking migration
-      const hasRecipe = !!(product.recipe?.id || product.recipe_id);
-      const hasTemplate = !!(product.recipe?.template?.id);
-      const templateActive = product.recipe?.template?.is_active === true;
-      
+      const hasRecipe = !!(recipe?.id || product.recipe_id);
+      const hasTemplate = !!(recipe?.template?.id);
+      const templateActive = recipe?.template?.is_active === true;
+
       enhanced.has_recipe_template = hasTemplate && templateActive;
-      enhanced.template_name = product.recipe?.template?.name;
-      enhanced.template_status = hasTemplate 
+      enhanced.template_name = recipe?.template?.name;
+      enhanced.template_status = hasTemplate
         ? (templateActive ? 'active' : 'inactive')
         : 'missing';
 
@@ -126,13 +140,13 @@ export const fetchEnhancedProductCatalog = async (storeId: string): Promise<Enha
       }
 
       // Check inventory status for recipe-based products
-      if (hasRecipe && product.ingredients && product.ingredients.length > 0) {
+      if (hasRecipe && productIngredients && productIngredients.length > 0) {
         const missingIngredients: string[] = [];
         const insufficientIngredients: string[] = [];
         let totalStock = 0;
         let hasStock = false;
 
-        product.ingredients.forEach((ingredient: any) => {
+        productIngredients.forEach((ingredient: any) => {
           const inventoryItem = ingredient.inventory_item;
           
           if (!inventoryItem) {
