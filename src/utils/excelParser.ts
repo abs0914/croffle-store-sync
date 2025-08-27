@@ -7,11 +7,15 @@ export interface ExcelRecipeData {
   yield_quantity: number;
   serving_size: number;
   instructions: string;
+  suggested_price?: number;
+  combo_main?: string;
+  combo_add_on?: string;
   ingredients: {
     ingredient_name: string;
     unit: string;
     quantity: number;
     cost_per_unit: number;
+    ingredient_category?: string;
   }[];
 }
 
@@ -105,9 +109,16 @@ export const parseExcelFile = async (file: File): Promise<ExcelParseResult> => {
         const quantityStr = String(row[headerMap['quantity']] || '0').trim();
         const costStr = String(row[headerMap['cost_per_unit']] || row[headerMap['cost']] || '0').trim();
 
+        // Extract new essential fields
+        const ingredientCategory = String(row[headerMap['ingredient_category']] || 'General').trim();
+        const suggestedPriceStr = String(row[headerMap['suggested_price']] || '0').trim();
+        const comboMain = String(row[headerMap['combo_main']] || '').trim();
+        const comboAddOn = String(row[headerMap['combo_add_on']] || '').trim();
+
         // Parse numeric values
         const quantity = parseFloat(quantityStr) || 0;
         const cost = parseFloat(costStr) || 0;
+        const suggestedPrice = parseFloat(suggestedPriceStr) || 0;
 
         console.log(`Processing row ${i + 1}:`, {
           recipeName,
@@ -115,7 +126,11 @@ export const parseExcelFile = async (file: File): Promise<ExcelParseResult> => {
           category,
           unit,
           quantity,
-          cost
+          cost,
+          ingredientCategory,
+          suggestedPrice,
+          comboMain,
+          comboAddOn
         });
 
         // Validate required fields
@@ -149,9 +164,23 @@ export const parseExcelFile = async (file: File): Promise<ExcelParseResult> => {
             yield_quantity: 1,
             serving_size: 1,
             instructions: 'Instructions to be added',
+            suggested_price: suggestedPrice > 0 ? suggestedPrice : undefined,
+            combo_main: comboMain || undefined,
+            combo_add_on: comboAddOn || undefined,
             ingredients: []
           };
           recipeMap.set(recipeName, recipe);
+        } else {
+          // Update recipe-level fields if they're provided and not already set
+          if (suggestedPrice > 0 && !recipe.suggested_price) {
+            recipe.suggested_price = suggestedPrice;
+          }
+          if (comboMain && !recipe.combo_main) {
+            recipe.combo_main = comboMain;
+          }
+          if (comboAddOn && !recipe.combo_add_on) {
+            recipe.combo_add_on = comboAddOn;
+          }
         }
 
         // Add ingredient to recipe
@@ -159,7 +188,8 @@ export const parseExcelFile = async (file: File): Promise<ExcelParseResult> => {
           ingredient_name: ingredientName,
           unit: unit,
           quantity: quantity,
-          cost_per_unit: cost
+          cost_per_unit: cost,
+          ingredient_category: ingredientCategory || undefined
         });
 
       } catch (error) {
@@ -191,13 +221,15 @@ export const generateExcelTemplate = (): Uint8Array => {
   // Create sample data
   const sampleData = [
     // Headers
-    ['recipe_name', 'recipe_category', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit'],
+    ['recipe_name', 'recipe_category', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category', 'suggested_price', 'combo_main', 'combo_add_on'],
     // Sample rows
-    ['Chocolate Croffle', 'Main', 'Croffle Base', 1, 'piece', 15],
-    ['Chocolate Croffle', 'Main', 'Chocolate Sauce', 30, 'ml', 2],
-    ['Chocolate Croffle', 'Main', 'Whipped Cream', 20, 'ml', 1.5],
-    ['Strawberry Jam', 'Add-on', 'Strawberry Toppings', 1, 'piece', 1.5],
-    ['Take out box w cover', 'Add-on', 'Take out box w cover', 1, 'piece', 8]
+    ['Chocolate Croffle', 'Main', 'Croffle Base', 1, 'piece', 15, 'Base Items', 85, '', ''],
+    ['Chocolate Croffle', 'Main', 'Chocolate Sauce', 30, 'ml', 2, 'Sauces', '', '', ''],
+    ['Chocolate Croffle', 'Main', 'Whipped Cream', 20, 'ml', 1.5, 'Toppings', '', '', ''],
+    ['Strawberry Jam', 'Add-on', 'Strawberry Toppings', 1, 'piece', 1.5, 'Toppings', 15, '', 'Strawberry Jam'],
+    ['Take out box w cover', 'Add-on', 'Take out box w cover', 1, 'piece', 8, 'Packaging', 8, '', 'Take out box w cover'],
+    ['Croffle + Drink Combo', 'Combo', 'Chocolate Croffle', 1, 'piece', 15, 'Base Items', 120, 'Chocolate Croffle', ''],
+    ['Croffle + Drink Combo', 'Combo', 'Iced Coffee', 1, 'piece', 25, 'Beverages', '', '', 'Iced Coffee']
   ];
 
   // Create workbook and worksheet
@@ -211,7 +243,11 @@ export const generateExcelTemplate = (): Uint8Array => {
     { width: 25 }, // ingredient_name
     { width: 10 }, // quantity
     { width: 10 }, // unit
-    { width: 15 }  // cost_per_unit
+    { width: 15 }, // cost_per_unit
+    { width: 18 }, // ingredient_category
+    { width: 15 }, // suggested_price
+    { width: 18 }, // combo_main
+    { width: 15 }  // combo_add_on
   ];
 
   // Add worksheet to workbook

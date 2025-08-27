@@ -535,12 +535,14 @@ export const RecipeTemplateUpload: React.FC = () => {
   };
 
   const downloadCSVTemplate = () => {
-    const csvContent = `recipe_name,recipe_category,ingredient_name,quantity,unit,cost_per_unit
-Chocolate Croffle,Main,Croffle Base,1,piece,15
-Chocolate Croffle,Main,Chocolate Sauce,30,ml,2
-Chocolate Croffle,Main,Whipped Cream,20,ml,1.5
-Strawberry Jam,Add-on,Strawberry Toppings,1,piece,1.5
-Take out box w cover,Add-on,Take out box w cover,1,piece,8`;
+    const csvContent = `recipe_name,recipe_category,ingredient_name,quantity,unit,cost_per_unit,ingredient_category,suggested_price,combo_main,combo_add_on
+Chocolate Croffle,Main,Croffle Base,1,piece,15,Base Items,85,,
+Chocolate Croffle,Main,Chocolate Sauce,30,ml,2,Sauces,,,
+Chocolate Croffle,Main,Whipped Cream,20,ml,1.5,Toppings,,,
+Strawberry Jam,Add-on,Strawberry Toppings,1,piece,1.5,Toppings,15,,Strawberry Jam
+Take out box w cover,Add-on,Take out box w cover,1,piece,8,Packaging,8,,Take out box w cover
+Croffle + Drink Combo,Combo,Chocolate Croffle,1,piece,15,Base Items,120,Chocolate Croffle,
+Croffle + Drink Combo,Combo,Iced Coffee,1,piece,25,Beverages,,,Iced Coffee`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -629,6 +631,8 @@ Take out box w cover,Add-on,Take out box w cover,1,piece,8`;
                       Multiple rows with the same recipe_name will be grouped together.
                       <br />
                       <strong>Required columns:</strong> recipe_name, ingredient_name, quantity, unit
+                      <br />
+                      <strong>Essential for POS/Catalog:</strong> ingredient_category, suggested_price, combo_main, combo_add_on
                       <br />
                       <strong>Optional columns:</strong> recipe_category, cost_per_unit
                     </AlertDescription>
