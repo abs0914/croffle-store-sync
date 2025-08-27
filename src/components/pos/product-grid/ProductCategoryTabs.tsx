@@ -11,20 +11,36 @@ interface ProductCategoryTabsProps {
   onCategorySelect?: (categoryId: string) => void;
 }
 
-export default function ProductCategoryTabs({ 
-  categories, 
-  activeCategory, 
+export default function ProductCategoryTabs({
+  categories,
+  activeCategory,
   setActiveCategory,
   onCategorySelect
 }: ProductCategoryTabsProps) {
   // Filter out inactive categories and categories that shouldn't appear in main menu
   const filteredCategories = categories.filter(category =>
-    category.is_active && 
+    category.is_active &&
     (shouldDisplayCategoryInPOS(category.name) || category.name === "Combo")
   );
 
+  // Remove duplicates by category name (keep first occurrence)
+  const uniqueCategories = filteredCategories.filter((category, index, array) =>
+    array.findIndex(c => c.name === category.name) === index
+  );
+
+  // Define the main POS categories based on your recipe categories
+  const mainCategoryNames = [
+    'Classic', 'Cold', 'Blended', 'Beverages', 'Add-on',
+    'Espresso', 'Fruity', 'Glaze', 'Mix & Match', 'Premium'
+  ];
+
+  // Filter to only show main categories that exist in the database
+  const mainCategories = uniqueCategories.filter(category =>
+    mainCategoryNames.includes(category.name)
+  );
+
   // Sort categories using custom POS ordering
-  const sortedCategories = sortCategoriesForPOS(filteredCategories);
+  const sortedCategories = sortCategoriesForPOS(mainCategories);
 
   const handleCategoryClick = (categoryId: string) => {
     if (onCategorySelect) {
@@ -34,13 +50,24 @@ export default function ProductCategoryTabs({
     }
   };
   
+  // Calculate grid columns based on number of categories (All Items + sorted categories)
+  const totalButtons = sortedCategories.length + 1;
+  const gridCols = totalButtons <= 4 ? 'grid-cols-4' :
+                   totalButtons <= 5 ? 'grid-cols-5' :
+                   totalButtons <= 6 ? 'grid-cols-6' :
+                   totalButtons <= 8 ? 'grid-cols-4 lg:grid-cols-8' : 'grid-cols-5';
+
   return (
-    <div className="grid grid-cols-5 gap-3 md:gap-4 pb-2 px-1">
+    <div className={`grid ${gridCols} gap-2 md:gap-3 pb-2 px-1`}>
       <Button
         onClick={() => setActiveCategory("all")}
         variant={activeCategory === "all" ? "default" : "outline"}
         size="lg"
-        className="min-h-12 min-w-[100px] px-6 whitespace-nowrap font-medium text-sm md:text-base shrink-0 touch-manipulation"
+        className={`min-h-12 min-w-[80px] px-3 md:px-4 whitespace-nowrap font-medium text-xs md:text-sm shrink-0 touch-manipulation ${
+          activeCategory === "all"
+            ? "bg-croffle-primary text-white hover:bg-croffle-dark"
+            : "border-2 border-croffle-primary/30 bg-white text-croffle-primary hover:bg-croffle-light hover:border-croffle-primary/50"
+        }`}
       >
         All Items
       </Button>
@@ -50,7 +77,11 @@ export default function ProductCategoryTabs({
           onClick={() => handleCategoryClick(category.id)}
           variant={activeCategory === category.id ? "default" : "outline"}
           size="lg"
-          className="min-h-12 min-w-[100px] px-6 whitespace-nowrap font-medium text-sm md:text-base shrink-0 touch-manipulation"
+          className={`min-h-12 min-w-[80px] px-3 md:px-4 whitespace-nowrap font-medium text-xs md:text-sm shrink-0 touch-manipulation ${
+            activeCategory === category.id
+              ? "bg-croffle-primary text-white hover:bg-croffle-dark"
+              : "border-2 border-croffle-primary/30 bg-white text-croffle-primary hover:bg-croffle-light hover:border-croffle-primary/50"
+          }`}
         >
           {category.name}
         </Button>
