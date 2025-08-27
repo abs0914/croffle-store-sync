@@ -8,14 +8,16 @@ export interface ExcelRecipeData {
   serving_size: number;
   instructions: string;
   suggested_price?: number;
-  combo_main?: string;
-  combo_add_on?: string;
+  combo_main?: boolean;
+  combo_add_on?: boolean;
   ingredients: {
     ingredient_name: string;
     unit: string;
     quantity: number;
     cost_per_unit: number;
     ingredient_category?: string;
+    combo_main?: boolean;
+    combo_add_on?: boolean;
   }[];
 }
 
@@ -112,13 +114,17 @@ export const parseExcelFile = async (file: File): Promise<ExcelParseResult> => {
         // Extract new essential fields
         const ingredientCategory = String(row[headerMap['ingredient_category']] || 'General').trim();
         const suggestedPriceStr = String(row[headerMap['suggested_price']] || '0').trim();
-        const comboMain = String(row[headerMap['combo_main']] || '').trim();
-        const comboAddOn = String(row[headerMap['combo_add_on']] || '').trim();
+        const comboMainStr = String(row[headerMap['combo_main']] || '').trim().toLowerCase();
+        const comboAddOnStr = String(row[headerMap['combo_add_on']] || '').trim().toLowerCase();
 
         // Parse numeric values
         const quantity = parseFloat(quantityStr) || 0;
         const cost = parseFloat(costStr) || 0;
         const suggestedPrice = parseFloat(suggestedPriceStr) || 0;
+
+        // Parse boolean values (Yes/No, True/False, 1/0)
+        const comboMain = comboMainStr === 'yes' || comboMainStr === 'true' || comboMainStr === '1';
+        const comboAddOn = comboAddOnStr === 'yes' || comboAddOnStr === 'true' || comboAddOnStr === '1';
 
         console.log(`Processing row ${i + 1}:`, {
           recipeName,
@@ -175,10 +181,10 @@ export const parseExcelFile = async (file: File): Promise<ExcelParseResult> => {
           if (suggestedPrice > 0 && !recipe.suggested_price) {
             recipe.suggested_price = suggestedPrice;
           }
-          if (comboMain && !recipe.combo_main) {
+          if (comboMain && recipe.combo_main === undefined) {
             recipe.combo_main = comboMain;
           }
-          if (comboAddOn && !recipe.combo_add_on) {
+          if (comboAddOn && recipe.combo_add_on === undefined) {
             recipe.combo_add_on = comboAddOn;
           }
         }
@@ -189,7 +195,9 @@ export const parseExcelFile = async (file: File): Promise<ExcelParseResult> => {
           unit: unit,
           quantity: quantity,
           cost_per_unit: cost,
-          ingredient_category: ingredientCategory || undefined
+          ingredient_category: ingredientCategory || undefined,
+          combo_main: comboMain || undefined,
+          combo_add_on: comboAddOn || undefined
         });
 
       } catch (error) {
@@ -223,13 +231,13 @@ export const generateExcelTemplate = (): Uint8Array => {
     // Headers
     ['recipe_name', 'recipe_category', 'ingredient_name', 'quantity', 'unit', 'cost_per_unit', 'ingredient_category', 'suggested_price', 'combo_main', 'combo_add_on'],
     // Sample rows
-    ['Chocolate Croffle', 'Main', 'Croffle Base', 1, 'piece', 15, 'Base Items', 85, '', ''],
-    ['Chocolate Croffle', 'Main', 'Chocolate Sauce', 30, 'ml', 2, 'Sauces', '', '', ''],
-    ['Chocolate Croffle', 'Main', 'Whipped Cream', 20, 'ml', 1.5, 'Toppings', '', '', ''],
-    ['Strawberry Jam', 'Add-on', 'Strawberry Toppings', 1, 'piece', 1.5, 'Toppings', 15, '', 'Strawberry Jam'],
-    ['Take out box w cover', 'Add-on', 'Take out box w cover', 1, 'piece', 8, 'Packaging', 8, '', 'Take out box w cover'],
-    ['Croffle + Drink Combo', 'Combo', 'Chocolate Croffle', 1, 'piece', 15, 'Base Items', 120, 'Chocolate Croffle', ''],
-    ['Croffle + Drink Combo', 'Combo', 'Iced Coffee', 1, 'piece', 25, 'Beverages', '', '', 'Iced Coffee']
+    ['Chocolate Croffle', 'Main', 'Croffle Base', 1, 'piece', 15, 'Base Items', 85, 'Yes', 'No'],
+    ['Chocolate Croffle', 'Main', 'Chocolate Sauce', 30, 'ml', 2, 'Sauces', '', 'No', 'Yes'],
+    ['Chocolate Croffle', 'Main', 'Whipped Cream', 20, 'ml', 1.5, 'Toppings', '', 'No', 'Yes'],
+    ['Strawberry Jam', 'Add-on', 'Strawberry Toppings', 1, 'piece', 1.5, 'Toppings', 15, 'No', 'Yes'],
+    ['Take out box w cover', 'Add-on', 'Take out box w cover', 1, 'piece', 8, 'Packaging', 8, 'No', 'Yes'],
+    ['Iced Coffee', 'Main', 'Coffee Beans', 20, 'grams', 3, 'Beverages', 45, 'Yes', 'Yes'],
+    ['Iced Coffee', 'Main', 'Ice Cubes', 100, 'grams', 0.5, 'Beverages', '', 'No', 'No']
   ];
 
   // Create workbook and worksheet

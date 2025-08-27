@@ -288,7 +288,7 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
         <CardContent className="text-sm space-y-2">
           <p><strong>Supported formats:</strong> CSV (.csv), Excel (.xlsx, .xls)</p>
           <p><strong>Required columns:</strong> recipe_name, ingredient_name, quantity, unit</p>
-          <p><strong>Essential for POS/Catalog:</strong> ingredient_category, suggested_price, combo_main, combo_add_on</p>
+          <p><strong>Essential for POS/Catalog:</strong> ingredient_category, suggested_price, combo_main (Yes/No), combo_add_on (Yes/No)</p>
           <p><strong>Optional columns:</strong> recipe_category, cost_per_unit, description, instructions</p>
           <p><strong>Units:</strong> Must match standardized units (ml, grams, piece, portion, Scoop, serving)</p>
           <p><strong>Structure:</strong> One row per ingredient, recipe info repeated for each ingredient</p>
