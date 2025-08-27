@@ -201,29 +201,33 @@ export const RecipeTemplateUpload: React.FC = () => {
         row[header] = value;
       });
 
-      // Handle your CSV format with recipe_name, ingredient_name, etc.
-      const recipeName = row.recipe_name || row.name || '';
-      const ingredientName = row.ingredient_name || '';
-      const category = row.recipe_category || row.category || 'General';
+      // Extract values based on your CSV format
+      const recipeName = (row.recipe_name || '').trim();
+      const recipeCategory = (row.recipe_category || '').trim();
+      const ingredientName = (row.ingredient_name || '').trim();
       const quantity = parseFloat(row.quantity || '0') || 0;
-      const unit = row.unit || row.uom || '';
+      const unit = (row.unit || '').trim();
       const costPerUnit = parseFloat(row.cost_per_unit || '0') || 0;
+      const suggestedPrice = parseFloat(row.suggested_price || '0') || 0;
 
-      // Skip empty rows
-      if (!recipeName || recipeName.trim() === '') continue;
-      if (!ingredientName || !unit || quantity <= 0) continue;
+      // Skip empty or invalid rows
+      if (!recipeName || !ingredientName || !unit || quantity <= 0) {
+        console.warn('Skipping invalid row:', { recipeName, ingredientName, unit, quantity });
+        continue;
+      }
 
       // Find existing recipe or create new one
       let existingRecipe = recipes.find(r => r.name === recipeName);
       if (!existingRecipe) {
         existingRecipe = {
           name: recipeName,
-          category_name: category.toLowerCase(),
-          description: `${category} recipe template`,
+          category_name: recipeCategory || 'General',
+          description: `${recipeCategory || 'General'} recipe template`,
           yield_quantity: 1,
           serving_size: 1,
-          instructions: 'Instructions to be added',
-          ingredients: []
+          instructions: `Instructions for ${recipeName}`,
+          ingredients: [],
+          suggested_price: suggestedPrice
         };
         recipes.push(existingRecipe);
       }
