@@ -56,6 +56,11 @@ export const fetchEnhancedProductCatalog = async (storeId: string): Promise<Enha
     if (!products) return [];
 
     console.log('📊 Processing', products.length, 'products for enhanced status');
+    console.log('🔍 Enhanced Product Catalog Debug:', {
+      storeId,
+      totalProducts: products.length,
+      sampleProducts: products.slice(0, 3).map(p => ({ id: p.id, name: p.product_name, available: p.is_available }))
+    });
 
     // Fetch additional data separately to avoid RLS issues
     const recipeIds = products.filter(p => p.recipe_id).map(p => p.recipe_id);

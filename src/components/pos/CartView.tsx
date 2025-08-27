@@ -11,6 +11,7 @@ import { useStore } from '@/contexts/StoreContext';
 import { useCart } from '@/contexts/cart/CartContext';
 import { toast } from 'sonner';
 import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
+import { quickCheckoutValidation } from '@/services/pos/lightweightValidationService';
 import {
   CartHeader,
   CartValidationMessage,
@@ -141,7 +142,6 @@ export default function CartView({
       // Step 1: Use lightweight validation for final check
       console.log('💨 Quick checkout validation for', cartItems.length, 'items');
       
-      const { quickCheckoutValidation } = await import('@/services/pos/lightweightValidationService');
       const quickValidation = await quickCheckoutValidation(cartItems, currentStore.id);
       
       if (!quickValidation.isValid) {

@@ -46,20 +46,21 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
   
   const canEditPrices = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
 
-  // Fetch enhanced product data
+  // Fetch enhanced product data with forced fresh fetch
   const {
     data: products = [],
     isLoading: loading,
     error: productsError,
     refetch: refetchProducts
   } = useOptimizedDataFetch<EnhancedProductCatalog[]>(
-    ['enhanced-product-catalog', storeId],
+    ['enhanced-product-catalog', storeId, Date.now()], // Add timestamp to force fresh fetch
     () => fetchEnhancedProductCatalog(storeId),
     {
       enabled: !!storeId,
       cacheConfig: {
-        staleTime: 30 * 1000, // 30 seconds for real-time updates
-        cacheTime: 2 * 60 * 1000,
+        staleTime: 0, // Force immediate refetch - no cache
+        cacheTime: 0, // Don't cache results
+        refetchOnWindowFocus: true
       }
     }
   );
