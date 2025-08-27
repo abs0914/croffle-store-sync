@@ -201,38 +201,40 @@ export const RecipeTemplateUpload: React.FC = () => {
         row[header] = value;
       });
 
-      // Skip empty rows
-      if (!row.name || row.name.trim() === '') continue;
+      // Handle your CSV format with recipe_name, ingredient_name, etc.
+      const recipeName = row.recipe_name || row.name || '';
+      const ingredientName = row.ingredient_name || '';
+      const category = row.recipe_category || row.category || 'General';
+      const quantity = parseFloat(row.quantity || '0') || 0;
+      const unit = row.unit || row.uom || '';
+      const costPerUnit = parseFloat(row.cost_per_unit || '0') || 0;
 
-      // Determine record type based on content
-      if (row.type === 'recipe' || (!row.type && row.name && row.ingredients)) {
-        try {
-          const recipe = parseRecipeRow(row);
-          if (recipe.name) {
-            recipes.push(recipe);
-          }
-        } catch (error) {
-          console.error('Failed to parse recipe row:', row.name, error);
-        }
-      } else if (row.type === 'addon') {
-        try {
-          const addon = parseAddonRow(row);
-          if (addon.name) {
-            addons.push(addon);
-          }
-        } catch (error) {
-          console.error('Failed to parse addon row:', row.name, error);
-        }
-      } else if (row.type === 'combo') {
-        try {
-          const combo = parseComboRow(row);
-          if (combo.name) {
-            combos.push(combo);
-          }
-        } catch (error) {
-          console.error('Failed to parse combo row:', row.name, error);
-        }
+      // Skip empty rows
+      if (!recipeName || recipeName.trim() === '') continue;
+      if (!ingredientName || !unit || quantity <= 0) continue;
+
+      // Find existing recipe or create new one
+      let existingRecipe = recipes.find(r => r.name === recipeName);
+      if (!existingRecipe) {
+        existingRecipe = {
+          name: recipeName,
+          category_name: category.toLowerCase(),
+          description: `${category} recipe template`,
+          yield_quantity: 1,
+          serving_size: 1,
+          instructions: 'Instructions to be added',
+          ingredients: []
+        };
+        recipes.push(existingRecipe);
       }
+
+      // Add ingredient to recipe
+      existingRecipe.ingredients.push({
+        ingredient_name: ingredientName,
+        unit: unit,
+        quantity: quantity,
+        cost_per_unit: costPerUnit
+      });
     }
 
     return { recipes, addons, combos };
