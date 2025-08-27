@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Upload, Download, FileText, Package, Sparkles, Zap } from 'lucide-react';
+import { Upload, Download, FileText, Package, Sparkles, Zap, FileSpreadsheet } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { bulkUploadRecipeTemplates, validateUploadData } from '@/services/recipeManagement/bulkUploadService';
+import { parseExcelFile, downloadExcelTemplate } from '@/utils/excelParser';
 
 interface UploadProgress {
   current: number;
@@ -48,12 +49,34 @@ export const RecipeTemplateUpload: React.FC = () => {
         throw new Error(result.error || 'Failed to read file');
       }
 
-      const text = result.content;
       let data;
 
-      if (file.name.endsWith('.csv')) {
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        // Handle Excel files
+        const excelResult = await parseExcelFile(file);
+
+        if (excelResult.errors.length > 0) {
+          throw new Error(`Excel parsing errors: ${excelResult.errors.join(', ')}`);
+        }
+
+        if (excelResult.warnings.length > 0) {
+          console.warn('Excel parsing warnings:', excelResult.warnings);
+          toast.warning(`${excelResult.warnings.length} warnings during parsing. Check console for details.`);
+        }
+
+        data = {
+          recipes: excelResult.recipes,
+          addons: excelResult.addons,
+          combos: excelResult.combos
+        };
+
+        console.log('Parsed Excel data:', data);
+
+      } else if (file.name.endsWith('.csv')) {
+        const text = result.content;
         data = parseCSV(text);
       } else {
+        const text = result.content;
         data = JSON.parse(text);
       }
 
@@ -512,10 +535,12 @@ export const RecipeTemplateUpload: React.FC = () => {
   };
 
   const downloadCSVTemplate = () => {
-    const csvContent = `type,name,description,category,instructions,yield_quantity,serving_size,recipe_type,ingredients,price,is_premium,display_order,base_category,combo_category,combo_price,discount_amount,priority,image_url
-recipe,"Sample Croffle","Delicious croffle","croffles","1. Cook in croffle maker",1,1,"food","[{""ingredient_name"":""Waffle Mix"",""quantity"":100,""unit"":""g"",""cost_per_unit"":0.02}]",,,,,,,,,
-addon,"Extra Cheese","Additional cheese","toppings",,,,,"",15,false,1,,,,,,
-combo,"Croffle + Drink","Combo deal",,,,,,"",,,,"croffles","beverages",120,20,1,`;
+    const csvContent = `recipe_name,recipe_category,ingredient_name,quantity,unit,cost_per_unit
+Chocolate Croffle,Main,Croffle Base,1,piece,15
+Chocolate Croffle,Main,Chocolate Sauce,30,ml,2
+Chocolate Croffle,Main,Whipped Cream,20,ml,1.5
+Strawberry Jam,Add-on,Strawberry Toppings,1,piece,1.5
+Take out box w cover,Add-on,Take out box w cover,1,piece,8`;
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -566,14 +591,48 @@ combo,"Croffle + Drink","Combo deal",,,,,,"",,,,"croffles","beverages",120,20,1,
 
               <TabsContent value="file" className="space-y-4">
                 <div>
-                  <Label htmlFor="file-upload">Upload CSV or JSON File</Label>
+                  <Label htmlFor="file-upload">Upload Excel, CSV or JSON File</Label>
                   <Input
                     id="file-upload"
                     type="file"
-                    accept=".csv,.json"
+                    accept=".xlsx,.xls,.csv,.json"
                     onChange={handleFileUpload}
                     className="mt-2"
                   />
+                  <div className="mt-4 flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={downloadExcelTemplate}
+                      className="flex items-center gap-2"
+                    >
+                      <FileSpreadsheet className="h-4 w-4" />
+                      Download Excel Template
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={downloadCSVTemplate}
+                      className="flex items-center gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Download CSV Template
+                    </Button>
+                  </div>
+
+                  <Alert className="mt-4">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Excel Format:</strong> Use the Excel template for the easiest experience. Each row represents one ingredient for a recipe.
+                      Multiple rows with the same recipe_name will be grouped together.
+                      <br />
+                      <strong>Required columns:</strong> recipe_name, ingredient_name, quantity, unit
+                      <br />
+                      <strong>Optional columns:</strong> recipe_category, cost_per_unit
+                    </AlertDescription>
+                  </Alert>
                 </div>
               </TabsContent>
 
