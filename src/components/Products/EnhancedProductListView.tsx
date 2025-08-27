@@ -31,6 +31,7 @@ import { updateProduct } from '@/services/productCatalog/productCatalogService';
 import { Category } from '@/types';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { useOptimizedDataFetch } from '@/hooks/useOptimizedDataFetch';
 
 interface EnhancedProductListViewProps {
@@ -46,24 +47,69 @@ export function EnhancedProductListView({ storeId }: EnhancedProductListViewProp
   
   const canEditPrices = hasPermission('admin') || hasPermission('owner') || hasPermission('manager');
 
-  // Fetch enhanced product data with forced fresh fetch
+  // Fallback to simple product catalog fetch if enhanced fails
   const {
-    data: products = [],
-    isLoading: loading,
-    error: productsError,
-    refetch: refetchProducts
+    data: enhancedProducts = [],
+    isLoading: loadingEnhanced,
+    error: enhancedError,
+    refetch: refetchEnhanced
   } = useOptimizedDataFetch<EnhancedProductCatalog[]>(
-    ['enhanced-product-catalog', storeId, Date.now()], // Add timestamp to force fresh fetch
+    ['enhanced-product-catalog', storeId],
     () => fetchEnhancedProductCatalog(storeId),
     {
       enabled: !!storeId,
       cacheConfig: {
-        staleTime: 0, // Force immediate refetch - no cache
-        cacheTime: 0, // Don't cache results
-        refetchOnWindowFocus: true
+        staleTime: 30 * 1000,
+        cacheTime: 2 * 60 * 1000,
       }
     }
   );
+
+  // Simple product catalog as fallback
+  const {
+    data: simpleProducts = [],
+    isLoading: loadingSimple,
+    error: simpleError,
+    refetch: refetchSimple
+  } = useOptimizedDataFetch<any[]>(
+    ['product-catalog-simple', storeId],
+    async () => {
+      const { data, error } = await supabase
+        .from('product_catalog')
+        .select('*')
+        .eq('store_id', storeId)
+        .order('display_order', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    {
+      enabled: !!storeId && enhancedProducts.length === 0,
+      cacheConfig: {
+        staleTime: 30 * 1000,
+        cacheTime: 2 * 60 * 1000,
+      }
+    }
+  );
+
+  // Use enhanced products if available, otherwise use simple products with basic enhancement
+  const products = enhancedProducts.length > 0 
+    ? enhancedProducts 
+    : simpleProducts.map(product => ({
+        ...product,
+        stock_status: 'direct_product' as const,
+        has_recipe_template: !!product.recipe_id,
+        pos_ready: !!product.recipe_id || product.is_available,
+        health_score: product.is_available ? 85 : 60,
+        health_issues: product.is_available ? [] : ['Product not available'],
+        template_status: product.recipe_id ? 'active' : 'missing' as const
+      }));
+
+  const loading = loadingEnhanced || loadingSimple;
+  const refetchProducts = () => {
+    refetchEnhanced();
+    refetchSimple();
+  };
 
   // Fetch health summary
   const {

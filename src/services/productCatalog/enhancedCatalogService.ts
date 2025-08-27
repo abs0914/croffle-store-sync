@@ -49,7 +49,7 @@ export const fetchEnhancedProductCatalog = async (storeId: string): Promise<Enha
         created_at, updated_at
       `)
       .eq('store_id', storeId)
-      .order('display_order', { ascending: true, nullsLast: true });
+      .order('display_order', { ascending: true });
 
     if (error) throw error;
 
@@ -195,7 +195,7 @@ export const fetchEnhancedProductCatalog = async (storeId: string): Promise<Enha
         enhanced.stock_count = totalStock;
         enhanced.missing_ingredients = missingIngredients;
         enhanced.insufficient_ingredients = insufficientIngredients;
-      } else if (hasRecipe && (!product.ingredients || product.ingredients.length === 0)) {
+      } else if (hasRecipe && (!productIngredients || productIngredients.length === 0)) {
         // Recipe exists but no ingredients defined
         enhanced.stock_status = 'missing_inventory';
         healthScore -= 35;

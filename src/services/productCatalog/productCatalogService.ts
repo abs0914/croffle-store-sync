@@ -46,7 +46,7 @@ export const fetchProductCatalog = async (storeId: string): Promise<ProductCatal
         created_at, updated_at
       `)
       .eq('store_id', storeId)
-      .order('display_order', { ascending: true, nullsLast: true });
+      .order('display_order', { ascending: true });
 
     if (error) throw error;
 
