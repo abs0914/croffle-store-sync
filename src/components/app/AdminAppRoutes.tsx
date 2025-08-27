@@ -13,6 +13,7 @@ import AdminExpenses from '@/pages/Admin/AdminExpenses';
 import CommissaryManagement from '@/pages/Commissary/CommissaryManagement';
 import ProductionManagement from '@/pages/ProductionManagement';
 import { RecipeManagement } from '@/pages/Admin/RecipeManagement';
+import { DeploymentVerification } from '@/pages/Admin/DeploymentVerification';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
 import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
@@ -34,7 +35,17 @@ export const AdminAppRoutes = () => {
         }
       />
 
-
+      {/* Deployment Verification */}
+      <Route
+        path="/admin/deployment-verification"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout>
+              <DeploymentVerification />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
 
       {/* Admin Commissary Inventory - Admin Only */}
       <Route

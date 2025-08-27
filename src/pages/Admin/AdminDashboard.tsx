@@ -19,6 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/utils/format';
+import { DeploymentReadinessVerification } from '@/components/Admin/DeploymentReadinessVerification';
 
 
 interface StoreMetrics {
@@ -444,7 +445,7 @@ export default function AdminDashboard() {
           <CardDescription>Common administrative tasks</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <a 
               href="/admin/stores" 
               className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
@@ -466,12 +467,19 @@ export default function AdminDashboard() {
               <Factory className="h-8 w-8 mb-2 text-purple-600" />
               <span className="text-sm font-medium">Commissary</span>
             </a>
-            <a 
-              href="/admin/reports" 
+            <a
+              href="/admin/reports"
               className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
             >
               <BarChart3 className="h-8 w-8 mb-2 text-orange-600" />
               <span className="text-sm font-medium">View Reports</span>
+            </a>
+            <a
+              href="/admin/deployment-verification"
+              className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <AlertTriangle className="h-8 w-8 mb-2 text-red-600" />
+              <span className="text-sm font-medium">Deployment Check</span>
             </a>
           </div>
         </CardContent>
