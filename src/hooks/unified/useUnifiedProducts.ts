@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { unifiedProductInventoryService, UnifiedInventoryData, UnifiedProductData } from '@/services/unified/UnifiedProductInventoryService';
 import { Category } from '@/types';
 import { useDebounce } from '@/hooks/useDebounce';
+import { priceRefreshService } from '@/services/pos/priceRefreshService';
 
 export interface UnifiedProductFilters {
   searchTerm: string;
@@ -245,12 +246,19 @@ export function useUnifiedProducts({
     // Subscribe to real-time updates
     const unsubscribeRealtime = unifiedProductInventoryService.subscribeToUpdates(storeId);
 
+    // Subscribe to price refresh notifications from catalog
+    const unsubscribePriceRefresh = priceRefreshService.addRefreshListener(() => {
+      console.log('💰 Price refresh notification received, reloading POS data');
+      loadData();
+    });
+
     return () => {
       console.log('🧹 Cleaning up unified products subscriptions for store:', storeId);
       unsubscribeListener();
       unsubscribeRealtime();
+      unsubscribePriceRefresh();
     };
-  }, [storeId, autoRefresh]);
+  }, [storeId, autoRefresh, loadData]);
 
   return {
     // Data
