@@ -103,18 +103,46 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const itemPrice = customization ? customization.final_price : (variation ? variation.price : product.price);
+    const itemPrice = customization ? customization.final_price ?? (variation ? variation.price : product.price) : (variation ? variation.price : product.price);
     console.log("CartContext: Item price determined:", itemPrice);
+
+    const normalizeMixMatch = (c: any) => {
+      if (!c || c.type !== 'mix_match_croffle') return null;
+      const toppingIds = (c.combo?.toppings || [])
+        .map((x: any) => x?.addon?.id)
+        .filter(Boolean)
+        .sort();
+      const sauceIds = (c.combo?.sauces || [])
+        .map((x: any) => x?.addon?.id)
+        .filter(Boolean)
+        .sort();
+      return {
+        type: c.type,
+        croffleType: c.croffleType,
+        toppingIds: JSON.stringify(toppingIds),
+        sauceIds: JSON.stringify(sauceIds)
+      };
+    };
 
     const existingItemIndex = items.findIndex(item => {
       if (customization) {
-        // For customized items, check if it's the same customization
-        return item.productId === product.id &&
-               item.customization &&
-               JSON.stringify(item.customization.selected_choices) === JSON.stringify(customization.selected_choices);
+        // Handle Mix & Match croffle uniqueness by selection signature
+        if (customization.type === 'mix_match_croffle') {
+          const a = normalizeMixMatch(item.customization);
+          const b = normalizeMixMatch(customization);
+          return item.productId === product.id && a && b && a.croffleType === b.croffleType && a.toppingIds === b.toppingIds && a.sauceIds === b.sauceIds && (item.variationId || null) === (variation?.id || null);
+        }
+        // Legacy recipe customization: compare selected_choices if present; otherwise treat as unique
+        if (item.customization?.selected_choices || customization.selected_choices) {
+          return item.productId === product.id &&
+                 item.customization &&
+                 JSON.stringify(item.customization.selected_choices || []) === JSON.stringify(customization.selected_choices || []) &&
+                 (item.variationId || null) === (variation?.id || null);
+        }
+        return false;
       }
       if (variation) {
-        return item.productId === product.id && item.variationId === variation.id;
+        return item.productId === product.id && item.variationId === variation.id && !item.customization;
       }
       return item.productId === product.id && !item.variationId && !item.customization;
     });

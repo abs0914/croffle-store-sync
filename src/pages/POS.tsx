@@ -89,30 +89,31 @@ export default function POS() {
   console.log(`POS: Total products: ${products.length}, Active products: ${activeProductsCount}`);
   
   // Enhanced wrapper for addItem with detailed logging
-  const handleAddItemToCart = (product, quantity, variation) => {
+  const handleAddItemToCart = (product, quantity, variation, customization?) => {
     console.log("POS: handleAddItemToCart called with:", {
       product: product.name,
       productId: product.id,
       quantity,
       variation: variation ? variation.name : "none",
+      hasCustomization: !!customization,
       currentStore: currentStore?.id,
       currentShift: currentShift?.id
     });
-    
+
     if (!currentStore) {
       console.error("POS: No store selected");
       toast.error("Please select a store first");
       return;
     }
-    
+
     if (!currentShift) {
       console.error("POS: No shift active");
       toast.error("Please start a shift first");
       return;
     }
-    
+
     console.log("POS: Calling addItem from CartContext");
-    addItem(product, quantity, variation);
+    addItem(product, quantity, variation, customization);
   };
   
   // Wrapper for payment processing with inventory validation
@@ -253,7 +254,7 @@ export default function POS() {
           handleApplyDiscount={handleApplyDiscount}
           handleApplyMultipleDiscounts={handleApplyMultipleDiscounts}
           handlePaymentComplete={handlePaymentComplete}
-          addItemToCart={handleAddItemToCart}
+          addItemToCart={(p,q,v,c)=>handleAddItemToCart(p,q,v,c)}
           storeId={currentStore?.id}
         />
       </div>

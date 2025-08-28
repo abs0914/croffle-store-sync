@@ -8,7 +8,7 @@ export type DeliveryPlatform = 'grab_food' | 'food_panda';
 
 export interface CartState {
   items: CartItem[];
-  addItem: (product: Product, quantity?: number, variation?: ProductVariation) => void;
+  addItem: (product: Product, quantity?: number, variation?: ProductVariation, customization?: any) => void;
   removeItem: (itemIndex: number) => void;
   updateQuantity: (itemIndex: number, quantity: number) => void;
   updateItemPrice: (itemIndex: number, price: number) => void;
