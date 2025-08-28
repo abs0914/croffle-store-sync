@@ -6,6 +6,7 @@ import { useCart } from "@/contexts/cart/CartContext";
 import { useUnifiedProducts } from "@/hooks/unified/useUnifiedProducts";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import { useLargeOrderDiagnostics } from "@/hooks/useLargeOrderDiagnostics";
+import { manualRefreshService } from "@/services/pos/manualRefreshService";
 
 import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
@@ -70,6 +71,14 @@ export default function POS() {
   useEffect(() => {
     updateCategoryFilter(activeCategory === "all" ? null : activeCategory);
   }, [activeCategory, updateCategoryFilter]);
+
+  // Force refresh on mount to ensure fresh data
+  useEffect(() => {
+    if (currentStore?.id && !manualRefreshService.isDataFresh(currentStore.id)) {
+      console.log('🔄 POS mounted, forcing data refresh');
+      manualRefreshService.forceRefresh(currentStore.id);
+    }
+  }, [currentStore?.id]);
 
   // Real-time notifications removed - using simplified toast system
 

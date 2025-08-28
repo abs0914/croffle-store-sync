@@ -50,7 +50,10 @@ class UnifiedProductInventoryService {
     try {
       console.log('🔄 Fetching unified product-inventory data for store:', storeId);
 
-      // Fetch products with enhanced availability data
+      // Clear cache to ensure fresh data
+      this.cache.delete(storeId);
+      
+      // Force fresh fetch from product catalog with no caching
       const { data: productsData, error: productsError } = await supabase
         .from('product_catalog')
         .select(`
@@ -58,8 +61,7 @@ class UnifiedProductInventoryService {
           categories!inner(id, name, description, is_active)
         `)
         .eq('store_id', storeId)
-        .eq('is_available', true)
-        .order('display_order', { ascending: true });
+        .order('display_order', { ascending: true })
 
       if (productsError) throw productsError;
 
@@ -254,17 +256,21 @@ class UnifiedProductInventoryService {
   private refreshTimeouts = new Map<string, NodeJS.Timeout>();
   
   private refreshData(storeId: string) {
+    // Clear cache immediately to ensure fresh data
+    this.cache.delete(storeId);
+    
     // Clear existing timeout
     const existingTimeout = this.refreshTimeouts.get(storeId);
     if (existingTimeout) {
       clearTimeout(existingTimeout);
     }
 
-    // Set new timeout (debounce for 1 second)
+    // Set new timeout (debounce for 500ms - faster refresh)
     const timeout = setTimeout(async () => {
+      console.log('🔄 Refreshing unified data after catalog update');
       await this.getUnifiedData(storeId);
       this.refreshTimeouts.delete(storeId);
-    }, 1000);
+    }, 500);
 
     this.refreshTimeouts.set(storeId, timeout);
   }
