@@ -8,6 +8,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface TransactionItem {
+  product_id?: string; // product_catalog.id when available
   name: string;
   quantity: number;
   unit_price: number;
@@ -52,39 +53,72 @@ export async function deductInventoryForTransaction(
     for (const item of transactionItems) {
       console.log(`\n🔍 PROCESSING ITEM: ${item.name} (quantity: ${item.quantity})`);
 
-      // Get recipe template for this product
-      console.log(`   📋 Looking up recipe template for: ${item.name}`);
-      const { data: recipe, error: recipeError } = await supabase
-        .from('recipe_templates')
-        .select('id, name')
-        .eq('name', item.name)
-        .eq('is_active', true)
-        .single();
+      // Prefer mapping via product_catalog -> product_ingredients when product_id is present
+      let ingredients: any[] | null = null;
+      let source: 'catalog' | 'template' = 'template';
+      let recipe: { id: string; name: string } | null = null;
 
-      if (recipeError || !recipe) {
-        const warningMsg = `Recipe not found for product: ${item.name} (Error: ${recipeError?.message || 'Not found'})`;
-        console.log(`   ❌ ${warningMsg}`);
-        result.warnings.push(warningMsg);
-        continue;
+      if (item.product_id) {
+        console.log(`   🔗 Resolving via product_catalog.id: ${item.product_id}`);
+        const { data: productIngredients, error: piError } = await supabase
+          .from('product_ingredients')
+          .select(`
+            id, required_quantity, unit,
+            inventory_item:inventory_stock(id, item, unit, stock_quantity, is_active)
+          `)
+          .eq('product_catalog_id', item.product_id);
+
+        if (piError) {
+          console.log(`   ⚠️ Failed catalog-based resolution: ${piError.message}`);
+        } else if (productIngredients && productIngredients.length > 0) {
+          source = 'catalog';
+          // Normalize to expected ingredient fields
+          ingredients = productIngredients.map(pi => ({
+            ingredient_name: pi.inventory_item?.item,
+            unit: pi.unit,
+            quantity: pi.required_quantity,
+            inventory_stock_id: pi.inventory_item?.id
+          }));
+          console.log(`   ✅ Found ${ingredients.length} ingredients via product_ingredients`);
+        }
       }
 
-      console.log(`   ✅ Recipe found: ${recipe.name} (ID: ${recipe.id})`);
+      // Fallback to name->recipe_template resolution
+      if (!ingredients) {
+        console.log(`   📋 Looking up recipe template for: ${item.name}`);
+        const { data: recipeData, error: recipeError } = await supabase
+          .from('recipe_templates')
+          .select('id, name')
+          .eq('name', item.name)
+          .eq('is_active', true)
+          .single();
 
-      // Get recipe ingredients
-      console.log(`   🧪 Getting ingredients for recipe: ${recipe.id}`);
-      const { data: ingredients, error: ingredientsError } = await supabase
-        .from('recipe_template_ingredients')
-        .select('*')
-        .eq('recipe_template_id', recipe.id);
+        if (recipeError || !recipeData) {
+          const warningMsg = `Recipe not found for product: ${item.name} (Error: ${recipeError?.message || 'Not found'})`;
+          console.log(`   ❌ ${warningMsg}`);
+          result.warnings.push(warningMsg);
+          continue;
+        }
 
-      if (ingredientsError || !ingredients) {
-        const errorMsg = `Failed to get ingredients for ${item.name}: ${ingredientsError?.message}`;
-        console.log(`   ❌ ${errorMsg}`);
-        result.errors.push(errorMsg);
-        continue;
+        recipe = recipeData;
+        console.log(`   ✅ Recipe found: ${recipe.name} (ID: ${recipe.id})`);
+
+        console.log(`   🧪 Getting ingredients for recipe: ${recipe.id}`);
+        const { data: ingredientsData, error: ingredientsError } = await supabase
+          .from('recipe_template_ingredients')
+          .select('*')
+          .eq('recipe_template_id', recipe.id);
+
+        if (ingredientsError || !ingredientsData) {
+          const errorMsg = `Failed to get ingredients for ${item.name}: ${ingredientsError?.message}`;
+          console.log(`   ❌ ${errorMsg}`);
+          result.errors.push(errorMsg);
+          continue;
+        }
+
+        ingredients = ingredientsData;
+        console.log(`   ✅ Found ${ingredients.length} ingredients via recipe template`);
       }
-
-      console.log(`   ✅ Found ${ingredients.length} ingredients`);
 
       // Process each ingredient
       for (const ingredient of ingredients) {
@@ -93,15 +127,30 @@ export async function deductInventoryForTransaction(
         console.log(`\n      🔍 Processing ingredient: ${ingredient.ingredient_name}`);
         console.log(`         Required: ${requiredQuantity} ${ingredient.unit} (${ingredient.quantity} × ${item.quantity})`);
 
-        // Get current inventory
+        // Get current inventory - prefer direct ID if available from product_ingredients
         console.log(`         📦 Looking up inventory for: ${ingredient.ingredient_name}`);
-        const { data: inventory, error: inventoryError } = await supabase
-          .from('inventory_stock')
-          .select('*')
-          .eq('store_id', storeId)
-          .eq('item', ingredient.ingredient_name)
-          .eq('is_active', true)
-          .single();
+        let inventory: any = null;
+        let inventoryError: any = null;
+
+        if (ingredient.inventory_stock_id) {
+          const { data, error } = await supabase
+            .from('inventory_stock')
+            .select('*')
+            .eq('id', ingredient.inventory_stock_id)
+            .eq('store_id', storeId)
+            .eq('is_active', true)
+            .single();
+          inventory = data; inventoryError = error;
+        } else {
+          const { data, error } = await supabase
+            .from('inventory_stock')
+            .select('*')
+            .eq('store_id', storeId)
+            .eq('item', ingredient.ingredient_name)
+            .eq('is_active', true)
+            .single();
+          inventory = data; inventoryError = error;
+        }
 
         if (inventoryError || !inventory) {
           const errorMsg = `Inventory not found for ${ingredient.ingredient_name} at store ${storeId} (Error: ${inventoryError?.message || 'Not found'})`;
@@ -147,25 +196,57 @@ export async function deductInventoryForTransaction(
 
         // Create inventory movement record (if table exists)
         try {
-          const { error: movementError } = await supabase
-            .from('inventory_transactions')
-            .insert({
-              store_id: storeId,
-              product_id: inventory.id, // Use inventory item ID as product_id
-              transaction_type: 'sale',
-              quantity: -requiredQuantity,
-              previous_quantity: previousStock,
-              new_quantity: newStock,
-              reference_id: transactionId,
-              notes: `Automatic deduction for transaction ${transactionId}`,
-              created_by: 'system',
-              created_at: new Date().toISOString()
-            });
+          const userRes = await supabase.auth.getUser();
+          const createdBy = userRes.data.user?.id || userRes.data.user?.email || 'system';
 
+          const insertPayload = {
+            store_id: storeId,
+            product_id: inventory.id, // references inventory_stock.id
+            transaction_type: 'sale',
+            quantity: -requiredQuantity,
+            previous_quantity: previousStock,
+            new_quantity: newStock,
+            reference_id: transactionId,
+            notes: `Automatic deduction for transaction ${transactionId}`,
+            created_by: createdBy,
+            created_at: new Date().toISOString()
+          } as const;
+
+          let movementError: any = null;
+          try {
+            const { error } = await supabase.from('inventory_transactions').insert(insertPayload);
+            movementError = error;
+          } catch (e) {
+            movementError = e;
+          }
+
+          // Fallback: try inventory_movements table if the primary insert fails due to RLS or schema mismatch
           if (movementError) {
-            result.warnings.push(`Movement record failed for ${ingredient.ingredient_name}: ${movementError.message}`);
+            console.warn('⚠️ inventory_transactions insert failed, trying inventory_movements fallback:', movementError);
+            try {
+              const { error: mvErr } = await supabase
+                .from('inventory_movements')
+                .insert({
+                  inventory_stock_id: inventory.id,
+                  movement_type: 'sale',
+                  quantity_change: -requiredQuantity,
+                  previous_quantity: previousStock,
+                  new_quantity: newStock,
+                  reference_type: 'transaction',
+                  reference_id: transactionId,
+                  notes: `Product sale: ${ingredient.ingredient_name}`,
+                  created_by: userRes.data.user?.id,
+                  created_at: new Date().toISOString()
+                });
+              if (mvErr) {
+                result.warnings.push(`Movement record failed in both tables for ${ingredient.ingredient_name}: ${mvErr.message}`);
+              }
+            } catch (fallbackErr) {
+              result.warnings.push(`Movement record fallback threw for ${ingredient.ingredient_name}: ${fallbackErr}`);
+            }
           }
         } catch (movementError) {
+          console.warn('⚠️ Movement insert threw:', movementError);
           result.warnings.push(`Movement record failed for ${ingredient.ingredient_name}: ${movementError}`);
         }
       }

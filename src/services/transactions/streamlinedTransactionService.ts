@@ -465,14 +465,44 @@ class StreamlinedTransactionService {
     console.log(`📦 Items to process: ${items.length}`);
 
     try {
-      const transactionItems = items.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-        total_price: item.totalPrice
-      }));
+      // Build deduction items, expanding combos into their components for accurate mapping
+      const transactionItems: Array<{ product_id?: string; name: string; quantity: number; unit_price: number; total_price: number }> = [];
+      for (const item of items) {
+        if (item.productId?.startsWith('combo-')) {
+          console.log('🔧 Expanding combo in deduction path:', item.productId);
+          try {
+            const components = await this.expandComboProductForTransaction(item);
+            for (const comp of components) {
+              transactionItems.push({
+                product_id: comp.product_id,
+                name: comp.name,
+                quantity: comp.quantity,
+                unit_price: comp.unit_price,
+                total_price: comp.total_price
+              });
+            }
+          } catch (e) {
+            console.warn('⚠️ Failed to expand combo for deduction, falling back to name-only:', e);
+            transactionItems.push({
+              product_id: undefined,
+              name: item.name,
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+              total_price: item.totalPrice
+            });
+          }
+        } else {
+          transactionItems.push({
+            product_id: item.productId,
+            name: item.name,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            total_price: item.totalPrice
+          });
+        }
+      }
 
-      console.log(`📋 Transaction items:`, transactionItems);
+      console.log(`📋 Transaction items for deduction:`, transactionItems);
 
       const result = await deductInventoryForTransaction(
         transactionId,
