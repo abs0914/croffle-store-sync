@@ -93,33 +93,13 @@ BEGIN
   RAISE NOTICE 'Created/updated standard categories for all stores';
 END $$;
 
--- Step 5: Create category mapping function
+-- Step 5: Create category mapping function (simplified - use exact CSV values)
 CREATE OR REPLACE FUNCTION map_template_category_to_pos(template_category TEXT)
 RETURNS TEXT AS $$
 BEGIN
-  RETURN CASE LOWER(TRIM(template_category))
-    WHEN 'premium' THEN 'Premium'
-    WHEN 'fruity' THEN 'Fruity'
-    WHEN 'classic' THEN 'Classic'
-    WHEN 'combo' THEN 'Combo'
-    WHEN 'mini_croffle' THEN 'Mini Croffle'
-    WHEN 'croffle_overload' THEN 'Croffle Overload'
-    WHEN 'add-on' THEN 'Add-ons'
-    WHEN 'addon' THEN 'Add-ons'
-    WHEN 'espresso' THEN 'Espresso'
-    WHEN 'beverages' THEN 'Beverages'
-    WHEN 'blended' THEN 'Blended'
-    WHEN 'cold' THEN 'Cold Beverages'
-    WHEN 'glaze' THEN 'Glaze'
-    WHEN 'mix & match' THEN 'Mix & Match'
-    -- Legacy mappings
-    WHEN 'croffles' THEN 'Classic'
-    WHEN 'drinks' THEN 'Beverages'
-    WHEN 'add-ons' THEN 'Add-ons'
-    WHEN 'combos' THEN 'Combo'
-    -- Default fallback
-    ELSE 'Classic'
-  END;
+  -- No mapping needed - just return the exact category name from CSV
+  -- This follows the principle: "Take what's in the file and use it directly"
+  RETURN TRIM(template_category);
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 

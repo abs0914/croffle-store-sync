@@ -44,32 +44,8 @@ export interface RecipeTemplateIngredient {
   ingredient_category: string;
 }
 
-// Category mapping - centralized and comprehensive
-const CATEGORY_MAPPING = {
-  // Template categories to POS categories
-  'premium': 'Premium',
-  'fruity': 'Fruity',
-  'classic': 'Classic',
-  'combo': 'Combo',
-  'mini_croffle': 'Mini Croffle',
-  'croffle_overload': 'Croffle Overload',
-  'add-on': 'Add-ons',
-  'addon': 'Add-ons',
-  'espresso': 'Espresso',
-  'beverages': 'Beverages',
-  'blended': 'Blended',
-  'cold': 'Cold Beverages',
-  'glaze': 'Glaze',
-  'mix & match': 'Mix & Match',
-  // Legacy mappings
-  'croffles': 'Classic',
-  'drinks': 'Beverages',
-  'add-ons': 'Add-ons',
-  'combos': 'Combo',
-  // Default fallback
-  'general': 'Classic',
-  'other': 'Classic'
-} as const;
+// NO CATEGORY MAPPING - Use exact CSV values as provided by user
+// This follows the principle: "Take what's in the file and use it directly"
 
 /**
  * Parse CSV data into structured recipe data
@@ -135,7 +111,7 @@ export const groupRecipesByName = (recipes: RecipeImportData[]): Map<string, Rec
       recipeMap.set(row.name, {
         name: row.name,
         description: `${row.recipe_category} recipe: ${row.name}`,
-        category_name: row.recipe_category.toLowerCase(),
+        category_name: row.recipe_category, // Use exact CSV value - no conversion
         instructions: 'Follow standard preparation procedures',
         yield_quantity: 1,
         serving_size: 1,
@@ -244,7 +220,15 @@ export const ensureStoreCategories = async (): Promise<void> => {
     throw new Error('Failed to fetch stores');
   }
 
-  const categoryNames = [...new Set(Object.values(CATEGORY_MAPPING))];
+  // Get unique category names from active recipe templates (exact CSV values)
+  const { data: templates } = await supabase
+    .from('recipe_templates')
+    .select('category_name')
+    .eq('is_active', true);
+
+  const categoryNames = [...new Set(
+    templates?.map(t => t.category_name).filter(Boolean) || []
+  )];
 
   for (const store of stores) {
     for (const categoryName of categoryNames) {
@@ -368,13 +352,13 @@ const deployTemplateToStore = async (template: any, storeId: string): Promise<vo
     throw new Error(`Failed to create recipe: ${recipeError.message}`);
   }
 
-  // Get category for product catalog
-  const posCategory = CATEGORY_MAPPING[template.category_name as keyof typeof CATEGORY_MAPPING] || 'Classic';
+  // Get category for product catalog - use exact template category name
+  const categoryName = template.category_name; // Use exact CSV value
   const { data: category } = await supabase
     .from('categories')
     .select('id')
     .eq('store_id', storeId)
-    .eq('name', posCategory)
+    .eq('name', categoryName) // Use exact category name from CSV
     .eq('is_active', true)
     .maybeSingle();
 
