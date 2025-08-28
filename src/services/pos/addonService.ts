@@ -58,16 +58,31 @@ export const fetchAddonRecipes = async (storeId?: string): Promise<AddonItem[]> 
 
     console.log('Raw products data:', allProducts?.length || 0, 'products');
 
-    // Filter products that are in addon categories
+    // Filter products that are in addon categories (exclude croffle/menu categories)
     const addonProducts = (allProducts || []).filter(product => {
-      const categoryName = product.categories?.name?.toLowerCase() || '';
-      return categoryName.includes('addon') || 
-             categoryName.includes('add-on') || 
-             categoryName.includes('add-ons') ||
-             categoryName.includes('glaze') ||
-             categoryName.includes('premium') ||
-             categoryName.includes('topping') ||
-             categoryName.includes('sauce');
+      const categoryName = (product.categories?.name || '').toLowerCase();
+      // Only true addon-like categories
+      const isAddonCategory = (
+        categoryName.includes('addon') ||
+        categoryName.includes('add-on') ||
+        categoryName.includes('add-ons') ||
+        categoryName.includes('topping') ||
+        categoryName.includes('toppings') ||
+        categoryName.includes('sauce') ||
+        categoryName.includes('spread') ||
+        categoryName.includes('jam') ||
+        categoryName.includes('syrup')
+      );
+      // Explicitly exclude main product categories like Premium/Classic/Fruity/etc.
+      const isMainProductCategory = (
+        categoryName.includes('croffle') ||
+        categoryName.includes('premium') ||
+        categoryName.includes('classic') ||
+        categoryName.includes('fruity') ||
+        categoryName.includes('mix & match') ||
+        categoryName.includes('mix and match')
+      );
+      return isAddonCategory && !isMainProductCategory;
     });
 
     console.log('Filtered addon products:', addonProducts.length, 'addon products');

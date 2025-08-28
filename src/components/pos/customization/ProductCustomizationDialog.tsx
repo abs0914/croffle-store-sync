@@ -134,16 +134,14 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
   // Get dynamic sauce and topping options for Mix & Match
   const getDynamicSauces = (): AddonItem[] => {
+    const allowedBaseNames = ['chocolate', 'caramel', 'tiramisu'];
     const sauces = dynamicAddons.filter(addon => {
       const name = addon.name.toLowerCase();
-      return name.includes('sauce') || 
-             name.includes('spread') ||
-             name.includes('jam') ||
-             name.includes('syrup') ||
-             name.includes('chocolate') ||
-             name.includes('caramel') ||
-             name.includes('strawberry') ||
-             name.includes('nutella');
+      // Accept only our allowed base sauce names, and explicitly exclude croffle and dark variants
+      const matchesAllowed = allowedBaseNames.some(n => name.includes(n));
+      const isCroffle = name.includes('croffle');
+      const isDarkVariant = name.includes('dark');
+      return matchesAllowed && !isCroffle && !isDarkVariant;
     });
     console.log('🥫 Filtered sauces:', sauces.map(s => s.name));
     return sauces;
@@ -174,7 +172,9 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     ? mixMatchSauces.filter(s => allowedMiniSauceNames.some(n => s.name.toLowerCase().includes(n)))
     : []; // Overload: no sauces; Regular handled elsewhere
 
+  // Remove any croffle base items from toppings by guarding against names containing 'croffle'
   const filteredToppings = mixMatchToppings.filter(t =>
+    !t.name.toLowerCase().includes('croffle') &&
     allowedToppingNames.some(n => t.name.toLowerCase().includes(n))
   );
 
