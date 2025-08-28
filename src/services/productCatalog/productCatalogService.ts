@@ -102,7 +102,7 @@ export const updateProduct = async (
   updates: Partial<ProductCatalog>
 ): Promise<boolean> => {
   try {
-    console.log('🔄 Product Catalog: Starting price update for product:', id);
+    console.log('🔄 Product Catalog: Starting update for product:', id);
     console.log('📝 Product Catalog: Update data:', updates);
 
     // First get the existing product data including recipe_id
@@ -132,7 +132,22 @@ export const updateProduct = async (
 
     if (error) {
       console.error('❌ Product Catalog: Update failed:', error);
-      throw error;
+      
+      // Provide more user-friendly error messages
+      let userMessage = 'Failed to update product';
+      if (error.message?.includes('already exists')) {
+        userMessage = 'A product with this name already exists in the store. Please use a different name.';
+      } else if (error.message?.includes('constraint')) {
+        userMessage = 'This update conflicts with existing data. Please check for duplicate names or SKUs.';
+      } else if (error.message?.includes('permission')) {
+        userMessage = 'You do not have permission to update this product.';
+      } else if (error.message) {
+        userMessage = `Update failed: ${error.message}`;
+      }
+      
+      const enhancedError = new Error(userMessage);
+      (enhancedError as any).originalError = error;
+      throw enhancedError;
     }
 
     console.log('✅ Product Catalog: Successfully updated product catalog entry');
