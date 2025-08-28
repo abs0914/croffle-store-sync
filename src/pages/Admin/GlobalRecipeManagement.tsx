@@ -37,7 +37,7 @@ import {
 import { RecipeTemplateDialog } from './components/RecipeTemplateDialog';
 import { OptimizedRecipeDeploymentDialog } from '@/components/Admin/recipe/OptimizedRecipeDeploymentDialog';
 import { BulkDeploymentDialog } from '@/components/Admin/recipe/BulkDeploymentDialog';
-import { MasterRecipeImportDialog } from '@/components/Admin/recipe/MasterRecipeImportDialog';
+import { UnifiedRecipeImportDialog } from '@/components/Admin/recipe/UnifiedRecipeImportDialog';
 import { useGlobalRecipeTemplateImportExport } from '@/hooks/useGlobalRecipeTemplateImportExport';
 import { RecipeTemplate } from '@/services/recipeManagement/types';
 import { toast } from 'sonner';
@@ -503,8 +503,8 @@ const GlobalRecipeManagement: React.FC = () => {
         onClose={() => setShowSqlBulkDeployment(false)}
       />
 
-      {/* Master Recipe Import Dialog */}
-      <MasterRecipeImportDialog
+      {/* Unified Recipe Import Dialog */}
+      <UnifiedRecipeImportDialog
         isOpen={showMasterImport}
         onClose={() => setShowMasterImport(false)}
         onSuccess={() => {
