@@ -162,8 +162,20 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
 
   // Get unique items to avoid duplicates
   const mixMatchSauces = getDynamicSauces();
-  const mixMatchToppings = getDynamicToppings().filter(t => 
+  const mixMatchToppings = getDynamicToppings().filter(t =>
     !mixMatchSauces.some(s => s.id === t.id)
+  );
+
+  // Apply business rules for Mix & Match selections
+  const allowedMiniSauceNames = ['chocolate', 'caramel', 'tiramisu'];
+  const allowedToppingNames = ['colored sprinkles', 'marshmallow', 'choco flakes', 'chocolate flakes', 'peanut', 'peanuts'];
+
+  const filteredSauces = croffleType === 'mini'
+    ? mixMatchSauces.filter(s => allowedMiniSauceNames.some(n => s.name.toLowerCase().includes(n)))
+    : []; // Overload: no sauces; Regular handled elsewhere
+
+  const filteredToppings = mixMatchToppings.filter(t =>
+    allowedToppingNames.some(n => t.name.toLowerCase().includes(n))
   );
 
   // Debug logging
@@ -172,8 +184,8 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     detectedType: croffleType,
     dynamicAddonsCount: dynamicAddons.length,
     isLoading: isLoadingAddons,
-    sauces: mixMatchSauces.length,
-    toppings: mixMatchToppings.length,
+    sauces: (croffleType === 'mini' ? filteredSauces.length : 0),
+    toppings: filteredToppings.length,
     allAddonNames: dynamicAddons.map(a => a.name)
   });
 
@@ -537,7 +549,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="toppings">Toppings</TabsTrigger>
-                  <TabsTrigger value="sauces">Sauces</TabsTrigger>
+                  {croffleType === 'mini' && (<TabsTrigger value="sauces">Sauces</TabsTrigger>)}
                 </TabsList>
                 
                 <TabsContent value="toppings" className="space-y-4">
@@ -557,8 +569,8 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
                           <p className="text-sm text-muted-foreground mt-2">Loading toppings...</p>
                         </div>
-                      ) : mixMatchToppings.length > 0 ? (
-                        mixMatchToppings.map(topping => renderMixMatchCard(topping, 'toppings'))
+                      ) : filteredToppings.length > 0 ? (
+                        filteredToppings.map(topping => renderMixMatchCard(topping, 'toppings'))
                       ) : (
                         <div className="text-center py-8">
                           <p className="text-sm text-muted-foreground">No toppings available</p>
@@ -586,8 +598,8 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
                           <p className="text-sm text-muted-foreground mt-2">Loading sauces...</p>
                         </div>
-                      ) : mixMatchSauces.length > 0 ? (
-                        mixMatchSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))
+                      ) : filteredSauces.length > 0 ? (
+                        filteredSauces.map(sauce => renderMixMatchCard(sauce, 'sauces'))
                       ) : (
                         <div className="text-center py-8">
                           <p className="text-sm text-muted-foreground">No sauces available</p>
