@@ -21,7 +21,17 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
   
   for (const item of items) {
     try {
-      // Fetch product with category information
+      // Check if this is a combo product
+      if (item.productId.startsWith('combo-')) {
+        console.log('🔧 Processing combo item:', item.productId, item.product.name);
+        
+        // Handle combo product - expand into component items
+        const comboItems = await expandComboProduct(item);
+        enrichedItems.push(...comboItems);
+        continue;
+      }
+
+      // Regular product processing
       const { data: product, error } = await supabase
         .from('product_catalog')
         .select(`
@@ -70,6 +80,115 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
 
   return enrichedItems;
 };
+
+/**
+ * Expands a combo product into its component items for transaction storage
+ */
+async function expandComboProduct(comboItem: CartItem): Promise<DetailedTransactionItem[]> {
+  console.log('🔧 Expanding combo product:', comboItem.product.name);
+  
+  try {
+    // Extract component IDs from combo ID: "combo-{croffle-id}-{espresso-id}"
+    const comboIdParts = comboItem.productId.split('-');
+    if (comboIdParts.length !== 3) {
+      throw new Error(`Invalid combo ID format: ${comboItem.productId}`);
+    }
+    
+    const croffleId = comboIdParts[1];
+    const espressoId = comboIdParts[2];
+    
+    console.log('🔧 Combo components:', { croffleId, espressoId });
+    
+    // Fetch both component products with price information
+    const { data: croffleProduct } = await supabase
+      .from('product_catalog')
+      .select(`
+        id,
+        product_name,
+        category_id,
+        price,
+        categories (id, name)
+      `)
+      .eq('id', croffleId)
+      .maybeSingle();
+      
+    const { data: espressoProduct } = await supabase
+      .from('product_catalog')
+      .select(`
+        id,
+        product_name,
+        category_id,
+        price,
+        categories (id, name)
+      `)
+      .eq('id', espressoId)
+      .maybeSingle();
+
+    const comboItems: DetailedTransactionItem[] = [];
+    
+    // Get pricing information - use product prices as defaults
+    const crofflePrice = croffleProduct?.price || 0;
+    const espressoPrice = espressoProduct?.price || 0;
+    const totalComboPrice = comboItem.price * comboItem.quantity;
+    
+    // Calculate proportional prices for combo components
+    const totalOriginalPrice = crofflePrice + espressoPrice;
+    const croffleProportionalPrice = totalOriginalPrice > 0 ? (crofflePrice / totalOriginalPrice) * totalComboPrice : totalComboPrice / 2;
+    const espressoProportionalPrice = totalComboPrice - croffleProportionalPrice;
+
+    // Add croffle component
+    if (croffleProduct) {
+      comboItems.push({
+        product_id: croffleId,
+        variation_id: undefined,
+        name: `${croffleProduct.product_name} (from ${comboItem.product.name})`,
+        quantity: comboItem.quantity,
+        unit_price: croffleProportionalPrice / comboItem.quantity,
+        total_price: croffleProportionalPrice,
+        category_id: croffleProduct.category_id,
+        category_name: croffleProduct.categories?.name,
+        product_type: 'combo_component'
+      });
+    }
+    
+    // Add espresso component
+    if (espressoProduct) {
+      comboItems.push({
+        product_id: espressoId,
+        variation_id: undefined,
+        name: `${espressoProduct.product_name} (from ${comboItem.product.name})`,
+        quantity: comboItem.quantity,
+        unit_price: espressoProportionalPrice / comboItem.quantity,
+        total_price: espressoProportionalPrice,
+        category_id: espressoProduct.category_id,
+        category_name: espressoProduct.categories?.name,
+        product_type: 'combo_component'
+      });
+    }
+    
+    console.log('✅ Combo expansion successful:', comboItems.length, 'components created');
+    return comboItems;
+    
+  } catch (error) {
+    console.error('❌ Failed to expand combo product:', error);
+    
+    // Fallback: create a single item with a safe product_id
+    // Use a placeholder UUID for combo items that can't be expanded
+    const fallbackId = '00000000-0000-0000-0000-000000000000'; // Special UUID for combo fallback
+    
+    return [{
+      product_id: fallbackId,
+      variation_id: undefined,
+      name: comboItem.product.name,
+      quantity: comboItem.quantity,
+      unit_price: comboItem.price,
+      total_price: comboItem.price * comboItem.quantity,
+      category_id: undefined,
+      category_name: 'Combo',
+      product_type: 'combo'
+    }];
+  }
+}
 
 /**
  * Inserts transaction items into the database
