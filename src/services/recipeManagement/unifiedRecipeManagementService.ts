@@ -183,7 +183,7 @@ export const createRecipeTemplates = async (
           ingredient_category: ing.ingredient_category,
           ingredient_type: ing.ingredient_category === 'packaging' ? 'packaging' : 'base',
           ingredient_group_name: 'Base Ingredients',
-          group_selection_type: 'required_all',
+          group_selection_type: 'multiple' as const,
           is_optional: false
         }));
 

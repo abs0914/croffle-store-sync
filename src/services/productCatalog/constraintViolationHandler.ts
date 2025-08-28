@@ -5,8 +5,8 @@
  * that occurs when updating products in the Product Catalog system.
  */
 
-import { supabase } from '@/lib/supabase';
-import { toast } from 'react-hot-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ConstraintViolationError {
   code: string;

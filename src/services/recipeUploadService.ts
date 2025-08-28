@@ -136,8 +136,8 @@ export const validateRecipeDeployment = async (
   try {
     const { data, error } = await supabase
       .rpc('validate_recipe_deployment', {
-        template_id_param: templateId,
-        store_id_param: storeId
+        p_template_id: templateId,
+        p_store_id: storeId
       });
 
     if (error) {

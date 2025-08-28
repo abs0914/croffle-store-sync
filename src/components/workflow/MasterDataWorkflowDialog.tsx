@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, XCircle, Clock, Play } from 'lucide-react';
 import { useMasterDataWorkflow } from '@/hooks/useMasterDataWorkflow';
-import { sampleMasterRecipes } from '@/data/sampleMasterRecipes';
+// Removed non-existent import
 
 interface MasterDataWorkflowDialogProps {
   open: boolean;
