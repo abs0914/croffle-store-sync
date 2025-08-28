@@ -202,7 +202,27 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
         }
       }
 
-      // Step 3: Delete recipes that reference templates
+      // Step 3: Clear product catalog entries that reference recipes
+      const { error: catalogError } = await supabase
+        .from('product_catalog')
+        .update({ recipe_id: null })
+        .not('recipe_id', 'is', null);
+
+      if (catalogError) {
+        throw new Error(`Failed to clear product catalog recipe references: ${catalogError.message}`);
+      }
+
+      // Step 4: Delete products that reference recipes (to avoid constraint violations)
+      const { error: productsError } = await supabase
+        .from('products')
+        .delete()
+        .not('recipe_id', 'is', null);
+
+      if (productsError) {
+        throw new Error(`Failed to delete products: ${productsError.message}`);
+      }
+
+      // Step 5: Delete recipes that reference templates
       const { error: recipesError } = await supabase
         .from('recipes')
         .delete()
@@ -212,7 +232,7 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
         throw new Error(`Failed to delete recipes: ${recipesError.message}`);
       }
 
-      // Step 4: Delete all recipe template ingredients
+      // Step 6: Delete all recipe template ingredients
       const { error: templateIngredientsError } = await supabase
         .from('recipe_template_ingredients')
         .delete()
@@ -222,7 +242,7 @@ export const MasterRecipeImportDialog: React.FC<MasterRecipeImportDialogProps> =
         throw new Error(`Failed to delete template ingredients: ${templateIngredientsError.message}`);
       }
 
-      // Step 5: Delete all recipe templates
+      // Step 7: Delete all recipe templates
       const { error: templatesError } = await supabase
         .from('recipe_templates')
         .delete()
