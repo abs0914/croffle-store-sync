@@ -76,7 +76,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         display_order: product.display_order,
         category_id: product.category_id || null
       });
-      setCurrentImageUrl(null); // Products don't have image_url in the current schema
+      setCurrentImageUrl(product.image_url || null); // Load existing image URL
       setImagePreview(null);
       setSelectedFile(null);
     }
