@@ -31,7 +31,7 @@ export default function ProductCategoryTabs({
   // Define the main POS categories based on your recipe categories
   const mainCategoryNames = [
     'Classic', 'Cold', 'Blended', 'Beverages', 'Add-on',
-    'Espresso', 'Fruity', 'Glaze', 'Mix & Match', 'Premium'
+    'Espresso', 'Fruity', 'Glaze', 'Mix & Match', 'Premium', 'Combo'
   ];
 
   // Filter to only show main categories that exist in the database
