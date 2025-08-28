@@ -44,10 +44,15 @@ Expected output:
 
 **Script 1: Core System Setup**
 ```sql
+-- OPTION A: Standard Version
 -- Copy entire content of database/setup/01_unified_recipe_system.sql
--- This creates:
+
+-- OPTION B: Safe Version (if you get constraint violations)
+-- Copy entire content of database/setup/01_unified_recipe_system_safe.sql
+
+-- Both create:
 -- ✅ Required table columns
--- ✅ Performance indexes  
+-- ✅ Performance indexes
 -- ✅ Standard categories
 -- ✅ Category mapping functions
 -- ✅ Automatic triggers
@@ -171,10 +176,10 @@ Problem: Database schema not updated
 Solution: Run database/setup/01_unified_recipe_system.sql
 ```
 
-**"Duplicate key violation"**
+**"Duplicate key violation" or "products_store_id_sku_key already exists"**
 ```
-Problem: Trying to create existing data
-Solution: This is expected - ignore these errors
+Problem: Existing triggers creating duplicate products
+Solution: Use database/setup/01_unified_recipe_system_safe.sql instead
 ```
 
 **Poor query performance**

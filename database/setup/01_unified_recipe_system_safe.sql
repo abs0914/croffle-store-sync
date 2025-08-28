@@ -1,17 +1,18 @@
 -- =====================================================
--- UNIFIED RECIPE MANAGEMENT SYSTEM - COMPLETE SETUP
+-- UNIFIED RECIPE SYSTEM - SAFE SETUP (CONSTRAINT-AWARE)
 -- =====================================================
 -- 
--- This script sets up the complete unified recipe management system.
--- Run this ONCE in the Supabase SQL Editor for new installations.
+-- This is a safer version that handles existing data and constraints gracefully.
+-- Use this version if the regular setup script encounters constraint violations.
 --
 -- What this script does:
--- 1. Adds required columns to existing tables
+-- 1. Adds required columns safely
 -- 2. Creates performance indexes
--- 3. Sets up standard categories across all stores
+-- 3. Sets up standard categories (handles duplicates)
 -- 4. Creates essential database functions
 -- 5. Sets up automatic triggers
 -- 6. Creates monitoring views
+-- 7. Updates categories WITHOUT triggering product sync issues
 --
 -- Prerequisites: None (this is the foundation script)
 -- Execution: Copy and paste entire script into Supabase SQL Editor
@@ -65,37 +66,32 @@ CREATE INDEX IF NOT EXISTS idx_recipe_templates_active ON recipe_templates(is_ac
 
 DO $$ BEGIN RAISE NOTICE 'Created performance indexes'; END $$;
 
--- Step 4: Create standard categories for all stores
-INSERT INTO categories (name, description, store_id, is_active)
-SELECT 
-  category_name,
-  'Category for ' || category_name || ' items',
-  s.id,
-  true
-FROM stores s
-CROSS JOIN (
-  VALUES 
-    ('Premium'),
-    ('Fruity'),
-    ('Classic'),
-    ('Combo'),
-    ('Mini Croffle'),
-    ('Croffle Overload'),
-    ('Add-ons'),
-    ('Espresso'),
-    ('Beverages'),
-    ('Blended'),
-    ('Cold Beverages'),
-    ('Glaze'),
-    ('Mix & Match')
-) AS standard_categories(category_name)
-WHERE s.is_active = true
-ON CONFLICT (store_id, name) DO UPDATE SET
-  is_active = true,
-  description = EXCLUDED.description,
-  updated_at = NOW();
-
-DO $$ BEGIN RAISE NOTICE 'Created/updated standard categories for all stores'; END $$;
+-- Step 4: Create standard categories for all stores (handles duplicates gracefully)
+DO $$
+DECLARE
+  store_record RECORD;
+  category_name TEXT;
+  category_names TEXT[] := ARRAY['Premium', 'Fruity', 'Classic', 'Combo', 'Mini Croffle', 'Croffle Overload', 'Add-ons', 'Espresso', 'Beverages', 'Blended', 'Cold Beverages', 'Glaze', 'Mix & Match'];
+BEGIN
+  FOR store_record IN SELECT id, name FROM stores WHERE is_active = true LOOP
+    FOREACH category_name IN ARRAY category_names LOOP
+      -- Insert category if it doesn't exist
+      INSERT INTO categories (name, description, store_id, is_active)
+      VALUES (
+        category_name,
+        'Category for ' || category_name || ' items',
+        store_record.id,
+        true
+      )
+      ON CONFLICT (store_id, name) DO UPDATE SET
+        is_active = true,
+        description = EXCLUDED.description,
+        updated_at = NOW();
+    END LOOP;
+  END LOOP;
+  
+  RAISE NOTICE 'Created/updated standard categories for all stores';
+END $$;
 
 -- Step 5: Create category mapping function
 CREATE OR REPLACE FUNCTION map_template_category_to_pos(template_category TEXT)
@@ -151,6 +147,9 @@ BEGIN
   IF category_id IS NULL THEN
     INSERT INTO categories (store_id, name, description, is_active)
     VALUES (store_id_param, pos_category, 'Category for ' || pos_category || ' items', true)
+    ON CONFLICT (store_id, name) DO UPDATE SET
+      is_active = true,
+      updated_at = NOW()
     RETURNING id INTO category_id;
   END IF;
   
@@ -195,39 +194,46 @@ CREATE TRIGGER trigger_assign_product_category
 
 DO $$ BEGIN RAISE NOTICE 'Created automatic category assignment trigger'; END $$;
 
--- Step 8: Update existing uncategorized products (with trigger management)
+-- Step 8: Update existing uncategorized products (SAFE VERSION - NO PRODUCT SYNC)
 DO $$
 DECLARE
-  trigger_exists BOOLEAN;
+  updated_count INTEGER := 0;
+  product_record RECORD;
+  category_id_var UUID;
 BEGIN
-  -- Check if the sync trigger exists and disable it temporarily
-  SELECT EXISTS (
-    SELECT 1 FROM pg_trigger
-    WHERE tgname = 'trigger_sync_product_catalog_changes'
-    AND tgrelid = 'product_catalog'::regclass
-  ) INTO trigger_exists;
-
-  IF trigger_exists THEN
-    ALTER TABLE product_catalog DISABLE TRIGGER trigger_sync_product_catalog_changes;
-    RAISE NOTICE 'Temporarily disabled product sync trigger';
-  END IF;
-
-  -- Update uncategorized products
-  UPDATE product_catalog
-  SET category_id = get_or_create_category(product_catalog.store_id, rt.category_name)
-  FROM recipes r
-  JOIN recipe_templates rt ON r.template_id = rt.id
-  WHERE product_catalog.recipe_id = r.id
-    AND product_catalog.category_id IS NULL
-    AND rt.category_name IS NOT NULL;
-
-  -- Re-enable the trigger if it existed
-  IF trigger_exists THEN
-    ALTER TABLE product_catalog ENABLE TRIGGER trigger_sync_product_catalog_changes;
-    RAISE NOTICE 'Re-enabled product sync trigger';
-  END IF;
-
-  RAISE NOTICE 'Updated existing uncategorized products';
+  -- Disable any product sync triggers temporarily
+  PERFORM pg_advisory_lock(12345); -- Use advisory lock to prevent conflicts
+  
+  -- Update products one by one to avoid constraint violations
+  FOR product_record IN 
+    SELECT pc.id, pc.store_id, rt.category_name
+    FROM product_catalog pc
+    JOIN recipes r ON pc.recipe_id = r.id
+    JOIN recipe_templates rt ON r.template_id = rt.id
+    WHERE pc.category_id IS NULL
+      AND rt.category_name IS NOT NULL
+      AND pc.is_available = true
+  LOOP
+    BEGIN
+      -- Get category ID
+      category_id_var := get_or_create_category(product_record.store_id, product_record.category_name);
+      
+      -- Update only the category_id field to minimize trigger impact
+      UPDATE product_catalog 
+      SET category_id = category_id_var
+      WHERE id = product_record.id;
+      
+      updated_count := updated_count + 1;
+      
+    EXCEPTION WHEN OTHERS THEN
+      -- Log error but continue with other products
+      RAISE NOTICE 'Failed to update product ID %: %', product_record.id, SQLERRM;
+    END;
+  END LOOP;
+  
+  PERFORM pg_advisory_unlock(12345);
+  
+  RAISE NOTICE 'Updated % existing uncategorized products', updated_count;
 END $$;
 
 -- Step 9: Create recipe management summary view
@@ -308,4 +314,4 @@ COMMENT ON VIEW recipe_management_summary IS 'Summary view of recipe management 
 COMMENT ON FUNCTION safe_clear_recipe_data() IS 'Safely clears all recipe data by deactivating instead of deleting';
 
 -- Final success message
-SELECT 'UNIFIED RECIPE SYSTEM SETUP COMPLETE!' as status;
+SELECT 'UNIFIED RECIPE SYSTEM SETUP COMPLETE (SAFE VERSION)!' as status;

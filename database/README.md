@@ -41,6 +41,7 @@ database/
 | Script | Purpose | Dependencies |
 |--------|---------|--------------|
 | `01_unified_recipe_system.sql` | Complete recipe management system setup | None |
+| `01_unified_recipe_system_safe.sql` | Safe version for existing data (use if constraint errors) | None |
 | `02_essential_functions.sql` | Core database functions and triggers | Script 01 |
 
 ### 🔄 Maintenance Scripts (Run as Needed)
@@ -69,10 +70,12 @@ These are handled automatically by Supabase's migration system. Do not run manua
 
 ### New Installation:
 ```sql
--- 1. Run in Supabase SQL Editor
-database/setup/01_unified_recipe_system.sql
+-- 1. Run in Supabase SQL Editor (choose one)
+database/setup/01_unified_recipe_system.sql          -- Standard version
+-- OR --
+database/setup/01_unified_recipe_system_safe.sql     -- If you get constraint errors
 
--- 2. Run in Supabase SQL Editor  
+-- 2. Run in Supabase SQL Editor
 database/setup/02_essential_functions.sql
 
 -- 3. Use application UI
