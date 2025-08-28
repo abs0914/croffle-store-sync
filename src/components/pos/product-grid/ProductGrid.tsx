@@ -181,16 +181,19 @@ export default function ProductGrid({
       return;
     }
 
-    // Check if this product needs customization based on name, not just category
+    // Decide if this product needs customization. Only base Mix & Match items should open the dialog
     const productName = product.name.toLowerCase();
-    const needsCustomization = productName.includes('mini') || productName.includes('overload');
-    
-    // Get the category name for Mix & Match category products
-    const categoryName = getCategoryName(product.category_id);
-    const isMixMatchCategory = categoryName.toLowerCase() === 'mix & match';
-    
-    // Products that need customization: Mix & Match category OR Mini/Overload products
-    const shouldCustomize = isMixMatchCategory || needsCustomization;
+    const categoryName = getCategoryName(product.category_id).toLowerCase();
+
+    // Mix & Match category always customizes
+    const isMixMatchCategory = categoryName === 'mix & match';
+
+    // Base Mix & Match products that trigger customization by name (exact matches only)
+    const baseMixMatchNames = ['overload croffle', 'mini croffle', 'mix & match croffle'];
+    const isBaseMixMatchProduct = baseMixMatchNames.some(n => productName === n);
+
+    // Only show customization for Mix & Match category or the exact base items above
+    const shouldCustomize = isMixMatchCategory || isBaseMixMatchProduct;
 
     // For products that don't need customization, add directly to cart
     if (!shouldCustomize) {
@@ -373,20 +376,22 @@ export default function ProductGrid({
   const shouldShowEnhancedCustomization = (product: Product): boolean => {
     const productName = product.name.toLowerCase();
     const categoryName = getCategoryName(product.category_id).toLowerCase();
-    
+
+    // Only base Mix & Match croffle builders should open the enhanced customization
+    const baseMixMatchNames = ['overload croffle', 'mini croffle', 'mix & match croffle'];
+    const isBaseMixMatchProduct = baseMixMatchNames.some(n => productName === n);
+    const isMixMatchCategory = categoryName === 'mix & match';
+
+    const willCustomize = isMixMatchCategory || isBaseMixMatchProduct;
     console.log('🎯 shouldShowEnhancedCustomization check:', {
       productName,
       categoryName,
-      containsCroffle: productName.includes('croffle'),
-      willShowCustomization: productName.includes('croffle')
+      isBaseMixMatchProduct,
+      isMixMatchCategory,
+      willCustomize
     });
-    
-    // Show enhanced customization for all croffle products (including Mix & Match croffles)
-    if (productName.includes('croffle')) {
-      return true;
-    }
-    
-    return false;
+
+    return willCustomize;
   };
 
   const shouldShowAddonSelection = (product: Product): boolean => {
