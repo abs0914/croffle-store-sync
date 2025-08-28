@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 
 interface ImageWithFallbackProps {
@@ -7,7 +7,6 @@ interface ImageWithFallbackProps {
   className?: string;
   fallbackClassName?: string;
   onError?: () => void;
-  retryCount?: number;
 }
 
 export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
@@ -15,29 +14,19 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
   alt,
   className = '',
   fallbackClassName = '',
-  onError,
-  retryCount = 2
+  onError
 }) => {
   const [hasError, setHasError] = useState(false);
-  const [retries, setRetries] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const handleImageError = useCallback(() => {
-    console.warn(`🖼️ Image load failed: ${src} (attempt ${retries + 1}/${retryCount + 1})`);
-    
-    if (retries < retryCount) {
-      setRetries(prev => prev + 1);
-    } else {
-      setHasError(true);
-      setIsLoading(false);
-      onError?.();
-    }
-  }, [src, retries, retryCount, onError]);
+  const handleImageError = () => {
+    console.warn(`🖼️ Image load failed: ${src}`);
+    setHasError(true);
+    onError?.();
+  };
 
-  const handleImageLoad = useCallback(() => {
-    setIsLoading(false);
+  const handleImageLoad = () => {
     setHasError(false);
-  }, []);
+  };
 
   if (hasError) {
     return (
@@ -50,22 +39,19 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
     );
   }
 
+  // Add cache-busting timestamp to force fresh image loads
+  const cacheBustedSrc = src.includes('?') 
+    ? `${src}&cb=${Date.now()}` 
+    : `${src}?cb=${Date.now()}`;
+
   return (
-    <>
-      {isLoading && (
-        <div className={`absolute inset-0 flex items-center justify-center bg-muted animate-pulse ${className}`}>
-          <div className="text-muted-foreground text-xs">Loading...</div>
-        </div>
-      )}
-      <img
-        src={retries > 0 ? `${src}?retry=${retries}&t=${Date.now()}` : src}
-        alt={alt}
-        className={className}
-        onError={handleImageError}
-        onLoad={handleImageLoad}
-        loading="lazy"
-        style={{ display: isLoading ? 'none' : 'block' }}
-      />
-    </>
+    <img
+      src={cacheBustedSrc}
+      alt={alt}
+      className={className}
+      onError={handleImageError}
+      onLoad={handleImageLoad}
+      loading="lazy"
+    />
   );
 };

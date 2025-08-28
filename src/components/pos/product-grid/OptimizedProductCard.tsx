@@ -150,7 +150,6 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                     className="w-full h-full object-cover"
                     fallbackClassName="w-full h-full"
                     onError={() => console.warn(`Image failed for product: ${product.name}`)}
-                    retryCount={3}
                   />
                 </div>
               ) : (
