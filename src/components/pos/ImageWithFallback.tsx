@@ -26,22 +26,7 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
     console.warn(`🖼️ Image load failed: ${src} (attempt ${retries + 1}/${retryCount + 1})`);
     
     if (retries < retryCount) {
-      // Try to reload the image with cache busting
-      const img = new Image();
-      img.onload = () => {
-        setRetries(prev => prev + 1);
-        setHasError(false);
-        setIsLoading(false);
-      };
-      img.onerror = () => {
-        setRetries(prev => prev + 1);
-        if (retries + 1 >= retryCount) {
-          setHasError(true);
-          setIsLoading(false);
-          onError?.();
-        }
-      };
-      img.src = `${src}?retry=${retries + 1}&t=${Date.now()}`;
+      setRetries(prev => prev + 1);
     } else {
       setHasError(true);
       setIsLoading(false);
