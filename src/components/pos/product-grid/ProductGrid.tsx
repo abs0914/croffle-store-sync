@@ -118,9 +118,11 @@ export default function ProductGrid({
 
   // Handle category selection for Combo
   const handleCategorySelect = (categoryId: string) => {
-    const categoryName = getCategoryName(categoryId);
+    console.log('🔧 handleCategorySelect called with:', categoryId);
     
-    if (categoryName === "Combo") {
+    // Handle special combo identifier passed from ProductCategoryTabs
+    if (categoryId === "combo") {
+      console.log('🔧 Combo identifier received');
       // Open combo selection dialog instead of showing products
       if (isShiftActive) {
         // Check if data is ready before opening dialog
@@ -139,6 +141,19 @@ export default function ProductGrid({
         } else {
           console.warn('🔧 Cannot open combo dialog: data not ready');
         }
+      } else {
+        console.warn('🔧 Shift not active, cannot open combo dialog');
+      }
+      return;
+    }
+    
+    const categoryName = getCategoryName(categoryId);
+    
+    if (categoryName === "Combo") {
+      // This handles the case where a real "Combo" category exists in database
+      if (isShiftActive) {
+        console.log('🔧 Opening combo dialog for real Combo category');
+        setIsComboDialogOpen(true);
       }
     } else {
       // Normal category selection
