@@ -2,9 +2,10 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Wifi, WifiOff, Menu, Expand } from 'lucide-react';
+import { Wifi, WifiOff, Menu, RefreshCw } from 'lucide-react';
 import { PrinterStatusIndicator } from '@/components/printer/PrinterStatusIndicator';
 import { useSidebar } from '@/components/ui/sidebar';
+
 interface OptimizedPOSHeaderProps {
   storeName: string;
   shiftInfo?: {
@@ -13,12 +14,14 @@ interface OptimizedPOSHeaderProps {
   };
   connectionStatus: 'online' | 'offline';
   onShowLastReceipt?: () => void;
+  onRefreshProducts?: () => void;
 }
-export function OptimizedPOSHeader({
-  storeName,
-  shiftInfo,
+export function OptimizedPOSHeader({ 
+  storeName, 
+  shiftInfo, 
   connectionStatus,
-  onShowLastReceipt
+  onShowLastReceipt,
+  onRefreshProducts
 }: OptimizedPOSHeaderProps) {
   const {
     toggleSidebar
@@ -61,10 +64,18 @@ export function OptimizedPOSHeader({
             {/* Printer Status */}
             <PrinterStatusIndicator />
 
-            {/* Last Receipt Button */}
-            {onShowLastReceipt && <Button variant="outline" size="sm" onClick={onShowLastReceipt}>
+            {/* Refresh & Last Receipt Buttons */}
+            {onRefreshProducts && (
+              <Button variant="outline" size="sm" onClick={onRefreshProducts}>
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Refresh
+              </Button>
+            )}
+            {onShowLastReceipt && (
+              <Button variant="outline" size="sm" onClick={onShowLastReceipt}>
                 Last Receipt
-              </Button>}
+              </Button>
+            )}
           </div>
         </div>
 

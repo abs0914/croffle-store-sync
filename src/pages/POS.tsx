@@ -227,6 +227,7 @@ export default function POS() {
           } : undefined}
           connectionStatus={isConnected ? 'online' : 'offline'}
           onShowLastReceipt={() => setShowReceiptModal(true)}
+          onRefreshProducts={refreshProducts}
         />
       </div>
 
