@@ -9,7 +9,7 @@ import { Transaction } from "@/types";
 import { unifiedProductInventoryService } from "@/services/unified/UnifiedProductInventoryService";
 import { deductInventoryForTransaction } from "@/services/inventoryDeductionService";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
-import { enrichCartItemsWithCategories, insertTransactionItems } from "./transactionItemsService";
+import { enrichCartItemsWithCategories, insertTransactionItems, DetailedTransactionItem } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -330,24 +330,125 @@ class StreamlinedTransactionService {
         const enrichedItems = await enrichCartItemsWithCategories(cartItems);
         await insertTransactionItems(transactionId, enrichedItems);
       } else {
-        // Create basic items from transaction data
-        const basicItems = items.map(item => ({
-          product_id: item.productId,
-          variation_id: item.variationId || undefined,
-          name: item.name,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          total_price: item.totalPrice,
-          category_id: undefined,
-          category_name: 'Unknown',
-          product_type: 'direct'
-        }));
+        // Create basic items from transaction data - handle combo products
+        const basicItems: DetailedTransactionItem[] = [];
+        
+        for (const item of items) {
+          // Check if this is a combo product
+          if (item.productId.startsWith('combo-')) {
+            console.log('🔧 Processing combo item in transaction:', item.productId);
+            
+            // Expand combo product into component items
+            const comboComponents = await this.expandComboProductForTransaction(item);
+            basicItems.push(...comboComponents);
+          } else {
+            // Regular product
+            basicItems.push({
+              product_id: item.productId,
+              variation_id: item.variationId || undefined,
+              name: item.name,
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+              total_price: item.totalPrice,
+              category_id: undefined,
+              category_name: 'Unknown',
+              product_type: 'direct'
+            });
+          }
+        }
         
         await insertTransactionItems(transactionId, basicItems);
       }
     } catch (error) {
       console.error('❌ Failed to insert transaction items:', error);
       throw new Error('Failed to save transaction items');
+    }
+  }
+
+  /**
+   * Expand combo product for transaction processing
+   */
+  private async expandComboProductForTransaction(item: StreamlinedTransactionItem): Promise<DetailedTransactionItem[]> {
+    try {
+      // Extract component IDs from combo ID: "combo-{croffle-id}-{espresso-id}"
+      const comboIdParts = item.productId.split('-');
+      if (comboIdParts.length !== 3) {
+        throw new Error(`Invalid combo ID format: ${item.productId}`);
+      }
+      
+      const croffleId = comboIdParts[1];
+      const espressoId = comboIdParts[2];
+      
+      // Fetch component products
+      const { data: croffleProduct } = await supabase
+        .from('product_catalog')
+        .select(`id, product_name, category_id, price, categories (id, name)`)
+        .eq('id', croffleId)
+        .maybeSingle();
+        
+      const { data: espressoProduct } = await supabase
+        .from('product_catalog')
+        .select(`id, product_name, category_id, price, categories (id, name)`)
+        .eq('id', espressoId)
+        .maybeSingle();
+
+      const comboItems: DetailedTransactionItem[] = [];
+      
+      // Calculate proportional pricing
+      const crofflePrice = croffleProduct?.price || 0;
+      const espressoPrice = espressoProduct?.price || 0;
+      const totalComboPrice = item.totalPrice;
+      const totalOriginalPrice = crofflePrice + espressoPrice;
+      
+      const croffleProportionalPrice = totalOriginalPrice > 0 ? 
+        (crofflePrice / totalOriginalPrice) * totalComboPrice : totalComboPrice / 2;
+      const espressoProportionalPrice = totalComboPrice - croffleProportionalPrice;
+
+      // Add component items
+      if (croffleProduct) {
+        comboItems.push({
+          product_id: croffleId,
+          variation_id: undefined,
+          name: `${croffleProduct.product_name} (from ${item.name})`,
+          quantity: item.quantity,
+          unit_price: croffleProportionalPrice / item.quantity,
+          total_price: croffleProportionalPrice,
+          category_id: croffleProduct.category_id,
+          category_name: croffleProduct.categories?.name,
+          product_type: 'combo_component'
+        });
+      }
+      
+      if (espressoProduct) {
+        comboItems.push({
+          product_id: espressoId,
+          variation_id: undefined,
+          name: `${espressoProduct.product_name} (from ${item.name})`,
+          quantity: item.quantity,
+          unit_price: espressoProportionalPrice / item.quantity,
+          total_price: espressoProportionalPrice,
+          category_id: espressoProduct.category_id,
+          category_name: espressoProduct.categories?.name,
+          product_type: 'combo_component'
+        });
+      }
+      
+      return comboItems;
+    } catch (error) {
+      console.error('❌ Failed to expand combo for transaction:', error);
+      
+      // Fallback: use placeholder UUID
+      return [{
+        product_id: '00000000-0000-0000-0000-000000000000',
+        variation_id: undefined,
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.totalPrice,
+        category_id: undefined,
+        category_name: 'Combo',
+        product_type: 'combo'
+      }];
     }
   }
 

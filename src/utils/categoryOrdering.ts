@@ -19,6 +19,7 @@ export const CATEGORY_ORDER = [
   'Beverages',
   // Then Additional Items
   'Add-ons',
+  // Finally Combos
   'Combo'
 ];
 

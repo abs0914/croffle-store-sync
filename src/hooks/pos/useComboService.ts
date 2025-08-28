@@ -1,33 +1,53 @@
 import { useMemo } from "react";
 import { Product, Category } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useComboService() {
-  // Combo pricing rules based on the provided table
-  const comboPricing = useMemo(() => ({
-    "Classic": {
-      "Hot Espresso": 170,
-      "Cold Espresso": 175
-    },
-    "Glaze": {
-      "Hot Espresso": 125,
-      "Cold Espresso": 130
-    },
-    "Fruity": {
-      "Hot Espresso": 170,
-      "Cold Espresso": 175
-    },
-    "Premium": {
-      "Hot Espresso": 170,
-      "Cold Espresso": 175
-    },
-    "Mini Croffle": {
-      "Hot Espresso": 110,
-      "Cold Espresso": 115
-    }
-  }), []);
-
+  // Dynamic combo pricing from database combo products
   const getComboPrice = (croffleCategory: string, espressoType: string): number => {
+    // TODO: Replace with database lookup once combo products are created
+    // For now, keep existing pricing logic for backward compatibility
+    const comboPricing = {
+      "Classic": {
+        "Hot Espresso": 170,
+        "Cold Espresso": 175
+      },
+      "Glaze": {
+        "Hot Espresso": 125,
+        "Cold Espresso": 130
+      },
+      "Fruity": {
+        "Hot Espresso": 170,
+        "Cold Espresso": 175
+      },
+      "Premium": {
+        "Hot Espresso": 170,
+        "Cold Espresso": 175
+      },
+      "Mini Croffle": {
+        "Hot Espresso": 110,
+        "Cold Espresso": 115
+      }
+    };
+    
     return comboPricing[croffleCategory as keyof typeof comboPricing]?.[espressoType as "Hot Espresso" | "Cold Espresso"] || 0;
+  };
+
+  const getComboProducts = async (storeId: string) => {
+    const { data: comboProducts, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('store_id', storeId)
+      .not('combo_main', 'is', null)
+      .not('combo_add_on', 'is', null)
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error fetching combo products:', error);
+      return [];
+    }
+
+    return comboProducts || [];
   };
 
   const getEspressoProducts = (products: Product[], categories: Category[]): Product[] => {
@@ -148,6 +168,6 @@ export function useComboService() {
     getComboPrice,
     getEspressoProducts,
     createComboCartItem,
-    comboPricing
+    getComboProducts
   };
 }

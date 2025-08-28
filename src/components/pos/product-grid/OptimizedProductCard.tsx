@@ -6,6 +6,7 @@ import { Product } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertTriangle, Package, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ImageWithFallback } from "../ImageWithFallback";
 
 interface OptimizedProductCardProps {
   product: Product;
@@ -142,12 +143,13 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
               )}
               
               {product.image_url || product.image ? (
-                <div className="w-full aspect-square overflow-hidden bg-white">
-                  <img 
+                <div className="w-full aspect-square overflow-hidden bg-white relative">
+                  <ImageWithFallback
                     src={product.image_url || product.image} 
                     alt={product.name} 
                     className="w-full h-full object-cover"
-                    loading="lazy"
+                    fallbackClassName="w-full h-full"
+                    onError={() => console.warn(`Image failed for product: ${product.name}`)}
                   />
                 </div>
               ) : (

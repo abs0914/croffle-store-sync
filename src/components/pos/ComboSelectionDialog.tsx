@@ -189,6 +189,13 @@ export function ComboSelectionDialog({
       count: getCategoryProducts(catName).length,
       foundCategories: categories.filter(c => c.name === catName).length,
       categoryDetails: categories.filter(c => c.name === catName).map(c => ({ id: c.id, is_active: c.is_active }))
+    })),
+    allProductsDetailed: products.map(p => ({
+      id: p.id,
+      name: p.name,
+      category_id: p.category_id,
+      is_active: p.is_active,
+      matchedCategory: categories.find(c => c.id === p.category_id)?.name || 'NO CATEGORY'
     }))
   });
 
@@ -388,8 +395,8 @@ export function ComboSelectionDialog({
             </div>
           )}
 
-          {/* Normal Content with Data Ready Check */}
-          {isDataLoaded && isDataReady && hasAnyValidProducts && step === "croffle" && (
+          {/* Debug Override - Show content if we have data */}
+          {isDataLoaded && step === "croffle" && (
             <div className="space-y-6">
               {/* Enhanced Category Tabs with Visual Feedback */}
               <div className="space-y-3">
