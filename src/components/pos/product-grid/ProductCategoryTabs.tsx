@@ -34,15 +34,37 @@ export default function ProductCategoryTabs({
     'Espresso', 'Fruity', 'Glaze', 'Mix & Match', 'Premium', 'Combo'
   ];
 
-  // Filter to only show main categories that exist in the database
+  // Filter to only show main categories that exist in the database OR always show Combo
   const mainCategories = uniqueCategories.filter(category =>
     mainCategoryNames.includes(category.name)
   );
+  
+  // Always ensure Combo appears if it doesn't exist in database categories
+  const hasComboCategory = mainCategories.some(cat => cat.name === "Combo");
+  if (!hasComboCategory) {
+    // Create a virtual Combo category for display
+    mainCategories.push({
+      id: "combo-virtual",
+      name: "Combo",
+      is_active: true,
+      store_id: categories[0]?.store_id || ""
+    } as Category);
+  }
 
   // Sort categories using custom POS ordering
   const sortedCategories = sortCategoriesForPOS(mainCategories);
 
   const handleCategoryClick = (categoryId: string) => {
+    // Special handling for Combo category
+    if (categoryId === "combo-virtual" || 
+        (categories.find(c => c.id === categoryId)?.name === "Combo")) {
+      // Open combo selection dialog instead of filtering products
+      if (onCategorySelect) {
+        onCategorySelect("combo"); // Pass special combo identifier
+      }
+      return;
+    }
+
     if (onCategorySelect) {
       onCategorySelect(categoryId);
     } else {
@@ -83,7 +105,7 @@ export default function ProductCategoryTabs({
               : "border-2 border-croffle-primary/30 bg-white text-croffle-primary hover:bg-croffle-light hover:border-croffle-primary/50"
           }`}
         >
-          {category.name}
+          {category.name === "Combo" ? "🍯 Combo" : category.name}
         </Button>
       ))}
     </div>
