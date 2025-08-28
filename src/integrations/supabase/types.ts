@@ -92,6 +92,51 @@ export type Database = {
         }
         Relationships: []
       }
+      app_users_backup_reset: {
+        Row: {
+          contact_number: string | null
+          created_at: string | null
+          custom_permissions: Json | null
+          email: string | null
+          first_name: string | null
+          id: string | null
+          is_active: boolean | null
+          last_name: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          store_ids: string[] | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          contact_number?: string | null
+          created_at?: string | null
+          custom_permissions?: Json | null
+          email?: string | null
+          first_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          last_name?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          store_ids?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          contact_number?: string | null
+          created_at?: string | null
+          custom_permissions?: Json | null
+          email?: string | null
+          first_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          last_name?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          store_ids?: string[] | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       auth_rate_limits: {
         Row: {
           attempt_count: number | null
@@ -185,6 +230,13 @@ export type Database = {
             foreignKeyName: "bir_audit_logs_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "bir_audit_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -225,6 +277,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bir_cumulative_sales_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
           {
             foreignKeyName: "bir_cumulative_sales_store_id_fkey"
             columns: ["store_id"]
@@ -293,6 +352,13 @@ export type Database = {
           zero_rated_sales?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "bir_ejournal_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
           {
             foreignKeyName: "bir_ejournal_store_id_fkey"
             columns: ["store_id"]
@@ -379,6 +445,13 @@ export type Database = {
             foreignKeyName: "cashiers_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "cashiers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -420,10 +493,50 @@ export type Database = {
             foreignKeyName: "categories_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "categories_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
+      }
+      categories_backup_reset: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          image_url: string | null
+          is_active: boolean | null
+          name: string | null
+          store_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          store_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          store_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       cleanup_log: {
         Row: {
@@ -710,6 +823,13 @@ export type Database = {
             foreignKeyName: "commissary_restock_fulfillments_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "commissary_restock_fulfillments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -797,6 +917,13 @@ export type Database = {
             foreignKeyName: "commissary_restock_requests_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "commissary_restock_requests_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -840,6 +967,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
           {
             foreignKeyName: "customers_store_id_fkey"
             columns: ["store_id"]
@@ -1030,6 +1164,13 @@ export type Database = {
             foreignKeyName: "expense_approval_limits_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "expense_approval_limits_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -1127,6 +1268,13 @@ export type Database = {
             foreignKeyName: "expense_audit_trail_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "expense_audit_trail_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -1182,6 +1330,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "expense_categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_budgets_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
           },
           {
             foreignKeyName: "expense_budgets_store_id_fkey"
@@ -1289,6 +1444,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "expense_categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
           },
           {
             foreignKeyName: "expenses_store_id_fkey"
@@ -1687,6 +1849,13 @@ export type Database = {
             foreignKeyName: "inventory_items_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "inventory_items_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -1820,6 +1989,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_stock_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
           {
             foreignKeyName: "inventory_stock_store_id_fkey"
             columns: ["store_id"]
@@ -2005,6 +2181,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
           },
           {
             foreignKeyName: "inventory_transactions_store_id_fkey"
@@ -2230,6 +2413,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
           {
             foreignKeyName: "orders_store_id_fkey"
             columns: ["store_id"]
@@ -2474,6 +2664,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "recipes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_catalog_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
           },
           {
             foreignKeyName: "product_catalog_store_id_fkey"
@@ -2746,6 +2943,13 @@ export type Database = {
             foreignKeyName: "products_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -2993,6 +3197,13 @@ export type Database = {
             foreignKeyName: "purchase_orders_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -3139,6 +3350,13 @@ export type Database = {
             foreignKeyName: "recipe_deployment_errors_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_errors_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -3218,6 +3436,13 @@ export type Database = {
             foreignKeyName: "recipe_deployment_logs_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "recipe_deployment_logs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -3287,6 +3512,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "recipes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_deployments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
           },
           {
             foreignKeyName: "recipe_deployments_store_id_fkey"
@@ -3732,6 +3964,8 @@ export type Database = {
           choice_group_name: string | null
           choice_group_type: string | null
           choice_order: number | null
+          combo_add_on: boolean | null
+          combo_main: boolean | null
           commissary_item_id: string | null
           commissary_item_name: string | null
           cost_per_unit: number | null
@@ -3741,6 +3975,7 @@ export type Database = {
             | Database["public"]["Enums"]["ingredient_group_selection_type"]
             | null
           id: string
+          ingredient_category: string | null
           ingredient_group_id: string | null
           ingredient_group_name: string | null
           ingredient_name: string
@@ -3765,6 +4000,8 @@ export type Database = {
           choice_group_name?: string | null
           choice_group_type?: string | null
           choice_order?: number | null
+          combo_add_on?: boolean | null
+          combo_main?: boolean | null
           commissary_item_id?: string | null
           commissary_item_name?: string | null
           cost_per_unit?: number | null
@@ -3774,6 +4011,7 @@ export type Database = {
             | Database["public"]["Enums"]["ingredient_group_selection_type"]
             | null
           id?: string
+          ingredient_category?: string | null
           ingredient_group_id?: string | null
           ingredient_group_name?: string | null
           ingredient_name: string
@@ -3798,6 +4036,8 @@ export type Database = {
           choice_group_name?: string | null
           choice_group_type?: string | null
           choice_order?: number | null
+          combo_add_on?: boolean | null
+          combo_main?: boolean | null
           commissary_item_id?: string | null
           commissary_item_name?: string | null
           cost_per_unit?: number | null
@@ -3807,6 +4047,7 @@ export type Database = {
             | Database["public"]["Enums"]["ingredient_group_selection_type"]
             | null
           id?: string
+          ingredient_category?: string | null
           ingredient_group_id?: string | null
           ingredient_group_name?: string | null
           ingredient_name?: string
@@ -3856,6 +4097,8 @@ export type Database = {
           base_price_includes: string | null
           category_name: string | null
           choice_configuration: Json | null
+          combo_add_on: boolean | null
+          combo_main: boolean | null
           combo_rules: Json | null
           created_at: string | null
           created_by: string | null
@@ -3873,6 +4116,7 @@ export type Database = {
           serving_size: number | null
           sku: string | null
           suggested_price: number | null
+          total_cost: number | null
           updated_at: string | null
           version: number | null
           yield_quantity: number
@@ -3881,6 +4125,8 @@ export type Database = {
           base_price_includes?: string | null
           category_name?: string | null
           choice_configuration?: Json | null
+          combo_add_on?: boolean | null
+          combo_main?: boolean | null
           combo_rules?: Json | null
           created_at?: string | null
           created_by?: string | null
@@ -3898,6 +4144,7 @@ export type Database = {
           serving_size?: number | null
           sku?: string | null
           suggested_price?: number | null
+          total_cost?: number | null
           updated_at?: string | null
           version?: number | null
           yield_quantity?: number
@@ -3906,6 +4153,8 @@ export type Database = {
           base_price_includes?: string | null
           category_name?: string | null
           choice_configuration?: Json | null
+          combo_add_on?: boolean | null
+          combo_main?: boolean | null
           combo_rules?: Json | null
           created_at?: string | null
           created_by?: string | null
@@ -3923,6 +4172,7 @@ export type Database = {
           serving_size?: number | null
           sku?: string | null
           suggested_price?: number | null
+          total_cost?: number | null
           updated_at?: string | null
           version?: number | null
           yield_quantity?: number
@@ -3974,6 +4224,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "recipes"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_usage_log_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
           },
           {
             foreignKeyName: "recipe_usage_log_store_id_fkey"
@@ -4085,6 +4342,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
           },
           {
             foreignKeyName: "recipes_store_id_fkey"
@@ -4239,6 +4503,13 @@ export type Database = {
             foreignKeyName: "shifts_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "shifts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -4294,6 +4565,13 @@ export type Database = {
           upload_sent?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_sm_export_logs_store_id"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
           {
             foreignKeyName: "fk_sm_export_logs_store_id"
             columns: ["store_id"]
@@ -4437,6 +4715,13 @@ export type Database = {
             foreignKeyName: "stock_orders_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "stock_orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -4544,6 +4829,13 @@ export type Database = {
             foreignKeyName: "store_inventory_alerts_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "store_inventory_alerts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -4590,6 +4882,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "store_metrics_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
           {
             foreignKeyName: "store_metrics_store_id_fkey"
             columns: ["store_id"]
@@ -4641,6 +4940,13 @@ export type Database = {
             foreignKeyName: "store_pricing_profiles_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "store_pricing_profiles_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -4687,6 +4993,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "store_settings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
           {
             foreignKeyName: "store_settings_store_id_fkey"
             columns: ["store_id"]
@@ -4846,6 +5159,156 @@ export type Database = {
         }
         Relationships: []
       }
+      stores_backup_reset: {
+        Row: {
+          accreditation_date: string | null
+          accreditation_number: string | null
+          address: string | null
+          bir_final_permit_number: string | null
+          business_name: string | null
+          business_type: string | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          date_issued: string | null
+          email: string | null
+          franchise_agreement_date: string | null
+          franchise_fee_amount: number | null
+          franchise_fee_percentage: number | null
+          franchisee_contact_info: Json | null
+          id: string | null
+          is_active: boolean | null
+          is_bir_accredited: boolean | null
+          is_vat_registered: boolean | null
+          location_type: string | null
+          logistics_zone: string | null
+          logo_url: string | null
+          machine_accreditation_number: string | null
+          machine_serial_number: string | null
+          name: string | null
+          non_vat_disclaimer: string | null
+          opening_date: string | null
+          owner_address: string | null
+          owner_contact_number: string | null
+          owner_email: string | null
+          owner_name: string | null
+          ownership_type: string | null
+          permit_number: string | null
+          phone: string | null
+          pos_version: string | null
+          region: string | null
+          state: string | null
+          store_location_photo_url: string | null
+          supplier_address: string | null
+          supplier_name: string | null
+          supplier_tin: string | null
+          tax_id: string | null
+          tin: string | null
+          updated_at: string | null
+          valid_until: string | null
+          validity_statement: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          accreditation_date?: string | null
+          accreditation_number?: string | null
+          address?: string | null
+          bir_final_permit_number?: string | null
+          business_name?: string | null
+          business_type?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          date_issued?: string | null
+          email?: string | null
+          franchise_agreement_date?: string | null
+          franchise_fee_amount?: number | null
+          franchise_fee_percentage?: number | null
+          franchisee_contact_info?: Json | null
+          id?: string | null
+          is_active?: boolean | null
+          is_bir_accredited?: boolean | null
+          is_vat_registered?: boolean | null
+          location_type?: string | null
+          logistics_zone?: string | null
+          logo_url?: string | null
+          machine_accreditation_number?: string | null
+          machine_serial_number?: string | null
+          name?: string | null
+          non_vat_disclaimer?: string | null
+          opening_date?: string | null
+          owner_address?: string | null
+          owner_contact_number?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          ownership_type?: string | null
+          permit_number?: string | null
+          phone?: string | null
+          pos_version?: string | null
+          region?: string | null
+          state?: string | null
+          store_location_photo_url?: string | null
+          supplier_address?: string | null
+          supplier_name?: string | null
+          supplier_tin?: string | null
+          tax_id?: string | null
+          tin?: string | null
+          updated_at?: string | null
+          valid_until?: string | null
+          validity_statement?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          accreditation_date?: string | null
+          accreditation_number?: string | null
+          address?: string | null
+          bir_final_permit_number?: string | null
+          business_name?: string | null
+          business_type?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          date_issued?: string | null
+          email?: string | null
+          franchise_agreement_date?: string | null
+          franchise_fee_amount?: number | null
+          franchise_fee_percentage?: number | null
+          franchisee_contact_info?: Json | null
+          id?: string | null
+          is_active?: boolean | null
+          is_bir_accredited?: boolean | null
+          is_vat_registered?: boolean | null
+          location_type?: string | null
+          logistics_zone?: string | null
+          logo_url?: string | null
+          machine_accreditation_number?: string | null
+          machine_serial_number?: string | null
+          name?: string | null
+          non_vat_disclaimer?: string | null
+          opening_date?: string | null
+          owner_address?: string | null
+          owner_contact_number?: string | null
+          owner_email?: string | null
+          owner_name?: string | null
+          ownership_type?: string | null
+          permit_number?: string | null
+          phone?: string | null
+          pos_version?: string | null
+          region?: string | null
+          state?: string | null
+          store_location_photo_url?: string | null
+          supplier_address?: string | null
+          supplier_name?: string | null
+          supplier_tin?: string | null
+          tax_id?: string | null
+          tin?: string | null
+          updated_at?: string | null
+          valid_until?: string | null
+          validity_statement?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       suppliers: {
         Row: {
           address: string | null
@@ -4882,6 +5345,30 @@ export type Database = {
           name?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      system_reset_log: {
+        Row: {
+          created_by: string | null
+          details: Json | null
+          id: string
+          reset_date: string | null
+          reset_type: string
+        }
+        Insert: {
+          created_by?: string | null
+          details?: Json | null
+          id?: string
+          reset_date?: string | null
+          reset_type: string
+        }
+        Update: {
+          created_by?: string | null
+          details?: Json | null
+          id?: string
+          reset_date?: string | null
+          reset_type?: string
         }
         Relationships: []
       }
@@ -5137,6 +5624,13 @@ export type Database = {
             foreignKeyName: "transactions_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -5348,6 +5842,13 @@ export type Database = {
             foreignKeyName: "user_stores_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "user_stores_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -5355,6 +5856,19 @@ export type Database = {
       }
     }
     Views: {
+      recipe_management_summary: {
+        Row: {
+          catalog_products: number | null
+          categorization_percentage: number | null
+          categorized_products: number | null
+          deployed_recipes: number | null
+          store_id: string | null
+          store_name: string | null
+          total_categories: number | null
+          total_templates: number | null
+        }
+        Relationships: []
+      }
       recipe_usage_analytics: {
         Row: {
           avg_quantity_per_use: number | null
@@ -5369,6 +5883,13 @@ export type Database = {
           usage_month: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "recipes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
           {
             foreignKeyName: "recipes_store_id_fkey"
             columns: ["store_id"]
@@ -5424,6 +5945,14 @@ export type Database = {
           template_unit: string
         }[]
       }
+      bulk_update_product_categories: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          products_failed: number
+          products_updated: number
+          store_name: string
+        }[]
+      }
       calculate_recipe_cost: {
         Args: { recipe_id: number }
         Returns: number
@@ -5450,9 +5979,31 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_product_catalog_update_conflicts: {
+        Args: { catalog_id: string; new_product_name?: string }
+        Returns: {
+          conflict_details: Json
+          has_conflicts: boolean
+        }[]
+      }
+      check_recipe_deployment_readiness: {
+        Args: { p_store_id: string; p_template_id: string }
+        Returns: {
+          error_message: string
+          is_valid: boolean
+          missing_ingredients: string[]
+        }[]
+      }
       check_recipe_ingredient_availability: {
         Args: { recipe_id_param: string; store_id_param: string }
         Returns: boolean
+      }
+      cleanup_inactive_data: {
+        Args: { days_old?: number }
+        Returns: {
+          records_cleaned: number
+          table_name: string
+        }[]
       }
       cleanup_test_data: {
         Args: { p_store_id: string; p_user_id?: string }
@@ -5551,6 +6102,14 @@ export type Database = {
           skipped_existing: number
           total_stores: number
         }[]
+      }
+      disable_sync_triggers: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      enable_sync_triggers: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       export_transaction_details_csv: {
         Args: { end_date?: string; start_date?: string }
@@ -5651,6 +6210,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_category_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          category_name: string
+          percentage: number
+          product_count: number
+          store_name: string
+        }[]
+      }
       get_commissary_purchase_history: {
         Args: { item_id: string; limit_count?: number }
         Returns: {
@@ -5711,6 +6279,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_or_create_category: {
+        Args: { store_id_param: string; template_category: string }
+        Returns: string
+      }
       get_recipe_repair_status: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -5750,6 +6322,14 @@ export type Database = {
           store_ids: string[]
           updated_at: string
           user_id: string
+        }[]
+      }
+      get_system_health: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          metric: string
+          status: string
+          value: string
         }[]
       }
       get_user_role_permissions: {
@@ -5873,6 +6453,10 @@ export type Database = {
           success: boolean
         }[]
       }
+      map_template_category_to_pos: {
+        Args: { template_category: string }
+        Returns: string
+      }
       migrate_product_catalog_to_products: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -5892,6 +6476,10 @@ export type Database = {
       }
       normalize_unit_name: {
         Args: { unit_text: string }
+        Returns: string
+      }
+      rebuild_performance_indexes: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       recalculate_senior_discounts: {
@@ -5920,6 +6508,37 @@ export type Database = {
       reset_user_rate_limit: {
         Args: { user_email: string }
         Returns: undefined
+      }
+      resolve_duplicate_skus_for_store: {
+        Args: { target_store_id: string }
+        Returns: {
+          details: string
+          resolved_count: number
+        }[]
+      }
+      safe_clear_recipe_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          catalog_references_cleared: number
+          recipes_deactivated: number
+          templates_deactivated: number
+        }[]
+      }
+      safe_update_product_catalog: {
+        Args: {
+          catalog_id: string
+          new_category_id?: string
+          new_description?: string
+          new_image_url?: string
+          new_is_available?: boolean
+          new_price?: number
+          new_product_name?: string
+        }
+        Returns: {
+          message: string
+          success: boolean
+          updated_data: Json
+        }[]
       }
       simple_duplicate_cleanup: {
         Args: Record<PropertyKey, never>
@@ -6053,11 +6672,20 @@ export type Database = {
         }[]
       }
       validate_recipe_deployment: {
-        Args: { store_id_param: string; template_id_param: string }
+        Args: { p_store_id: string; p_template_id: string }
         Returns: {
           error_message: string
           is_valid: boolean
           missing_ingredients: string[]
+        }[]
+      }
+      validate_recipe_integrity: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          check_name: string
+          details: string
+          issue_count: number
+          status: string
         }[]
       }
       validate_recipe_inventory_readiness: {
@@ -6074,6 +6702,8 @@ export type Database = {
           check_name: string
           details: string
           status: string
+          store_id: string
+          store_name: string
         }[]
       }
       validate_user_input: {
