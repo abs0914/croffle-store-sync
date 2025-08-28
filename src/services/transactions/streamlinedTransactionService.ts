@@ -173,7 +173,8 @@ class StreamlinedTransactionService {
       const inventoryResult = await this.processInventoryDeduction(
         transaction.id,
         transactionData.storeId,
-        transactionData.items
+        transactionData.items,
+        cartItems
       );
 
       if (!inventoryResult.success) {
@@ -458,7 +459,8 @@ class StreamlinedTransactionService {
   private async processInventoryDeduction(
     transactionId: string,
     storeId: string,
-    items: StreamlinedTransactionItem[]
+    items: StreamlinedTransactionItem[],
+    cartItems?: any[]
   ): Promise<{ success: boolean; errors: string[] }> {
     console.log(`🔄 Starting inventory deduction for transaction: ${transactionId}`);
     console.log(`📍 Store ID: ${storeId}`);
@@ -499,10 +501,30 @@ class StreamlinedTransactionService {
             unit_price: item.unitPrice,
             total_price: item.totalPrice
           });
+
+          // Option B: Embed Mix & Match selections into deduction as addon components
+          const matchingCart = cartItems?.find(ci => ci.productId === item.productId && (ci.variationId || null) === (item.variationId || null));
+          const mixMatchCombo = matchingCart?.customization?.type === 'mix_match_croffle' ? matchingCart.customization?.combo : null;
+          if (mixMatchCombo) {
+            const allSelected: Array<{ id: string; name: string }> = [];
+            (mixMatchCombo.toppings || []).forEach((sel: any) => allSelected.push({ id: sel.addon?.id, name: sel.addon?.name }));
+            (mixMatchCombo.sauces || []).forEach((sel: any) => allSelected.push({ id: sel.addon?.id, name: sel.addon?.name }));
+
+            for (const sel of allSelected) {
+              if (!sel?.id || !sel?.name) continue;
+              transactionItems.push({
+                product_id: sel.id,
+                name: sel.name,
+                quantity: item.quantity, // 1 portion per base item
+                unit_price: 0,
+                total_price: 0
+              });
+            }
+          }
         }
       }
 
-      console.log(`📋 Transaction items for deduction:`, transactionItems);
+      console.log(`📋 Transaction items for deduction (expanded with Mix & Match):`, transactionItems);
 
       const result = await deductInventoryForTransaction(
         transactionId,

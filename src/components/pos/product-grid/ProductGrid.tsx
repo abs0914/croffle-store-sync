@@ -44,7 +44,7 @@ interface ProductGridProps {
   categories: Category[];
   activeCategory: string;
   setActiveCategory: (category: string) => void;
-  addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
+  addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation, customization?: any) => void;
   isShiftActive: boolean;
   isLoading: boolean;
   storeId?: string;
@@ -494,10 +494,11 @@ export default function ProductGrid({
 
   const handleEnhancedCustomizationAddToCart = (customizedItems: any[]) => {
     console.log("ProductGrid: Adding enhanced customized items to cart:", customizedItems);
-    
-    // Add each customized item to cart
+
+    // Add each customized item to cart and embed combo selections for deduction
     customizedItems.forEach(item => {
-      addItemToCart(item.product, item.quantity);
+      const customization = item.customization || {};
+      addItemToCart(item.product, item.quantity, item.product.selectedVariation, customization);
     });
 
     setIsEnhancedCustomizationOpen(false);

@@ -318,7 +318,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     }
 
     const items = [];
-    
+
     // Add main product
     const mainItem = {
       id: `${product.id}-${Date.now()}`,
@@ -331,6 +331,7 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
       quantity: 1,
       price: calculateTotal(),
       customization: {
+        type: 'mix_match_croffle',
         croffleType,
         addons: croffleType === 'regular' ? selectedAddons : [],
         combo: croffleType !== 'regular' ? comboSelection : null

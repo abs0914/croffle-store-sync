@@ -41,7 +41,7 @@ interface POSContentProps {
     deliveryPlatform?: string,
     deliveryOrderNumber?: string
   ) => Promise<boolean>;
-  addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation) => void;
+  addItemToCart: (product: Product, quantity?: number, variation?: ProductVariation, customization?: any) => void;
   storeId?: string;
 }
 
@@ -89,9 +89,9 @@ export default function POSContent({
               allProducts={allProducts}
               categories={categories} 
               activeCategory={activeCategory} 
-              setActiveCategory={setActiveCategory} 
-              addItemToCart={addItemToCart} 
-              isShiftActive={!!currentShift} 
+              setActiveCategory={setActiveCategory}
+              addItemToCart={(p,q,v,c)=>addItemToCart(p,q,v,c)}
+              isShiftActive={!!currentShift}
               isLoading={isLoading}
               storeId={storeId}
             />
