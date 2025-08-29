@@ -84,31 +84,66 @@ export async function deductInventoryForTransaction(
         }
       }
 
-      // Fallback to name->recipe_template resolution
+      // Fallback via product_catalog.recipe_id -> recipes.template_id -> recipe_template_ingredients
       if (!ingredients) {
-        console.log(`   📋 Looking up recipe template for: ${item.name}`);
-        const { data: recipeData, error: recipeError } = await supabase
-          .from('recipe_templates')
-          .select('id, name')
-          .eq('name', item.name)
-          .eq('is_active', true)
-          .single();
+        let templateId: string | null = null;
 
-        if (recipeError || !recipeData) {
-          const warningMsg = `Recipe not found for product: ${item.name} (Error: ${recipeError?.message || 'Not found'})`;
-          console.log(`   ❌ ${warningMsg}`);
-          result.warnings.push(warningMsg);
-          continue;
+        if (item.product_id) {
+          console.log(`   🔗 Resolving via product_catalog.recipe_id for product_id=${item.product_id}`);
+          const { data: pc, error: pcErr } = await supabase
+            .from('product_catalog')
+            .select('id, recipe_id, product_name')
+            .eq('id', item.product_id)
+            .maybeSingle();
+
+          if (pcErr) {
+            console.warn('   ⚠️ product_catalog lookup error:', pcErr.message);
+          }
+
+          if (pc?.recipe_id) {
+            const { data: rec, error: recErr } = await supabase
+              .from('recipes')
+              .select('id, template_id, name')
+              .eq('id', pc.recipe_id)
+              .maybeSingle();
+
+            if (!recErr && rec?.template_id) {
+              templateId = rec.template_id as string;
+              recipe = { id: templateId, name: pc.product_name || item.name } as any;
+              console.log(`   ✅ Using template_id from recipes: ${templateId}`);
+            } else {
+              console.warn('   ⚠️ recipes lookup failed or missing template_id:', recErr?.message);
+            }
+          }
         }
 
-        recipe = recipeData;
-        console.log(`   ✅ Recipe found: ${recipe.name} (ID: ${recipe.id})`);
+        // Last resort: name->recipe_templates (pick first active)
+        if (!templateId) {
+          console.log(`   📋 Fallback: looking up recipe_templates by name: ${item.name}`);
+          const { data: rtRows, error: rtErr } = await supabase
+            .from('recipe_templates')
+            .select('id, name')
+            .eq('name', item.name)
+            .eq('is_active', true)
+            .limit(1);
 
-        console.log(`   🧪 Getting ingredients for recipe: ${recipe.id}`);
+          if (rtErr || !rtRows || rtRows.length === 0) {
+            const warningMsg = `Recipe not found for product: ${item.name} (Error: ${rtErr?.message || 'Not found'})`;
+            console.log(`   ❌ ${warningMsg}`);
+            result.warnings.push(warningMsg);
+            continue;
+          }
+
+          recipe = rtRows[0];
+          templateId = rtRows[0].id;
+          console.log(`   ✅ Found template by name: ${recipe.name} (ID: ${templateId})`);
+        }
+
+        console.log(`   🧪 Getting ingredients for template: ${templateId}`);
         const { data: ingredientsData, error: ingredientsError } = await supabase
           .from('recipe_template_ingredients')
           .select('*')
-          .eq('recipe_template_id', recipe.id);
+          .eq('recipe_template_id', templateId);
 
         if (ingredientsError || !ingredientsData) {
           const errorMsg = `Failed to get ingredients for ${item.name}: ${ingredientsError?.message}`;
