@@ -102,7 +102,7 @@ export const POSImageDebugPanel: React.FC = () => {
               <div className="grid grid-cols-4 gap-2 text-xs">
                 <div className="text-center">
                   <div className="font-medium">{stats.total}</div>
-                  <div className="text-muted-foreground">Total</div>
+                  
                 </div>
                 <div className="text-center">
                   <div className="font-medium text-green-600">{stats.success}</div>
