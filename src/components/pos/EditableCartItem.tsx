@@ -82,9 +82,29 @@ export function EditableCartItem({
             {item.customization && (
               <div className="mt-1">
                 <p className="text-xs text-muted-foreground">
-                  Customized: {item.customization.selected_choices.map(choice =>
-                    choice.selected_ingredient.ingredient_name
-                  ).join(', ')}
+                  {(item.customization as any)?.type === 'mix_match_croffle' ? (
+                    // Handle Mix & Match customization display
+                    (() => {
+                      const parts = [];
+                      const combo = (item.customization as any)?.combo;
+                      if (combo?.toppings?.length > 0) {
+                        const toppings = combo.toppings.map((t: any) => t.addon?.name).filter(Boolean);
+                        if (toppings.length > 0) parts.push(`Toppings: ${toppings.join(', ')}`);
+                      }
+                      if (combo?.sauces?.length > 0) {
+                        const sauces = combo.sauces.map((s: any) => s.addon?.name).filter(Boolean);
+                        if (sauces.length > 0) parts.push(`Sauces: ${sauces.join(', ')}`);
+                      }
+                      return parts.length > 0 ? parts.join(' • ') : 'Mix & Match Croffle';
+                    })()
+                  ) : (
+                    // Handle recipe-based customization display
+                    item.customization.selected_choices?.length > 0 
+                      ? `Customized: ${item.customization.selected_choices.map(choice =>
+                          choice.selected_ingredient?.ingredient_name || 'Unknown'
+                        ).join(', ')}`
+                      : 'Customized item'
+                  )}
                 </p>
               </div>
             )}
