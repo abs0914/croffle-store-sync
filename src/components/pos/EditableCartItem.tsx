@@ -47,6 +47,29 @@ export function EditableCartItem({
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [editPrice, setEditPrice] = useState(item.price.toString());
 
+  // Render customization details for both legacy and mix & match
+  const renderCustomizationDetails = (): string | null => {
+    const c: any = (item as any).customization;
+    if (!c) return null;
+    // Mix & Match croffle structure
+    if (c.type === 'mix_match_croffle') {
+      if (c.addons && Array.isArray(c.addons) && c.addons.length > 0) {
+        return `Addons: ${c.addons.map((a: any) => `${a.addon?.name || ''}${a.quantity ? ` x${a.quantity}` : ''}`).join(', ')}`;
+      }
+      const toppings = (c.combo?.toppings || []).map((x: any) => x?.addon?.name).filter(Boolean);
+      const sauces = (c.combo?.sauces || []).map((x: any) => x?.addon?.name).filter(Boolean);
+      const parts = [] as string[];
+      if (toppings.length) parts.push(`Toppings: ${toppings.join(', ')}`);
+      if (sauces.length) parts.push(`Sauces: ${sauces.join(', ')}`);
+      return parts.length ? parts.join(' • ') : null;
+    }
+    // Legacy recipe customization
+    if (Array.isArray(c.selected_choices)) {
+      return `Customized: ${c.selected_choices.map((choice: any) => choice?.selected_ingredient?.ingredient_name).filter(Boolean).join(', ')}`;
+    }
+    return null;
+  };
+
   const handlePriceEdit = () => {
     const newPrice = parseFloat(editPrice);
     if (newPrice > 0) {
@@ -74,26 +97,25 @@ export function EditableCartItem({
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h4 className="font-medium text-sm">
-              {item.customization ? item.customization.display_name : item.product.name}
+              {item.customization ? (item.customization.display_name || item.product.name) : item.product.name}
               {item.variation && !item.customization && (
                 <span className="text-muted-foreground"> ({item.variation.name})</span>
               )}
             </h4>
-            {item.customization && (
-              <div className="mt-1">
-                <p className="text-xs text-muted-foreground">
-                  Customized: {item.customization.selected_choices.map(choice =>
-                    choice.selected_ingredient.ingredient_name
-                  ).join(', ')}
-                </p>
-              </div>
-            )}
+            {(() => {
+              const text = renderCustomizationDetails();
+              return text ? (
+                <div className="mt-1">
+                  <p className="text-xs text-muted-foreground">{text}</p>
+                </div>
+              ) : null;
+            })()}
             {hasStockIssue && validation && (
               <p className="text-xs text-amber-600 mt-1">
                 Insufficient stock: {validation.insufficientItems.join(', ')}
               </p>
             )}
-            
+
             {/* Price Display/Edit */}
             <div className="flex items-center gap-2 mt-1">
               {isEditingPrice ? (
