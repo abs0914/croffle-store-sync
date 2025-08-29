@@ -6,7 +6,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown, RefreshCw, Image, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useUnifiedProducts } from '@/hooks/unified/useUnifiedProducts';
 import { useStore } from '@/contexts/StoreContext';
-
 interface ImageStatus {
   productId: string;
   productName: string;
@@ -14,24 +13,23 @@ interface ImageStatus {
   status: 'loading' | 'success' | 'error' | 'missing';
   lastChecked: Date;
 }
-
 export const POSImageDebugPanel: React.FC = () => {
-  const { currentStore } = useStore();
-  const { allProducts } = useUnifiedProducts({
+  const {
+    currentStore
+  } = useStore();
+  const {
+    allProducts
+  } = useUnifiedProducts({
     storeId: currentStore?.id || null,
     autoRefresh: false
   });
-  
   const [isOpen, setIsOpen] = useState(false);
   const [imageStatuses, setImageStatuses] = useState<ImageStatus[]>([]);
   const [isChecking, setIsChecking] = useState(false);
-
   const checkImageStatuses = async () => {
     if (!allProducts.length) return;
-    
     setIsChecking(true);
     const statuses: ImageStatus[] = [];
-
     for (const product of allProducts) {
       const status: ImageStatus = {
         productId: product.id,
@@ -40,36 +38,32 @@ export const POSImageDebugPanel: React.FC = () => {
         status: product.image_url ? 'loading' : 'missing',
         lastChecked: new Date()
       };
-
       if (product.image_url) {
         try {
-          const response = await fetch(product.image_url, { method: 'HEAD' });
+          const response = await fetch(product.image_url, {
+            method: 'HEAD'
+          });
           status.status = response.ok ? 'success' : 'error';
         } catch (error) {
           status.status = 'error';
         }
       }
-
       statuses.push(status);
     }
-
     setImageStatuses(statuses);
     setIsChecking(false);
   };
-
   useEffect(() => {
     if (isOpen && allProducts.length > 0) {
       checkImageStatuses();
     }
   }, [isOpen, allProducts.length]);
-
   const stats = {
     total: imageStatuses.length,
     success: imageStatuses.filter(s => s.status === 'success').length,
     error: imageStatuses.filter(s => s.status === 'error').length,
     missing: imageStatuses.filter(s => s.status === 'missing').length
   };
-
   const getStatusIcon = (status: ImageStatus['status']) => {
     switch (status) {
       case 'success':
@@ -82,7 +76,6 @@ export const POSImageDebugPanel: React.FC = () => {
         return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
     }
   };
-
   const getStatusBadge = (status: ImageStatus['status']) => {
     switch (status) {
       case 'success':
@@ -95,38 +88,11 @@ export const POSImageDebugPanel: React.FC = () => {
         return <Badge variant="outline">Checking...</Badge>;
     }
   };
-
   if (!currentStore) return null;
-
-  return (
-    <Card className="fixed bottom-4 right-4 w-80 max-h-96 z-50 shadow-lg">
+  return <Card className="fixed bottom-4 right-4 w-80 max-h-96 z-50 shadow-lg">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors pb-3">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Image className="w-4 h-4" />
-                Image Debug Panel
-              </div>
-              <div className="flex items-center gap-2">
-                {stats.total > 0 && (
-                  <div className="flex gap-1">
-                    {stats.error > 0 && (
-                      <Badge variant="destructive" className="text-xs">
-                        {stats.error} errors
-                      </Badge>
-                    )}
-                    {stats.missing > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        {stats.missing} missing
-                      </Badge>
-                    )}
-                  </div>
-                )}
-                <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-              </div>
-            </CardTitle>
-          </CardHeader>
+          
         </CollapsibleTrigger>
         
         <CollapsibleContent>
@@ -153,54 +119,33 @@ export const POSImageDebugPanel: React.FC = () => {
               </div>
 
               {/* Refresh Button */}
-              <Button 
-                onClick={checkImageStatuses} 
-                disabled={isChecking}
-                size="sm" 
-                className="w-full"
-              >
-                {isChecking ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                )}
+              <Button onClick={checkImageStatuses} disabled={isChecking} size="sm" className="w-full">
+                {isChecking ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                 Check Images
               </Button>
 
               {/* Image List */}
-              {imageStatuses.length > 0 && (
-                <div className="max-h-48 overflow-y-auto space-y-2">
-                  {imageStatuses
-                    .filter(status => status.status === 'error' || status.status === 'missing')
-                    .slice(0, 10)
-                    .map((status) => (
-                    <div key={status.productId} className="flex items-center gap-2 p-2 rounded border bg-muted/30">
+              {imageStatuses.length > 0 && <div className="max-h-48 overflow-y-auto space-y-2">
+                  {imageStatuses.filter(status => status.status === 'error' || status.status === 'missing').slice(0, 10).map(status => <div key={status.productId} className="flex items-center gap-2 p-2 rounded border bg-muted/30">
                       {getStatusIcon(status.status)}
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-xs truncate">
                           {status.productName}
                         </div>
-                        {status.imageUrl && (
-                          <div className="text-xs text-muted-foreground truncate">
+                        {status.imageUrl && <div className="text-xs text-muted-foreground truncate">
                             {status.imageUrl}
-                          </div>
-                        )}
+                          </div>}
                       </div>
                       {getStatusBadge(status.status)}
-                    </div>
-                  ))}
+                    </div>)}
                   
-                  {imageStatuses.filter(s => s.status === 'error' || s.status === 'missing').length === 0 && (
-                    <div className="text-center text-sm text-muted-foreground py-4">
+                  {imageStatuses.filter(s => s.status === 'error' || s.status === 'missing').length === 0 && <div className="text-center text-sm text-muted-foreground py-4">
                       All images are valid! 🎉
-                    </div>
-                  )}
-                </div>
-              )}
+                    </div>}
+                </div>}
             </div>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
-    </Card>
-  );
+    </Card>;
 };
