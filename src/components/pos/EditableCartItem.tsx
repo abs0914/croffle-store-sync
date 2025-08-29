@@ -47,6 +47,18 @@ export function EditableCartItem({
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [editPrice, setEditPrice] = useState(item.price.toString());
 
+  // Safe helper to extract addon names without using Array.map (to avoid crashing on undefined)
+  const extractAddonNames = (list: any): string[] => {
+    const names: string[] = [];
+    if (Array.isArray(list)) {
+      for (const entry of list) {
+        const n = entry?.addon?.name;
+        if (n) names.push(n);
+      }
+    }
+    return names;
+  };
+
   // Render customization details for both legacy and mix & match
   const renderCustomizationDetails = (): string | null => {
     try {
@@ -55,12 +67,15 @@ export function EditableCartItem({
       // Mix & Match croffle structure
       if (c.type === 'mix_match_croffle') {
         if (Array.isArray(c.addons) && c.addons.length > 0) {
-          return `Addons: ${c.addons.map((a: any) => `${a?.addon?.name || ''}${a?.quantity ? ` x${a.quantity}` : ''}`).filter(Boolean).join(', ')}`;
+          const parts: string[] = [];
+          for (const a of c.addons) {
+            const name = a?.addon?.name || '';
+            if (name) parts.push(`${name}${a?.quantity ? ` x${a.quantity}` : ''}`);
+          }
+          return parts.length ? `Addons: ${parts.join(', ')}` : null;
         }
-        const toppingsArr = Array.isArray(c?.combo?.toppings) ? c.combo.toppings : [];
-        const saucesArr = Array.isArray(c?.combo?.sauces) ? c.combo.sauces : [];
-        const toppings = toppingsArr.map((x: any) => x?.addon?.name).filter(Boolean);
-        const sauces = saucesArr.map((x: any) => x?.addon?.name).filter(Boolean);
+        const toppings = extractAddonNames(c?.combo?.toppings);
+        const sauces = extractAddonNames(c?.combo?.sauces);
         const parts: string[] = [];
         if (toppings.length) parts.push(`Toppings: ${toppings.join(', ')}`);
         if (sauces.length) parts.push(`Sauces: ${sauces.join(', ')}`);
@@ -68,7 +83,12 @@ export function EditableCartItem({
       }
       // Legacy recipe customization
       if (Array.isArray(c.selected_choices)) {
-        return `Customized: ${c.selected_choices.map((choice: any) => choice?.selected_ingredient?.ingredient_name).filter(Boolean).join(', ')}`;
+        const names: string[] = [];
+        for (const choice of c.selected_choices) {
+          const n = choice?.selected_ingredient?.ingredient_name;
+          if (n) names.push(n);
+        }
+        return names.length ? `Customized: ${names.join(', ')}` : null;
       }
       return null;
     } catch (err) {
@@ -109,8 +129,8 @@ export function EditableCartItem({
                 if (c?.type === 'mix_match_croffle') {
                   // Use product base name + short summary for mix & match
                   const base = item.product?.name || 'Item';
-                  const toppings = Array.isArray(c?.combo?.toppings) ? c.combo.toppings.map((x: any) => x?.addon?.name).filter(Boolean) : [];
-                  const sauces = Array.isArray(c?.combo?.sauces) ? c.combo.sauces.map((x: any) => x?.addon?.name).filter(Boolean) : [];
+                  const toppings = extractAddonNames(c?.combo?.toppings);
+                  const sauces = extractAddonNames(c?.combo?.sauces);
                   const summary = [
                     toppings.length ? `+ ${toppings.join(', ')}` : null,
                     sauces.length ? `with ${sauces.join(', ')}` : null
