@@ -182,7 +182,7 @@ export default function CartView({
   const canCheckout = cartItems.length > 0 && isShiftActive && !isValidating && !Boolean(validationMessage) && isDeliveryOrderValid;
 
   return (
-    <div className="flex flex-col h-full space-y-3 max-h-screen overflow-hidden">
+    <div className="flex flex-col h-full space-y-3 max-h-screen overflow-y-auto">
       <CartHeader 
         itemCount={cartItems?.length || 0}
         onClearCart={clearCart}
