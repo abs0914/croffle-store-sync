@@ -47,6 +47,56 @@ export function EditableCartItem({
   const [isEditingPrice, setIsEditingPrice] = useState(false);
   const [editPrice, setEditPrice] = useState(item.price.toString());
 
+  // Safe helper to extract addon names without using Array.map (to avoid crashing on undefined)
+  const extractAddonNames = (list: any): string[] => {
+    const names: string[] = [];
+    if (Array.isArray(list)) {
+      for (const entry of list) {
+        const n = entry?.addon?.name;
+        if (n) names.push(n);
+      }
+    }
+    return names;
+  };
+
+  // Render customization details for both legacy and mix & match
+  const renderCustomizationDetails = (): string | null => {
+    try {
+      const c: any = (item as any).customization;
+      if (!c) return null;
+      // Mix & Match croffle structure
+      if (c.type === 'mix_match_croffle') {
+        if (Array.isArray(c.addons) && c.addons.length > 0) {
+          const parts: string[] = [];
+          for (const a of c.addons) {
+            const name = a?.addon?.name || '';
+            if (name) parts.push(`${name}${a?.quantity ? ` x${a.quantity}` : ''}`);
+          }
+          return parts.length ? `Addons: ${parts.join(', ')}` : null;
+        }
+        const toppings = extractAddonNames(c?.combo?.toppings);
+        const sauces = extractAddonNames(c?.combo?.sauces);
+        const parts: string[] = [];
+        if (toppings.length) parts.push(`Toppings: ${toppings.join(', ')}`);
+        if (sauces.length) parts.push(`Sauces: ${sauces.join(', ')}`);
+        return parts.length ? parts.join(' • ') : null;
+      }
+      // Legacy recipe customization
+      if (Array.isArray(c.selected_choices)) {
+        const names: string[] = [];
+        for (const choice of c.selected_choices) {
+          const n = choice?.selected_ingredient?.ingredient_name;
+          if (n) names.push(n);
+        }
+        return names.length ? `Customized: ${names.join(', ')}` : null;
+      }
+      return null;
+    } catch (err) {
+      console.warn('EditableCartItem: Failed to render customization details', err);
+      return null;
+    }
+  };
+
   const handlePriceEdit = () => {
     const newPrice = parseFloat(editPrice);
     if (newPrice > 0) {
@@ -74,46 +124,39 @@ export function EditableCartItem({
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h4 className="font-medium text-sm">
-              {item.customization ? item.customization.display_name : item.product.name}
+              {(() => {
+                const c: any = (item as any).customization;
+                if (c?.type === 'mix_match_croffle') {
+                  // Use product base name + short summary for mix & match
+                  const base = item.product?.name || 'Item';
+                  const toppings = extractAddonNames(c?.combo?.toppings);
+                  const sauces = extractAddonNames(c?.combo?.sauces);
+                  const summary = [
+                    toppings.length ? `+ ${toppings.join(', ')}` : null,
+                    sauces.length ? `with ${sauces.join(', ')}` : null
+                  ].filter(Boolean).join(' ');
+                  return summary ? `${base} ${summary}` : base;
+                }
+                return item.customization ? (item.customization.display_name || item.product.name) : item.product.name;
+              })()}
               {item.variation && !item.customization && (
                 <span className="text-muted-foreground"> ({item.variation.name})</span>
               )}
             </h4>
-            {item.customization && (
-              <div className="mt-1">
-                <p className="text-xs text-muted-foreground">
-                  {(item.customization as any)?.type === 'mix_match_croffle' ? (
-                    // Handle Mix & Match customization display
-                    (() => {
-                      const parts = [];
-                      const combo = (item.customization as any)?.combo;
-                      if (combo?.toppings?.length > 0) {
-                        const toppings = combo.toppings.map((t: any) => t.addon?.name).filter(Boolean);
-                        if (toppings.length > 0) parts.push(`Toppings: ${toppings.join(', ')}`);
-                      }
-                      if (combo?.sauces?.length > 0) {
-                        const sauces = combo.sauces.map((s: any) => s.addon?.name).filter(Boolean);
-                        if (sauces.length > 0) parts.push(`Sauces: ${sauces.join(', ')}`);
-                      }
-                      return parts.length > 0 ? parts.join(' • ') : 'Mix & Match Croffle';
-                    })()
-                  ) : (
-                    // Handle recipe-based customization display
-                    item.customization.selected_choices?.length > 0 
-                      ? `Customized: ${item.customization.selected_choices.map(choice =>
-                          choice.selected_ingredient?.ingredient_name || 'Unknown'
-                        ).join(', ')}`
-                      : 'Customized item'
-                  )}
-                </p>
-              </div>
-            )}
+            {(() => {
+              const text = renderCustomizationDetails();
+              return text ? (
+                <div className="mt-1">
+                  <p className="text-xs text-muted-foreground">{text}</p>
+                </div>
+              ) : null;
+            })()}
             {hasStockIssue && validation && (
               <p className="text-xs text-amber-600 mt-1">
                 Insufficient stock: {validation.insufficientItems.join(', ')}
               </p>
             )}
-            
+
             {/* Price Display/Edit */}
             <div className="flex items-center gap-2 mt-1">
               {isEditingPrice ? (

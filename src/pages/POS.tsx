@@ -12,7 +12,6 @@ import POSContent from "@/components/pos/POSContent";
 import CompletedTransaction from "@/components/pos/CompletedTransaction";
 import { OptimizedPOSHeader } from "@/components/pos/OptimizedPOSHeader";
 import { POSDebugPanel } from "@/components/debug/POSDebugPanel";
-import { POSImageDebugPanel } from "@/components/debug/POSImageDebugPanel";
 
 import { QuickShiftAccess } from "@/components/pos/QuickShiftAccess";
 import { Button } from "@/components/ui/button";
@@ -274,9 +273,8 @@ export default function POS() {
         </DialogContent>
       </Dialog>
 
-      {/* Debug Panels */}
+      {/* Debug Panel */}
       <POSDebugPanel />
-      <POSImageDebugPanel />
     </div>
   );
 }
