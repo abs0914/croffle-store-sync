@@ -140,15 +140,52 @@ export async function deductInventoryForTransaction(
         }
 
         console.log(`   🧪 Getting ingredients for template: ${templateId}`);
-        const { data: ingredientsData, error: ingredientsError } = await supabase
+        let ingredientsDataRes = await supabase
           .from('recipe_template_ingredients')
           .select('*')
           .eq('recipe_template_id', templateId);
 
-        if (ingredientsError || !ingredientsData) {
-          const errorMsg = `Failed to get ingredients for ${item.name}: ${ingredientsError?.message}`;
+        if (ingredientsDataRes.error) {
+          const errorMsg = `Failed to get ingredients for ${item.name}: ${ingredientsDataRes.error.message}`;
           console.log(`   ❌ ${errorMsg}`);
           result.errors.push(errorMsg);
+          continue;
+        }
+
+        let ingredientsData = ingredientsDataRes.data || [];
+
+        // Fallback: if no rows via template_id, try name-normalized template lookup
+        if (ingredientsData.length === 0) {
+          const baseName = item.name
+            .replace(/\s*\(from[^)]*\)/i, '') // strip "(from ...)"
+            .replace(/\s+with\s+.+$/i, '')     // strip " with ..."
+            .trim();
+          if (baseName && baseName !== item.name) {
+            console.log(`   🔁 No ingredients via template_id. Fallback by normalized name: ${baseName}`);
+            const { data: rtRows2, error: rtErr2 } = await supabase
+              .from('recipe_templates')
+              .select('id, name')
+              .eq('name', baseName)
+              .eq('is_active', true)
+              .limit(1);
+            if (!rtErr2 && rtRows2 && rtRows2.length > 0) {
+              const altTemplateId = rtRows2[0].id;
+              console.log(`   ✅ Found alternate template ${rtRows2[0].name} (${altTemplateId})`);
+              const altRes = await supabase
+                .from('recipe_template_ingredients')
+                .select('*')
+                .eq('recipe_template_id', altTemplateId);
+              if (!altRes.error && altRes.data && altRes.data.length > 0) {
+                ingredientsData = altRes.data;
+              }
+            }
+          }
+        }
+
+        if (!ingredientsData || ingredientsData.length === 0) {
+          const warningMsg = `No ingredients defined for ${item.name} (template: ${templateId})`;
+          console.log(`   ⚠️ ${warningMsg}`);
+          result.warnings.push(warningMsg);
           continue;
         }
 
