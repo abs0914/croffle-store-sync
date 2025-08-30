@@ -1,11 +1,12 @@
 /**
  * Inventory Deduction Service
- * 
+ *
  * This service handles automatic inventory deduction when transactions are completed.
  * It ensures that inventory levels are properly maintained and tracked.
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { findInventoryMatch } from '@/services/inventory/inventoryMatcher';
 
 export interface TransactionItem {
   product_id?: string; // product_catalog.id when available
@@ -83,31 +84,66 @@ export async function deductInventoryForTransaction(
         }
       }
 
-      // Fallback to name->recipe_template resolution
+      // Fallback via product_catalog.recipe_id -> recipes.template_id -> recipe_template_ingredients
       if (!ingredients) {
-        console.log(`   📋 Looking up recipe template for: ${item.name}`);
-        const { data: recipeData, error: recipeError } = await supabase
-          .from('recipe_templates')
-          .select('id, name')
-          .eq('name', item.name)
-          .eq('is_active', true)
-          .single();
+        let templateId: string | null = null;
 
-        if (recipeError || !recipeData) {
-          const warningMsg = `Recipe not found for product: ${item.name} (Error: ${recipeError?.message || 'Not found'})`;
-          console.log(`   ❌ ${warningMsg}`);
-          result.warnings.push(warningMsg);
-          continue;
+        if (item.product_id) {
+          console.log(`   🔗 Resolving via product_catalog.recipe_id for product_id=${item.product_id}`);
+          const { data: pc, error: pcErr } = await supabase
+            .from('product_catalog')
+            .select('id, recipe_id, product_name')
+            .eq('id', item.product_id)
+            .maybeSingle();
+
+          if (pcErr) {
+            console.warn('   ⚠️ product_catalog lookup error:', pcErr.message);
+          }
+
+          if (pc?.recipe_id) {
+            const { data: rec, error: recErr } = await supabase
+              .from('recipes')
+              .select('id, template_id, name')
+              .eq('id', pc.recipe_id)
+              .maybeSingle();
+
+            if (!recErr && rec?.template_id) {
+              templateId = rec.template_id as string;
+              recipe = { id: templateId, name: pc.product_name || item.name } as any;
+              console.log(`   ✅ Using template_id from recipes: ${templateId}`);
+            } else {
+              console.warn('   ⚠️ recipes lookup failed or missing template_id:', recErr?.message);
+            }
+          }
         }
 
-        recipe = recipeData;
-        console.log(`   ✅ Recipe found: ${recipe.name} (ID: ${recipe.id})`);
+        // Last resort: name->recipe_templates (pick first active)
+        if (!templateId) {
+          console.log(`   📋 Fallback: looking up recipe_templates by name: ${item.name}`);
+          const { data: rtRows, error: rtErr } = await supabase
+            .from('recipe_templates')
+            .select('id, name')
+            .eq('name', item.name)
+            .eq('is_active', true)
+            .limit(1);
 
-        console.log(`   🧪 Getting ingredients for recipe: ${recipe.id}`);
+          if (rtErr || !rtRows || rtRows.length === 0) {
+            const warningMsg = `Recipe not found for product: ${item.name} (Error: ${rtErr?.message || 'Not found'})`;
+            console.log(`   ❌ ${warningMsg}`);
+            result.warnings.push(warningMsg);
+            continue;
+          }
+
+          recipe = rtRows[0];
+          templateId = rtRows[0].id;
+          console.log(`   ✅ Found template by name: ${recipe.name} (ID: ${templateId})`);
+        }
+
+        console.log(`   🧪 Getting ingredients for template: ${templateId}`);
         const { data: ingredientsData, error: ingredientsError } = await supabase
           .from('recipe_template_ingredients')
           .select('*')
-          .eq('recipe_template_id', recipe.id);
+          .eq('recipe_template_id', templateId);
 
         if (ingredientsError || !ingredientsData) {
           const errorMsg = `Failed to get ingredients for ${item.name}: ${ingredientsError?.message}`;
@@ -127,57 +163,70 @@ export async function deductInventoryForTransaction(
         console.log(`\n      🔍 Processing ingredient: ${ingredient.ingredient_name}`);
         console.log(`         Required: ${requiredQuantity} ${ingredient.unit} (${ingredient.quantity} × ${item.quantity})`);
 
-        // Get current inventory - prefer direct ID if available from product_ingredients
-        console.log(`         📦 Looking up inventory for: ${ingredient.ingredient_name}`);
-        let inventory: any = null;
-        let inventoryError: any = null;
+        // Get inventory via robust matcher (category-aware) and prefer serving_ready_quantity when available
+        console.log(`         📦 Resolving inventory for: ${ingredient.ingredient_name}`);
 
-        if (ingredient.inventory_stock_id) {
-          const { data, error } = await supabase
-            .from('inventory_stock')
-            .select('*')
-            .eq('id', ingredient.inventory_stock_id)
-            .eq('store_id', storeId)
-            .eq('is_active', true)
-            .single();
-          inventory = data; inventoryError = error;
-        } else {
-          const { data, error } = await supabase
-            .from('inventory_stock')
-            .select('*')
-            .eq('store_id', storeId)
-            .eq('item', ingredient.ingredient_name)
-            .eq('is_active', true)
-            .single();
-          inventory = data; inventoryError = error;
+        // 1) Find inventory item ID and conversion factor
+        let inventoryId: string | null = ingredient.inventory_stock_id || null;
+        let conversionFactor = 1;
+        if (!inventoryId) {
+          try {
+            const match = await findInventoryMatch(ingredient.ingredient_name, ingredient.unit, storeId);
+            if (match && match.match_type !== 'none') {
+              inventoryId = match.inventory_item_id;
+              conversionFactor = match.conversion_factor || 1;
+              console.log(`         🎯 Match → ${match.inventory_item_name} (type: ${match.match_type}, conv: ${conversionFactor})`);
+            }
+          } catch (e) {
+            console.warn('         ⚠️ Matcher error:', e);
+          }
         }
 
-        if (inventoryError || !inventory) {
-          const errorMsg = `Inventory not found for ${ingredient.ingredient_name} at store ${storeId} (Error: ${inventoryError?.message || 'Not found'})`;
+        if (!inventoryId) {
+          const errorMsg = `Inventory not found for ${ingredient.ingredient_name} at store ${storeId}`;
           console.log(`         ❌ ${errorMsg}`);
           result.errors.push(errorMsg);
           continue;
         }
 
-        const previousStock = inventory.stock_quantity;
-        const newStock = Math.max(0, previousStock - requiredQuantity);
+        // 2) Load inventory row
+        const { data: inventory, error: invErr } = await supabase
+          .from('inventory_stock')
+          .select('*')
+          .eq('id', inventoryId)
+          .eq('store_id', storeId)
+          .single();
 
-        // Check if we have enough stock
-        if (previousStock < requiredQuantity) {
-          result.warnings.push(
-            `Insufficient stock for ${ingredient.ingredient_name}: required ${requiredQuantity}, available ${previousStock}`
-          );
+        if (invErr || !inventory) {
+          const errorMsg = `Inventory row not accessible for ${ingredient.ingredient_name} (id: ${inventoryId})`;
+          console.log(`         ❌ ${errorMsg}`);
+          result.errors.push(errorMsg);
+          continue;
         }
 
-        // Update inventory
+        // 3) Compute final required quantity with conversion
+        const finalRequired = requiredQuantity * conversionFactor;
+        const available = (typeof inventory.serving_ready_quantity === 'number' && inventory.serving_ready_quantity !== null)
+          ? inventory.serving_ready_quantity
+          : (inventory.stock_quantity || 0);
+        const fieldToUpdate = (typeof inventory.serving_ready_quantity === 'number' && inventory.serving_ready_quantity !== null)
+          ? 'serving_ready_quantity'
+          : 'stock_quantity';
+
+        if (available < finalRequired) {
+          result.warnings.push(`Insufficient stock for ${ingredient.ingredient_name}: required ${finalRequired}, available ${available}`);
+        }
+
+        const newQuantity = Math.max(0, available - finalRequired);
+
+        // 4) Update inventory
         const { error: updateError } = await supabase
           .from('inventory_stock')
-          .update({ 
-            stock_quantity: newStock,
+          .update({
+            [fieldToUpdate]: newQuantity,
             updated_at: new Date().toISOString()
           })
           .eq('id', inventory.id);
-
         if (updateError) {
           result.errors.push(`Failed to update inventory for ${ingredient.ingredient_name}: ${updateError.message}`);
           continue;
@@ -186,26 +235,26 @@ export async function deductInventoryForTransaction(
         // Record the deduction
         result.deductedItems.push({
           ingredient: ingredient.ingredient_name,
-          deducted: requiredQuantity,
+          deducted: finalRequired,
           unit: ingredient.unit,
-          previousStock,
-          newStock
+          previousStock: available,
+          newStock: newQuantity
         });
 
-        console.log(`    ✅ Updated ${ingredient.ingredient_name}: ${previousStock} → ${newStock}`);
+        console.log(`    ✅ Updated ${ingredient.ingredient_name}: ${available} → ${newQuantity} (${fieldToUpdate})`);
 
-        // Create inventory movement record (if table exists)
+        // 5) Movement records (primary: inventory_transactions, fallback: inventory_movements)
         try {
           const userRes = await supabase.auth.getUser();
           const createdBy = userRes.data.user?.id || userRes.data.user?.email || 'system';
 
           const insertPayload = {
             store_id: storeId,
-            product_id: inventory.id, // references inventory_stock.id
+            product_id: inventory.id,
             transaction_type: 'sale',
-            quantity: -requiredQuantity,
-            previous_quantity: previousStock,
-            new_quantity: newStock,
+            quantity: -finalRequired,
+            previous_quantity: available,
+            new_quantity: newQuantity,
             reference_id: transactionId,
             notes: `Automatic deduction for transaction ${transactionId}`,
             created_by: createdBy,
@@ -220,7 +269,6 @@ export async function deductInventoryForTransaction(
             movementError = e;
           }
 
-          // Fallback: try inventory_movements table if the primary insert fails due to RLS or schema mismatch
           if (movementError) {
             console.warn('⚠️ inventory_transactions insert failed, trying inventory_movements fallback:', movementError);
             try {
@@ -229,9 +277,9 @@ export async function deductInventoryForTransaction(
                 .insert({
                   inventory_stock_id: inventory.id,
                   movement_type: 'sale',
-                  quantity_change: -requiredQuantity,
-                  previous_quantity: previousStock,
-                  new_quantity: newStock,
+                  quantity_change: -finalRequired,
+                  previous_quantity: available,
+                  new_quantity: newQuantity,
                   reference_type: 'transaction',
                   reference_id: transactionId,
                   notes: `Product sale: ${ingredient.ingredient_name}`,
