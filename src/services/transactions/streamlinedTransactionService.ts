@@ -461,6 +461,7 @@ class StreamlinedTransactionService {
 
   /**
    * Process inventory deduction with comprehensive logging and Mix & Match base ingredient support
+   * Updated to work with normalized 1x recipe template quantities
    */
   private async processInventoryDeduction(
     transactionId: string,
@@ -506,7 +507,7 @@ class StreamlinedTransactionService {
           const matchingCart = cartItems?.find(ci => ci.productId === item.productId && (ci.variationId || null) === (item.variationId || null));
           const isMixMatch = matchingCart?.customization?.type === 'mix_match_croffle';
           
-          console.log(`🔍 DEBUGGING Mix & Match detection for ${item.name}:`, {
+          console.log(`🔍 Mix & Match detection for ${item.name}:`, {
             hasCartItems: !!cartItems,
             cartItemsLength: cartItems?.length || 0,
             itemProductId: item.productId,
@@ -515,12 +516,12 @@ class StreamlinedTransactionService {
             isMixMatch
           });
           
-          // Handle Mix & Match products using recipe templates
+          // Handle Mix & Match products - apply 0.5x deduction for Regular Croissant
           if (this.isMixAndMatchProduct(item.name)) {
-            console.log(`  🎯 Processing Mix & Match product with recipe template: ${item.name}`);
+            console.log(`🎯 Processing Mix & Match product: ${item.name} (applying 0.5x for Regular Croissant)`);
             await this.processRecipeBasedIngredients(item, transactionItems, processedIngredients, storeId);
           } else {
-            // Regular product - preserve existing functionality
+            // Regular product - 1x deduction (normalized recipe quantities)
             transactionItems.push({
               product_id: item.productId,
               name: item.name,
@@ -633,21 +634,27 @@ class StreamlinedTransactionService {
 
       console.log(`  ✅ Found recipe template: ${recipeTemplate.name} with ${recipeTemplate.recipe_template_ingredients?.length || 0} ingredients`);
 
-      // Add base recipe ingredients
+      // Add base recipe ingredients with Mix & Match logic
       if (recipeTemplate.recipe_template_ingredients) {
         for (const ingredient of recipeTemplate.recipe_template_ingredients) {
           const baseIngredientKey = `recipe_${ingredient.ingredient_name.replace(/\s+/g, '_')}`;
           if (!processedIngredients.has(baseIngredientKey)) {
-            const ingredientQuantity = ingredient.quantity * item.quantity;
+            // Apply 0.5x deduction for Regular Croissant in Mix & Match orders (as per user requirement)
+            let finalQuantity = ingredient.quantity * item.quantity;
+            if (ingredient.ingredient_name === 'Regular Croissant') {
+              finalQuantity = finalQuantity * 0.5; // 0.5x deduction for Mix & Match
+              console.log(`  🎯 Mix & Match logic: ${ingredient.ingredient_name} quantity reduced to 0.5x (${finalQuantity})`);
+            }
+            
             transactionItems.push({
               product_id: undefined,
               name: ingredient.ingredient_name,
-              quantity: ingredientQuantity,
+              quantity: finalQuantity,
               unit_price: 0,
               total_price: 0
             });
             processedIngredients.add(baseIngredientKey);
-            console.log(`  ✅ Added recipe ingredient: ${ingredient.ingredient_name} (qty: ${ingredientQuantity} ${ingredient.unit})`);
+            console.log(`  ✅ Added recipe ingredient: ${ingredient.ingredient_name} (qty: ${finalQuantity} ${ingredient.unit})`);
           }
         }
       }
