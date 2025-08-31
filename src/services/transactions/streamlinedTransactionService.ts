@@ -624,18 +624,32 @@ class StreamlinedTransactionService {
         return;
       }
 
-      // FIXED: All Mix & Match products use Regular Croissant as base with 0.5x ratio
-      const baseIngredientKey = 'base_Regular_Croissant';
-      if (!processedIngredients.has(baseIngredientKey)) {
-        transactionItems.push({
-          product_id: undefined,
-          name: 'Regular Croissant',
-          quantity: 0.5 * item.quantity, // FIXED: 0.5x ratio for all Mix & Match
-          unit_price: 0,
-          total_price: 0
-        });
-        processedIngredients.add(baseIngredientKey);
-        console.log(`  ✅ Added base ingredient: Regular Croissant (qty: ${0.5 * item.quantity})`);
+      // FIXED: Determine base ingredients based on Mix & Match type
+      let baseIngredients: string[] = [];
+      
+      if (item.name.toLowerCase().includes('croffle overload')) {
+        baseIngredients = ['Regular Croissant', 'Whipped Cream', 'Popsicle', 'Mini Spoon', 'Overload Cup'];
+      } else if (item.name.toLowerCase().includes('mini croffle')) {
+        baseIngredients = ['Regular Croissant', 'Whipped Cream', 'Popsicle', 'Mini take out box'];
+      } else {
+        console.log(`  ⚠️ Unknown Mix & Match type: ${item.name}`);
+        return;
+      }
+
+      // Add all base ingredients with 0.5x ratio
+      for (const ingredient of baseIngredients) {
+        const baseIngredientKey = `base_${ingredient.replace(/\s+/g, '_')}`;
+        if (!processedIngredients.has(baseIngredientKey)) {
+          transactionItems.push({
+            product_id: undefined,
+            name: ingredient,
+            quantity: 0.5 * item.quantity, // 0.5x ratio for all Mix & Match base ingredients
+            unit_price: 0,
+            total_price: 0
+          });
+          processedIngredients.add(baseIngredientKey);
+          console.log(`  ✅ Added base ingredient: ${ingredient} (qty: ${0.5 * item.quantity})`);
+        }
       }
 
       // FIXED: Parse specific addons from product name
