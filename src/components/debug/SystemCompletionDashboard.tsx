@@ -57,12 +57,8 @@ export function SystemCompletionDashboard() {
         .eq('is_active', true)
         .limit(100);
 
-      // Check security status
-      const { data: rlsTables } = await supabase
-        .from('information_schema.tables')
-        .select('table_name')
-        .eq('table_schema', 'public')
-        .limit(50);
+      // Check system tables count for security assessment
+      const securityCheck = await supabase.rpc('get_recipe_repair_status');
 
       const modules: SystemModule[] = [
         {

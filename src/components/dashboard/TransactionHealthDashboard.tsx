@@ -9,11 +9,11 @@ import { transactionHealthMonitor } from '@/services/transactions/transactionHea
 import { Activity, AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react';
 
 interface HealthMetrics {
-  systemStatus: 'healthy' | 'warning' | 'critical';
+  systemStatus: 'healthy' | 'degraded' | 'critical';
   successRate: number;
-  averageProcessingTime: number;
+  avgProcessingTime: number;
   errorRate: number;
-  totalTransactions: number;
+  inventoryFailureRate: number;
   recommendations: string[];
   lastUpdated: Date;
 }
@@ -29,9 +29,9 @@ export function TransactionHealthDashboard() {
       setMetrics({
         systemStatus: health.systemStatus,
         successRate: health.successRate,
-        averageProcessingTime: health.averageProcessingTime,
+        avgProcessingTime: health.avgProcessingTime,
         errorRate: health.errorRate,
-        totalTransactions: health.totalTransactions,
+        inventoryFailureRate: health.inventoryFailureRate,
         recommendations: health.recommendations,
         lastUpdated: new Date()
       });
@@ -58,7 +58,7 @@ export function TransactionHealthDashboard() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'healthy': return 'text-emerald-600';
-      case 'warning': return 'text-amber-600';
+      case 'degraded': return 'text-amber-600';
       case 'critical': return 'text-red-600';
       default: return 'text-muted-foreground';
     }
@@ -67,7 +67,7 @@ export function TransactionHealthDashboard() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'healthy': return <CheckCircle className="h-5 w-5 text-emerald-600" />;
-      case 'warning': return <AlertTriangle className="h-5 w-5 text-amber-600" />;
+      case 'degraded': return <AlertTriangle className="h-5 w-5 text-amber-600" />;
       case 'critical': return <AlertTriangle className="h-5 w-5 text-red-600" />;
       default: return <Activity className="h-5 w-5" />;
     }
@@ -140,7 +140,7 @@ export function TransactionHealthDashboard() {
               <div>
                 <div className="text-sm text-muted-foreground">Avg Processing</div>
                 <div className="font-semibold text-blue-600">
-                  {metrics?.averageProcessingTime.toFixed(0) || '0'}ms
+                  {metrics?.avgProcessingTime.toFixed(0) || '0'}ms
                 </div>
               </div>
             </div>
@@ -152,8 +152,8 @@ export function TransactionHealthDashboard() {
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
               <div>
-                <div className="text-sm text-muted-foreground">Total Transactions</div>
-                <div className="font-semibold">{metrics?.totalTransactions || 0}</div>
+                <div className="text-sm text-muted-foreground">Inventory Failure Rate</div>
+                <div className="font-semibold">{metrics?.inventoryFailureRate.toFixed(1) || '0'}%</div>
               </div>
             </div>
           </CardContent>
@@ -211,7 +211,7 @@ export function TransactionHealthDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-primary">
-                {metrics?.averageProcessingTime.toFixed(0)}ms
+                {metrics?.avgProcessingTime.toFixed(0)}ms
               </div>
               <div className="text-sm text-muted-foreground mt-2">
                 Target: Under 2000ms for optimal performance

@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { useStore } from '@/contexts/StoreContext';
-import { processTransaction } from '@/services/transactions/streamlinedTransactionService';
+import { streamlinedTransactionService } from '@/services/transactions/streamlinedTransactionService';
 import { CartItem } from '@/types';
 import { Play, Square, Zap, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 
@@ -51,7 +51,7 @@ export function LoadTestRunner() {
   const [results, setResults] = useState<LoadTestResult[]>([]);
   const [stats, setStats] = useState<LoadTestStats | null>(null);
 
-  const generateTestCartItems = (count: number): CartItem[] => {
+  const generateTestTransactionItems = (count: number) => {
     const testProducts = [
       { id: 'test-1', name: 'Test Coffee', price: 120 },
       { id: 'test-2', name: 'Test Pastry', price: 85 },
@@ -62,13 +62,13 @@ export function LoadTestRunner() {
 
     return Array.from({ length: count }, (_, index) => {
       const product = testProducts[index % testProducts.length];
+      const quantity = Math.floor(Math.random() * 3) + 1;
       return {
-        id: `${product.id}-${Date.now()}-${index}`,
         productId: product.id,
         name: product.name,
-        price: product.price,
-        quantity: Math.floor(Math.random() * 3) + 1,
-        subtotal: product.price * (Math.floor(Math.random() * 3) + 1)
+        quantity,
+        unitPrice: product.price,
+        totalPrice: product.price * quantity
       };
     });
   };
@@ -77,35 +77,29 @@ export function LoadTestRunner() {
     const startTime = Date.now();
     
     try {
-      const cartItems = generateTestCartItems(config.itemsPerTransaction);
-      const total = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
+      const transactionItems = generateTestTransactionItems(config.itemsPerTransaction);
+      const total = transactionItems.reduce((sum, item) => sum + item.totalPrice, 0);
       
       const transactionData = {
-        store_id: currentStore?.id || '',
-        total,
+        storeId: currentStore?.id || '',
+        userId: 'test-user',
+        shiftId: 'test-shift',
+        items: transactionItems,
         subtotal: total,
         tax: 0,
         discount: 0,
-        payment_method: 'cash',
-        items: cartItems.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total_price: item.subtotal,
-          product_id: item.productId
-        })),
-        customer_id: null,
-        notes: `Load test transaction ${transactionIndex + 1}`
+        total,
+        paymentMethod: 'cash' as const
       };
 
-      const result = await processTransaction(transactionData);
+      const result = await streamlinedTransactionService.processTransaction(transactionData);
       const processingTime = Date.now() - startTime;
 
       return {
         transactionId: result.id,
         status: 'success',
         processingTime,
-        itemCount: cartItems.length
+        itemCount: transactionItems.length
       };
     } catch (error) {
       const processingTime = Date.now() - startTime;

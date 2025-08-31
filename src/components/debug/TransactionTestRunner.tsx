@@ -4,8 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { deductIngredientsForProduct } from "@/services/productCatalog/ingredientDeductionService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecipeCreationTool } from "./RecipeCreationTool";
 import { BatchInventoryTester } from "./BatchInventoryTester";
+import { LoadTestRunner } from "./LoadTestRunner";
+import { TransactionHealthDashboard } from "../dashboard/TransactionHealthDashboard";
+import { SystemCompletionDashboard } from "./SystemCompletionDashboard";
 
 export const TransactionTestRunner = () => {
   const [testing, setTesting] = useState(false);
@@ -123,13 +127,37 @@ export const TransactionTestRunner = () => {
 
   return (
     <div className="space-y-6">
-      {/* Recipe Creation Tool */}
-      <RecipeCreationTool />
-      
-      {/* Batch Inventory Tester */}
-      <BatchInventoryTester />
-      
-      {/* Original Transaction Test */}
+      <Tabs defaultValue="system-status" className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="system-status">System Status</TabsTrigger>
+          <TabsTrigger value="health-monitor">Health Monitor</TabsTrigger>
+          <TabsTrigger value="load-testing">Load Testing</TabsTrigger>
+          <TabsTrigger value="inventory-testing">Inventory Testing</TabsTrigger>
+          <TabsTrigger value="recipe-tools">Recipe Tools</TabsTrigger>
+          <TabsTrigger value="legacy-testing">Legacy Testing</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="system-status" className="space-y-4">
+          <SystemCompletionDashboard />
+        </TabsContent>
+
+        <TabsContent value="health-monitor" className="space-y-4">
+          <TransactionHealthDashboard />
+        </TabsContent>
+
+        <TabsContent value="load-testing" className="space-y-4">
+          <LoadTestRunner />
+        </TabsContent>
+
+        <TabsContent value="inventory-testing" className="space-y-4">
+          <BatchInventoryTester />
+        </TabsContent>
+
+        <TabsContent value="recipe-tools" className="space-y-4">
+          <RecipeCreationTool />
+        </TabsContent>
+
+        <TabsContent value="legacy-testing" className="space-y-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">
@@ -187,11 +215,13 @@ export const TransactionTestRunner = () => {
             </div>
           )}
           
-          <p className="text-xs text-muted-foreground">
-            This will test the actual transaction and show inventory changes
-          </p>
-        </CardContent>
-      </Card>
+              <p className="text-xs text-muted-foreground">
+                This will test the actual transaction and show inventory changes
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
