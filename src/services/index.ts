@@ -5,8 +5,12 @@
 export * from './transactions/streamlinedTransactionService';
 export * from './transactions/transactionItemsService';
 
-// Simple Inventory Service (SINGLE SOURCE OF TRUTH)
+// Optimized Inventory Services (BATCH PROCESSING)
+export * from './inventory/batchInventoryService';
 export * from './inventory/simpleInventoryService';
+
+// Recipe Management Services  
+export * from './recipes/missingRecipeHandler';
 
 /**
  * ARCHITECTURE CLEANUP COMPLETED ✅

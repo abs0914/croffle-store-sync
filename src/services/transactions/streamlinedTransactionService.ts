@@ -7,7 +7,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types";
 import { unifiedProductInventoryService } from "@/services/unified/UnifiedProductInventoryService";
-import { deductInventoryForTransaction } from "@/services/inventoryDeductionService";
+import { batchDeductInventoryForTransaction } from "@/services/inventory/batchInventoryService";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { enrichCartItemsWithCategories, insertTransactionItems, DetailedTransactionItem } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
@@ -536,24 +536,28 @@ class StreamlinedTransactionService {
       console.log(`📋 Transaction items for deduction (${transactionItems.length} items):`, 
         transactionItems.map(ti => `${ti.name} (qty: ${ti.quantity})`));
 
-      const result = await deductInventoryForTransaction(
+      // OPTIMIZED: Use batch processing instead of sequential processing
+      const result = await batchDeductInventoryForTransaction(
         transactionId,
         storeId,
-        transactionItems
+        transactionItems,
+        30000 // 30 second timeout
       );
 
       console.log(`📊 Inventory deduction result:`, {
         success: result.success,
         deductedItems: result.deductedItems?.length || 0,
         errors: result.errors?.length || 0,
-        warnings: result.warnings?.length || 0
+        warnings: result.warnings?.length || 0,
+        processingTimeMs: result.processingTimeMs,
+        itemsProcessed: result.itemsProcessed
       });
 
       // Enhanced success logging for monitoring
       if (result.success) {
         console.log(`✅ INVENTORY DEDUCTION SUCCESS for transaction ${transactionId}`);
         console.log(`   Deducted ingredients:`, result.deductedItems.map(item => 
-          `${item.ingredient}: -${item.deducted} ${item.unit} (${item.previousStock}→${item.newStock})`
+          `${item.itemName}: -${item.quantityDeducted} units (new stock: ${item.newStock})`
         ));
       } else {
         console.error(`❌ INVENTORY DEDUCTION FAILED for transaction ${transactionId}`);
@@ -563,7 +567,7 @@ class StreamlinedTransactionService {
 
       return {
         success: result.success,
-        errors: result.errors || []
+        errors: [...result.errors, ...result.warnings]
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Inventory deduction failed';
