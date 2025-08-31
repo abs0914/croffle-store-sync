@@ -607,7 +607,7 @@ class StreamlinedTransactionService {
 
   /**
    * Process base recipe ingredients for Mix & Match products
-   * SAFE IMPLEMENTATION: Add base croffle ingredients without breaking existing functionality
+   * FIXED: Use correct base ingredient and addon parsing for Mix & Match
    */
   private async processBaseRecipeIngredients(
     item: StreamlinedTransactionItem,
@@ -616,83 +616,89 @@ class StreamlinedTransactionService {
     storeId: string
   ): Promise<void> {
     try {
-      console.log(`  🔍 Finding base recipe for Mix & Match: ${item.name}`);
+      console.log(`  🔍 Processing Mix & Match base ingredients for: ${item.name}`);
       
-      // Extract base croffle name from Mix & Match display name
-      // e.g., "Mini Croffle with Choco Flakes and Tiramisu" → "Mini Croffle"
-      const baseName = item.name
-        .replace(/\s+with\s+.+$/i, '')    // Remove " with ..." suffix
-        .replace(/\s*\(from[^)]*\)/i, '') // Remove "(from ...)" 
-        .trim();
-      
-      if (baseName === item.name) {
-        console.log(`  ⚠️ No base name extraction needed for: ${item.name}`);
+      // Check if this is a Mix & Match product (contains "with")
+      if (!item.name.toLowerCase().includes(' with ')) {
+        console.log(`  ⚠️ Not a Mix & Match product: ${item.name}`);
         return;
       }
-      
-      console.log(`  🎯 Extracted base name: "${baseName}" from "${item.name}"`);
-      
-      // Find base recipe template (e.g., "Mini Croffle", "Regular Croffle") 
-      const { data: baseTemplate, error: templateError } = await supabase
-        .from('recipe_templates')
-        .select('id, name')
-        .eq('name', baseName)
-        .eq('is_active', true)
-        .maybeSingle();
-      
-      if (templateError) {
-        console.warn(`  ⚠️ Error finding base template for "${baseName}":`, templateError.message);
-        return;
+
+      // FIXED: All Mix & Match products use Regular Croissant as base with 0.5x ratio
+      const baseIngredientKey = 'base_Regular_Croissant';
+      if (!processedIngredients.has(baseIngredientKey)) {
+        transactionItems.push({
+          product_id: undefined,
+          name: 'Regular Croissant',
+          quantity: 0.5 * item.quantity, // FIXED: 0.5x ratio for all Mix & Match
+          unit_price: 0,
+          total_price: 0
+        });
+        processedIngredients.add(baseIngredientKey);
+        console.log(`  ✅ Added base ingredient: Regular Croissant (qty: ${0.5 * item.quantity})`);
       }
-      
-      if (!baseTemplate) {
-        console.warn(`  ⚠️ No base template found for "${baseName}"`);
-        return;
-      }
-      
-      console.log(`  ✅ Found base template: ${baseTemplate.name} (ID: ${baseTemplate.id})`);
-      
-      // Get base recipe ingredients  
-      const { data: baseIngredients, error: ingredientsError } = await supabase
-        .from('recipe_template_ingredients')
-        .select('ingredient_name, quantity, unit, cost_per_unit')
-        .eq('recipe_template_id', baseTemplate.id);
-      
-      if (ingredientsError) {
-        console.warn(`  ⚠️ Error getting base ingredients:`, ingredientsError.message);
-        return;
-      }
-      
-      if (!baseIngredients || baseIngredients.length === 0) {
-        console.warn(`  ⚠️ No base ingredients found for template: ${baseTemplate.name}`);
-        return;
-      }
-      
-      console.log(`  📋 Found ${baseIngredients.length} base ingredients:`, 
-        baseIngredients.map(ing => `${ing.ingredient_name} (${ing.quantity} ${ing.unit})`));
-      
-      // Add base ingredients to deduction items (with duplicate prevention)
-      for (const ingredient of baseIngredients) {
-        const ingredientKey = `base_${ingredient.ingredient_name}`;
-        if (!processedIngredients.has(ingredientKey)) {
-          // Create virtual item for base ingredient deduction
+
+      // FIXED: Parse specific addons from product name
+      const addons = this.parseAddonsFromProductName(item.name);
+      console.log(`  🎯 Parsed addons from "${item.name}":`, addons);
+
+      // Add parsed addons to deduction items
+      for (const addon of addons) {
+        const addonKey = `addon_${addon}_${item.name}`;
+        if (!processedIngredients.has(addonKey)) {
           transactionItems.push({
-            product_id: undefined, // Let the inventory service resolve by name
-            name: ingredient.ingredient_name,
-            quantity: ingredient.quantity * item.quantity, // Scale by transaction quantity
-            unit_price: ingredient.cost_per_unit || 0,
+            product_id: undefined,
+            name: addon,
+            quantity: 1.0 * item.quantity, // 1x ratio for addons
+            unit_price: 0,
             total_price: 0
           });
-          processedIngredients.add(ingredientKey);
-          console.log(`  ✅ Added base ingredient: ${ingredient.ingredient_name} (qty: ${ingredient.quantity * item.quantity})`);
-        } else {
-          console.log(`  ⏭️ Skipping duplicate base ingredient: ${ingredient.ingredient_name}`);
+          processedIngredients.add(addonKey);
+          console.log(`  ✅ Added addon ingredient: ${addon} (qty: ${1.0 * item.quantity})`);
         }
       }
       
     } catch (error) {
-      console.error(`  ❌ Error processing base recipe ingredients for ${item.name}:`, error);
-      // Don't throw - preserve existing functionality even if base ingredient processing fails
+      console.error(`  ❌ Error processing Mix & Match ingredients for ${item.name}:`, error);
+      // Don't throw - preserve existing functionality even if processing fails
+    }
+  }
+
+  /**
+   * Parse specific addons from Mix & Match product names
+   * e.g., "Croffle Overload with Choco Flakes and Caramel" → ["Choco Flakes", "Caramel"]
+   */
+  private parseAddonsFromProductName(productName: string): string[] {
+    try {
+      // Extract the part after "with"
+      const withPart = productName.split(' with ')[1];
+      if (!withPart) return [];
+
+      // Split by "and" and clean up each addon name
+      const addons = withPart
+        .split(/\s+and\s+/i)
+        .map(addon => addon.trim())
+        .map(addon => {
+          // Handle "Colored Sprinkles" specifically
+          if (addon.toLowerCase().includes('colored sprinkles')) return 'Colored Sprinkles';
+          if (addon.toLowerCase().includes('choco flakes')) return 'Choco Flakes';
+          if (addon.toLowerCase().includes('caramel')) return 'Caramel';
+          if (addon.toLowerCase().includes('chocolate')) return 'Chocolate';
+          if (addon.toLowerCase().includes('marshmallow')) return 'Marshmallow';
+          if (addon.toLowerCase().includes('peanut')) return 'Peanut';
+          if (addon.toLowerCase().includes('tiramisu')) return 'Tiramisu';
+          
+          // Default: return as-is but capitalized
+          return addon.split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          ).join(' ');
+        })
+        .filter(addon => addon.length > 0);
+
+      return addons;
+    } catch (error) {
+      console.error(`❌ Error parsing addons from "${productName}":`, error);
+      return [];
     }
   }
 
