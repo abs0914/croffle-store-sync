@@ -50,8 +50,40 @@ export async function deductInventoryForTransaction(
   console.log(`   Items to process: ${transactionItems.length}`);
   console.log(`   Items:`, transactionItems.map(item => `${item.name} (qty: ${item.quantity})`));
 
+  // 🎯 MIX & MATCH BASE INGREDIENT FIX
+  // Add base ingredients for Mix & Match items
+  const mixMatchBaseIngredients = [
+    { pattern: /^Croffle Overload/i, baseIngredient: 'Regular Croissant' },
+    { pattern: /^Mini Croffle/i, baseIngredient: 'Mini Croissant' },
+    { pattern: /^Croffle Supreme/i, baseIngredient: 'Regular Croissant' },
+    { pattern: /^Croffle Classic/i, baseIngredient: 'Regular Croissant' }
+  ];
+
+  const additionalItems: TransactionItem[] = [];
+  for (const item of transactionItems) {
+    for (const mixMatch of mixMatchBaseIngredients) {
+      if (mixMatch.pattern.test(item.name)) {
+        console.log(`🎯 MIX & MATCH DETECTED: ${item.name} → Adding base ingredient: ${mixMatch.baseIngredient}`);
+        additionalItems.push({
+          product_id: undefined,
+          name: mixMatch.baseIngredient,
+          quantity: item.quantity,
+          unit_price: 0,
+          total_price: 0
+        });
+        break;
+      }
+    }
+  }
+
+  // Add base ingredients to the processing list
+  const allItemsToProcess = [...transactionItems, ...additionalItems];
+  if (additionalItems.length > 0) {
+    console.log(`🎯 Added ${additionalItems.length} base ingredients for Mix & Match items`);
+  }
+
   try {
-    for (const item of transactionItems) {
+    for (const item of allItemsToProcess) {
       console.log(`\n🔍 PROCESSING ITEM: ${item.name} (quantity: ${item.quantity})`);
 
       // Prefer mapping via product_catalog -> product_ingredients when product_id is present
