@@ -515,41 +515,10 @@ class StreamlinedTransactionService {
             isMixMatch
           });
           
-          if (isMixMatch) {
-            console.log(`🎯 Processing Mix & Match product: ${item.name}`);
-            
-            // SAFE IMPLEMENTATION: Add base ingredient deduction for Mix & Match
-            // Find the base croffle recipe to deduct base ingredients
-            await this.processBaseRecipeIngredients(
-              item, 
-              transactionItems, 
-              processedIngredients,
-              storeId
-            );
-            
-            // Preserve existing addon processing (don't break working functionality)
-            const mixMatchCombo = matchingCart.customization?.combo;
-            if (mixMatchCombo) {
-              const allSelected: Array<{ id: string; name: string }> = [];
-              (mixMatchCombo.toppings || []).forEach((sel: any) => allSelected.push({ id: sel.addon?.id, name: sel.addon?.name }));
-              (mixMatchCombo.sauces || []).forEach((sel: any) => allSelected.push({ id: sel.addon?.id, name: sel.addon?.name }));
-
-              for (const sel of allSelected) {
-                if (!sel?.id || !sel?.name) continue;
-                const addonKey = `addon_${sel.id}_${sel.name}`;
-                if (!processedIngredients.has(addonKey)) {
-                  transactionItems.push({
-                    product_id: sel.id,
-                    name: sel.name,
-                    quantity: item.quantity,
-                    unit_price: 0,
-                    total_price: 0
-                  });
-                  processedIngredients.add(addonKey);
-                  console.log(`  ✅ Added addon: ${sel.name} (qty: ${item.quantity})`);
-                }
-              }
-            }
+          // Handle Mix & Match products using recipe templates
+          if (this.isMixAndMatchProduct(item.name)) {
+            console.log(`  🎯 Processing Mix & Match product with recipe template: ${item.name}`);
+            await this.processRecipeBasedIngredients(item, transactionItems, processedIngredients, storeId);
           } else {
             // Regular product - preserve existing functionality
             transactionItems.push({
@@ -606,55 +575,82 @@ class StreamlinedTransactionService {
   }
 
   /**
-   * Process base recipe ingredients for Mix & Match products
-   * FIXED: Use correct base ingredient and addon parsing for Mix & Match
+   * Process recipe-based ingredients for Mix & Match products using recipe templates
+   * Uses proper recipe templates with base ingredients + addon parsing
    */
-  private async processBaseRecipeIngredients(
+  private async processRecipeBasedIngredients(
     item: StreamlinedTransactionItem,
     transactionItems: Array<{ product_id?: string; name: string; quantity: number; unit_price: number; total_price: number }>,
     processedIngredients: Set<string>,
     storeId: string
   ): Promise<void> {
     try {
-      console.log(`  🔍 Processing Mix & Match base ingredients for: ${item.name}`);
+      console.log(`  🔍 Processing recipe-based ingredients for: ${item.name}`);
       
-      // Check if this is a Mix & Match product (contains "with")
-      if (!item.name.toLowerCase().includes(' with ')) {
-        console.log(`  ⚠️ Not a Mix & Match product: ${item.name}`);
-        return;
-      }
-
-      // FIXED: Determine base ingredients based on Mix & Match type
-      let baseIngredients: string[] = [];
+      // Extract base product name for recipe template lookup
+      let baseProductName = '';
+      let addons: string[] = [];
       
-      if (item.name.toLowerCase().includes('croffle overload')) {
-        baseIngredients = ['Regular Croissant', 'Whipped Cream', 'Popsicle', 'Mini Spoon', 'Overload Cup'];
-      } else if (item.name.toLowerCase().includes('mini croffle')) {
-        baseIngredients = ['Regular Croissant', 'Whipped Cream', 'Popsicle', 'Mini take out box'];
+      if (item.name.toLowerCase().includes(' with ')) {
+        // Parse Mix & Match product: "Croffle Overload with Choco Flakes" → base: "Croffle Overload", addons: ["Choco Flakes"]
+        const parts = item.name.split(' with ');
+        baseProductName = parts[0].trim();
+        addons = this.parseAddonsFromProductName(item.name);
+        console.log(`  📋 Parsed Mix & Match - Base: "${baseProductName}", Addons:`, addons);
       } else {
-        console.log(`  ⚠️ Unknown Mix & Match type: ${item.name}`);
-        return;
-      }
-
-      // Add all base ingredients with 0.5x ratio
-      for (const ingredient of baseIngredients) {
-        const baseIngredientKey = `base_${ingredient.replace(/\s+/g, '_')}`;
-        if (!processedIngredients.has(baseIngredientKey)) {
-          transactionItems.push({
-            product_id: undefined,
-            name: ingredient,
-            quantity: 0.5 * item.quantity, // 0.5x ratio for all Mix & Match base ingredients
-            unit_price: 0,
-            total_price: 0
-          });
-          processedIngredients.add(baseIngredientKey);
-          console.log(`  ✅ Added base ingredient: ${ingredient} (qty: ${0.5 * item.quantity})`);
+        // Check if this is a standalone Mix & Match base product
+        const itemName = item.name.toLowerCase();
+        if (itemName.includes('croffle overload') || itemName.includes('mini croffle')) {
+          baseProductName = item.name;
+          console.log(`  📋 Standalone Mix & Match product: "${baseProductName}"`);
+        } else {
+          console.log(`  ⚠️ Not a Mix & Match product: ${item.name}`);
+          return;
         }
       }
 
-      // FIXED: Parse specific addons from product name
-      const addons = this.parseAddonsFromProductName(item.name);
-      console.log(`  🎯 Parsed addons from "${item.name}":`, addons);
+      // Look up recipe template for base product
+      console.log(`  🔍 Looking up recipe template for: "${baseProductName}"`);
+      const { data: recipeTemplate } = await supabase
+        .from('recipe_templates')
+        .select(`
+          id,
+          name,
+          recipe_template_ingredients (
+            ingredient_name,
+            quantity,
+            unit
+          )
+        `)
+        .eq('name', baseProductName)
+        .eq('is_active', true)
+        .single();
+
+      if (!recipeTemplate) {
+        console.log(`  ⚠️ No recipe template found for: "${baseProductName}"`);
+        return;
+      }
+
+      console.log(`  ✅ Found recipe template: ${recipeTemplate.name} with ${recipeTemplate.recipe_template_ingredients?.length || 0} ingredients`);
+
+      // Add base recipe ingredients
+      if (recipeTemplate.recipe_template_ingredients) {
+        for (const ingredient of recipeTemplate.recipe_template_ingredients) {
+          const baseIngredientKey = `recipe_${ingredient.ingredient_name.replace(/\s+/g, '_')}`;
+          if (!processedIngredients.has(baseIngredientKey)) {
+            const ingredientQuantity = ingredient.quantity * item.quantity;
+            transactionItems.push({
+              product_id: undefined,
+              name: ingredient.ingredient_name,
+              quantity: ingredientQuantity,
+              unit_price: 0,
+              total_price: 0
+            });
+            processedIngredients.add(baseIngredientKey);
+            console.log(`  ✅ Added recipe ingredient: ${ingredient.ingredient_name} (qty: ${ingredientQuantity} ${ingredient.unit})`);
+          }
+        }
+      }
 
       // Add parsed addons to deduction items
       for (const addon of addons) {
@@ -673,7 +669,7 @@ class StreamlinedTransactionService {
       }
       
     } catch (error) {
-      console.error(`  ❌ Error processing Mix & Match ingredients for ${item.name}:`, error);
+      console.error(`  ❌ Error processing recipe-based ingredients for ${item.name}:`, error);
       // Don't throw - preserve existing functionality even if processing fails
     }
   }
@@ -766,6 +762,15 @@ class StreamlinedTransactionService {
     } catch (error) {
       console.error('❌ Transaction rollback failed:', error);
     }
+  }
+  /**
+   * Check if a product is Mix & Match type (enhanced to handle standalone products)
+   */
+  private isMixAndMatchProduct(productName: string): boolean {
+    const lowerName = productName.toLowerCase();
+    return lowerName.includes(' with ') || 
+           lowerName.includes('croffle overload') || 
+           lowerName.includes('mini croffle');
   }
 }
 
