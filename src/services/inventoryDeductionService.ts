@@ -51,23 +51,24 @@ export async function deductInventoryForTransaction(
   console.log(`   Items:`, transactionItems.map(item => `${item.name} (qty: ${item.quantity})`));
 
   // 🎯 MIX & MATCH BASE INGREDIENT FIX
-  // Add base ingredients for Mix & Match items
+  // Add base ingredients for Mix & Match items with correct quantities
   const mixMatchBaseIngredients = [
-    { pattern: /^Croffle Overload/i, baseIngredient: 'Regular Croissant' },
-    { pattern: /^Mini Croffle/i, baseIngredient: 'Mini Croissant' },
-    { pattern: /^Croffle Supreme/i, baseIngredient: 'Regular Croissant' },
-    { pattern: /^Croffle Classic/i, baseIngredient: 'Regular Croissant' }
+    { pattern: /^Croffle Overload/i, baseIngredient: 'Regular Croissant', quantityRatio: 0.5 },
+    { pattern: /^Mini Croffle/i, baseIngredient: 'Regular Croissant', quantityRatio: 0.5 },
+    { pattern: /^Croffle Supreme/i, baseIngredient: 'Regular Croissant', quantityRatio: 1.0 },
+    { pattern: /^Croffle Classic/i, baseIngredient: 'Regular Croissant', quantityRatio: 1.0 }
   ];
 
   const additionalItems: TransactionItem[] = [];
   for (const item of transactionItems) {
     for (const mixMatch of mixMatchBaseIngredients) {
       if (mixMatch.pattern.test(item.name)) {
-        console.log(`🎯 MIX & MATCH DETECTED: ${item.name} → Adding base ingredient: ${mixMatch.baseIngredient}`);
+        const baseQuantity = item.quantity * mixMatch.quantityRatio;
+        console.log(`🎯 MIX & MATCH DETECTED: ${item.name} → Adding base ingredient: ${mixMatch.baseIngredient} (qty: ${baseQuantity})`);
         additionalItems.push({
           product_id: undefined,
           name: mixMatch.baseIngredient,
-          quantity: item.quantity,
+          quantity: baseQuantity,
           unit_price: 0,
           total_price: 0
         });
