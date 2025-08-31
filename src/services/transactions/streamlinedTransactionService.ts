@@ -138,6 +138,7 @@ class StreamlinedTransactionService {
       storeId: transactionData.storeId,
       total: transactionData.total,
       itemCount: transactionData.items.length,
+      cartItemsCount: cartItems?.length || 0,
       operationId
     });
 
@@ -499,6 +500,15 @@ class StreamlinedTransactionService {
           // Check if this is a Mix & Match product
           const matchingCart = cartItems?.find(ci => ci.productId === item.productId && (ci.variationId || null) === (item.variationId || null));
           const isMixMatch = matchingCart?.customization?.type === 'mix_match_croffle';
+          
+          console.log(`🔍 DEBUGGING Mix & Match detection for ${item.name}:`, {
+            hasCartItems: !!cartItems,
+            cartItemsLength: cartItems?.length || 0,
+            itemProductId: item.productId,
+            matchingCart: !!matchingCart,
+            customizationType: matchingCart?.customization?.type,
+            isMixMatch
+          });
           
           if (isMixMatch) {
             console.log(`🎯 Processing Mix & Match product: ${item.name}`);
