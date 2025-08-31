@@ -134,6 +134,11 @@ class StreamlinedTransactionService {
     cartItems?: any[]
   ): Promise<Transaction | null> {
     const operationId = `transaction_${Date.now()}`;
+    
+    console.log('🚀 STREAMLINED SERVICE CALLED!');
+    console.log('Cart items received:', cartItems?.length || 0);
+    console.log('Items to process:', transactionData.items?.length || 0);
+    
     console.log('🚀 Starting atomic transaction processing', {
       storeId: transactionData.storeId,
       total: transactionData.total,
