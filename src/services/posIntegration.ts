@@ -268,6 +268,8 @@ export class POSIntegrationService {
     cashierId: string
   ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
     try {
+      console.log('🔍 POSIntegration - Creating transaction through OLD service');
+      
       // Process final cart calculations
       const processedCart = await this.processCart(cartItems);
 
@@ -303,6 +305,20 @@ export class POSIntegrationService {
 
       // Deduct inventory for recipe ingredients
       for (const cartItem of processedCart.items) {
+        // Check if this is a Mix & Match product first
+        const isMixMatch = cartItem.item.name.includes(' with ');
+        
+        if (isMixMatch) {
+          console.log(`🎯 POSIntegration - Detected Mix & Match: ${cartItem.item.name}`);
+          // Handle Mix & Match base ingredients
+          await this.deductMixMatchBaseIngredients(
+            cartItem.item.name,
+            cartItem.quantity,
+            storeId
+          );
+        }
+        
+        // Then handle regular recipe template if it exists
         if (cartItem.item.recipe_template_id) {
           await this.deductRecipeInventory(
             cartItem.item.recipe_template_id,
@@ -326,12 +342,17 @@ export class POSIntegrationService {
     storeId: string
   ): Promise<void> {
     try {
+      console.log(`🔍 POSIntegration - Deducting inventory for recipe: ${recipeTemplateId}`);
+      
       const { data: ingredients } = await supabase
         .from('recipe_template_ingredients')
         .select('*')
         .eq('recipe_template_id', recipeTemplateId);
 
-      if (!ingredients) return;
+      if (!ingredients) {
+        console.log(`  ⚠️ No ingredients found for recipe template: ${recipeTemplateId}`);
+        return;
+      }
 
       for (const ingredient of ingredients) {
         if (ingredient.inventory_stock_id) {
@@ -350,12 +371,60 @@ export class POSIntegrationService {
               .from('inventory_stock')
               .update({ stock_quantity: newQuantity })
               .eq('id', ingredient.inventory_stock_id);
+              
+            console.log(`  ✅ Deducted ${requiredQuantity} of ${ingredient.ingredient_name}`);
           }
         }
       }
     } catch (error) {
       console.error('Error deducting recipe inventory:', error);
       // Don't throw here to avoid breaking the transaction
+    }
+  }
+
+  // NEW: Handle Mix & Match base ingredient deduction
+  private static async deductMixMatchBaseIngredients(
+    itemName: string,
+    quantity: number,
+    storeId: string
+  ): Promise<void> {
+    try {
+      console.log(`🎯 POSIntegration - Processing Mix & Match base ingredients for: ${itemName}`);
+      
+      // Extract base croffle name (e.g., "Mini Croffle with Choco Flakes" → "Mini Croffle") 
+      const baseName = itemName
+        .replace(/\s+with\s+.+$/i, '')    // Remove " with ..." suffix
+        .replace(/\s*\(from[^)]*\)/i, '') // Remove "(from ...)"
+        .trim();
+      
+      if (baseName === itemName) {
+        console.log(`  ℹ️ Not a Mix & Match item: ${itemName}`);
+        return;
+      }
+      
+      console.log(`  🔍 Extracted base name: "${baseName}" from "${itemName}"`);
+      
+      // Find base recipe template
+      const { data: baseTemplate, error } = await supabase
+        .from('recipe_templates')
+        .select('id, name')
+        .eq('name', baseName)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (error || !baseTemplate) {
+        console.warn(`  ⚠️ No base template found for "${baseName}":`, error?.message);
+        return;
+      }
+      
+      console.log(`  ✅ Found base template: ${baseTemplate.name} (${baseTemplate.id})`);
+      
+      // Deduct base recipe ingredients using existing method
+      await this.deductRecipeInventory(baseTemplate.id, quantity, storeId);
+      
+    } catch (error) {
+      console.error(`❌ Error processing Mix & Match base ingredients for ${itemName}:`, error);
+      // Don't throw - preserve transaction integrity
     }
   }
 }
