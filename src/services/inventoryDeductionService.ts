@@ -50,46 +50,25 @@ export async function deductInventoryForTransaction(
   console.log(`   Items to process: ${transactionItems.length}`);
   console.log(`   Items:`, transactionItems.map(item => `${item.name} (qty: ${item.quantity})`));
 
-  // 🎯 MIX & MATCH BASE INGREDIENT FIX
-  // Add base ingredients for Mix & Match items with correct quantities
-  const mixMatchBaseIngredients = [
-    { pattern: /^Croffle Overload/i, baseIngredient: 'Regular Croissant', quantityRatio: 0.5 },
-    { pattern: /^Mini Croffle/i, baseIngredient: 'Regular Croissant', quantityRatio: 0.5 },
-    { pattern: /^Croffle Supreme/i, baseIngredient: 'Regular Croissant', quantityRatio: 1.0 },
-    { pattern: /^Croffle Classic/i, baseIngredient: 'Regular Croissant', quantityRatio: 1.0 }
-  ];
-
-  const additionalItems: TransactionItem[] = [];
-  for (const item of transactionItems) {
-    for (const mixMatch of mixMatchBaseIngredients) {
-      if (mixMatch.pattern.test(item.name)) {
-        const baseQuantity = item.quantity * mixMatch.quantityRatio;
-        console.log(`🎯 MIX & MATCH DETECTED: ${item.name} → Adding base ingredient: ${mixMatch.baseIngredient} (qty: ${baseQuantity})`);
-        additionalItems.push({
-          product_id: undefined,
-          name: mixMatch.baseIngredient,
-          quantity: baseQuantity,
-          unit_price: 0,
-          total_price: 0
-        });
-        break;
-      }
-    }
-  }
-
-  // Add base ingredients to the processing list
-  const allItemsToProcess = [...transactionItems, ...additionalItems];
-  if (additionalItems.length > 0) {
-    console.log(`🎯 Added ${additionalItems.length} base ingredients for Mix & Match items`);
-  }
-
   try {
-    for (const item of allItemsToProcess) {
+    // Track processed items to prevent double-deduction within this transaction
+    const processedItems = new Set<string>();
+
+    for (const item of transactionItems) {
       console.log(`\n🔍 PROCESSING ITEM: ${item.name} (quantity: ${item.quantity})`);
+
+      // Detect Mix & Match items for enhanced logging
+      const isMixMatchItem = item.name.toLowerCase().includes('with ') ||
+                            item.name.toLowerCase().includes('croffle overload') ||
+                            item.name.toLowerCase().includes('mini croffle');
+
+      if (isMixMatchItem) {
+        console.log(`   🎯 DETECTED MIX & MATCH ITEM: Enhanced processing enabled`);
+      }
 
       // Prefer mapping via product_catalog -> product_ingredients when product_id is present
       let ingredients: any[] | null = null;
-      let source: 'catalog' | 'template' = 'template';
+      let resolutionSource: 'product_ingredients' | 'recipe_template' | 'name_fallback' = 'recipe_template';
       let recipe: { id: string; name: string } | null = null;
 
       if (item.product_id) {
@@ -105,7 +84,7 @@ export async function deductInventoryForTransaction(
         if (piError) {
           console.log(`   ⚠️ Failed catalog-based resolution: ${piError.message}`);
         } else if (productIngredients && productIngredients.length > 0) {
-          source = 'catalog';
+          resolutionSource = 'product_ingredients';
           // Normalize to expected ingredient fields
           ingredients = productIngredients.map(pi => ({
             ingredient_name: pi.inventory_item?.item,
@@ -117,12 +96,12 @@ export async function deductInventoryForTransaction(
         }
       }
 
-      // Fallback via product_catalog.recipe_id -> recipes.template_id -> recipe_template_ingredients
+      // Enhanced fallback via product_catalog.recipe_id -> recipes.template_id -> recipe_template_ingredients
       if (!ingredients) {
         let templateId: string | null = null;
 
         if (item.product_id) {
-          console.log(`   🔗 Resolving via product_catalog.recipe_id for product_id=${item.product_id}`);
+          console.log(`   🔗 ENHANCED: Resolving base recipe for product_id=${item.product_id}`);
           const { data: pc, error: pcErr } = await supabase
             .from('product_catalog')
             .select('id, recipe_id, product_name')
@@ -131,9 +110,12 @@ export async function deductInventoryForTransaction(
 
           if (pcErr) {
             console.warn('   ⚠️ product_catalog lookup error:', pcErr.message);
+          } else if (pc) {
+            console.log(`   📦 Product catalog entry: ${pc.product_name}, recipe_id: ${pc.recipe_id || 'null'}`);
           }
 
           if (pc?.recipe_id) {
+            console.log(`   🔗 Looking up recipe.template_id for recipe_id=${pc.recipe_id}`);
             const { data: rec, error: recErr } = await supabase
               .from('recipes')
               .select('id, template_id, name')
@@ -143,25 +125,45 @@ export async function deductInventoryForTransaction(
             if (!recErr && rec?.template_id) {
               templateId = rec.template_id as string;
               recipe = { id: templateId, name: pc.product_name || item.name } as any;
-              console.log(`   ✅ Using template_id from recipes: ${templateId}`);
+              console.log(`   ✅ RESOLVED: template_id=${templateId} for base product "${pc.product_name}"`);
             } else {
               console.warn('   ⚠️ recipes lookup failed or missing template_id:', recErr?.message);
+              if (isMixMatchItem) {
+                console.log(`   🎯 MIX & MATCH: Base recipe resolution failed - this will skip base ingredients!`);
+              }
             }
+          } else if (isMixMatchItem) {
+            console.log(`   🎯 MIX & MATCH: No recipe_id in product_catalog - base ingredients not linked!`);
           }
         }
 
         // Last resort: name->recipe_templates (pick first active)
         if (!templateId) {
           console.log(`   📋 Fallback: looking up recipe_templates by name: ${item.name}`);
+
+          // For Mix & Match items, try normalized name first
+          let searchName = item.name;
+          if (isMixMatchItem) {
+            const baseName = item.name
+              .replace(/\s*\(from[^)]*\)/i, '') // strip "(from ...)"
+              .replace(/\s+with\s+.+$/i, '')     // strip " with ..."
+              .replace(/\s+and\s+.+$/i, '')      // strip " and ..."
+              .trim();
+            if (baseName && baseName !== item.name) {
+              searchName = baseName;
+              console.log(`   🎯 MIX & MATCH: Normalized name "${item.name}" → "${searchName}"`);
+            }
+          }
+
           const { data: rtRows, error: rtErr } = await supabase
             .from('recipe_templates')
             .select('id, name')
-            .eq('name', item.name)
+            .eq('name', searchName)
             .eq('is_active', true)
             .limit(1);
 
           if (rtErr || !rtRows || rtRows.length === 0) {
-            const warningMsg = `Recipe not found for product: ${item.name} (Error: ${rtErr?.message || 'Not found'})`;
+            const warningMsg = `Recipe not found for product: ${item.name} (searched: ${searchName}) (Error: ${rtErr?.message || 'Not found'})`;
             console.log(`   ❌ ${warningMsg}`);
             result.warnings.push(warningMsg);
             continue;
@@ -169,6 +171,7 @@ export async function deductInventoryForTransaction(
 
           recipe = rtRows[0];
           templateId = rtRows[0].id;
+          resolutionSource = 'name_fallback';
           console.log(`   ✅ Found template by name: ${recipe.name} (ID: ${templateId})`);
         }
 
@@ -223,15 +226,30 @@ export async function deductInventoryForTransaction(
         }
 
         ingredients = ingredientsData;
+        resolutionSource = 'recipe_template';
         console.log(`   ✅ Found ${ingredients.length} ingredients via recipe template`);
       }
 
+      // Log resolution method used
+      if (ingredients && ingredients.length > 0) {
+        console.log(`   📊 RESOLUTION: Used ${resolutionSource} to find ${ingredients.length} ingredients for "${item.name}"`);
+        if (isMixMatchItem) {
+          console.log(`   🎯 MIX & MATCH: Successfully resolved base ingredients via ${resolutionSource}`);
+        }
+      } else {
+        console.log(`   ❌ NO INGREDIENTS FOUND for "${item.name}" via any resolution method`);
+        if (isMixMatchItem) {
+          console.log(`   🎯 MIX & MATCH: Base ingredients missing - this will skip base deduction!`);
+        }
+      }
+
       // Process each ingredient
-      for (const ingredient of ingredients) {
+      for (const ingredient of ingredients || []) {
         const requiredQuantity = ingredient.quantity * item.quantity;
 
         console.log(`\n      🔍 Processing ingredient: ${ingredient.ingredient_name}`);
         console.log(`         Required: ${requiredQuantity} ${ingredient.unit} (${ingredient.quantity} × ${item.quantity})`);
+        console.log(`         Source: ${resolutionSource}`);
 
         // Get inventory via robust matcher (category-aware) and prefer serving_ready_quantity when available
         console.log(`         📦 Resolving inventory for: ${ingredient.ingredient_name}`);
@@ -258,6 +276,14 @@ export async function deductInventoryForTransaction(
           result.errors.push(errorMsg);
           continue;
         }
+
+        // Deduplication: Check if we've already processed this inventory item in this transaction
+        const dedupeKey = `${inventoryId}-${ingredient.ingredient_name}`;
+        if (processedItems.has(dedupeKey)) {
+          console.log(`         🔄 SKIP: Already processed ${ingredient.ingredient_name} in this transaction`);
+          continue;
+        }
+        processedItems.add(dedupeKey);
 
         // 2) Load inventory row
         const { data: inventory, error: invErr } = await supabase
@@ -373,7 +399,19 @@ export async function deductInventoryForTransaction(
     // Set overall success based on whether we had any critical errors
     result.success = result.errors.length === 0;
 
-    console.log(`✅ Inventory deduction completed. Success: ${result.success}, Deducted: ${result.deductedItems.length} items`);
+    console.log(`✅ INVENTORY DEDUCTION COMPLETED`);
+    console.log(`   Success: ${result.success}`);
+    console.log(`   Items processed: ${transactionItems.length}`);
+    console.log(`   Ingredients deducted: ${result.deductedItems.length}`);
+    console.log(`   Errors: ${result.errors.length}`);
+    console.log(`   Warnings: ${result.warnings.length}`);
+
+    if (result.errors.length > 0) {
+      console.log(`   ❌ Errors:`, result.errors);
+    }
+    if (result.warnings.length > 0) {
+      console.log(`   ⚠️ Warnings:`, result.warnings);
+    }
 
   } catch (error) {
     result.success = false;
