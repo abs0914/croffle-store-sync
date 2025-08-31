@@ -454,7 +454,7 @@ class StreamlinedTransactionService {
   }
 
   /**
-   * Process inventory deduction with comprehensive logging
+   * Process inventory deduction with comprehensive logging and Mix & Match base ingredient support
    */
   private async processInventoryDeduction(
     transactionId: string,
@@ -467,8 +467,10 @@ class StreamlinedTransactionService {
     console.log(`📦 Items to process: ${items.length}`);
 
     try {
-      // Build deduction items, expanding combos into their components for accurate mapping
+      // Build deduction items, expanding combos and handling Mix & Match base ingredients
       const transactionItems: Array<{ product_id?: string; name: string; quantity: number; unit_price: number; total_price: number }> = [];
+      const processedIngredients = new Set<string>(); // Prevent duplicate deductions
+
       for (const item of items) {
         if (item.productId?.startsWith('combo-')) {
           console.log('🔧 Expanding combo in deduction path:', item.productId);
@@ -494,37 +496,60 @@ class StreamlinedTransactionService {
             });
           }
         } else {
-          transactionItems.push({
-            product_id: item.productId,
-            name: item.name,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            total_price: item.totalPrice
-          });
-
-          // Option B: Embed Mix & Match selections into deduction as addon components
+          // Check if this is a Mix & Match product
           const matchingCart = cartItems?.find(ci => ci.productId === item.productId && (ci.variationId || null) === (item.variationId || null));
-          const mixMatchCombo = matchingCart?.customization?.type === 'mix_match_croffle' ? matchingCart.customization?.combo : null;
-          if (mixMatchCombo) {
-            const allSelected: Array<{ id: string; name: string }> = [];
-            (mixMatchCombo.toppings || []).forEach((sel: any) => allSelected.push({ id: sel.addon?.id, name: sel.addon?.name }));
-            (mixMatchCombo.sauces || []).forEach((sel: any) => allSelected.push({ id: sel.addon?.id, name: sel.addon?.name }));
+          const isMixMatch = matchingCart?.customization?.type === 'mix_match_croffle';
+          
+          if (isMixMatch) {
+            console.log(`🎯 Processing Mix & Match product: ${item.name}`);
+            
+            // SAFE IMPLEMENTATION: Add base ingredient deduction for Mix & Match
+            // Find the base croffle recipe to deduct base ingredients
+            await this.processBaseRecipeIngredients(
+              item, 
+              transactionItems, 
+              processedIngredients,
+              storeId
+            );
+            
+            // Preserve existing addon processing (don't break working functionality)
+            const mixMatchCombo = matchingCart.customization?.combo;
+            if (mixMatchCombo) {
+              const allSelected: Array<{ id: string; name: string }> = [];
+              (mixMatchCombo.toppings || []).forEach((sel: any) => allSelected.push({ id: sel.addon?.id, name: sel.addon?.name }));
+              (mixMatchCombo.sauces || []).forEach((sel: any) => allSelected.push({ id: sel.addon?.id, name: sel.addon?.name }));
 
-            for (const sel of allSelected) {
-              if (!sel?.id || !sel?.name) continue;
-              transactionItems.push({
-                product_id: sel.id,
-                name: sel.name,
-                quantity: item.quantity, // 1 portion per base item
-                unit_price: 0,
-                total_price: 0
-              });
+              for (const sel of allSelected) {
+                if (!sel?.id || !sel?.name) continue;
+                const addonKey = `addon_${sel.id}_${sel.name}`;
+                if (!processedIngredients.has(addonKey)) {
+                  transactionItems.push({
+                    product_id: sel.id,
+                    name: sel.name,
+                    quantity: item.quantity,
+                    unit_price: 0,
+                    total_price: 0
+                  });
+                  processedIngredients.add(addonKey);
+                  console.log(`  ✅ Added addon: ${sel.name} (qty: ${item.quantity})`);
+                }
+              }
             }
+          } else {
+            // Regular product - preserve existing functionality
+            transactionItems.push({
+              product_id: item.productId,
+              name: item.name,
+              quantity: item.quantity,
+              unit_price: item.unitPrice,
+              total_price: item.totalPrice
+            });
           }
         }
       }
 
-      console.log(`📋 Transaction items for deduction (expanded with Mix & Match):`, transactionItems);
+      console.log(`📋 Transaction items for deduction (${transactionItems.length} items):`, 
+        transactionItems.map(ti => `${ti.name} (qty: ${ti.quantity})`));
 
       const result = await deductInventoryForTransaction(
         transactionId,
@@ -539,10 +564,16 @@ class StreamlinedTransactionService {
         warnings: result.warnings?.length || 0
       });
 
-      if (!result.success) {
-        console.error(`❌ Inventory deduction failed for transaction ${transactionId}:`, result.errors);
+      // Enhanced success logging for monitoring
+      if (result.success) {
+        console.log(`✅ INVENTORY DEDUCTION SUCCESS for transaction ${transactionId}`);
+        console.log(`   Deducted ingredients:`, result.deductedItems.map(item => 
+          `${item.ingredient}: -${item.deducted} ${item.unit} (${item.previousStock}→${item.newStock})`
+        ));
       } else {
-        console.log(`✅ Inventory deduction successful for transaction ${transactionId}`);
+        console.error(`❌ INVENTORY DEDUCTION FAILED for transaction ${transactionId}`);
+        console.error(`   Errors:`, result.errors);
+        console.error(`   Warnings:`, result.warnings);
       }
 
       return {
@@ -551,11 +582,102 @@ class StreamlinedTransactionService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Inventory deduction failed';
-      console.error(`❌ Inventory deduction error for transaction ${transactionId}:`, error);
+      console.error(`❌ CRITICAL: Inventory deduction system error for transaction ${transactionId}:`, error);
       return {
         success: false,
         errors: [errorMessage]
       };
+    }
+  }
+
+  /**
+   * Process base recipe ingredients for Mix & Match products
+   * SAFE IMPLEMENTATION: Add base croffle ingredients without breaking existing functionality
+   */
+  private async processBaseRecipeIngredients(
+    item: StreamlinedTransactionItem,
+    transactionItems: Array<{ product_id?: string; name: string; quantity: number; unit_price: number; total_price: number }>,
+    processedIngredients: Set<string>,
+    storeId: string
+  ): Promise<void> {
+    try {
+      console.log(`  🔍 Finding base recipe for Mix & Match: ${item.name}`);
+      
+      // Extract base croffle name from Mix & Match display name
+      // e.g., "Mini Croffle with Choco Flakes and Tiramisu" → "Mini Croffle"
+      const baseName = item.name
+        .replace(/\s+with\s+.+$/i, '')    // Remove " with ..." suffix
+        .replace(/\s*\(from[^)]*\)/i, '') // Remove "(from ...)" 
+        .trim();
+      
+      if (baseName === item.name) {
+        console.log(`  ⚠️ No base name extraction needed for: ${item.name}`);
+        return;
+      }
+      
+      console.log(`  🎯 Extracted base name: "${baseName}" from "${item.name}"`);
+      
+      // Find base recipe template (e.g., "Mini Croffle", "Regular Croffle") 
+      const { data: baseTemplate, error: templateError } = await supabase
+        .from('recipe_templates')
+        .select('id, name')
+        .eq('name', baseName)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      if (templateError) {
+        console.warn(`  ⚠️ Error finding base template for "${baseName}":`, templateError.message);
+        return;
+      }
+      
+      if (!baseTemplate) {
+        console.warn(`  ⚠️ No base template found for "${baseName}"`);
+        return;
+      }
+      
+      console.log(`  ✅ Found base template: ${baseTemplate.name} (ID: ${baseTemplate.id})`);
+      
+      // Get base recipe ingredients  
+      const { data: baseIngredients, error: ingredientsError } = await supabase
+        .from('recipe_template_ingredients')
+        .select('ingredient_name, quantity, unit, cost_per_unit')
+        .eq('recipe_template_id', baseTemplate.id);
+      
+      if (ingredientsError) {
+        console.warn(`  ⚠️ Error getting base ingredients:`, ingredientsError.message);
+        return;
+      }
+      
+      if (!baseIngredients || baseIngredients.length === 0) {
+        console.warn(`  ⚠️ No base ingredients found for template: ${baseTemplate.name}`);
+        return;
+      }
+      
+      console.log(`  📋 Found ${baseIngredients.length} base ingredients:`, 
+        baseIngredients.map(ing => `${ing.ingredient_name} (${ing.quantity} ${ing.unit})`));
+      
+      // Add base ingredients to deduction items (with duplicate prevention)
+      for (const ingredient of baseIngredients) {
+        const ingredientKey = `base_${ingredient.ingredient_name}`;
+        if (!processedIngredients.has(ingredientKey)) {
+          // Create virtual item for base ingredient deduction
+          transactionItems.push({
+            product_id: undefined, // Let the inventory service resolve by name
+            name: ingredient.ingredient_name,
+            quantity: ingredient.quantity * item.quantity, // Scale by transaction quantity
+            unit_price: ingredient.cost_per_unit || 0,
+            total_price: 0
+          });
+          processedIngredients.add(ingredientKey);
+          console.log(`  ✅ Added base ingredient: ${ingredient.ingredient_name} (qty: ${ingredient.quantity * item.quantity})`);
+        } else {
+          console.log(`  ⏭️ Skipping duplicate base ingredient: ${ingredient.ingredient_name}`);
+        }
+      }
+      
+    } catch (error) {
+      console.error(`  ❌ Error processing base recipe ingredients for ${item.name}:`, error);
+      // Don't throw - preserve existing functionality even if base ingredient processing fails
     }
   }
 
