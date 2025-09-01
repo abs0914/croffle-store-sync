@@ -103,9 +103,10 @@ async function processBatchInventoryDeduction(
   
   let recipes: any[] = [];
   let recipeTemplates: any[] = [];
+  let storeInventoryItems: any[] = [];
 
   // Fetch recipes by product_id and by name in parallel
-  const [recipesResult, templatesResult] = await Promise.all([
+  const [recipesResult, templatesResult, inventoryResult] = await Promise.all([
     // Fetch recipes by product_id
     productIds.length > 0 ? supabase
       .from('recipes')
@@ -140,6 +141,13 @@ async function processBatchInventoryDeduction(
         )
       `)
       .in('name', productNames)
+      .eq('is_active', true),
+    
+    // Fetch store inventory items for template mapping
+    supabase
+      .from('inventory_stock')
+      .select('id, item, stock_quantity')
+      .eq('store_id', storeId)
       .eq('is_active', true)
   ]);
 
@@ -157,7 +165,14 @@ async function processBatchInventoryDeduction(
     recipeTemplates = templatesResult.data || [];
   }
 
-  console.log(`📋 Found ${recipes.length} recipes and ${recipeTemplates.length} recipe templates`);
+  if (inventoryResult.error) {
+    console.error('❌ Error fetching store inventory:', inventoryResult.error);
+    result.warnings.push(`Error fetching store inventory: ${inventoryResult.error.message}`);
+  } else {
+    storeInventoryItems = inventoryResult.data || [];
+  }
+
+  console.log(`📋 Found ${recipes.length} recipes, ${recipeTemplates.length} recipe templates, and ${storeInventoryItems.length} inventory items`);
 
   // Step 2: Build inventory deduction plan
   console.log('📝 Step 2: Building deduction plan...');
@@ -201,9 +216,25 @@ async function processBatchInventoryDeduction(
         // Try recipe template as fallback
         const template = recipeTemplates.find(t => t.name.toLowerCase().trim() === item.name.toLowerCase().trim());
         if (template) {
+          console.log(`🔄 Using recipe template for ${item.name} - no store-specific recipe found`);
           result.warnings.push(`Using recipe template for ${item.name} - no store-specific recipe found`);
-          // Use template ingredients but we'll need to map them to inventory manually
-          continue; // Skip for now as this requires additional inventory mapping
+          
+          // Process template ingredients with inventory mapping
+          const templateSuccess = await processTemplateIngredients(
+            template,
+            item,
+            storeInventoryItems,
+            transactionId,
+            userId || 'system',
+            inventoryUpdates,
+            inventoryMovements,
+            result
+          );
+          
+          if (templateSuccess) {
+            result.itemsProcessed++;
+          }
+          continue; // Continue to next item after processing template
         }
       }
     }
@@ -342,4 +373,175 @@ async function processBatchInventoryDeduction(
   }
 
   console.log(`✅ Batch processing completed successfully`);
+}
+
+/**
+ * Process template ingredients with intelligent inventory mapping
+ */
+async function processTemplateIngredients(
+  template: any,
+  item: BatchTransactionItem,
+  storeInventoryItems: any[],
+  transactionId: string,
+  userId: string,
+  inventoryUpdates: Map<string, any>,
+  inventoryMovements: Array<{
+    inventory_stock_id: string;
+    movement_type: 'sale';
+    quantity_change: number;
+    previous_quantity: number;
+    new_quantity: number;
+    reference_type: 'transaction';
+    reference_id: string;
+    notes: string;
+    created_by: string;
+  }>,
+  result: BatchInventoryDeductionResult
+): Promise<boolean> {
+  console.log(`🔄 Processing template ${template.name} with ${template.recipe_template_ingredients?.length || 0} ingredients`);
+  
+  if (!template.recipe_template_ingredients || template.recipe_template_ingredients.length === 0) {
+    result.warnings.push(`Template ${template.name} has no ingredients defined`);
+    return false;
+  }
+
+  let processedCount = 0;
+
+  for (const templateIngredient of template.recipe_template_ingredients) {
+    const ingredientName = templateIngredient.ingredient_name;
+    const quantity = templateIngredient.quantity;
+    
+    // Find matching inventory item using intelligent matching
+    const matchedInventoryItem = findBestInventoryMatch(ingredientName, storeInventoryItems);
+    
+    if (!matchedInventoryItem) {
+      result.warnings.push(`No inventory mapping found for template ingredient: ${ingredientName}`);
+      console.log(`⚠️ No inventory match for template ingredient: ${ingredientName}`);
+      continue;
+    }
+
+    console.log(`✅ Matched template ingredient "${ingredientName}" to inventory item "${matchedInventoryItem.item}"`);
+
+    const totalDeduction = quantity * item.quantity;
+    const inventoryId = matchedInventoryItem.id;
+    
+    if (!inventoryUpdates.has(inventoryId)) {
+      inventoryUpdates.set(inventoryId, {
+        inventoryId,
+        itemName: matchedInventoryItem.item,
+        currentStock: matchedInventoryItem.stock_quantity,
+        totalDeduction: 0,
+        newStock: matchedInventoryItem.stock_quantity,
+        transactions: []
+      });
+    }
+
+    const update = inventoryUpdates.get(inventoryId)!;
+    update.totalDeduction += totalDeduction;
+    update.newStock = Math.max(0, update.currentStock - update.totalDeduction);
+    update.transactions.push({
+      transactionId,
+      itemName: item.name,
+      quantity: totalDeduction
+    });
+
+    // Prepare inventory movement record
+    inventoryMovements.push({
+      inventory_stock_id: inventoryId,
+      movement_type: 'sale',
+      quantity_change: -totalDeduction,
+      previous_quantity: matchedInventoryItem.stock_quantity,
+      new_quantity: Math.max(0, matchedInventoryItem.stock_quantity - totalDeduction),
+      reference_type: 'transaction',
+      reference_id: transactionId,
+      notes: `Template deduction: ${ingredientName} (${matchedInventoryItem.item}) for ${item.name}`,
+      created_by: userId
+    });
+
+    processedCount++;
+  }
+
+  console.log(`🎯 Template ${template.name}: processed ${processedCount}/${template.recipe_template_ingredients.length} ingredients`);
+  return processedCount > 0;
+}
+
+/**
+ * Intelligent ingredient name matching with fuzzy logic
+ */
+function findBestInventoryMatch(templateIngredientName: string, inventoryItems: any[]): any | null {
+  const normalizedTemplateName = templateIngredientName.toLowerCase().trim();
+  
+  // 1. Exact match (case-insensitive)
+  let match = inventoryItems.find(item => 
+    item.item.toLowerCase().trim() === normalizedTemplateName
+  );
+  
+  if (match) {
+    console.log(`🎯 Exact match: "${templateIngredientName}" → "${match.item}"`);
+    return match;
+  }
+
+  // 2. Common ingredient variations mapping
+  const ingredientMappings: { [key: string]: string[] } = {
+    'oreo crushed': ['crushed oreo', 'oreo crushed'],
+    'crushed oreo': ['oreo crushed', 'crushed oreo'],
+    'biscoff crushed': ['crushed biscoff', 'biscoff crushed'],
+    'crushed biscoff': ['biscoff crushed', 'crushed biscoff'],
+    'graham crushed': ['crushed grahams', 'graham crushed'],
+    'crushed grahams': ['graham crushed', 'crushed grahams'],
+    'chocolate sauce': ['choco sauce', 'chocolate sauce', 'dark chocolate sauce'],
+    'caramel sauce': ['caramel syrup', 'caramel sauce'],
+    'strawberry toppings': ['strawberry jam', 'strawberry topping'],
+    'nutella topping': ['nutella', 'nutella sauce']
+  };
+
+  // Check variations
+  for (const [templatePattern, inventoryVariations] of Object.entries(ingredientMappings)) {
+    if (normalizedTemplateName.includes(templatePattern) || templatePattern.includes(normalizedTemplateName)) {
+      for (const variation of inventoryVariations) {
+        match = inventoryItems.find(item => 
+          item.item.toLowerCase().trim().includes(variation)
+        );
+        if (match) {
+          console.log(`🔄 Variation match: "${templateIngredientName}" → "${match.item}" (via ${variation})`);
+          return match;
+        }
+      }
+    }
+  }
+
+  // 3. Partial word matching (if template name contains inventory item name or vice versa)
+  match = inventoryItems.find(item => {
+    const normalizedInventoryName = item.item.toLowerCase().trim();
+    return normalizedTemplateName.includes(normalizedInventoryName) || 
+           normalizedInventoryName.includes(normalizedTemplateName);
+  });
+
+  if (match) {
+    console.log(`🔍 Partial match: "${templateIngredientName}" → "${match.item}"`);
+    return match;
+  }
+
+  // 4. Word-based fuzzy matching (split words and check for common words)
+  const templateWords = normalizedTemplateName.split(/\s+/);
+  const bestMatches = inventoryItems.map(item => {
+    const inventoryWords = item.item.toLowerCase().trim().split(/\s+/);
+    const commonWords = templateWords.filter(word => 
+      inventoryWords.some(invWord => invWord.includes(word) || word.includes(invWord))
+    );
+    return {
+      item,
+      score: commonWords.length / Math.max(templateWords.length, inventoryWords.length)
+    };
+  }).filter(result => result.score > 0.5)
+    .sort((a, b) => b.score - a.score);
+
+  if (bestMatches.length > 0) {
+    const bestMatch = bestMatches[0];
+    console.log(`🧠 Fuzzy match: "${templateIngredientName}" → "${bestMatch.item.item}" (score: ${bestMatch.score.toFixed(2)})`);
+    return bestMatch.item;
+  }
+
+  console.log(`❌ No match found for template ingredient: "${templateIngredientName}"`);
+  return null;
 }
