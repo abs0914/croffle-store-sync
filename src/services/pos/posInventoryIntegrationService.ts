@@ -11,14 +11,10 @@ export interface POSInventoryStatus {
   limitingIngredients?: string[];
 }
 
-// Determine stock status based on available quantity with improved thresholds
-const getStockStatus = (availableQuantity: number, isDirectProduct: boolean = false): 'in_stock' | 'low_stock' | 'out_of_stock' => {
+// Simple stock status based on quantity threshold of 5
+const getStockStatus = (availableQuantity: number): 'in_stock' | 'low_stock' | 'out_of_stock' => {
   if (availableQuantity <= 0) return 'out_of_stock';
-  
-  // Use different thresholds for direct vs recipe-based products
-  const lowStockThreshold = isDirectProduct ? 10 : 5;
-  
-  if (availableQuantity <= lowStockThreshold) return 'low_stock';
+  if (availableQuantity <= 5) return 'low_stock';
   return 'in_stock';
 };
 
@@ -57,7 +53,7 @@ export const fetchPOSInventoryStatus = async (
         console.log(`🧪 Recipe product ${product.name}: availability = ${product.is_available}, stock = ${availableQuantity}`);
       }
       
-      const status = getStockStatus(availableQuantity, isDirectProduct);
+      const status = getStockStatus(availableQuantity);
       
       statusMap.set(product.id, {
         productId: product.id,
