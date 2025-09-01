@@ -1,21 +1,28 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types";
+import { checkProductAvailabilityByRecipe } from "@/services/productCatalog/automaticAvailabilityService";
 
 export interface POSInventoryStatus {
   productId: string;
   status: 'in_stock' | 'low_stock' | 'out_of_stock';
   availableQuantity: number;
   isDirectProduct: boolean;
+  maxProducibleQuantity?: number;
+  limitingIngredients?: string[];
 }
 
-// Determine stock status based on available quantity
-const getStockStatus = (stockQuantity: number): 'in_stock' | 'low_stock' | 'out_of_stock' => {
-  if (stockQuantity <= 0) return 'out_of_stock';
-  if (stockQuantity <= 5) return 'low_stock';
+// Determine stock status based on available quantity with improved thresholds
+const getStockStatus = (availableQuantity: number, isDirectProduct: boolean = false): 'in_stock' | 'low_stock' | 'out_of_stock' => {
+  if (availableQuantity <= 0) return 'out_of_stock';
+  
+  // Use different thresholds for direct vs recipe-based products
+  const lowStockThreshold = isDirectProduct ? 10 : 5;
+  
+  if (availableQuantity <= lowStockThreshold) return 'low_stock';
   return 'in_stock';
 };
 
-// Fetch inventory status for POS products
+// Fetch inventory status for POS products with template-based calculations
 export const fetchPOSInventoryStatus = async (
   products: Product[], 
   storeId: string
@@ -23,40 +30,81 @@ export const fetchPOSInventoryStatus = async (
   const statusMap = new Map<string, POSInventoryStatus>();
   
   try {
-    // For now, we'll determine direct products based on product_type if available,
-    // or use a simple heuristic based on existing data
-    products.forEach(product => {
-      // Check if product has product_type field or use heuristic
+    console.log(`🔍 POS Inventory: Calculating status for ${products.length} products in store ${storeId}`);
+    
+    for (const product of products) {
+      // Determine if this is a direct product or template-based
       const isDirectProduct = (product as any).product_type === 'direct' || 
+                             !product.recipe_id ||
                              (!product.description?.includes('recipe') && 
                               (product.name.toLowerCase().includes('water') || 
                                product.name.toLowerCase().includes('drink') ||
                                product.name.toLowerCase().includes('bottle')));
       
-      const stockQuantity = product.stock_quantity || 0;
+      let availableQuantity = 0;
+      let maxProducibleQuantity: number | undefined;
+      let limitingIngredients: string[] | undefined;
+      
+      if (isDirectProduct) {
+        // For direct products, use the static stock quantity
+        availableQuantity = product.stock_quantity || 0;
+        console.log(`📦 Direct product ${product.name}: stock = ${availableQuantity}`);
+      } else {
+        // For template-based products, calculate availability from ingredients
+        try {
+          const availability = await checkProductAvailabilityByRecipe(product.id, storeId);
+          if (availability) {
+            availableQuantity = availability.maxQuantity;
+            maxProducibleQuantity = availability.maxQuantity;
+            limitingIngredients = availability.insufficientIngredients;
+            
+            console.log(`🧪 Template product ${product.name}: can make ${availableQuantity} units`, {
+              maxQuantity: availability.maxQuantity,
+              insufficientIngredients: availability.insufficientIngredients,
+              canMake: availability.canMake
+            });
+          } else {
+            // Fallback if availability check returns null
+            availableQuantity = (product.is_available !== false) ? 1 : 0;
+            console.log(`⚠️ Null availability result for ${product.name}, using fallback: ${availableQuantity}`);
+          }
+        } catch (error) {
+          console.warn(`⚠️ Failed to calculate template availability for ${product.name}:`, error);
+          // Fallback to product availability flag
+          availableQuantity = (product.is_available !== false) ? 1 : 0;
+        }
+      }
+      
+      const status = getStockStatus(availableQuantity, isDirectProduct);
       
       statusMap.set(product.id, {
         productId: product.id,
-        status: getStockStatus(stockQuantity),
-        availableQuantity: stockQuantity,
-        isDirectProduct
+        status,
+        availableQuantity,
+        isDirectProduct,
+        maxProducibleQuantity,
+        limitingIngredients
       });
-    });
+      
+      console.log(`✅ Product ${product.name}: ${status} (${availableQuantity} available)`);
+    }
 
   } catch (error) {
-    console.error('Error in fetchPOSInventoryStatus:', error);
+    console.error('❌ Error in fetchPOSInventoryStatus:', error);
     
     // Fallback: return safe defaults for all products
     products.forEach(product => {
+      const fallbackQuantity = (product.is_available !== false) ? 1 : 0;
       statusMap.set(product.id, {
         productId: product.id,
-        status: product.stock_quantity > 0 ? 'in_stock' : 'out_of_stock',
-        availableQuantity: product.stock_quantity || 0,
+        status: getStockStatus(fallbackQuantity),
+        availableQuantity: fallbackQuantity,
         isDirectProduct: false
       });
     });
   }
 
+  console.log(`🎯 POS Inventory: Status calculated for ${statusMap.size} products`);
   return statusMap;
 };
 

@@ -595,13 +595,14 @@ export default function ProductGrid({
                        <h2 className="text-lg font-semibold text-gray-900">{category.name}</h2>
                           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
                            {categoryProducts.map(product => (
-                             <ProductCard
-                               key={product.id}
-                               product={product}
-                               isShiftActive={isShiftActive}
-                               getCategoryName={getCategoryName}
-                               onClick={handleProductClick}
-                             />
+                              <ProductCard
+                                key={product.id}
+                                product={product}
+                                isShiftActive={isShiftActive}
+                                getCategoryName={getCategoryName}
+                                onClick={handleProductClick}
+                                storeId={storeId}
+                              />
                            ))}
                          </div>
                      </div>
@@ -620,13 +621,14 @@ export default function ProductGrid({
                          <h2 className="text-lg font-semibold text-gray-900">Other Items</h2>
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
                              {uncategorizedProducts.map(product => (
-                               <ProductCard
-                                 key={product.id}
-                                 product={product}
-                                 isShiftActive={isShiftActive}
-                                 getCategoryName={getCategoryName}
-                                 onClick={handleProductClick}
-                               />
+                                <ProductCard
+                                  key={product.id}
+                                  product={product}
+                                  isShiftActive={isShiftActive}
+                                  getCategoryName={getCategoryName}
+                                  onClick={handleProductClick}
+                                  storeId={storeId}
+                                />
                              ))}
                            </div>
                        </div>
@@ -639,13 +641,14 @@ export default function ProductGrid({
               // Single category grid view
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
                   {filteredProducts.map(product => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      isShiftActive={isShiftActive}
-                      getCategoryName={getCategoryName}
-                      onClick={handleProductClick}
-                    />
+                     <ProductCard
+                       key={product.id}
+                       product={product}
+                       isShiftActive={isShiftActive}
+                       getCategoryName={getCategoryName}
+                       onClick={handleProductClick}
+                       storeId={storeId}
+                     />
                   ))}
                 </div>
             )

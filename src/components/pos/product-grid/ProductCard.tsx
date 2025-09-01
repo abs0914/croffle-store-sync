@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,27 +8,51 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Plus, Info, AlertTriangle, XCircle } from "lucide-react";
 import { ProductStatusIndicator } from "@/components/pos/ProductStatusIndicator";
 import { ImageWithFallback } from "../ImageWithFallback";
+import { fetchPOSInventoryStatus, POSInventoryStatus } from "@/services/pos/posInventoryIntegrationService";
 
 interface ProductCardProps {
   product: Product;
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
   onClick: (product: Product) => void;
+  storeId?: string;
 }
 
 export default function ProductCard({
   product,
   isShiftActive,
   getCategoryName,
-  onClick
+  onClick,
+  storeId
 }: ProductCardProps) {
   const isActive = product.is_active || product.isActive;
-  const stockQuantity = product.stock_quantity || product.stockQuantity || 0;
+  const [inventoryStatus, setInventoryStatus] = useState<POSInventoryStatus | null>(null);
   
-  // Check ingredient availability from automatic service
-  const isIngredientAvailable = product.product_status !== 'out_of_stock' && 
-                                product.product_status !== 'temporarily_unavailable' &&
-                                (product.is_available !== false);
+  // Fetch real-time inventory status for this product
+  useEffect(() => {
+    if (storeId) {
+      fetchPOSInventoryStatus([product], storeId).then(statusMap => {
+        const status = statusMap.get(product.id);
+        if (status) {
+          setInventoryStatus(status);
+        }
+      }).catch(error => {
+        console.error(`Failed to fetch inventory status for ${product.name}:`, error);
+        // Fallback to basic logic
+        setInventoryStatus({
+          productId: product.id,
+          status: (product.is_available !== false) ? 'in_stock' : 'out_of_stock',
+          availableQuantity: (product.is_available !== false) ? 1 : 0,
+          isDirectProduct: false
+        });
+      });
+    }
+  }, [product.id, storeId, product.is_available]);
+  
+  // Use inventory status for availability calculations
+  const stockQuantity = inventoryStatus?.availableQuantity || 0;
+  const stockStatus = inventoryStatus?.status || 'out_of_stock';
+  const isIngredientAvailable = stockStatus !== 'out_of_stock' && (product.is_available !== false);
   
   const canSell = isActive && isIngredientAvailable;
 
@@ -107,10 +131,24 @@ export default function ProductCard({
               </Tooltip>
             </TooltipProvider>
           )}
-          {stockQuantity <= 5 && stockQuantity > 0 && isIngredientAvailable && (
-            <Badge variant="destructive" className="text-xs font-medium px-1 py-0">
-              Low
-            </Badge>
+          {stockStatus === 'low_stock' && isIngredientAvailable && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="text-xs font-medium px-1 py-0 border-orange-300 text-orange-700 bg-orange-50">
+                    Low Stock
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    {inventoryStatus?.isDirectProduct 
+                      ? `Only ${stockQuantity} left in stock`
+                      : `Can make ${stockQuantity} more${inventoryStatus?.limitingIngredients?.length ? ` (limited by: ${inventoryStatus.limitingIngredients.join(', ')})` : ''}`
+                    }
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
 
@@ -152,9 +190,27 @@ export default function ProductCard({
 
             {/* Stock Indicator */}
             {stockQuantity > 0 && (
-              <div className="text-xs text-gray-500 bg-gray-100 px-1 py-0.5 rounded-md">
-                {stockQuantity}
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className={`text-xs px-1 py-0.5 rounded-md ${
+                      stockStatus === 'low_stock' 
+                        ? 'text-orange-700 bg-orange-100' 
+                        : 'text-gray-500 bg-gray-100'
+                    }`}>
+                      {stockQuantity}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">
+                      {inventoryStatus?.isDirectProduct 
+                        ? `${stockQuantity} units in stock`
+                        : `Can make ${stockQuantity} units`
+                      }
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>
