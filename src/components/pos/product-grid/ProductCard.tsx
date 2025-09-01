@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,46 +8,26 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Plus, Info, AlertTriangle, XCircle } from "lucide-react";
 import { ProductStatusIndicator } from "@/components/pos/ProductStatusIndicator";
 import { ImageWithFallback } from "../ImageWithFallback";
-import { fetchPOSInventoryStatus, POSInventoryStatus } from "@/services/pos/posInventoryIntegrationService";
+import { usePOSInventory } from "@/contexts/POSInventoryContext";
 
 interface ProductCardProps {
   product: Product;
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
   onClick: (product: Product) => void;
-  storeId?: string;
 }
 
-export default function ProductCard({
-  product,
-  isShiftActive,
+export default function ProductCard({ 
+  product, 
+  isShiftActive, 
   getCategoryName,
-  onClick,
-  storeId
+  onClick
 }: ProductCardProps) {
   const isActive = product.is_active || product.isActive;
-  const [inventoryStatus, setInventoryStatus] = useState<POSInventoryStatus | null>(null);
+  const { getProductStatus } = usePOSInventory();
   
-  // Fetch real-time inventory status for this product
-  useEffect(() => {
-    if (storeId) {
-      fetchPOSInventoryStatus([product], storeId).then(statusMap => {
-        const status = statusMap.get(product.id);
-        if (status) {
-          setInventoryStatus(status);
-        }
-      }).catch(error => {
-        console.error(`Failed to fetch inventory status for ${product.name}:`, error);
-        // Fallback to basic logic
-        setInventoryStatus({
-          productId: product.id,
-          status: (product.is_available !== false) ? 'in_stock' : 'out_of_stock',
-          availableQuantity: (product.is_available !== false) ? 1 : 0,
-          isDirectProduct: false
-        });
-      });
-    }
-  }, [product.id, storeId, product.is_available]);
+  // Get inventory status from context
+  const inventoryStatus = getProductStatus(product.id);
   
   // Use inventory status for availability calculations
   const stockQuantity = inventoryStatus?.availableQuantity || 0;

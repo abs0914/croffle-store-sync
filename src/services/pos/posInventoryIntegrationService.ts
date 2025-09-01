@@ -42,37 +42,19 @@ export const fetchPOSInventoryStatus = async (
                                product.name.toLowerCase().includes('bottle')));
       
       let availableQuantity = 0;
-      let maxProducibleQuantity: number | undefined;
-      let limitingIngredients: string[] | undefined;
       
+      // Simplify stock calculation to use static inventory quantities only
+      // Remove all recipe-based calculations that are causing conflicts
       if (isDirectProduct) {
         // For direct products, use the static stock quantity
         availableQuantity = product.stock_quantity || 0;
         console.log(`📦 Direct product ${product.name}: stock = ${availableQuantity}`);
       } else {
-        // For template-based products, calculate availability from ingredients
-        try {
-          const availability = await checkProductAvailabilityByRecipe(product.id, storeId);
-          if (availability && availability.maxQuantity > 0) {
-            availableQuantity = availability.maxQuantity;
-            maxProducibleQuantity = availability.maxQuantity;
-            limitingIngredients = availability.insufficientIngredients;
-            
-            console.log(`🧪 Template product ${product.name}: can make ${availableQuantity} units`, {
-              maxQuantity: availability.maxQuantity,
-              insufficientIngredients: availability.insufficientIngredients,
-              canMake: availability.canMake
-            });
-          } else {
-            // Fallback: if no recipe ingredients found, treat as available if product is marked available
-            console.log(`⚠️ No recipe ingredients found for ${product.name}, using product availability flag`);
-            availableQuantity = (product.is_available !== false) ? 50 : 0; // Assume good stock if product is available
-          }
-        } catch (error) {
-          console.warn(`⚠️ Failed to calculate template availability for ${product.name}:`, error);
-          // Fallback to product availability flag
-          availableQuantity = (product.is_available !== false) ? 50 : 0; // Assume good stock if product is available
-        }
+        // For recipe-based products, use a simplified approach
+        // If product is marked as available, assume reasonable stock
+        // If not available, treat as out of stock
+        availableQuantity = (product.is_available !== false) ? 25 : 0;
+        console.log(`🧪 Recipe product ${product.name}: availability = ${product.is_available}, stock = ${availableQuantity}`);
       }
       
       const status = getStockStatus(availableQuantity, isDirectProduct);
@@ -81,9 +63,7 @@ export const fetchPOSInventoryStatus = async (
         productId: product.id,
         status,
         availableQuantity,
-        isDirectProduct,
-        maxProducibleQuantity,
-        limitingIngredients
+        isDirectProduct
       });
       
       console.log(`✅ Product ${product.name}: ${status} (${availableQuantity} available)`);

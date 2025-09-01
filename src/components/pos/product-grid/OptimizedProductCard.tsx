@@ -1,5 +1,5 @@
 
-import React, { memo, useState, useCallback } from "react";
+import React, { memo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/types";
@@ -7,28 +7,26 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertTriangle, Package, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ImageWithFallback } from "../ImageWithFallback";
+import { usePOSInventory } from "@/contexts/POSInventoryContext";
 
 interface OptimizedProductCardProps {
   product: Product;
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
   onClick: (product: Product) => void;
-  inventoryStatus?: {
-    status: 'in_stock' | 'low_stock' | 'out_of_stock';
-    availableQuantity: number;
-    isDirectProduct: boolean;
-  };
 }
 
 const OptimizedProductCard = memo(function OptimizedProductCard({ 
   product, 
   isShiftActive, 
   getCategoryName,
-  onClick,
-  inventoryStatus
+  onClick
 }: OptimizedProductCardProps) {
   const navigate = useNavigate();
+  const { getProductStatus } = usePOSInventory();
   
+  // Get inventory status from context
+  const inventoryStatus = getProductStatus(product.id);
   
   // Check if product is active, handling both is_active and isActive properties
   const isActive = product.is_active || product.isActive;

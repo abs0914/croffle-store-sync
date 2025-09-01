@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import CartView from "@/components/pos/CartView";
 import ProductGrid from "@/components/pos/product-grid";
+import { POSInventoryProvider } from "@/contexts/POSInventoryContext";
 import { useCart } from "@/contexts/cart/CartContext";
 import { Product, Category, Customer, ProductVariation } from "@/types";
 import { SeniorDiscount } from "@/hooks/useTransactionHandler";
@@ -84,17 +85,21 @@ export default function POSContent({
         {/* Products Section */}
         <div className="flex-1 bg-card rounded-lg shadow-sm border border-border overflow-hidden">
           <div className="p-3 md:p-4 h-full flex flex-col">
-            <ProductGrid
-              products={products} 
-              allProducts={allProducts}
-              categories={categories} 
-              activeCategory={activeCategory} 
-              setActiveCategory={setActiveCategory}
-              addItemToCart={(p,q,v,c)=>addItemToCart(p,q,v,c)}
-              isShiftActive={!!currentShift}
-              isLoading={isLoading}
-              storeId={storeId}
-            />
+            {storeId && (
+              <POSInventoryProvider products={products} storeId={storeId}>
+                <ProductGrid
+                  products={products} 
+                  allProducts={allProducts}
+                  categories={categories} 
+                  activeCategory={activeCategory} 
+                  setActiveCategory={setActiveCategory}
+                  addItemToCart={(p,q,v,c)=>addItemToCart(p,q,v,c)}
+                  isShiftActive={!!currentShift}
+                  isLoading={isLoading}
+                  storeId={storeId}
+                />
+              </POSInventoryProvider>
+            )}
           </div>
         </div>
       </div>

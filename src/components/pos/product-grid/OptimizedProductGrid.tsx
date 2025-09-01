@@ -1,7 +1,7 @@
 import React, { useState, useMemo, memo, useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 import { Product, Category, ProductVariation } from "@/types";
-import { fetchPOSInventoryStatus, POSInventoryStatus } from "@/services/pos/posInventoryIntegrationService";
+import { POSInventoryProvider } from "@/contexts/POSInventoryContext";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -45,19 +45,11 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
   const [productVariations, setProductVariations] = useState<ProductVariation[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoadingVariations, setIsLoadingVariations] = useState(false);
-  const [inventoryStatusMap, setInventoryStatusMap] = useState<Map<string, POSInventoryStatus>>(new Map());
   
   // Recipe customization states
   const [customizableRecipes, setCustomizableRecipes] = useState<any[]>([]);
   const [selectedCustomizableRecipe, setSelectedCustomizableRecipe] = useState<any>(null);
   const [isCustomizationDialogOpen, setIsCustomizationDialogOpen] = useState(false);
-  
-  // Fetch inventory status for POS integration
-  useEffect(() => {
-    if (products.length > 0 && storeId) {
-      fetchPOSInventoryStatus(products, storeId).then(setInventoryStatusMap);
-    }
-  }, [products, storeId]);
   
   // Load customizable recipes on component mount
   useEffect(() => {
@@ -170,80 +162,83 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
 
   return (
     <>
-      <div className="mb-4 flex gap-2">
-        <OptimizedProductSearch 
-          searchTerm={searchTerm} 
-          setSearchTerm={setSearchTerm} 
-        />
-      </div>
-      
-      <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory}>
-        <ProductCategoryTabs 
-          categories={categories} 
-          activeCategory={activeCategory} 
-          setActiveCategory={setActiveCategory} 
-        />
-        
-        <TabsContent value={activeCategory} className="mt-0">
-          {!isShiftActive && (
-            <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mb-4 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              <span className="text-sm text-amber-800">You need to start a shift before adding items to cart</span>
-            </div>
-          )}
+      {storeId && (
+        <POSInventoryProvider products={products} storeId={storeId}>
+          <div className="mb-4 flex gap-2">
+            <OptimizedProductSearch 
+              searchTerm={searchTerm} 
+              setSearchTerm={setSearchTerm} 
+            />
+          </div>
           
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <p>Loading products...</p>
-            </div>
-          ) : filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
-              {filteredProducts.map(product => (
-                <OptimizedProductCard
-                  key={product.id}
-                  product={product}
-                  isShiftActive={isShiftActive}
-                  getCategoryName={getCategoryName}
-                  onClick={handleProductClick}
-                  inventoryStatus={inventoryStatusMap.get(product.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex justify-center items-center h-64">
-              <p>No products found in this category</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory}>
+            <ProductCategoryTabs 
+              categories={categories} 
+              activeCategory={activeCategory} 
+              setActiveCategory={setActiveCategory} 
+            />
+            
+            <TabsContent value={activeCategory} className="mt-0">
+              {!isShiftActive && (
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-md mb-4 flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-500" />
+                  <span className="text-sm text-amber-800">You need to start a shift before adding items to cart</span>
+                </div>
+              )}
+              
+              {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <p>Loading products...</p>
+                </div>
+              ) : filteredProducts.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 md:gap-3">
+                  {filteredProducts.map(product => (
+                    <OptimizedProductCard
+                      key={product.id}
+                      product={product}
+                      isShiftActive={isShiftActive}
+                      getCategoryName={getCategoryName}
+                      onClick={handleProductClick}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex justify-center items-center h-64">
+                  <p>No products found in this category</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
 
-      {/* Product Variations Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{selectedProduct?.name} - Select Size</DialogTitle>
-            <DialogDescription>
-              Choose a variation or select regular size
-            </DialogDescription>
-          </DialogHeader>
-          
-          <ProductVariationsList 
-            isLoading={isLoadingVariations}
-            variations={productVariations}
-            onVariationSelect={handleVariationSelect}
-            onRegularSelect={handleRegularProductSelect}
-            selectedProduct={selectedProduct}
+          {/* Product Variations Dialog */}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>{selectedProduct?.name} - Select Size</DialogTitle>
+                <DialogDescription>
+                  Choose a variation or select regular size
+                </DialogDescription>
+              </DialogHeader>
+              
+              <ProductVariationsList 
+                isLoading={isLoadingVariations}
+                variations={productVariations}
+                onVariationSelect={handleVariationSelect}
+                onRegularSelect={handleRegularProductSelect}
+                selectedProduct={selectedProduct}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* Recipe Customization Dialog */}
+          <RecipeCustomizationDialog
+            isOpen={isCustomizationDialogOpen}
+            onClose={() => setIsCustomizationDialogOpen(false)}
+            recipe={selectedCustomizableRecipe}
+            onAddToCart={handleCustomizedAddToCart}
           />
-        </DialogContent>
-      </Dialog>
-
-      {/* Recipe Customization Dialog */}
-      <RecipeCustomizationDialog
-        isOpen={isCustomizationDialogOpen}
-        onClose={() => setIsCustomizationDialogOpen(false)}
-        recipe={selectedCustomizableRecipe}
-        onAddToCart={handleCustomizedAddToCart}
-      />
+        </POSInventoryProvider>
+      )}
     </>
   );
 });
