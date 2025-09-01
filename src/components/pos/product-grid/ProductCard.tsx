@@ -106,24 +106,10 @@ export default function ProductCard({
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">Insufficient ingredients to make this item</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {stockStatus === 'low_stock' && isIngredientAvailable && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline" className="text-xs font-medium px-1 py-0 border-orange-300 text-orange-700 bg-orange-50">
-                    Low Stock
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
                   <p className="text-xs">
                     {inventoryStatus?.isDirectProduct 
-                      ? `Only ${stockQuantity} left in stock`
-                      : `Can make ${stockQuantity} more${inventoryStatus?.limitingIngredients?.length ? ` (limited by: ${inventoryStatus.limitingIngredients.join(', ')})` : ''}`
+                      ? `Only ${stockQuantity} units in stock`
+                      : `Cannot make this item`
                     }
                   </p>
                 </TooltipContent>
@@ -174,8 +160,8 @@ export default function ProductCard({
                 <Tooltip>
                   <TooltipTrigger>
                     <div className={`text-xs px-1 py-0.5 rounded-md ${
-                      stockStatus === 'low_stock' 
-                        ? 'text-orange-700 bg-orange-100' 
+                      stockStatus === 'out_of_stock' 
+                        ? 'text-red-700 bg-red-100' 
                         : 'text-gray-500 bg-gray-100'
                     }`}>
                       {stockQuantity}

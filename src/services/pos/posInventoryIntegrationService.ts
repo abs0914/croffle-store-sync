@@ -4,17 +4,14 @@ import { checkProductAvailabilityByRecipe } from "@/services/productCatalog/auto
 
 export interface POSInventoryStatus {
   productId: string;
-  status: 'in_stock' | 'low_stock' | 'out_of_stock';
+  status: 'in_stock' | 'out_of_stock';
   availableQuantity: number;
   isDirectProduct: boolean;
-  maxProducibleQuantity?: number;
-  limitingIngredients?: string[];
 }
 
-// Simple stock status based on quantity threshold of 5
-const getStockStatus = (availableQuantity: number): 'in_stock' | 'low_stock' | 'out_of_stock' => {
+// Simplified stock status - only show out of stock
+const getStockStatus = (availableQuantity: number): 'in_stock' | 'out_of_stock' => {
   if (availableQuantity <= 0) return 'out_of_stock';
-  if (availableQuantity <= 5) return 'low_stock';
   return 'in_stock';
 };
 

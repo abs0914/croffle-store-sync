@@ -33,7 +33,6 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
   
   // Check stock availability for direct products
   const isOutOfStock = inventoryStatus?.status === 'out_of_stock';
-  const isLowStock = inventoryStatus?.status === 'low_stock';
   const isDirectProduct = inventoryStatus?.isDirectProduct || false;
   
   // Auto-disable if out of stock
@@ -63,32 +62,15 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
     if (!isShiftActive) return "Start a shift to add items to cart";
     if (!isActive) return "This product is inactive";
     if (isOutOfStock && isDirectProduct) return `Out of stock - ${inventoryStatus?.availableQuantity || 0} units available`;
-    if (isLowStock && isDirectProduct) return `Low stock - Only ${inventoryStatus?.availableQuantity || 0} units available`;
     return `Select ${product.name}`;
-  }, [isShiftActive, isActive, isOutOfStock, isLowStock, isDirectProduct, product.name, inventoryStatus?.availableQuantity]);
+  }, [isShiftActive, isActive, isOutOfStock, isDirectProduct, product.name, inventoryStatus?.availableQuantity]);
 
   const getStockBadge = () => {
-    if (!isDirectProduct) return null;
-    
-    if (isOutOfStock) {
-      return (
-        <Badge variant="destructive" className="text-xs px-1 py-0 bg-red-100 text-red-800">
-          Out
-        </Badge>
-      );
-    }
-    
-    if (isLowStock) {
-      return (
-        <Badge variant="outline" className="text-xs px-1 py-0 bg-yellow-100 text-yellow-800 border-yellow-500">
-          Low ({inventoryStatus?.availableQuantity})
-        </Badge>
-      );
-    }
+    if (!isDirectProduct || !isOutOfStock) return null;
     
     return (
-      <Badge variant="default" className="text-xs px-1 py-0 bg-green-100 text-green-800">
-        In Stock
+      <Badge variant="destructive" className="text-xs px-1 py-0 bg-red-100 text-red-800">
+        Out of Stock
       </Badge>
     );
   };
@@ -103,9 +85,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
             className={`h-auto p-0 flex flex-col items-center justify-between text-left border overflow-hidden rounded-lg relative ${
               isDisabled 
                 ? 'opacity-50 cursor-not-allowed border-gray-200' 
-                : isLowStock 
-                  ? 'border-yellow-300 bg-yellow-50/50' 
-                  : 'border-croffle-primary/20 hover:border-croffle-primary/40'
+                : 'border-croffle-primary/20 hover:border-croffle-primary/40'
             }`}
             onClick={handleClick}
             disabled={isDisabled}
@@ -117,15 +97,6 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                   <Badge variant="destructive" className="text-xs flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
                     Out of Stock
-                  </Badge>
-                </div>
-              )}
-              
-              {isLowStock && !isOutOfStock && (
-                <div className="absolute top-2 left-2 z-10">
-                  <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-500 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    Low Stock
                   </Badge>
                 </div>
               )}
