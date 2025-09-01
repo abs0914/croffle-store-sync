@@ -126,7 +126,8 @@ export const ImageZoomViewer: React.FC<ImageZoomViewerProps> = ({
     maxWidth: 'none',
     maxHeight: 'none',
     width: 'auto',
-    height: 'auto'
+    height: 'auto',
+    display: 'block'
   };
 
   return (
@@ -215,13 +216,13 @@ export const ImageZoomViewer: React.FC<ImageZoomViewerProps> = ({
           onMouseLeave={handleMouseUp}
           onWheel={handleWheel}
         >
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="w-full h-full flex items-center justify-center overflow-auto">
             <img
               ref={imageRef}
               src={src}
               alt={alt}
               style={imageStyle}
-              className="select-none"
+              className="select-none max-w-none max-h-none"
               draggable={false}
               onLoad={handleFitToScreen}
             />
