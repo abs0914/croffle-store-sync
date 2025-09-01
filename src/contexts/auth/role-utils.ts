@@ -2,24 +2,18 @@
 import { UserRole } from "@/types";
 
 /**
- * Maps a user email to a role (temporary solution, to be replaced with database roles)
+ * SECURITY FIX: Removed insecure email pattern-based role assignment
+ * Roles are now managed exclusively through the database app_users table
+ * This function now returns a default role and logs security events
  */
 export const mapUserRole = (email: string): UserRole => {
-  if (email === 'admin@example.com') return 'admin';
-  if (email === 'owner@example.com') return 'owner';
+  // Log potential security bypass attempt
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('🚨 SECURITY: mapUserRole called - roles should be managed via database only');
+  }
   
-  // Enhanced pattern matching for admin users
-  if (email.includes('admin') || email.match(/\.admin@/)) return 'admin';
-  if (email.includes('owner') || email.match(/\.owner@/)) return 'owner';
-  if (email.includes('manager') || email === 'rbsons.north.manager@croffle.com') return 'manager';
-  if (email.includes('stock') || email.match(/\.stock@/)) return 'stock_user';
-  if (email.includes('production') || email.match(/\.production@/)) return 'production_user';
-  if (email.includes('commissary') || email.match(/\.commissary@/)) return 'commissary_user';
-  
-  // Specific user mappings
-  if (email === 'marasabaras@croffle.com' || email === 'robinsons.north@croffle.com') return 'cashier';
-  
-  return 'cashier'; // Default role
+  // Return default role - all role assignment must happen through database
+  return 'cashier';
 };
 
 /**

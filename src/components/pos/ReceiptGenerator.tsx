@@ -105,7 +105,7 @@ export default function ReceiptGenerator({ transaction, customer }: ReceiptGener
           </style>
         </head>
         <body>
-          ${content.innerHTML}
+          ${content.textContent || ''}
         </body>
       </html>
     `);
