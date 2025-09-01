@@ -76,6 +76,7 @@ export default function ProductCard({
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             fallbackClassName="w-full h-full"
+            enableZoom={true}
             onError={() => console.warn(`Image failed for product: ${product.name}`)}
           />
         ) : (

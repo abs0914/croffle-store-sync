@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ZoomIn } from 'lucide-react';
+import { ImageZoomViewer } from '../common/ImageZoomViewer';
+import { useImageZoom } from '@/hooks/useImageZoom';
 
 interface ImageWithFallbackProps {
   src: string;
@@ -7,6 +9,7 @@ interface ImageWithFallbackProps {
   className?: string;
   fallbackClassName?: string;
   onError?: () => void;
+  enableZoom?: boolean;
 }
 
 export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
@@ -14,9 +17,11 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
   alt,
   className = '',
   fallbackClassName = '',
-  onError
+  onError,
+  enableZoom = false
 }) => {
   const [hasError, setHasError] = useState(false);
+  const { selectedImage, isZoomViewerOpen, openImageZoom, closeImageZoom } = useImageZoom();
 
   const handleImageError = () => {
     console.warn(`🖼️ Image load failed: ${src}`);
@@ -26,6 +31,12 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
 
   const handleImageLoad = () => {
     setHasError(false);
+  };
+
+  const handleImageClick = () => {
+    if (enableZoom && !hasError) {
+      openImageZoom(cacheBustedSrc, alt);
+    }
   };
 
   if (hasError) {
@@ -45,13 +56,37 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
     : `${src}?cb=${Date.now()}`;
 
   return (
-    <img
-      src={cacheBustedSrc}
-      alt={alt}
-      className={className}
-      onError={handleImageError}
-      onLoad={handleImageLoad}
-      loading="lazy"
-    />
+    <>
+      <div className={`relative group ${enableZoom ? 'cursor-pointer' : ''}`}>
+        <img
+          src={cacheBustedSrc}
+          alt={alt}
+          className={className}
+          onError={handleImageError}
+          onLoad={handleImageLoad}
+          onClick={handleImageClick}
+          loading="lazy"
+        />
+        
+        {/* Zoom overlay icon */}
+        {enableZoom && !hasError && (
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+            <div className="bg-white bg-opacity-90 rounded-full p-2 transform scale-75 group-hover:scale-100 transition-transform duration-200">
+              <ZoomIn className="w-4 h-4 text-gray-700" />
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Zoom Viewer Modal */}
+      {enableZoom && selectedImage && (
+        <ImageZoomViewer
+          src={selectedImage.src}
+          alt={selectedImage.alt}
+          isOpen={isZoomViewerOpen}
+          onClose={closeImageZoom}
+        />
+      )}
+    </>
   );
 };

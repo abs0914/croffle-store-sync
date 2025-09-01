@@ -118,6 +118,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                     alt={product.name} 
                     className="w-full h-full object-cover"
                     fallbackClassName="w-full h-full"
+                    enableZoom={true}
                     onError={() => console.warn(`Image failed for product: ${product.name}`)}
                   />
                 </div>
