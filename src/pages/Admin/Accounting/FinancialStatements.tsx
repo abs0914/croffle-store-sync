@@ -7,12 +7,14 @@ import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { generateFinancialStatementPdf } from "@/services/reports/financialStatementPdfGenerator";
 import { useToast } from "@/hooks/use-toast";
+import { useStore } from "@/contexts/StoreContext";
 
 export function FinancialStatements() {
   const [selectedStore, setSelectedStore] = useState<string>("all");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("2025-01");
   const [statementType, setStatementType] = useState<string>("income");
   const { toast } = useToast();
+  const { stores: systemStores } = useStore();
 
   const handleExportPdf = () => {
     try {
@@ -58,9 +60,10 @@ export function FinancialStatements() {
 
   const stores = [
     { value: "all", label: "All Stores (Consolidated)" },
-    { value: "store-1", label: "Robinsons Galleria" },
-    { value: "store-2", label: "SM North EDSA" },
-    { value: "store-3", label: "Ayala Malls" },
+    ...systemStores.map(store => ({
+      value: store.id,
+      label: store.name
+    }))
   ];
 
   const periods = [
