@@ -16,6 +16,7 @@ import { RecipeManagement } from '@/pages/Admin/RecipeManagement';
 import { DeploymentVerification } from '@/pages/Admin/DeploymentVerification';
 import { AdminAccounting } from '@/pages/Admin/Accounting/AdminAccounting';
 import { ChartOfAccounts } from '@/pages/Admin/Accounting/ChartOfAccounts';
+import { GeneralLedger } from '@/pages/Admin/Accounting/GeneralLedger';
 import { FinancialStatements } from '@/pages/Admin/Accounting/FinancialStatements';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
@@ -188,10 +189,7 @@ export const AdminAppRoutes = () => {
         element={
           <AdminProtectedRoute section="accounting">
             <AdminLayout>
-              <div className="p-8 text-center">
-                <h2 className="text-2xl font-bold mb-4">General Ledger</h2>
-                <p className="text-gray-600">Coming soon - Journal entries and transaction history</p>
-              </div>
+              <GeneralLedger />
             </AdminLayout>
           </AdminProtectedRoute>
         }

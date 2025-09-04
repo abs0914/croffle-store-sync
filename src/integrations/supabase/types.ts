@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_balance_summary: {
+        Row: {
+          account_id: string
+          beginning_balance: number | null
+          created_at: string | null
+          ending_balance: number | null
+          fiscal_period: string
+          id: string
+          is_closed: boolean | null
+          store_id: string | null
+          total_credits: number | null
+          total_debits: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          beginning_balance?: number | null
+          created_at?: string | null
+          ending_balance?: number | null
+          fiscal_period: string
+          id?: string
+          is_closed?: boolean | null
+          store_id?: string | null
+          total_credits?: number | null
+          total_debits?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          beginning_balance?: number | null
+          created_at?: string | null
+          ending_balance?: number | null
+          fiscal_period?: string
+          id?: string
+          is_closed?: boolean | null
+          store_id?: string | null
+          total_credits?: number | null
+          total_debits?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_balance_summary_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_balance_summary_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "account_balance_summary_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       account_balances: {
         Row: {
           account_id: string
@@ -1784,6 +1848,80 @@ export type Database = {
           },
         ]
       }
+      general_ledger: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          credit_amount: number | null
+          debit_amount: number | null
+          description: string
+          fiscal_period: string | null
+          id: string
+          journal_entry_line_id: string
+          reference_number: string | null
+          running_balance: number | null
+          store_id: string | null
+          transaction_date: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          credit_amount?: number | null
+          debit_amount?: number | null
+          description: string
+          fiscal_period?: string | null
+          id?: string
+          journal_entry_line_id: string
+          reference_number?: string | null
+          running_balance?: number | null
+          store_id?: string | null
+          transaction_date: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          credit_amount?: number | null
+          debit_amount?: number | null
+          description?: string
+          fiscal_period?: string | null
+          id?: string
+          journal_entry_line_id?: string
+          reference_number?: string | null
+          running_balance?: number | null
+          store_id?: string | null
+          transaction_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "general_ledger_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_ledger_journal_entry_line_id_fkey"
+            columns: ["journal_entry_line_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entry_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_ledger_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "general_ledger_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goods_received_notes: {
         Row: {
           created_at: string | null
@@ -2471,57 +2609,97 @@ export type Database = {
       }
       journal_entries: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           created_by: string
           description: string
           entry_date: string
+          entry_number: string | null
+          fiscal_period: string | null
           id: string
+          is_adjusting_entry: boolean | null
+          is_closing_entry: boolean | null
           is_posted: boolean
           journal_number: string
+          notes: string | null
           posted_at: string | null
           posted_by: string | null
           reference_id: string | null
           reference_type: string | null
+          reversal_entry_id: string | null
+          source_document_id: string | null
+          source_document_type: string | null
+          status: string | null
           store_id: string | null
           total_credit: number
           total_debit: number
           updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           created_by: string
           description: string
           entry_date?: string
+          entry_number?: string | null
+          fiscal_period?: string | null
           id?: string
+          is_adjusting_entry?: boolean | null
+          is_closing_entry?: boolean | null
           is_posted?: boolean
           journal_number: string
+          notes?: string | null
           posted_at?: string | null
           posted_by?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          reversal_entry_id?: string | null
+          source_document_id?: string | null
+          source_document_type?: string | null
+          status?: string | null
           store_id?: string | null
           total_credit?: number
           total_debit?: number
           updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           created_by?: string
           description?: string
           entry_date?: string
+          entry_number?: string | null
+          fiscal_period?: string | null
           id?: string
+          is_adjusting_entry?: boolean | null
+          is_closing_entry?: boolean | null
           is_posted?: boolean
           journal_number?: string
+          notes?: string | null
           posted_at?: string | null
           posted_by?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          reversal_entry_id?: string | null
+          source_document_id?: string | null
+          source_document_type?: string | null
+          status?: string | null
           store_id?: string | null
           total_credit?: number
           total_debit?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "journal_entries_reversal_entry_id_fkey"
+            columns: ["reversal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "journal_entries_store_id_fkey"
             columns: ["store_id"]
@@ -6567,6 +6745,10 @@ export type Database = {
       }
       generate_recipe_sku: {
         Args: { recipe_name: string; recipe_type?: string }
+        Returns: string
+      }
+      generate_sequential_journal_number: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       generate_stock_order_number: {
