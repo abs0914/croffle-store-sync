@@ -5,11 +5,56 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Download, FileText, BarChart3, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { generateFinancialStatementPdf } from "@/services/reports/financialStatementPdfGenerator";
+import { useToast } from "@/hooks/use-toast";
 
 export function FinancialStatements() {
   const [selectedStore, setSelectedStore] = useState<string>("all");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("2025-01");
   const [statementType, setStatementType] = useState<string>("income");
+  const { toast } = useToast();
+
+  const handleExportPdf = () => {
+    try {
+      // Get the selected store name
+      const storeName = stores.find(s => s.value === selectedStore)?.label || "All Stores";
+      
+      // Get the selected period label
+      const periodLabel = periods.find(p => p.value === selectedPeriod)?.label || selectedPeriod;
+      
+      // Generate the PDF
+      const pdfDataUri = generateFinancialStatementPdf(
+        statementType as 'income' | 'balance' | 'cashflow',
+        storeName,
+        periodLabel
+      );
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = pdfDataUri;
+      
+      // Generate filename
+      const statementName = statementTypes.find(s => s.value === statementType)?.label || 'Financial Statement';
+      const filename = `${statementName}_${periodLabel}_${storeName.replace(/\s+/g, '_')}.pdf`;
+      link.download = filename;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "PDF Exported Successfully",
+        description: `${statementName} has been downloaded.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Unable to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const stores = [
     { value: "all", label: "All Stores (Consolidated)" },
@@ -382,7 +427,7 @@ export function FinancialStatements() {
           </div>
         </div>
         
-        <Button>
+        <Button onClick={handleExportPdf}>
           <Download className="h-4 w-4 mr-2" />
           Export PDF
         </Button>
