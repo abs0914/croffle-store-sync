@@ -19,6 +19,7 @@ export type AdminSection =
   | 'users'
   | 'expenses'
   | 'reports'
+  | 'accounting'
   | 'addons';
 
 // Map admin sections to allowed roles
@@ -33,6 +34,7 @@ export const ADMIN_SECTION_PERMISSIONS: Record<AdminSection, UserRole[]> = {
   'users': ['admin', 'owner'],
   'expenses': ['admin', 'owner', 'manager'],
   'reports': ['admin', 'owner', 'manager', 'stock_user'],
+  'accounting': ['admin', 'owner'],
   'addons': ['admin', 'owner']
 };
 
@@ -73,6 +75,7 @@ export const getAdminSectionFromPath = (path: string): AdminSection | null => {
     'cashiers': 'users',
     'expenses': 'expenses',
     'reports': 'reports',
+    'accounting': 'accounting',
     'add-ons': 'addons'
   };
   

@@ -14,6 +14,9 @@ import CommissaryManagement from '@/pages/Commissary/CommissaryManagement';
 import ProductionManagement from '@/pages/ProductionManagement';
 import { RecipeManagement } from '@/pages/Admin/RecipeManagement';
 import { DeploymentVerification } from '@/pages/Admin/DeploymentVerification';
+import { AdminAccounting } from '@/pages/Admin/Accounting/AdminAccounting';
+import { ChartOfAccounts } from '@/pages/Admin/Accounting/ChartOfAccounts';
+import { FinancialStatements } from '@/pages/Admin/Accounting/FinancialStatements';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
 import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
@@ -138,6 +141,87 @@ export const AdminAppRoutes = () => {
           <AdminProtectedRoute>
             <AdminLayout>
               <AdminExpenses />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Admin Accounting */}
+      <Route
+        path="/admin/accounting"
+        element={
+          <AdminProtectedRoute section="accounting">
+            <AdminLayout>
+              <AdminAccounting />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Chart of Accounts */}
+      <Route
+        path="/admin/accounting/chart-of-accounts"
+        element={
+          <AdminProtectedRoute section="accounting">
+            <AdminLayout>
+              <ChartOfAccounts />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Financial Statements */}
+      <Route
+        path="/admin/accounting/financial-statements"
+        element={
+          <AdminProtectedRoute section="accounting">
+            <AdminLayout>
+              <FinancialStatements />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* General Ledger */}
+      <Route
+        path="/admin/accounting/general-ledger"
+        element={
+          <AdminProtectedRoute section="accounting">
+            <AdminLayout>
+              <div className="p-8 text-center">
+                <h2 className="text-2xl font-bold mb-4">General Ledger</h2>
+                <p className="text-gray-600">Coming soon - Journal entries and transaction history</p>
+              </div>
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Period Closing */}
+      <Route
+        path="/admin/accounting/period-closing"
+        element={
+          <AdminProtectedRoute section="accounting">
+            <AdminLayout>
+              <div className="p-8 text-center">
+                <h2 className="text-2xl font-bold mb-4">Period Closing</h2>
+                <p className="text-gray-600">Coming soon - Manage fiscal periods and closings</p>
+              </div>
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Financial Analytics */}
+      <Route
+        path="/admin/accounting/analytics"
+        element={
+          <AdminProtectedRoute section="accounting">
+            <AdminLayout>
+              <div className="p-8 text-center">
+                <h2 className="text-2xl font-bold mb-4">Financial Analytics</h2>
+                <p className="text-gray-600">Coming soon - Advanced financial analysis and KPIs</p>
+              </div>
             </AdminLayout>
           </AdminProtectedRoute>
         }

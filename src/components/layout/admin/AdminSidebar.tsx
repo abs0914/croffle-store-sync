@@ -11,7 +11,8 @@ import {
   Warehouse,
   Factory,
   User,
-  LogOut
+  LogOut,
+  Calculator
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/auth";
@@ -62,6 +63,11 @@ const adminMenuItems = [
     title: "Expenses",
     icon: DollarSign,
     href: "/admin/expenses",
+  },
+  {
+    title: "Accounting",
+    icon: Calculator,
+    href: "/admin/accounting",
   },
   {
     title: "Reports",
