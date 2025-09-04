@@ -7,6 +7,8 @@ import { ArrowLeft, Plus, Search, Edit, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AccountDialog } from "@/components/accounting/AccountDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface ChartOfAccount {
   id: string;
@@ -48,6 +50,31 @@ export function ChartOfAccounts() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async (accountId: string, accountName: string) => {
+    try {
+      const { error } = await supabase
+        .from('chart_of_accounts')
+        .delete()
+        .eq('id', accountId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Account "${accountName}" deleted successfully.`,
+      });
+
+      fetchAccounts();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete account. It may be referenced by other records.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -106,10 +133,7 @@ export function ChartOfAccounts() {
           </div>
         </div>
         
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Account
-        </Button>
+        <AccountDialog onAccountSaved={fetchAccounts} accounts={accounts} />
       </div>
 
       {/* Filters */}
@@ -182,14 +206,37 @@ export function ChartOfAccounts() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm">
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                  <AccountDialog 
+                    account={account}
+                    onAccountSaved={fetchAccounts}
+                    accounts={accounts}
+                  />
                   
                   {!account.is_system_account && (
-                    <Button variant="ghost" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Account</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{account.account_name}"? This action cannot be undone and may affect related financial records.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteAccount(account.id, account.account_name)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete Account
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </div>
               </div>
