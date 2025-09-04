@@ -18,6 +18,10 @@ import { AdminAccounting } from '@/pages/Admin/Accounting/AdminAccounting';
 import { ChartOfAccounts } from '@/pages/Admin/Accounting/ChartOfAccounts';
 import { GeneralLedger } from '@/pages/Admin/Accounting/GeneralLedger';
 import { FinancialStatements } from '@/pages/Admin/Accounting/FinancialStatements';
+import { PeriodClosing } from '@/pages/Admin/Accounting/PeriodClosing';
+import { FinancialAnalytics } from '@/pages/Admin/Accounting/FinancialAnalytics';
+import { ManualAdjustments } from '@/pages/Admin/Accounting/ManualAdjustments';
+import { BankReconciliation } from '@/pages/Admin/Accounting/BankReconciliation';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
 import { AdminUserRoutes } from './routes/AdminUserRoutes';
 import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
@@ -201,10 +205,7 @@ export const AdminAppRoutes = () => {
         element={
           <AdminProtectedRoute section="accounting">
             <AdminLayout>
-              <div className="p-8 text-center">
-                <h2 className="text-2xl font-bold mb-4">Period Closing</h2>
-                <p className="text-gray-600">Coming soon - Manage fiscal periods and closings</p>
-              </div>
+              <PeriodClosing />
             </AdminLayout>
           </AdminProtectedRoute>
         }
@@ -216,10 +217,43 @@ export const AdminAppRoutes = () => {
         element={
           <AdminProtectedRoute section="accounting">
             <AdminLayout>
-              <div className="p-8 text-center">
-                <h2 className="text-2xl font-bold mb-4">Financial Analytics</h2>
-                <p className="text-gray-600">Coming soon - Advanced financial analysis and KPIs</p>
-              </div>
+              <FinancialAnalytics />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Manual Adjustments */}
+      <Route
+        path="/admin/accounting/adjustments"
+        element={
+          <AdminProtectedRoute section="accounting">
+            <AdminLayout>
+              <ManualAdjustments />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Bank Reconciliation */}
+      <Route
+        path="/admin/accounting/reconciliation"
+        element={
+          <AdminProtectedRoute section="accounting">
+            <AdminLayout>
+              <BankReconciliation />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Journal Entry (redirect to General Ledger) */}
+      <Route
+        path="/admin/accounting/journal-entry"
+        element={
+          <AdminProtectedRoute section="accounting">
+            <AdminLayout>
+              <GeneralLedger />
             </AdminLayout>
           </AdminProtectedRoute>
         }
