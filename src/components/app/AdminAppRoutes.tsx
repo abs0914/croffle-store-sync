@@ -273,7 +273,7 @@ export const AdminAppRoutes = () => {
 
       {/* Modular Admin Routes */}
       {AdminInventoryRoutes()}
-      <AdminUserRoutes />
+      {AdminUserRoutes()}
     </>
   );
 };
