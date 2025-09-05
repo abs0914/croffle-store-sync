@@ -6731,6 +6731,16 @@ export type Database = {
           recipes_fixed: number
         }[]
       }
+      fix_missing_inventory_deduction: {
+        Args: { p_store_id: string; p_transaction_id: string }
+        Returns: {
+          deducted_quantity: number
+          ingredient_name: string
+          message: string
+          new_stock: number
+          success: boolean
+        }[]
+      }
       format_promo_details: {
         Args: { promo_name: string; promo_ref: string }
         Returns: string
