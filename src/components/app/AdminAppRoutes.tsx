@@ -23,8 +23,7 @@ import { FinancialAnalytics } from '@/pages/Admin/Accounting/FinancialAnalytics'
 import { ManualAdjustments } from '@/pages/Admin/Accounting/ManualAdjustments';
 import { BankReconciliation } from '@/pages/Admin/Accounting/BankReconciliation';
 import { AdminInventoryRoutes } from './routes/AdminInventoryRoutes';
-import { AdminUserRoutes } from './routes/AdminUserRoutes';
-import { AdminStoreRoutes } from './routes/AdminStoreRoutes';
+import { AdminPage } from '@/pages/Admin/AdminPage';
 
 export const AdminAppRoutes = () => {
   console.log('🔵 AdminAppRoutes component loading...');
@@ -34,6 +33,18 @@ export const AdminAppRoutes = () => {
       {/* Admin Dashboard */}
       <Route
         path="/admin"
+        element={
+          <AdminProtectedRoute>
+            <AdminLayout>
+              <AdminPage />
+            </AdminLayout>
+          </AdminProtectedRoute>
+        }
+      />
+
+      {/* Legacy Admin Dashboard */}
+      <Route
+        path="/admin/dashboard"
         element={
           <AdminProtectedRoute>
             <AdminLayout>
@@ -261,8 +272,6 @@ export const AdminAppRoutes = () => {
 
       {/* Modular Admin Routes */}
       {AdminInventoryRoutes()}
-      {AdminUserRoutes()}
-      {AdminStoreRoutes()}
     </>
   );
 };
