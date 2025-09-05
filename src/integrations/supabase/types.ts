@@ -6583,6 +6583,14 @@ export type Database = {
           recipes_updated: number
         }[]
       }
+      create_advanced_inventory_mappings: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          mapping_details: Json
+          mappings_created: number
+          stores_processed: number
+        }[]
+      }
       create_app_user: {
         Args: {
           p_first_name: string
@@ -6739,6 +6747,14 @@ export type Database = {
           message: string
           new_stock: number
           success: boolean
+        }[]
+      }
+      fix_recipe_ingredients_with_proper_units: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          execution_details: Json
+          ingredients_added: number
+          recipes_fixed: number
         }[]
       }
       format_promo_details: {
@@ -7051,6 +7067,20 @@ export type Database = {
           details: string[]
           error_count: number
           migrated_count: number
+        }[]
+      }
+      monitor_inventory_system_health: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          health_score: number
+          mapped_ingredients: number
+          recipes_with_ingredients: number
+          recipes_without_ingredients: number
+          store_id: string
+          store_name: string
+          total_ingredients: number
+          total_recipes: number
+          unmapped_ingredients: number
         }[]
       }
       normalize_unit_name: {
