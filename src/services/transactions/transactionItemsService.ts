@@ -260,7 +260,14 @@ export const insertTransactionItems = async (transactionId: string, items: Detai
 
     console.log('🔄 Prepared items for insertion (validated UUIDs):', itemsToInsert);
 
-    // Insert transaction items
+    // Insert transaction items with detailed debugging
+    console.log('🔍 About to insert transaction items:', {
+      transactionId,
+      itemCount: itemsToInsert.length,
+      firstItem: itemsToInsert[0],
+      allColumns: Object.keys(itemsToInsert[0] || {})
+    });
+
     const { data, error } = await supabase
       .from("transaction_items")
       .insert(itemsToInsert)

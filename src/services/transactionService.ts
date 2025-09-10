@@ -30,6 +30,18 @@ export interface TransactionLogData {
  */
 export const logInventoryTransaction = async (data: TransactionLogData): Promise<boolean> => {
   try {
+    // Validate reference_id if provided - ensure it's a valid UUID
+    let validatedReferenceId: string | null = null;
+    if (data.reference_id) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(data.reference_id)) {
+        validatedReferenceId = data.reference_id;
+      } else {
+        console.warn(`Invalid reference_id UUID format: ${data.reference_id}`);
+        validatedReferenceId = null;
+      }
+    }
+
     const { error } = await supabase
       .from('inventory_transactions')
       .insert({
@@ -40,7 +52,7 @@ export const logInventoryTransaction = async (data: TransactionLogData): Promise
         quantity: data.quantity,
         previous_quantity: data.previous_quantity,
         new_quantity: data.new_quantity,
-        reference_id: data.reference_id,
+        reference_id: validatedReferenceId,
         notes: data.notes,
         created_by: data.created_by,
         created_at: new Date().toISOString()
