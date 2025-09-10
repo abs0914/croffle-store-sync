@@ -245,7 +245,7 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
                         </TableCell>
                         <TableCell></TableCell>
                         <TableCell className="text-right text-sm text-muted-foreground">
-                          {formatCurrency(item.totalPrice || (item.price * item.quantity))}
+                          {formatCurrency(item.totalPrice || (item.unitPrice * item.quantity))}
                         </TableCell>
                       </TableRow>
                     ))}
