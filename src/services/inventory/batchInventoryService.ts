@@ -404,15 +404,16 @@ async function processBatchInventoryDeduction(
 
     console.log(`🧪 Processing recipe: ${recipe.name} with ${recipe.recipe_ingredients.length} ingredients`);
 
-    // Process recipe ingredients using dedicated function
-    const processedRecipe = await processRecipeIngredients(
+    // Process recipe ingredients using dedicated function with enhanced fallback
+    const processedRecipe = await processRecipeIngredientsWithFallback(
       recipe,
       item,
       transactionId,
       userId || 'system',
       inventoryUpdates,
       inventoryMovements,
-      result
+      result,
+      storeId
     );
     
     if (processedRecipe) {
@@ -518,6 +519,242 @@ async function processBatchInventoryDeduction(
   }
 
   console.log(`✅ Batch processing completed successfully`);
+}
+
+/**
+ * Enhanced recipe ingredients processing with fallback mapping logic
+ * Phase 2: Enhanced Fallback Logic Implementation
+ */
+async function processRecipeIngredientsWithFallback(
+  recipe: any,
+  item: BatchTransactionItem,
+  transactionId: string,  
+  userId: string,
+  inventoryUpdates: Map<string, any>,
+  inventoryMovements: Array<any>,
+  result: BatchInventoryDeductionResult,
+  storeId: string
+): Promise<boolean> {
+  console.log(`🧪 ENHANCED PROCESSING: Recipe "${recipe.name}" with ${recipe.recipe_ingredients?.length || 0} ingredients`);
+  
+  if (!recipe.recipe_ingredients || recipe.recipe_ingredients.length === 0) {
+    console.warn(`⚠️ No ingredients found for recipe: ${recipe.name}`);
+    result.warnings.push(`No ingredients found for recipe: ${recipe.name}`);
+    return false;
+  }
+
+  let processedIngredients = 0;
+  const failedIngredients: string[] = [];
+
+  for (const recipeIngredient of recipe.recipe_ingredients) {
+    const ingredientName = recipeIngredient.ingredient_name;
+    const quantity = recipeIngredient.quantity * item.quantity;
+    
+    console.log(`🔍 Processing ingredient: ${ingredientName} (${quantity} required)`);
+
+    // PRIMARY: Use direct inventory_stock_id if available and valid
+    if (recipeIngredient.inventory_stock_id && recipeIngredient.inventory_stock) {
+      const inventoryStock = recipeIngredient.inventory_stock;
+      
+      console.log(`✅ DIRECT MAPPING: ${ingredientName} → ${inventoryStock.item} (Stock: ${inventoryStock.stock_quantity})`);
+      
+      if (inventoryStock.stock_quantity >= quantity) {
+        addToInventoryUpdates(
+          inventoryStock.id,
+          inventoryStock.item,
+          inventoryStock.stock_quantity,
+          quantity,
+          transactionId,
+          ingredientName,
+          userId,
+          inventoryUpdates,
+          inventoryMovements
+        );
+        processedIngredients++;
+      } else {
+        console.warn(`⚠️ INSUFFICIENT STOCK: ${ingredientName} needs ${quantity}, only ${inventoryStock.stock_quantity} available`);
+        result.warnings.push(`Insufficient stock for ${ingredientName}: need ${quantity}, have ${inventoryStock.stock_quantity}`);
+        failedIngredients.push(`${ingredientName} (insufficient stock)`);
+      }
+      continue;
+    }
+
+    // PHASE 2 FALLBACK: Use recipe_ingredient_mappings when inventory_stock_id is null
+    console.log(`🔄 FALLBACK: inventory_stock_id is null for ${ingredientName}, checking recipe_ingredient_mappings...`);
+    
+    const { data: mappingData, error: mappingError } = await supabase
+      .from('recipe_ingredient_mappings')
+      .select(`
+        inventory_stock_id,
+        conversion_factor,
+        inventory_stock (
+          id,
+          item,
+          stock_quantity
+        )
+      `)
+      .eq('recipe_id', recipe.id)
+      .eq('ingredient_name', ingredientName)
+      .maybeSingle();
+
+    if (mappingError) {
+      console.error(`❌ Error fetching ingredient mapping for ${ingredientName}:`, mappingError);
+      result.warnings.push(`Error fetching mapping for ${ingredientName}: ${mappingError.message}`);
+      failedIngredients.push(`${ingredientName} (mapping error)`);
+      continue;
+    }
+
+    if (mappingData?.inventory_stock) {
+      const inventoryStock = mappingData.inventory_stock;
+      const adjustedQuantity = quantity * (mappingData.conversion_factor || 1);
+      
+      console.log(`✅ MAPPING FALLBACK: ${ingredientName} → ${inventoryStock.item} (Stock: ${inventoryStock.stock_quantity}, Adjusted qty: ${adjustedQuantity})`);
+      
+      if (inventoryStock.stock_quantity >= adjustedQuantity) {
+        addToInventoryUpdates(
+          inventoryStock.id,
+          inventoryStock.item,
+          inventoryStock.stock_quantity,
+          adjustedQuantity,
+          transactionId,
+          ingredientName,
+          userId,
+          inventoryUpdates,
+          inventoryMovements
+        );
+        processedIngredients++;
+      } else {
+        console.warn(`⚠️ INSUFFICIENT STOCK (via mapping): ${ingredientName} needs ${adjustedQuantity}, only ${inventoryStock.stock_quantity} available`);
+        result.warnings.push(`Insufficient stock for ${ingredientName} (via mapping): need ${adjustedQuantity}, have ${inventoryStock.stock_quantity}`);
+        failedIngredients.push(`${ingredientName} (insufficient stock via mapping)`);
+      }
+      continue;
+    }
+
+    // FINAL FALLBACK: Try fuzzy matching with store inventory
+    console.log(`🔄 FUZZY FALLBACK: No mapping found for ${ingredientName}, trying fuzzy match...`);
+    
+    const { data: inventoryItems, error: inventoryError } = await supabase
+      .from('inventory_stock')
+      .select('id, item, stock_quantity')
+      .eq('store_id', storeId)
+      .eq('is_active', true);
+
+    if (inventoryError) {
+      console.error(`❌ Error fetching inventory for fuzzy match:`, inventoryError);
+      failedIngredients.push(`${ingredientName} (inventory fetch error)`);
+      continue;
+    }
+
+    // Try fuzzy matching logic
+    const fuzzyMatch = inventoryItems?.find(inv => {
+      const invItem = inv.item.toLowerCase().trim();
+      const ingredient = ingredientName.toLowerCase().trim();
+      
+      // Exact match
+      if (invItem === ingredient) return true;
+      
+      // Common ingredient name variations
+      if ((ingredient.includes('coffee') && invItem.includes('coffee')) ||
+          (ingredient.includes('bean') && invItem.includes('bean')) ||
+          (ingredient === 'espresso shot' && invItem.includes('coffee')) ||
+          (ingredient.includes('cup') && invItem.includes('cup')) ||
+          (ingredient.includes('lid') && invItem.includes('lid'))) {
+        return true;
+      }
+      
+      // Word overlap matching (70% threshold)
+      const ingredientWords = ingredient.split(' ');
+      const invWords = invItem.split(' ');
+      const commonWords = ingredientWords.filter(word => 
+        invWords.some(invWord => invWord.includes(word) || word.includes(invWord))
+      );
+      
+      return commonWords.length >= Math.min(ingredientWords.length, invWords.length) * 0.7;
+    });
+
+    if (fuzzyMatch && fuzzyMatch.stock_quantity >= quantity) {
+      console.log(`✅ FUZZY MATCH SUCCESS: ${ingredientName} → ${fuzzyMatch.item} (Stock: ${fuzzyMatch.stock_quantity})`);
+      result.warnings.push(`Used fuzzy matching for ${ingredientName} → ${fuzzyMatch.item}`);
+      
+      addToInventoryUpdates(
+        fuzzyMatch.id,
+        fuzzyMatch.item,
+        fuzzyMatch.stock_quantity,
+        quantity,
+        transactionId,
+        ingredientName,
+        userId,
+        inventoryUpdates,
+        inventoryMovements
+      );
+      processedIngredients++;
+    } else {
+      console.error(`❌ CRITICAL FAILURE: No inventory mapping found for ${ingredientName}`);
+      result.errors.push(`CRITICAL: No inventory mapping found for ${ingredientName} - cannot deduct from inventory`);
+      failedIngredients.push(`${ingredientName} (no mapping found)`);
+    }
+  }
+
+  const success = failedIngredients.length === 0;
+  
+  console.log(`📊 RECIPE PROCESSING COMPLETE: ${recipe.name}`);
+  console.log(`   ✅ Processed: ${processedIngredients}/${recipe.recipe_ingredients.length}`);
+  console.log(`   ❌ Failed: ${failedIngredients.length} - ${failedIngredients.join(', ')}`);
+  
+  if (failedIngredients.length > 0) {
+    result.warnings.push(`Failed to process ${failedIngredients.length} ingredients for ${recipe.name}: ${failedIngredients.join(', ')}`);
+  }
+
+  return success;
+}
+
+/**
+ * Helper function to add inventory updates in a standardized way
+ */
+function addToInventoryUpdates(
+  inventoryId: string,
+  itemName: string,
+  currentStock: number,
+  quantity: number,
+  transactionId: string,
+  ingredientName: string,
+  userId: string,
+  inventoryUpdates: Map<string, any>,
+  inventoryMovements: Array<any>
+): void {
+  if (!inventoryUpdates.has(inventoryId)) {
+    inventoryUpdates.set(inventoryId, {
+      inventoryId,
+      itemName,
+      currentStock,
+      totalDeduction: 0,
+      newStock: currentStock,
+      transactions: []
+    });
+  }
+
+  const update = inventoryUpdates.get(inventoryId)!;
+  update.totalDeduction += quantity;
+  update.newStock = Math.max(0, update.currentStock - update.totalDeduction);
+  update.transactions.push({
+    transactionId,
+    itemName: ingredientName,
+    quantity
+  });
+
+  // Prepare inventory movement record
+  inventoryMovements.push({
+    inventory_stock_id: inventoryId,
+    movement_type: 'sale',
+    quantity_change: -quantity,
+    previous_quantity: currentStock,
+    new_quantity: Math.max(0, currentStock - quantity),
+    reference_type: 'transaction',
+    reference_id: transactionId,
+    notes: `Enhanced deduction: ${ingredientName} (${itemName}) for transaction ${transactionId}`,
+    created_by: userId
+  });
 }
 
 /**

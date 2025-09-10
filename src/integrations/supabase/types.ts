@@ -7332,6 +7332,16 @@ export type Database = {
           status: string
         }[]
       }
+      validate_recipe_inventory_consistency: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          has_inventory_mapping: boolean
+          ingredient_name: string
+          inventory_item_name: string
+          is_consistent: boolean
+          recipe_name: string
+        }[]
+      }
       validate_recipe_inventory_readiness: {
         Args: { recipe_id_param: string }
         Returns: {
