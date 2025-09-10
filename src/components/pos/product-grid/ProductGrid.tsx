@@ -22,6 +22,7 @@ import { RecipeCustomizationDialog } from "../customization/RecipeCustomizationD
 import { AddonSelectionDialog } from "../addons/AddonSelectionDialog";
 import { ProductCustomizationDialog } from "../customization/ProductCustomizationDialog";
 import { ComboSelectionDialog } from "../ComboSelectionDialog";
+import { ComboSelectionDialog as SimpleComboDialog } from "../dialogs/ComboSelectionDialog";
 import {
   fetchCustomizableRecipes,
   CustomizableRecipe,
@@ -85,6 +86,10 @@ export default function ProductGrid({
 
   // Combo selection states
   const [isComboDialogOpen, setIsComboDialogOpen] = useState(false);
+  
+  // Simple combo selection for Mini Croffle
+  const [isSimpleComboDialogOpen, setIsSimpleComboDialogOpen] = useState(false);
+  const [selectedMiniCroffle, setSelectedMiniCroffle] = useState<Product | null>(null);
   
   // Load customizable recipes and addons on component mount
   useEffect(() => {
@@ -184,6 +189,17 @@ export default function ProductGrid({
     // Decide if this product needs customization. Only base Mix & Match items should open the dialog
     const productName = product.name.toLowerCase().trim();
     const categoryName = (getCategoryName(product.category_id) || '').toLowerCase().trim();
+
+    // Special handling for Mini Croffle in Mix & Match category
+    const isMiniCroffle = productName.includes('mini croffle');
+    const isViewingMixMatch = activeCategory.toLowerCase().includes('mix') && activeCategory.toLowerCase().includes('match');
+    
+    if (isMiniCroffle && isViewingMixMatch) {
+      console.log("ProductGrid: Mini Croffle clicked from Mix & Match - showing simple combo dialog");
+      setSelectedMiniCroffle(product);
+      setIsSimpleComboDialogOpen(true);
+      return;
+    }
 
     // Mix & Match category always customizes (be tolerant of naming)
     const isMixMatchCategory = categoryName.includes('mix') && categoryName.includes('match');
@@ -314,10 +330,10 @@ export default function ProductGrid({
     const productName = product.name.toLowerCase().trim();
     const categoryName = getCategoryName(product.category_id).toLowerCase();
     
-    // Include Mini Croffle products (from Mini Croffle category) and products from Mix & Match category
-    return productName.includes('mini croffle') || 
-           productName.includes('croffle overload') ||
-           categoryName.includes('mix') && categoryName.includes('match');
+    // Products from Mix & Match category OR Mini Croffle products (which should appear in Mix & Match view)
+    return categoryName.includes('mix') && categoryName.includes('match') ||
+           productName.includes('mini croffle') || 
+           productName.includes('croffle overload');
   };
 
   // Filter products based on category and search term
@@ -537,8 +553,7 @@ export default function ProductGrid({
       id: `combo-${croffleData.id}-${comboData.espresso.id}`,
       name: comboData.comboName,
       price: comboData.comboPrice,
-      description: `${croffleData.name} with ${comboData.espresso.name}`,
-      product_type: 'combo' as const
+      description: `${croffleData.name} with ${comboData.espresso.name}`
     };
 
     // Add the combo product with customization data
@@ -550,6 +565,34 @@ export default function ProductGrid({
     
     addItemToCart(comboProduct);
     setIsComboDialogOpen(false);
+  };
+
+  // Simple combo handlers for Mini Croffle
+  const handleMiniCroffleStandalone = () => {
+    if (selectedMiniCroffle) {
+      console.log("ProductGrid: Adding standalone Mini Croffle to cart");
+      addItemToCart(selectedMiniCroffle);
+    }
+  };
+
+  const handleMiniCroffleCombo = (espressoType: 'hot' | 'cold') => {
+    if (selectedMiniCroffle) {
+      const comboPrice = espressoType === 'hot' ? 110 : 115;
+      const espressoName = espressoType === 'hot' ? 'Hot Espresso' : 'Iced Espresso';
+      
+      console.log(`ProductGrid: Adding Mini Croffle + ${espressoName} combo to cart`);
+      
+      // Create a combo product for the cart
+      const comboProduct: Product = {
+        ...selectedMiniCroffle,
+        id: `combo_mini_croffle_${espressoType}_${Date.now()}`,
+        name: `${selectedMiniCroffle.name} + ${espressoName}`,
+        price: comboPrice,
+        description: `${selectedMiniCroffle.name} with ${espressoName}`
+      };
+      
+      addItemToCart(comboProduct);
+    }
   };
 
   console.log("ProductGrid: Render state", {
@@ -732,6 +775,18 @@ export default function ProductGrid({
         addonCategories={addonCategories}
         comboRules={comboRules}
         onAddToCart={handleEnhancedCustomizationAddToCart}
+      />
+
+      {/* Simple Mini Croffle Combo Dialog */}
+      <SimpleComboDialog
+        open={isSimpleComboDialogOpen}
+        onClose={() => {
+          setIsSimpleComboDialogOpen(false);
+          setSelectedMiniCroffle(null);
+        }}
+        product={selectedMiniCroffle!}
+        onSelectStandalone={handleMiniCroffleStandalone}
+        onSelectCombo={handleMiniCroffleCombo}
       />
 
       {/* Combo Selection Dialog - Use unfiltered products and categories */}
