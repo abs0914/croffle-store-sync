@@ -309,6 +309,18 @@ export default function ProductGrid({
     return category ? category.name : "Uncategorized";
   };
 
+  // Helper function to identify customizable products for Mix & Match
+  const isCustomizableProduct = (product: Product): boolean => {
+    const productName = product.name.toLowerCase().trim();
+    const customizableNames = [
+      'mini croffle',
+      'croffle overload',
+      'mix & match croffle',
+      'mix and match croffle'
+    ];
+    return customizableNames.some(name => productName.includes(name));
+  };
+
   // Filter products based on category and search term
   const filteredProducts = products.filter(product => {
     const isActive = product.is_active || product.isActive;
@@ -317,8 +329,13 @@ export default function ProductGrid({
     const categoryName = getCategoryName(product.category_id);
     const shouldDisplayCategory = shouldDisplayCategoryInPOS(categoryName) && categoryName !== "Combo";
 
+    // Special handling for Mix & Match category - show customizable products
+    const selectedCategoryName = categories.find(c => c.id === activeCategory)?.name || '';
+    const isMixMatchSelected = selectedCategoryName.toLowerCase().includes('mix') && selectedCategoryName.toLowerCase().includes('match');
+    
     const matchesCategory = activeCategory === "all" ||
-                           (product.category_id === activeCategory);
+                           (product.category_id === activeCategory) ||
+                           (isMixMatchSelected && isCustomizableProduct(product));
 
     const matchesSearch = !searchTerm ||
                           product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
