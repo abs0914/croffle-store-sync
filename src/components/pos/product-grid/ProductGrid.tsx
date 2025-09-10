@@ -312,13 +312,12 @@ export default function ProductGrid({
   // Helper function to identify customizable products for Mix & Match
   const isCustomizableProduct = (product: Product): boolean => {
     const productName = product.name.toLowerCase().trim();
-    const customizableNames = [
-      'mini croffle',
-      'croffle overload',
-      'mix & match croffle',
-      'mix and match croffle'
-    ];
-    return customizableNames.some(name => productName.includes(name));
+    const categoryName = getCategoryName(product.category_id).toLowerCase();
+    
+    // Include Mini Croffle products (from Mini Croffle category) and products from Mix & Match category
+    return productName.includes('mini croffle') || 
+           productName.includes('croffle overload') ||
+           categoryName.includes('mix') && categoryName.includes('match');
   };
 
   // Filter products based on category and search term
