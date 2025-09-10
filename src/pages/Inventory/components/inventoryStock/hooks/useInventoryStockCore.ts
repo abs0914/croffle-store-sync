@@ -17,17 +17,30 @@ export const useInventoryStockCore = () => {
     queryFn: async () => {
       if (!user) return { count: 0 };
       
-      const { count, error } = await supabase
-        .from('user_stores')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-      
-      setHasMultipleStores(count !== null && count > 1);
-      return { count };
+      try {
+        const { count, error } = await supabase
+          .from('user_stores')
+          .select('*', { count: 'exact' })
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.warn('Failed to fetch user stores count:', error.message);
+          // Fallback: assume single store if query fails
+          setHasMultipleStores(false);
+          return { count: 1 };
+        }
+        
+        setHasMultipleStores(count !== null && count > 1);
+        return { count };
+      } catch (error) {
+        console.warn('Error checking user stores count:', error);
+        // Graceful fallback
+        setHasMultipleStores(false);
+        return { count: 1 };
+      }
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    retry: false // Don't retry failed permission checks
   });
   
   // Query to fetch inventory stock
