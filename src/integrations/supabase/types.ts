@@ -6950,6 +6950,20 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_inventory_movement_safe: {
+        Args: {
+          p_created_by?: string
+          p_inventory_stock_id: string
+          p_movement_type: string
+          p_new_quantity: number
+          p_notes?: string
+          p_previous_quantity: number
+          p_quantity_change: number
+          p_reference_id: string
+          p_reference_type: string
+        }
+        Returns: string
+      }
       is_admin_email: {
         Args: { email_address: string }
         Returns: boolean

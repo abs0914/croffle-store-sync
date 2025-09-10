@@ -350,26 +350,37 @@ async function processBatchInventoryDeduction(
   // Step 4: Log inventory movements (non-blocking)
   console.log(`📋 Step 4: Logging ${inventoryMovements.length} inventory movements...`);
   
-  // Insert movements in batches
+  // Insert movements in batches using safe UUID function
   for (let i = 0; i < inventoryMovements.length; i += BATCH_SIZE) {
     const batch = inventoryMovements.slice(i, i + BATCH_SIZE);
     
-    // Don't await this - let it run in background
-    const batchWithCastedUUIDs = batch.map(movement => ({
-      ...movement,
-      reference_id: `${movement.reference_id}::uuid`
-    }));
+    // Process each movement using the safe function
+    const movementPromises = batch.map(movement => 
+      supabase.rpc('insert_inventory_movement_safe', {
+        p_inventory_stock_id: movement.inventory_stock_id,
+        p_movement_type: movement.movement_type,
+        p_quantity_change: movement.quantity_change,
+        p_previous_quantity: movement.previous_quantity,
+        p_new_quantity: movement.new_quantity,
+        p_reference_type: movement.reference_type,
+        p_reference_id: movement.reference_id,
+        p_notes: movement.notes,
+        p_created_by: movement.created_by
+      })
+    );
     
-    supabase
-      .from('inventory_movements')
-      .insert(batchWithCastedUUIDs)
-      .then(({ error }) => {
-        if (error) {
-          console.warn(`⚠️ Failed to log inventory movements batch ${i}-${i + batch.length}:`, error.message);
-        } else {
-          console.log(`✅ Logged movements batch ${i}-${i + batch.length}`);
-        }
-      });
+    // Execute batch in parallel
+    Promise.allSettled(movementPromises).then(results => {
+      const errors = results
+        .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+        .map(result => result.reason);
+      
+      if (errors.length > 0) {
+        console.warn(`⚠️ Failed to log some inventory movements in batch ${i}-${i + batch.length}:`, errors);
+      } else {
+        console.log(`✅ Logged movements batch ${i}-${i + batch.length}`);
+      }
+    });
   }
 
   // Step 5: Prepare results

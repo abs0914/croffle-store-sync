@@ -135,32 +135,19 @@ export const deductInventoryForTransaction = async (
           continue;
         }
 
-        // Log inventory movement with enhanced error handling and type safety
+        // Log inventory movement with enhanced error handling using safe UUID function
         try {
-          // Ensure all numeric values are properly typed and validated
-          const movementData = {
-            inventory_stock_id: ingredient.inventory_stock_id,
-            movement_type: 'sale' as const,
-            quantity_change: Number(-totalDeduction),
-            previous_quantity: Number(stockItem.stock_quantity),
-            new_quantity: Number(newStock),
-            reference_type: 'transaction' as const,
-            reference_id: transactionId, // Already validated UUID
-            notes: `Transaction deduction: ${ingredient.ingredient_name} for ${recipe.name}`,
-            created_by: userId || null
-          };
-
-          // Validate numeric fields before insert
-          if (isNaN(movementData.quantity_change) || isNaN(movementData.previous_quantity) || isNaN(movementData.new_quantity)) {
-            throw new Error(`Invalid numeric values in inventory movement: ${JSON.stringify(movementData)}`);
-          }
-          
-          const { error: movementError } = await supabase
-            .from('inventory_movements')
-            .insert([{
-              ...movementData,
-              reference_id: `${transactionId}::uuid`
-            }]);
+          const { error: movementError } = await supabase.rpc('insert_inventory_movement_safe', {
+            p_inventory_stock_id: ingredient.inventory_stock_id,
+            p_movement_type: 'sale',
+            p_quantity_change: -totalDeduction,
+            p_previous_quantity: stockItem.stock_quantity,
+            p_new_quantity: newStock,
+            p_reference_type: 'transaction',
+            p_reference_id: transactionId,
+            p_notes: `Transaction deduction: ${ingredient.ingredient_name} for ${recipe.name}`,
+            p_created_by: userId || null
+          });
 
           if (movementError) {
             console.error(`⚠️ Failed to log inventory movement for ${ingredient.ingredient_name}:`, {
