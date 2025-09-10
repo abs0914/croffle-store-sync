@@ -9,21 +9,27 @@ export * from './transactions/transactionItemsService';
 export * from './inventory/batchInventoryService';
 export * from './inventory/simpleInventoryService';
 
+// UNIFIED INVENTORY AUDIT SYSTEM (STANDARDIZED)
+export * from './inventory/unifiedInventoryAuditService';
+export * from './inventory/standardizedInventoryMigration';
+
 // Recipe Management Services  
 export * from './recipes/missingRecipeHandler';
 
 /**
  * ARCHITECTURE CLEANUP COMPLETED ✅
  * 
- * REMOVED COMPLEX/ORPHANED SERVICES:
- * - masterControlService (complex stubs)
- * - intelligentValidationService (over-engineered)
- * - realTimeAvailabilityService (complex real-time)
- * - predictive services (unused)
- * - advanced analytics engines (over-complex)
- * - workflow automation (unnecessary)
- * - real-time sync validators (complex)
- * - disabled transaction services (broken)
+ * NEW: UNIFIED INVENTORY AUDIT SYSTEM
+ * - inventory_movements: Primary audit table (raw inventory changes)
+ * - inventory_transactions: Secondary audit table (product-specific operations)
+ * - Consistent audit trails with proper reference tracking
+ * - Migration layer for backward compatibility
  * 
- * RESULT: Clean, maintainable, working transaction flow
+ * USAGE:
+ * - Use unifiedInventoryAuditService for all new inventory operations
+ * - Existing services automatically use migration layer
+ * - inventory_movements = primary audit trail
+ * - inventory_transactions = product sales/returns only
+ * 
+ * RESULT: Standardized, reliable inventory audit system
  */

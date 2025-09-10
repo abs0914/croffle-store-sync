@@ -26,48 +26,40 @@ export interface TransactionLogData {
 }
 
 /**
- * Log inventory transaction with standardized format
+ * Log inventory transaction with standardized format (MIGRATED TO UNIFIED SYSTEM)
  */
 export const logInventoryTransaction = async (data: TransactionLogData): Promise<boolean> => {
-  try {
-    // Validate reference_id if provided - ensure it's a valid UUID
-    let validatedReferenceId: string | null = null;
-    if (data.reference_id) {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (uuidRegex.test(data.reference_id)) {
-        validatedReferenceId = data.reference_id;
-      } else {
-        console.warn(`Invalid reference_id UUID format: ${data.reference_id}`);
-        validatedReferenceId = null;
-      }
-    }
-
-    const { error } = await supabase
-      .from('inventory_transactions')
-      .insert({
-        store_id: data.store_id,
-        product_id: data.product_id,
-        variation_id: data.variation_id,
-        transaction_type: data.transaction_type,
-        quantity: data.quantity,
-        previous_quantity: data.previous_quantity,
-        new_quantity: data.new_quantity,
-        reference_id: validatedReferenceId,
-        notes: data.notes,
-        created_by: data.created_by,
-        created_at: new Date().toISOString()
-      });
-
-    if (error) {
-      console.error('Error logging inventory transaction:', error);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Exception logging inventory transaction:', error);
-    return false;
+  // Import the unified service dynamically to avoid circular dependencies
+  const { logInventoryTransaction: unifiedLogTransaction } = await import('./inventory/unifiedInventoryAuditService');
+  
+  console.log('📦 Using unified inventory transaction logging');
+  
+  // Map legacy transaction types to unified types
+  let mappedTransactionType: 'sale' | 'return' | 'adjustment' | 'transfer' | 'recipe_usage' | 'conversion' | 'restock';
+  
+  switch (data.transaction_type) {
+    case 'transfer_in':
+    case 'transfer_out':
+      mappedTransactionType = 'transfer';
+      break;
+    default:
+      mappedTransactionType = data.transaction_type as any;
   }
+  
+  const result = await unifiedLogTransaction({
+    store_id: data.store_id,
+    product_id: data.product_id,
+    variation_id: data.variation_id,
+    transaction_type: mappedTransactionType,
+    quantity: data.quantity,
+    previous_quantity: data.previous_quantity,
+    new_quantity: data.new_quantity,
+    reference_id: data.reference_id,
+    notes: data.notes,
+    created_by: data.created_by
+  });
+
+  return result.success;
 };
 
 /**
@@ -107,7 +99,7 @@ export const logRecipeUsage = async (
 };
 
 /**
- * Update inventory stock quantity with transaction logging
+ * Update inventory stock quantity with transaction logging (MIGRATED TO UNIFIED SYSTEM)
  */
 export const updateInventoryStock = async (
   stockId: string,
@@ -118,60 +110,20 @@ export const updateInventoryStock = async (
   referenceId?: string,
   notes?: string
 ): Promise<{ success: boolean; error?: string }> => {
-  try {
-    // Get current stock
-    const { data: currentStock, error: fetchError } = await supabase
-      .from('inventory_stock')
-      .select('stock_quantity')
-      .eq('id', stockId)
-      .eq('store_id', storeId)
-      .single();
-
-    if (fetchError) {
-      return { success: false, error: fetchError.message };
-    }
-
-    const previousQuantity = currentStock.stock_quantity;
-    const quantityChange = Math.abs(newQuantity - previousQuantity);
-
-    // Update stock
-    const { error: updateError } = await supabase
-      .from('inventory_stock')
-      .update({
-        stock_quantity: newQuantity,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', stockId)
-      .eq('store_id', storeId);
-
-    if (updateError) {
-      return { success: false, error: updateError.message };
-    }
-
-    // Log transaction
-    const logSuccess = await logInventoryTransaction({
-      store_id: storeId,
-      product_id: stockId,
-      transaction_type: transactionType,
-      quantity: quantityChange,
-      previous_quantity: previousQuantity,
-      new_quantity: newQuantity,
-      reference_id: referenceId,
-      notes: notes,
-      created_by: userId
-    });
-
-    if (!logSuccess) {
-      console.warn('Inventory updated but transaction logging failed');
-    }
-
-    return { success: true };
-
-  } catch (error) {
-    console.error('Exception updating inventory stock:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    };
-  }
+  // Import the unified service dynamically to avoid circular dependencies
+  const { migrateUpdateInventoryStock } = await import('./inventory/standardizedInventoryMigration');
+  
+  console.log('🔄 Using unified inventory stock update');
+  
+  const result = await migrateUpdateInventoryStock(
+    stockId,
+    storeId,
+    newQuantity,
+    transactionType,
+    userId,
+    referenceId,
+    notes
+  );
+  
+  return result;
 };
