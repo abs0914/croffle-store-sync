@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { inventorySystemRepairService, SystemHealthStatus } from '@/services/inventory/inventorySystemRepair';
 import { format } from 'date-fns';
+import { InventorySystemRepair } from "@/components/inventory/InventorySystemRepair";
 
 export const InventorySystemManager: React.FC = () => {
   const [systemHealth, setSystemHealth] = useState<SystemHealthStatus[]>([]);
@@ -216,11 +217,14 @@ export const InventorySystemManager: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="repair" className="space-y-4">
+          {/* New Inventory System Repair Component */}
+          <InventorySystemRepair storeId="d7c47e6b-f20a-4543-a6bd-000398f72df5" />
+          
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wrench className="h-5 w-5" />
-                System Repair Tools
+                Legacy System Repair Tools
               </CardTitle>
               <CardDescription>
                 Execute comprehensive repairs to fix inventory deduction issues
