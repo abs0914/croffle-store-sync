@@ -784,7 +784,7 @@ export default function ProductGrid({
           setIsSimpleComboDialogOpen(false);
           setSelectedMiniCroffle(null);
         }}
-        product={selectedMiniCroffle!}
+        product={selectedMiniCroffle}
         onSelectStandalone={handleMiniCroffleStandalone}
         onSelectCombo={handleMiniCroffleCombo}
       />

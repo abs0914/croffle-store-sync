@@ -7,7 +7,7 @@ import { Product } from '@/types/product';
 interface ComboSelectionDialogProps {
   open: boolean;
   onClose: () => void;
-  product: Product;
+  product: Product | null;
   onSelectStandalone: () => void;
   onSelectCombo: (espressoType: 'hot' | 'cold') => void;
 }
@@ -28,6 +28,11 @@ export const ComboSelectionDialog: React.FC<ComboSelectionDialogProps> = ({
     onSelectCombo(espressoType);
     onClose();
   };
+
+  // Don't render if product is null
+  if (!product) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
