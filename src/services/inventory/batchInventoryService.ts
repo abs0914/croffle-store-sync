@@ -355,9 +355,14 @@ async function processBatchInventoryDeduction(
     const batch = inventoryMovements.slice(i, i + BATCH_SIZE);
     
     // Don't await this - let it run in background
+    const batchWithCastedUUIDs = batch.map(movement => ({
+      ...movement,
+      reference_id: `${movement.reference_id}::uuid`
+    }));
+    
     supabase
       .from('inventory_movements')
-      .insert(batch)
+      .insert(batchWithCastedUUIDs)
       .then(({ error }) => {
         if (error) {
           console.warn(`⚠️ Failed to log inventory movements batch ${i}-${i + batch.length}:`, error.message);

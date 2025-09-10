@@ -157,7 +157,10 @@ export const deductInventoryForTransaction = async (
           
           const { error: movementError } = await supabase
             .from('inventory_movements')
-            .insert(movementData);
+            .insert([{
+              ...movementData,
+              reference_id: `${transactionId}::uuid`
+            }]);
 
           if (movementError) {
             console.error(`⚠️ Failed to log inventory movement for ${ingredient.ingredient_name}:`, {
