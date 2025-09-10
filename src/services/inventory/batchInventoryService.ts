@@ -43,8 +43,18 @@ export const batchDeductInventoryForTransaction = async (
 ): Promise<BatchInventoryDeductionResult> => {
   const startTime = Date.now();
   
-  console.log(`🚀 Starting BATCH inventory deduction for transaction: ${transactionId}`);
-  console.log(`📦 Processing ${items.length} items with ${timeoutMs}ms timeout`);
+  // 🔥 ENHANCED LOGGING - Phase 3: System Hardening
+  console.log(`🚀 BATCH INVENTORY DEDUCTION STARTED`);
+  console.log(`📋 Transaction ID: ${transactionId}`);
+  console.log(`🏪 Store ID: ${storeId}`);  
+  console.log(`📦 Items to process: ${items.length}`);
+  console.log(`⏱️ Timeout: ${timeoutMs}ms`);
+  console.log(`📄 Items:`, items.map(item => ({
+    name: item.name,
+    product_id: item.product_id,
+    quantity: item.quantity,
+    unit_price: item.unit_price
+  })));
   
   const result: BatchInventoryDeductionResult = {
     success: true,
@@ -58,29 +68,89 @@ export const batchDeductInventoryForTransaction = async (
   try {
     // Create timeout promise
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error(`Inventory deduction timeout after ${timeoutMs}ms`)), timeoutMs);
+      setTimeout(() => {
+        console.error(`❌ TIMEOUT: Inventory deduction timed out after ${timeoutMs}ms`);
+        reject(new Error(`Inventory deduction timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
     });
 
-    // Main processing promise
+    // Main processing promise  
     const processingPromise = processBatchInventoryDeduction(transactionId, storeId, items, result);
 
     // Race between processing and timeout
     await Promise.race([processingPromise, timeoutPromise]);
 
+    // 🔥 SUCCESS LOGGING
+    console.log(`✅ BATCH INVENTORY DEDUCTION COMPLETED SUCCESSFULLY`);
+    console.log(`📊 Final Results:`, {
+      success: result.success,
+      itemsProcessed: result.itemsProcessed,
+      deductedItems: result.deductedItems.length,
+      errors: result.errors.length,
+      warnings: result.warnings.length,
+      processingTimeMs: result.processingTimeMs
+    });
+
   } catch (error) {
-    console.error('❌ Batch inventory deduction failed:', error);
+    // 🔥 COMPREHENSIVE ERROR LOGGING
+    console.error(`❌ BATCH INVENTORY DEDUCTION CRITICAL FAILURE`);
+    console.error(`🔥 Error Type:`, error?.constructor?.name || 'Unknown');
+    console.error(`🔥 Error Message:`, error instanceof Error ? error.message : 'Unknown error');
+    console.error(`🔥 Error Stack:`, error instanceof Error ? error.stack : 'No stack trace');
+    console.error(`🔥 Transaction ID:`, transactionId);
+    console.error(`🔥 Store ID:`, storeId);
+    console.error(`🔥 Items Being Processed:`, items);
+    console.error(`🔥 Current Result State:`, result);
+    
     result.success = false;
     if (error instanceof Error && error.message.includes('timeout')) {
-      result.errors.push(`Processing timeout after ${timeoutMs}ms - transaction may be partially processed`);
+      result.errors.push(`❌ TIMEOUT: Processing timeout after ${timeoutMs}ms - transaction may be partially processed`);
     } else {
-      result.errors.push(`Batch processing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      result.errors.push(`❌ CRITICAL ERROR: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+    
+    // Log inventory sync failure
+    try {
+      await supabase.rpc('log_inventory_sync_result', {
+        p_transaction_id: transactionId,
+        p_sync_status: 'error',
+        p_error_details: error instanceof Error ? error.message : 'Unknown error',
+        p_items_processed: result.itemsProcessed,
+        p_sync_duration_ms: Date.now() - startTime,
+        p_affected_inventory_items: null
+      });
+    } catch (logError) {
+      console.error(`🔥 FAILED TO LOG SYNC ERROR:`, logError);
     }
   }
 
   result.processingTimeMs = Date.now() - startTime;
   
-  console.log(`⏱️ Batch inventory deduction completed in ${result.processingTimeMs}ms`);
-  console.log(`📊 Results: ${result.deductedItems.length} deducted, ${result.errors.length} errors, ${result.warnings.length} warnings`);
+  console.log(`⏱️ TOTAL PROCESSING TIME: ${result.processingTimeMs}ms`);
+  console.log(`📊 FINAL SUMMARY:`, {
+    success: result.success,
+    deductedItems: result.deductedItems.length,
+    errors: result.errors.length,
+    warnings: result.warnings.length,
+    itemsProcessed: result.itemsProcessed
+  });
+  
+  // Log successful sync result
+  if (result.success && result.errors.length === 0) {
+    try {
+      await supabase.rpc('log_inventory_sync_result', {
+        p_transaction_id: transactionId,
+        p_sync_status: 'success',
+        p_error_details: null,
+        p_items_processed: result.itemsProcessed,
+        p_sync_duration_ms: result.processingTimeMs,
+        p_affected_inventory_items: result.deductedItems
+      });
+      console.log(`✅ SYNC RESULT LOGGED SUCCESSFULLY`);
+    } catch (logError) {
+      console.error(`🔥 FAILED TO LOG SYNC SUCCESS:`, logError);
+    }
+  }
   
   return result;
 };
