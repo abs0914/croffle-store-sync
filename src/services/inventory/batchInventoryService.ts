@@ -215,37 +215,116 @@ async function processBatchInventoryDeduction(
     const recipe = catalogEntry?.recipes;
     
     if (!recipe && item.name) {
-      // Try to find by name match in catalog
+      // ENHANCED FALLBACK CHAIN for NULL recipe_id products
+      console.log(`⚠️ No recipe found via product_catalog for ${item.name} (product_id: ${item.product_id})`);
+      
+      // Try to find by name match in catalog first (case-insensitive)
       const catalogByName = recipes.find(pc => 
         pc.product_name.toLowerCase().trim() === item.name.toLowerCase().trim()
       );
       const recipeByName = catalogByName?.recipes;
       
-      if (!recipeByName) {
-        // Try recipe template as fallback
-        const template = recipeTemplates.find(t => t.name.toLowerCase().trim() === item.name.toLowerCase().trim());
-        if (template) {
-          console.log(`🔄 Using recipe template for ${item.name} - no store-specific recipe found`);
-          result.warnings.push(`Using recipe template for ${item.name} - no store-specific recipe found`);
-          
-          // Process template ingredients with inventory mapping
-          const templateSuccess = await processTemplateIngredients(
-            template,
-            item,
-            storeInventoryItems,
-            transactionId,
-            userId || 'system',
-            inventoryUpdates,
-            inventoryMovements,
-            result
-          );
-          
-          if (templateSuccess) {
-            result.itemsProcessed++;
-          }
-          continue; // Continue to next item after processing template
+      if (recipeByName) {
+        console.log(`🔄 Found recipe via product name match for ${item.name}`);
+        // Process the recipe normally using the name-matched recipe
+        const processedDirectly = await processRecipeIngredients(
+          recipeByName,
+          item,
+          transactionId,
+          userId || 'system',
+          inventoryUpdates,
+          inventoryMovements,
+          result
+        );
+        
+        if (processedDirectly) {
+          result.itemsProcessed++;
         }
+        continue; // Continue to next item after processing recipe
       }
+      
+      // Try fuzzy name matching for common variations
+      const fuzzyMatch = recipes.find(pc => {
+        const productName = pc.product_name.toLowerCase().trim();
+        const itemName = item.name.toLowerCase().trim();
+        
+        // Handle common croffle variations
+        if ((itemName.includes('mini croffle') && productName.includes('mini croffle')) ||
+            (itemName.includes('croffle overload') && productName.includes('croffle overload')) ||
+            (itemName.includes('croffle') && productName.includes('croffle'))) {
+          return true;
+        }
+        
+        // Handle other common product name variations
+        const itemWords = itemName.split(' ');
+        const productWords = productName.split(' ');
+        const commonWords = itemWords.filter(word => productWords.some(pWord => pWord.includes(word) || word.includes(pWord)));
+        
+        return commonWords.length >= Math.min(itemWords.length, productWords.length) * 0.7; // 70% word match
+      });
+      
+      if (fuzzyMatch?.recipes) {
+        console.log(`🔄 Found recipe via fuzzy name match: "${item.name}" → "${fuzzyMatch.product_name}"`);
+        result.warnings.push(`Used fuzzy name matching for ${item.name} → ${fuzzyMatch.product_name}`);
+        
+        const processedFuzzy = await processRecipeIngredients(
+          fuzzyMatch.recipes,
+          item,
+          transactionId,
+          userId || 'system',
+          inventoryUpdates,
+          inventoryMovements,
+          result
+        );
+        
+        if (processedFuzzy) {
+          result.itemsProcessed++;
+        }
+        continue; // Continue to next item after processing recipe
+      }
+      
+      // FINAL FALLBACK: Try recipe template with enhanced matching
+      const template = recipeTemplates.find(t => {
+        const templateName = t.name.toLowerCase().trim();
+        const itemName = item.name.toLowerCase().trim();
+        
+        // Exact match first
+        if (templateName === itemName) return true;
+        
+        // Common croffle template variations
+        if ((itemName.includes('mini croffle') && templateName.includes('mini croffle')) ||
+            (itemName.includes('croffle overload') && templateName.includes('croffle overload'))) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      if (template) {
+        console.log(`🔄 FALLBACK: Using recipe template for ${item.name} - no store-specific recipe found`);
+        result.warnings.push(`FALLBACK: Using recipe template for ${item.name} - store recipe missing or not linked`);
+        
+        // Process template ingredients with inventory mapping
+        const templateSuccess = await processTemplateIngredients(
+          template,
+          item,
+          storeInventoryItems,
+          transactionId,
+          userId || 'system',
+          inventoryUpdates,
+          inventoryMovements,
+          result
+        );
+        
+        if (templateSuccess) {
+          result.itemsProcessed++;
+        }
+        continue; // Continue to next item after processing template
+      }
+      
+      // Complete failure - no recipe or template found
+      console.error(`❌ CRITICAL: No recipe or template found for ${item.name} (product_id: ${item.product_id})`);
+      result.errors.push(`CRITICAL: No recipe or template found for ${item.name} - inventory cannot be deducted`);
     }
 
     if (!recipe || !recipe.recipe_ingredients || recipe.recipe_ingredients.length === 0) {
@@ -255,48 +334,19 @@ async function processBatchInventoryDeduction(
 
     console.log(`🧪 Processing recipe: ${recipe.name} with ${recipe.recipe_ingredients.length} ingredients`);
 
-    // Process each ingredient in the recipe
-    for (const ingredient of recipe.recipe_ingredients) {
-      if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
-        result.warnings.push(`Ingredient ${ingredient.ingredient_name} not mapped to inventory`);
-        continue;
-      }
-
-      const totalDeduction = ingredient.quantity * item.quantity;
-      const inventoryId = ingredient.inventory_stock_id;
-      
-      if (!inventoryUpdates.has(inventoryId)) {
-        inventoryUpdates.set(inventoryId, {
-          inventoryId,
-          itemName: ingredient.ingredient_name,
-          currentStock: ingredient.inventory_stock.stock_quantity,
-          totalDeduction: 0,
-          newStock: ingredient.inventory_stock.stock_quantity,
-          transactions: []
-        });
-      }
-
-      const update = inventoryUpdates.get(inventoryId)!;
-      update.totalDeduction += totalDeduction;
-      update.newStock = Math.max(0, update.currentStock - update.totalDeduction);
-      update.transactions.push({
-        transactionId,
-        itemName: item.name,
-        quantity: totalDeduction
-      });
-
-      // Prepare inventory movement record
-      inventoryMovements.push({
-        inventory_stock_id: inventoryId,
-        movement_type: 'sale',
-        quantity_change: -totalDeduction,
-        previous_quantity: ingredient.inventory_stock.stock_quantity,
-        new_quantity: Math.max(0, ingredient.inventory_stock.stock_quantity - totalDeduction),
-        reference_type: 'transaction',
-        reference_id: transactionId,
-        notes: `Batch deduction: ${ingredient.ingredient_name} for ${item.name}`,
-        created_by: userId || 'system'
-      });
+    // Process recipe ingredients using dedicated function
+    const processedRecipe = await processRecipeIngredients(
+      recipe,
+      item,
+      transactionId,
+      userId || 'system',
+      inventoryUpdates,
+      inventoryMovements,
+      result
+    );
+    
+    if (processedRecipe) {
+      result.itemsProcessed++;
     }
   }
 
@@ -487,6 +537,87 @@ async function processTemplateIngredients(
   }
 
   console.log(`🎯 Template ${template.name}: processed ${processedCount}/${template.recipe_template_ingredients.length} ingredients`);
+  return processedCount > 0;
+}
+
+/**
+ * Process recipe ingredients with proper deduction logic
+ */
+async function processRecipeIngredients(
+  recipe: any,
+  item: BatchTransactionItem,
+  transactionId: string,
+  userId: string,
+  inventoryUpdates: Map<string, any>,
+  inventoryMovements: Array<{
+    inventory_stock_id: string;
+    movement_type: 'sale';
+    quantity_change: number;
+    previous_quantity: number;
+    new_quantity: number;
+    reference_type: 'transaction';
+    reference_id: string;
+    notes: string;
+    created_by: string;
+  }>,
+  result: BatchInventoryDeductionResult
+): Promise<boolean> {
+  console.log(`🧪 Processing recipe: ${recipe.name} with ${recipe.recipe_ingredients?.length || 0} ingredients`);
+  
+  if (!recipe.recipe_ingredients || recipe.recipe_ingredients.length === 0) {
+    result.warnings.push(`Recipe ${recipe.name} has no ingredients defined`);
+    return false;
+  }
+
+  let processedCount = 0;
+
+  // Process each ingredient in the recipe
+  for (const ingredient of recipe.recipe_ingredients) {
+    if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
+      result.warnings.push(`Ingredient ${ingredient.ingredient_name} not mapped to inventory`);
+      continue;
+    }
+
+    const totalDeduction = ingredient.quantity * item.quantity;
+    const inventoryId = ingredient.inventory_stock_id;
+    
+    if (!inventoryUpdates.has(inventoryId)) {
+      inventoryUpdates.set(inventoryId, {
+        inventoryId,
+        itemName: ingredient.ingredient_name,
+        currentStock: ingredient.inventory_stock.stock_quantity,
+        totalDeduction: 0,
+        newStock: ingredient.inventory_stock.stock_quantity,
+        transactions: []
+      });
+    }
+
+    const update = inventoryUpdates.get(inventoryId)!;
+    update.totalDeduction += totalDeduction;
+    update.newStock = Math.max(0, update.currentStock - update.totalDeduction);
+    update.transactions.push({
+      transactionId,
+      itemName: item.name,
+      quantity: totalDeduction
+    });
+
+    // Prepare inventory movement record
+    inventoryMovements.push({
+      inventory_stock_id: inventoryId,
+      movement_type: 'sale',
+      quantity_change: -totalDeduction,
+      previous_quantity: ingredient.inventory_stock.stock_quantity,
+      new_quantity: Math.max(0, ingredient.inventory_stock.stock_quantity - totalDeduction),
+      reference_type: 'transaction',
+      reference_id: transactionId,
+      notes: `Batch deduction: ${ingredient.ingredient_name} for ${item.name}`,
+      created_by: userId
+    });
+
+    processedCount++;
+  }
+
+  console.log(`🎯 Recipe ${recipe.name}: processed ${processedCount}/${recipe.recipe_ingredients.length} ingredients`);
   return processedCount > 0;
 }
 
