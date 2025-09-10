@@ -1110,6 +1110,42 @@ export type Database = {
           },
         ]
       }
+      conversion_mappings: {
+        Row: {
+          conversion_factor: number
+          created_at: string | null
+          id: string
+          inventory_stock_id: string
+          is_active: boolean | null
+          notes: string | null
+          recipe_ingredient_name: string
+          recipe_ingredient_unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          conversion_factor?: number
+          created_at?: string | null
+          id?: string
+          inventory_stock_id: string
+          is_active?: boolean | null
+          notes?: string | null
+          recipe_ingredient_name: string
+          recipe_ingredient_unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          conversion_factor?: number
+          created_at?: string | null
+          id?: string
+          inventory_stock_id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          recipe_ingredient_name?: string
+          recipe_ingredient_unit?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -2190,6 +2226,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inventory_deduction_logs: {
+        Row: {
+          conversion_factor: number | null
+          created_at: string | null
+          deduction_status: string | null
+          error_message: string | null
+          id: string
+          ingredient_name: string
+          inventory_quantity_deducted: number
+          inventory_stock_id: string
+          new_stock: number
+          previous_stock: number
+          recipe_id: string
+          recipe_quantity_needed: number
+          transaction_id: string
+        }
+        Insert: {
+          conversion_factor?: number | null
+          created_at?: string | null
+          deduction_status?: string | null
+          error_message?: string | null
+          id?: string
+          ingredient_name: string
+          inventory_quantity_deducted: number
+          inventory_stock_id: string
+          new_stock: number
+          previous_stock: number
+          recipe_id: string
+          recipe_quantity_needed: number
+          transaction_id: string
+        }
+        Update: {
+          conversion_factor?: number | null
+          created_at?: string | null
+          deduction_status?: string | null
+          error_message?: string | null
+          id?: string
+          ingredient_name?: string
+          inventory_quantity_deducted?: number
+          inventory_stock_id?: string
+          new_stock?: number
+          previous_stock?: number
+          recipe_id?: string
+          recipe_quantity_needed?: number
+          transaction_id?: string
+        }
+        Relationships: []
       }
       inventory_items: {
         Row: {
