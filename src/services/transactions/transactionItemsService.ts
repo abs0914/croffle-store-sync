@@ -88,14 +88,36 @@ async function expandComboProduct(comboItem: CartItem): Promise<DetailedTransact
   console.log('🔧 Expanding combo product:', comboItem.product.name);
   
   try {
-    // Extract component IDs from combo ID: "combo-{croffle-id}-{espresso-id}"
-    const comboIdParts = comboItem.productId.split('-');
-    if (comboIdParts.length !== 3) {
+    // Extract component IDs from combo ID: "combo-{uuid1}-{uuid2}"
+    const parts = comboItem.productId.split('-');
+    if (parts.length < 3) {
       throw new Error(`Invalid combo ID format: ${comboItem.productId}`);
     }
+
+    // Extract the component product IDs (everything after "combo-")
+    const componentIds: string[] = [];
+    let currentId = '';
     
-    const croffleId = comboIdParts[1];
-    const espressoId = comboIdParts[2];
+    for (let i = 1; i < parts.length; i++) {
+      if (currentId) {
+        currentId += '-' + parts[i];
+      } else {
+        currentId = parts[i];
+      }
+      
+      // Check if this looks like a complete UUID (36 characters with dashes)
+      if (currentId.length === 36 && currentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        componentIds.push(currentId);
+        currentId = '';
+      }
+    }
+
+    if (componentIds.length !== 2) {
+      throw new Error(`Expected 2 component IDs in combo, found ${componentIds.length}: ${comboItem.productId}`);
+    }
+    
+    const croffleId = componentIds[0];
+    const espressoId = componentIds[1];
     
     console.log('🔧 Combo components:', { croffleId, espressoId });
     
