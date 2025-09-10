@@ -8,39 +8,26 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useInventoryStockCore = () => {
   const { currentStore } = useStore();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [hasMultipleStores, setHasMultipleStores] = useState(false);
   
-  // Check if user has access to multiple stores
+  // Check if user has access to multiple stores - use storeIds from user object instead
   useQuery({
-    queryKey: ['user-stores-count'],
+    queryKey: ['user-stores-count', user?.id],
     queryFn: async () => {
-      if (!user) return { count: 0 };
-      
-      try {
-        const { count, error } = await supabase
-          .from('user_stores')
-          .select('*', { count: 'exact' })
-          .eq('user_id', user.id);
-        
-        if (error) {
-          console.warn('Failed to fetch user stores count:', error.message);
-          // Fallback: assume single store if query fails
-          setHasMultipleStores(false);
-          return { count: 1 };
-        }
-        
-        setHasMultipleStores(count !== null && count > 1);
-        return { count };
-      } catch (error) {
-        console.warn('Error checking user stores count:', error);
-        // Graceful fallback
+      if (!user || !user.storeIds) {
         setHasMultipleStores(false);
-        return { count: 1 };
+        return { count: 0 };
       }
+      
+      // Use the storeIds from the user object instead of querying user_stores
+      const storeCount = user.storeIds.length;
+      setHasMultipleStores(storeCount > 1);
+      return { count: storeCount };
     },
-    enabled: !!user?.id,
-    retry: false // Don't retry failed permission checks
+    enabled: !!user?.id && !authLoading,
+    retry: false,
+    staleTime: 5 * 60 * 1000 // Cache for 5 minutes
   });
   
   // Query to fetch inventory stock
