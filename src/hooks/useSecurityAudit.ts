@@ -47,7 +47,7 @@ export const useSecurityAudit = () => {
     identifierType: 'email' | 'ip' = 'email'
   ): Promise<RateLimitInfo> => {
     try {
-      const { data, error } = await supabase.rpc('check_auth_rate_limit', {
+      const { data, error } = await supabase.rpc('is_user_rate_limited', {
         p_identifier: identifier,
         p_identifier_type: identifierType
       });
@@ -58,8 +58,8 @@ export const useSecurityAudit = () => {
       }
 
       return {
-        isBlocked: !data,
-        attemptsRemaining: data ? 5 : 0
+        isBlocked: data, // data is true if user is blocked
+        attemptsRemaining: data ? 0 : 5
       };
     } catch (err) {
       console.error('Rate limit check error:', err);

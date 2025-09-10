@@ -34,20 +34,48 @@ export const useAuthState = () => {
     identifierType: 'email' | 'ip' = 'email'
   ): Promise<boolean> => {
     try {
-      const { data, error } = await supabase.rpc('check_auth_rate_limit', {
+      const { data, error } = await supabase.rpc('is_user_rate_limited', {
         p_identifier: identifier,
         p_identifier_type: identifierType
       });
 
       if (error) {
         console.error('Rate limit check failed:', error);
-        return true; // Allow if check fails
+        return false; // Allow if check fails
       }
 
-      return data;
+      return !data; // Return true if NOT rate limited
     } catch (err) {
       console.error('Rate limit check error:', err);
       return true; // Allow if check fails
+    }
+  }, []);
+
+  const recordFailedAttempt = useCallback(async (
+    identifier: string,
+    identifierType: 'email' | 'ip' = 'email'
+  ): Promise<void> => {
+    try {
+      await supabase.rpc('record_failed_login_attempt', {
+        p_identifier: identifier,
+        p_identifier_type: identifierType
+      });
+    } catch (err) {
+      console.error('Failed to record login attempt:', err);
+    }
+  }, []);
+
+  const clearRateLimit = useCallback(async (
+    identifier: string,
+    identifierType: 'email' | 'ip' = 'email'
+  ): Promise<void> => {
+    try {
+      await supabase.rpc('clear_successful_login_rate_limit', {
+        p_identifier: identifier,
+        p_identifier_type: identifierType
+      });
+    } catch (err) {
+      console.error('Failed to clear rate limit:', err);
     }
   }, []);
 
@@ -99,7 +127,7 @@ export const useAuthState = () => {
 
   const login = async (email: string, password: string) => {
     try {
-      // Check rate limiting
+      // Check if user is currently rate limited
       const isAllowed = await checkRateLimit(email);
       if (!isAllowed) {
         await logSecurityEvent('auth_rate_limited', { email }, 'high');
@@ -112,6 +140,8 @@ export const useAuthState = () => {
       });
 
       if (error) {
+        // Record failed attempt ONLY when authentication actually fails
+        await recordFailedAttempt(email);
         await logSecurityEvent('login_failed', { 
           email, 
           error: error.message 
@@ -120,6 +150,9 @@ export const useAuthState = () => {
       }
 
       if (data.user) {
+        // Clear rate limit on successful authentication
+        await clearRateLimit(email);
+        
         const mappedUser = await mapSupabaseUser(data.user);
         setUser(mappedUser);
         setSession(data.session);

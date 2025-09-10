@@ -6577,6 +6577,10 @@ export type Database = {
         Args: { p_store_id: string; p_user_id?: string }
         Returns: boolean
       }
+      clear_successful_login_rate_limit: {
+        Args: { p_identifier: string; p_identifier_type?: string }
+        Returns: undefined
+      }
       complete_recipe_ingredients: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -6991,6 +6995,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_user_rate_limited: {
+        Args: { p_identifier: string; p_identifier_type?: string }
+        Returns: boolean
+      }
       log_bir_audit: {
         Args:
           | {
@@ -7111,6 +7119,16 @@ export type Database = {
       recalculate_senior_discounts: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      record_failed_login_attempt: {
+        Args: {
+          p_block_minutes?: number
+          p_identifier: string
+          p_identifier_type?: string
+          p_max_attempts?: number
+          p_window_minutes?: number
+        }
+        Returns: boolean
       }
       repair_missing_product_catalog_entries: {
         Args: Record<PropertyKey, never>
