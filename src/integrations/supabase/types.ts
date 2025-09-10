@@ -5937,6 +5937,249 @@ export type Database = {
         }
         Relationships: []
       }
+      temp_deleted_inventory_sync_backup: {
+        Row: {
+          affected_inventory_items: Json | null
+          backup_reason: string | null
+          backup_timestamp: string | null
+          created_at: string | null
+          error_details: string | null
+          id: string | null
+          items_processed: number | null
+          resolved_at: string | null
+          resolved_by: string | null
+          sync_duration_ms: number | null
+          sync_status: string | null
+          transaction_id: string | null
+        }
+        Insert: {
+          affected_inventory_items?: Json | null
+          backup_reason?: string | null
+          backup_timestamp?: string | null
+          created_at?: string | null
+          error_details?: string | null
+          id?: string | null
+          items_processed?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sync_duration_ms?: number | null
+          sync_status?: string | null
+          transaction_id?: string | null
+        }
+        Update: {
+          affected_inventory_items?: Json | null
+          backup_reason?: string | null
+          backup_timestamp?: string | null
+          created_at?: string | null
+          error_details?: string | null
+          id?: string | null
+          items_processed?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sync_duration_ms?: number | null
+          sync_status?: string | null
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
+      temp_deleted_transaction_items_backup: {
+        Row: {
+          backup_reason: string | null
+          backup_timestamp: string | null
+          category_id: string | null
+          category_name: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string | null
+          name: string | null
+          product_id: string | null
+          product_type: string | null
+          quantity: number | null
+          total_price: number | null
+          transaction_id: string | null
+          unit_price: number | null
+          updated_at: string | null
+          variation_id: string | null
+        }
+        Insert: {
+          backup_reason?: string | null
+          backup_timestamp?: string | null
+          category_id?: string | null
+          category_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          name?: string | null
+          product_id?: string | null
+          product_type?: string | null
+          quantity?: number | null
+          total_price?: number | null
+          transaction_id?: string | null
+          unit_price?: number | null
+          updated_at?: string | null
+          variation_id?: string | null
+        }
+        Update: {
+          backup_reason?: string | null
+          backup_timestamp?: string | null
+          category_id?: string | null
+          category_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          name?: string | null
+          product_id?: string | null
+          product_type?: string | null
+          quantity?: number | null
+          total_price?: number | null
+          transaction_id?: string | null
+          unit_price?: number | null
+          updated_at?: string | null
+          variation_id?: string | null
+        }
+        Relationships: []
+      }
+      temp_deleted_transactions_backup: {
+        Row: {
+          amount_tendered: number | null
+          assigned_to: string | null
+          backup_reason: string | null
+          backup_timestamp: string | null
+          cashier_name: string | null
+          change: number | null
+          created_at: string | null
+          customer_id: string | null
+          delivery_order_number: string | null
+          delivery_platform: string | null
+          discount: number | null
+          discount_amount: number | null
+          discount_details: Json | null
+          discount_id: string | null
+          discount_id_number: string | null
+          discount_type: string | null
+          estimated_completion_time: string | null
+          id: string | null
+          items: Json | null
+          order_notes: string | null
+          order_status: string | null
+          order_type: string | null
+          payment_details: Json | null
+          payment_method: string | null
+          promo_details: string | null
+          promo_reference: string | null
+          pwd_discount: number | null
+          receipt_number: string | null
+          senior_citizen_discount: number | null
+          senior_discount: number | null
+          senior_discounts: Json | null
+          sequence_number: number | null
+          shift_id: string | null
+          status: string | null
+          store_id: string | null
+          subtotal: number | null
+          tax: number | null
+          terminal_id: string | null
+          total: number | null
+          user_id: string | null
+          vat_amount: number | null
+          vat_exempt_sales: number | null
+          vat_sales: number | null
+          zero_rated_sales: number | null
+        }
+        Insert: {
+          amount_tendered?: number | null
+          assigned_to?: string | null
+          backup_reason?: string | null
+          backup_timestamp?: string | null
+          cashier_name?: string | null
+          change?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          delivery_order_number?: string | null
+          delivery_platform?: string | null
+          discount?: number | null
+          discount_amount?: number | null
+          discount_details?: Json | null
+          discount_id?: string | null
+          discount_id_number?: string | null
+          discount_type?: string | null
+          estimated_completion_time?: string | null
+          id?: string | null
+          items?: Json | null
+          order_notes?: string | null
+          order_status?: string | null
+          order_type?: string | null
+          payment_details?: Json | null
+          payment_method?: string | null
+          promo_details?: string | null
+          promo_reference?: string | null
+          pwd_discount?: number | null
+          receipt_number?: string | null
+          senior_citizen_discount?: number | null
+          senior_discount?: number | null
+          senior_discounts?: Json | null
+          sequence_number?: number | null
+          shift_id?: string | null
+          status?: string | null
+          store_id?: string | null
+          subtotal?: number | null
+          tax?: number | null
+          terminal_id?: string | null
+          total?: number | null
+          user_id?: string | null
+          vat_amount?: number | null
+          vat_exempt_sales?: number | null
+          vat_sales?: number | null
+          zero_rated_sales?: number | null
+        }
+        Update: {
+          amount_tendered?: number | null
+          assigned_to?: string | null
+          backup_reason?: string | null
+          backup_timestamp?: string | null
+          cashier_name?: string | null
+          change?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          delivery_order_number?: string | null
+          delivery_platform?: string | null
+          discount?: number | null
+          discount_amount?: number | null
+          discount_details?: Json | null
+          discount_id?: string | null
+          discount_id_number?: string | null
+          discount_type?: string | null
+          estimated_completion_time?: string | null
+          id?: string | null
+          items?: Json | null
+          order_notes?: string | null
+          order_status?: string | null
+          order_type?: string | null
+          payment_details?: Json | null
+          payment_method?: string | null
+          promo_details?: string | null
+          promo_reference?: string | null
+          pwd_discount?: number | null
+          receipt_number?: string | null
+          senior_citizen_discount?: number | null
+          senior_discount?: number | null
+          senior_discounts?: Json | null
+          sequence_number?: number | null
+          shift_id?: string | null
+          status?: string | null
+          store_id?: string | null
+          subtotal?: number | null
+          tax?: number | null
+          terminal_id?: string | null
+          total?: number | null
+          user_id?: string | null
+          vat_amount?: number | null
+          vat_exempt_sales?: number | null
+          vat_sales?: number | null
+          zero_rated_sales?: number | null
+        }
+        Relationships: []
+      }
       transaction_items: {
         Row: {
           category_id: string | null
