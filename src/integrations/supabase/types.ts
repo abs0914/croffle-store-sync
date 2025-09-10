@@ -5942,6 +5942,7 @@ export type Database = {
           category_id: string | null
           category_name: string | null
           created_at: string
+          created_by: string | null
           id: string
           name: string
           product_id: string
@@ -5957,6 +5958,7 @@ export type Database = {
           category_id?: string | null
           category_name?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           name: string
           product_id: string
@@ -5972,6 +5974,7 @@ export type Database = {
           category_id?: string | null
           category_name?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           name?: string
           product_id?: string
