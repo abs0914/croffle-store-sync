@@ -6962,7 +6962,7 @@ export type Database = {
           p_reference_id: string
           p_reference_type: string
         }
-        Returns: string
+        Returns: undefined
       }
       is_admin_email: {
         Args: { email_address: string }
