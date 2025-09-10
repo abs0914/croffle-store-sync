@@ -107,27 +107,32 @@ async function processBatchInventoryDeduction(
 
   // Fetch recipes by product_id and by name in parallel
   const [recipesResult, templatesResult, inventoryResult] = await Promise.all([
-    // Fetch recipes by product_id
+    // Fetch recipes via product_catalog relationship
     productIds.length > 0 ? supabase
-      .from('recipes')
+      .from('product_catalog')
       .select(`
         id,
-        name,
-        product_id,
-        recipe_ingredients (
-          ingredient_name,
-          quantity,
-          inventory_stock_id,
-          inventory_stock (
-            id,
-            item,
-            stock_quantity
+        product_name,
+        recipe_id,
+        recipes!inner (
+          id,
+          name,
+          product_id,
+          recipe_ingredients (
+            ingredient_name,
+            quantity,
+            inventory_stock_id,
+            inventory_stock (
+              id,
+              item,
+              stock_quantity
+            )
           )
         )
       `)
-      .in('product_id', productIds)
+      .in('id', productIds)
       .eq('store_id', storeId)
-      .eq('is_active', true) : Promise.resolve({ data: [], error: null }),
+      .eq('is_available', true) : Promise.resolve({ data: [], error: null }),
     
     // Fetch recipe templates by name as fallback
     supabase
@@ -205,14 +210,18 @@ async function processBatchInventoryDeduction(
   for (const item of items) {
     result.itemsProcessed++;
     
-    // Find recipe by product_id first, then by name
-    let recipe = recipes.find(r => r.product_id === item.product_id);
+    // Find recipe via product_catalog relationship
+    const catalogEntry = recipes.find(pc => pc.id === item.product_id);
+    const recipe = catalogEntry?.recipes;
     
     if (!recipe && item.name) {
-      // Try to find by name match
-      recipe = recipes.find(r => r.name.toLowerCase().trim() === item.name.toLowerCase().trim());
+      // Try to find by name match in catalog
+      const catalogByName = recipes.find(pc => 
+        pc.product_name.toLowerCase().trim() === item.name.toLowerCase().trim()
+      );
+      const recipeByName = catalogByName?.recipes;
       
-      if (!recipe) {
+      if (!recipeByName) {
         // Try recipe template as fallback
         const template = recipeTemplates.find(t => t.name.toLowerCase().trim() === item.name.toLowerCase().trim());
         if (template) {

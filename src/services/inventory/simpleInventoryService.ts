@@ -54,27 +54,37 @@ export const deductInventoryForTransaction = async (
     for (const item of items) {
       console.log(`📦 Processing item: ${item.productId} x${item.quantity}`);
       
-      // Get recipe for this product - enhanced query with better error handling
-      const { data: recipe, error: recipeError } = await supabase
-        .from('recipes')
+      // Get recipe for this product - query via product_catalog relationship
+      const { data: productCatalog, error: catalogError } = await supabase
+        .from('product_catalog')
         .select(`
           id,
-          name,
-          recipe_ingredients (
-            ingredient_name,
-            quantity,
-            inventory_stock_id
+          product_name,
+          recipe_id,
+          recipes!inner (
+            id,
+            name,
+            recipe_ingredients (
+              ingredient_name,
+              quantity,
+              inventory_stock_id
+            )
           )
         `)
-        .eq('product_id', item.productId)
+        .eq('id', item.productId)
         .eq('store_id', storeId)
-        .eq('is_active', true)
+        .eq('is_available', true)
         .maybeSingle();
 
-      if (recipeError) {
-        console.error(`❌ Error fetching recipe for product ${item.productId}:`, recipeError);
+      if (catalogError) {
+        console.error(`❌ Error fetching recipe for product ${item.productId}:`, catalogError);
         result.errors.push(`Error fetching recipe for product ${item.productId}`);
         continue;
+      }
+
+      const recipe = productCatalog?.recipes;
+
+      if (!recipe) {
       }
 
       if (!recipe) {

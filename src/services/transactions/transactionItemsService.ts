@@ -191,12 +191,25 @@ async function expandComboProduct(comboItem: CartItem): Promise<DetailedTransact
 }
 
 /**
+ * Validates UUID format
+ */
+const isValidUUID = (uuid: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
+
+/**
  * Inserts transaction items into the database
  */
 export const insertTransactionItems = async (transactionId: string, items: DetailedTransactionItem[]): Promise<void> => {
   if (items.length === 0) {
     console.log('No items to insert for transaction:', transactionId);
     return;
+  }
+
+  // Validate transaction ID is a proper UUID
+  if (!isValidUUID(transactionId)) {
+    throw new Error(`Invalid transaction ID format: ${transactionId}`);
   }
 
   console.log('🔄 Inserting transaction items:', {
@@ -211,24 +224,43 @@ export const insertTransactionItems = async (transactionId: string, items: Detai
   });
 
   try {
-    // Prepare items with exact column mapping to avoid UUID errors
-    const itemsToInsert = items.map(item => ({
-      transaction_id: transactionId,
-      product_id: item.product_id,
-      variation_id: item.variation_id || null,
-      name: item.name,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      total_price: item.total_price,
-      category_id: item.category_id || null,
-      category_name: item.category_name || null,
-      product_type: item.product_type || 'regular'
-      // Removed reference_id field that was causing UUID type error
-    }));
+    // Prepare and validate items with exact column mapping
+    const itemsToInsert = items.map((item, index) => {
+      // Validate product_id is a proper UUID
+      if (!isValidUUID(item.product_id)) {
+        console.warn(`⚠️ Invalid product_id UUID at index ${index}: ${item.product_id}`);
+        throw new Error(`Invalid product_id UUID format: ${item.product_id}`);
+      }
 
-    console.log('🔄 Prepared items for insertion (exact columns):', itemsToInsert);
+      // Validate variation_id if provided
+      if (item.variation_id && !isValidUUID(item.variation_id)) {
+        console.warn(`⚠️ Invalid variation_id UUID at index ${index}: ${item.variation_id}`);
+        throw new Error(`Invalid variation_id UUID format: ${item.variation_id}`);
+      }
 
-    // Use insert instead of upsert to avoid conflicts - table has auto-generated id
+      // Validate category_id if provided
+      if (item.category_id && !isValidUUID(item.category_id)) {
+        console.warn(`⚠️ Invalid category_id UUID at index ${index}: ${item.category_id}`);
+        throw new Error(`Invalid category_id UUID format: ${item.category_id}`);
+      }
+
+      return {
+        transaction_id: transactionId,
+        product_id: item.product_id,
+        variation_id: item.variation_id || null,
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        category_id: item.category_id || null,
+        category_name: item.category_name || null,
+        product_type: item.product_type || 'regular'
+      };
+    });
+
+    console.log('🔄 Prepared items for insertion (validated UUIDs):', itemsToInsert);
+
+    // Insert transaction items
     const { data, error } = await supabase
       .from("transaction_items")
       .insert(itemsToInsert)
@@ -241,22 +273,11 @@ export const insertTransactionItems = async (transactionId: string, items: Detai
         details: error.details,
         hint: error.hint,
         transactionId,
-        itemCount: items.length
+        itemCount: items.length,
+        sampleData: itemsToInsert[0]
       });
       
-      // Try a simple insert as fallback
-      console.log('🔄 Trying simple insert as fallback...');
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from("transaction_items")
-        .insert(itemsToInsert);
-        
-      if (fallbackError) {
-        console.error('❌ Fallback insert also failed:', fallbackError);
-        throw new Error(`Failed to save transaction items: ${fallbackError.message}`);
-      }
-      
-      console.log('✅ Fallback insert succeeded');
-      return;
+      throw new Error(`Failed to save transaction items: ${error.message}`);
     }
 
     console.log('✅ Transaction items inserted successfully:', {
