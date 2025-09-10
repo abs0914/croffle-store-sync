@@ -67,10 +67,15 @@ export default function POS() {
   // Local state for active category filter - initialize to "all" to show all products
   const [activeCategory, setActiveCategory] = useState<string | null>("all");
 
-  // Sync category filter with unified products - handle "all" as null
+  // Sync category filter with unified products - handle "all" and "Mix & Match" as null
   useEffect(() => {
-    updateCategoryFilter(activeCategory === "all" ? null : activeCategory);
-  }, [activeCategory, updateCategoryFilter]);
+    // For Mix & Match category, pass null to get all products and let ProductGrid handle filtering
+    const isMixMatchCategory = activeCategory && categories.some(c => 
+      c.id === activeCategory && c.name.toLowerCase().includes('mix') && c.name.toLowerCase().includes('match')
+    );
+    
+    updateCategoryFilter(activeCategory === "all" || isMixMatchCategory ? null : activeCategory);
+  }, [activeCategory, updateCategoryFilter, categories]);
 
   // Force refresh on mount to ensure fresh data
   useEffect(() => {
