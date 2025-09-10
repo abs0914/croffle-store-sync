@@ -73,6 +73,8 @@ export function ComboSelectionDialog({
       
       // Special case for Mini Croffle with improved matching
       if (categoryName === "Mini Croffle") {
+        console.log('Special Mini Croffle category handling activated');
+        
         // First try to find by name with proper croffle filtering
         let miniProducts = products.filter(p => 
           p && p.name && typeof p.name === 'string' &&
@@ -82,7 +84,8 @@ export function ComboSelectionDialog({
           !p.name.toLowerCase().includes("packaging") &&
           !p.name.toLowerCase().includes("container") &&
           !p.name.toLowerCase().includes("bag") &&
-          p.is_active
+          !p.name.toLowerCase().includes("combo") && // Exclude pre-made combo products
+          p.is_active && p.price > 0 // Exclude ₱0 products to prevent duplicates
         );
         
         // If no products found by name, try "Mix & Match" category
@@ -93,13 +96,23 @@ export function ComboSelectionDialog({
               p && p.category_id === mixMatchCategory.id && 
               p.name && !p.name.toLowerCase().includes("box") &&
               !p.name.toLowerCase().includes("packaging") &&
-              p.is_active
+              !p.name.toLowerCase().includes("combo") &&
+              p.is_active && p.price > 0
             );
           }
         }
         
-        console.log(`Mini Croffle products found:`, miniProducts.length, miniProducts.map(p => p.name));
-        return miniProducts || [];
+        // Remove duplicates by unique ID to prevent UI duplication
+        const uniqueMiniProducts = miniProducts.filter((product, index, self) => {
+          return index === self.findIndex(p => p.id === product.id);
+        });
+        
+        console.log(`Mini Croffle products found:`, uniqueMiniProducts.length, uniqueMiniProducts.map(p => ({
+          id: p.id, 
+          name: p.name, 
+          price: p.price
+        })));
+        return uniqueMiniProducts || [];
       }
       
       // For other categories, find products with enhanced validation
@@ -667,11 +680,22 @@ export function ComboSelectionDialog({
             addonCategories={addonCategories || []}
             comboRules={comboRules || []}
             onAddToCart={(items) => {
+              console.log('🎯 ProductCustomizationDialog onAddToCart called with:', items);
+              
+              const customizedItem = items[0];
+              if (!customizedItem) {
+                console.error('❌ No customized item received');
+                return;
+              }
+              
+              // Extract the actual customization data from the item
+              const customization = customizedItem.customization || {};
+              console.log('🎯 Extracted customization:', customization);
+              
               handleMiniCroffleNext({
-                sauce: '', // These will be handled by the unified dialog
-                toppings: [],
-                price: items[0]?.price || 0,
-                customizedProduct: items[0]?.product || selectedCroffle
+                customization: customization,
+                customizedProduct: customizedItem.product || selectedCroffle,
+                price: customizedItem.price || selectedCroffle?.price || 0
               });
             }}
           />
