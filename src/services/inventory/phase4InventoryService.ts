@@ -61,12 +61,12 @@ export class SimplifiedInventoryService {
     
     try {
       for (const item of items) {
-        // Get recipe through product catalog relationship
+        // Get recipe through product catalog relationship with proper JOIN
         const { data: productCatalog } = await supabase
           .from('product_catalog')
           .select(`
             recipe_id,
-            recipes!inner (
+            recipes (
               id,
               recipe_ingredients (
                 ingredient_name,
@@ -77,6 +77,7 @@ export class SimplifiedInventoryService {
           `)
           .eq('id', item.productId)
           .eq('is_available', true)
+          .not('recipe_id', 'is', null)
           .maybeSingle();
 
         const recipeData = productCatalog?.recipes;
@@ -251,12 +252,12 @@ export class SimplifiedInventoryService {
     const validationFailures: Array<{ingredient: string; required: number; available: number}> = [];
 
     try {
-      // Get recipe through product catalog relationship
+      // Get recipe through product catalog relationship with proper JOIN
       const { data: productCatalog } = await supabase
         .from('product_catalog')
         .select(`
           recipe_id,
-          recipes!inner (
+          recipes (
             id,
             recipe_ingredients (
               ingredient_name,
@@ -267,6 +268,7 @@ export class SimplifiedInventoryService {
         `)
         .eq('id', item.productId)
         .eq('is_available', true)
+        .not('recipe_id', 'is', null)
         .maybeSingle();
 
       const recipeData = productCatalog?.recipes;
