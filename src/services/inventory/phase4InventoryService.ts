@@ -61,20 +61,25 @@ export class SimplifiedInventoryService {
     
     try {
       for (const item of items) {
-        // Get recipe ingredients for this product
-        const { data: recipeData } = await supabase
-          .from('recipes')
+        // Get recipe through product catalog relationship
+        const { data: productCatalog } = await supabase
+          .from('product_catalog')
           .select(`
-            id,
-            recipe_ingredients (
-              ingredient_name,
-              quantity,
-              unit
+            recipe_id,
+            recipes!inner (
+              id,
+              recipe_ingredients (
+                ingredient_name,
+                quantity,
+                unit
+              )
             )
           `)
-          .eq('product_id', item.productId)
-          .eq('is_active', true)
+          .eq('id', item.productId)
+          .eq('is_available', true)
           .maybeSingle();
+
+        const recipeData = productCatalog?.recipes;
 
         if (!recipeData?.recipe_ingredients) {
           // Product doesn't use recipes - check if it's a direct inventory item
@@ -246,20 +251,25 @@ export class SimplifiedInventoryService {
     const validationFailures: Array<{ingredient: string; required: number; available: number}> = [];
 
     try {
-      // Get recipe for this product
-      const { data: recipeData } = await supabase
-        .from('recipes')
+      // Get recipe through product catalog relationship
+      const { data: productCatalog } = await supabase
+        .from('product_catalog')
         .select(`
-          id,
-          recipe_ingredients (
-            ingredient_name,
-            quantity,
-            unit
+          recipe_id,
+          recipes!inner (
+            id,
+            recipe_ingredients (
+              ingredient_name,
+              quantity,
+              unit
+            )
           )
         `)
-        .eq('product_id', item.productId)
-        .eq('is_active', true)
+        .eq('id', item.productId)
+        .eq('is_available', true)
         .maybeSingle();
+
+      const recipeData = productCatalog?.recipes;
 
       if (!recipeData?.recipe_ingredients) {
         // Handle direct product
