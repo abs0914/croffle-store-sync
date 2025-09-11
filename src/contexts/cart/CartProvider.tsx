@@ -81,14 +81,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const addItem = (product: Product, quantity = 1, variation?: ProductVariation, customization?: any) => {
-    console.log("CartContext: addItem function called! Arguments:", {
+    console.log("🛒 CartContext: addItem function called! Arguments:", {
       product: product ? product.name : "NULL",
       productId: product ? product.id : "NULL",
       quantity,
       variation: variation ? variation.name : "none",
       customization: customization ? "present" : "none",
       currentStoreId: currentStore?.id,
-      functionType: typeof addItem
+      functionType: typeof addItem,
+      currentItemsCount: items.length
     });
 
     if (!currentStore?.id) {
@@ -151,9 +152,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     console.log("CartContext: Current items before addition:", items);
 
     if (existingItemIndex !== -1) {
-      console.log("CartContext: Updating existing item quantity");
+      console.log("🛒 CartContext: Updated existing item quantity");
       const newItems = [...items];
       newItems[existingItemIndex].quantity += quantity;
+      console.log("🛒 CartContext: About to setItems for existing item", { beforeCount: items.length, afterCount: newItems.length });
       setItems(newItems);
 
       const displayName = customization ? customization.display_name :
@@ -180,12 +182,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
         newItem.variation = variation;
       }
 
-      console.log("CartContext: New cart item created:", newItem);
+      console.log("🛒 CartContext: New cart item created:", newItem);
 
+      console.log("🛒 CartContext: About to setItems for new item", { currentCount: items.length });
       setItems(prevItems => {
-        console.log("CartContext: Previous items:", prevItems);
+        console.log("🛒 CartContext: setItems callback - Previous items:", prevItems.length);
         const updatedItems = [...prevItems, newItem];
-        console.log("CartContext: Updated items array:", updatedItems);
+        console.log("🛒 CartContext: setItems callback - Updated items array:", updatedItems.length);
         return updatedItems;
       });
 

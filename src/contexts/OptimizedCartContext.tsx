@@ -80,7 +80,14 @@ export function OptimizedCartProvider({ children }: { children: React.ReactNode 
   // Memoized actions to prevent re-renders
   const actions = useMemo(() => ({
     addItem: (product: Product, quantity = 1, variation?: ProductVariation) => {
+      console.log('🛒 OptimizedCartContext: Adding item to cart', { 
+        product: product.name, 
+        productId: product.id, 
+        quantity, 
+        variation: variation?.name 
+      });
       dispatch({ type: 'ADD_ITEM', payload: { product, quantity, variation } });
+      console.log('🛒 OptimizedCartContext: Dispatch completed');
     },
     removeItem: (index: number) => {
       dispatch({ type: 'REMOVE_ITEM', payload: { index } });
