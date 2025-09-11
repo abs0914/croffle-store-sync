@@ -5,6 +5,7 @@ import { TransactionHealthDashboard } from '@/components/dashboard/TransactionHe
 import { SystemCompletionDashboard } from '@/components/debug/SystemCompletionDashboard';
 import { LoadTestRunner } from '@/components/debug/LoadTestRunner';
 import { TransactionTestRunner } from '@/components/debug/TransactionTestRunner';
+import { InventoryDeductionValidator } from '@/components/debug/InventoryDeductionValidator';
 import { Shield, Activity, Zap, Settings } from 'lucide-react';
 
 export function AdminDashboard() {
@@ -47,7 +48,10 @@ export function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="debug-tools" className="space-y-4">
-          <TransactionTestRunner />
+          <div className="grid gap-4">
+            <TransactionTestRunner />
+            <InventoryDeductionValidator />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

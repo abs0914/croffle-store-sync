@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+/**
+ * Deduct ingredients for a product with enhanced logging and transaction deduplication
+ */
 export const deductIngredientsForProduct = async (
   productId: string,
   quantity: number,
@@ -8,6 +11,28 @@ export const deductIngredientsForProduct = async (
 ): Promise<boolean> => {
   try {
     console.log('🔄 Starting ingredient deduction for product:', { productId, quantity, transactionId });
+
+    // ✅ STEP 1: Check if transaction has already been processed to prevent double deductions
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId);
+    
+    if (isValidUUID) {
+      const { data: existingSync, error: syncCheckError } = await supabase
+        .from('inventory_sync_audit')
+        .select('sync_status, created_at')
+        .eq('transaction_id', transactionId)
+        .eq('sync_status', 'success')
+        .maybeSingle();
+
+      if (existingSync) {
+        console.log('⚠️ Transaction already processed successfully:', {
+          transactionId,
+          processedAt: existingSync.created_at,
+          productId,
+          quantity
+        });
+        return true; // Already processed successfully
+      }
+    }
 
     // Track sync timing for audit
     const syncStartTime = Date.now();
