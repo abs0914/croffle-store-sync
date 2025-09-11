@@ -6,7 +6,6 @@ import { AlertTriangle, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { processTransactionInventoryWithMixMatchSupport } from '@/services/inventory/mixMatchInventoryIntegration';
-
 interface FailedTransaction {
   id: string;
   receipt_number: string;
@@ -15,34 +14,26 @@ interface FailedTransaction {
   movement_count: number;
   transaction_count: number;
 }
-
 export const InventoryDeductionDiagnostic: React.FC = () => {
   const [testing, setTesting] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [failedTransactions, setFailedTransactions] = useState<FailedTransaction[]>([]);
   const [diagnosticResult, setDiagnosticResult] = useState<string>('');
-
   const testInventoryDeduction = async () => {
     setTesting(true);
     try {
       console.log('🧪 Testing inventory deduction with diagnostic transaction');
-      
+
       // Create a test transaction
-      const testItems = [
-        {
-          name: 'Regular Croissant',
-          quantity: 1,
-          unit_price: 65,
-          total_price: 65
-        }
-      ];
-
-      const result = await processTransactionInventoryWithMixMatchSupport(
-        'test-diagnostic-' + Date.now(),
-        'a1b2c3d4-e5f6-7890-1234-567890abcdef', // Replace with actual store ID
-        testItems
-      );
-
+      const testItems = [{
+        name: 'Regular Croissant',
+        quantity: 1,
+        unit_price: 65,
+        total_price: 65
+      }];
+      const result = await processTransactionInventoryWithMixMatchSupport('test-diagnostic-' + Date.now(), 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+      // Replace with actual store ID
+      testItems);
       if (result.success) {
         setDiagnosticResult('✅ INVENTORY DEDUCTION SYSTEM IS NOW WORKING');
         toast.success('Inventory deduction test passed!');
@@ -58,24 +49,23 @@ export const InventoryDeductionDiagnostic: React.FC = () => {
       setTesting(false);
     }
   };
-
   const identifyFailedTransactions = async () => {
     setRecovering(true);
     try {
       console.log('🔍 Identifying failed transactions since Sep 11 01:56:15');
-      
+
       // Query transactions that should have inventory movements but don't
-      const { data: transactions, error } = await supabase
-        .from('transactions')
-        .select(`
+      const {
+        data: transactions,
+        error
+      } = await supabase.from('transactions').select(`
           id,
           receipt_number,
           created_at,
           total
-        `)
-        .gte('created_at', '2025-09-11 01:56:15')
-        .order('created_at', { ascending: false });
-
+        `).gte('created_at', '2025-09-11 01:56:15').order('created_at', {
+        ascending: false
+      });
       if (error) {
         throw error;
       }
@@ -83,23 +73,18 @@ export const InventoryDeductionDiagnostic: React.FC = () => {
       // Check each transaction for missing inventory movements
       const failed: FailedTransaction[] = [];
       for (const txn of transactions || []) {
-        const { data: movements } = await supabase
-          .from('inventory_movements')
-          .select('id')
-          .eq('reference_id', txn.id);
-
-        const { data: inventoryTxns } = await supabase
-          .from('inventory_transactions')
-          .select('id')
-          .eq('reference_id', txn.id);
-
+        const {
+          data: movements
+        } = await supabase.from('inventory_movements').select('id').eq('reference_id', txn.id);
+        const {
+          data: inventoryTxns
+        } = await supabase.from('inventory_transactions').select('id').eq('reference_id', txn.id);
         failed.push({
           ...txn,
           movement_count: movements?.length || 0,
           transaction_count: inventoryTxns?.length || 0
         });
       }
-
       setFailedTransactions(failed);
       toast.success(`Found ${failed.length} transactions to analyze`);
     } catch (error) {
@@ -109,17 +94,15 @@ export const InventoryDeductionDiagnostic: React.FC = () => {
       setRecovering(false);
     }
   };
-
   const recoverFailedTransaction = async (transaction: FailedTransaction) => {
     try {
       console.log(`🔧 Recovering transaction ${transaction.receipt_number}`);
-      
-      // Get transaction items
-      const { data: items, error } = await supabase
-        .from('transaction_items')
-        .select('*')
-        .eq('transaction_id', transaction.id);
 
+      // Get transaction items
+      const {
+        data: items,
+        error
+      } = await supabase.from('transaction_items').select('*').eq('transaction_id', transaction.id);
       if (error || !items) {
         throw new Error('Failed to get transaction items');
       }
@@ -133,12 +116,9 @@ export const InventoryDeductionDiagnostic: React.FC = () => {
       }));
 
       // Process inventory deduction
-      const result = await processTransactionInventoryWithMixMatchSupport(
-        transaction.id,
-        'a1b2c3d4-e5f6-7890-1234-567890abcdef', // Replace with actual store ID
-        transactionItems
-      );
-
+      const result = await processTransactionInventoryWithMixMatchSupport(transaction.id, 'a1b2c3d4-e5f6-7890-1234-567890abcdef',
+      // Replace with actual store ID
+      transactionItems);
       if (result.success) {
         toast.success(`✅ Recovered transaction ${transaction.receipt_number}`);
         // Refresh the failed transactions list
@@ -151,55 +131,16 @@ export const InventoryDeductionDiagnostic: React.FC = () => {
       toast.error(`Recovery failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
+  return <div className="space-y-4">
+      
 
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-warning" />
-            Inventory Deduction Emergency Diagnostic
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button 
-              onClick={testInventoryDeduction} 
-              disabled={testing}
-              className="flex items-center gap-2"
-            >
-              {testing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-              Test Inventory Deduction
-            </Button>
-            
-            <Button 
-              onClick={identifyFailedTransactions} 
-              disabled={recovering}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              {recovering ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
-              Identify Failed Transactions
-            </Button>
-          </div>
-
-          {diagnosticResult && (
-            <div className="p-4 bg-muted rounded-lg">
-              <p className="font-mono text-sm">{diagnosticResult}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {failedTransactions.length > 0 && (
-        <Card>
+      {failedTransactions.length > 0 && <Card>
           <CardHeader>
             <CardTitle>Failed Transactions ({failedTransactions.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {failedTransactions.map((txn) => (
-                <div key={txn.id} className="flex items-center justify-between p-3 border rounded-lg">
+              {failedTransactions.map(txn => <div key={txn.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex items-center gap-3">
                     <Badge variant={txn.movement_count === 0 ? "destructive" : "secondary"}>
                       {txn.receipt_number}
@@ -213,22 +154,13 @@ export const InventoryDeductionDiagnostic: React.FC = () => {
                     </span>
                   </div>
                   
-                  {txn.movement_count === 0 && (
-                    <Button 
-                      size="sm" 
-                      onClick={() => recoverFailedTransaction(txn)}
-                      className="flex items-center gap-1"
-                    >
+                  {txn.movement_count === 0 && <Button size="sm" onClick={() => recoverFailedTransaction(txn)} className="flex items-center gap-1">
                       <RefreshCw className="h-3 w-3" />
                       Recover
-                    </Button>
-                  )}
-                </div>
-              ))}
+                    </Button>}
+                </div>)}
             </div>
           </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+        </Card>}
+    </div>;
 };
