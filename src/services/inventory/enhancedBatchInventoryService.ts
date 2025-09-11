@@ -377,3 +377,86 @@ export const enhancedBatchInventoryService = {
     }
   }
 };
+
+/**
+ * Enhanced batch inventory deduction function for transactions with Mix & Match support
+ * This is the main function expected by the integration layer
+ */
+export const enhancedBatchDeductInventoryForTransaction = async (
+  transactionId: string,
+  storeId: string,
+  transactionItems: Array<{
+    product_id?: string;
+    name: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+  }>,
+  timeoutMs: number = 30000
+): Promise<{
+  success: boolean;
+  deductedItems: any[];
+  errors: string[];
+  warnings: string[];
+  processingTimeMs: number;
+  itemsProcessed: number;
+}> => {
+  const startTime = Date.now();
+  
+  console.log(`🎯 Enhanced batch deduction starting for transaction ${transactionId}`);
+  
+  try {
+    // Convert transaction items to the format expected by the batch service
+    const mockTransaction = {
+      id: transactionId,
+      receipt_number: `TXN-${transactionId}`,
+      store_id: storeId,
+      transaction_items: transactionItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity
+      }))
+    };
+    
+    // Use the enhanced batch inventory service to process the transaction
+    const result = await enhancedBatchInventoryService.processTransactionInventory(mockTransaction);
+    
+    const processingTimeMs = Date.now() - startTime;
+    
+    if (result.status === 'success') {
+      console.log(`✅ Enhanced batch deduction completed successfully in ${processingTimeMs}ms`);
+      
+      return {
+        success: true,
+        deductedItems: result.items || [],
+        errors: [],
+        warnings: [],
+        processingTimeMs,
+        itemsProcessed: result.processedIngredients || 0
+      };
+    } else {
+      console.log(`⚠️ Enhanced batch deduction completed with errors: ${result.error}`);
+      
+      return {
+        success: false,
+        deductedItems: [],
+        errors: [result.error || 'Unknown error'],
+        warnings: [],
+        processingTimeMs,
+        itemsProcessed: 0
+      };
+    }
+    
+  } catch (error) {
+    const processingTimeMs = Date.now() - startTime;
+    console.error(`❌ Enhanced batch deduction failed:`, error);
+    
+    return {
+      success: false,
+      deductedItems: [],
+      errors: [error instanceof Error ? error.message : 'Unknown error'],
+      warnings: [],
+      processingTimeMs,
+      itemsProcessed: 0
+    };
+  }
+};
