@@ -45,6 +45,7 @@ export function ComboSelectionDialog({
   const [selectedCategory, setSelectedCategory] = useState<string>("Classic");
   const [isChangingCategory, setIsChangingCategory] = useState<boolean>(false);
   const [selectedCroffle, setSelectedCroffle] = useState<Product | null>(null);
+  const [selectedEspresso, setSelectedEspresso] = useState<Product | null>(null);
   const [customizedCroffle, setCustomizedCroffle] = useState<any>(null);
   const [miniCroffleCustomization, setMiniCroffleCustomization] = useState<any>(null);
   
@@ -243,12 +244,17 @@ export function ComboSelectionDialog({
     console.log("Selected croffle:", croffle.name);
     setSelectedCroffle(croffle);
     
-    // Check if it's a product that needs customization (Mini Croffle or Croffle Overload)
-    const needsCustomization = croffle.name.toLowerCase().includes("mini") || 
-                              croffle.name.toLowerCase().includes("overload");
+    // For Mini Croffle: go to espresso first, then customization
+    // For Croffle Overload: go to customization first (unchanged)
+    // For Regular: go to espresso directly (unchanged)
+    const isMiniCroffle = croffle.name.toLowerCase().includes("mini");
+    const isOverload = croffle.name.toLowerCase().includes("overload");
     
-    if (needsCustomization) {
-      console.log("Product needs customization, going to customize step");
+    if (isMiniCroffle) {
+      console.log("Mini Croffle selected, going to espresso step first");
+      setStep("espresso");
+    } else if (isOverload) {
+      console.log("Croffle Overload selected, going to customize step");
       setStep("customize");
     } else {
       console.log("Regular croffle, going to espresso step");
@@ -259,13 +265,71 @@ export function ComboSelectionDialog({
   const handleMiniCroffleNext = (customization: any) => {
     setMiniCroffleCustomization(customization);
     setCustomizedCroffle(customization.customizedProduct);
-    setStep("espresso");
+    
+    // If we have an espresso selected (Mini Croffle new flow), finalize the combo
+    if (selectedEspresso) {
+      // Debug category mapping
+      const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
+      
+      // Fix category mapping for Mini Croffle
+      let categoryForPricing = "Mini Croffle";
+
+      // Map espresso product name to espresso type for pricing
+      let espressoType = "Hot Espresso"; // default
+      if (selectedEspresso.name.toLowerCase().includes("iced") || selectedEspresso.name.toLowerCase().includes("cold")) {
+        espressoType = "Cold Espresso";
+      }
+
+      const comboPrice = getComboPrice(categoryForPricing, espressoType);
+      const comboName = `${customization.customizedProduct.product?.name || customization.customizedProduct.name} + ${selectedEspresso.name}`;
+
+      console.log('Debug Mini Croffle combo pricing:', {
+        selectedCroffle: selectedCroffle?.name,
+        categoryForPricing,
+        espressoName: selectedEspresso.name,
+        espressoType,
+        comboPrice,
+        comboName
+      });
+
+      onAddToCart({
+        croffle: customization.customizedProduct,
+        espresso: selectedEspresso,
+        comboPrice,
+        comboName,
+        customization: customization.customizedProduct.customization
+      });
+
+      // Reset dialog (but keep selected category)
+      setStep("croffle");
+      setSelectedCroffle(null);
+      setSelectedEspresso(null);
+      setCustomizedCroffle(null);
+      setMiniCroffleCustomization(null);
+      onOpenChange(false);
+    } else {
+      // Original flow for Croffle Overload
+      setStep("espresso");
+    }
   };
 
   const handleEspressoSelect = (espresso: Product) => {
     const croffleToUse = customizedCroffle || selectedCroffle;
     if (!croffleToUse) return;
 
+    // Store selected espresso
+    setSelectedEspresso(espresso);
+
+    // Check if Mini Croffle needs customization after espresso selection
+    const isMiniCroffle = selectedCroffle?.name.toLowerCase().includes("mini");
+    
+    if (isMiniCroffle && !customizedCroffle) {
+      console.log("Mini Croffle with espresso selected, going to customize step");
+      setStep("customize");
+      return;
+    }
+
+    // For all other cases (regular croffle, overload after customization, mini after customization)
     // Debug category mapping
     const croffleCategory = categories.find(c => c.id === selectedCroffle?.category_id)?.name || "";
     
@@ -309,23 +373,39 @@ export function ComboSelectionDialog({
     setSelectedCroffle(null);
     setCustomizedCroffle(null);
     setMiniCroffleCustomization(null);
+    setSelectedEspresso(null);
     onOpenChange(false);
   };
 
   const handleBack = () => {
     if (step === "espresso") {
-      // If we came from customization, go back to customization
-      const needsCustomization = selectedCroffle?.name.toLowerCase().includes("mini") ||
-                                 selectedCroffle?.name.toLowerCase().includes("overload");
-      setStep(needsCustomization ? "customize" : "croffle");
+      // For Mini Croffle: go back to croffle selection (new flow)
+      // For Croffle Overload: go back to customization (original flow)
+      // For Regular: go back to croffle selection
+      const isMiniCroffle = selectedCroffle?.name.toLowerCase().includes("mini");
+      const isOverload = selectedCroffle?.name.toLowerCase().includes("overload");
+      
+      if (isMiniCroffle) {
+        setStep("croffle");
+      } else if (isOverload) {
+        setStep(customizedCroffle ? "customize" : "croffle");
+      } else {
+        setStep("croffle");
+      }
     } else if (step === "customize") {
-      setStep("croffle");
-    }
-    
-    if (step === "customize") {
-      setSelectedCroffle(null);
-      setCustomizedCroffle(null);
-      setMiniCroffleCustomization(null);
+      // For Mini Croffle: go back to espresso (new flow)
+      // For Croffle Overload: go back to croffle (original flow)
+      const isMiniCroffle = selectedCroffle?.name.toLowerCase().includes("mini");
+      
+      if (isMiniCroffle && selectedEspresso) {
+        setStep("espresso");
+      } else {
+        setStep("croffle");
+        setSelectedCroffle(null);
+        setSelectedEspresso(null);
+        setCustomizedCroffle(null);
+        setMiniCroffleCustomization(null);
+      }
     }
   };
 
@@ -334,6 +414,7 @@ export function ComboSelectionDialog({
   const handleClose = () => {
     setStep("croffle");
     setSelectedCroffle(null);
+    setSelectedEspresso(null);
     setCustomizedCroffle(null);
     setMiniCroffleCustomization(null);
     resetError();
