@@ -37,19 +37,33 @@ export const formatNumber = (num: number): string => {
 };
 
 export const formatDate = (date: string | Date): string => {
-  return new Date(date).toLocaleDateString('en-US', {
+  return new Date(date).toLocaleDateString('en-PH', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    timeZone: 'Asia/Manila',
   });
 };
 
 export const formatDateTime = (date: string | Date): string => {
-  return new Date(date).toLocaleString('en-US', {
+  return new Date(date).toLocaleString('en-PH', {
     year: 'numeric',
-    month: 'short',
+    month: 'short', 
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Asia/Manila',
+  });
+};
+
+export const formatDateTimeDetailed = (date: string | Date): string => {
+  return new Date(date).toLocaleString('en-PH', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric', 
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'Asia/Manila',
   });
 };

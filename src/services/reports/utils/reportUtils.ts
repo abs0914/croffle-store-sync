@@ -1,6 +1,6 @@
 
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatInPhilippinesTime, PHILIPPINES_TIMEZONE } from "@/utils/timezone";
 import { supabase } from "@/integrations/supabase/client";
 
 // Utility function to get store information
@@ -38,7 +38,7 @@ export function createSampleVATReport(from: string, to: string) {
   let receiptCounter = 1;
   
   while (currentDate <= toDate) {
-    const dateStr = format(currentDate, 'yyyy-MM-dd');
+    const dateStr = formatInPhilippinesTime(currentDate, 'yyyy-MM-dd');
     
     // Create 4-6 transactions for each day
     const txCount = 4 + Math.floor(Math.random() * 3);
@@ -49,7 +49,7 @@ export function createSampleVATReport(from: string, to: string) {
       
       transactions.push({
         date: dateStr,
-        receiptNumber: `R-${format(currentDate, 'yyyyMMdd')}-${String(receiptCounter).padStart(4, '0')}`,
+        receiptNumber: `R-${formatInPhilippinesTime(currentDate, 'yyyyMMdd')}-${String(receiptCounter).padStart(4, '0')}`,
         transactionType: Math.random() > 0.7 ? 'NON-CASH SALES' : 'CASH SALES',
         vatableSales,
         vatAmount,

@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { DailySalesSummary } from "@/types/reports";
 import { createSampleDailySummary, handleReportError } from "../utils/reportUtils";
+import { getDateRangeInPhilippines } from "@/utils/timezone";
 
 // Daily Sales Summary
 export async function fetchDailySalesSummary(
@@ -9,14 +10,17 @@ export async function fetchDailySalesSummary(
   date: string
 ): Promise<DailySalesSummary | null> {
   try {
-    // Get all transactions for this date
+    // Get date range in Philippines timezone and convert to UTC for database query
+    const dateRange = getDateRangeInPhilippines(date);
+    
+    // Get all transactions for this date using proper timezone conversion
     const { data: transactions, error: txError } = await supabase
       .from("transactions")
       .select("*")
       .eq("store_id", storeId)
       .eq("status", "completed")
-      .gte("created_at", `${date}T00:00:00`)
-      .lt("created_at", `${date}T23:59:59`);
+      .gte("created_at", dateRange.from)
+      .lt("created_at", dateRange.to);
     
     if (txError) throw txError;
     

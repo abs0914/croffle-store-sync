@@ -8,6 +8,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { nowInPhilippines } from "@/utils/timezone";
 
 export interface SimpleDeductionItem {
   productId: string;
@@ -73,7 +74,7 @@ export class SimplifiedInventoryAuditService {
         .update({ 
           stock_quantity: newQuantity,
           serving_ready_quantity: newQuantity, // Keep in sync
-          updated_at: new Date().toISOString()
+          updated_at: nowInPhilippines().toISOString()
         })
         .eq("id", inventoryStockId);
       
@@ -225,7 +226,7 @@ export class SimplifiedInventoryAuditService {
             reference_id: record.reference_id,
             notes: record.notes,
             created_by: 'system',
-            created_at: new Date().toISOString()
+            created_at: nowInPhilippines().toISOString()
           });
         
         if (!error) {

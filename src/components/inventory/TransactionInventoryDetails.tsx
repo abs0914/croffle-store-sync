@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { CheckCircle, XCircle, Clock } from 'lucide-react';
+import { formatDateTime } from '@/utils/format';
 
 interface AffectedInventoryItem {
   item_name: string;
@@ -147,7 +148,7 @@ export const TransactionInventoryDetails = ({ transactionId }: TransactionInvent
         <Separator />
         
         <p className="text-xs text-muted-foreground">
-          Sync completed on {new Date(syncData.created_at).toLocaleString()}
+          Sync completed on {formatDateTime(syncData.created_at)}
         </p>
       </CardContent>
     </Card>

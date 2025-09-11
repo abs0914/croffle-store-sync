@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Database, TestTube } from "lucide-react";
 import { DataSource } from "@/services/reports/utils/dataSourceUtils";
+import { formatDateTime } from "@/utils/format";
 
 interface DataSourceIndicatorProps {
   dataSource: DataSource;
@@ -78,7 +79,7 @@ export function DataSourceIndicator({
           </div>
           {generatedAt && (
             <div className="text-xs mt-1 opacity-75">
-              Generated: {new Date(generatedAt).toLocaleString()}
+              Generated: {formatDateTime(generatedAt)}
             </div>
           )}
           {debugInfo && isDevelopment && (

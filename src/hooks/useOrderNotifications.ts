@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth";
 import { useNavigate } from "react-router-dom";
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInPhilippinesTime, PHILIPPINES_TIMEZONE } from "@/utils/timezone";
 
 // In-app realtime notifications for order-related events
 export const useOrderNotifications = () => {
@@ -19,7 +19,7 @@ export const useOrderNotifications = () => {
     const fmt = (dateStr?: string | null) => {
       if (!dateStr) return "";
       try {
-        return formatInTimeZone(dateStr, "Asia/Manila", "MMM d, yyyy h:mm a");
+        return formatInPhilippinesTime(dateStr, "MMM d, yyyy h:mm a");
       } catch {
         return dateStr;
       }
