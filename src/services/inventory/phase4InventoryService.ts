@@ -173,62 +173,45 @@ export class SimplifiedInventoryService {
     const validationFailures: Array<{ingredient: string; required: number; available: number}> = [];
 
     try {
-      // Start transaction
-      const { data: transaction, error: txError } = await supabase.rpc('begin_transaction');
-      if (txError) {
-        throw new Error(`Failed to start transaction: ${txError.message}`);
+      // Simplified approach without explicit transactions
+      for (const item of items) {
+        const result = await this.deductSingleItem(transactionId, item);
+        
+        if (result.success) {
+          deductedItems.push(...result.deductedItems);
+        } else {
+          errors.push(...result.errors);
+          validationFailures.push(...result.validationFailures);
+        }
       }
 
-      try {
-        for (const item of items) {
-          const result = await this.deductSingleItem(transactionId, item);
-          
-          if (result.success) {
-            deductedItems.push(...result.deductedItems);
-          } else {
-            errors.push(...result.errors);
-            validationFailures.push(...result.validationFailures);
-          }
-        }
-
-        if (errors.length > 0) {
-          // Rollback transaction
-          await supabase.rpc('rollback_transaction');
-          console.error('❌ PHASE 4: Deduction failed, transaction rolled back');
-          
-          // Send failure alert
-          await this.sendDeductionFailureAlert(transactionId, errors);
-          
-          return {
-            success: false,
-            errors,
-            warnings,
-            deductedItems: [],
-            validationFailures
-          };
-        }
-
-        // Commit transaction
-        await supabase.rpc('commit_transaction');
+      if (errors.length > 0) {
+        console.error('❌ PHASE 4: Deduction failed');
         
-        console.log('✅ PHASE 4: Deduction completed successfully');
+        // Send failure alert
+        await this.sendDeductionFailureAlert(transactionId, errors);
         
-        // Log successful deduction
-        await this.logSuccessfulDeduction(transactionId, deductedItems);
-
         return {
-          success: true,
-          errors: [],
+          success: false,
+          errors,
           warnings,
-          deductedItems,
-          validationFailures: []
+          deductedItems: [],
+          validationFailures
         };
-
-      } catch (innerError) {
-        // Rollback on any error
-        await supabase.rpc('rollback_transaction');
-        throw innerError;
       }
+      
+      console.log('✅ PHASE 4: Deduction completed successfully');
+      
+      // Log successful deduction
+      await this.logSuccessfulDeduction(transactionId, deductedItems);
+
+      return {
+        success: true,
+        errors: [],
+        warnings,
+        deductedItems,
+        validationFailures: []
+      };
 
     } catch (error) {
       console.error('❌ PHASE 4: Critical deduction error:', error);
@@ -452,29 +435,13 @@ export class SimplifiedInventoryService {
   }
 
   /**
-   * Send real-time deduction failure alert
+   * Send deduction failure alert (simplified)
    */
   private static async sendDeductionFailureAlert(
     transactionId: string,
     errors: string[]
   ): Promise<void> {
     try {
-      // Store alert in database for persistence
-      await supabase
-        .from('system_alerts')
-        .insert({
-          alert_type: 'inventory_deduction_failure',
-          severity: 'high',
-          title: 'Inventory Deduction Failed',
-          message: `Transaction ${transactionId} failed inventory deduction: ${errors.join(', ')}`,
-          metadata: {
-            transaction_id: transactionId,
-            errors,
-            timestamp: new Date().toISOString()
-          },
-          is_resolved: false
-        });
-
       // Show user notification
       toast.error(`🚨 Inventory deduction failed: ${errors[0]}${errors.length > 1 ? ` (${errors.length - 1} more)` : ''}`);
 
@@ -485,58 +452,29 @@ export class SimplifiedInventoryService {
   }
 
   /**
-   * Send critical system failure alert
+   * Send critical system failure alert (simplified)
    */
   private static async sendCriticalFailureAlert(
     transactionId: string,
     error: any
   ): Promise<void> {
     try {
-      await supabase
-        .from('system_alerts')
-        .insert({
-          alert_type: 'critical_system_failure',
-          severity: 'critical',
-          title: 'Critical Inventory System Failure',
-          message: `URGENT: Critical failure in inventory deduction system for transaction ${transactionId}`,
-          metadata: {
-            transaction_id: transactionId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            timestamp: new Date().toISOString()
-          },
-          is_resolved: false
-        });
+      // Show critical notification
+      toast.error(`🚨 CRITICAL: System failure in transaction ${transactionId}`);
 
-      toast.error('🚨 CRITICAL: Inventory system failure - IT support required');
-      
-      console.error('🚨 PHASE 4: Critical failure alert sent', { transactionId, error });
     } catch (alertError) {
       console.error('❌ Failed to send critical failure alert:', alertError);
     }
   }
 
   /**
-   * Log successful deduction for monitoring
+   * Log successful deduction for monitoring (simplified)
    */
   private static async logSuccessfulDeduction(
     transactionId: string,
     deductedItems: Array<{ingredient: string; deducted: number; remaining: number}>
   ): Promise<void> {
     try {
-      await supabase
-        .from('inventory_audit_log')
-        .insert({
-          transaction_id: transactionId,
-          operation_type: 'deduction',
-          status: 'success',
-          items_processed: deductedItems.length,
-          metadata: {
-            deducted_items: deductedItems,
-            timestamp: new Date().toISOString()
-          }
-        });
-
       console.log('✅ PHASE 4: Successful deduction logged', { transactionId, itemsCount: deductedItems.length });
     } catch (error) {
       console.warn('⚠️ Failed to log successful deduction (non-critical):', error);

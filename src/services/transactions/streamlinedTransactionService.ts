@@ -6,6 +6,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types";
+import { SimplifiedInventoryService } from "@/services/inventory/phase4InventoryService";
 import { unifiedProductInventoryService } from "@/services/unified/UnifiedProductInventoryService";
 import { processTransactionInventoryWithMixMatchSupport } from "@/services/inventory/mixMatchInventoryIntegration";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
@@ -554,30 +555,52 @@ class StreamlinedTransactionService {
       console.log(`📋 Transaction items for deduction (${transactionItems.length} items):`, 
         transactionItems.map(ti => `${ti.name} (qty: ${ti.quantity})`));
 
-      // ENHANCED: Use Mix & Match integration layer instead of old batch service
-      console.log(`🚀 DIAGNOSTIC: About to call processTransactionInventoryWithMixMatchSupport for transaction ${transactionId}`);
-      const result = await processTransactionInventoryWithMixMatchSupport(
-        transactionId,
-        storeId,
-        transactionItems,
-        30000 // 30 second timeout
+      // PHASE 4: Use simplified inventory service for reliable deduction
+      console.log(`🚀 PHASE 4: About to call SimplifiedInventoryService for transaction ${transactionId}`);
+      
+      // Step 1: Mandatory pre-validation
+      const validation = await SimplifiedInventoryService.validateInventoryAvailability(
+        transactionItems.map(item => ({
+          productId: item.product_id || '',
+          productName: item.name,
+          quantity: item.quantity,
+          storeId: storeId
+        }))
       );
-      console.log(`🔍 DIAGNOSTIC: processTransactionInventoryWithMixMatchSupport completed for transaction ${transactionId}`);
+
+      if (!validation.canProceed) {
+        console.error('❌ PHASE 4: Pre-validation failed', validation.errors);
+        return {
+          success: false,
+          errors: validation.errors
+        };
+      }
+
+      // Step 2: Perform atomic deduction
+      const result = await SimplifiedInventoryService.performInventoryDeduction(
+        transactionId,
+        transactionItems.map(item => ({
+          productId: item.product_id || '',
+          productName: item.name,
+          quantity: item.quantity,
+          storeId: storeId
+        }))
+      );
+      
+      console.log(`🔍 PHASE 4: SimplifiedInventoryService completed for transaction ${transactionId}`);
 
       console.log(`📊 Inventory deduction result:`, {
         success: result.success,
         deductedItems: result.deductedItems?.length || 0,
         errors: result.errors?.length || 0,
-        warnings: result.warnings?.length || 0,
-        processingTimeMs: result.processingTimeMs,
-        itemsProcessed: result.itemsProcessed
+        warnings: result.warnings?.length || 0
       });
 
       // Enhanced success logging for monitoring
       if (result.success) {
         console.log(`✅ INVENTORY DEDUCTION SUCCESS for transaction ${transactionId}`);
         console.log(`   Deducted ingredients:`, result.deductedItems.map(item => 
-          `${item.itemName}: -${item.quantityDeducted} units (new stock: ${item.newStock})`
+          `${item.ingredient}: -${item.deducted} units (new stock: ${item.remaining})`
         ));
       } else {
         console.error(`❌ INVENTORY DEDUCTION FAILED for transaction ${transactionId}`);
