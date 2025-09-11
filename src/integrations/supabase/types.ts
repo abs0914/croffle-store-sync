@@ -2173,6 +2173,36 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_audit_log: {
+        Row: {
+          created_at: string
+          id: string
+          items_processed: number
+          metadata: Json | null
+          operation_type: string
+          status: string
+          transaction_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          items_processed?: number
+          metadata?: Json | null
+          operation_type: string
+          status: string
+          transaction_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          items_processed?: number
+          metadata?: Json | null
+          operation_type?: string
+          status?: string
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
       inventory_conversions: {
         Row: {
           commissary_item_id: string | null
@@ -6000,6 +6030,45 @@ export type Database = {
         }
         Relationships: []
       }
+      system_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          id: string
+          is_resolved: boolean
+          message: string
+          metadata: Json | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          id?: string
+          is_resolved?: boolean
+          message: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity: string
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          is_resolved?: boolean
+          message?: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          title?: string
+        }
+        Relationships: []
+      }
       system_reset_log: {
         Row: {
           created_by: string | null
@@ -6600,6 +6669,10 @@ export type Database = {
           template_unit: string
         }[]
       }
+      begin_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       bulk_update_product_categories: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -6667,6 +6740,10 @@ export type Database = {
       clear_successful_login_rate_limit: {
         Args: { p_identifier: string; p_identifier_type?: string }
         Returns: undefined
+      }
+      commit_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       complete_recipe_ingredients: {
         Args: Record<PropertyKey, never>
@@ -6983,6 +7060,14 @@ export type Database = {
           total_products: number
         }[]
       }
+      get_recipe_with_ingredients: {
+        Args: { p_product_id: string }
+        Returns: {
+          ingredient_name: string
+          quantity: number
+          unit: string
+        }[]
+      }
       get_sm_cron_jobs: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -7246,6 +7331,14 @@ export type Database = {
           details: string
           resolved_count: number
         }[]
+      }
+      rollback_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      run_inventory_system_health_check: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       safe_clear_recipe_data: {
         Args: Record<PropertyKey, never>

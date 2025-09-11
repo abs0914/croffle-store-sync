@@ -64,10 +64,25 @@ export class SimplifiedInventoryService {
       for (const item of items) {
         console.log(`🔍 PHASE 4: Processing item: ${item.productName} (${item.productId})`);
         
-        // FIXED: Use raw SQL query that actually works
-        const { data: recipeResults, error: recipeError } = await supabase.rpc('get_recipe_with_ingredients', {
-          p_product_id: item.productId
-        });
+        // FIXED: Use proper SQL query with explicit JOINs
+        const { data: recipeData, error: recipeError } = await supabase
+          .from('product_catalog')
+          .select(`
+            recipe_id,
+            recipes!inner (
+              id,
+              is_active,
+              recipe_ingredients (
+                ingredient_name,
+                quantity,
+                unit
+              )
+            )
+          `)
+          .eq('id', item.productId)
+          .eq('is_available', true)
+          .eq('recipes.is_active', true)
+          .not('recipe_id', 'is', null);
 
         if (recipeError) {
           console.error(`❌ PHASE 4: Recipe query failed for ${item.productName}:`, recipeError);
@@ -76,16 +91,23 @@ export class SimplifiedInventoryService {
           continue;
         }
 
-        if (!recipeResults || recipeResults.length === 0) {
+        if (!recipeData || recipeData.length === 0) {
           console.log(`⚠️ PHASE 4: No recipe found for ${item.productName}, checking as direct product`);
           await this.validateDirectProduct(item, errors, warnings, insufficientItems);
           continue;
         }
 
-        console.log(`✅ PHASE 4: Found recipe with ${recipeResults.length} ingredients for ${item.productName}`);
+        const recipe = recipeData[0].recipes;
+        if (!recipe?.recipe_ingredients || recipe.recipe_ingredients.length === 0) {
+          console.log(`⚠️ PHASE 4: Recipe has no ingredients for ${item.productName}, checking as direct product`);
+          await this.validateDirectProduct(item, errors, warnings, insufficientItems);
+          continue;
+        }
+
+        console.log(`✅ PHASE 4: Found recipe with ${recipe.recipe_ingredients.length} ingredients for ${item.productName}`);
         
         // Validate recipe ingredients
-        for (const ingredient of recipeResults) {
+        for (const ingredient of recipe.recipe_ingredients) {
           const requiredQuantity = ingredient.quantity * item.quantity;
           console.log(`🔍 PHASE 4: Validating ${ingredient.ingredient_name}: need ${requiredQuantity}`);
           
@@ -213,19 +235,15 @@ export class SimplifiedInventoryService {
         }
       }
 
+      // CRITICAL: Always fail the transaction on any inventory errors
       if (errors.length > 0) {
-        console.error('❌ PHASE 4: Deduction failed');
+        console.error('❌ PHASE 4: Deduction failed - throwing error to prevent transaction');
         
         // Send failure alert
         await this.sendDeductionFailureAlert(transactionId, errors);
         
-        return {
-          success: false,
-          errors,
-          warnings,
-          deductedItems: [],
-          validationFailures
-        };
+        // CRITICAL: Throw error to prevent transaction completion
+        throw new Error(`Inventory deduction failed: ${errors.join(', ')}`);
       }
       
       console.log('✅ PHASE 4: Deduction completed successfully');
@@ -247,13 +265,8 @@ export class SimplifiedInventoryService {
       // Send critical failure alert
       await this.sendCriticalFailureAlert(transactionId, error);
       
-      return {
-        success: false,
-        errors: [`Critical deduction error: ${error instanceof Error ? error.message : 'Unknown error'}`],
-        warnings,
-        deductedItems: [],
-        validationFailures
-      };
+      // CRITICAL: Re-throw to prevent transaction completion
+      throw error;
     }
   }
 
@@ -276,10 +289,25 @@ export class SimplifiedInventoryService {
     try {
       console.log(`🔄 PHASE 4: Deducting item: ${item.productName} (${item.productId})`);
       
-      // FIXED: Use raw SQL query that actually works
-      const { data: recipeResults, error: recipeError } = await supabase.rpc('get_recipe_with_ingredients', {
-        p_product_id: item.productId
-      });
+      // FIXED: Use proper SQL query with explicit JOINs
+      const { data: recipeData, error: recipeError } = await supabase
+        .from('product_catalog')
+        .select(`
+          recipe_id,
+          recipes!inner (
+            id,
+            is_active,
+            recipe_ingredients (
+              ingredient_name,
+              quantity,
+              unit
+            )
+          )
+        `)
+        .eq('id', item.productId)
+        .eq('is_available', true)
+        .eq('recipes.is_active', true)
+        .not('recipe_id', 'is', null);
 
       if (recipeError) {
         console.error(`❌ PHASE 4: Recipe query failed for ${item.productName}:`, recipeError);
@@ -287,16 +315,23 @@ export class SimplifiedInventoryService {
         return { success: false, errors, deductedItems, validationFailures };
       }
 
-      if (!recipeResults || recipeResults.length === 0) {
+      if (!recipeData || recipeData.length === 0) {
         console.log(`⚠️ PHASE 4: No recipe found for ${item.productName}, trying direct product`);
         const result = await this.deductDirectProduct(transactionId, item);
         return result;
       }
 
-      console.log(`✅ PHASE 4: Processing ${recipeResults.length} ingredients for ${item.productName}`);
+      const recipe = recipeData[0].recipes;
+      if (!recipe?.recipe_ingredients || recipe.recipe_ingredients.length === 0) {
+        console.log(`⚠️ PHASE 4: Recipe has no ingredients for ${item.productName}, trying direct product`);
+        const result = await this.deductDirectProduct(transactionId, item);
+        return result;
+      }
+
+      console.log(`✅ PHASE 4: Processing ${recipe.recipe_ingredients.length} ingredients for ${item.productName}`);
       
       // Process recipe ingredients
-      for (const ingredient of recipeResults) {
+      for (const ingredient of recipe.recipe_ingredients) {
 
         const deductionAmount = ingredient.quantity * item.quantity;
         console.log(`🔄 PHASE 4: Deducting ${ingredient.ingredient_name}: ${deductionAmount}`);
