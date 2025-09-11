@@ -1307,6 +1307,147 @@ export type Database = {
           },
         ]
       }
+      deleted_transactions_backup: {
+        Row: {
+          amount_tendered: number | null
+          assigned_to: string | null
+          cashier_name: string | null
+          change: number | null
+          created_at: string | null
+          customer_id: string | null
+          deletion_reason: string | null
+          deletion_timestamp: string | null
+          delivery_order_number: string | null
+          delivery_platform: string | null
+          discount: number | null
+          discount_amount: number | null
+          discount_details: Json | null
+          discount_id: string | null
+          discount_id_number: string | null
+          discount_type: string | null
+          estimated_completion_time: string | null
+          id: string | null
+          items: Json | null
+          order_notes: string | null
+          order_status: string | null
+          order_type: string | null
+          payment_details: Json | null
+          payment_method: string | null
+          promo_details: string | null
+          promo_reference: string | null
+          pwd_discount: number | null
+          receipt_number: string | null
+          senior_citizen_discount: number | null
+          senior_discount: number | null
+          senior_discounts: Json | null
+          sequence_number: number | null
+          shift_id: string | null
+          status: string | null
+          store_id: string | null
+          subtotal: number | null
+          tax: number | null
+          terminal_id: string | null
+          total: number | null
+          user_id: string | null
+          vat_amount: number | null
+          vat_exempt_sales: number | null
+          vat_sales: number | null
+          zero_rated_sales: number | null
+        }
+        Insert: {
+          amount_tendered?: number | null
+          assigned_to?: string | null
+          cashier_name?: string | null
+          change?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          deletion_reason?: string | null
+          deletion_timestamp?: string | null
+          delivery_order_number?: string | null
+          delivery_platform?: string | null
+          discount?: number | null
+          discount_amount?: number | null
+          discount_details?: Json | null
+          discount_id?: string | null
+          discount_id_number?: string | null
+          discount_type?: string | null
+          estimated_completion_time?: string | null
+          id?: string | null
+          items?: Json | null
+          order_notes?: string | null
+          order_status?: string | null
+          order_type?: string | null
+          payment_details?: Json | null
+          payment_method?: string | null
+          promo_details?: string | null
+          promo_reference?: string | null
+          pwd_discount?: number | null
+          receipt_number?: string | null
+          senior_citizen_discount?: number | null
+          senior_discount?: number | null
+          senior_discounts?: Json | null
+          sequence_number?: number | null
+          shift_id?: string | null
+          status?: string | null
+          store_id?: string | null
+          subtotal?: number | null
+          tax?: number | null
+          terminal_id?: string | null
+          total?: number | null
+          user_id?: string | null
+          vat_amount?: number | null
+          vat_exempt_sales?: number | null
+          vat_sales?: number | null
+          zero_rated_sales?: number | null
+        }
+        Update: {
+          amount_tendered?: number | null
+          assigned_to?: string | null
+          cashier_name?: string | null
+          change?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          deletion_reason?: string | null
+          deletion_timestamp?: string | null
+          delivery_order_number?: string | null
+          delivery_platform?: string | null
+          discount?: number | null
+          discount_amount?: number | null
+          discount_details?: Json | null
+          discount_id?: string | null
+          discount_id_number?: string | null
+          discount_type?: string | null
+          estimated_completion_time?: string | null
+          id?: string | null
+          items?: Json | null
+          order_notes?: string | null
+          order_status?: string | null
+          order_type?: string | null
+          payment_details?: Json | null
+          payment_method?: string | null
+          promo_details?: string | null
+          promo_reference?: string | null
+          pwd_discount?: number | null
+          receipt_number?: string | null
+          senior_citizen_discount?: number | null
+          senior_discount?: number | null
+          senior_discounts?: Json | null
+          sequence_number?: number | null
+          shift_id?: string | null
+          status?: string | null
+          store_id?: string | null
+          subtotal?: number | null
+          tax?: number | null
+          terminal_id?: string | null
+          total?: number | null
+          user_id?: string | null
+          vat_amount?: number | null
+          vat_exempt_sales?: number | null
+          vat_sales?: number | null
+          zero_rated_sales?: number | null
+        }
+        Relationships: []
+      }
       delivery_orders: {
         Row: {
           actual_delivery_date: string | null
