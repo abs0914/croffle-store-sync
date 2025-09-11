@@ -339,59 +339,62 @@ export async function deductInventoryForTransaction(
 
         console.log(`    ✅ Updated ${ingredient.ingredient_name}: ${available} → ${newQuantity} (${fieldToUpdate})`);
 
-        // 5) Movement records (primary: inventory_transactions, fallback: inventory_movements)
+        // 5) Create inventory movement record (PRIMARY audit trail)
         try {
           const userRes = await supabase.auth.getUser();
-          const createdBy = userRes.data.user?.id || userRes.data.user?.email || 'system';
+          const createdBy = userRes.data.user?.id || 'system';
 
-          const insertPayload = {
-            store_id: storeId,
-            product_id: inventory.id,
-            transaction_type: 'sale',
-            quantity: -finalRequired,
-            previous_quantity: available,
-            new_quantity: newQuantity,
-            reference_id: transactionId,
-            notes: `Automatic deduction for transaction ${transactionId}`,
-            created_by: createdBy,
-            created_at: new Date().toISOString()
-          } as const;
+          // ALWAYS create inventory_movements record first (primary audit trail)
+          const { error: movementErr } = await supabase
+            .from('inventory_movements')
+            .insert({
+              inventory_stock_id: inventory.id,
+              movement_type: 'sale',
+              quantity_change: -finalRequired,
+              previous_quantity: available,
+              new_quantity: newQuantity,
+              reference_type: 'transaction',
+              reference_id: transactionId,
+              notes: `Product sale: ${ingredient.ingredient_name} (${item.name})`,
+              created_by: createdBy,
+              created_at: new Date().toISOString()
+            });
 
-          let movementError: any = null;
+          if (movementErr) {
+            console.warn('⚠️ Primary inventory_movements insert failed:', movementErr);
+            result.warnings.push(`Movement record failed for ${ingredient.ingredient_name}: ${movementErr.message}`);
+          } else {
+            console.log(`✅ Created inventory movement record for ${ingredient.ingredient_name}`);
+          }
+
+          // OPTIONAL: Create inventory_transactions record (secondary audit for product tracking)
           try {
-            const { error } = await supabase.from('inventory_transactions').insert(insertPayload);
-            movementError = error;
+            const { error: transactionErr } = await supabase
+              .from('inventory_transactions')
+              .insert({
+                store_id: storeId,
+                product_id: inventory.id,
+                transaction_type: 'sale',
+                quantity: -finalRequired,
+                previous_quantity: available,
+                new_quantity: newQuantity,
+                reference_id: transactionId,
+                notes: `Automatic deduction for transaction ${transactionId}`,
+                created_by: createdBy,
+                created_at: new Date().toISOString()
+              });
+
+            if (transactionErr) {
+              console.warn('⚠️ Secondary inventory_transactions insert failed (non-critical):', transactionErr);
+              // Don't add to warnings - this is secondary audit only
+            }
           } catch (e) {
-            movementError = e;
+            console.warn('⚠️ inventory_transactions threw (non-critical):', e);
           }
 
-          if (movementError) {
-            console.warn('⚠️ inventory_transactions insert failed, trying inventory_movements fallback:', movementError);
-            try {
-              const { error: mvErr } = await supabase
-                .from('inventory_movements')
-                .insert({
-                  inventory_stock_id: inventory.id,
-                  movement_type: 'sale',
-                  quantity_change: -finalRequired,
-                  previous_quantity: available,
-                  new_quantity: newQuantity,
-                  reference_type: 'transaction',
-                  reference_id: transactionId,
-                  notes: `Product sale: ${ingredient.ingredient_name}`,
-                  created_by: userRes.data.user?.id,
-                  created_at: new Date().toISOString()
-                });
-              if (mvErr) {
-                result.warnings.push(`Movement record failed in both tables for ${ingredient.ingredient_name}: ${mvErr.message}`);
-              }
-            } catch (fallbackErr) {
-              result.warnings.push(`Movement record fallback threw for ${ingredient.ingredient_name}: ${fallbackErr}`);
-            }
-          }
-        } catch (movementError) {
-          console.warn('⚠️ Movement insert threw:', movementError);
-          result.warnings.push(`Movement record failed for ${ingredient.ingredient_name}: ${movementError}`);
+        } catch (error) {
+          console.warn('⚠️ Movement logging threw:', error);
+          result.warnings.push(`Movement record failed for ${ingredient.ingredient_name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
     }
