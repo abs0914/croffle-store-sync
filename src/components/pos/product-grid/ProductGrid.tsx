@@ -190,14 +190,13 @@ export default function ProductGrid({
     const productName = product.name.toLowerCase().trim();
     const categoryName = (getCategoryName(product.category_id) || '').toLowerCase().trim();
 
-    // Special handling for Mini Croffle in Mix & Match category
+    // Special handling for Mini Croffle in Mix & Match category - treat as regular product
     const isMiniCroffle = productName.includes('mini croffle');
     const isViewingMixMatch = activeCategory.toLowerCase().includes('mix') && activeCategory.toLowerCase().includes('match');
     
     if (isMiniCroffle && isViewingMixMatch) {
-      console.log("ProductGrid: Mini Croffle clicked from Mix & Match - showing simple combo dialog");
-      setSelectedMiniCroffle(product);
-      setIsSimpleComboDialogOpen(true);
+      console.log("ProductGrid: Mini Croffle clicked from Mix & Match - adding as regular product");
+      addItemToCart(product);
       return;
     }
 
