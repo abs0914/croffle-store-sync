@@ -16,7 +16,6 @@ import { StockTransferModal } from '@/pages/Inventory/components/inventoryStock/
 import { Input } from '@/components/ui/input';
 import { Search, Download, Upload } from 'lucide-react';
 import { InventoryDeductionDiagnostic } from '@/components/debug/InventoryDeductionDiagnostic';
-import { EmergencyRecoveryPanel } from '@/components/recovery/EmergencyRecoveryPanel';
 import { Phase4MonitoringDashboard } from '@/components/monitoring/Phase4MonitoringDashboard';
 
 export default function Inventory() {
@@ -236,8 +235,6 @@ export default function Inventory() {
       {/* Phase 4: Real-time Monitoring Dashboard */}
       <Phase4MonitoringDashboard />
 
-      {/* Emergency Recovery Panel */}
-      <EmergencyRecoveryPanel storeId={currentStore?.id || ""} />
       
       {/* Emergency Diagnostic Component */}
       <InventoryDeductionDiagnostic />
