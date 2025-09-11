@@ -7,8 +7,20 @@ import { SimplifiedInventoryService } from "./phase4InventoryService";
 import { TransactionInventoryIntegration } from "../transactions/transactionInventoryIntegration";
 
 /**
- * Test data from the failed transaction #20250911-8198-142040
+ * REAL TRANSACTION DATA from failed transaction #20250911-3282-143958
+ * Transaction ID: 6f2fecba-a102-4ea4-ae68-15aaa87ce8a4
+ * Store: d7c47e6b-f20a-4543-a6bd-000398f72df5
+ * ISSUE: NO inventory movements were recorded for this transaction
  */
+const REAL_FAILED_TRANSACTION_ITEMS = [
+  { productId: 'c46d62a1-3e60-4b1a-b5e1-ef26ba56d9b5', productName: 'Choco Nut Croffle', quantity: 1, storeId: 'd7c47e6b-f20a-4543-a6bd-000398f72df5' },
+  { productId: 'ea3e2298-c799-4f51-9557-fb8a307af246', productName: 'Matcha Croffle', quantity: 1, storeId: 'd7c47e6b-f20a-4543-a6bd-000398f72df5' },
+  { productId: '6bfe6f23-8d81-4fa9-96bd-017a68c5546f', productName: 'Nutella Croffle', quantity: 1, storeId: 'd7c47e6b-f20a-4543-a6bd-000398f72df5' },
+  { productId: '8b6d7280-bb00-44c8-ab81-1468639228ca', productName: 'Blueberry Croffle', quantity: 1, storeId: 'd7c47e6b-f20a-4543-a6bd-000398f72df5' },
+  { productId: 'dc87d6c4-5739-4834-9aeb-4069c2730f61', productName: 'Strawberry Croffle', quantity: 1, storeId: 'd7c47e6b-f20a-4543-a6bd-000398f72df5' }
+];
+
+// Keep the original test data for comparison
 const FAILED_TRANSACTION_ITEMS = [
   { productId: 'a37947b5-eadf-4d09-a23f-55a2414389ab', productName: 'Bottled Water', quantity: 1, storeId: '9c35a9b4-b4f2-415b-8c54-26dcf57b7c22' },
   { productId: '48df620d-ea20-4198-98ff-5d2f94ffc775', productName: 'Cafe Latte Iced', quantity: 1, storeId: '9c35a9b4-b4f2-415b-8c54-26dcf57b7c22' },
@@ -24,11 +36,47 @@ const FAILED_TRANSACTION_ITEMS = [
 export class Phase4InventoryTester {
   
   /**
-   * Test the complete inventory flow with the exact data from the failed transaction
+   * Test with the REAL failed transaction data
+   */
+  static async testRealFailedTransaction(): Promise<void> {
+    console.log('🧪 PHASE 4 TEST: Testing REAL failed transaction #20250911-3282-143958');
+    console.log('🧪 PHASE 4 TEST: Transaction ID: 6f2fecba-a102-4ea4-ae68-15aaa87ce8a4');
+    console.log('🧪 PHASE 4 TEST: Store: d7c47e6b-f20a-4543-a6bd-000398f72df5');
+    
+    const testTransactionId = `real_test_${Date.now()}`;
+    
+    try {
+      // Step 1: Test Pre-Transaction Validation
+      console.log('📋 PHASE 4 TEST: Step 1 - Pre-transaction validation');
+      await TransactionInventoryIntegration.validateTransactionInventory(
+        testTransactionId,
+        REAL_FAILED_TRANSACTION_ITEMS
+      );
+      console.log('✅ PHASE 4 TEST: Pre-transaction validation passed');
+      
+      // Step 2: Test Inventory Deduction
+      console.log('🔄 PHASE 4 TEST: Step 2 - Inventory deduction');
+      await TransactionInventoryIntegration.processTransactionInventory(
+        testTransactionId,
+        REAL_FAILED_TRANSACTION_ITEMS
+      );
+      console.log('✅ PHASE 4 TEST: Inventory deduction completed successfully');
+      
+      console.log('🎉 PHASE 4 TEST: REAL TRANSACTION TEST PASSED - System is working correctly!');
+      return;
+      
+    } catch (error) {
+      console.error('❌ PHASE 4 TEST: Real transaction test failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Test the complete inventory flow with the original test data
    */
   static async testInventoryDeductionFlow(): Promise<void> {
     console.log('🧪 PHASE 4 TEST: Starting inventory deduction flow test');
-    console.log('🧪 PHASE 4 TEST: Using data from failed transaction #20250911-8198-142040');
+    console.log('🧪 PHASE 4 TEST: Using original test data');
     
     const testTransactionId = `test_${Date.now()}`;
     
@@ -58,6 +106,38 @@ export class Phase4InventoryTester {
     }
   }
   
+  /**
+   * Test validation with REAL transaction data
+   */
+  static async testRealValidationOnly(): Promise<any> {
+    console.log('🔍 PHASE 4 TEST: Testing REAL transaction validation only');
+    
+    try {
+      const result = await SimplifiedInventoryService.validateInventoryAvailability(REAL_FAILED_TRANSACTION_ITEMS);
+      
+      console.log('📊 PHASE 4 TEST: Real validation result:', {
+        canProceed: result.canProceed,
+        errors: result.errors.length,
+        warnings: result.warnings.length,
+        insufficientItems: result.insufficientItems.length
+      });
+      
+      if (result.errors.length > 0) {
+        console.error('❌ PHASE 4 TEST: Real validation errors:', result.errors);
+      }
+      
+      if (result.warnings.length > 0) {
+        console.warn('⚠️ PHASE 4 TEST: Real validation warnings:', result.warnings);
+      }
+      
+      return result;
+      
+    } catch (error) {
+      console.error('❌ PHASE 4 TEST: Real validation test failed:', error);
+      throw error;
+    }
+  }
+
   /**
    * Test individual validation for debugging
    */
@@ -131,7 +211,9 @@ if (typeof window !== 'undefined') {
   (window as any).Phase4InventoryTester = Phase4InventoryTester;
   
   console.log('🧪 PHASE 4 TEST: Test functions available in console:');
-  console.log('   Phase4InventoryTester.testInventoryDeductionFlow()');
-  console.log('   Phase4InventoryTester.testValidationOnly()');
-  console.log('   Phase4InventoryTester.testDeductionOnly()');
+  console.log('   Phase4InventoryTester.testRealFailedTransaction() - TEST THE ACTUAL FAILED TRANSACTION');
+  console.log('   Phase4InventoryTester.testRealValidationOnly() - Validate the real transaction data');
+  console.log('   Phase4InventoryTester.testInventoryDeductionFlow() - Original test');
+  console.log('   Phase4InventoryTester.testValidationOnly() - Original validation');
+  console.log('   Phase4InventoryTester.testDeductionOnly() - Original deduction');
 }
