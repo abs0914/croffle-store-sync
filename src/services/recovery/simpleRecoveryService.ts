@@ -175,20 +175,28 @@ const recoverSingleTransaction = async (
         continue;
       }
 
-      // Check if this is a recipe-based product
-      const { data: recipeData } = await supabase
-        .from('recipes')
+      // FIXED: Check if this is a recipe-based product through product catalog
+      const { data: productCatalog } = await supabase
+        .from('product_catalog')
         .select(`
-          id,
-          recipe_ingredients (
-            ingredient_name,
-            quantity,
-            unit
+          recipe_id,
+          recipes!inner (
+            id,
+            recipe_ingredients (
+              ingredient_name,
+              quantity,
+              unit
+            )
           )
         `)
-        .eq('product_id', item.product_id)
-        .eq('is_active', true)
+        .eq('id', item.product_id)
+        .eq('store_id', transaction.store_id)
+        .eq('is_available', true)
+        .eq('recipes.is_active', true)
+        .not('recipe_id', 'is', null)
         .maybeSingle();
+
+      const recipeData = productCatalog?.recipes;
 
       if (recipeData?.recipe_ingredients) {
         // Process recipe ingredients

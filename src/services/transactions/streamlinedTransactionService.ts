@@ -558,16 +558,43 @@ class StreamlinedTransactionService {
       // PHASE 4: Use simplified inventory service for reliable deduction
       console.log(`🚀 PHASE 4: About to call SimplifiedInventoryService for transaction ${transactionId}`);
       
-      // Step 1: Mandatory pre-validation
-      const validation = await SimplifiedInventoryService.validateInventoryAvailability(
-        transactionItems.map(item => ({
-          productId: item.product_id || '',
-          productName: item.name,
-          quantity: item.quantity,
-          storeId: storeId
-        }))
-      );
-
+      // CRITICAL FIX: Proper product ID mapping with fallback lookup
+      const phase4Items = [];
+      for (const item of transactionItems) {
+        let productId = item.product_id;
+        
+        // If no product_id, look it up by name and store
+        if (!productId) {
+          console.log(`🔍 Looking up product ID for: ${item.name}`);
+          const { data: productLookup } = await supabase
+            .from('product_catalog')
+            .select('id')
+            .eq('product_name', item.name)
+            .eq('store_id', storeId)
+            .eq('is_available', true)
+            .maybeSingle();
+          
+          productId = productLookup?.id;
+          console.log(`📍 Found product ID for ${item.name}: ${productId}`);
+        }
+        
+        if (productId) {
+          phase4Items.push({
+            productId: productId,
+            productName: item.name,
+            quantity: item.quantity,
+            storeId: storeId
+          });
+        } else {
+          console.warn(`⚠️ No product ID found for: ${item.name}`);
+        }
+      }
+      
+      console.log(`📦 Phase 4 items prepared:`, phase4Items.map(i => `${i.productName} (${i.productId})`));
+      
+      // Step 1: Mandatory pre-validation with correct IDs
+      const validation = await SimplifiedInventoryService.validateInventoryAvailability(phase4Items);
+      
       if (!validation.canProceed) {
         console.error('❌ PHASE 4: Pre-validation failed', validation.errors);
         return {
@@ -576,16 +603,8 @@ class StreamlinedTransactionService {
         };
       }
 
-      // Step 2: Perform atomic deduction
-      const result = await SimplifiedInventoryService.performInventoryDeduction(
-        transactionId,
-        transactionItems.map(item => ({
-          productId: item.product_id || '',
-          productName: item.name,
-          quantity: item.quantity,
-          storeId: storeId
-        }))
-      );
+      // Step 2: Perform deduction with correct IDs  
+      const result = await SimplifiedInventoryService.performInventoryDeduction(transactionId, phase4Items);
       
       console.log(`🔍 PHASE 4: SimplifiedInventoryService completed for transaction ${transactionId}`);
 

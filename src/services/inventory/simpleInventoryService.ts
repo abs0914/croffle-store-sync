@@ -203,24 +203,31 @@ export const validateInventoryAvailability = async (
   const insufficientItems: string[] = [];
 
   for (const item of items) {
-    // Get recipe for this product
-    const { data: recipe } = await supabase
-      .from('recipes')
+    // FIXED: Get recipe through product catalog relationship (recipes don't have product_id)
+    const { data: productCatalog } = await supabase
+      .from('product_catalog')
       .select(`
-        name,
-        recipe_ingredients (
-          ingredient_name,
-          quantity,
-          inventory_stock (
-            item,
-            stock_quantity
+        recipe_id,
+        recipes!inner (
+          name,
+          recipe_ingredients (
+            ingredient_name,
+            quantity,
+            inventory_stock (
+              item,
+              stock_quantity
+            )
           )
         )
       `)
-      .eq('product_id', item.productId)
+      .eq('id', item.productId)
       .eq('store_id', storeId)
-      .eq('is_active', true)
+      .eq('is_available', true)
+      .eq('recipes.is_active', true)
+      .not('recipe_id', 'is', null)
       .maybeSingle();
+
+    const recipe = productCatalog?.recipes;
 
     if (!recipe?.recipe_ingredients) continue;
 

@@ -440,27 +440,34 @@ class UnifiedProductInventoryService {
     }>;
   }> {
     try {
-      // Get recipe for this product
-      const { data: recipe, error: recipeError } = await supabase
-        .from('recipes')
+      // FIXED: Get recipe through product catalog relationship (recipes don't have product_id)
+      const { data: productCatalog, error: recipeError } = await supabase
+        .from('product_catalog')
         .select(`
-          id,
-          name,
-           recipe_ingredients (
-             ingredient_name,
-             quantity,
-             inventory_stock_id,
-             inventory_stock (
-               id,
-               item,
-               stock_quantity
-             )
-           )
+          recipe_id,
+          recipes!inner (
+            id,
+            name,
+            recipe_ingredients (
+              ingredient_name,
+              quantity,
+              inventory_stock_id,
+              inventory_stock (
+                id,
+                item,
+                stock_quantity
+              )
+            )
+          )
         `)
-        .eq('product_id', productId)
+        .eq('id', productId)
         .eq('store_id', storeId)
-        .eq('is_active', true)
+        .eq('is_available', true)
+        .eq('recipes.is_active', true)
+        .not('recipe_id', 'is', null)
         .maybeSingle();
+
+      const recipe = productCatalog?.recipes;
 
       if (recipeError || !recipe) {
         // No recipe found - check if product is direct sale
