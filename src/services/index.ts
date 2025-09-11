@@ -5,8 +5,10 @@
 export * from './transactions/streamlinedTransactionService';
 export * from './transactions/transactionItemsService';
 
-// SIMPLIFIED TRANSACTION INVENTORY INTEGRATION
+// ENHANCED TRANSACTION INVENTORY INTEGRATION (Mix & Match Support)
 export * from './transactions/simplifiedTransactionInventoryIntegration';
+export * from './inventory/smartMixMatchDeductionService';
+export * from './inventory/enhancedInventoryDeductionService';
 
 // Optimized Inventory Services (BATCH PROCESSING)
 export * from './inventory/batchInventoryService';
@@ -25,17 +27,24 @@ export * from './recipes/missingRecipeHandler';
 /**
  * ARCHITECTURE CLEANUP COMPLETED ✅
  * 
- * NEW: SIMPLIFIED INVENTORY AUDIT SYSTEM
+ * NEW: ENHANCED INVENTORY DEDUCTION SYSTEM WITH MIX & MATCH SUPPORT
+ * - Smart detection of Mix & Match products (Croffle Overload, Mini Croffle)
+ * - Intelligent ingredient categorization (base, choice, packaging)
+ * - Only deducts base + selected choices + packaging (not ALL ingredients)
+ * - Automatic fallback to regular deduction for standard products
+ * - Comprehensive logging and debug information
+ * 
+ * PREVIOUS: SIMPLIFIED INVENTORY AUDIT SYSTEM
  * - inventory_movements: SINGLE audit table (all inventory changes)
  * - Simple deductWithAudit method for all deductions
  * - Non-blocking audit logging with retry mechanism
  * - Maintains feature compatibility while simplifying architecture
  * 
  * USAGE:
- * - Use SimplifiedInventoryAuditService.deductWithAudit() for all deductions
- * - Use SimplifiedInventoryAuditService.deductTransactionItems() for POS transactions
+ * - Use SimplifiedTransactionInventoryIntegration.processTransactionInventory() for ALL transactions
+ * - System automatically detects Mix & Match products and uses smart deduction
+ * - Regular products continue to use standard deduction logic
  * - All audit records go to inventory_movements only
- * - inventory_transactions table is deprecated for new operations
  * 
- * RESULT: Clean, reliable, single-table audit system
+ * RESULT: Accurate inventory deduction for Mix & Match products, eliminating over-deduction issues
  */

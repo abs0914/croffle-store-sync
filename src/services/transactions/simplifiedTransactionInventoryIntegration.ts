@@ -5,6 +5,7 @@
  */
 
 import { SimplifiedInventoryAuditService, SimpleDeductionItem } from "@/services/inventory/simplifiedInventoryAuditService";
+import { deductInventoryForTransactionEnhanced } from "@/services/inventory/enhancedInventoryDeductionService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -96,43 +97,53 @@ export class SimplifiedTransactionInventoryIntegration {
   
   /**
    * Process inventory deduction after successful payment
-   * Uses simplified audit system
+   * Uses enhanced deduction system that handles Mix & Match products intelligently
    */
   static async processTransactionInventory(
     transactionId: string,
     items: TransactionItem[]
   ): Promise<{ success: boolean; errors: string[]; warnings: string[] }> {
-    console.log(`🔄 SIMPLE PROCESSING: Deducting inventory for transaction ${transactionId}`);
+    console.log(`🔄 ENHANCED PROCESSING: Deducting inventory for transaction ${transactionId}`);
     
     try {
-      // Convert to simple deduction items
-      const deductionItems: SimpleDeductionItem[] = items.map(item => ({
+      // Use enhanced deduction service that auto-detects Mix & Match products
+      const enhancedItems = items.map(item => ({
         productId: item.productId,
         productName: item.productName,
-        quantity: item.quantity,
-        storeId: item.storeId
+        quantity: item.quantity
       }));
       
-      // Use simplified service to process deductions
-      const result = await SimplifiedInventoryAuditService.deductTransactionItems(
+      // Get store ID from first item (all items should be from same store)
+      const storeId = items[0]?.storeId;
+      if (!storeId) {
+        throw new Error('Store ID is required for inventory deduction');
+      }
+      
+      const result = await deductInventoryForTransactionEnhanced(
         transactionId,
-        deductionItems
+        storeId,
+        enhancedItems
       );
       
       if (result.success) {
-        console.log(`✅ SIMPLE PROCESSING: Transaction inventory processed successfully`);
-        if (result.warnings.length > 0) {
-          console.warn(`⚠️ SIMPLE PROCESSING: ${result.warnings.length} warnings:`, result.warnings);
+        console.log(`✅ ENHANCED PROCESSING: Transaction inventory processed successfully`);
+        console.log(`📊 ENHANCED PROCESSING: Deducted ${result.deductedItems.length} items${result.isMixMatch ? ' (Mix & Match detected)' : ''}`);
+        if (result.skippedItems && result.skippedItems.length > 0) {
+          console.log(`⚠️ ENHANCED PROCESSING: Skipped ${result.skippedItems.length} items: ${result.skippedItems.join(', ')}`);
         }
       } else {
-        console.error(`❌ SIMPLE PROCESSING: Transaction inventory failed:`, result.errors);
+        console.error(`❌ ENHANCED PROCESSING: Transaction inventory failed:`, result.errors);
         toast.error(`Inventory deduction failed: ${result.errors[0]}`);
       }
       
-      return result;
+      return { 
+        success: result.success, 
+        errors: result.errors, 
+        warnings: result.skippedItems || [] 
+      };
       
     } catch (error) {
-      console.error('❌ SIMPLE PROCESSING: Processing failed:', error);
+      console.error('❌ ENHANCED PROCESSING: Processing failed:', error);
       const errorMsg = error instanceof Error ? error.message : 'Processing failed';
       return { 
         success: false, 
