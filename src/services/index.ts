@@ -5,11 +5,17 @@
 export * from './transactions/streamlinedTransactionService';
 export * from './transactions/transactionItemsService';
 
+// SIMPLIFIED TRANSACTION INVENTORY INTEGRATION
+export * from './transactions/simplifiedTransactionInventoryIntegration';
+
 // Optimized Inventory Services (BATCH PROCESSING)
 export * from './inventory/batchInventoryService';
 export * from './inventory/simpleInventoryService';
 
-// UNIFIED INVENTORY AUDIT SYSTEM (STANDARDIZED)
+// SIMPLIFIED INVENTORY AUDIT SYSTEM (SINGLE TABLE)
+export * from './inventory/simplifiedInventoryAuditService';
+
+// LEGACY UNIFIED INVENTORY AUDIT SYSTEM (STANDARDIZED)
 export * from './inventory/unifiedInventoryAuditService';
 export * from './inventory/standardizedInventoryMigration';
 
@@ -19,17 +25,17 @@ export * from './recipes/missingRecipeHandler';
 /**
  * ARCHITECTURE CLEANUP COMPLETED ✅
  * 
- * NEW: UNIFIED INVENTORY AUDIT SYSTEM
- * - inventory_movements: Primary audit table (raw inventory changes)
- * - inventory_transactions: Secondary audit table (product-specific operations)
- * - Consistent audit trails with proper reference tracking
- * - Migration layer for backward compatibility
+ * NEW: SIMPLIFIED INVENTORY AUDIT SYSTEM
+ * - inventory_movements: SINGLE audit table (all inventory changes)
+ * - Simple deductWithAudit method for all deductions
+ * - Non-blocking audit logging with retry mechanism
+ * - Maintains feature compatibility while simplifying architecture
  * 
  * USAGE:
- * - Use unifiedInventoryAuditService for all new inventory operations
- * - Existing services automatically use migration layer
- * - inventory_movements = primary audit trail
- * - inventory_transactions = product sales/returns only
+ * - Use SimplifiedInventoryAuditService.deductWithAudit() for all deductions
+ * - Use SimplifiedInventoryAuditService.deductTransactionItems() for POS transactions
+ * - All audit records go to inventory_movements only
+ * - inventory_transactions table is deprecated for new operations
  * 
- * RESULT: Standardized, reliable inventory audit system
+ * RESULT: Clean, reliable, single-table audit system
  */
