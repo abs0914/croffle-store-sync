@@ -54,6 +54,7 @@ export class SimplifiedInventoryService {
     items: InventoryDeductionItem[]
   ): Promise<InventoryValidationResult> {
     console.log('🔍 PHASE 4: Starting mandatory inventory validation');
+    console.log('🔍 PHASE 4: Validating items:', items.map(i => ({ id: i.productId, name: i.productName, qty: i.quantity })));
     
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -61,58 +62,35 @@ export class SimplifiedInventoryService {
     
     try {
       for (const item of items) {
-        // Get recipe through product catalog relationship with proper JOIN
-        const { data: productCatalog } = await supabase
-          .from('product_catalog')
-          .select(`
-            recipe_id,
-            recipes (
-              id,
-              recipe_ingredients (
-                ingredient_name,
-                quantity,
-                unit
-              )
-            )
-          `)
-          .eq('id', item.productId)
-          .eq('is_available', true)
-          .not('recipe_id', 'is', null)
-          .maybeSingle();
+        console.log(`🔍 PHASE 4: Processing item: ${item.productName} (${item.productId})`);
+        
+        // FIXED: Use raw SQL query that actually works
+        const { data: recipeResults, error: recipeError } = await supabase.rpc('get_recipe_with_ingredients', {
+          p_product_id: item.productId
+        });
 
-        const recipeData = productCatalog?.recipes;
-
-        if (!recipeData?.recipe_ingredients) {
-          // Product doesn't use recipes - check if it's a direct inventory item
-          const { data: directProduct } = await supabase
-            .from('inventory_stock')
-            .select('id, item, stock_quantity')
-            .eq('store_id', item.storeId)
-            .eq('item', item.productName)
-            .eq('is_active', true)
-            .maybeSingle();
-
-          if (directProduct) {
-            if (directProduct.stock_quantity < item.quantity) {
-              insufficientItems.push({
-                ingredient: item.productName,
-                required: item.quantity,
-                available: directProduct.stock_quantity
-              });
-              errors.push(`Insufficient ${item.productName}: need ${item.quantity}, have ${directProduct.stock_quantity}`);
-            }
-          } else {
-            warnings.push(`No inventory tracking for: ${item.productName}`);
-          }
+        if (recipeError) {
+          console.error(`❌ PHASE 4: Recipe query failed for ${item.productName}:`, recipeError);
+          // Fallback to direct product check
+          await this.validateDirectProduct(item, errors, warnings, insufficientItems);
           continue;
         }
 
+        if (!recipeResults || recipeResults.length === 0) {
+          console.log(`⚠️ PHASE 4: No recipe found for ${item.productName}, checking as direct product`);
+          await this.validateDirectProduct(item, errors, warnings, insufficientItems);
+          continue;
+        }
+
+        console.log(`✅ PHASE 4: Found recipe with ${recipeResults.length} ingredients for ${item.productName}`);
+        
         // Validate recipe ingredients
-        for (const ingredient of recipeData.recipe_ingredients) {
+        for (const ingredient of recipeResults) {
           const requiredQuantity = ingredient.quantity * item.quantity;
+          console.log(`🔍 PHASE 4: Validating ${ingredient.ingredient_name}: need ${requiredQuantity}`);
           
           // Find inventory stock for this ingredient
-          const { data: inventoryStock } = await supabase
+          const { data: inventoryStock, error: stockError } = await supabase
             .from('inventory_stock')
             .select('id, item, stock_quantity')
             .eq('store_id', item.storeId)
@@ -120,10 +98,19 @@ export class SimplifiedInventoryService {
             .eq('is_active', true)
             .maybeSingle();
 
+          if (stockError) {
+            console.error(`❌ PHASE 4: Stock query failed for ${ingredient.ingredient_name}:`, stockError);
+            errors.push(`Database error checking ${ingredient.ingredient_name}: ${stockError.message}`);
+            continue;
+          }
+
           if (!inventoryStock) {
+            console.error(`❌ PHASE 4: Missing inventory for ingredient: ${ingredient.ingredient_name}`);
             errors.push(`Missing inventory for ingredient: ${ingredient.ingredient_name}`);
             continue;
           }
+
+          console.log(`📊 PHASE 4: ${ingredient.ingredient_name} stock: ${inventoryStock.stock_quantity}, need: ${requiredQuantity}`);
 
           if (inventoryStock.stock_quantity < requiredQuantity) {
             insufficientItems.push({
@@ -132,8 +119,16 @@ export class SimplifiedInventoryService {
               available: inventoryStock.stock_quantity
             });
             errors.push(`Insufficient ${ingredient.ingredient_name}: need ${requiredQuantity}, have ${inventoryStock.stock_quantity}`);
+            console.error(`❌ PHASE 4: Insufficient ${ingredient.ingredient_name}: need ${requiredQuantity}, have ${inventoryStock.stock_quantity}`);
           }
         }
+
+      }
+
+      // CRITICAL: Throw errors instead of returning them silently
+      if (errors.length > 0) {
+        console.error('❌ PHASE 4: VALIDATION FAILED - BLOCKING TRANSACTION', { errors, insufficientItems });
+        throw new Error(`Inventory validation failed: ${errors.join(', ')}`);
       }
 
       const canProceed = errors.length === 0;
@@ -154,12 +149,39 @@ export class SimplifiedInventoryService {
 
     } catch (error) {
       console.error('❌ PHASE 4: Validation failed:', error);
-      return {
-        canProceed: false,
-        errors: [`Validation system error: ${error instanceof Error ? error.message : 'Unknown error'}`],
-        warnings,
-        insufficientItems
-      };
+      // Re-throw critical validation errors
+      throw error;
+    }
+  }
+
+  /**
+   * Validate direct product (no recipe)
+   */
+  private static async validateDirectProduct(
+    item: InventoryDeductionItem,
+    errors: string[],
+    warnings: string[],
+    insufficientItems: Array<{ingredient: string; required: number; available: number}>
+  ): Promise<void> {
+    const { data: directProduct } = await supabase
+      .from('inventory_stock')
+      .select('id, item, stock_quantity')
+      .eq('store_id', item.storeId)
+      .eq('item', item.productName)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (directProduct) {
+      if (directProduct.stock_quantity < item.quantity) {
+        insufficientItems.push({
+          ingredient: item.productName,
+          required: item.quantity,
+          available: directProduct.stock_quantity
+        });
+        errors.push(`Insufficient ${item.productName}: need ${item.quantity}, have ${directProduct.stock_quantity}`);
+      }
+    } else {
+      warnings.push(`No inventory tracking for: ${item.productName}`);
     }
   }
 
@@ -252,47 +274,50 @@ export class SimplifiedInventoryService {
     const validationFailures: Array<{ingredient: string; required: number; available: number}> = [];
 
     try {
-      // Get recipe through product catalog relationship with proper JOIN
-      const { data: productCatalog } = await supabase
-        .from('product_catalog')
-        .select(`
-          recipe_id,
-          recipes (
-            id,
-            recipe_ingredients (
-              ingredient_name,
-              quantity,
-              unit
-            )
-          )
-        `)
-        .eq('id', item.productId)
-        .eq('is_available', true)
-        .not('recipe_id', 'is', null)
-        .maybeSingle();
+      console.log(`🔄 PHASE 4: Deducting item: ${item.productName} (${item.productId})`);
+      
+      // FIXED: Use raw SQL query that actually works
+      const { data: recipeResults, error: recipeError } = await supabase.rpc('get_recipe_with_ingredients', {
+        p_product_id: item.productId
+      });
 
-      const recipeData = productCatalog?.recipes;
+      if (recipeError) {
+        console.error(`❌ PHASE 4: Recipe query failed for ${item.productName}:`, recipeError);
+        errors.push(`Failed to get recipe for ${item.productName}: ${recipeError.message}`);
+        return { success: false, errors, deductedItems, validationFailures };
+      }
 
-      if (!recipeData?.recipe_ingredients) {
-        // Handle direct product
+      if (!recipeResults || recipeResults.length === 0) {
+        console.log(`⚠️ PHASE 4: No recipe found for ${item.productName}, trying direct product`);
         const result = await this.deductDirectProduct(transactionId, item);
         return result;
       }
 
+      console.log(`✅ PHASE 4: Processing ${recipeResults.length} ingredients for ${item.productName}`);
+      
       // Process recipe ingredients
-      for (const ingredient of recipeData.recipe_ingredients) {
+      for (const ingredient of recipeResults) {
+
         const deductionAmount = ingredient.quantity * item.quantity;
+        console.log(`🔄 PHASE 4: Deducting ${ingredient.ingredient_name}: ${deductionAmount}`);
         
-        // Get current inventory
-        const { data: inventoryStock } = await supabase
+        // Get current inventory with error handling
+        const { data: inventoryStock, error: stockError } = await supabase
           .from('inventory_stock')
           .select('id, stock_quantity')
           .eq('store_id', item.storeId)
           .eq('item', ingredient.ingredient_name)
           .eq('is_active', true)
-          .single();
+          .maybeSingle();
+
+        if (stockError) {
+          console.error(`❌ PHASE 4: Stock query failed for ${ingredient.ingredient_name}:`, stockError);
+          errors.push(`Database error for ${ingredient.ingredient_name}: ${stockError.message}`);
+          continue;
+        }
 
         if (!inventoryStock) {
+          console.error(`❌ PHASE 4: Inventory not found: ${ingredient.ingredient_name}`);
           errors.push(`Inventory not found: ${ingredient.ingredient_name}`);
           continue;
         }
@@ -303,12 +328,14 @@ export class SimplifiedInventoryService {
             required: deductionAmount,
             available: inventoryStock.stock_quantity
           });
-          errors.push(`Insufficient ${ingredient.ingredient_name}`);
+          errors.push(`Insufficient ${ingredient.ingredient_name}: need ${deductionAmount}, have ${inventoryStock.stock_quantity}`);
+          console.error(`❌ PHASE 4: Insufficient ${ingredient.ingredient_name}: need ${deductionAmount}, have ${inventoryStock.stock_quantity}`);
           continue;
         }
 
         // Perform deduction
         const newQuantity = inventoryStock.stock_quantity - deductionAmount;
+        console.log(`🔄 PHASE 4: Updating ${ingredient.ingredient_name}: ${inventoryStock.stock_quantity} → ${newQuantity}`);
         
         const { error: updateError } = await supabase
           .from('inventory_stock')
@@ -319,9 +346,12 @@ export class SimplifiedInventoryService {
           .eq('id', inventoryStock.id);
 
         if (updateError) {
+          console.error(`❌ PHASE 4: Failed to update ${ingredient.ingredient_name}:`, updateError);
           errors.push(`Failed to update ${ingredient.ingredient_name}: ${updateError.message}`);
           continue;
         }
+
+        console.log(`✅ PHASE 4: Successfully updated ${ingredient.ingredient_name} stock`);
 
         // Create movement record
         const { error: movementError } = await supabase
@@ -339,7 +369,9 @@ export class SimplifiedInventoryService {
           });
 
         if (movementError) {
-          console.warn('Movement record failed (non-critical):', movementError);
+          console.warn('⚠️ PHASE 4: Movement record failed (non-critical):', movementError);
+        } else {
+          console.log(`✅ PHASE 4: Created movement record for ${ingredient.ingredient_name}`);
         }
 
         deductedItems.push({
