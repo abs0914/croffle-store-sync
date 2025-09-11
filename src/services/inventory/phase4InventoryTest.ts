@@ -72,6 +72,43 @@ export class Phase4InventoryTester {
   }
 
   /**
+   * Run ALL inventory system tests in sequence
+   * CRITICAL: Comprehensive test to verify system is working after the fix
+   */
+  static async runAllInventoryTests(): Promise<void> {
+    console.log('🚀 RUNNING COMPREHENSIVE INVENTORY SYSTEM TESTS');
+    console.log('=' .repeat(60));
+    
+    try {
+      // Test 1: Real failed transaction validation
+      console.log('\n📋 TEST 1: Real Failed Transaction Validation');
+      await this.testRealValidationOnly();
+      
+      // Test 2: Real failed transaction processing 
+      console.log('\n📋 TEST 2: Real Failed Transaction Processing');
+      await this.testRealFailedTransaction();
+      
+      // Test 3: Original test data validation
+      console.log('\n📋 TEST 3: Original Test Data Validation');
+      await this.testValidationOnly();
+      
+      // Test 4: Original test data processing
+      console.log('\n📋 TEST 4: Original Test Data Processing');
+      await this.testInventoryDeductionFlow();
+      
+      console.log('\n✅ ALL INVENTORY TESTS COMPLETED SUCCESSFULLY');
+      console.log('🎉 INVENTORY DEDUCTION SYSTEM IS WORKING CORRECTLY');
+      console.log('=' .repeat(60));
+      
+    } catch (error) {
+      console.error('\n❌ INVENTORY TEST SUITE FAILED');
+      console.error('🚨 SYSTEM STILL HAS ISSUES:', error);
+      console.log('=' .repeat(60));
+      throw error;
+    }
+  }
+
+  /**
    * Test the complete inventory flow with the original test data
    */
   static async testInventoryDeductionFlow(): Promise<void> {
@@ -211,6 +248,7 @@ if (typeof window !== 'undefined') {
   (window as any).Phase4InventoryTester = Phase4InventoryTester;
   
   console.log('🧪 PHASE 4 TEST: Test functions available in console:');
+  console.log('   Phase4InventoryTester.runAllInventoryTests() - RUN ALL TESTS (RECOMMENDED)');
   console.log('   Phase4InventoryTester.testRealFailedTransaction() - TEST THE ACTUAL FAILED TRANSACTION');
   console.log('   Phase4InventoryTester.testRealValidationOnly() - Validate the real transaction data');
   console.log('   Phase4InventoryTester.testInventoryDeductionFlow() - Original test');

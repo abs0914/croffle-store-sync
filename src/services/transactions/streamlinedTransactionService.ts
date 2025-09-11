@@ -175,35 +175,53 @@ class StreamlinedTransactionService {
       await this.insertTransactionItems(transaction.id, transactionData.items, cartItems);
       console.log('✅ Transaction items saved');
 
-      // Step 3: Process inventory deduction (CRITICAL)
+      // Step 3: Process inventory deduction (CRITICAL - TRANSACTION WILL FAIL IF THIS FAILS)
       console.log('🔄 Processing inventory deduction...');
-      const inventoryResult = await this.processInventoryDeduction(
-        transaction.id,
-        transactionData.storeId,
-        transactionData.items,
-        cartItems
-      );
+      
+      try {
+        const inventoryResult = await this.processInventoryDeduction(
+          transaction.id,
+          transactionData.storeId,
+          transactionData.items,
+          cartItems
+        );
 
-      if (!inventoryResult.success) {
-        console.error('❌ CRITICAL: Inventory deduction failed for transaction:', transaction.id);
-        console.error('❌ Inventory errors:', inventoryResult.errors);
+        if (!inventoryResult.success) {
+          console.error('❌ CRITICAL: Inventory deduction failed for transaction:', transaction.id);
+          console.error('❌ Inventory errors:', inventoryResult.errors);
 
-        // Log the failure for monitoring
+          // Log the failure for monitoring
+          await transactionErrorLogger.logInventoryError(
+            'deduction_failed',
+            new Error(`Inventory deduction failed: ${inventoryResult.errors.join(', ')}`),
+            {
+              ...context,
+              transactionId: transaction.id,
+              affectedItems: inventoryResult.errors
+            }
+          );
+
+          // CRITICAL FIX: FAIL THE TRANSACTION when inventory deduction fails
+          throw new Error(`Transaction failed: Inventory deduction failed - ${inventoryResult.errors.join(', ')}`);
+        } else {
+          console.log('✅ Inventory deduction completed successfully');
+          toast.success('✅ Transaction and inventory updated successfully');
+        }
+      } catch (inventoryError) {
+        console.error('❌ CRITICAL: Inventory deduction system error:', inventoryError);
+        
+        // Log the critical error
         await transactionErrorLogger.logInventoryError(
-          'deduction_failed',
-          new Error(`Inventory deduction failed: ${inventoryResult.errors.join(', ')}`),
+          'deduction_system_error', 
+          inventoryError instanceof Error ? inventoryError : new Error('Inventory system error'),
           {
             ...context,
-            transactionId: transaction.id,
-            affectedItems: inventoryResult.errors
+            transactionId: transaction.id
           }
         );
 
-        toast.error(`⚠️ Transaction completed but inventory was NOT updated! Please check manually.`);
-        console.warn('⚠️ Transaction completed but inventory deduction failed - MANUAL INTERVENTION REQUIRED');
-      } else {
-        console.log('✅ Inventory deduction completed successfully');
-        toast.success('✅ Transaction and inventory updated successfully');
+        // CRITICAL FIX: Re-throw to fail the transaction
+        throw inventoryError;
       }
 
       // Step 4: Log BIR compliance (non-critical)
@@ -634,10 +652,9 @@ class StreamlinedTransactionService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Inventory deduction failed';
       console.error(`❌ CRITICAL: Inventory deduction system error for transaction ${transactionId}:`, error);
-      return {
-        success: false,
-        errors: [errorMessage]
-      };
+      
+      // CRITICAL FIX: Re-throw inventory errors to prevent transactions
+      throw new Error(`Inventory deduction failed: ${errorMessage}`);
     }
   }
 
