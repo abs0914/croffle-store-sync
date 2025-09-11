@@ -16,6 +16,7 @@ import { StockTransferModal } from '@/pages/Inventory/components/inventoryStock/
 import { Input } from '@/components/ui/input';
 import { Search, Download, Upload } from 'lucide-react';
 import { InventoryDeductionDiagnostic } from '@/components/debug/InventoryDeductionDiagnostic';
+import { EmergencyRecoveryPanel } from '@/components/recovery/EmergencyRecoveryPanel';
 
 export default function Inventory() {
   const { toast } = useToast();
@@ -228,6 +229,9 @@ export default function Inventory() {
         </div>
       )}
 
+      {/* Emergency Recovery Panel */}
+      <EmergencyRecoveryPanel storeId={currentStore?.id || ""} />
+      
       {/* Emergency Diagnostic Component */}
       <InventoryDeductionDiagnostic />
 

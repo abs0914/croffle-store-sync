@@ -496,9 +496,11 @@ class StreamlinedTransactionService {
     console.log(`📦 Items to process: ${items.length}`);
 
     try {
-      // Build deduction items, expanding combos and handling Mix & Match base ingredients
+      // EMERGENCY FIX: Use direct inventory deduction
+      // Bypass complex enhanced/mix-match system that is failing silently
+      console.log('🚨 EMERGENCY MODE: Using direct inventory deduction');
+      
       const transactionItems: Array<{ product_id?: string; name: string; quantity: number; unit_price: number; total_price: number }> = [];
-      const processedIngredients = new Set<string>(); // Prevent duplicate deductions
 
       for (const item of items) {
         if (item.productId?.startsWith('combo-')) {
@@ -538,20 +540,14 @@ class StreamlinedTransactionService {
             isMixMatch
           });
           
-          // Handle Mix & Match products - apply 0.5x deduction for Regular Croissant
-          if (this.isMixAndMatchProduct(item.name)) {
-            console.log(`🎯 Processing Mix & Match product: ${item.name} (applying 0.5x for Regular Croissant)`);
-            await this.processRecipeBasedIngredients(item, transactionItems, processedIngredients, storeId);
-          } else {
-            // Regular product - 1x deduction (normalized recipe quantities)
-            transactionItems.push({
-              product_id: item.productId,
-              name: item.name,
-              quantity: item.quantity,
-              unit_price: item.unitPrice,
-              total_price: item.totalPrice
-            });
-          }
+          // EMERGENCY: Skip complex mix-match logic
+          transactionItems.push({
+            product_id: item.productId,
+            name: item.name,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            total_price: item.totalPrice
+          });
         }
       }
 
