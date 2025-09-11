@@ -7,7 +7,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types";
 import { unifiedProductInventoryService } from "@/services/unified/UnifiedProductInventoryService";
-import { batchDeductInventoryForTransaction } from "@/services/inventory/batchInventoryService";
+import { processTransactionInventoryWithMixMatchSupport } from "@/services/inventory/mixMatchInventoryIntegration";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { enrichCartItemsWithCategories, insertTransactionItems, DetailedTransactionItem } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
@@ -558,13 +558,15 @@ class StreamlinedTransactionService {
       console.log(`📋 Transaction items for deduction (${transactionItems.length} items):`, 
         transactionItems.map(ti => `${ti.name} (qty: ${ti.quantity})`));
 
-      // OPTIMIZED: Use batch processing instead of sequential processing
-      const result = await batchDeductInventoryForTransaction(
+      // ENHANCED: Use Mix & Match integration layer instead of old batch service
+      console.log(`🚀 DIAGNOSTIC: About to call processTransactionInventoryWithMixMatchSupport for transaction ${transactionId}`);
+      const result = await processTransactionInventoryWithMixMatchSupport(
         transactionId,
         storeId,
         transactionItems,
         30000 // 30 second timeout
       );
+      console.log(`🔍 DIAGNOSTIC: processTransactionInventoryWithMixMatchSupport completed for transaction ${transactionId}`);
 
       console.log(`📊 Inventory deduction result:`, {
         success: result.success,

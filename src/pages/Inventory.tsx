@@ -15,6 +15,7 @@ import { StockAdjustmentModal } from '@/pages/Inventory/components/inventoryStoc
 import { StockTransferModal } from '@/pages/Inventory/components/inventoryStock/StockTransferModal';
 import { Input } from '@/components/ui/input';
 import { Search, Download, Upload } from 'lucide-react';
+import { InventoryDeductionDiagnostic } from '@/components/debug/InventoryDeductionDiagnostic';
 
 export default function Inventory() {
   const { toast } = useToast();
@@ -226,6 +227,9 @@ export default function Inventory() {
           </p>
         </div>
       )}
+
+      {/* Emergency Diagnostic Component */}
+      <InventoryDeductionDiagnostic />
 
       {/* Search and Inventory List */}
       <Card>
