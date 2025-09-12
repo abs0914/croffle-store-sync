@@ -81,16 +81,16 @@ export const ProductIngredientMappingTab: React.FC = () => {
   useEffect(() => {
     if (selectedStore) {
       loadInventoryItems(selectedStore);
+      // Also reload products for the selected store to avoid cross-store confusion
+      loadProductMappings();
     }
   }, [selectedStore]);
 
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        loadStores(),
-        loadProductMappings()
-      ]);
+      // Load stores first; products and inventory will load when a store is selected
+      await loadStores();
     } catch (error) {
       console.error('Error loading initial data:', error);
       toast.error('Failed to load data');
@@ -120,7 +120,9 @@ export const ProductIngredientMappingTab: React.FC = () => {
 
   const loadProductMappings = async () => {
     try {
-      // Get all products from all stores
+      if (!selectedStore) return;
+
+      // Get products only for the currently selected store to avoid cross-store grouping
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`
@@ -128,47 +130,38 @@ export const ProductIngredientMappingTab: React.FC = () => {
           name,
           category_id,
           categories(name),
-          store_id,
-          stores(id, name)
+          store_id
         `)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('store_id', selectedStore);
 
       if (productsError) throw productsError;
 
-      // Group products by name and category to show unified view
-      const productMap = new Map<string, ProductMapping>();
+      const productList: ProductMapping[] = [];
 
       for (const product of productsData || []) {
-        const key = `${product.name}-${product.category_id}`;
-        
-        if (!productMap.has(key)) {
-          const isMixMatch = detectMixMatchProduct(product.name, product.categories?.name);
-          productMap.set(key, {
-            id: product.id,
-            name: product.name,
-            category: product.categories?.name || 'Uncategorized',
-            storeCount: 1,
-            mappingStatus: 'missing',
-            ingredients: [],
-            isMixMatch,
-            mixMatchConfig: isMixMatch ? {
-              baseIngredients: [],
-              choiceIngredients: [],
-              deductionRule: 'base_plus_choices'
-            } : undefined
-          });
-        } else {
-          const existing = productMap.get(key)!;
-          existing.storeCount += 1;
-        }
+        const isMixMatch = detectMixMatchProduct(product.name, product.categories?.name);
+        const pm: ProductMapping = {
+          id: product.id,
+          name: product.name,
+          category: product.categories?.name || 'Uncategorized',
+          storeCount: 1,
+          mappingStatus: 'missing',
+          ingredients: [],
+          isMixMatch,
+          mixMatchConfig: isMixMatch
+            ? {
+                baseIngredients: [],
+                choiceIngredients: [],
+                deductionRule: 'base_plus_choices'
+              }
+            : undefined
+        };
+        await loadProductIngredients(pm);
+        productList.push(pm);
       }
 
-      // Load ingredient mappings for each product
-      for (const [key, product] of productMap.entries()) {
-        await loadProductIngredients(product);
-      }
-
-      setProducts(Array.from(productMap.values()));
+      setProducts(productList);
     } catch (error) {
       console.error('Error loading product mappings:', error);
     }
@@ -323,21 +316,27 @@ export const ProductIngredientMappingTab: React.FC = () => {
       setProducts(prevProducts =>
         prevProducts.map(product => {
           if (product.id === productId) {
+            const updatedIngredients = product.ingredients.map(ingredient =>
+              ingredient.ingredientName === ingredientName
+                ? {
+                    ...ingredient,
+                    inventoryId,
+                    inventoryName: inventoryId
+                      ? inventoryItems.find(item => item.id === inventoryId)?.item || ingredient.inventoryName
+                      : null,
+                    mapped: !!inventoryId
+                  }
+                : ingredient
+            );
+
+            const total = updatedIngredients.length;
+            const mappedCount = updatedIngredients.filter(i => i.mapped).length;
+            const newStatus = mappedCount === 0 ? 'missing' : mappedCount === total ? 'complete' : 'partial';
+
             return {
               ...product,
-              ingredients: product.ingredients.map(ingredient =>
-                ingredient.ingredientName === ingredientName
-                  ? {
-                      ...ingredient,
-                      inventoryId,
-                      inventoryName: inventoryId
-                        ? inventoryItems.find(item => item.id === inventoryId)?.item || ingredient.inventoryName
-                        : null,
-                      mapped: !!inventoryId,
-                      mappingStatus: inventoryId ? 'mapped' : 'missing'
-                    }
-                  : ingredient
-              )
+              ingredients: updatedIngredients,
+              mappingStatus: newStatus
             };
           }
           return product;
@@ -347,7 +346,7 @@ export const ProductIngredientMappingTab: React.FC = () => {
       const inventoryName = inventoryId ? inventoryItems.find(item => item.id === inventoryId)?.item : 'No mapping';
       toast.success(`Updated "${ingredientName}" → "${inventoryName}"`);
 
-      // Reload data to ensure consistency
+      // Reload data to ensure consistency for the selected store
       setTimeout(() => loadProductMappings(), 400);
     } catch (error) {
       console.error('Error updating ingredient mapping:', error);
