@@ -4688,58 +4688,6 @@ export type Database = {
           },
         ]
       }
-      recipe_ingredient_mappings: {
-        Row: {
-          conversion_factor: number
-          created_at: string
-          id: string
-          ingredient_name: string
-          inventory_stock_id: string
-          recipe_id: string
-          updated_at: string
-        }
-        Insert: {
-          conversion_factor?: number
-          created_at?: string
-          id?: string
-          ingredient_name: string
-          inventory_stock_id: string
-          recipe_id: string
-          updated_at?: string
-        }
-        Update: {
-          conversion_factor?: number
-          created_at?: string
-          id?: string
-          ingredient_name?: string
-          inventory_stock_id?: string
-          recipe_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "recipe_ingredient_mappings_inventory_stock_id_fkey"
-            columns: ["inventory_stock_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_stock"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recipe_ingredient_mappings_recipe_id_fkey"
-            columns: ["recipe_id"]
-            isOneToOne: false
-            referencedRelation: "recipe_usage_analytics"
-            referencedColumns: ["recipe_id"]
-          },
-          {
-            foreignKeyName: "recipe_ingredient_mappings_recipe_id_fkey"
-            columns: ["recipe_id"]
-            isOneToOne: false
-            referencedRelation: "recipes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       recipe_ingredient_substitutions: {
         Row: {
           conversion_factor: number | null
@@ -4797,8 +4745,7 @@ export type Database = {
           id: string
           ingredient_group_id: string | null
           ingredient_group_name: string | null
-          ingredient_name: string | null
-          inventory_stock_id: string | null
+          inventory_stock_id: string
           is_optional: boolean | null
           notes: string | null
           purchase_unit: string | null
@@ -4817,8 +4764,7 @@ export type Database = {
           id?: string
           ingredient_group_id?: string | null
           ingredient_group_name?: string | null
-          ingredient_name?: string | null
-          inventory_stock_id?: string | null
+          inventory_stock_id: string
           is_optional?: boolean | null
           notes?: string | null
           purchase_unit?: string | null
@@ -4837,8 +4783,7 @@ export type Database = {
           id?: string
           ingredient_group_id?: string | null
           ingredient_group_name?: string | null
-          ingredient_name?: string | null
-          inventory_stock_id?: string | null
+          inventory_stock_id?: string
           is_optional?: boolean | null
           notes?: string | null
           purchase_unit?: string | null
@@ -4854,6 +4799,13 @@ export type Database = {
             columns: ["commissary_item_id"]
             isOneToOne: false
             referencedRelation: "commissary_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_recipe_ingredients_inventory_stock"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
           },
           {
@@ -6925,6 +6877,64 @@ export type Database = {
       }
     }
     Views: {
+      recipe_ingredients_with_names: {
+        Row: {
+          cost_per_unit: number | null
+          created_at: string | null
+          id: string | null
+          ingredient_name: string | null
+          inventory_stock_id: string | null
+          quantity: number | null
+          recipe_id: string | null
+          store_id: string | null
+          unit: Database["public"]["Enums"]["inventory_unit"] | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_recipe_ingredients_inventory_stock"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_stock_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "inventory_stock_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_usage_analytics"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_management_summary: {
         Row: {
           catalog_products: number | null

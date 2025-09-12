@@ -59,19 +59,23 @@ export interface Recipe {
 export interface RecipeIngredient {
   id: string;
   recipe_id: string;
-  inventory_stock_id: string;
-  commissary_item_id?: string;
+  inventory_stock_id: string; // Required - FK to inventory_stock.id
   quantity: number;
   unit: string;
   cost_per_unit?: number;
   created_at: string;
+  updated_at?: string;
+  // Derived fields from inventory_stock via JOIN
   inventory_stock?: {
     id: string;
-    item: string;
+    item: string; // This becomes the ingredient_name
     unit: string;
     cost?: number;
     stock_quantity: number;
+    store_id: string;
   };
+  // Computed fields for backward compatibility
+  ingredient_name?: string; // Derived from inventory_stock.item
 }
 
 export interface InventoryStock {

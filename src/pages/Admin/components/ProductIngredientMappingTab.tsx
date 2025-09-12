@@ -1,1145 +1,445 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Search, 
-  Target, 
-  CheckCircle, 
-  AlertTriangle, 
-  XCircle,
-  Package,
-  RefreshCw,
-  Eye,
-  Edit,
-  Save,
-  X,
-  Copy,
-  Download,
-  Upload,
-  TestTube,
-  Zap,
-  Settings,
-  Microscope,
-  FileText
-} from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { AlertCircle, CheckCircle2, Loader2, Plus, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { 
-  updateIngredientMappingUnified,
-  calculateMappingStatus,
-  generateMappingDiagnostics,
-  findIngredientVariants,
-  type MappingDiagnostics 
+import {
+  fetchProductRecipeIngredients,
+  fetchInventoryStock,
+  updateRecipeIngredientMapping,
+  bulkUpdateRecipeIngredientMappings,
+  createRecipeIngredient,
+  deleteRecipeIngredient,
+  validateRecipeIngredientMappings,
+  calculateRecipeCost,
+  autoMapIngredients,
+  type RecipeIngredientWithNames,
+  type InventoryStockItem
 } from '@/utils/ingredientMapping';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface ProductMapping {
+interface ProductIngredientMappingTabProps {
+  selectedStore: string;
+  products: any[];
+}
+
+interface ProductSummary {
   id: string;
   name: string;
   category: string;
-  storeCount: number;
+  totalIngredients: number;
+  mappedIngredients: number;
+  unmappedIngredients: number;
   mappingStatus: 'complete' | 'partial' | 'missing';
-  ingredients: IngredientMapping[];
-  isMixMatch: boolean;
-  mixMatchConfig?: MixMatchConfig;
+  totalCost: number;
 }
 
-interface MixMatchConfig {
-  baseIngredients: string[];
-  choiceIngredients: string[];
-  deductionRule: 'base_only' | 'base_plus_choices' | 'conditional';
-}
+export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabProps> = ({
+  selectedStore,
+  products
+}) => {
+  const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredientWithNames[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryStockItem[]>([]);
+  const [productSummaries, setProductSummaries] = useState<ProductSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [validationStatus, setValidationStatus] = useState<{
+    isValid: boolean;
+    unmappedCount: number;
+    totalCount: number;
+  } | null>(null);
+  const [recipeCost, setRecipeCost] = useState<number>(0);
 
-interface IngredientMapping {
-  ingredientName: string;
-  inventoryId: string | null;
-  inventoryName: string | null;
-  quantity: number;
-  unit: string;
-  mapped: boolean;
-  ingredientType?: 'base' | 'choice' | 'always';
-  isEditing?: boolean;
-}
-
-interface Store {
-  id: string;
-  name: string;
-}
-
-export const ProductIngredientMappingTab: React.FC = () => {
-  const [products, setProducts] = useState<ProductMapping[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<ProductMapping | null>(null);
-  const [selectedStore, setSelectedStore] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [editingProduct, setEditingProduct] = useState<string | null>(null);
-  const [inventoryItems, setInventoryItems] = useState<any[]>([]);
-  const [showTransactionTester, setShowTransactionTester] = useState(false);
-  const [testTransactionId, setTestTransactionId] = useState('');
-  const [testResults, setTestResults] = useState<any>(null);
-  const [bulkOperationsOpen, setBulkOperationsOpen] = useState(false);
-  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
-  const [diagnosticsData, setDiagnosticsData] = useState<Record<string, MappingDiagnostics[]>>({});
-  const [updating, setUpdating] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    loadInitialData();
-  }, []);
-
+  // Load inventory items when store changes
   useEffect(() => {
     if (selectedStore) {
-      loadInventoryItems(selectedStore);
-      // Also reload products for the selected store to avoid cross-store confusion
-      loadProductMappings();
+      loadInventoryItems();
+      loadProductSummaries();
     }
   }, [selectedStore]);
 
-  const loadInitialData = async () => {
-    setLoading(true);
-    try {
-      // Load stores first; products and inventory will load when a store is selected
-      await loadStores();
-    } catch (error) {
-      console.error('Error loading initial data:', error);
-      toast.error('Failed to load data');
-    } finally {
-      setLoading(false);
+  // Load recipe ingredients when product changes
+  useEffect(() => {
+    if (selectedProduct) {
+      loadRecipeIngredients();
+    } else {
+      setRecipeIngredients([]);
+      setValidationStatus(null);
+      setRecipeCost(0);
     }
-  };
+  }, [selectedProduct]);
 
-  const loadStores = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('stores')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setStores(data || []);
-      
-      if (data && data.length > 0 && !selectedStore) {
-        setSelectedStore(data[0].id);
-      }
-    } catch (error) {
-      console.error('Error loading stores:', error);
-    }
-  };
-
-  const loadProductMappings = async () => {
-    try {
-      if (!selectedStore) return;
-
-      // Get products only for the currently selected store to avoid cross-store grouping
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          category_id,
-          categories(name),
-          store_id
-        `)
-        .eq('is_active', true)
-        .eq('store_id', selectedStore);
-
-      if (productsError) throw productsError;
-
-      const productList: ProductMapping[] = [];
-
-      for (const product of productsData || []) {
-        const isMixMatch = detectMixMatchProduct(product.name, product.categories?.name);
-        const pm: ProductMapping = {
-          id: product.id,
-          name: product.name,
-          category: product.categories?.name || 'Uncategorized',
-          storeCount: 1,
-          mappingStatus: 'missing',
-          ingredients: [],
-          isMixMatch,
-          mixMatchConfig: isMixMatch
-            ? {
-                baseIngredients: [],
-                choiceIngredients: [],
-                deductionRule: 'base_plus_choices'
-              }
-            : undefined
-        };
-        await loadProductIngredients(pm);
-        productList.push(pm);
-      }
-
-      setProducts(productList);
-    } catch (error) {
-      console.error('Error loading product mappings:', error);
-    }
-  };
-
-  const loadProductIngredients = async (product: ProductMapping) => {
-    try {
-      console.log(`📊 [LOAD] Loading ingredients for product "${product.name}" (${product.id}) in store ${selectedStore}`);
-      
-      // Get recipes for this product in the selected store only
-      const { data: recipes, error: recipesError } = await supabase
-        .from('recipes')
-        .select(`
-          id,
-          recipe_ingredients(
-            id,
-            ingredient_name,
-            quantity,
-            unit,
-            inventory_stock_id,
-            inventory_stock(id, item)
-          )
-        `)
-        .eq('product_id', product.id)
-        .eq('store_id', selectedStore);
-
-      if (recipesError) {
-        console.error(`❌ [ERROR] Failed to load recipes for product ${product.name}:`, recipesError);
-        throw recipesError;
-      }
-
-      console.log(`📝 [DATA] Found ${recipes?.length || 0} recipes with ingredients`);
-
-      // CRITICAL FIX: Use deterministic aggregation that handles variants properly
-      const ingredientMap = new Map<string, IngredientMapping & { 
-        recipeIngredientId: string; 
-        allMappings: Array<{ id: string; mapped: boolean; inventoryId: string | null }> 
-      }>();
-
-      recipes?.forEach(recipe => {
-        recipe.recipe_ingredients?.forEach(ri => {
-          const key = ri.ingredient_name;
-          
-          if (!ingredientMap.has(key)) {
-            ingredientMap.set(key, {
-              ingredientName: ri.ingredient_name,
-              inventoryId: ri.inventory_stock_id,
-              inventoryName: ri.inventory_stock?.item || null,
-              quantity: ri.quantity,
-              unit: ri.unit,
-              mapped: !!ri.inventory_stock_id,
-              recipeIngredientId: ri.id,
-              allMappings: []
-            });
-          }
-          
-          // Track all mappings for this ingredient variant
-          const existing = ingredientMap.get(key)!;
-          existing.allMappings.push({
-            id: ri.id,
-            mapped: !!ri.inventory_stock_id,
-            inventoryId: ri.inventory_stock_id
-          });
-          
-          // Use the most complete mapping (prioritize mapped over unmapped)
-          if (ri.inventory_stock_id && !existing.inventoryId) {
-            existing.inventoryId = ri.inventory_stock_id;
-            existing.inventoryName = ri.inventory_stock?.item || null;
-            existing.mapped = true;
-          }
-        });
-      });
-
-      // Convert to final ingredient list with deterministic status
-      product.ingredients = Array.from(ingredientMap.values()).map(({ recipeIngredientId, allMappings, ...ingredient }) => {
-        // CRITICAL FIX: Calculate mapped status based on ALL occurrences, not just first one
-        const totalOccurrences = allMappings.length;
-        const mappedOccurrences = allMappings.filter(m => m.mapped).length;
-        
-        // Consider ingredient "mapped" if ANY occurrence is mapped (most permissive)
-        // Alternative: consider "mapped" only if ALL occurrences are mapped (most strict)
-        const isMapped = mappedOccurrences > 0; // Using permissive approach
-        
-        console.log(`  📝 Ingredient "${ingredient.ingredientName}": ${mappedOccurrences}/${totalOccurrences} mapped → ${isMapped ? 'MAPPED' : 'UNMAPPED'}`);
-        
-        return {
-          ...ingredient,
-          mapped: isMapped
-        };
-      });
-      
-      // Use unified mapping status calculation
-      const statusBefore = product.mappingStatus;
-      product.mappingStatus = calculateMappingStatus(product.ingredients);
-      
-      console.log(`🎯 [STATUS] Product "${product.name}" mapping status: ${statusBefore} → ${product.mappingStatus} (${product.ingredients.length} ingredients)`);
-      
-    } catch (error) {
-      console.error(`💥 [FATAL ERROR] Error loading ingredients for product ${product.name}:`, error);
-    }
-  };
-
-  const loadInventoryItems = async (storeId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('inventory_stock')
-        .select('id, item, unit')
-        .eq('store_id', storeId)
-        .eq('is_active', true)
-        .eq('recipe_compatible', true)
-        .order('item');
-
-      if (error) throw error;
-      setInventoryItems(data || []);
-    } catch (error) {
-      console.error('Error loading inventory items:', error);
-    }
-  };
-
-  const updateIngredientMapping = async (
-    productId: string,
-    ingredientName: string,
-    inventoryId: string | null
-  ) => {
-    if (!selectedStore) {
-      toast.error('Please select a store first');
-      return;
-    }
-
-    const updateKey = `${productId}-${ingredientName}`;
-    setUpdating(prev => new Set([...prev, updateKey]));
-
-    try {
-      console.log(`🔧 Starting unified mapping update: ${ingredientName} → ${inventoryId ? 'mapped' : 'unmapped'}`);
-      
-      const result = await updateIngredientMappingUnified(
-        productId,
-        ingredientName,
-        inventoryId,
-        selectedStore,
-        supabase,
-        {
-          resolveVariants: false,
-          syncMappingTable: true,
-          skipVerification: false
-        }
-      );
-
-      if (!result.success) {
-        console.error('❌ Update failed:', result.errors);
-        toast.error(`Failed to update mapping: ${result.errors.join(', ')}`);
-        return;
-      }
-
-      // Show precise update counts and warnings
-      const inventoryName = inventoryId 
-        ? inventoryItems.find(item => item.id === inventoryId)?.item 
-        : 'unmapped';
-        
-      if (result.warnings.length > 0) {
-        console.warn('⚠️ Warnings:', result.warnings);
-        toast.warning(`Updated with warnings: ${result.warnings.join(', ')}`);
-      } else {
-        toast.success(`✅ "${ingredientName}" mapped to "${inventoryName}" (${result.updatedCount} records updated)`);
-      }
-
-      console.log(`✅ Update completed: ${result.updatedCount} records updated`);
-
-      // Update local state immediately for UI responsiveness
-      setProducts(prevProducts =>
-        prevProducts.map(product => {
-          if (product.id === productId) {
-            const updatedIngredients = product.ingredients.map(ingredient =>
-              ingredient.ingredientName === ingredientName
-                ? {
-                    ...ingredient,
-                    inventoryId,
-                    inventoryName: inventoryName === 'unmapped' ? null : inventoryName,
-                    mapped: !!inventoryId
-                  }
-                : ingredient
-            );
-
-            return {
-              ...product,
-              ingredients: updatedIngredients,
-              mappingStatus: calculateMappingStatus(updatedIngredients)
-            };
-          }
-          return product;
-        })
-      );
-
-      // CRITICAL FIX: Add comprehensive post-update verification with variant support
-      setTimeout(async () => {
-        console.log('🔄 [VERIFY] Starting post-update verification...');
-        
-        try {
-          // Get all ingredient names including variants to check
-          const { data: allIngredients, error: ingredientsError } = await supabase
-            .from('recipe_ingredients')
-            .select('ingredient_name, recipes!inner(product_id, store_id)')
-            .eq('recipes.product_id', productId)
-            .eq('recipes.store_id', selectedStore);
-            
-          if (ingredientsError) {
-            console.error('❌ [VERIFY ERROR] Failed to get ingredient list:', ingredientsError);
-            return;
-          }
-
-          const allIngredientNames = [...new Set(allIngredients?.map(i => i.ingredient_name) || [])];
-          const variants = findIngredientVariants(ingredientName, allIngredientNames);
-          const allNames = [ingredientName, ...variants.variants];
-          
-          console.log(`🔍 [VERIFY] Checking variants: ${allNames.join(', ')}`);
-          
-          // Re-query all variants to verify changes persisted
-          const { data: verifyData, error: verifyError } = await supabase
-            .from('recipe_ingredients')
-            .select(`
-              id,
-              ingredient_name,
-              inventory_stock_id,
-              inventory_stock(item),
-              recipes!inner(product_id, store_id)
-            `)
-            .eq('recipes.product_id', productId)
-            .eq('recipes.store_id', selectedStore)
-            .in('ingredient_name', allNames);
-          
-          if (verifyError) {
-            console.error('❌ [VERIFY ERROR] Failed to verify update:', verifyError);
-          } else {
-            const mappedCount = verifyData?.filter(item => item.inventory_stock_id).length || 0;
-            const totalCount = verifyData?.length || 0;
-            console.log(`✅ [VERIFY] Post-update state: ${mappedCount}/${totalCount} variant records are mapped`);
-            
-            if (inventoryId && mappedCount === 0) {
-              console.warn('⚠️ [VERIFY WARNING] Expected mapping but found none - possible persistence failure');
-              toast.warning('Mapping may not have persisted correctly');
-            } else if (!inventoryId && mappedCount > 0) {
-              console.warn('⚠️ [VERIFY WARNING] Expected unmapping but found mappings - possible persistence failure');
-              toast.warning('Unmapping may not have completed');
-            }
-          }
-          
-          // Run diagnostics for the product to check for mapping table sync issues
-          const diagnostics = await generateMappingDiagnostics(productId, selectedStore, supabase);
-          const syncIssues = diagnostics.filter(d => 
-            d.consistencyIssues.some(issue => issue.includes('mapping table out of sync'))
-          );
-          
-          if (syncIssues.length > 0) {
-            console.warn('⚠️ [VERIFY WARNING] Mapping table sync issues detected:', syncIssues);
-            toast.warning(`Mapping table sync issues detected for ${syncIssues.length} ingredients`);
-          }
-          
-        } catch (verifyError) {
-          console.error('💥 [VERIFY FATAL] Verification failed:', verifyError);
-        }
-        
-        // Reload full product mappings
-        await loadProductMappings();
-        console.log('🔄 [VERIFY] Product mappings reloaded');
-      }, 1000);
-
-    } catch (error) {
-      console.error('❌ Unexpected error during mapping update:', error);
-      toast.error('Failed to update mapping - check console for details');
-    } finally {
-      setUpdating(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(updateKey);
-        return newSet;
-      });
-    }
-  };
-
-  const loadDiagnostics = async (productId: string) => {
+  const loadInventoryItems = async () => {
     if (!selectedStore) return;
     
     try {
-      console.log(`🔍 Loading diagnostics for product ${productId}`);
-      const diagnostics = await generateMappingDiagnostics(productId, selectedStore, supabase);
-      
-      setDiagnosticsData(prev => ({
-        ...prev,
-        [productId]: diagnostics
-      }));
-      
-      console.log(`📊 Loaded ${diagnostics.length} diagnostic entries`);
+      const items = await fetchInventoryStock(selectedStore);
+      setInventoryItems(items);
     } catch (error) {
-      console.error('Error loading diagnostics:', error);
-      toast.error('Failed to load mapping diagnostics');
+      console.error('Error loading inventory items:', error);
+      toast.error('Failed to load inventory items');
     }
   };
 
-  const detectMixMatchProduct = (name: string, category: string): boolean => {
-    const mixMatchKeywords = ['mix', 'match', 'combo', 'build your own', 'custom'];
-    const productText = `${name} ${category}`.toLowerCase();
-    return mixMatchKeywords.some(keyword => productText.includes(keyword));
-  };
+  const loadProductSummaries = async () => {
+    if (!selectedStore || !products.length) return;
 
-  const applyToAllStores = async (productId: string, mappings: IngredientMapping[]) => {
-    try {
-      // Get all products with the same name as the current product
-      const currentProduct = products.find(p => p.id === productId);
-      if (!currentProduct) return;
+    const summaries: ProductSummary[] = [];
 
-      // Get all stores with this product
-      const { data: allProducts, error: productsError } = await supabase
-        .from('products')
-        .select('id, store_id, stores(name)')
-        .eq('name', currentProduct.name);
+    for (const product of products) {
+      try {
+        // Only process products that have a recipe_id
+        if (!product.recipe_id) continue;
 
-      if (productsError) throw productsError;
-
-      let updatedStores = 0;
-      for (const product of allProducts || []) {
-        if (product.id === productId) continue; // Skip current product
+        const ingredients = await fetchProductRecipeIngredients(product.id, selectedStore);
+        const mapped = ingredients.filter(ing => ing.inventory_stock_id).length;
+        const unmapped = ingredients.length - mapped;
         
-        // Apply mappings to this store's version of the product
-        for (const mapping of mappings) {
-          if (mapping.inventoryId) {
-            // Find equivalent inventory item in this store
-            const { data: inventoryItem, error: inventoryError } = await supabase
-              .from('inventory_stock')
-              .select('id')
-              .eq('store_id', product.store_id)
-              .eq('item', mapping.inventoryName)
-              .eq('is_active', true)
-              .single();
-
-            if (!inventoryError && inventoryItem) {
-              await updateIngredientMapping(product.id, mapping.ingredientName, inventoryItem.id);
-            }
-          }
+        let status: 'complete' | 'partial' | 'missing' = 'missing';
+        if (ingredients.length === 0) {
+          status = 'missing';
+        } else if (mapped === ingredients.length) {
+          status = 'complete';
+        } else if (mapped > 0) {
+          status = 'partial';
         }
-        updatedStores++;
+
+        const cost = ingredients.reduce((total, ing) => 
+          total + (ing.quantity * ing.cost_per_unit), 0
+        );
+
+        summaries.push({
+          id: product.id,
+          name: product.name || product.product_name,
+          category: product.category?.name || 'Unknown',
+          totalIngredients: ingredients.length,
+          mappedIngredients: mapped,
+          unmappedIngredients: unmapped,
+          mappingStatus: status,
+          totalCost: cost
+        });
+      } catch (error) {
+        console.error(`Error loading summary for product ${product.name}:`, error);
       }
+    }
 
-      toast.success(`Applied mappings to ${updatedStores} stores`);
-      await loadProductMappings();
+    setProductSummaries(summaries);
+  };
+
+  const loadRecipeIngredients = async () => {
+    if (!selectedProduct) return;
+
+    setIsLoading(true);
+    try {
+      const ingredients = await fetchProductRecipeIngredients(selectedProduct, selectedStore);
+      setRecipeIngredients(ingredients);
+
+      // Calculate validation status
+      const mapped = ingredients.filter(ing => ing.inventory_stock_id).length;
+      setValidationStatus({
+        isValid: mapped === ingredients.length && ingredients.length > 0,
+        unmappedCount: ingredients.length - mapped,
+        totalCount: ingredients.length
+      });
+
+      // Calculate cost
+      const cost = ingredients.reduce((total, ing) => 
+        total + (ing.quantity * ing.cost_per_unit), 0
+      );
+      setRecipeCost(cost);
+
     } catch (error) {
-      console.error('Error applying to all stores:', error);
-      toast.error('Failed to apply to all stores');
+      console.error('Error loading recipe ingredients:', error);
+      toast.error('Failed to load recipe ingredients');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const testTransactionDeduction = async () => {
-    if (!testTransactionId.trim()) return;
-
+  const handleMappingUpdate = async (ingredientId: string, inventoryStockId: string) => {
+    setIsSaving(true);
     try {
-      // Simulate transaction deduction test
-      const results = {
-        transactionId: testTransactionId,
-        productDeductions: [
-          {
-            productName: 'Test Product',
-            ingredients: [
-              { name: 'Ingredient A', deducted: 2, unit: 'pcs' },
-              { name: 'Ingredient B', deducted: 150, unit: 'ml' }
-            ]
-          }
-        ],
-        totalDeductions: 2,
-        warnings: ['Some ingredients not mapped to inventory']
-      };
-
-      setTestResults(results);
-      toast.success('Transaction test completed');
-    } catch (error) {
-      console.error('Error testing transaction:', error);
-      toast.error('Failed to test transaction');
-    }
-  };
-
-  const updateIngredientQuantity = async (
-    productId: string,
-    ingredientName: string,
-    newQuantity: number
-  ) => {
-    try {
-      if (!selectedStore) return;
-
-      const { data: recipes, error: recipesError } = await supabase
-        .from('recipes')
-        .select('id')
-        .eq('product_id', productId)
-        .eq('store_id', selectedStore);
-
-      if (recipesError) throw recipesError;
-
-      for (const recipe of recipes || []) {
-        const { error: updateError } = await supabase
-          .from('recipe_ingredients')
-          .update({ quantity: newQuantity })
-          .eq('recipe_id', recipe.id)
-          .eq('ingredient_name', ingredientName);
-
-        if (updateError) throw updateError;
+      const result = await updateRecipeIngredientMapping(ingredientId, inventoryStockId);
+      
+      if (result.success) {
+        // Reload data to get updated names
+        await loadRecipeIngredients();
+        await loadProductSummaries();
       }
-
-      toast.success(`Updated quantity for ${ingredientName}`);
-      await loadProductMappings();
     } catch (error) {
-      console.error('Error updating quantity:', error);
-      toast.error('Failed to update quantity');
+      console.error('Error updating mapping:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const handleAutoMap = async () => {
+    if (!selectedProduct) return;
+
+    // Find the recipe ID for this product
+    const product = products.find(p => p.id === selectedProduct);
+    if (!product?.recipe_id) {
+      toast.error('No recipe found for this product');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const result = await autoMapIngredients(product.recipe_id, selectedStore);
+      
+      if (result.success && result.mappedCount > 0) {
+        await loadRecipeIngredients();
+        await loadProductSummaries();
+        toast.success(result.message);
+      } else {
+        toast.info(result.message);
+      }
+    } catch (error) {
+      console.error('Error in auto-map:', error);
+      toast.error('Failed to auto-map ingredients');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddIngredient = async () => {
+    if (!selectedProduct || inventoryItems.length === 0) return;
+
+    const product = products.find(p => p.id === selectedProduct);
+    if (!product?.recipe_id) return;
+
+    const firstInventoryItem = inventoryItems[0];
+    
+    setIsSaving(true);
+    try {
+      const result = await createRecipeIngredient(
+        product.recipe_id,
+        firstInventoryItem.id,
+        1,
+        firstInventoryItem.unit,
+        firstInventoryItem.cost_per_unit
+      );
+
+      if (result.success) {
+        await loadRecipeIngredients();
+        await loadProductSummaries();
+        toast.success('New ingredient added');
+      }
+    } catch (error) {
+      console.error('Error adding ingredient:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteIngredient = async (ingredientId: string) => {
+    setIsSaving(true);
+    try {
+      const result = await deleteRecipeIngredient(ingredientId);
+      
+      if (result.success) {
+        await loadRecipeIngredients();
+        await loadProductSummaries();
+      }
+    } catch (error) {
+      console.error('Error deleting ingredient:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const getValidationBadge = () => {
+    if (!validationStatus) return null;
+
+    if (validationStatus.isValid) {
+      return (
+        <Badge variant="secondary" className="bg-green-100 text-green-800">
+          <CheckCircle2 className="w-3 h-3 mr-1" />
+          All Mapped ({validationStatus.totalCount})
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge variant="destructive">
+        <AlertCircle className="w-3 h-3 mr-1" />
+        {validationStatus.unmappedCount} Unmapped
+      </Badge>
+    );
+  };
+
+  const getStatusBadge = (status: 'complete' | 'partial' | 'missing') => {
     switch (status) {
       case 'complete':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <Badge className="bg-green-100 text-green-800">Complete</Badge>;
       case 'partial':
-        return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
-      default:
-        return <XCircle className="h-4 w-4 text-red-600" />;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'complete':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Complete</Badge>;
-      case 'partial':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Partial</Badge>;
-      default:
+        return <Badge className="bg-yellow-100 text-yellow-800">Partial</Badge>;
+      case 'missing':
         return <Badge variant="destructive">Missing</Badge>;
     }
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) {
+  if (!selectedStore) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <Card>
+        <CardContent className="p-6">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please select a store to manage ingredient mappings.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold">Product Ingredient Mapping</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage product-to-ingredient mappings and store inventory deductions
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Select value={selectedStore} onValueChange={setSelectedStore}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Select store" />
-            </SelectTrigger>
-            <SelectContent>
-              {stores.map(store => (
-                <SelectItem key={store.id} value={store.id}>
-                  {store.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button 
-            onClick={() => setBulkOperationsOpen(!bulkOperationsOpen)} 
-            variant="outline"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Bulk Operations
-          </Button>
-          <Button 
-            onClick={() => setDiagnosticsOpen(!diagnosticsOpen)} 
-            variant="outline"
-          >
-            <Microscope className="h-4 w-4 mr-2" />
-            Diagnostics
-          </Button>
-          <Button 
-            onClick={() => setShowTransactionTester(!showTransactionTester)} 
-            variant="outline"
-          >
-            <TestTube className="h-4 w-4 mr-2" />
-            Test Transaction
-          </Button>
-          <Button onClick={loadProductMappings} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Products</p>
-                <p className="text-2xl font-bold">{products.length}</p>
-              </div>
-              <Package className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Complete</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {products.filter(p => p.mappingStatus === 'complete').length}
-                </p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Partial</p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {products.filter(p => p.mappingStatus === 'partial').length}
-                </p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-yellow-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Missing</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {products.filter(p => p.mappingStatus === 'missing').length}
-                </p>
-              </div>
-              <XCircle className="h-8 w-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Bulk Operations Panel */}
-      {bulkOperationsOpen && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Bulk Operations
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Copy className="h-4 w-4" />
-                Apply Template to All Stores
-              </Button>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                Export Mappings (CSV)
-              </Button>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                Import Mappings (CSV)
-              </Button>
-            </div>
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Bulk operations will affect all products. Use with caution and ensure you have backups.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Diagnostics Panel */}
-      {diagnosticsOpen && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Microscope className="h-5 w-5" />
-              Mapping Diagnostics
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Diagnostics help identify and resolve ingredient mapping issues, name variants, and consistency problems.
-              </AlertDescription>
-            </Alert>
-            
-            {Object.keys(diagnosticsData).length > 0 && (
-              <div className="space-y-4">
-                {Object.entries(diagnosticsData).map(([productId, diagnostics]) => {
-                  const product = products.find(p => p.id === productId);
-                  if (!product) return null;
-                  
-                  return (
-                    <div key={productId} className="bg-muted/30 p-4 rounded-lg">
-                      <h4 className="font-medium mb-3">
-                        {product.name} - Diagnostic Report
-                      </h4>
-                      
-                      {diagnostics.map((diagnostic, idx) => (
-                        <div key={idx} className="bg-background p-3 rounded border mb-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-sm">{diagnostic.ingredientName}</span>
-                            <div className="flex gap-2">
-                              {diagnostic.nameVariants.length > 1 && (
-                                <Badge variant="outline" className="text-xs">
-                                  {diagnostic.nameVariants.length} variants
-                                </Badge>
-                              )}
-                              {diagnostic.consistencyIssues.length > 0 && (
-                                <Badge variant="destructive" className="text-xs">
-                                  {diagnostic.consistencyIssues.length} issues
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {diagnostic.nameVariants.length > 1 && (
-                            <div className="mb-2">
-                              <p className="text-xs text-muted-foreground mb-1">Name Variants:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {diagnostic.nameVariants.map((variant, vIdx) => (
-                                  <Badge key={vIdx} variant="outline" className="text-xs">
-                                    {variant}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {diagnostic.consistencyIssues.length > 0 && (
-                            <div className="mb-2">
-                              <p className="text-xs text-muted-foreground mb-1">Issues:</p>
-                              <ul className="list-disc ml-4 text-xs">
-                                {diagnostic.consistencyIssues.map((issue, iIdx) => (
-                                  <li key={iIdx} className="text-red-600">{issue}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          
-                          {diagnostic.recommendations.length > 0 && (
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">Recommendations:</p>
-                              <ul className="list-disc ml-4 text-xs">
-                                {diagnostic.recommendations.map((rec, rIdx) => (
-                                  <li key={rIdx} className="text-blue-600">{rec}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+      {/* Product Summaries Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Product Mapping Overview</span>
+            <Button
+              onClick={loadProductSummaries}
+              disabled={isLoading}
+              variant="ghost"
+              size="sm"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {productSummaries.map((summary) => (
+              <Card 
+                key={summary.id} 
+                className={`cursor-pointer transition-colors ${
+                  selectedProduct === summary.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
+                }`}
+                onClick={() => setSelectedProduct(summary.id)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-medium text-sm">{summary.name}</h4>
+                    {getStatusBadge(summary.mappingStatus)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">{summary.category}</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Mapped:</span>
+                      <span className="ml-1 font-medium">{summary.mappedIngredients}</span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                    <div>
+                      <span className="text-muted-foreground">Total:</span>
+                      <span className="ml-1 font-medium">{summary.totalIngredients}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-muted-foreground">Cost:</span>
+                      <span className="ml-1 font-medium">₱{summary.totalCost.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Transaction Tester Panel */}
-      {showTransactionTester && (
+      {/* Detailed Product Ingredient Mapping */}
+      {selectedProduct && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TestTube className="h-5 w-5" />
-              Transaction Deduction Tester
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter transaction ID or simulate product selection..."
-                value={testTransactionId}
-                onChange={(e) => setTestTransactionId(e.target.value)}
-                className="flex-1"
-              />
-              <Button onClick={testTransactionDeduction}>
-                <Zap className="h-4 w-4 mr-2" />
-                Test Deduction
-              </Button>
-            </div>
-            
-            {testResults && (
-              <div className="bg-muted/30 p-4 rounded-lg space-y-3">
-                <h4 className="font-medium">Test Results</h4>
-                <div className="space-y-2">
-                  <p className="text-sm"><strong>Transaction ID:</strong> {testResults.transactionId}</p>
-                  <p className="text-sm"><strong>Total Deductions:</strong> {testResults.totalDeductions}</p>
-                  
-                  {testResults.productDeductions.map((product: any, idx: number) => (
-                    <div key={idx} className="bg-background p-3 rounded border">
-                      <p className="font-medium text-sm">{product.productName}</p>
-                      <div className="ml-4 mt-2 space-y-1">
-                        {product.ingredients.map((ing: any, ingIdx: number) => (
-                          <p key={ingIdx} className="text-xs text-muted-foreground">
-                            {ing.name}: -{ing.deducted} {ing.unit}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {testResults.warnings.length > 0 && (
-                    <Alert>
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Warnings:</strong>
-                        <ul className="list-disc ml-4 mt-1">
-                          {testResults.warnings.map((warning: string, idx: number) => (
-                            <li key={idx} className="text-sm">{warning}</li>
-                          ))}
-                        </ul>
-                      </AlertDescription>
-                    </Alert>
+            <CardTitle className="flex items-center justify-between">
+              <span>Ingredient Mapping</span>
+              {validationStatus && (
+                <div className="flex items-center gap-2">
+                  {getValidationBadge()}
+                  {recipeCost > 0 && (
+                    <Badge variant="outline">
+                      Cost: ₱{recipeCost.toFixed(2)}
+                    </Badge>
                   )}
                 </div>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Action Buttons */}
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleAutoMap}
+                  disabled={isSaving || isLoading || recipeIngredients.length === 0}
+                  variant="outline"
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  Auto-Map Ingredients
+                </Button>
+                
+                <Button
+                  onClick={handleAddIngredient}
+                  disabled={isSaving || inventoryItems.length === 0}
+                  variant="outline"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Ingredient
+                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search products..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* Products List */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="space-y-0">
-            {filteredProducts.map((product, index) => (
-              <div 
-                key={product.id} 
-                className={`p-4 hover:bg-muted/50 transition-colors ${
-                  index !== filteredProducts.length - 1 ? 'border-b' : ''
-                }`}
+              <Button
+                onClick={loadRecipeIngredients}
+                disabled={isLoading}
+                variant="ghost"
+                size="sm"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    {getStatusIcon(product.mappingStatus)}
-                    <div>
-                      <h4 className="font-semibold">{product.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {product.category} • {product.storeCount} store{product.storeCount !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {product.isMixMatch && (
-                      <Badge className="bg-purple-100 text-purple-800">Mix & Match</Badge>
-                    )}
-                    {getStatusBadge(product.mappingStatus)}
-                    <Badge variant="outline">
-                      {product.ingredients.filter(i => i.mapped).length}/{product.ingredients.length} mapped
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => applyToAllStores(product.id, product.ingredients)}
-                      title="Apply to all stores"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => loadDiagnostics(product.id)}
-                      title="Run diagnostics"
-                    >
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingProduct(editingProduct === product.id ? null : product.id)}
-                    >
-                      {editingProduct === product.id ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              </Button>
+            </div>
 
-                {/* Ingredient Details - Shown when editing */}
-                {editingProduct === product.id && (
-                  <div className="mt-4 space-y-4 bg-muted/30 p-4 rounded-lg">
-                    {/* Mix & Match Configuration */}
-                    {product.isMixMatch && product.mixMatchConfig && (
-                      <div className="bg-purple-50 p-3 rounded border">
-                        <h6 className="font-medium text-sm mb-2 flex items-center gap-2">
-                          <Zap className="h-4 w-4" />
-                          Mix & Match Configuration
-                        </h6>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div>
-                            <label className="font-medium">Deduction Rule:</label>
-                            <Select 
-                              value={product.mixMatchConfig.deductionRule} 
-                              onValueChange={(value: any) => {
-                                // Update mix match config
-                                console.log('Update deduction rule:', value);
-                              }}
-                            >
-                              <SelectTrigger className="h-6 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="base_only">Base ingredients only</SelectItem>
-                                <SelectItem value="base_plus_choices">Base + selected choices</SelectItem>
-                                <SelectItem value="conditional">Conditional based on selection</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="font-medium">Base Ingredients:</label>
-                            <div className="text-muted-foreground">
-                              {product.mixMatchConfig.baseIngredients.length || 0} configured
-                            </div>
-                          </div>
-                          <div>
-                            <label className="font-medium">Choice Ingredients:</label>
-                            <div className="text-muted-foreground">
-                              {product.mixMatchConfig.choiceIngredients.length || 0} configured
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+            <Separator />
 
-                    <h5 className="font-medium text-sm">Ingredient Mappings</h5>
-                    {product.ingredients.map((ingredient, idx) => (
-                      <div key={idx} className="flex items-center gap-3 p-3 bg-background rounded border">
-                        <div className="flex-1">
-                          <div className="font-medium text-sm flex items-center gap-2">
-                            {ingredient.ingredientName}
-                            {product.isMixMatch && (
-                              <Badge 
-                                variant="outline" 
-                                className={`text-xs ${
-                                  ingredient.ingredientType === 'base' ? 'bg-blue-50 text-blue-700' :
-                                  ingredient.ingredientType === 'choice' ? 'bg-orange-50 text-orange-700' :
-                                  'bg-gray-50 text-gray-700'
-                                }`}
-                              >
-                                {ingredient.ingredientType || 'always'}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            {ingredient.isEditing ? (
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  type="number"
-                                  value={ingredient.quantity}
-                                  onChange={(e) => {
-                                    // Update local state temporarily
-                                    setProducts(prev => prev.map(p => 
-                                      p.id === product.id ? {
-                                        ...p,
-                                        ingredients: p.ingredients.map(ing => 
-                                          ing.ingredientName === ingredient.ingredientName 
-                                            ? { ...ing, quantity: parseFloat(e.target.value) || 0 }
-                                            : ing
-                                        )
-                                      } : p
-                                    ));
-                                  }}
-                                  className="w-16 h-6 text-xs"
-                                />
-                                <span>{ingredient.unit}</span>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => {
-                                    updateIngredientQuantity(product.id, ingredient.ingredientName, ingredient.quantity);
-                                    setProducts(prev => prev.map(p => 
-                                      p.id === product.id ? {
-                                        ...p,
-                                        ingredients: p.ingredients.map(ing => 
-                                          ing.ingredientName === ingredient.ingredientName 
-                                            ? { ...ing, isEditing: false }
-                                            : ing
-                                        )
-                                      } : p
-                                    ));
-                                  }}
-                                >
-                                  <Save className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div 
-                                className="cursor-pointer hover:bg-muted/50 px-2 py-1 rounded"
-                                onClick={() => {
-                                  setProducts(prev => prev.map(p => 
-                                    p.id === product.id ? {
-                                      ...p,
-                                      ingredients: p.ingredients.map(ing => 
-                                        ing.ingredientName === ingredient.ingredientName 
-                                          ? { ...ing, isEditing: true }
-                                          : ing
-                                      )
-                                    } : p
-                                  ));
-                                }}
-                              >
-                                {ingredient.quantity} {ingredient.unit} (click to edit)
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex-1">
+            {/* Ingredients List */}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                Loading ingredients...
+              </div>
+            ) : recipeIngredients.length === 0 ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  No ingredients found for this product recipe.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="space-y-3">
+                {recipeIngredients.map((ingredient) => (
+                  <Card key={ingredient.id} className="border-l-4 border-l-blue-500">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                        {/* Inventory Item Selection */}
+                        <div className="md:col-span-4">
+                          <Label className="text-sm font-medium">Inventory Item</Label>
                           <Select
-                            value={ingredient.inventoryId || 'none'}
-                            onValueChange={(value) => 
-                              updateIngredientMapping(product.id, ingredient.ingredientName, value === 'none' ? null : value)
-                            }
-                            disabled={updating.has(`${product.id}-${ingredient.ingredientName}`)}
+                            value={ingredient.inventory_stock_id || ''}
+                            onValueChange={(value) => handleMappingUpdate(ingredient.id, value)}
+                            disabled={isSaving}
                           >
-                            <SelectTrigger className="h-8">
-                              {updating.has(`${product.id}-${ingredient.ingredientName}`) ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="animate-spin h-3 w-3 border border-gray-300 border-t-transparent rounded-full"></div>
-                                  <span>Updating...</span>
-                                </div>
-                              ) : (
-                                <SelectValue placeholder="Select inventory item" />
-                              )}
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select inventory item..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="none">No mapping</SelectItem>
-                              {inventoryItems
-                                .filter(item => 
-                                  item.item.toLowerCase().includes(ingredient.ingredientName.toLowerCase()) ||
-                                  ingredient.ingredientName.toLowerCase().includes(item.item.toLowerCase())
-                                )
-                                .map(item => (
+                              {inventoryItems.map(item => (
                                 <SelectItem key={item.id} value={item.id}>
                                   {item.item} ({item.unit})
                                 </SelectItem>
@@ -1147,36 +447,82 @@ export const ProductIngredientMappingTab: React.FC = () => {
                             </SelectContent>
                           </Select>
                         </div>
-                        
-                        <div className="w-20 text-right">
-                          {ingredient.mapped ? (
-                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                              Linked
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive">
-                              None
-                            </Badge>
-                          )}
+
+                        {/* Current Name Display */}
+                        <div className="md:col-span-3">
+                          <Label className="text-sm font-medium">Ingredient Name</Label>
+                          <div className="text-sm bg-muted/50 p-2 rounded">
+                            {ingredient.ingredient_name || 'Not mapped'}
+                          </div>
+                        </div>
+
+                        {/* Quantity */}
+                        <div className="md:col-span-2">
+                          <Label className="text-sm font-medium">Quantity</Label>
+                          <Input
+                            type="number"
+                            value={ingredient.quantity}
+                            className="text-sm"
+                            readOnly
+                          />
+                        </div>
+
+                        {/* Unit */}
+                        <div className="md:col-span-2">
+                          <Label className="text-sm font-medium">Unit</Label>
+                          <Input
+                            value={ingredient.unit}
+                            className="text-sm"
+                            readOnly
+                          />
+                        </div>
+
+                        {/* Actions */}
+                        <div className="md:col-span-1 flex justify-end">
+                          <Button
+                            onClick={() => handleDeleteIngredient(ingredient.id)}
+                            disabled={isSaving}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
-      {filteredProducts.length === 0 && (
-        <div className="text-center py-12">
-          <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No products found</h3>
-          <p className="text-muted-foreground">
-            {searchTerm ? 'No products match your search.' : 'No products available for mapping.'}
-          </p>
-        </div>
+                      {/* Cost Information */}
+                      <div className="mt-2 pt-2 border-t border-muted text-sm text-muted-foreground">
+                        Cost: ₱{ingredient.cost_per_unit}/unit × {ingredient.quantity} = ₱{(ingredient.cost_per_unit * ingredient.quantity).toFixed(2)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Summary */}
+            {validationStatus && recipeIngredients.length > 0 && (
+              <Card className="bg-muted/30">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <strong>Total Ingredients:</strong> {validationStatus.totalCount}
+                    </div>
+                    <div>
+                      <strong>Mapped:</strong> {validationStatus.totalCount - validationStatus.unmappedCount}
+                    </div>
+                    <div>
+                      <strong>Unmapped:</strong> {validationStatus.unmappedCount}
+                    </div>
+                    <div>
+                      <strong>Total Cost:</strong> ₱{recipeCost.toFixed(2)}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );
