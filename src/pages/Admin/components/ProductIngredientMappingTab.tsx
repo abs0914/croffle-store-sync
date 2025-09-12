@@ -324,15 +324,34 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
           .delete()
           .eq('recipe_id', targetRecipeId);
 
-        // Copy current ingredients to target recipe
-        const ingredientInserts = recipeIngredients
-          .filter(ing => ing.inventory_stock_id)
-          .map(ing => ({
+        // Copy current ingredients to target recipe with per-store inventory matching
+        const ingredientInserts: Array<{ recipe_id: string; inventory_stock_id: string | null; quantity: number; unit: InventoryUnit }> = [];
+
+        for (const ing of recipeIngredients) {
+          let targetInventoryId: string | null = null;
+
+          // Try to map by inventory item name in the target store
+          const sourceItemName = ing.inventory_stock?.item;
+          if (sourceItemName) {
+            const { data: targetStock, error: targetStockError } = await supabase
+              .from('inventory_stock')
+              .select('id')
+              .eq('store_id', store.id)
+              .ilike('item', sourceItemName)
+              .maybeSingle();
+
+            if (!targetStockError && targetStock?.id) {
+              targetInventoryId = targetStock.id;
+            }
+          }
+
+          ingredientInserts.push({
             recipe_id: targetRecipeId,
-            inventory_stock_id: ing.inventory_stock_id,
+            inventory_stock_id: targetInventoryId,
             quantity: ing.quantity,
             unit: ing.unit
-          }));
+          });
+        }
 
         if (ingredientInserts.length > 0) {
           await supabase
