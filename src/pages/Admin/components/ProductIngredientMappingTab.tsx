@@ -234,19 +234,32 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
 
       if (updateByIdError) throw updateByIdError;
 
+      // Check if update actually affected any rows
       if (!updatedById || updatedById.length === 0) {
+        console.warn('⚠️ No rows updated by ID. Attempting composite update...');
         const ing = recipeIngredients.find(i => i.id === ingredientId);
         const recipeId = products.find(p => p.id === selectedProduct)?.recipe_id;
+        
         if (ing && recipeId) {
-          const { error: updateByCompositeError } = await supabase
+          const { data: updatedByComposite, error: updateByCompositeError } = await supabase
             .from('recipe_ingredients')
             .update({ quantity, updated_at: now })
             .eq('recipe_id', recipeId)
             .eq('inventory_stock_id', ing.inventory_stock_id)
-            .eq('unit', ing.unit);
+            .eq('unit', ing.unit)
+            .select('id');
 
           if (updateByCompositeError) throw updateByCompositeError;
+          
+          if (!updatedByComposite || updatedByComposite.length === 0) {
+            throw new Error('No rows were updated. You may not have permission to modify this ingredient.');
+          }
+          console.log(`✅ Composite update affected ${updatedByComposite.length} row(s).`);
+        } else {
+          throw new Error('No rows were updated. You may not have permission to modify this ingredient.');
         }
+      } else {
+        console.log(`✅ Direct update affected ${updatedById.length} row(s).`);
       }
 
       await loadRecipeIngredients();
@@ -258,7 +271,8 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
       }
     } catch (error) {
       console.error('Error updating quantity:', error);
-      toast.error('Failed to update quantity');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update quantity';
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -368,7 +382,10 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
 
       let deletedCompositeCount = 0;
 
-      if (!deletedRowsById || deletedRowsById.length === 0) {
+      // Check if any rows were actually deleted
+      let totalDeleted = deletedRowsById?.length || 0;
+
+      if (totalDeleted === 0) {
         console.warn('⚠️ No rows deleted by id. Attempting composite delete...');
         if (ingredient) {
           const product = products.find(p => p.id === selectedProduct);
@@ -387,6 +404,8 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
               throw deleteByCompositeError;
             }
             deletedCompositeCount = deletedByComposite?.length || 0;
+            totalDeleted = deletedCompositeCount;
+            
             if (deletedCompositeCount === 0) {
               console.warn('⚠️ Composite delete found no matches.');
             } else {
@@ -394,9 +413,16 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
             }
           }
         }
+        
+        // If still no rows deleted, show permission error
+        if (totalDeleted === 0) {
+          throw new Error('No rows were deleted. You may not have permission to delete this ingredient.');
+        }
+      } else {
+        console.log(`✅ Direct delete removed ${totalDeleted} row(s).`);
       }
 
-      // Optimistically update UI
+      // Only update UI optimistically if we successfully deleted rows
       if (ingredient) {
         const product = products.find(p => p.id === selectedProduct);
         const recipeId = product?.recipe_id;
@@ -423,7 +449,8 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
       }
     } catch (error) {
       console.error('Error deleting ingredient:', error);
-      toast.error('Failed to remove ingredient');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to remove ingredient';
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
