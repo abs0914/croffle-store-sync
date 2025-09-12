@@ -316,7 +316,7 @@ export const ProductIngredientMappingTab: React.FC = () => {
         selectedStore,
         supabase,
         {
-          resolveVariants: true,
+          resolveVariants: false,
           syncMappingTable: true,
           skipVerification: false
         }

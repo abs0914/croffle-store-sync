@@ -33,7 +33,7 @@ export const normalizeIngredientName = (name: string): string => {
     .trim()
     .replace(/[^\w\s]/g, '') // Remove punctuation
     .replace(/\s+/g, ' ')    // Normalize whitespace
-    .replace(/\b(crushed|chopped|diced|sliced|fresh|dried|powdered)\b/g, '')
+    .replace(/\b(chopped|diced|sliced|fresh|dried|powdered)\b/g, '')
     .replace(/\b(organic|natural|premium|regular)\b/g, '')
     .trim();
 };
