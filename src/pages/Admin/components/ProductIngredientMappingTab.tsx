@@ -338,19 +338,30 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     setIsSaving(true);
     try {
       console.log('🚀 Deleting ingredient from database...');
-      const { error } = await supabase
+      const { data: deletedRows, error } = await supabase
         .from('recipe_ingredients')
         .delete()
-        .eq('id', ingredientId);
+        .eq('id', ingredientId)
+        .select();
 
       if (error) {
         console.error('❌ Database error:', error);
         throw error;
       }
 
-      console.log('✅ Successfully deleted ingredient');
+      if (!deletedRows || deletedRows.length === 0) {
+        console.warn('⚠️ No rows deleted (already removed or not found). Forcing local removal.');
+        setRecipeIngredients(prev => prev.filter(i => i.id !== ingredientId));
+        toast.info('Ingredient not found; UI refreshed');
+      } else {
+        console.log('✅ Successfully deleted ingredient', deletedRows[0]);
+        // Optimistically update UI
+        setRecipeIngredients(prev => prev.filter(i => i.id !== ingredientId));
+        toast.success('Ingredient removed');
+      }
+
+      // Reload from server to be safe
       await loadRecipeIngredients();
-      toast.success('Ingredient removed');
 
       // If apply to all stores is enabled, deploy changes
       if (applyToAllStores) {
