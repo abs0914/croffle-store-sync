@@ -327,15 +327,28 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
   };
 
   const deleteIngredient = async (ingredientId: string) => {
+    console.log('🗑️ Delete ingredient clicked!', ingredientId);
+    
+    if (!ingredientId) {
+      console.error('❌ No ingredient ID provided');
+      toast.error('Invalid ingredient ID');
+      return;
+    }
+
     setIsSaving(true);
     try {
+      console.log('🚀 Deleting ingredient from database...');
       const { error } = await supabase
         .from('recipe_ingredients')
         .delete()
         .eq('id', ingredientId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw error;
+      }
 
+      console.log('✅ Successfully deleted ingredient');
       await loadRecipeIngredients();
       toast.success('Ingredient removed');
 
