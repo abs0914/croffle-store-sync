@@ -158,7 +158,7 @@ async function deductRegularProduct(
           recipe_ingredients (
             quantity,
             inventory_stock_id,
-            inventory_stock:inventory_stock!inventory_stock_id(item)
+            inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(item)
           )
         )
       `)

@@ -95,7 +95,7 @@ export const deductInventoryForSingleProduct = async (
             inventory_stock_id,
             quantity,
             unit,
-            inventory_stock:inventory_stock!inventory_stock_id(
+            inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
               id,
               item,
               stock_quantity
@@ -247,7 +247,7 @@ export const performSimpleInventoryDeduction = async (
               inventory_stock_id,
               quantity,
               unit,
-              inventory_stock:inventory_stock!inventory_stock_id(
+              inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
                 id,
                 item,
                 stock_quantity,

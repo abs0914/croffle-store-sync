@@ -68,7 +68,7 @@ export const validateProductForSale = async (
       .from('product_ingredients')
       .select(`
         *,
-        inventory_item:inventory_stock!inventory_stock_id(*)
+        inventory_item:inventory_stock!product_ingredients_inventory_stock_id_fkey(*)
       `)
       .eq('product_catalog_id', productId);
 
@@ -84,7 +84,7 @@ export const validateProductForSale = async (
         .from('recipe_ingredients')
         .select(`
           *,
-          inventory_item:inventory_stock!inventory_stock_id(*)
+          inventory_item:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(*)
         `)
         .eq('recipe_id', productInfo.recipe_id);
 

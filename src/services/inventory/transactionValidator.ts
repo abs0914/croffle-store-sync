@@ -218,7 +218,7 @@ export class TransactionValidator {
               ingredient_name,
               quantity,
               unit,
-              inventory_stock:inventory_stock!inventory_stock_id (
+              inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
                 item,
                 stock_quantity
               )

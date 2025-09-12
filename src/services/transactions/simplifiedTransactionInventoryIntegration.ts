@@ -45,7 +45,7 @@ export class SimplifiedTransactionInventoryIntegration {
               recipe_ingredients_with_names!inner (
                 ingredient_name,
                 quantity,
-                inventory_stock!inventory_stock_id (
+                inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
                   id,
                   stock_quantity
                 )

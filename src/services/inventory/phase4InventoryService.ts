@@ -76,7 +76,7 @@ export class SimplifiedInventoryService {
               quantity,
               unit,
               inventory_stock_id,
-              inventory_stock:inventory_stock!inventory_stock_id(item)
+              inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(item)
             )
             )
           `)
@@ -294,7 +294,7 @@ export class SimplifiedInventoryService {
     try {
       console.log(`🔄 PHASE 4: Deducting item: ${item.productName} (${item.productId})`);
       
-      // FIXED: Use proper SQL query with explicit JOINs and embedding hints
+      // FIXED: Use proper SQL query with foreign key constraint hint to avoid ambiguity
       const { data: recipeData, error: recipeError } = await supabase
         .from('product_catalog')
         .select(`
@@ -306,7 +306,7 @@ export class SimplifiedInventoryService {
               quantity,
               unit,
               inventory_stock_id,
-              inventory_stock!inventory_stock_id(item)
+              inventory_stock!recipe_ingredients_inventory_stock_id_fkey(item)
             )
           )
         `)

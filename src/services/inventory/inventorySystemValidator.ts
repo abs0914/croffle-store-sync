@@ -249,7 +249,7 @@ async function validateInventoryMappings(storeId: string): Promise<ValidationRes
     .from('recipe_ingredients')
     .select(`
       inventory_stock_id,
-      inventory_stock:inventory_stock!inventory_stock_id(item),
+      inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(item),
       recipes!inner (
         store_id
       )

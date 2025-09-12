@@ -32,7 +32,7 @@ export const fetchRecipes = async (storeId: string): Promise<Recipe[]> => {
         *,
         ingredients:recipe_ingredients(
           *,
-          inventory_stock:inventory_stock!inventory_stock_id(*)
+          inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(*)
         )
       `)
       .eq('store_id', storeId)

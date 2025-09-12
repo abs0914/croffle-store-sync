@@ -440,7 +440,7 @@ class UnifiedProductInventoryService {
     }>;
   }> {
     try {
-      // FIXED: Use recipe_ingredients_with_names view and proper embedding hints
+      // FIXED: Use constraint name hint to avoid PostgREST ambiguity
       const { data: productCatalog, error: recipeError } = await supabase
         .from('product_catalog')
         .select(`
@@ -452,7 +452,7 @@ class UnifiedProductInventoryService {
               inventory_stock_id,
               ingredient_name,
               quantity,
-              inventory_stock!inventory_stock_id (
+              inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
                 id,
                 item,
                 stock_quantity
