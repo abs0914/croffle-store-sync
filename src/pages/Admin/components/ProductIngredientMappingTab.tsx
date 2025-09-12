@@ -233,15 +233,32 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
   };
 
   const addNewIngredient = async () => {
-    if (!selectedProduct || inventoryItems.length === 0) return;
+    console.log('🔧 Add Ingredient clicked!');
+    console.log('Selected product:', selectedProduct);
+    console.log('Inventory items length:', inventoryItems.length);
+    console.log('Products:', products);
+    
+    if (!selectedProduct || inventoryItems.length === 0) {
+      console.log('❌ Early return: no product or no inventory items');
+      toast.error('Please select a product and ensure inventory items are available');
+      return;
+    }
 
     const product = products.find(p => p.id === selectedProduct);
-    if (!product?.recipe_id) return;
+    console.log('Found product:', product);
+    
+    if (!product?.recipe_id) {
+      console.log('❌ Early return: no recipe_id found');
+      toast.error('Product does not have a recipe associated');
+      return;
+    }
 
     const firstInventoryItem = inventoryItems[0];
+    console.log('First inventory item:', firstInventoryItem);
     
     setIsSaving(true);
     try {
+      console.log('🚀 Inserting new ingredient...');
       const { error } = await supabase
         .from('recipe_ingredients')
         .insert({
@@ -251,8 +268,12 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
           unit: firstInventoryItem.unit
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw error;
+      }
 
+      console.log('✅ Successfully inserted ingredient');
       await loadRecipeIngredients();
       toast.success('New ingredient added');
 
