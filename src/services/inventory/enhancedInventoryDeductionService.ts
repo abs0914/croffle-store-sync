@@ -156,9 +156,9 @@ async function deductRegularProduct(
           id,
           name,
           recipe_ingredients (
-            ingredient_name,
             quantity,
-            inventory_stock_id
+            inventory_stock_id,
+            inventory_stock:inventory_stock_id(item)
           )
         )
       `)
@@ -189,12 +189,13 @@ async function deductRegularProduct(
     // Process each ingredient (deduct ALL for regular products)
     for (const ingredient of recipe.recipe_ingredients || []) {
       if (!ingredient.inventory_stock_id) {
-        console.log(`⚠️ Ingredient ${ingredient.ingredient_name} not mapped to inventory, skipping`);
+        console.log(`⚠️ Ingredient not mapped to inventory, skipping`);
         continue;
       }
 
+      const ingredientName = ingredient.inventory_stock?.item || 'unknown';
       const totalDeduction = ingredient.quantity * quantity;
-      console.log(`🔢 Deducting ${totalDeduction} of ${ingredient.ingredient_name}`);
+      console.log(`🔢 Deducting ${totalDeduction} of ${ingredientName}`);
 
       // Get current stock
       const { data: stockItem, error: stockError } = await supabase
@@ -204,7 +205,7 @@ async function deductRegularProduct(
         .single();
 
       if (stockError) {
-        result.errors.push(`Error fetching stock for ${ingredient.ingredient_name}`);
+        result.errors.push(`Error fetching stock for ${ingredientName}`);
         continue;
       }
 
@@ -220,7 +221,7 @@ async function deductRegularProduct(
         .eq('id', ingredient.inventory_stock_id);
 
       if (updateError) {
-        result.errors.push(`Error updating stock for ${ingredient.ingredient_name}`);
+        result.errors.push(`Error updating stock for ${ingredientName}`);
         result.success = false;
         continue;
       }
@@ -235,22 +236,22 @@ async function deductRegularProduct(
           p_new_quantity: newStock,
           p_reference_type: 'transaction',
           p_reference_id: transactionId,
-          p_notes: `Regular deduction: ${ingredient.ingredient_name} for ${recipe.name}`,
+          p_notes: `Regular deduction: ${ingredientName} for ${recipe.name}`,
           p_created_by: userId || null
         });
       } catch (logError) {
-        console.warn(`⚠️ Failed to log movement for ${ingredient.ingredient_name}:`, logError);
+        console.warn(`⚠️ Failed to log movement for ${ingredientName}:`, logError);
       }
 
       // Record the deduction
       result.deductedItems.push({
         inventoryId: ingredient.inventory_stock_id,
-        itemName: ingredient.ingredient_name,
+        itemName: ingredientName,
         quantityDeducted: totalDeduction,
         newStock
       });
 
-      console.log(`✅ Successfully deducted ${totalDeduction} of ${ingredient.ingredient_name}, new stock: ${newStock}`);
+      console.log(`✅ Successfully deducted ${totalDeduction} of ${ingredientName}, new stock: ${newStock}`);
     }
 
     if (result.errors.length > 0) {

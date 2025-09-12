@@ -244,11 +244,12 @@ async function validateStoreRecipeDeployment(storeId: string): Promise<Validatio
  * Validate inventory mappings exist for all recipe ingredients
  */
 async function validateInventoryMappings(storeId: string): Promise<ValidationResult> {
-  // Get all recipe ingredients for this store
+  // Get all recipe ingredients for this store  
   const { data: recipeIngredients, error: ingredientError } = await supabase
     .from('recipe_ingredients')
     .select(`
-      ingredient_name,
+      inventory_stock_id,
+      inventory_stock:inventory_stock_id(item),
       recipes!inner (
         store_id
       )
@@ -270,7 +271,7 @@ async function validateInventoryMappings(storeId: string): Promise<ValidationRes
     throw new Error(`Inventory fetch failed: ${inventoryError.message}`);
   }
 
-  const uniqueIngredients = [...new Set(recipeIngredients?.map(ri => ri.ingredient_name) || [])];
+  const uniqueIngredients = [...new Set(recipeIngredients?.map(ri => ri.inventory_stock?.item).filter(Boolean) || [])];
   const inventoryItemNames = inventoryItems?.map(item => item.item) || [];
 
   const unmappedIngredients = uniqueIngredients.filter(ingredient => {
@@ -462,7 +463,7 @@ export const validateSpecificItems = async (
           id,
           name,
           recipe_ingredients (
-            ingredient_name,
+            inventory_stock_id,
             quantity
           )
         `)

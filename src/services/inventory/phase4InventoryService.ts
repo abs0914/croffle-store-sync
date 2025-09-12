@@ -72,11 +72,12 @@ export class SimplifiedInventoryService {
             recipes!inner (
               id,
               is_active,
-              recipe_ingredients (
-                ingredient_name,
-                quantity,
-                unit
-              )
+            recipe_ingredients (
+              quantity,
+              unit,
+              inventory_stock_id,
+              inventory_stock:inventory_stock_id(item)
+            )
             )
           `)
           .eq('id', item.productId)
@@ -108,40 +109,44 @@ export class SimplifiedInventoryService {
         
         // Validate recipe ingredients
         for (const ingredient of recipe.recipe_ingredients) {
-          const requiredQuantity = ingredient.quantity * item.quantity;
-          console.log(`🔍 PHASE 4: Validating ${ingredient.ingredient_name}: need ${requiredQuantity}`);
+          if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
+            continue; // Skip unmapped ingredients
+          }
           
-          // Find inventory stock for this ingredient
+          const ingredientName = ingredient.inventory_stock.item;
+          const requiredQuantity = ingredient.quantity * item.quantity;
+          console.log(`🔍 PHASE 4: Validating ${ingredientName}: need ${requiredQuantity}`);
+          
+          // Get current stock
           const { data: inventoryStock, error: stockError } = await supabase
             .from('inventory_stock')
             .select('id, item, stock_quantity')
-            .eq('store_id', item.storeId)
-            .eq('item', ingredient.ingredient_name)
+            .eq('id', ingredient.inventory_stock_id)
             .eq('is_active', true)
             .maybeSingle();
 
           if (stockError) {
-            console.error(`❌ PHASE 4: Stock query failed for ${ingredient.ingredient_name}:`, stockError);
-            errors.push(`Database error checking ${ingredient.ingredient_name}: ${stockError.message}`);
+            console.error(`❌ PHASE 4: Stock query failed for ${ingredientName}:`, stockError);
+            errors.push(`Database error checking ${ingredientName}: ${stockError.message}`);
             continue;
           }
 
           if (!inventoryStock) {
-            console.error(`❌ PHASE 4: Missing inventory for ingredient: ${ingredient.ingredient_name}`);
-            errors.push(`Missing inventory for ingredient: ${ingredient.ingredient_name}`);
+            console.error(`❌ PHASE 4: Missing inventory for ingredient: ${ingredientName}`);
+            errors.push(`Missing inventory for ingredient: ${ingredientName}`);
             continue;
           }
 
-          console.log(`📊 PHASE 4: ${ingredient.ingredient_name} stock: ${inventoryStock.stock_quantity}, need: ${requiredQuantity}`);
+          console.log(`📊 PHASE 4: ${ingredientName} stock: ${inventoryStock.stock_quantity}, need: ${requiredQuantity}`);
 
           if (inventoryStock.stock_quantity < requiredQuantity) {
             insufficientItems.push({
-              ingredient: ingredient.ingredient_name,
+              ingredient: ingredientName,
               required: requiredQuantity,
               available: inventoryStock.stock_quantity
             });
-            errors.push(`Insufficient ${ingredient.ingredient_name}: need ${requiredQuantity}, have ${inventoryStock.stock_quantity}`);
-            console.error(`❌ PHASE 4: Insufficient ${ingredient.ingredient_name}: need ${requiredQuantity}, have ${inventoryStock.stock_quantity}`);
+            errors.push(`Insufficient ${ingredientName}: need ${requiredQuantity}, have ${inventoryStock.stock_quantity}`);
+            console.error(`❌ PHASE 4: Insufficient ${ingredientName}: need ${requiredQuantity}, have ${inventoryStock.stock_quantity}`);
           }
         }
 
@@ -298,9 +303,10 @@ export class SimplifiedInventoryService {
             id,
             is_active,
             recipe_ingredients (
-              ingredient_name,
               quantity,
-              unit
+              unit,
+              inventory_stock_id,
+              inventory_stock!inner(item)
             )
           )
         `)
@@ -332,45 +338,48 @@ export class SimplifiedInventoryService {
       
       // Process recipe ingredients
       for (const ingredient of recipe.recipe_ingredients) {
+        if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
+          continue; // Skip unmapped ingredients
+        }
 
+        const ingredientName = ingredient.inventory_stock.item;
         const deductionAmount = ingredient.quantity * item.quantity;
-        console.log(`🔄 PHASE 4: Deducting ${ingredient.ingredient_name}: ${deductionAmount}`);
+        console.log(`🔄 PHASE 4: Deducting ${ingredientName}: ${deductionAmount}`);
         
         // Get current inventory with error handling
         const { data: inventoryStock, error: stockError } = await supabase
           .from('inventory_stock')
           .select('id, stock_quantity')
-          .eq('store_id', item.storeId)
-          .eq('item', ingredient.ingredient_name)
+          .eq('id', ingredient.inventory_stock_id)
           .eq('is_active', true)
           .maybeSingle();
 
         if (stockError) {
-          console.error(`❌ PHASE 4: Stock query failed for ${ingredient.ingredient_name}:`, stockError);
-          errors.push(`Database error for ${ingredient.ingredient_name}: ${stockError.message}`);
+          console.error(`❌ PHASE 4: Stock query failed for ${ingredientName}:`, stockError);
+          errors.push(`Database error for ${ingredientName}: ${stockError.message}`);
           continue;
         }
 
         if (!inventoryStock) {
-          console.error(`❌ PHASE 4: Inventory not found: ${ingredient.ingredient_name}`);
-          errors.push(`Inventory not found: ${ingredient.ingredient_name}`);
+          console.error(`❌ PHASE 4: Inventory not found: ${ingredientName}`);
+          errors.push(`Inventory not found: ${ingredientName}`);
           continue;
         }
 
         if (inventoryStock.stock_quantity < deductionAmount) {
           validationFailures.push({
-            ingredient: ingredient.ingredient_name,
+            ingredient: ingredientName,
             required: deductionAmount,
             available: inventoryStock.stock_quantity
           });
-          errors.push(`Insufficient ${ingredient.ingredient_name}: need ${deductionAmount}, have ${inventoryStock.stock_quantity}`);
-          console.error(`❌ PHASE 4: Insufficient ${ingredient.ingredient_name}: need ${deductionAmount}, have ${inventoryStock.stock_quantity}`);
+          errors.push(`Insufficient ${ingredientName}: need ${deductionAmount}, have ${inventoryStock.stock_quantity}`);
+          console.error(`❌ PHASE 4: Insufficient ${ingredientName}: need ${deductionAmount}, have ${inventoryStock.stock_quantity}`);
           continue;
         }
 
         // Perform deduction
         const newQuantity = inventoryStock.stock_quantity - deductionAmount;
-        console.log(`🔄 PHASE 4: Updating ${ingredient.ingredient_name}: ${inventoryStock.stock_quantity} → ${newQuantity}`);
+        console.log(`🔄 PHASE 4: Updating ${ingredientName}: ${inventoryStock.stock_quantity} → ${newQuantity}`);
         
         const { error: updateError } = await supabase
           .from('inventory_stock')
@@ -381,12 +390,12 @@ export class SimplifiedInventoryService {
           .eq('id', inventoryStock.id);
 
         if (updateError) {
-          console.error(`❌ PHASE 4: Failed to update ${ingredient.ingredient_name}:`, updateError);
-          errors.push(`Failed to update ${ingredient.ingredient_name}: ${updateError.message}`);
+          console.error(`❌ PHASE 4: Failed to update ${ingredientName}:`, updateError);
+          errors.push(`Failed to update ${ingredientName}: ${updateError.message}`);
           continue;
         }
 
-        console.log(`✅ PHASE 4: Successfully updated ${ingredient.ingredient_name} stock`);
+        console.log(`✅ PHASE 4: Successfully updated ${ingredientName} stock`);
 
         // Create movement record
         const { error: movementError } = await supabase
@@ -406,11 +415,11 @@ export class SimplifiedInventoryService {
         if (movementError) {
           console.warn('⚠️ PHASE 4: Movement record failed (non-critical):', movementError);
         } else {
-          console.log(`✅ PHASE 4: Created movement record for ${ingredient.ingredient_name}`);
+          console.log(`✅ PHASE 4: Created movement record for ${ingredientName}`);
         }
 
         deductedItems.push({
-          ingredient: ingredient.ingredient_name,
+          ingredient: ingredientName,
           deducted: deductionAmount,
           remaining: newQuantity
         });

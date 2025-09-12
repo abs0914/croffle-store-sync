@@ -89,7 +89,7 @@ export class EnhancedDeductionService {
               quantity,
               unit,
               inventory_stock_id,
-              inventory_stock!inner(
+              inventory_stock:inventory_stock_id(
                 id,
                 item,
                 stock_quantity,
@@ -107,22 +107,22 @@ export class EnhancedDeductionService {
         return result;
       }
 
-      const recipe = productInfo.recipes;
-      const ingredients = recipe.recipe_ingredients || [];
+        const recipe = productInfo.recipes;
+        const ingredients = recipe.recipe_ingredients || [];
 
-      console.log('📊 DEDUCTION ANALYSIS:', {
-        productName: productInfo.product_name,
-        recipeId: recipe.id,
-        quantity,
-        ingredientCount: ingredients.length,
-        ingredients: ingredients.map(ing => ({
-          name: (ing as any).inventory_stock?.item || 'ingredient',
-          recipeQuantity: ing.quantity,
-          totalNeeded: ing.quantity * quantity,
-          unit: ing.unit,
-          currentStock: (ing as any).inventory_stock?.stock_quantity
-        }))
-      });
+        console.log('📊 DEDUCTION ANALYSIS:', {
+          productName: productInfo.product_name,
+          recipeId: recipe.id,
+          quantity,
+          ingredientCount: ingredients.length,
+          ingredients: ingredients.map(ing => ({
+            name: ing.inventory_stock?.item || 'ingredient',
+            recipeQuantity: ing.quantity,
+            totalNeeded: ing.quantity * quantity,
+            unit: ing.unit,
+            currentStock: ing.inventory_stock?.stock_quantity
+          }))
+        });
 
       // Validate and prepare deductions
       const updates = [];
@@ -135,7 +135,7 @@ export class EnhancedDeductionService {
 
         if (newStock < 0) {
           insufficientStock.push({
-            ingredient: (ingredient as any).inventory_stock?.item || 'ingredient',
+            ingredient: ingredient.inventory_stock?.item || 'ingredient',
             needed: totalNeeded,
             available: currentStock,
             shortfall: Math.abs(newStock)
@@ -143,7 +143,7 @@ export class EnhancedDeductionService {
         } else {
           updates.push({
             inventoryId: ingredient.inventory_stock_id,
-            ingredient: (ingredient as any).inventory_stock?.item || 'ingredient',
+            ingredient: ingredient.inventory_stock?.item || 'ingredient',
             totalNeeded,
             currentStock,
             newStock,
@@ -247,9 +247,10 @@ export class EnhancedDeductionService {
       .select(`
         name,
         recipe_ingredients(
-          ingredient_name,
           quantity,
-          unit
+          unit,
+          inventory_stock_id,
+          inventory_stock:inventory_stock_id(item)
         )
       `)
       .eq('name', productName)
@@ -279,18 +280,19 @@ export class EnhancedDeductionService {
     };
 
     for (const ingredient of ingredients) {
-      const expected = expectedQuantities[productName]?.[ingredient.ingredient_name];
+      const ingredientName = ingredient.inventory_stock?.item;
+      const expected = expectedQuantities[productName]?.[ingredientName];
       
       if (expected !== undefined && ingredient.quantity !== expected) {
         issues.push({
-          ingredient: ingredient.ingredient_name,
+          ingredient: ingredientName,
           currentQuantity: ingredient.quantity,
           expectedQuantity: expected,
           unit: ingredient.unit
         });
       } else {
         issues.push({
-          ingredient: ingredient.ingredient_name,
+          ingredient: ingredientName,
           currentQuantity: ingredient.quantity,
           unit: ingredient.unit
         });
