@@ -38,6 +38,7 @@ import { RecipeTemplateDialog } from './components/RecipeTemplateDialog';
 import { OptimizedRecipeDeploymentDialog } from '@/components/Admin/recipe/OptimizedRecipeDeploymentDialog';
 import { BulkDeploymentDialog } from '@/components/Admin/recipe/BulkDeploymentDialog';
 import { UnifiedRecipeImportDialog } from '@/components/Admin/recipe/UnifiedRecipeImportDialog';
+import { InventoryMappingManager } from '@/components/Admin/InventoryMappingManager';
 import { useGlobalRecipeTemplateImportExport } from '@/hooks/useGlobalRecipeTemplateImportExport';
 import { RecipeTemplate } from '@/services/recipeManagement/types';
 import { toast } from 'sonner';
@@ -433,29 +434,34 @@ const GlobalRecipeManagement: React.FC = () => {
       </Card>
 
       {/* Templates Display */}
-      {filteredTemplates.length === 0 ? (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {searchTerm || categoryFilter !== 'all' 
-              ? `No templates found matching your filters` 
-              : 'No recipe templates created yet. Click "Create Template" to get started.'
-            }
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <>
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTemplates.map(renderTemplateCard)}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredTemplates.map(renderTemplateList)}
-            </div>
-          )}
-        </>
-      )}
+      <div className="space-y-6">
+        {/* Inventory Mapping Manager */}
+        <InventoryMappingManager />
+        
+        {filteredTemplates.length === 0 ? (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {searchTerm || categoryFilter !== 'all' 
+                ? `No templates found matching your filters` 
+                : 'No recipe templates created yet. Click "Create Template" to get started.'
+              }
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredTemplates.map(renderTemplateCard)}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredTemplates.map(renderTemplateList)}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Create Template Dialog */}
       <RecipeTemplateDialog

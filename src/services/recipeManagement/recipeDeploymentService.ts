@@ -463,7 +463,7 @@ const deployToSingleStoreWithTransaction = async (
 };
 
 /**
- * Validate and clean ingredients with enhanced store mapping
+ * Validate and clean ingredients with enhanced store mapping and cross-store fix
  */
 const validateAndCleanIngredients = async (ingredients: any[], storeId: string): Promise<any[]> => {
   const validIngredients = [];
@@ -496,21 +496,54 @@ const validateAndCleanIngredients = async (ingredients: any[], storeId: string):
       if (cleanName.length > 0) {
         console.log(`✅ Processing valid ingredient: ${cleanName}`);
         
-        // Try to find matching store inventory item (optional)
-        const storeItem = await findMatchingInventoryItem(cleanName, storeId);
+        // Validate existing inventory_stock_id for cross-store issues
+        let finalInventoryStockId = null;
         
-        if (storeItem) {
-          console.log(`🔗 Found store inventory match for "${cleanName}": ${storeItem.item}`);
-        } else {
-          console.log(`⚠️ No store inventory match for "${cleanName}" - proceeding anyway`);
+        if (ingredient.inventory_stock_id) {
+          // Check if the existing inventory_stock_id belongs to the target store
+          const { data: existingInventory } = await supabase
+            .from('inventory_stock')
+            .select('id, item, store_id')
+            .eq('id', ingredient.inventory_stock_id)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (existingInventory && existingInventory.store_id === storeId) {
+            // Valid store-specific mapping
+            finalInventoryStockId = existingInventory.id;
+            console.log(`✅ Valid store mapping: ${cleanName} -> ${existingInventory.item}`);
+          } else if (existingInventory) {
+            // Cross-store mapping detected - find correct item in target store
+            console.log(`⚠️ Cross-store mapping detected for "${cleanName}": item belongs to store ${existingInventory.store_id}, need ${storeId}`);
+            const correctStoreItem = await findMatchingInventoryItem(cleanName, storeId);
+            
+            if (correctStoreItem) {
+              finalInventoryStockId = correctStoreItem.id;
+              console.log(`✅ Fixed cross-store mapping: ${cleanName} -> ${correctStoreItem.item}`);
+            } else {
+              console.log(`⚠️ No equivalent item found in target store for: ${cleanName}`);
+            }
+          }
+        }
+        
+        // If no valid mapping found, try to find store inventory item
+        if (!finalInventoryStockId) {
+          const storeItem = await findMatchingInventoryItem(cleanName, storeId);
+          
+          if (storeItem) {
+            finalInventoryStockId = storeItem.id;
+            console.log(`🔗 Found store inventory match for "${cleanName}": ${storeItem.item}`);
+          } else {
+            console.log(`⚠️ No store inventory match for "${cleanName}" - proceeding anyway`);
+          }
         }
         
         const validIngredient = {
           ...ingredient,
           ingredient_name: cleanName,
-          inventory_stock_id: storeItem?.id || null,
+          inventory_stock_id: finalInventoryStockId,
           commissary_item_id: ingredient.commissary_item_id || null,
-          uses_store_inventory: !!storeItem,
+          uses_store_inventory: !!finalInventoryStockId,
           // Ensure we have essential fields with defaults
           quantity: ingredient.quantity || 1,
           unit: ingredient.unit || 'pieces',
