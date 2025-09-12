@@ -180,6 +180,7 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
       }));
 
       setRecipeIngredients(combinedData as RecipeIngredient[]);
+      console.log('📥 Loaded ingredients:', (combinedData || []).length, (combinedData || []).map((i: any) => i.id));
     } catch (error) {
       console.error('Error loading recipe ingredients:', error);
       toast.error('Failed to load recipe ingredients');
@@ -326,8 +327,8 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     );
   };
 
-  const deleteIngredient = async (ingredientId: string) => {
-    console.log('🗑️ Delete ingredient clicked!', ingredientId);
+  const deleteIngredient = async (ingredientId: string, ingredient?: RecipeIngredient) => {
+    console.log('🗑️ Delete ingredient clicked!', ingredientId, ingredient);
     
     if (!ingredientId) {
       console.error('❌ No ingredient ID provided');
@@ -337,30 +338,50 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
 
     setIsSaving(true);
     try {
-      console.log('🚀 Deleting ingredient from database...');
-      const { data: deletedRows, error } = await supabase
+      console.log('🚀 Deleting ingredient from database by id...');
+      const { data: deletedRowsById, error: deleteByIdError } = await supabase
         .from('recipe_ingredients')
         .delete()
         .eq('id', ingredientId)
         .select();
 
-      if (error) {
-        console.error('❌ Database error:', error);
-        throw error;
+      if (deleteByIdError) {
+        console.error('❌ Database error (by id):', deleteByIdError);
+        throw deleteByIdError;
       }
 
-      if (!deletedRows || deletedRows.length === 0) {
-        console.warn('⚠️ No rows deleted (already removed or not found). Forcing local removal.');
-        setRecipeIngredients(prev => prev.filter(i => i.id !== ingredientId));
-        toast.info('Ingredient not found; UI refreshed');
-      } else {
-        console.log('✅ Successfully deleted ingredient', deletedRows[0]);
-        // Optimistically update UI
-        setRecipeIngredients(prev => prev.filter(i => i.id !== ingredientId));
-        toast.success('Ingredient removed');
+      if (!deletedRowsById || deletedRowsById.length === 0) {
+        console.warn('⚠️ No rows deleted by id. Attempting fallback lookup...');
+        // Fallback: try to locate by recipe + inventory + quantity + unit
+        if (ingredient) {
+          const product = products.find(p => p.id === selectedProduct);
+          const recipeId = product?.recipe_id;
+          if (recipeId) {
+            const { data: match, error: findError } = await supabase
+              .from('recipe_ingredients')
+              .select('id')
+              .eq('recipe_id', recipeId)
+              .eq('inventory_stock_id', ingredient.inventory_stock_id)
+              .eq('quantity', ingredient.quantity)
+              .eq('unit', ingredient.unit)
+              .order('created_at', { ascending: false })
+              .maybeSingle();
+
+            if (!findError && match?.id) {
+              console.log('🔎 Fallback found match id:', match.id, '→ deleting...');
+              await supabase.from('recipe_ingredients').delete().eq('id', match.id);
+            } else {
+              console.warn('⚠️ Fallback could not find a matching row to delete.', findError);
+            }
+          }
+        }
       }
 
-      // Reload from server to be safe
+      // Optimistically update UI
+      setRecipeIngredients(prev => prev.filter(i => i.id !== ingredientId));
+      toast.success('Ingredient removed');
+
+      // Reload from server to ensure consistency
       await loadRecipeIngredients();
 
       // If apply to all stores is enabled, deploy changes
@@ -978,7 +999,7 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
                               {/* Actions */}
                               <div className="md:col-span-1 flex justify-end">
                                 <Button
-                                  onClick={() => deleteIngredient(ingredient.id)}
+                                  onClick={() => deleteIngredient(ingredient.id, ingredient)}
                                   disabled={isSaving}
                                   variant="ghost"
                                   size="sm"
