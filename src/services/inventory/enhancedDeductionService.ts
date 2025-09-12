@@ -86,7 +86,6 @@ export class EnhancedDeductionService {
             id,
             name,
             recipe_ingredients(
-              ingredient_name,
               quantity,
               unit,
               inventory_stock_id,
@@ -117,11 +116,11 @@ export class EnhancedDeductionService {
         quantity,
         ingredientCount: ingredients.length,
         ingredients: ingredients.map(ing => ({
-          name: ing.ingredient_name,
+          name: (ing as any).inventory_stock?.item || 'ingredient',
           recipeQuantity: ing.quantity,
           totalNeeded: ing.quantity * quantity,
           unit: ing.unit,
-          currentStock: ing.inventory_stock?.stock_quantity
+          currentStock: (ing as any).inventory_stock?.stock_quantity
         }))
       });
 
@@ -136,7 +135,7 @@ export class EnhancedDeductionService {
 
         if (newStock < 0) {
           insufficientStock.push({
-            ingredient: ingredient.ingredient_name,
+            ingredient: (ingredient as any).inventory_stock?.item || 'ingredient',
             needed: totalNeeded,
             available: currentStock,
             shortfall: Math.abs(newStock)
@@ -144,7 +143,7 @@ export class EnhancedDeductionService {
         } else {
           updates.push({
             inventoryId: ingredient.inventory_stock_id,
-            ingredient: ingredient.ingredient_name,
+            ingredient: (ingredient as any).inventory_stock?.item || 'ingredient',
             totalNeeded,
             currentStock,
             newStock,

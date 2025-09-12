@@ -57,7 +57,6 @@ export const validateProductsBeforeTransaction = async (
             is_active,
             recipe_ingredients (
               id,
-              ingredient_name,
               inventory_stock_id
             )
           )
@@ -147,22 +146,22 @@ export const validateProductsBeforeTransaction = async (
           } else {
             result.warnings.push(`${item.productName} missing recipe link - will use template fallback`);
           }
-        } else {
-          // Recipe exists - validate it
-          const recipe = catalogProduct.recipes;
-          
-          if (!recipe || !recipe.is_active) {
-            productIssues.push('Product recipe is inactive or missing');
-          } else if (!recipe.recipe_ingredients || recipe.recipe_ingredients.length === 0) {
-            productIssues.push('Product recipe has no ingredients defined');
           } else {
-            // Check if ingredients are mapped to inventory
-            const unmappedIngredients = recipe.recipe_ingredients.filter(ing => !ing.inventory_stock_id);
-            if (unmappedIngredients.length > 0) {
-              productIssues.push(`Recipe has ${unmappedIngredients.length} ingredients not mapped to inventory`);
+            // Recipe exists - validate it
+            const recipe = catalogProduct.recipes;
+            
+            if (!recipe || !recipe.is_active) {
+              productIssues.push('Product recipe is inactive or missing');
+            } else if (!recipe.recipe_ingredients || recipe.recipe_ingredients.length === 0) {
+              productIssues.push('Product recipe has no ingredients defined');
+            } else {
+              // Check if ingredients are mapped to inventory (FK presence)
+              const unmappedIngredients = recipe.recipe_ingredients.filter((ing: any) => !ing.inventory_stock_id);
+              if (unmappedIngredients.length > 0) {
+                productIssues.push(`Recipe has ${unmappedIngredients.length} ingredients not mapped to inventory`);
+              }
             }
           }
-        }
       }
 
       // If any critical issues found, block the product

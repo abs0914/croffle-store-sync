@@ -90,22 +90,34 @@ export const RecipeEditDialog: React.FC<RecipeEditDialogProps> = ({
     setTotalCost(total);
   }, [ingredients]);
 
-  const loadRecipeIngredients = async () => {
-    if (!recipe) return;
+const loadRecipeIngredients = async () => {
+  if (!recipe) return;
 
-    try {
-      const { data, error } = await supabase
-        .from('recipe_ingredients')
-        .select('*')
-        .eq('recipe_id', recipe.id);
+  try {
+    const { data, error } = await supabase
+      .from('recipe_ingredients_with_names')
+      .select('id, recipe_id, inventory_stock_id, ingredient_name, quantity, unit, cost_per_unit')
+      .eq('recipe_id', recipe.id);
 
-      if (error) throw error;
-      setIngredients(data || []);
-    } catch (error) {
-      console.error('Error loading recipe ingredients:', error);
-      toast.error('Failed to load recipe ingredients');
-    }
-  };
+    if (error) throw error;
+
+    const mapped = (data || []).map((ing: any) => ({
+      id: ing.id,
+      recipe_id: ing.recipe_id,
+      inventory_stock_id: ing.inventory_stock_id || '',
+      ingredient_name: ing.ingredient_name || '',
+      quantity: ing.quantity || 0,
+      unit: ing.unit || 'pieces',
+      cost_per_unit: ing.cost_per_unit || 0,
+    }));
+
+    setIngredients(mapped);
+  } catch (error) {
+    console.error('Error loading recipe ingredients:', error);
+    toast.error('Failed to load recipe ingredients');
+    setIngredients([]);
+  }
+};
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
@@ -139,22 +151,21 @@ export const RecipeEditDialog: React.FC<RecipeEditDialogProps> = ({
           .eq('recipe_id', recipe.id);
 
         // Insert updated ingredients
-        if (ingredients.length > 0) {
-          const ingredientsData = ingredients.map(ing => ({
-            recipe_id: recipe.id,
-            inventory_stock_id: ing.inventory_stock_id || null,
-            ingredient_name: ing.ingredient_name,
-            quantity: ing.quantity,
-            unit: ing.unit as any, // Cast to handle enum type
-            cost_per_unit: ing.cost_per_unit
-          }));
+if (ingredients.length > 0) {
+  const ingredientsData = ingredients.map(ing => ({
+    recipe_id: recipe.id,
+    inventory_stock_id: ing.inventory_stock_id || null,
+    quantity: ing.quantity,
+    unit: ing.unit as any, // Cast to handle enum type
+    cost_per_unit: ing.cost_per_unit
+  }));
 
-          const { error: ingredientsError } = await supabase
-            .from('recipe_ingredients')
-            .insert(ingredientsData);
+  const { error: ingredientsError } = await supabase
+    .from('recipe_ingredients')
+    .insert(ingredientsData);
 
-          if (ingredientsError) throw ingredientsError;
-        }
+  if (ingredientsError) throw ingredientsError;
+}
 
         toast.success('Recipe updated successfully');
       } else {
@@ -176,23 +187,22 @@ export const RecipeEditDialog: React.FC<RecipeEditDialogProps> = ({
 
         if (recipeError) throw recipeError;
 
-        // Insert ingredients
-        if (ingredients.length > 0) {
-          const ingredientsData = ingredients.map(ing => ({
-            recipe_id: newRecipe.id,
-            inventory_stock_id: ing.inventory_stock_id || null,
-            ingredient_name: ing.ingredient_name,
-            quantity: ing.quantity,
-            unit: ing.unit as any, // Cast to handle enum type
-            cost_per_unit: ing.cost_per_unit
-          }));
+// Insert ingredients
+if (ingredients.length > 0) {
+  const ingredientsData = ingredients.map(ing => ({
+    recipe_id: newRecipe.id,
+    inventory_stock_id: ing.inventory_stock_id || null,
+    quantity: ing.quantity,
+    unit: ing.unit as any, // Cast to handle enum type
+    cost_per_unit: ing.cost_per_unit
+  }));
 
-          const { error: ingredientsError } = await supabase
-            .from('recipe_ingredients')
-            .insert(ingredientsData);
+  const { error: ingredientsError } = await supabase
+    .from('recipe_ingredients')
+    .insert(ingredientsData);
 
-          if (ingredientsError) throw ingredientsError;
-        }
+  if (ingredientsError) throw ingredientsError;
+}
 
         toast.success('Recipe created successfully');
       }

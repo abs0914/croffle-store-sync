@@ -136,21 +136,26 @@ export const enhancedBatchInventoryService = {
   ): Promise<{ ingredientsProcessed: number; errors: string[] }> {
     try {
       // Find recipe ingredients for this item
-      const { data: recipeIngredients, error: recipeError } = await supabase
-        .from('recipe_ingredients')
-        .select(`
-          ingredient_name,
-          quantity,
-          unit,
-          recipe_id,
-          recipes!inner(
-            name,
-            store_id
-          )
-        `)
-        .eq('recipes.name', itemName)
-        .eq('recipes.store_id', storeId)
-        .eq('recipes.is_active', true);
+const { data: recipeIngredients, error: recipeError } = await supabase
+  .from('recipe_ingredients')
+  .select(`
+    inventory_stock_id,
+    quantity,
+    unit,
+    recipe_id,
+    inventory_stock!inner(
+      id,
+      item,
+      stock_quantity
+    ),
+    recipes!inner(
+      name,
+      store_id
+    )
+  `)
+  .eq('recipes.name', itemName)
+  .eq('recipes.store_id', storeId)
+  .eq('recipes.is_active', true);
 
       if (recipeError) {
         throw new Error(`Recipe lookup failed: ${recipeError.message}`);
@@ -163,17 +168,32 @@ export const enhancedBatchInventoryService = {
       const errors: string[] = [];
       let ingredientsProcessed = 0;
 
-      // Process each ingredient
+      // Process each ingredient directly using joined inventory_stock
       for (const ingredient of recipeIngredients) {
         try {
-          await this.deductSingleIngredient(
-            ingredient.ingredient_name,
-            ingredient.quantity * quantity,
-            storeId
-          );
-          ingredientsProcessed++;
-        } catch (error) {
-          errors.push(`${ingredient.ingredient_name}: ${error}`);
+          const inventory = (ingredient as any).inventory_stock as { id: string; item: string; stock_quantity: number } | null;
+          if (!inventory || !ingredient.inventory_stock_id) {
+            errors.push(`No inventory linked for ingredient (unit: ${ingredient.unit})`);
+            continue;
+          }
+          const required = (ingredient.quantity || 0) * quantity;
+          const available = inventory.stock_quantity || 0;
+          if (available < required) {
+            errors.push(`${inventory.item}: need ${required}, have ${available}`);
+            continue;
+          }
+          const newQty = available - required;
+          const { error: updErr } = await supabase
+            .from('inventory_stock')
+            .update({ stock_quantity: newQty, updated_at: new Date().toISOString() })
+            .eq('id', inventory.id);
+          if (updErr) {
+            errors.push(`${inventory.item}: update failed - ${updErr.message}`);
+          } else {
+            ingredientsProcessed++;
+          }
+        } catch (e) {
+          errors.push(e instanceof Error ? e.message : 'Unknown error');
         }
       }
 
@@ -187,72 +207,13 @@ export const enhancedBatchInventoryService = {
     }
   },
 
-  // Deduct a single ingredient from inventory
+  // Deduct a single ingredient from inventory (deprecated - mappings removed)
   async deductSingleIngredient(
-    ingredientName: string, 
-    quantityToDeduct: number, 
-    storeId: string
+    _ingredientName: string,
+    _quantityToDeduct: number,
+    _storeId: string
   ): Promise<void> {
-    try {
-      // Find inventory mapping
-      const { data: mapping, error: mappingError } = await supabase
-        .from('recipe_ingredient_mappings')
-        .select(`
-          inventory_stock_id,
-          conversion_factor,
-          inventory_stock!inner(
-            id,
-            item,
-            stock_quantity
-          )
-        `)
-        .eq('ingredient_name', ingredientName)
-        .eq('inventory_stock.store_id', storeId)
-        .eq('inventory_stock.is_active', true)
-        .maybeSingle();
-
-      if (mappingError) {
-        throw new Error(`Mapping lookup failed: ${mappingError.message}`);
-      }
-
-      if (!mapping) {
-        throw new Error(`No inventory mapping found for ${ingredientName}`);
-      }
-
-      const adjustedQuantity = quantityToDeduct * (mapping.conversion_factor || 1);
-      const currentStock = mapping.inventory_stock.stock_quantity;
-      const newQuantity = Math.max(0, currentStock - adjustedQuantity);
-
-      // Update inventory stock
-      const { error: updateError } = await supabase
-        .from('inventory_stock')
-        .update({
-          stock_quantity: newQuantity,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', mapping.inventory_stock_id);
-
-      if (updateError) {
-        throw new Error(`Stock update failed: ${updateError.message}`);
-      }
-
-      // Create movement record
-      await supabase.from('inventory_movements').insert({
-        inventory_stock_id: mapping.inventory_stock_id,
-        movement_type: 'sale',
-        quantity_change: -adjustedQuantity,
-        previous_quantity: currentStock,
-        new_quantity: newQuantity,
-        reference_type: 'batch_deduction',
-        notes: `Batch deduction: ${ingredientName}`,
-        created_by: 'system', // System user for batch operations
-        created_at: new Date().toISOString()
-      });
-
-    } catch (error) {
-      console.error(`Error deducting ingredient ${ingredientName}:`, error);
-      throw error;
-    }
+    throw new Error('Deprecated function - use direct deduction from recipe_ingredients with inventory_stock join');
   },
 
   // Validate inventory readiness for transactions
@@ -290,8 +251,9 @@ export const enhancedBatchInventoryService = {
           const { data: ingredients, error: ingredientsError } = await supabase
             .from('recipe_ingredients')
             .select(`
-              ingredient_name,
-              quantity
+              quantity,
+              inventory_stock_id,
+              inventory_stock(stock_quantity)
             `)
             .eq('recipe_id', recipe.id);
 
@@ -301,29 +263,12 @@ export const enhancedBatchInventoryService = {
           }
 
           for (const ingredient of ingredients || []) {
-            // Check if mapping exists
-            const { data: mapping } = await supabase
-              .from('recipe_ingredient_mappings')
-              .select(`
-                inventory_stock_id,
-                conversion_factor,
-                inventory_stock(stock_quantity)
-              `)
-              .eq('ingredient_name', ingredient.ingredient_name)
-              .eq('recipe_id', recipe.id)
-              .maybeSingle();
-            
-            if (!mapping) {
-              missingMappings.push(`${item.name} -> ${ingredient.ingredient_name}`);
-              continue;
-            }
-
-            const requiredQuantity = ingredient.quantity * item.quantity * (mapping.conversion_factor || 1);
-            const availableStock = (mapping.inventory_stock as any)?.stock_quantity || 0;
+            const requiredQuantity = (ingredient.quantity || 0) * item.quantity;
+            const availableStock = (ingredient as any).inventory_stock?.stock_quantity || 0;
 
             if (availableStock < requiredQuantity) {
               insufficientStock.push(
-                `${ingredient.ingredient_name}: need ${requiredQuantity}, have ${availableStock}`
+                `ingredient: need ${requiredQuantity}, have ${availableStock}`
               );
             }
           }

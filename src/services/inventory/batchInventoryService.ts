@@ -579,57 +579,7 @@ async function processRecipeIngredientsWithFallback(
       continue;
     }
 
-    // PHASE 2 FALLBACK: Use recipe_ingredient_mappings when inventory_stock_id is null
-    console.log(`🔄 FALLBACK: inventory_stock_id is null for ${ingredientName}, checking recipe_ingredient_mappings...`);
-    
-    const { data: mappingData, error: mappingError } = await supabase
-      .from('recipe_ingredient_mappings')
-      .select(`
-        inventory_stock_id,
-        conversion_factor,
-        inventory_stock (
-          id,
-          item,
-          stock_quantity
-        )
-      `)
-      .eq('recipe_id', recipe.id)
-      .eq('ingredient_name', ingredientName)
-      .maybeSingle();
-
-    if (mappingError) {
-      console.error(`❌ Error fetching ingredient mapping for ${ingredientName}:`, mappingError);
-      result.warnings.push(`Error fetching mapping for ${ingredientName}: ${mappingError.message}`);
-      failedIngredients.push(`${ingredientName} (mapping error)`);
-      continue;
-    }
-
-    if (mappingData?.inventory_stock) {
-      const inventoryStock = mappingData.inventory_stock;
-      const adjustedQuantity = quantity * (mappingData.conversion_factor || 1);
-      
-      console.log(`✅ MAPPING FALLBACK: ${ingredientName} → ${inventoryStock.item} (Stock: ${inventoryStock.stock_quantity}, Adjusted qty: ${adjustedQuantity})`);
-      
-      if (inventoryStock.stock_quantity >= adjustedQuantity) {
-        addToInventoryUpdates(
-          inventoryStock.id,
-          inventoryStock.item,
-          inventoryStock.stock_quantity,
-          adjustedQuantity,
-          transactionId,
-          ingredientName,
-          userId,
-          inventoryUpdates,
-          inventoryMovements
-        );
-        processedIngredients++;
-      } else {
-        console.warn(`⚠️ INSUFFICIENT STOCK (via mapping): ${ingredientName} needs ${adjustedQuantity}, only ${inventoryStock.stock_quantity} available`);
-        result.warnings.push(`Insufficient stock for ${ingredientName} (via mapping): need ${adjustedQuantity}, have ${inventoryStock.stock_quantity}`);
-        failedIngredients.push(`${ingredientName} (insufficient stock via mapping)`);
-      }
-      continue;
-    }
+    // Skip legacy mapping fallback; proceed to fuzzy inventory match
 
     // FINAL FALLBACK: Try fuzzy matching with store inventory
     console.log(`🔄 FUZZY FALLBACK: No mapping found for ${ingredientName}, trying fuzzy match...`);
