@@ -101,22 +101,43 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // First, get the recipe ingredients
+      const { data: ingredientsData, error: ingredientsError } = await supabase
         .from('recipe_ingredients')
-        .select(`
-          id,
-          recipe_id,
-          inventory_stock_id,
-          quantity,
-          unit,
-          created_at,
-          updated_at,
-          inventory_stock:inventory_stock_id(id, item, unit, cost)
-        `)
+        .select('id, recipe_id, inventory_stock_id, quantity, unit, created_at, updated_at')
         .eq('recipe_id', product.recipe_id);
 
-      if (error) throw error;
-      setRecipeIngredients((data || []) as RecipeIngredient[]);
+      if (ingredientsError) throw ingredientsError;
+
+      // Then get inventory stock details for the mapped ingredients
+      const stockIds = (ingredientsData || [])
+        .map(ing => ing.inventory_stock_id)
+        .filter(Boolean);
+
+      let inventoryStockMap: Record<string, any> = {};
+      
+      if (stockIds.length > 0) {
+        const { data: stockData, error: stockError } = await supabase
+          .from('inventory_stock')
+          .select('id, item, unit, cost')
+          .in('id', stockIds);
+
+        if (stockError) throw stockError;
+
+        // Create a map for quick lookup
+        inventoryStockMap = (stockData || []).reduce((acc, stock) => {
+          acc[stock.id] = stock;
+          return acc;
+        }, {} as Record<string, any>);
+      }
+
+      // Combine the data
+      const combinedData = (ingredientsData || []).map(ingredient => ({
+        ...ingredient,
+        inventory_stock: ingredient.inventory_stock_id ? inventoryStockMap[ingredient.inventory_stock_id] || null : null
+      }));
+
+      setRecipeIngredients(combinedData as RecipeIngredient[]);
     } catch (error) {
       console.error('Error loading recipe ingredients:', error);
       toast.error('Failed to load recipe ingredients');
