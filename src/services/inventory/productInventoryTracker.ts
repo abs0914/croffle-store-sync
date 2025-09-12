@@ -200,7 +200,7 @@ export const deductIngredientsWithTracking = async (
           .from('recipe_ingredients')
           .select(`
             *,
-            inventory_item:inventory_stock(*)
+            inventory_item:inventory_stock!inventory_stock_id(*)
           `)
           .eq('recipe_id', productInfo.recipe_id);
 

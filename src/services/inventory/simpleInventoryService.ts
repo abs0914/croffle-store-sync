@@ -5,6 +5,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SimplifiedInventoryService } from "./phase4InventoryService";
 
 export interface InventoryDeductionResult {
   success: boolean;
@@ -94,7 +95,7 @@ export const deductInventoryForSingleProduct = async (
             inventory_stock_id,
             quantity,
             unit,
-            inventory_stock:inventory_stock_id(
+            inventory_stock:inventory_stock!inventory_stock_id(
               id,
               item,
               stock_quantity
@@ -246,7 +247,7 @@ export const performSimpleInventoryDeduction = async (
               inventory_stock_id,
               quantity,
               unit,
-              inventory_stock:inventory_stock_id(
+              inventory_stock:inventory_stock!inventory_stock_id(
                 id,
                 item,
                 stock_quantity,
@@ -354,4 +355,21 @@ export const performSimpleInventoryDeduction = async (
     result.errors.push(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return result;
   }
+};
+
+export const validateInventoryAvailability = async (
+  storeId: string,
+  validationItems: Array<{ productId: string; quantity: number }>
+): Promise<{ available: boolean; insufficientItems: string[] }> => {
+  const items = validationItems.map(v => ({
+    productId: v.productId,
+    productName: '',
+    quantity: v.quantity,
+    storeId
+  }));
+  const res = await SimplifiedInventoryService.validateInventoryAvailability(items as any);
+  return {
+    available: res.canProceed,
+    insufficientItems: (res.insufficientItems || []).map((i: any) => i.ingredient)
+  };
 };

@@ -165,7 +165,7 @@ export class EnhancedProductCatalogService {
             id,
             required_quantity,
             unit,
-            inventory_stock:inventory_stock_id(
+            inventory_stock:inventory_stock!inventory_stock_id(
               id,
               item,
               stock_quantity,

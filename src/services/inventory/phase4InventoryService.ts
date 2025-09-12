@@ -76,7 +76,7 @@ export class SimplifiedInventoryService {
               quantity,
               unit,
               inventory_stock_id,
-              inventory_stock:inventory_stock_id(item)
+              inventory_stock:inventory_stock!inventory_stock_id(item)
             )
             )
           `)
