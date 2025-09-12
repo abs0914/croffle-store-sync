@@ -294,7 +294,7 @@ export class SimplifiedInventoryService {
     try {
       console.log(`🔄 PHASE 4: Deducting item: ${item.productName} (${item.productId})`);
       
-      // FIXED: Use proper SQL query with explicit JOINs
+      // FIXED: Use proper SQL query with explicit JOINs and embedding hints
       const { data: recipeData, error: recipeError } = await supabase
         .from('product_catalog')
         .select(`
@@ -306,7 +306,7 @@ export class SimplifiedInventoryService {
               quantity,
               unit,
               inventory_stock_id,
-              inventory_stock!inner(item)
+              inventory_stock!inventory_stock_id(item)
             )
           )
         `)

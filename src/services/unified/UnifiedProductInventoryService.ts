@@ -440,7 +440,7 @@ class UnifiedProductInventoryService {
     }>;
   }> {
     try {
-      // FIXED: Get recipe through product catalog relationship (recipes don't have product_id)
+      // FIXED: Use recipe_ingredients_with_names view and proper embedding hints
       const { data: productCatalog, error: recipeError } = await supabase
         .from('product_catalog')
         .select(`
@@ -448,11 +448,11 @@ class UnifiedProductInventoryService {
           recipes!inner (
             id,
             name,
-            recipe_ingredients (
+            recipe_ingredients_with_names (
+              inventory_stock_id,
               ingredient_name,
               quantity,
-              inventory_stock_id,
-              inventory_stock (
+              inventory_stock!inventory_stock_id (
                 id,
                 item,
                 stock_quantity
