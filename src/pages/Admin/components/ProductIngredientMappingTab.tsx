@@ -133,7 +133,8 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
         .from('recipe_ingredients')
         .select('id, recipe_id, inventory_stock_id, quantity, unit, created_at, updated_at, ingredient_group_name, is_optional, display_order')
         .eq('recipe_id', product.recipe_id)
-        .order('ingredient_group_name, display_order');
+        .order('ingredient_group_name', { nullsFirst: true })
+        .order('display_order', { nullsFirst: true });
 
       if (ingredientsError) throw ingredientsError;
 
@@ -256,31 +257,33 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     const firstInventoryItem = inventoryItems[0];
     console.log('First inventory item:', firstInventoryItem);
     
-    setIsSaving(true);
-    try {
-      console.log('🚀 Inserting new ingredient...');
-      const { error } = await supabase
-        .from('recipe_ingredients')
-        .insert({
-          recipe_id: product.recipe_id,
-          inventory_stock_id: firstInventoryItem.id,
-          quantity: 1,
-          unit: firstInventoryItem.unit
-        });
+  setIsSaving(true);
+  try {
+    console.log('🚀 Inserting new ingredient...');
+    const { data: inserted, error } = await supabase
+      .from('recipe_ingredients')
+      .insert({
+        recipe_id: product.recipe_id,
+        inventory_stock_id: firstInventoryItem.id,
+        quantity: 1,
+        unit: firstInventoryItem.unit
+      })
+      .select()
+      .single();
 
-      if (error) {
-        console.error('❌ Database error:', error);
-        throw error;
-      }
+    if (error) {
+      console.error('❌ Database error:', error);
+      throw error;
+    }
 
-      console.log('✅ Successfully inserted ingredient');
-      await loadRecipeIngredients();
-      toast.success('New ingredient added');
+    console.log('✅ Successfully inserted ingredient', inserted);
+    await loadRecipeIngredients();
+    toast.success(`New ingredient added: ${firstInventoryItem.item}`);
 
-      // If apply to all stores is enabled, deploy changes
-      if (applyToAllStores) {
-        await deployToAllStores();
-      }
+    // If apply to all stores is enabled, deploy changes
+    if (applyToAllStores) {
+      await deployToAllStores();
+    }
     } catch (error) {
       console.error('Error adding ingredient:', error);
       toast.error('Failed to add ingredient');
