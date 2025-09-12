@@ -32,7 +32,8 @@ import {
   RecipeTemplateWithMetrics
 } from '@/services/recipeManagement/recipeTemplateService';
 import { fetchCategories } from '@/services/category/categoryFetch';
-import { Category } from '@/types';
+import { fetchStores } from '@/pages/Admin/hooks/services/adminRecipesDataService';
+import { Category, Store } from '@/types';
 import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
 import { RecipeAuditDialog } from '@/components/Admin/RecipeAuditDialog';
@@ -40,6 +41,7 @@ import { MasterRecipeImportDialog } from '@/components/Admin/recipe/MasterRecipe
 import { ProductIngredientMappingTab } from './ProductIngredientMappingTab';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export const RecipeManagementTab: React.FC = () => {
   const [templates, setTemplates] = useState<any[]>([]);
@@ -53,11 +55,24 @@ export const RecipeManagementTab: React.FC = () => {
   const [showDeployDialog, setShowDeployDialog] = useState(false);
   const [showAuditDialog, setShowAuditDialog] = useState(false);
   const [showMasterImport, setShowMasterImport] = useState(false);
+  // Product mapping states
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedMappingStore, setSelectedMappingStore] = useState<string>('');
+  const [products, setProducts] = useState<any[]>([]);
+  const [loadingStores, setLoadingStores] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   useEffect(() => {
     loadTemplates();
     loadCategories();
+    loadStores();
   }, []);
+
+  useEffect(() => {
+    if (selectedMappingStore) {
+      loadProducts();
+    }
+  }, [selectedMappingStore]);
 
   const loadTemplates = async () => {
     setLoading(true);
@@ -98,6 +113,48 @@ export const RecipeManagementTab: React.FC = () => {
       setCategories(categoryList);
     } catch (error) {
       console.error('Error loading categories:', error);
+    }
+  };
+
+  const loadStores = async () => {
+    setLoadingStores(true);
+    try {
+      const data = await fetchStores();
+      setStores(data);
+    } catch (error) {
+      console.error('Error loading stores:', error);
+      toast.error('Failed to load stores');
+    } finally {
+      setLoadingStores(false);
+    }
+  };
+
+  const loadProducts = async () => {
+    if (!selectedMappingStore) return;
+    
+    setLoadingProducts(true);
+    try {
+      const { data, error } = await supabase
+        .from('product_catalog')
+        .select(`
+          *,
+          category:categories(id, name),
+          recipe:recipes(id, name, is_active)
+        `)
+        .eq('store_id', selectedMappingStore)
+        .eq('is_available', true)
+        .not('recipe_id', 'is', null)
+        .order('product_name');
+
+      if (error) throw error;
+      
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast.error('Failed to load products');
+      setProducts([]);
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -344,11 +401,61 @@ export const RecipeManagementTab: React.FC = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="mappings">
-          {/* For now, use the hook data until we properly integrate */}
+        <TabsContent value="mappings" className="space-y-6">
+          {/* Store Selection Header */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Product Ingredient Mapping</h3>
+              <p className="text-sm text-muted-foreground">
+                Map recipe ingredients to inventory items for accurate stock tracking
+              </p>
+            </div>
+          </div>
+
+          {/* Store Selector */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Store Selection</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Select 
+                    value={selectedMappingStore} 
+                    onValueChange={setSelectedMappingStore}
+                    disabled={loadingStores}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a store to manage mappings" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border border-border shadow-md z-50">
+                      {stores.map(store => (
+                        <SelectItem key={store.id} value={store.id}>
+                          {store.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedMappingStore && (
+                  <Badge variant="secondary">
+                    {products.length} products with recipes
+                  </Badge>
+                )}
+              </div>
+              {loadingProducts && (
+                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                  Loading products...
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Product Ingredient Mapping Component */}
           <ProductIngredientMappingTab 
-            selectedStore={''}
-            products={[]}
+            selectedStore={selectedMappingStore}
+            products={products}
           />
         </TabsContent>
       </Tabs>
