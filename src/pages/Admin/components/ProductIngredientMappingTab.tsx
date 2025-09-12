@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { MixMatchGroupedView } from '@/components/admin/recipe/MixMatchGroupedView';
+import { fixForeignMappingsByName } from '@/services/recipeManagement/crossStoreMappingService';
 
 interface ProductIngredientMappingTabProps {
   selectedStore: string;
@@ -471,34 +472,23 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
       toast.info('No foreign mappings found');
       return;
     }
+    
     setIsSaving(true);
     try {
-      let fixed = 0;
-      for (const ing of foreignMappedIngredients) {
-        const sourceName = ing.inventory_stock?.item || '';
-        if (!sourceName) continue;
-        const lower = sourceName.toLowerCase();
-        const bestMatch = inventoryItems.find(item => 
-          item.item.toLowerCase() === lower ||
-          item.item.toLowerCase().includes(lower) ||
-          lower.includes(item.item.toLowerCase())
-        );
-        if (bestMatch) {
-          const { error } = await supabase
-            .from('recipe_ingredients')
-            .update({ 
-              inventory_stock_id: bestMatch.id,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', ing.id);
-          if (!error) fixed++;
+      const result = await fixForeignMappingsByName(selectedStore);
+      
+      if (result) {
+        // Reload the recipe ingredients to reflect the changes
+        await loadRecipeIngredients();
+        
+        if (result.fixed_count > 0) {
+          toast.success(`Fixed ${result.fixed_count} foreign mappings`);
+        } else {
+          toast.info('No suitable matches found to remap');
         }
-      }
-      await loadRecipeIngredients();
-      if (fixed > 0) {
-        toast.success(`Fixed ${fixed} foreign mappings`);
-      } else {
-        toast.info('No suitable matches found to remap');
+        
+        // Log details for debugging
+        console.log('Fix foreign mappings result:', result);
       }
     } catch (error) {
       console.error('Error fixing foreign mappings:', error);
