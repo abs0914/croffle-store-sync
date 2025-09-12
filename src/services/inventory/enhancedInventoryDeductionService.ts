@@ -130,6 +130,7 @@ function isMixMatchProduct(productName: string): boolean {
 
 /**
  * Regular deduction for non-Mix & Match products
+ * Now includes support for ingredient groups and structured addon tracking
  */
 async function deductRegularProduct(
   transactionId: string,
@@ -145,7 +146,7 @@ async function deductRegularProduct(
   };
 
   try {
-    // Get recipe for this product
+    // Get recipe for this product with ingredient groups
     const { data: productCatalog, error: catalogError } = await supabase
       .from('product_catalog')
       .select(`
@@ -157,6 +158,8 @@ async function deductRegularProduct(
           name,
           recipe_ingredients (
             quantity,
+            ingredient_group_name,
+            is_optional,
             inventory_stock_id,
             inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(item)
           )
@@ -186,16 +189,26 @@ async function deductRegularProduct(
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
 
-    // Process each ingredient (deduct ALL for regular products)
+    // Process each ingredient with group-aware logic
     for (const ingredient of recipe.recipe_ingredients || []) {
       if (!ingredient.inventory_stock_id) {
-        console.log(`⚠️ Ingredient not mapped to inventory, skipping`);
+        console.log(`⚠️ Ingredient ${ingredient.ingredient_group_name || 'unknown'} not mapped to inventory, skipping`);
         continue;
       }
 
       const ingredientName = ingredient.inventory_stock?.item || 'unknown';
+      const groupName = ingredient.ingredient_group_name || 'base';
+      const isOptional = ingredient.is_optional || false;
+      
+      // For regular products, deduct all non-optional ingredients
+      // Optional ingredients are only deducted if specifically selected (for future addon support)
+      if (isOptional) {
+        console.log(`⏭️ Skipping optional ingredient ${ingredientName} (${groupName}) - not selected`);
+        continue;
+      }
+
       const totalDeduction = ingredient.quantity * quantity;
-      console.log(`🔢 Deducting ${totalDeduction} of ${ingredientName}`);
+      console.log(`🔢 Deducting ${totalDeduction} of ${ingredientName} (${groupName})`);
 
       // Get current stock
       const { data: stockItem, error: stockError } = await supabase

@@ -70,7 +70,7 @@ export const deductMixMatchInventory = async (
 
     console.log(`🔍 SMART MIX & MATCH: Detected Mix & Match product with selections:`, mixMatchInfo.selectedChoices);
 
-    // Step 2: Get the recipe ingredients
+    // Step 2: Get the recipe ingredients with group information
     const { data: productCatalog, error: catalogError } = await supabase
       .from('product_catalog')
       .select(`
@@ -83,6 +83,8 @@ export const deductMixMatchInventory = async (
           recipe_ingredients (
             ingredient_name,
             quantity,
+            ingredient_group_name,
+            is_optional,
             inventory_stock_id,
             inventory_stock (
               id,
@@ -106,7 +108,7 @@ export const deductMixMatchInventory = async (
     const recipe = productCatalog.recipes;
     console.log(`📝 SMART MIX & MATCH: Found recipe with ${recipe.recipe_ingredients?.length || 0} ingredients`);
 
-    // Step 3: Categorize ingredients
+    // Step 3: Use ingredient groups instead of hardcoded categorization
     const categorizedIngredients = categorizeIngredients(recipe.recipe_ingredients || []);
     result.debugInfo.baseIngredients = categorizedIngredients.base.map(i => i.ingredient_name);
     result.debugInfo.choiceIngredients = categorizedIngredients.choices.map(i => i.ingredient_name);
@@ -180,9 +182,15 @@ export const deductMixMatchInventory = async (
         console.warn(`⚠️ SMART MIX & MATCH: Failed to log movement for ${ingredient.ingredient_name}:`, logError);
       }
 
-      // Determine category
+      // Determine category using ingredient groups
       let category: 'base' | 'choice' | 'packaging' = 'choice';
-      if (categorizedIngredients.base.some(b => b.ingredient_name === ingredient.ingredient_name)) {
+      const groupName = ingredient.ingredient_group_name || 'base';
+      
+      if (groupName === 'packaging') {
+        category = 'packaging';
+      } else if (groupName === 'base') {
+        category = 'base';
+      } else if (categorizedIngredients.base.some(b => b.ingredient_name === ingredient.ingredient_name)) {
         category = 'base';
       } else if (categorizedIngredients.packaging.some(p => p.ingredient_name === ingredient.ingredient_name)) {
         category = 'packaging';
@@ -267,13 +275,51 @@ function parseMixMatchProduct(productName: string): {
 }
 
 /**
- * Categorize recipe ingredients into base, choices, and packaging
+ * Categorize recipe ingredients using the new ingredient_group_name and is_optional fields
+ */
+function categorizeIngredientsByGroup(ingredients: any[]): {
+  base: any[];
+  choices: any[];
+  packaging: any[];
+} {
+  const base: any[] = [];
+  const choices: any[] = [];
+  const packaging: any[] = [];
+
+  for (const ingredient of ingredients) {
+    const groupName = ingredient.ingredient_group_name || 'base';
+    const isOptional = ingredient.is_optional || false;
+    
+    if (groupName === 'packaging') {
+      packaging.push(ingredient);
+    } else if (groupName === 'base') {
+      base.push(ingredient);
+    } else if (isOptional || ['sauce', 'topping', 'addon'].includes(groupName)) {
+      choices.push(ingredient);
+    } else {
+      // Default to base for unknown groups
+      base.push(ingredient);
+    }
+  }
+
+  return { base, choices, packaging };
+}
+
+/**
+ * Legacy categorize ingredients function - kept for backward compatibility
+ * but now using the new ingredient groups when available
  */
 function categorizeIngredients(ingredients: any[]): {
   base: any[];
   choices: any[];
   packaging: any[];
 } {
+  // If ingredients have group information, use the new method
+  if (ingredients.length > 0 && ingredients[0].ingredient_group_name !== undefined) {
+    return categorizeIngredientsByGroup(ingredients);
+  }
+  
+  // Fallback to legacy hardcoded categorization
   const base: any[] = [];
   const choices: any[] = [];
   const packaging: any[] = [];
@@ -309,7 +355,6 @@ function categorizeIngredients(ingredients: any[]): {
 
   return { base, choices, packaging };
 }
-
 /**
  * Check if an ingredient name matches a selected choice
  */

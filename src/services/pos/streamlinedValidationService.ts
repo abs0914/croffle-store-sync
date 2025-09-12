@@ -146,11 +146,19 @@ export class StreamlinedValidationService {
             product_name,
             is_available,
             recipe_id,
-            ingredients:product_ingredients(
-              required_quantity,
-              inventory_item:inventory_stock(
-                stock_quantity,
-                is_active
+            recipe:recipes!inner(
+              id,
+              ingredients:recipe_ingredients(
+                ingredient_group_name,
+                is_optional,
+                quantity,
+                inventory_stock_id,
+                inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
+                  id,
+                  item,
+                  stock_quantity,
+                  is_active
+                )
               )
             )
           `)
@@ -168,15 +176,23 @@ export class StreamlinedValidationService {
           continue;
         }
 
-        // Check stock for recipe-based products
-        if (product.recipe_id && product.ingredients?.length > 0) {
-          for (const ingredient of product.ingredients) {
-            if (ingredient.inventory_item?.is_active) {
-              const requiredStock = ingredient.required_quantity * item.quantity;
-              const availableStock = ingredient.inventory_item.stock_quantity || 0;
+        // Check stock for recipe-based products with ingredient groups
+        if (product.recipe_id && product.recipe?.ingredients?.length > 0) {
+          for (const ingredient of product.recipe.ingredients) {
+            if (ingredient.inventory_stock?.is_active) {
+              // For optional ingredients (choices), don't validate stock unless selected
+              const isOptional = ingredient.is_optional || false;
+              const groupName = ingredient.ingredient_group_name || 'base';
+              
+              if (isOptional && ['sauce', 'topping', 'addon'].includes(groupName)) {
+                continue; // Skip stock validation for optional choices
+              }
+              
+              const requiredStock = ingredient.quantity * item.quantity;
+              const availableStock = ingredient.inventory_stock.stock_quantity || 0;
               
               if (availableStock < requiredStock) {
-                errors.push(`Insufficient stock for ${product.product_name}`);
+                errors.push(`Insufficient stock for ${product.product_name} (${ingredient.inventory_stock?.item || 'ingredient'})`);
                 break;
               }
             }
