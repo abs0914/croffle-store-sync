@@ -2729,6 +2729,42 @@ export type Database = {
           },
         ]
       }
+      inventory_mapping_audit: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_name: string | null
+          matching_method: string | null
+          new_inventory_stock_id: string | null
+          new_store_id: string | null
+          old_inventory_stock_id: string | null
+          old_store_id: string | null
+          recipe_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_name?: string | null
+          matching_method?: string | null
+          new_inventory_stock_id?: string | null
+          new_store_id?: string | null
+          old_inventory_stock_id?: string | null
+          old_store_id?: string | null
+          recipe_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_name?: string | null
+          matching_method?: string | null
+          new_inventory_stock_id?: string | null
+          new_store_id?: string | null
+          old_inventory_stock_id?: string | null
+          old_store_id?: string | null
+          recipe_id?: string | null
+        }
+        Relationships: []
+      }
       inventory_movements: {
         Row: {
           created_at: string | null
