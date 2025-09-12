@@ -222,15 +222,32 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     
     setIsSaving(true);
     try {
-      const { error } = await supabase
+      const now = new Date().toISOString();
+      const { data: updatedById, error: updateByIdError } = await supabase
         .from('recipe_ingredients')
         .update({ 
           quantity,
-          updated_at: new Date().toISOString()
+          updated_at: now
         })
-        .eq('id', ingredientId);
+        .eq('id', ingredientId)
+        .select('id');
 
-      if (error) throw error;
+      if (updateByIdError) throw updateByIdError;
+
+      if (!updatedById || updatedById.length === 0) {
+        const ing = recipeIngredients.find(i => i.id === ingredientId);
+        const recipeId = products.find(p => p.id === selectedProduct)?.recipe_id;
+        if (ing && recipeId) {
+          const { error: updateByCompositeError } = await supabase
+            .from('recipe_ingredients')
+            .update({ quantity, updated_at: now })
+            .eq('recipe_id', recipeId)
+            .eq('inventory_stock_id', ing.inventory_stock_id)
+            .eq('unit', ing.unit);
+
+          if (updateByCompositeError) throw updateByCompositeError;
+        }
+      }
 
       await loadRecipeIngredients();
       toast.success('Quantity updated');
@@ -246,7 +263,6 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
       setIsSaving(false);
     }
   };
-
   const addNewIngredient = async () => {
     if (!selectedProduct || inventoryItems.length === 0) {
       toast.error('Please select a product and ensure inventory items are available');
@@ -343,42 +359,59 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
         .from('recipe_ingredients')
         .delete()
         .eq('id', ingredientId)
-        .select();
+        .select('id');
 
       if (deleteByIdError) {
         console.error('❌ Database error (by id):', deleteByIdError);
         throw deleteByIdError;
       }
 
+      let deletedCompositeCount = 0;
+
       if (!deletedRowsById || deletedRowsById.length === 0) {
-        console.warn('⚠️ No rows deleted by id. Attempting fallback lookup...');
-        // Fallback: try to locate by recipe + inventory + quantity + unit
+        console.warn('⚠️ No rows deleted by id. Attempting composite delete...');
         if (ingredient) {
           const product = products.find(p => p.id === selectedProduct);
           const recipeId = product?.recipe_id;
           if (recipeId) {
-            const { data: match, error: findError } = await supabase
+            const { data: deletedByComposite, error: deleteByCompositeError } = await supabase
               .from('recipe_ingredients')
-              .select('id')
+              .delete()
               .eq('recipe_id', recipeId)
               .eq('inventory_stock_id', ingredient.inventory_stock_id)
-              .eq('quantity', ingredient.quantity)
               .eq('unit', ingredient.unit)
-              .order('created_at', { ascending: false })
-              .maybeSingle();
+              .select('id');
 
-            if (!findError && match?.id) {
-              console.log('🔎 Fallback found match id:', match.id, '→ deleting...');
-              await supabase.from('recipe_ingredients').delete().eq('id', match.id);
+            if (deleteByCompositeError) {
+              console.error('❌ Composite delete error:', deleteByCompositeError);
+              throw deleteByCompositeError;
+            }
+            deletedCompositeCount = deletedByComposite?.length || 0;
+            if (deletedCompositeCount === 0) {
+              console.warn('⚠️ Composite delete found no matches.');
             } else {
-              console.warn('⚠️ Fallback could not find a matching row to delete.', findError);
+              console.log(`✅ Composite delete removed ${deletedCompositeCount} row(s).`);
             }
           }
         }
       }
 
       // Optimistically update UI
-      setRecipeIngredients(prev => prev.filter(i => i.id !== ingredientId));
+      if (ingredient) {
+        const product = products.find(p => p.id === selectedProduct);
+        const recipeId = product?.recipe_id;
+        setRecipeIngredients(prev => prev.filter(i => {
+          if (i.id === ingredientId) return false;
+          if (recipeId) {
+            const isCompositeMatch = i.recipe_id === recipeId && i.inventory_stock_id === ingredient.inventory_stock_id && i.unit === ingredient.unit;
+            if (isCompositeMatch) return false;
+          }
+          return true;
+        }));
+      } else {
+        setRecipeIngredients(prev => prev.filter(i => i.id !== ingredientId));
+      }
+
       toast.success('Ingredient removed');
 
       // Reload from server to ensure consistency
@@ -395,7 +428,6 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
       setIsSaving(false);
     }
   };
-
   const deployToAllStores = async () => {
     if (!selectedProduct) return;
 
