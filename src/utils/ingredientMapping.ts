@@ -328,21 +328,26 @@ export const updateIngredientMappingUnified = async (
       console.log(`✅ [VERIFY] Inventory item verified: "${inventoryItem.item}"`);
     }
 
-    // Update recipe ingredients - CRITICAL FIX: Update ALL variants, not just exact matches
-    console.log(`💾 [UPDATE] Updating ${targetIngredients.length} recipe ingredient records`);
-    for (const ri of targetIngredients) {
-      console.log(`  🔄 Updating recipe ingredient ${ri.id}: "${ri.ingredient_name}" → ${inventoryId || 'null'}`);
-      const { error: updateError } = await supabase
-        .from('recipe_ingredients')
-        .update({ inventory_stock_id: inventoryId })
-        .eq('id', ri.id);
+    // Update recipe ingredients - CRITICAL FIX: Batch update with returned row verification
+    console.log(`💾 [UPDATE] Batch updating ${targetIngredients.length} recipe ingredient records`);
+    const targetIds = targetIngredients.map(ri => ri.id);
+    console.log(`🎯 [UNIFIED UPDATE] Target IDs: ${targetIds.length} records`);
+    
+    const { data: updatedRows, error: updateError } = await supabase
+      .from('recipe_ingredients')
+      .update({ inventory_stock_id: inventoryId })
+      .in('id', targetIds)
+      .select('id');
 
-      if (updateError) {
-        console.error(`❌ [ERROR] Failed to update recipe ingredient ${ri.id}:`, updateError);
-        errors.push(`Failed to update recipe ingredient ${ri.id}: ${updateError.message}`);
-      } else {
-        updatedCount++;
-        console.log(`  ✅ Updated recipe ingredient ${ri.id}`);
+    if (updateError) {
+      console.error(`❌ [ERROR] Batch update failed:`, updateError);
+      errors.push(`Failed to update recipe ingredients: ${updateError.message}`);
+    } else {
+      updatedCount = updatedRows?.length || 0;
+      console.log(`✅ [UNIFIED UPDATE] Successfully updated ${updatedCount}/${targetIds.length} records`);
+      
+      if (updatedCount < targetIds.length) {
+        warnings.push(`Only ${updatedCount} of ${targetIds.length} records were updated - possible RLS or constraint issues`);
       }
     }
 
@@ -358,7 +363,7 @@ export const updateIngredientMappingUnified = async (
         for (const ingredientVariantName of uniqueIngredientNames) {
           if (inventoryId) {
             console.log(`  💾 Upserting mapping: recipe ${recipeId} + "${ingredientVariantName}" → ${inventoryId}`);
-            const { error: mappingError } = await supabase
+            const { data: upsertedRows, error: mappingError } = await supabase
               .from('recipe_ingredient_mappings')
               .upsert(
                 {
@@ -368,27 +373,37 @@ export const updateIngredientMappingUnified = async (
                   conversion_factor: 1.0
                 },
                 { onConflict: 'recipe_id,ingredient_name' }
-              );
+              )
+              .select('recipe_id, ingredient_name');
             
             if (mappingError) {
               console.error(`❌ [ERROR] Mapping upsert failed for ${recipeId}+"${ingredientVariantName}":`, mappingError);
               warnings.push(`Failed to sync mapping table for recipe ${recipeId}, ingredient "${ingredientVariantName}": ${mappingError.message}`);
             } else {
-              console.log(`  ✅ Mapping upserted successfully`);
+              const rowCount = upsertedRows?.length || 0;
+              console.log(`  ✅ [MAPPING] Upserted ${rowCount} mapping record(s)`);
+              if (rowCount === 0) {
+                warnings.push(`Mapping upsert returned 0 rows for recipe ${recipeId}, ingredient "${ingredientVariantName}" - possible RLS issue`);
+              }
             }
           } else {
             console.log(`  🗑️ Deleting mapping: recipe ${recipeId} + "${ingredientVariantName}"`);
-            const { error: deleteError } = await supabase
+            const { data: deletedRows, error: deleteError } = await supabase
               .from('recipe_ingredient_mappings')
               .delete()
               .eq('recipe_id', recipeId)
-              .eq('ingredient_name', ingredientVariantName);
+              .eq('ingredient_name', ingredientVariantName)
+              .select('recipe_id, ingredient_name');
             
             if (deleteError) {
               console.error(`❌ [ERROR] Mapping delete failed for ${recipeId}+"${ingredientVariantName}":`, deleteError);
               warnings.push(`Failed to remove mapping for recipe ${recipeId}, ingredient "${ingredientVariantName}": ${deleteError.message}`);
             } else {
-              console.log(`  ✅ Mapping deleted successfully`);
+              const rowCount = deletedRows?.length || 0;
+              console.log(`  ✅ [MAPPING] Deleted ${rowCount} mapping record(s)`);
+              if (rowCount === 0) {
+                console.warn(`⚠️ [MAPPING] Delete returned 0 rows for recipe ${recipeId}, ingredient "${ingredientVariantName}" - record may not have existed`);
+              }
             }
           }
         }

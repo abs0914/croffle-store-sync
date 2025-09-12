@@ -328,24 +328,21 @@ export const ProductIngredientMappingTab: React.FC = () => {
         return;
       }
 
-      // Show warnings if any
+      // Show precise update counts and warnings
+      const inventoryName = inventoryId 
+        ? inventoryItems.find(item => item.id === inventoryId)?.item 
+        : 'unmapped';
+        
       if (result.warnings.length > 0) {
         console.warn('⚠️ Warnings:', result.warnings);
         toast.warning(`Updated with warnings: ${result.warnings.join(', ')}`);
       } else {
-        const inventoryName = inventoryId 
-          ? inventoryItems.find(item => item.id === inventoryId)?.item 
-          : 'unmapped';
         toast.success(`✅ "${ingredientName}" mapped to "${inventoryName}" (${result.updatedCount} records updated)`);
       }
 
       console.log(`✅ Update completed: ${result.updatedCount} records updated`);
 
       // Update local state immediately for UI responsiveness
-      const inventoryName = inventoryId 
-        ? inventoryItems.find(item => item.id === inventoryId)?.item 
-        : null;
-
       setProducts(prevProducts =>
         prevProducts.map(product => {
           if (product.id === productId) {
@@ -354,7 +351,7 @@ export const ProductIngredientMappingTab: React.FC = () => {
                 ? {
                     ...ingredient,
                     inventoryId,
-                    inventoryName,
+                    inventoryName: inventoryName === 'unmapped' ? null : inventoryName,
                     mapped: !!inventoryId
                   }
                 : ingredient
@@ -370,12 +367,30 @@ export const ProductIngredientMappingTab: React.FC = () => {
         })
       );
 
-      // CRITICAL FIX: Add comprehensive post-update verification
+      // CRITICAL FIX: Add comprehensive post-update verification with variant support
       setTimeout(async () => {
         console.log('🔄 [VERIFY] Starting post-update verification...');
         
         try {
-          // Re-query the specific product to verify changes persisted
+          // Get all ingredient names including variants to check
+          const { data: allIngredients, error: ingredientsError } = await supabase
+            .from('recipe_ingredients')
+            .select('ingredient_name, recipes!inner(product_id, store_id)')
+            .eq('recipes.product_id', productId)
+            .eq('recipes.store_id', selectedStore);
+            
+          if (ingredientsError) {
+            console.error('❌ [VERIFY ERROR] Failed to get ingredient list:', ingredientsError);
+            return;
+          }
+
+          const allIngredientNames = [...new Set(allIngredients?.map(i => i.ingredient_name) || [])];
+          const variants = findIngredientVariants(ingredientName, allIngredientNames);
+          const allNames = [ingredientName, ...variants.variants];
+          
+          console.log(`🔍 [VERIFY] Checking variants: ${allNames.join(', ')}`);
+          
+          // Re-query all variants to verify changes persisted
           const { data: verifyData, error: verifyError } = await supabase
             .from('recipe_ingredients')
             .select(`
@@ -387,14 +402,14 @@ export const ProductIngredientMappingTab: React.FC = () => {
             `)
             .eq('recipes.product_id', productId)
             .eq('recipes.store_id', selectedStore)
-            .eq('ingredient_name', ingredientName);
+            .in('ingredient_name', allNames);
           
           if (verifyError) {
             console.error('❌ [VERIFY ERROR] Failed to verify update:', verifyError);
           } else {
             const mappedCount = verifyData?.filter(item => item.inventory_stock_id).length || 0;
             const totalCount = verifyData?.length || 0;
-            console.log(`✅ [VERIFY] Post-update state: ${mappedCount}/${totalCount} "${ingredientName}" records are mapped`);
+            console.log(`✅ [VERIFY] Post-update state: ${mappedCount}/${totalCount} variant records are mapped`);
             
             if (inventoryId && mappedCount === 0) {
               console.warn('⚠️ [VERIFY WARNING] Expected mapping but found none - possible persistence failure');
@@ -404,6 +419,18 @@ export const ProductIngredientMappingTab: React.FC = () => {
               toast.warning('Unmapping may not have completed');
             }
           }
+          
+          // Run diagnostics for the product to check for mapping table sync issues
+          const diagnostics = await generateMappingDiagnostics(productId, selectedStore, supabase);
+          const syncIssues = diagnostics.filter(d => 
+            d.consistencyIssues.some(issue => issue.includes('mapping table out of sync'))
+          );
+          
+          if (syncIssues.length > 0) {
+            console.warn('⚠️ [VERIFY WARNING] Mapping table sync issues detected:', syncIssues);
+            toast.warning(`Mapping table sync issues detected for ${syncIssues.length} ingredients`);
+          }
+          
         } catch (verifyError) {
           console.error('💥 [VERIFY FATAL] Verification failed:', verifyError);
         }
