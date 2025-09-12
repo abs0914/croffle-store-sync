@@ -22,7 +22,8 @@ import {
   Filter,
   FileBarChart,
   Download,
-  BookOpen
+  BookOpen,
+  Target
 } from 'lucide-react';
 import { 
   fetchRecipeTemplates,
@@ -36,6 +37,7 @@ import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
 import { RecipeAuditDialog } from '@/components/Admin/RecipeAuditDialog';
 import { MasterRecipeImportDialog } from '@/components/Admin/recipe/MasterRecipeImportDialog';
+import { ProductIngredientMappingTab } from './ProductIngredientMappingTab';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 
@@ -179,154 +181,173 @@ export const RecipeManagementTab: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold">Recipe Templates</h3>
-          <p className="text-sm text-muted-foreground">
-            Create and manage recipe templates for deployment to stores
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => setShowMasterImport(true)}>
-            <BookOpen className="h-4 w-4 mr-2" />
-            Import Master Recipes
-          </Button>
-          <Button variant="outline" onClick={() => setShowAuditDialog(true)}>
-            <FileBarChart className="h-4 w-4 mr-2" />
-            Audit & Sync
-          </Button>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Template
-          </Button>
-        </div>
-      </div>
+      <Tabs defaultValue="templates" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="templates" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Recipe Templates
+          </TabsTrigger>
+          <TabsTrigger value="mappings" className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            Product Ingredient Mapping
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Search and Filter */}
-      <div className="flex gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search templates..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-48">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Filter by category" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border border-border shadow-md z-50">
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map(category => (
-              <SelectItem key={category.id} value={category.name}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Templates List */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="space-y-0">
-            {filteredTemplates.map((template, index) => (
-              <div 
-                key={template.id} 
-                className={`flex items-center justify-between p-4 hover:bg-muted/50 transition-colors ${
-                  index !== filteredTemplates.length - 1 ? 'border-b' : ''
-                }`}
-              >
-                {/* Template Info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className="font-semibold text-lg">{template.name}</h3>
-                    <Badge variant="secondary" className="text-xs">
-                      v{template.version || 1}
-                    </Badge>
-                    {template.category_name && (
-                      <Badge variant="outline" className="text-xs">
-                        {template.category_name}
-                      </Badge>
-                    )}
-                  </div>
-                  {template.description && (
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {template.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <Badge variant="destructive" className="text-xs">
-                      {template.ingredients?.length || 0} ingredients
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      Yield: {template.yield_quantity || 1}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleDeploy(template)}
-                    className="h-8 w-8 p-0"
-                    title="Deploy"
-                  >
-                    <Rocket className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleEdit(template)}
-                    className="h-8 w-8 p-0"
-                    title="Edit"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleDuplicate(template)}
-                    className="h-8 w-8 p-0"
-                    title="Duplicate"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleDelete(template.id)}
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+        <TabsContent value="templates" className="space-y-6">
+          {/* Header */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Recipe Templates</h3>
+              <p className="text-sm text-muted-foreground">
+                Create and manage recipe templates for deployment to stores
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setShowMasterImport(true)}>
+                <BookOpen className="h-4 w-4 mr-2" />
+                Import Master Recipes
+              </Button>
+              <Button variant="outline" onClick={() => setShowAuditDialog(true)}>
+                <FileBarChart className="h-4 w-4 mr-2" />
+                Audit & Sync
+              </Button>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Template
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {filteredTemplates.length === 0 && (
-        <div className="text-center py-12">
-          <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No templates found</h3>
-          <p className="text-muted-foreground mb-4">
-            {searchTerm ? 'No templates match your search.' : 'Get started by creating your first recipe template.'}
-          </p>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Template
-          </Button>
-        </div>
-      )}
+          {/* Search and Filter */}
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search templates..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-48">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border border-border shadow-md z-50">
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Templates List */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="space-y-0">
+                {filteredTemplates.map((template, index) => (
+                  <div 
+                    key={template.id} 
+                    className={`flex items-center justify-between p-4 hover:bg-muted/50 transition-colors ${
+                      index !== filteredTemplates.length - 1 ? 'border-b' : ''
+                    }`}
+                  >
+                    {/* Template Info */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="font-semibold text-lg">{template.name}</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          v{template.version || 1}
+                        </Badge>
+                        {template.category_name && (
+                          <Badge variant="outline" className="text-xs">
+                            {template.category_name}
+                          </Badge>
+                        )}
+                      </div>
+                      {template.description && (
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {template.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-3">
+                        <Badge variant="destructive" className="text-xs">
+                          {template.ingredients?.length || 0} ingredients
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Yield: {template.yield_quantity || 1}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeploy(template)}
+                        className="h-8 w-8 p-0"
+                        title="Deploy"
+                      >
+                        <Rocket className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEdit(template)}
+                        className="h-8 w-8 p-0"
+                        title="Edit"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDuplicate(template)}
+                        className="h-8 w-8 p-0"
+                        title="Duplicate"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDelete(template.id)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {filteredTemplates.length === 0 && (
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No templates found</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchTerm ? 'No templates match your search.' : 'Get started by creating your first recipe template.'}
+              </p>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Template
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="mappings">
+          <ProductIngredientMappingTab />
+        </TabsContent>
+      </Tabs>
 
       {/* Create Template Dialog */}
       <RecipeTemplateDialog
