@@ -71,6 +71,16 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     return products.find(p => p.id === selectedProduct);
   }, [products, selectedProduct]);
 
+  // Inventory IDs for current store
+  const inventoryIds = React.useMemo(() => new Set(inventoryItems.map(i => i.id)), [inventoryItems]);
+
+  // Ingredients mapped to other stores' inventory
+  const foreignMappedIngredients = React.useMemo(() => {
+    return recipeIngredients.filter(ing => ing.inventory_stock_id && !inventoryIds.has(ing.inventory_stock_id));
+  }, [recipeIngredients, inventoryIds]);
+
+  const foreignMappingsCount = foreignMappedIngredients.length;
+
   // Load inventory items when store changes
   useEffect(() => {
     if (selectedStore) {
@@ -446,6 +456,48 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
       toast.error('Failed to auto-map ingredients');
     } finally {
       setIsAutoMapping(false);
+    }
+  };
+
+  const fixForeignMappings = async () => {
+    if (foreignMappingsCount === 0) {
+      toast.info('No foreign mappings found');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      let fixed = 0;
+      for (const ing of foreignMappedIngredients) {
+        const sourceName = ing.inventory_stock?.item || '';
+        if (!sourceName) continue;
+        const lower = sourceName.toLowerCase();
+        const bestMatch = inventoryItems.find(item => 
+          item.item.toLowerCase() === lower ||
+          item.item.toLowerCase().includes(lower) ||
+          lower.includes(item.item.toLowerCase())
+        );
+        if (bestMatch) {
+          const { error } = await supabase
+            .from('recipe_ingredients')
+            .update({ 
+              inventory_stock_id: bestMatch.id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', ing.id);
+          if (!error) fixed++;
+        }
+      }
+      await loadRecipeIngredients();
+      if (fixed > 0) {
+        toast.success(`Fixed ${fixed} foreign mappings`);
+      } else {
+        toast.info('No suitable matches found to remap');
+      }
+    } catch (error) {
+      console.error('Error fixing foreign mappings:', error);
+      toast.error('Failed to fix foreign mappings');
+    } finally {
+      setIsSaving(false);
     }
   };
 
