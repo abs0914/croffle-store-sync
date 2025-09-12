@@ -50,6 +50,14 @@ interface InventoryItem {
   is_active: boolean | null;
 }
 
+interface DraftIngredient {
+  id: string; // temporary ID for UI purposes
+  inventory_stock_id: string;
+  quantity: number;
+  unit: InventoryUnit;
+  isDraft: true;
+}
+
 export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabProps> = ({
   selectedStore,
   products
@@ -61,6 +69,9 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
   const [isSaving, setIsSaving] = useState(false);
   const [applyToAllStores, setApplyToAllStores] = useState(false);
   const [isAutoMapping, setIsAutoMapping] = useState(false);
+  
+  // Draft ingredients state
+  const [draftIngredients, setDraftIngredients] = useState<DraftIngredient[]>([]);
   
   // Detect if current product is Mix & Match
   const isMixMatchProduct = React.useMemo(() => {
@@ -96,6 +107,8 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     } else {
       setRecipeIngredients([]);
     }
+    // Clear draft ingredients when product changes
+    setDraftIngredients([]);
   }, [selectedProduct]);
 
   const loadInventoryItems = async () => {
@@ -234,62 +247,83 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
   };
 
   const addNewIngredient = async () => {
-    console.log('🔧 Add Ingredient clicked!');
-    console.log('Selected product:', selectedProduct);
-    console.log('Inventory items length:', inventoryItems.length);
-    console.log('Products:', products);
-    
     if (!selectedProduct || inventoryItems.length === 0) {
-      console.log('❌ Early return: no product or no inventory items');
       toast.error('Please select a product and ensure inventory items are available');
       return;
     }
 
     const product = products.find(p => p.id === selectedProduct);
-    console.log('Found product:', product);
-    
     if (!product?.recipe_id) {
-      console.log('❌ Early return: no recipe_id found');
       toast.error('Product does not have a recipe associated');
       return;
     }
 
-    const firstInventoryItem = inventoryItems[0];
-    console.log('First inventory item:', firstInventoryItem);
-    
-  setIsSaving(true);
-  try {
-    console.log('🚀 Inserting new ingredient...');
-    const { data: inserted, error } = await supabase
-      .from('recipe_ingredients')
-      .insert({
-        recipe_id: product.recipe_id,
-        inventory_stock_id: firstInventoryItem.id,
-        quantity: 1,
-        unit: firstInventoryItem.unit
-      })
-      .select()
-      .single();
+    // Create a new draft ingredient with empty values
+    const newDraftIngredient: DraftIngredient = {
+      id: `draft_${Date.now()}`, // temporary ID
+      inventory_stock_id: '',
+      quantity: 1,
+      unit: 'pieces',
+      isDraft: true
+    };
 
-    if (error) {
-      console.error('❌ Database error:', error);
-      throw error;
+    setDraftIngredients(prev => [...prev, newDraftIngredient]);
+  };
+
+  const saveDraftIngredient = async (draftId: string, draftData: DraftIngredient) => {
+    if (!selectedProduct || !draftData.inventory_stock_id) {
+      toast.error('Please select an inventory item');
+      return;
     }
 
-    console.log('✅ Successfully inserted ingredient', inserted);
-    await loadRecipeIngredients();
-    toast.success(`New ingredient added: ${firstInventoryItem.item}`);
-
-    // If apply to all stores is enabled, deploy changes
-    if (applyToAllStores) {
-      await deployToAllStores();
+    const product = products.find(p => p.id === selectedProduct);
+    if (!product?.recipe_id) {
+      toast.error('Product does not have a recipe associated');
+      return;
     }
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('recipe_ingredients')
+        .insert({
+          recipe_id: product.recipe_id,
+          inventory_stock_id: draftData.inventory_stock_id,
+          quantity: draftData.quantity,
+          unit: draftData.unit
+        });
+
+      if (error) throw error;
+
+      // Remove from draft ingredients
+      setDraftIngredients(prev => prev.filter(draft => draft.id !== draftId));
+      
+      // Reload recipe ingredients
+      await loadRecipeIngredients();
+      toast.success('Ingredient saved successfully');
+
+      // If apply to all stores is enabled, deploy changes
+      if (applyToAllStores) {
+        await deployToAllStores();
+      }
     } catch (error) {
-      console.error('Error adding ingredient:', error);
-      toast.error('Failed to add ingredient');
+      console.error('Error saving ingredient:', error);
+      toast.error('Failed to save ingredient');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const cancelDraftIngredient = (draftId: string) => {
+    setDraftIngredients(prev => prev.filter(draft => draft.id !== draftId));
+  };
+
+  const updateDraftIngredient = (draftId: string, updates: Partial<DraftIngredient>) => {
+    setDraftIngredients(prev => 
+      prev.map(draft => 
+        draft.id === draftId ? { ...draft, ...updates } : draft
+      )
+    );
   };
 
   const deleteIngredient = async (ingredientId: string) => {
@@ -945,10 +979,107 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
                         </Card>
                       );
                     })}
-                  </div>
-                )}
+                   </div>
+                 )}
 
-                {/* Summary Information - Regular Products */}
+                 {/* Draft Ingredients - Regular Products */}
+                 {draftIngredients.map((draft) => (
+                   <Card key={draft.id} className="border-l-4 border-l-blue-500 bg-blue-50/50">
+                     <CardContent className="p-4">
+                       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                         {/* Inventory Item Selection */}
+                         <div className="md:col-span-4">
+                           <div className="flex items-center gap-2 mb-1">
+                             <Label className="text-sm font-medium">Inventory Item</Label>
+                             <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700">
+                               Draft
+                             </Badge>
+                           </div>
+                           <Select
+                             value={draft.inventory_stock_id}
+                             onValueChange={(value) => updateDraftIngredient(draft.id, { inventory_stock_id: value })}
+                           >
+                             <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                               <SelectValue placeholder="Select inventory item..." />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {inventoryItems.map(item => (
+                                 <SelectItem key={item.id} value={item.id} textValue={item.item}>
+                                   {item.item} ({item.unit} - ₱{item.cost || 0})
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                         </div>
+
+                         {/* Selected Item Display */}
+                         <div className="md:col-span-3">
+                           <Label className="text-sm font-medium">Selected Item</Label>
+                           <div className="text-sm p-2 rounded bg-blue-100 text-blue-800 border border-blue-200">
+                             {draft.inventory_stock_id ? 
+                               inventoryItems.find(item => item.id === draft.inventory_stock_id)?.item || 'Item not found' :
+                               'Not selected'
+                             }
+                           </div>
+                         </div>
+
+                         {/* Quantity */}
+                         <div className="md:col-span-2">
+                           <Label className="text-sm font-medium">Quantity</Label>
+                           <Input
+                             type="number"
+                             value={draft.quantity}
+                             onChange={(e) => updateDraftIngredient(draft.id, { quantity: parseFloat(e.target.value) || 0 })}
+                             className="text-sm"
+                             min="0"
+                             step="0.1"
+                           />
+                         </div>
+
+                         {/* Unit */}
+                         <div className="md:col-span-2">
+                           <Label className="text-sm font-medium">Unit</Label>
+                           <div className="text-sm bg-muted/50 p-2 rounded">
+                             {draft.inventory_stock_id ? 
+                               inventoryItems.find(item => item.id === draft.inventory_stock_id)?.unit || draft.unit :
+                               draft.unit
+                             }
+                           </div>
+                         </div>
+
+                         {/* Actions */}
+                         <div className="md:col-span-1 flex justify-end gap-1">
+                           <Button
+                             onClick={() => saveDraftIngredient(draft.id, draft)}
+                             disabled={isSaving || !draft.inventory_stock_id}
+                             variant="default"
+                             size="sm"
+                           >
+                             {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                           </Button>
+                           <Button
+                             onClick={() => cancelDraftIngredient(draft.id)}
+                             disabled={isSaving}
+                             variant="ghost"
+                             size="sm"
+                           >
+                             <Trash2 className="w-3 h-3 text-destructive" />
+                           </Button>
+                         </div>
+                       </div>
+
+                       {/* Draft Instructions */}
+                       <div className="mt-2 pt-2 border-t border-blue-200 text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                         <div className="flex items-center gap-1">
+                           <HelpCircle className="w-4 h-4" />
+                           Select an inventory item and click the save button to add this ingredient
+                         </div>
+                       </div>
+                     </CardContent>
+                   </Card>
+                 ))}
+
+                 {/* Summary Information - Regular Products */}
                 {recipeIngredients.length > 0 && (
                   <Card className="bg-muted/30">
                     <CardContent className="p-4">
