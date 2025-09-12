@@ -298,10 +298,17 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     const product = products.find(p => p.id === selectedProduct);
     if (!product?.recipe_id) return;
 
-    // Enhanced validation - prevent deployment if ingredients are unmapped
+    // Enhanced validation - prevent deployment if ingredients are unmapped OR have foreign mappings
     const unmappedIngredients = recipeIngredients.filter(ing => !ing.inventory_stock_id);
+    const foreignMappedIngredients = recipeIngredients.filter(ing => ing.inventory_stock_id && !inventoryIds.has(ing.inventory_stock_id));
+    
     if (unmappedIngredients.length > 0) {
       toast.error(`Cannot deploy: ${unmappedIngredients.length} ingredients are not mapped to inventory items. Please map all ingredients before deploying.`);
+      return;
+    }
+    
+    if (foreignMappedIngredients.length > 0) {
+      toast.error(`Cannot deploy: ${foreignMappedIngredients.length} ingredients are mapped to other stores' inventory. Please fix foreign mappings before deploying.`);
       return;
     }
 
@@ -509,6 +516,25 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
       return <Badge variant="destructive">No Ingredients</Badge>;
     }
 
+    // Check for foreign mappings (critical issue)
+    if (foreignMappingsCount > 0) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="destructive">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Foreign Mappings ({foreignMappingsCount})
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{foreignMappingsCount} ingredients are mapped to other stores' inventory. Fix these before deployment.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
     if (mapped === total) {
       return (
         <Badge variant="secondary" className="bg-green-100 text-green-800">
@@ -613,6 +639,42 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
         </CardContent>
       </Card>
 
+      {/* Foreign Mappings Warning */}
+      {selectedProduct && foreignMappingsCount > 0 && (
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+                <div>
+                  <div className="font-medium text-amber-800">Cross-Store Mapping Issue</div>
+                  <div className="text-sm text-amber-700">
+                    {foreignMappingsCount} ingredient{foreignMappingsCount === 1 ? ' is' : 's are'} mapped to inventory from other stores.
+                    This causes empty dropdowns and will prevent deployment.
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fixForeignMappings} 
+                  disabled={isSaving}
+                  className="border-amber-300 hover:bg-amber-100"
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Target className="w-4 h-4 mr-2" />
+                  )}
+                  Fix Mappings
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Ingredient Management Interface */}
       {selectedProduct && (
         <>
@@ -689,7 +751,8 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
                             <Button
                               onClick={deployToAllStores}
                               disabled={isSaving || recipeIngredients.length === 0 || 
-                                recipeIngredients.some(ing => !ing.inventory_stock_id)}
+                                recipeIngredients.some(ing => !ing.inventory_stock_id) ||
+                                foreignMappingsCount > 0}
                               variant="default"
                             >
                               <Settings className="w-4 h-4 mr-2" />
@@ -697,7 +760,10 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Deploy this recipe configuration to all active stores. All ingredients must be mapped first.</p>
+                            <p>
+                              Deploy this recipe configuration to all active stores. 
+                              {foreignMappingsCount > 0 ? 'Fix foreign mappings first.' : 'All ingredients must be mapped first.'}
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -770,11 +836,25 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
                                     <SelectValue placeholder="Select inventory item..." />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {inventoryItems.map(item => (
-                                      <SelectItem key={item.id} value={item.id}>
-                                        {item.item} ({item.unit} - ₱{item.cost || 0})
-                                      </SelectItem>
-                                    ))}
+                    {inventoryItems.map(item => (
+                        <SelectItem key={item.id} value={item.id} textValue={item.item}>
+                          {item.item} ({item.unit} - ₱{item.cost || 0})
+                        </SelectItem>
+                      ))}
+                      {/* Show foreign mapped items that aren't in current store */}
+                      {ingredient.inventory_stock_id && !inventoryIds.has(ingredient.inventory_stock_id) && ingredient.inventory_stock?.item && (
+                        <SelectItem 
+                          key={ingredient.inventory_stock_id} 
+                          value={ingredient.inventory_stock_id}
+                          textValue={`${ingredient.inventory_stock.item} (other store)`}
+                          className="text-amber-700 bg-amber-50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="w-3 h-3" />
+                            {ingredient.inventory_stock.item} (mapped to other store - remap required)
+                          </div>
+                        </SelectItem>
+                      )}
                                   </SelectContent>
                                 </Select>
                               </div>
