@@ -22,10 +22,19 @@ import {
   Upload,
   TestTube,
   Zap,
-  Settings
+  Settings,
+  Microscope,
+  FileText
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { 
+  updateIngredientMappingUnified,
+  calculateMappingStatus,
+  generateMappingDiagnostics,
+  findIngredientVariants,
+  type MappingDiagnostics 
+} from '@/utils/ingredientMapping';
 
 interface ProductMapping {
   id: string;
@@ -73,6 +82,9 @@ export const ProductIngredientMappingTab: React.FC = () => {
   const [testTransactionId, setTestTransactionId] = useState('');
   const [testResults, setTestResults] = useState<any>(null);
   const [bulkOperationsOpen, setBulkOperationsOpen] = useState(false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [diagnosticsData, setDiagnosticsData] = useState<Record<string, MappingDiagnostics[]>>({});
+  const [updating, setUpdating] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadInitialData();
@@ -208,17 +220,9 @@ export const ProductIngredientMappingTab: React.FC = () => {
 
       product.ingredients = Array.from(ingredientMap.values()).map(({ recipeIngredientId, ...ingredient }) => ingredient);
       
-      // Calculate mapping status
-      const totalIngredients = product.ingredients.length;
-      const mappedIngredients = product.ingredients.filter(i => i.mapped).length;
+      // Use unified mapping status calculation
+      product.mappingStatus = calculateMappingStatus(product.ingredients);
       
-      if (mappedIngredients === 0) {
-        product.mappingStatus = 'missing';
-      } else if (mappedIngredients === totalIngredients) {
-        product.mappingStatus = 'complete';
-      } else {
-        product.mappingStatus = 'partial';
-      }
     } catch (error) {
       console.error(`Error loading ingredients for product ${product.name}:`, error);
     }
@@ -246,121 +250,50 @@ export const ProductIngredientMappingTab: React.FC = () => {
     ingredientName: string,
     inventoryId: string | null
   ) => {
+    if (!selectedStore) {
+      toast.error('Please select a store first');
+      return;
+    }
+
+    const updateKey = `${productId}-${ingredientName}`;
+    setUpdating(prev => new Set([...prev, updateKey]));
+
     try {
-      if (!selectedStore) {
-        console.error('No store selected');
-        toast.error('Please select a store first');
+      console.log(`🔧 Starting unified mapping update: ${ingredientName} → ${inventoryId ? 'mapped' : 'unmapped'}`);
+      
+      const result = await updateIngredientMappingUnified(
+        productId,
+        ingredientName,
+        inventoryId,
+        selectedStore,
+        supabase,
+        {
+          resolveVariants: true,
+          syncMappingTable: true,
+          skipVerification: false
+        }
+      );
+
+      if (!result.success) {
+        console.error('❌ Update failed:', result.errors);
+        toast.error(`Failed to update mapping: ${result.errors.join(', ')}`);
         return;
       }
 
-      console.log(`🔧 Updating mapping: ${ingredientName} → ${inventoryId ? inventoryItems.find(i => i.id === inventoryId)?.item : 'unmapped'}`);
-      console.log(`🏪 Store: ${selectedStore}, Product: ${productId}`);
-
-      // Verify inventory item belongs to selected store if mapping is being set
-      if (inventoryId) {
-        const inventoryItem = inventoryItems.find(item => item.id === inventoryId);
-        if (!inventoryItem) {
-          console.error('Selected inventory item not found in current store');
-          toast.error('Selected inventory item not available in this store');
-          return;
-        }
-        
-        // Double-check inventory item belongs to selected store
-        const { data: verifyItem, error: verifyError } = await supabase
-          .from('inventory_stock')
-          .select('id, item')
-          .eq('id', inventoryId)
-          .eq('store_id', selectedStore)
-          .single();
-
-        if (verifyError || !verifyItem) {
-          console.error('Inventory item verification failed:', verifyError);
-          toast.error('Cannot map to inventory from different store');
-          return;
-        }
-        console.log(`✅ Verified inventory item: ${verifyItem.item}`);
+      // Show warnings if any
+      if (result.warnings.length > 0) {
+        console.warn('⚠️ Warnings:', result.warnings);
+        toast.warning(`Updated with warnings: ${result.warnings.join(', ')}`);
+      } else {
+        const inventoryName = inventoryId 
+          ? inventoryItems.find(item => item.id === inventoryId)?.item 
+          : 'unmapped';
+        toast.success(`✅ "${ingredientName}" mapped to "${inventoryName}" (${result.updatedCount} records updated)`);
       }
 
-      // Get all recipe ingredients for this product in the selected store
-      const { data: recipeIngredients, error: riError } = await supabase
-        .from('recipe_ingredients')
-        .select(`
-          id,
-          recipe_id,
-          ingredient_name,
-          recipes!inner(
-            id,
-            product_id,
-            store_id
-          )
-        `)
-        .eq('recipes.product_id', productId)
-        .eq('recipes.store_id', selectedStore)
-        .eq('ingredient_name', ingredientName);
+      console.log(`✅ Update completed: ${result.updatedCount} records updated`);
 
-      if (riError) {
-        console.error('Error fetching recipe ingredients:', riError);
-        throw riError;
-      }
-
-      if (!recipeIngredients || recipeIngredients.length === 0) {
-        console.error('No recipe ingredients found for update');
-        toast.error('No recipe ingredients found for this product in the selected store');
-        return;
-      }
-
-      console.log(`🔍 Found ${recipeIngredients.length} recipe ingredients to update`);
-
-      // Update each recipe ingredient by ID (most precise)
-      for (const ri of recipeIngredients) {
-        console.log(`📝 Updating recipe ingredient ID: ${ri.id}`);
-        
-        const { error: updateError } = await supabase
-          .from('recipe_ingredients')
-          .update({ inventory_stock_id: inventoryId })
-          .eq('id', ri.id);
-
-        if (updateError) {
-          console.error(`Failed to update recipe ingredient ${ri.id}:`, updateError);
-          throw updateError;
-        }
-
-        // Sync recipe_ingredient_mappings
-        if (inventoryId) {
-          const { error: mappingError } = await supabase
-            .from('recipe_ingredient_mappings')
-            .upsert(
-              {
-                recipe_id: ri.recipe_id,
-                ingredient_name: ingredientName,
-                inventory_stock_id: inventoryId,
-                conversion_factor: 1.0
-              },
-              { onConflict: 'recipe_id,ingredient_name' }
-            );
-          
-          if (mappingError) {
-            console.warn('Mapping sync failed:', mappingError);
-          } else {
-            console.log(`✅ Synced mapping for recipe ${ri.recipe_id}`);
-          }
-        } else {
-          // Remove mapping when clearing
-          const { error: deleteError } = await supabase
-            .from('recipe_ingredient_mappings')
-            .delete()
-            .eq('recipe_id', ri.recipe_id)
-            .eq('ingredient_name', ingredientName);
-          
-          if (deleteError) {
-            console.warn('Mapping deletion failed:', deleteError);
-          } else {
-            console.log(`🗑️ Removed mapping for recipe ${ri.recipe_id}`);
-          }
-        }
-      }
-
-      // Immediately update local state for UI responsiveness
+      // Update local state immediately for UI responsiveness
       const inventoryName = inventoryId 
         ? inventoryItems.find(item => item.id === inventoryId)?.item 
         : null;
@@ -379,35 +312,50 @@ export const ProductIngredientMappingTab: React.FC = () => {
                 : ingredient
             );
 
-            const total = updatedIngredients.length;
-            const mappedCount = updatedIngredients.filter(i => i.mapped).length;
-            const newStatus = mappedCount === 0 ? 'missing' : mappedCount === total ? 'complete' : 'partial';
-
-            console.log(`📊 Status update: ${mappedCount}/${total} mapped → ${newStatus}`);
-
             return {
               ...product,
               ingredients: updatedIngredients,
-              mappingStatus: newStatus
+              mappingStatus: calculateMappingStatus(updatedIngredients)
             };
           }
           return product;
         })
       );
 
-      const displayName = inventoryName || 'unmapped';
-      toast.success(`✅ "${ingredientName}" mapped to "${displayName}"`);
-      console.log(`✅ Mapping update completed successfully`);
-
-      // Verify the update persisted by reloading (with slight delay)
+      // Verify persistence with delay
       setTimeout(async () => {
         console.log('🔄 Verifying mapping persistence...');
         await loadProductMappings();
-      }, 300);
+      }, 500);
 
     } catch (error) {
-      console.error('❌ Error updating ingredient mapping:', error);
+      console.error('❌ Unexpected error during mapping update:', error);
       toast.error('Failed to update mapping - check console for details');
+    } finally {
+      setUpdating(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(updateKey);
+        return newSet;
+      });
+    }
+  };
+
+  const loadDiagnostics = async (productId: string) => {
+    if (!selectedStore) return;
+    
+    try {
+      console.log(`🔍 Loading diagnostics for product ${productId}`);
+      const diagnostics = await generateMappingDiagnostics(productId, selectedStore, supabase);
+      
+      setDiagnosticsData(prev => ({
+        ...prev,
+        [productId]: diagnostics
+      }));
+      
+      console.log(`📊 Loaded ${diagnostics.length} diagnostic entries`);
+    } catch (error) {
+      console.error('Error loading diagnostics:', error);
+      toast.error('Failed to load mapping diagnostics');
     }
   };
 
@@ -591,6 +539,13 @@ export const ProductIngredientMappingTab: React.FC = () => {
             Bulk Operations
           </Button>
           <Button 
+            onClick={() => setDiagnosticsOpen(!diagnosticsOpen)} 
+            variant="outline"
+          >
+            <Microscope className="h-4 w-4 mr-2" />
+            Diagnostics
+          </Button>
+          <Button 
             onClick={() => setShowTransactionTester(!showTransactionTester)} 
             variant="outline"
           >
@@ -691,6 +646,98 @@ export const ProductIngredientMappingTab: React.FC = () => {
                 Bulk operations will affect all products. Use with caution and ensure you have backups.
               </AlertDescription>
             </Alert>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Diagnostics Panel */}
+      {diagnosticsOpen && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Microscope className="h-5 w-5" />
+              Mapping Diagnostics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Diagnostics help identify and resolve ingredient mapping issues, name variants, and consistency problems.
+              </AlertDescription>
+            </Alert>
+            
+            {Object.keys(diagnosticsData).length > 0 && (
+              <div className="space-y-4">
+                {Object.entries(diagnosticsData).map(([productId, diagnostics]) => {
+                  const product = products.find(p => p.id === productId);
+                  if (!product) return null;
+                  
+                  return (
+                    <div key={productId} className="bg-muted/30 p-4 rounded-lg">
+                      <h4 className="font-medium mb-3">
+                        {product.name} - Diagnostic Report
+                      </h4>
+                      
+                      {diagnostics.map((diagnostic, idx) => (
+                        <div key={idx} className="bg-background p-3 rounded border mb-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-sm">{diagnostic.ingredientName}</span>
+                            <div className="flex gap-2">
+                              {diagnostic.nameVariants.length > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  {diagnostic.nameVariants.length} variants
+                                </Badge>
+                              )}
+                              {diagnostic.consistencyIssues.length > 0 && (
+                                <Badge variant="destructive" className="text-xs">
+                                  {diagnostic.consistencyIssues.length} issues
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {diagnostic.nameVariants.length > 1 && (
+                            <div className="mb-2">
+                              <p className="text-xs text-muted-foreground mb-1">Name Variants:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {diagnostic.nameVariants.map((variant, vIdx) => (
+                                  <Badge key={vIdx} variant="outline" className="text-xs">
+                                    {variant}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {diagnostic.consistencyIssues.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs text-muted-foreground mb-1">Issues:</p>
+                              <ul className="list-disc ml-4 text-xs">
+                                {diagnostic.consistencyIssues.map((issue, iIdx) => (
+                                  <li key={iIdx} className="text-red-600">{issue}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {diagnostic.recommendations.length > 0 && (
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Recommendations:</p>
+                              <ul className="list-disc ml-4 text-xs">
+                                {diagnostic.recommendations.map((rec, rIdx) => (
+                                  <li key={rIdx} className="text-blue-600">{rec}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -806,6 +853,14 @@ export const ProductIngredientMappingTab: React.FC = () => {
                       title="Apply to all stores"
                     >
                       <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => loadDiagnostics(product.id)}
+                      title="Run diagnostics"
+                    >
+                      <FileText className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -953,9 +1008,17 @@ export const ProductIngredientMappingTab: React.FC = () => {
                             onValueChange={(value) => 
                               updateIngredientMapping(product.id, ingredient.ingredientName, value === 'none' ? null : value)
                             }
+                            disabled={updating.has(`${product.id}-${ingredient.ingredientName}`)}
                           >
                             <SelectTrigger className="h-8">
-                              <SelectValue placeholder="Select inventory item" />
+                              {updating.has(`${product.id}-${ingredient.ingredientName}`) ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="animate-spin h-3 w-3 border border-gray-300 border-t-transparent rounded-full"></div>
+                                  <span>Updating...</span>
+                                </div>
+                              ) : (
+                                <SelectValue placeholder="Select inventory item" />
+                              )}
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">No mapping</SelectItem>
