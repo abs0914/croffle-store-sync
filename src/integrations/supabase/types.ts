@@ -4783,6 +4783,7 @@ export type Database = {
           ingredient_group_name: string | null
           inventory_stock_id: string
           is_optional: boolean | null
+          is_selected_addon: boolean | null
           notes: string | null
           purchase_unit: string | null
           quantity: number
@@ -4802,6 +4803,7 @@ export type Database = {
           ingredient_group_name?: string | null
           inventory_stock_id: string
           is_optional?: boolean | null
+          is_selected_addon?: boolean | null
           notes?: string | null
           purchase_unit?: string | null
           quantity: number
@@ -4821,6 +4823,7 @@ export type Database = {
           ingredient_group_name?: string | null
           inventory_stock_id?: string
           is_optional?: boolean | null
+          is_selected_addon?: boolean | null
           notes?: string | null
           purchase_unit?: string | null
           quantity?: number
@@ -6428,6 +6431,7 @@ export type Database = {
       }
       transaction_items: {
         Row: {
+          addon_metadata: Json | null
           category_id: string | null
           category_name: string | null
           created_at: string
@@ -6437,6 +6441,7 @@ export type Database = {
           product_id: string
           product_type: string | null
           quantity: number
+          selected_addons: Json | null
           total_price: number
           transaction_id: string
           unit_price: number
@@ -6444,6 +6449,7 @@ export type Database = {
           variation_id: string | null
         }
         Insert: {
+          addon_metadata?: Json | null
           category_id?: string | null
           category_name?: string | null
           created_at?: string
@@ -6453,6 +6459,7 @@ export type Database = {
           product_id: string
           product_type?: string | null
           quantity?: number
+          selected_addons?: Json | null
           total_price?: number
           transaction_id: string
           unit_price?: number
@@ -6460,6 +6467,7 @@ export type Database = {
           variation_id?: string | null
         }
         Update: {
+          addon_metadata?: Json | null
           category_id?: string | null
           category_name?: string | null
           created_at?: string
@@ -6469,6 +6477,7 @@ export type Database = {
           product_id?: string
           product_type?: string | null
           quantity?: number
+          selected_addons?: Json | null
           total_price?: number
           transaction_id?: string
           unit_price?: number
