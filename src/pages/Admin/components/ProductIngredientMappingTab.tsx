@@ -169,12 +169,13 @@ export const ProductIngredientMappingTab: React.FC = () => {
 
   const loadProductIngredients = async (product: ProductMapping) => {
     try {
-      // Get recipes for this product
+      // Get recipes for this product in the selected store only
       const { data: recipes, error: recipesError } = await supabase
         .from('recipes')
         .select(`
           id,
           recipe_ingredients(
+            id,
             ingredient_name,
             quantity,
             unit,
@@ -182,11 +183,12 @@ export const ProductIngredientMappingTab: React.FC = () => {
             inventory_stock(id, item)
           )
         `)
-        .eq('product_id', product.id);
+        .eq('product_id', product.id)
+        .eq('store_id', selectedStore);
 
       if (recipesError) throw recipesError;
 
-      const ingredientMap = new Map<string, IngredientMapping>();
+      const ingredientMap = new Map<string, IngredientMapping & { recipeIngredientId: string }>();
 
       recipes?.forEach(recipe => {
         recipe.recipe_ingredients?.forEach(ri => {
@@ -197,13 +199,14 @@ export const ProductIngredientMappingTab: React.FC = () => {
               inventoryName: ri.inventory_stock?.item || null,
               quantity: ri.quantity,
               unit: ri.unit,
-              mapped: !!ri.inventory_stock_id
+              mapped: !!ri.inventory_stock_id,
+              recipeIngredientId: ri.id
             });
           }
         });
       });
 
-      product.ingredients = Array.from(ingredientMap.values());
+      product.ingredients = Array.from(ingredientMap.values()).map(({ recipeIngredientId, ...ingredient }) => ingredient);
       
       // Calculate mapping status
       const totalIngredients = product.ingredients.length;
@@ -244,75 +247,124 @@ export const ProductIngredientMappingTab: React.FC = () => {
     inventoryId: string | null
   ) => {
     try {
-      if (!selectedStore) return;
-
-      // Resolve the actual product for the selected store (grouped by name)
-      const groupProduct = products.find(p => p.id === productId);
-      let targetProductId = productId;
-
-      if (groupProduct) {
-        const { data: targetProduct, error: targetProductError } = await supabase
-          .from('products')
-          .select('id')
-          .eq('store_id', selectedStore)
-          .eq('name', groupProduct.name)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (!targetProductError && targetProduct?.id) {
-          targetProductId = targetProduct.id;
-        }
-      }
-
-      // Get recipes for the resolved product in the selected store
-      const { data: recipes, error: recipesError } = await supabase
-        .from('recipes')
-        .select('id')
-        .eq('product_id', targetProductId)
-        .eq('store_id', selectedStore);
-
-      if (recipesError) throw recipesError;
-      if (!recipes || recipes.length === 0) {
-        toast.info('No recipes found for this product in the selected store');
+      if (!selectedStore) {
+        console.error('No store selected');
+        toast.error('Please select a store first');
         return;
       }
 
-      // Update recipe ingredients
-      for (const recipe of recipes) {
+      console.log(`🔧 Updating mapping: ${ingredientName} → ${inventoryId ? inventoryItems.find(i => i.id === inventoryId)?.item : 'unmapped'}`);
+      console.log(`🏪 Store: ${selectedStore}, Product: ${productId}`);
+
+      // Verify inventory item belongs to selected store if mapping is being set
+      if (inventoryId) {
+        const inventoryItem = inventoryItems.find(item => item.id === inventoryId);
+        if (!inventoryItem) {
+          console.error('Selected inventory item not found in current store');
+          toast.error('Selected inventory item not available in this store');
+          return;
+        }
+        
+        // Double-check inventory item belongs to selected store
+        const { data: verifyItem, error: verifyError } = await supabase
+          .from('inventory_stock')
+          .select('id, item')
+          .eq('id', inventoryId)
+          .eq('store_id', selectedStore)
+          .single();
+
+        if (verifyError || !verifyItem) {
+          console.error('Inventory item verification failed:', verifyError);
+          toast.error('Cannot map to inventory from different store');
+          return;
+        }
+        console.log(`✅ Verified inventory item: ${verifyItem.item}`);
+      }
+
+      // Get all recipe ingredients for this product in the selected store
+      const { data: recipeIngredients, error: riError } = await supabase
+        .from('recipe_ingredients')
+        .select(`
+          id,
+          recipe_id,
+          ingredient_name,
+          recipes!inner(
+            id,
+            product_id,
+            store_id
+          )
+        `)
+        .eq('recipes.product_id', productId)
+        .eq('recipes.store_id', selectedStore)
+        .eq('ingredient_name', ingredientName);
+
+      if (riError) {
+        console.error('Error fetching recipe ingredients:', riError);
+        throw riError;
+      }
+
+      if (!recipeIngredients || recipeIngredients.length === 0) {
+        console.error('No recipe ingredients found for update');
+        toast.error('No recipe ingredients found for this product in the selected store');
+        return;
+      }
+
+      console.log(`🔍 Found ${recipeIngredients.length} recipe ingredients to update`);
+
+      // Update each recipe ingredient by ID (most precise)
+      for (const ri of recipeIngredients) {
+        console.log(`📝 Updating recipe ingredient ID: ${ri.id}`);
+        
         const { error: updateError } = await supabase
           .from('recipe_ingredients')
           .update({ inventory_stock_id: inventoryId })
-          .eq('recipe_id', recipe.id)
-          .eq('ingredient_name', ingredientName);
+          .eq('id', ri.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error(`Failed to update recipe ingredient ${ri.id}:`, updateError);
+          throw updateError;
+        }
 
-        // Keep recipe_ingredient_mappings in sync
+        // Sync recipe_ingredient_mappings
         if (inventoryId) {
           const { error: mappingError } = await supabase
             .from('recipe_ingredient_mappings')
             .upsert(
               {
-                recipe_id: recipe.id,
+                recipe_id: ri.recipe_id,
                 ingredient_name: ingredientName,
                 inventory_stock_id: inventoryId,
                 conversion_factor: 1.0
               },
               { onConflict: 'recipe_id,ingredient_name' }
             );
-          if (mappingError) console.warn('Mapping upsert failed:', mappingError);
+          
+          if (mappingError) {
+            console.warn('Mapping sync failed:', mappingError);
+          } else {
+            console.log(`✅ Synced mapping for recipe ${ri.recipe_id}`);
+          }
         } else {
-          // If cleared, remove mapping if exists
+          // Remove mapping when clearing
           const { error: deleteError } = await supabase
             .from('recipe_ingredient_mappings')
             .delete()
-            .eq('recipe_id', recipe.id)
+            .eq('recipe_id', ri.recipe_id)
             .eq('ingredient_name', ingredientName);
-          if (deleteError) console.warn('Mapping delete failed:', deleteError);
+          
+          if (deleteError) {
+            console.warn('Mapping deletion failed:', deleteError);
+          } else {
+            console.log(`🗑️ Removed mapping for recipe ${ri.recipe_id}`);
+          }
         }
       }
 
-      // Update local state immediately for instant UI feedback
+      // Immediately update local state for UI responsiveness
+      const inventoryName = inventoryId 
+        ? inventoryItems.find(item => item.id === inventoryId)?.item 
+        : null;
+
       setProducts(prevProducts =>
         prevProducts.map(product => {
           if (product.id === productId) {
@@ -321,9 +373,7 @@ export const ProductIngredientMappingTab: React.FC = () => {
                 ? {
                     ...ingredient,
                     inventoryId,
-                    inventoryName: inventoryId
-                      ? inventoryItems.find(item => item.id === inventoryId)?.item || ingredient.inventoryName
-                      : null,
+                    inventoryName,
                     mapped: !!inventoryId
                   }
                 : ingredient
@@ -332,6 +382,8 @@ export const ProductIngredientMappingTab: React.FC = () => {
             const total = updatedIngredients.length;
             const mappedCount = updatedIngredients.filter(i => i.mapped).length;
             const newStatus = mappedCount === 0 ? 'missing' : mappedCount === total ? 'complete' : 'partial';
+
+            console.log(`📊 Status update: ${mappedCount}/${total} mapped → ${newStatus}`);
 
             return {
               ...product,
@@ -343,14 +395,19 @@ export const ProductIngredientMappingTab: React.FC = () => {
         })
       );
 
-      const inventoryName = inventoryId ? inventoryItems.find(item => item.id === inventoryId)?.item : 'No mapping';
-      toast.success(`Updated "${ingredientName}" → "${inventoryName}"`);
+      const displayName = inventoryName || 'unmapped';
+      toast.success(`✅ "${ingredientName}" mapped to "${displayName}"`);
+      console.log(`✅ Mapping update completed successfully`);
 
-      // Reload data to ensure consistency for the selected store
-      setTimeout(() => loadProductMappings(), 400);
+      // Verify the update persisted by reloading (with slight delay)
+      setTimeout(async () => {
+        console.log('🔄 Verifying mapping persistence...');
+        await loadProductMappings();
+      }, 300);
+
     } catch (error) {
-      console.error('Error updating ingredient mapping:', error);
-      toast.error('Failed to update mapping');
+      console.error('❌ Error updating ingredient mapping:', error);
+      toast.error('Failed to update mapping - check console for details');
     }
   };
 
