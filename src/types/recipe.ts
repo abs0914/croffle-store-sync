@@ -2,14 +2,15 @@
 // Recipe type definitions
 export interface RecipeIngredient {
   id: string;
-  recipeId: string;
-  ingredientId: string;
-  ingredient_id?: string; // For backward compatibility
+  recipe_id: string;
+  inventory_stock_id: string; // Required FK to inventory_stock
   quantity: number;
   unit: string;
-  unit_type?: string; // For backward compatibility
-  cost_per_unit?: number; // For backward compatibility
-  ingredient_name?: string; // For backward compatibility
+  cost_per_unit?: number;
+  created_at?: string;
+  updated_at?: string;
+  // Computed fields for backward compatibility
+  ingredient_name?: string; // Derived from inventory_stock.item via JOIN
 }
 
 export interface Recipe {

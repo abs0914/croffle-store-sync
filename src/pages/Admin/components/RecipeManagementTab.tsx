@@ -345,7 +345,11 @@ export const RecipeManagementTab: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="mappings">
-          <ProductIngredientMappingTab />
+          {/* For now, use the hook data until we properly integrate */}
+          <ProductIngredientMappingTab 
+            selectedStore={''}
+            products={[]}
+          />
         </TabsContent>
       </Tabs>
 

@@ -69,13 +69,10 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
     if (!recipe?.id) return;
 
     try {
-      // First try to load existing recipe ingredients
+      // Load recipe ingredients using the new view that includes ingredient names via JOIN
       const { data: recipeIngredients, error: recipeError } = await supabase
-        .from('recipe_ingredients')
-        .select(`
-          *,
-          inventory_stock:inventory_stock(item, unit, cost)
-        `)
+        .from('recipe_ingredients_with_names')
+        .select('*')
         .eq('recipe_id', recipe.id);
 
       if (recipeError) {
@@ -86,11 +83,14 @@ export function RecipeEditDialog({ isOpen, onClose, recipe, onSuccess }: RecipeE
       if (recipeIngredients && recipeIngredients.length > 0) {
         const mappedIngredients = recipeIngredients.map(ing => ({
           id: ing.id,
+          recipe_id: ing.recipe_id,
           inventory_stock_id: ing.inventory_stock_id,
+          ingredient_name: ing.ingredient_name, // Now available from the view
           quantity: ing.quantity || 0,
           unit: (VALID_UNITS.includes(ing.unit as any) ? ing.unit : 'g') as 'kg' | 'g' | 'pieces' | 'liters' | 'ml' | 'boxes' | 'packs',
           cost_per_unit: ing.cost_per_unit || 0,
-          inventory_stock: ing.inventory_stock
+          created_at: ing.created_at,
+          updated_at: ing.updated_at
         }));
 
         setIngredients(mappedIngredients);
