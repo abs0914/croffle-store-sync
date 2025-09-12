@@ -145,7 +145,7 @@ export const IngredientGroupCard: React.FC<IngredientGroupCardProps> = ({
                       </SelectTrigger>
                       <SelectContent>
                         {inventoryItems.map(item => (
-                          <SelectItem key={item.id} value={item.id}>
+                          <SelectItem key={item.id} value={item.id} textValue={item.item}>
                             <div className="flex items-center justify-between w-full">
                               <span>{item.item}</span>
                               <span className="text-xs text-muted-foreground ml-2">
