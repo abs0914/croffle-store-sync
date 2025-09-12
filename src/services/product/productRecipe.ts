@@ -29,16 +29,16 @@ export const areRecipesEqual = (recipe1: Recipe | null, recipe2: Recipe | null):
   }
   
   const sortedIngredients1 = [...recipe1.ingredients].sort((a, b) => 
-    (a.ingredientId || a.ingredient_id || '').localeCompare(b.ingredientId || b.ingredient_id || '')
+    (a.inventory_stock_id || '').localeCompare(b.inventory_stock_id || '')
   );
   
   const sortedIngredients2 = [...recipe2.ingredients].sort((a, b) => 
-    (a.ingredientId || a.ingredient_id || '').localeCompare(b.ingredientId || b.ingredient_id || '')
+    (a.inventory_stock_id || '').localeCompare(b.inventory_stock_id || '')
   );
   
   for (let i = 0; i < sortedIngredients1.length; i++) {
-    const id1 = sortedIngredients1[i].ingredientId || sortedIngredients1[i].ingredient_id || '';
-    const id2 = sortedIngredients2[i].ingredientId || sortedIngredients2[i].ingredient_id || '';
+    const id1 = sortedIngredients1[i].inventory_stock_id || '';
+    const id2 = sortedIngredients2[i].inventory_stock_id || '';
     
     if (id1 !== id2 || sortedIngredients1[i].quantity !== sortedIngredients2[i].quantity) {
       return false;

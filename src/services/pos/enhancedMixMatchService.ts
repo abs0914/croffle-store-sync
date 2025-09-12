@@ -318,7 +318,7 @@ export class EnhancedMixMatchProcessor {
           recipes!inner (
             id,
             template_id,
-            recipe_ingredients (
+            recipe_ingredients_with_names (
               ingredient_name,
               quantity,
               unit,
@@ -330,9 +330,9 @@ export class EnhancedMixMatchProcessor {
         .eq('store_id', storeId)
         .maybeSingle();
 
-      if (catalogData?.recipes?.recipe_ingredients?.length > 0) {
+      if (catalogData?.recipes?.recipe_ingredients_with_names?.length > 0) {
         return {
-          ingredients: catalogData.recipes.recipe_ingredients,
+          ingredients: catalogData.recipes.recipe_ingredients_with_names,
           recipeId: catalogData.recipes.id,
           templateId: catalogData.recipes.template_id
         };
@@ -348,7 +348,7 @@ export class EnhancedMixMatchProcessor {
         recipes (
           id,
           template_id,
-          recipe_ingredients (
+          recipe_ingredients_with_names (
             ingredient_name,
             quantity,
             unit,
@@ -360,10 +360,10 @@ export class EnhancedMixMatchProcessor {
       .eq('product_name', baseName)
       .eq('is_available', true);
 
-    const validProduct = baseProducts?.find(p => p.recipes?.recipe_ingredients?.length > 0);
-    if (validProduct?.recipes?.recipe_ingredients) {
+    const validProduct = baseProducts?.find(p => p.recipes?.recipe_ingredients_with_names?.length > 0);
+    if (validProduct?.recipes?.recipe_ingredients_with_names) {
       return {
-        ingredients: validProduct.recipes.recipe_ingredients,
+        ingredients: validProduct.recipes.recipe_ingredients_with_names,
         recipeId: validProduct.recipes.id,
         templateId: validProduct.recipes.template_id
       };

@@ -150,7 +150,7 @@ export class SystemHealthValidator {
     try {
       // Check for consistent units between recipe ingredients and inventory
       const { data: recipeIngredients, error: recipeError } = await supabase
-        .from('recipe_ingredients')
+        .from('recipe_ingredients_with_names')
         .select('ingredient_name, unit');
 
       if (recipeError) throw recipeError;
@@ -286,8 +286,8 @@ export class SystemHealthValidator {
         .eq('is_active', true);
 
       const inventoryItems = new Set(inventory?.map(i => i.item.toLowerCase()) || []);
-      const mappedIngredients = recipeIngredients?.filter(ing => 
-        inventoryItems.has(ing.ingredient_name.toLowerCase())
+      const mappedIngredients = recipeIngredients?.filter((ing: any) => 
+        ing.ingredient_name && inventoryItems.has(ing.ingredient_name.toLowerCase())
       ).length || 0;
 
       const mappingPercentage = totalIngredients > 0 ? Math.round((mappedIngredients / totalIngredients) * 100) : 0;

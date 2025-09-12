@@ -213,12 +213,12 @@ export class TransactionValidator {
         // Recipe-based product - check ingredient availability
         if (productInfo.recipe_id) {
           const { data: recipeIngredients } = await supabase
-            .from('recipe_ingredients')
+            .from('recipe_ingredients_with_names')
             .select(`
               ingredient_name,
               quantity,
               unit,
-              inventory_stock:inventory_stock_id (
+              inventory_stock:inventory_stock!inventory_stock_id (
                 item,
                 stock_quantity
               )

@@ -70,7 +70,7 @@ export async function fetchInventoryStock(
   try {
     const { data, error } = await supabase
       .from('inventory_stock')
-      .select('id, item, unit, cost_per_unit, store_id, is_active')
+      .select('id, item, unit, cost, store_id, is_active')
       .eq('store_id', storeId)
       .eq('is_active', true)
       .order('item');
@@ -81,7 +81,12 @@ export async function fetchInventoryStock(
       return [];
     }
 
-    return data || [];
+    const mappedData = data.map(item => ({
+      ...item,
+      cost_per_unit: item.cost // Map cost to cost_per_unit for compatibility
+    }));
+
+    return mappedData;
   } catch (error) {
     console.error('Error in fetchInventoryStock:', error);
     toast.error('Failed to fetch inventory items');
@@ -199,7 +204,7 @@ export async function createRecipeIngredient(
         recipe_id: recipeId,
         inventory_stock_id: inventoryStockId,
         quantity,
-        unit,
+        unit: unit as any, // Cast to handle unit type
         cost_per_unit: costPerUnit
       })
       .select('id')

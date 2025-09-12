@@ -48,7 +48,7 @@ export class RecipeService {
         .from('recipes')
         .select(`
           *,
-          recipe_ingredients (*)
+          recipe_ingredients_with_names (*)
         `)
         .eq('id', recipeId)
         .single();
@@ -56,7 +56,7 @@ export class RecipeService {
       if (recipeError) throw recipeError;
 
       let totalCost = 0;
-      const ingredients = recipe.recipe_ingredients.map((ing: any) => {
+      const ingredients = recipe.recipe_ingredients_with_names.map((ing: any) => {
         const ingredientTotal = ing.quantity * ing.cost_per_unit;
         totalCost += ingredientTotal;
         
@@ -140,7 +140,6 @@ export class RecipeService {
           ingredientsToInsert.push({
             recipe_id: recipe.id,
             inventory_stock_id: ingredient.inventoryStockId,
-            ingredient_name: ingredient.ingredientName,
             quantity: ingredient.quantity,
             unit: ingredient.unit as any, // Cast to avoid type issues
             cost_per_unit: ingredient.costPerUnit
@@ -166,7 +165,6 @@ export class RecipeService {
           ingredientsToInsert.push({
             recipe_id: recipe.id,
             inventory_stock_id: inventoryItem?.id,
-            ingredient_name: templateIngredient.ingredient_name,
             quantity: templateIngredient.quantity,
             unit: templateIngredient.unit as any, // Cast to avoid type issues
             cost_per_unit: costPerUnit
@@ -288,7 +286,7 @@ export class RecipeService {
         .select(`
           id,
           yield_quantity,
-          recipe_ingredients (
+          recipe_ingredients_with_names (
             id,
             inventory_stock_id,
             ingredient_name,
@@ -313,7 +311,7 @@ export class RecipeService {
         let recipeNeedsUpdate = false;
         let newTotalCost = 0;
 
-        for (const ingredient of recipe.recipe_ingredients) {
+        for (const ingredient of recipe.recipe_ingredients_with_names) {
           if (ingredient.inventory_stock_id) {
             // Get current inventory cost
             const { data: inventoryItem } = await supabase

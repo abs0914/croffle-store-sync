@@ -32,7 +32,7 @@ export const fetchRecipes = async (storeId: string): Promise<Recipe[]> => {
         *,
         ingredients:recipe_ingredients(
           *,
-          inventory_stock:inventory_stock(*)
+          inventory_stock:inventory_stock!inventory_stock_id(*)
         )
       `)
       .eq('store_id', storeId)
@@ -314,7 +314,8 @@ export const parseRecipesCSV = async (csvData: string, storeId: string): Promise
           item: values[4],
           cost: parseFloat(values[7]) || 0,
           unit: values[6] || 'kg',
-          stock_quantity: 0
+          stock_quantity: 0,
+          store_id: storeId
         }
       });
     }

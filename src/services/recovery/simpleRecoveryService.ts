@@ -182,7 +182,7 @@ const recoverSingleTransaction = async (
           recipe_id,
           recipes!inner (
             id,
-            recipe_ingredients (
+            recipe_ingredients_with_names (
               ingredient_name,
               quantity,
               unit
@@ -198,9 +198,9 @@ const recoverSingleTransaction = async (
 
       const recipeData = productCatalog?.recipes;
 
-      if (recipeData?.recipe_ingredients) {
+      if (recipeData?.recipe_ingredients_with_names) {
         // Process recipe ingredients
-        for (const ingredient of recipeData.recipe_ingredients) {
+        for (const ingredient of recipeData.recipe_ingredients_with_names) {
           const result = await deductIngredientInventory(
             transaction.store_id,
             ingredient.ingredient_name,

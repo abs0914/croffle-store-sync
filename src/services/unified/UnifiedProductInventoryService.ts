@@ -492,7 +492,7 @@ class UnifiedProductInventoryService {
       let hasLowStock = false;
 
       // Check each ingredient
-      for (const ingredient of recipe.recipe_ingredients || []) {
+      for (const ingredient of recipe.recipe_ingredients_with_names || []) {
         if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
           console.warn(`Ingredient ${ingredient.ingredient_name} not mapped to inventory`);
           continue;

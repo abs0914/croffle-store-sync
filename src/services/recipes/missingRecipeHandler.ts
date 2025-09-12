@@ -107,7 +107,7 @@ export const createMissingRecipes = async (
             .from('recipe_ingredients')
             .insert({
               recipe_id: newRecipe.id,
-              ingredient_name: basicIngredientName,
+              inventory_stock_id: null, // Will need to be mapped manually
               quantity: 1,
               unit: 'pieces',
               cost_per_unit: 0

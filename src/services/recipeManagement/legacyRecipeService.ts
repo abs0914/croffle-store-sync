@@ -48,7 +48,7 @@ export const legacyRecipeService = {
         .from('recipes')
         .select(`
           *,
-          recipe_ingredients (
+          recipe_ingredients_with_names (
             id,
             recipe_id,
             inventory_stock_id,
@@ -66,7 +66,7 @@ export const legacyRecipeService = {
 
       return (data || []).map(recipe => ({
         ...recipe,
-        ingredients: recipe.recipe_ingredients || []
+        ingredients: recipe.recipe_ingredients_with_names || []
       }));
     } catch (error) {
       console.error('Error fetching legacy recipes:', error);
@@ -82,7 +82,7 @@ export const legacyRecipeService = {
         .from('recipes')
         .select(`
           *,
-          recipe_ingredients (
+          recipe_ingredients_with_names (
             id,
             recipe_id,
             inventory_stock_id,
@@ -99,7 +99,7 @@ export const legacyRecipeService = {
 
       return data ? {
         ...data,
-        ingredients: data.recipe_ingredients || []
+        ingredients: data.recipe_ingredients_with_names || []
       } : null;
     } catch (error) {
       console.error('Error fetching legacy recipe:', error);
@@ -131,7 +131,6 @@ export const legacyRecipeService = {
         const ingredientsData = recipeData.ingredients.map(ing => ({
           recipe_id: recipe.id,
           inventory_stock_id: ing.inventory_stock_id,
-          ingredient_name: ing.ingredient_name,
           quantity: ing.quantity,
           unit: ing.unit as any, // Cast to handle flexible unit types
           cost_per_unit: ing.cost_per_unit
@@ -185,7 +184,6 @@ export const legacyRecipeService = {
         const ingredientsData = recipeData.ingredients.map(ing => ({
           recipe_id: recipeId,
           inventory_stock_id: ing.inventory_stock_id,
-          ingredient_name: ing.ingredient_name,
           quantity: ing.quantity,
           unit: ing.unit as any, // Cast to handle flexible unit types
           cost_per_unit: ing.cost_per_unit
@@ -272,7 +270,7 @@ export const legacyRecipeService = {
         .from('recipes')
         .select(`
           *,
-          recipe_ingredients (
+          recipe_ingredients_with_names (
             id,
             recipe_id,
             inventory_stock_id,
@@ -291,7 +289,7 @@ export const legacyRecipeService = {
 
       return (data || []).map(recipe => ({
         ...recipe,
-        ingredients: recipe.recipe_ingredients || []
+        ingredients: recipe.recipe_ingredients_with_names || []
       }));
     } catch (error) {
       console.error('Error searching legacy recipes:', error);

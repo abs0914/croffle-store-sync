@@ -91,7 +91,7 @@ export const quickFixRecipeIngredients = async (
 
     // Get existing recipe ingredients
     const { data: existingIngredients, error: existingError } = await supabase
-      .from('recipe_ingredients')
+      .from('recipe_ingredients_with_names')
       .select('ingredient_name')
       .eq('recipe_id', recipeId);
 
@@ -135,24 +135,22 @@ export const quickFixRecipeIngredients = async (
           .single();
           
         if (fallbackItem) {
-          ingredientsWithInventory.push({
-            recipe_id: recipeId,
-            ingredient_name: ingredient.ingredient_name,
-            quantity: ingredient.quantity,
-            unit: ingredient.unit as any,
-            cost_per_unit: ingredient.cost_per_unit,
-            inventory_stock_id: fallbackItem.id,
-            commissary_item_id: null
-          });
+        ingredientsWithInventory.push({
+          recipe_id: recipeId,
+          inventory_stock_id: fallbackItem.id,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit as any,
+          cost_per_unit: ingredient.cost_per_unit,
+          commissary_item_id: null
+        });
         }
       } else {
         ingredientsWithInventory.push({
           recipe_id: recipeId,
-          ingredient_name: ingredient.ingredient_name,
+          inventory_stock_id: inventoryItem.id,
           quantity: ingredient.quantity,
           unit: ingredient.unit as any,
           cost_per_unit: ingredient.cost_per_unit,
-          inventory_stock_id: inventoryItem.id,
           commissary_item_id: null
         });
       }

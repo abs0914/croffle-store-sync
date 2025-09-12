@@ -44,8 +44,8 @@ export const processRecipeUsageFromPOS = async (
         *,
         ingredients:recipe_ingredients(
           *,
-          inventory_stock:inventory_stock(*),
-          commissary_inventory:commissary_item_id(*)
+          inventory_stock:inventory_stock!inventory_stock_id(*),
+          commissary_inventory:commissary_inventory!commissary_item_id(*)
         )
       `)
       .eq('id', usage.recipe_id)
@@ -245,8 +245,8 @@ export const checkRecipeAvailabilityForPOS = async (
         *,
         ingredients:recipe_ingredients(
           *,
-          inventory_stock:inventory_stock(*),
-          commissary_inventory:commissary_item_id(*)
+          inventory_stock:inventory_stock!inventory_stock_id(*),
+          commissary_inventory:commissary_inventory!commissary_item_id(*)
         )
       `)
       .eq('id', recipeId)

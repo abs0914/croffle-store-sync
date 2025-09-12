@@ -42,10 +42,10 @@ export class SimplifiedTransactionInventoryIntegration {
           .select(`
             recipe_id,
             recipes!inner (
-              recipe_ingredients!inner (
+              recipe_ingredients_with_names!inner (
                 ingredient_name,
                 quantity,
-                inventory_stock!inner (
+                inventory_stock!inventory_stock_id (
                   id,
                   stock_quantity
                 )
@@ -53,8 +53,8 @@ export class SimplifiedTransactionInventoryIntegration {
             )
           `)
           .eq('id', item.productId)
-          .eq('recipes.recipe_ingredients.inventory_stock.store_id', item.storeId)
-          .eq('recipes.recipe_ingredients.inventory_stock.is_active', true);
+          .eq('recipes.recipe_ingredients_with_names.inventory_stock.store_id', item.storeId)
+          .eq('recipes.recipe_ingredients_with_names.inventory_stock.is_active', true);
         
         if (!productData || productData.length === 0) {
           console.warn(`⚠️ SIMPLE VALIDATION: No recipe found for ${item.productName}`);
@@ -62,12 +62,12 @@ export class SimplifiedTransactionInventoryIntegration {
         }
         
         const recipe = productData[0].recipes;
-        if (!recipe?.recipe_ingredients) continue;
+        if (!recipe?.recipe_ingredients_with_names) continue;
         
         // Check each ingredient
-        for (const ingredient of recipe.recipe_ingredients) {
+        for (const ingredient of recipe.recipe_ingredients_with_names) {
           const requiredQuantity = ingredient.quantity * item.quantity;
-          const availableStock = ingredient.inventory_stock.stock_quantity;
+          const availableStock = ingredient.inventory_stock?.stock_quantity || 0;
           
           if (availableStock < requiredQuantity) {
             errors.push(
