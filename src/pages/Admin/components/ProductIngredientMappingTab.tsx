@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { AlertCircle, CheckCircle2, Loader2, Plus, Trash2, RefreshCw, Settings, HelpCircle, Zap, AlertTriangle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Plus, Trash2, RefreshCw, Settings, HelpCircle, Zap, AlertTriangle, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
+import { MixMatchGroupedView } from '@/components/admin/recipe/MixMatchGroupedView';
 
 interface ProductIngredientMappingTabProps {
   selectedStore: string;
@@ -28,6 +29,9 @@ interface RecipeIngredient {
   unit: InventoryUnit;
   created_at: string;
   updated_at: string | null;
+  ingredient_group_name?: string;
+  is_optional?: boolean;
+  display_order?: number;
   inventory_stock?: {
     id: string;
     item: string;
@@ -56,6 +60,16 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
   const [isSaving, setIsSaving] = useState(false);
   const [applyToAllStores, setApplyToAllStores] = useState(false);
   const [isAutoMapping, setIsAutoMapping] = useState(false);
+  
+  // Detect if current product is Mix & Match
+  const isMixMatchProduct = React.useMemo(() => {
+    return recipeIngredients.some(ingredient => ingredient.ingredient_group_name);
+  }, [recipeIngredients]);
+
+  // Get current product details
+  const selectedProductData = React.useMemo(() => {
+    return products.find(p => p.id === selectedProduct);
+  }, [products, selectedProduct]);
 
   // Load inventory items when store changes
   useEffect(() => {
@@ -103,11 +117,12 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
 
     setIsLoading(true);
     try {
-      // First, get the recipe ingredients
+      // First, get the recipe ingredients with Mix & Match fields
       const { data: ingredientsData, error: ingredientsError } = await supabase
         .from('recipe_ingredients')
-        .select('id, recipe_id, inventory_stock_id, quantity, unit, created_at, updated_at')
-        .eq('recipe_id', product.recipe_id);
+        .select('id, recipe_id, inventory_stock_id, quantity, unit, created_at, updated_at, ingredient_group_name, is_optional, display_order')
+        .eq('recipe_id', product.recipe_id)
+        .order('ingredient_group_name, display_order');
 
       if (ingredientsError) throw ingredientsError;
 
@@ -500,7 +515,7 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
         <CardContent>
           <div className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div>
+                <div>
                 <Label>Product</Label>
                 <Select
                   value={selectedProduct}
@@ -515,7 +530,14 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
                       .filter(p => p.recipe_id) // Only show products with recipes
                       .map(product => (
                         <SelectItem key={product.id} value={product.id}>
-                          {product.name || product.product_name}
+                          <div className="flex items-center justify-between w-full">
+                            <span>{product.name || product.product_name}</span>
+                            {product.description?.includes('Mix & Match') && (
+                              <Badge variant="secondary" className="ml-2 text-xs">
+                                Mix & Match
+                              </Badge>
+                            )}
+                          </div>
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -541,259 +563,281 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
 
       {/* Ingredient Management Interface */}
       {selectedProduct && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Product Ingredient Mapping</span>
-              <div className="flex items-center gap-2">
-                {getValidationBadge()}
-                <Badge variant="outline">
-                  Cost: ₱{calculateTotalCost().toFixed(2)}
-                </Badge>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Action Buttons */}
-            <div className="flex justify-between items-center">
-              <div className="flex gap-2">
-                <Button
-                  onClick={addNewIngredient}
-                  disabled={isSaving || inventoryItems.length === 0}
-                  variant="outline"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Ingredient
-                </Button>
-                
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={autoMapIngredients}
-                        disabled={isAutoMapping || isSaving || recipeIngredients.length === 0}
-                        variant="outline"
-                      >
-                        {isAutoMapping ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Zap className="w-4 h-4 mr-2" />
-                        )}
-                        Auto-Map
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Automatically match ingredients to inventory items based on name similarity</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                
-                {applyToAllStores && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          onClick={deployToAllStores}
-                          disabled={isSaving || recipeIngredients.length === 0 || 
-                            recipeIngredients.some(ing => !ing.inventory_stock_id)}
-                          variant="default"
-                        >
-                          <Settings className="w-4 h-4 mr-2" />
-                          Deploy to All Stores
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Deploy this recipe configuration to all active stores. All ingredients must be mapped first.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
-
-              <Button
-                onClick={loadRecipeIngredients}
-                disabled={isLoading}
-                variant="ghost"
-                size="sm"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              </Button>
-            </div>
-
-            <Separator />
-
-            {/* Ingredients List */}
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                Loading ingredients...
-              </div>
-            ) : recipeIngredients.length === 0 ? (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  No ingredients found for this product recipe. Add ingredients to get started.
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <div className="space-y-3">
-                {recipeIngredients.map((ingredient) => {
-                  const isUnmapped = !ingredient.inventory_stock_id;
-                  return (
-                    <Card 
-                      key={ingredient.id} 
-                      className={`border-l-4 ${
-                        isUnmapped 
-                          ? 'border-l-amber-500 bg-amber-50/50' 
-                          : 'border-l-primary/50'
-                      }`}
-                    >
-                      <CardContent className="p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                          {/* Inventory Item Selection */}
-                          <div className="md:col-span-4">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Label className="text-sm font-medium">Inventory Item</Label>
-                              {isUnmapped && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>This ingredient is not mapped to any inventory item. Select an item to enable cost calculations and deployment.</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
-                            <Select
-                              value={ingredient.inventory_stock_id || ''}
-                              onValueChange={(value) => updateIngredientMapping(ingredient.id, value)}
-                              disabled={isSaving}
-                            >
-                              <SelectTrigger className={isUnmapped ? 'border-amber-300 focus:border-amber-500' : ''}>
-                                <SelectValue placeholder="Select inventory item..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {inventoryItems.map(item => (
-                                  <SelectItem key={item.id} value={item.id}>
-                                    {item.item} ({item.unit} - ₱{item.cost || 0})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {/* Current Item Display */}
-                          <div className="md:col-span-3">
-                            <Label className="text-sm font-medium">Selected Item</Label>
-                            <div className={`text-sm p-2 rounded ${
-                              isUnmapped 
-                                ? 'bg-amber-100 text-amber-800 border border-amber-200' 
-                                : 'bg-muted/50'
-                            }`}>
-                              {ingredient.inventory_stock?.item || (
-                                <span className="flex items-center gap-1">
-                                  <AlertCircle className="w-3 h-3" />
-                                  Not selected
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Quantity (Editable) */}
-                          <div className="md:col-span-2">
-                            <Label className="text-sm font-medium">Quantity</Label>
-                            <Input
-                              type="number"
-                              value={ingredient.quantity}
-                              onChange={(e) => {
-                                const newQuantity = parseFloat(e.target.value) || 0;
-                                if (newQuantity !== ingredient.quantity) {
-                                  updateIngredientQuantity(ingredient.id, newQuantity);
-                                }
-                              }}
-                              className="text-sm"
-                              disabled={isSaving}
-                              min="0"
-                              step="0.1"
-                            />
-                          </div>
-
-                          {/* Unit Display */}
-                          <div className="md:col-span-2">
-                            <Label className="text-sm font-medium">Unit</Label>
-                            <div className="text-sm bg-muted/50 p-2 rounded">
-                              {ingredient.inventory_stock?.unit || ingredient.unit}
-                            </div>
-                          </div>
-
-                          {/* Actions */}
-                          <div className="md:col-span-1 flex justify-end">
-                            <Button
-                              onClick={() => deleteIngredient(ingredient.id)}
-                              disabled={isSaving}
-                              variant="ghost"
-                              size="sm"
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Cost Information */}
-                        {ingredient.inventory_stock && ingredient.inventory_stock.cost ? (
-                          <div className="mt-2 pt-2 border-t border-muted text-sm text-muted-foreground">
-                            Cost: ₱{ingredient.inventory_stock.cost}/unit × {ingredient.quantity} = ₱{(ingredient.inventory_stock.cost * ingredient.quantity).toFixed(2)}
-                          </div>
-                        ) : isUnmapped && (
-                          <div className="mt-2 pt-2 border-t border-amber-200 text-sm text-amber-600 bg-amber-50 p-2 rounded">
-                            <AlertCircle className="w-4 h-4 inline mr-1" />
-                            Cost calculation unavailable - please map to inventory item
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Summary Information */}
-            {recipeIngredients.length > 0 && (
-              <Card className="bg-muted/30">
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Total Ingredients:</span>
-                      <span className="ml-1 font-medium">{recipeIngredients.length}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Mapped:</span>
-                      <span className="ml-1 font-medium">
-                        {recipeIngredients.filter(ing => ing.inventory_stock_id).length}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Total Cost:</span>
-                      <span className="ml-1 font-medium">₱{calculateTotalCost().toFixed(2)}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Status:</span>
-                      <span className="ml-1">
-                        {recipeIngredients.filter(ing => ing.inventory_stock_id).length === recipeIngredients.length 
-                          ? '✅ Complete' 
-                          : '⚠️ Incomplete'
-                        }
-                      </span>
-                    </div>
+        <>
+          {isMixMatchProduct ? (
+            // Mix & Match Products - Use grouped view
+            <MixMatchGroupedView
+              product={selectedProductData}
+              ingredients={recipeIngredients}
+              inventoryItems={inventoryItems}
+              isLoading={isLoading}
+              isSaving={isSaving}
+              onUpdateMapping={updateIngredientMapping}
+              onUpdateQuantity={updateIngredientQuantity}
+              onDeleteIngredient={deleteIngredient}
+              onAddIngredient={addNewIngredient}
+              onAutoMap={autoMapIngredients}
+              onRefresh={loadRecipeIngredients}
+            />
+          ) : (
+            // Regular Products - Use flat view (existing functionality)
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-muted-foreground" />
+                    <span>Regular Product Ingredient Mapping</span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </CardContent>
-        </Card>
+                  <div className="flex items-center gap-2">
+                    {getValidationBadge()}
+                    <Badge variant="outline">
+                      Cost: ₱{calculateTotalCost().toFixed(2)}
+                    </Badge>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">{/* Action Buttons */}
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={addNewIngredient}
+                      disabled={isSaving || inventoryItems.length === 0}
+                      variant="outline"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Ingredient
+                    </Button>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={autoMapIngredients}
+                            disabled={isAutoMapping || isSaving || recipeIngredients.length === 0}
+                            variant="outline"
+                          >
+                            {isAutoMapping ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Zap className="w-4 h-4 mr-2" />
+                            )}
+                            Auto-Map
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Automatically match ingredients to inventory items based on name similarity</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    {applyToAllStores && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={deployToAllStores}
+                              disabled={isSaving || recipeIngredients.length === 0 || 
+                                recipeIngredients.some(ing => !ing.inventory_stock_id)}
+                              variant="default"
+                            >
+                              <Settings className="w-4 h-4 mr-2" />
+                              Deploy to All Stores
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Deploy this recipe configuration to all active stores. All ingredients must be mapped first.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
+
+                  <Button
+                    onClick={loadRecipeIngredients}
+                    disabled={isLoading}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  </Button>
+                </div>
+
+                <Separator />
+
+                {/* Ingredients List - Regular Product View */}
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                    Loading ingredients...
+                  </div>
+                ) : recipeIngredients.length === 0 ? (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      No ingredients found for this product recipe. Add ingredients to get started.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="space-y-3">
+                    {recipeIngredients.map((ingredient) => {
+                      const isUnmapped = !ingredient.inventory_stock_id;
+                      return (
+                        <Card 
+                          key={ingredient.id} 
+                          className={`border-l-4 ${
+                            isUnmapped 
+                              ? 'border-l-amber-500 bg-amber-50/50' 
+                              : 'border-l-primary/50'
+                          }`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                              {/* Inventory Item Selection */}
+                              <div className="md:col-span-4">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Label className="text-sm font-medium">Inventory Item</Label>
+                                  {isUnmapped && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>This ingredient is not mapped to any inventory item. Select an item to enable cost calculations and deployment.</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
+                                <Select
+                                  value={ingredient.inventory_stock_id || ''}
+                                  onValueChange={(value) => updateIngredientMapping(ingredient.id, value)}
+                                  disabled={isSaving}
+                                >
+                                  <SelectTrigger className={isUnmapped ? 'border-amber-300 focus:border-amber-500' : ''}>
+                                    <SelectValue placeholder="Select inventory item..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {inventoryItems.map(item => (
+                                      <SelectItem key={item.id} value={item.id}>
+                                        {item.item} ({item.unit} - ₱{item.cost || 0})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              {/* Current Item Display */}
+                              <div className="md:col-span-3">
+                                <Label className="text-sm font-medium">Selected Item</Label>
+                                <div className={`text-sm p-2 rounded ${
+                                  isUnmapped 
+                                    ? 'bg-amber-100 text-amber-800 border border-amber-200' 
+                                    : 'bg-muted/50'
+                                }`}>
+                                  {ingredient.inventory_stock?.item || (
+                                    <span className="flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3" />
+                                      Not selected
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Quantity (Editable) */}
+                              <div className="md:col-span-2">
+                                <Label className="text-sm font-medium">Quantity</Label>
+                                <Input
+                                  type="number"
+                                  value={ingredient.quantity}
+                                  onChange={(e) => {
+                                    const newQuantity = parseFloat(e.target.value) || 0;
+                                    if (newQuantity !== ingredient.quantity) {
+                                      updateIngredientQuantity(ingredient.id, newQuantity);
+                                    }
+                                  }}
+                                  className="text-sm"
+                                  disabled={isSaving}
+                                  min="0"
+                                  step="0.1"
+                                />
+                              </div>
+
+                              {/* Unit Display */}
+                              <div className="md:col-span-2">
+                                <Label className="text-sm font-medium">Unit</Label>
+                                <div className="text-sm bg-muted/50 p-2 rounded">
+                                  {ingredient.inventory_stock?.unit || ingredient.unit}
+                                </div>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="md:col-span-1 flex justify-end">
+                                <Button
+                                  onClick={() => deleteIngredient(ingredient.id)}
+                                  disabled={isSaving}
+                                  variant="ghost"
+                                  size="sm"
+                                >
+                                  <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Cost Information */}
+                            {ingredient.inventory_stock && ingredient.inventory_stock.cost ? (
+                              <div className="mt-2 pt-2 border-t border-muted text-sm text-muted-foreground">
+                                Cost: ₱{ingredient.inventory_stock.cost}/unit × {ingredient.quantity} = ₱{(ingredient.inventory_stock.cost * ingredient.quantity).toFixed(2)}
+                              </div>
+                            ) : isUnmapped && (
+                              <div className="mt-2 pt-2 border-t border-amber-200 text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                                <AlertCircle className="w-4 h-4 inline mr-1" />
+                                Cost calculation unavailable - please map to inventory item
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Summary Information - Regular Products */}
+                {recipeIngredients.length > 0 && (
+                  <Card className="bg-muted/30">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Total Ingredients:</span>
+                          <span className="ml-1 font-medium">{recipeIngredients.length}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Mapped:</span>
+                          <span className="ml-1 font-medium">
+                            {recipeIngredients.filter(ing => ing.inventory_stock_id).length}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Total Cost:</span>
+                          <span className="ml-1 font-medium">₱{calculateTotalCost().toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Status:</span>
+                          <span className="ml-1">
+                            {recipeIngredients.filter(ing => ing.inventory_stock_id).length === recipeIngredients.length 
+                              ? '✅ Complete' 
+                              : '⚠️ Incomplete'
+                            }
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );
