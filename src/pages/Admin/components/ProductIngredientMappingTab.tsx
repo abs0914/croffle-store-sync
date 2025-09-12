@@ -6,37 +6,42 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, CheckCircle2, Loader2, Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { AlertCircle, CheckCircle2, Loader2, Plus, Trash2, RefreshCw, Settings } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  fetchProductRecipeIngredients,
-  fetchInventoryStock,
-  updateRecipeIngredientMapping,
-  bulkUpdateRecipeIngredientMappings,
-  createRecipeIngredient,
-  deleteRecipeIngredient,
-  validateRecipeIngredientMappings,
-  calculateRecipeCost,
-  autoMapIngredients,
-  type RecipeIngredientWithNames,
-  type InventoryStockItem
-} from '@/utils/ingredientMapping';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProductIngredientMappingTabProps {
   selectedStore: string;
   products: any[];
 }
 
-interface ProductSummary {
+type InventoryUnit = "kg" | "g" | "pieces" | "liters" | "ml" | "boxes" | "packs";
+
+interface RecipeIngredient {
   id: string;
-  name: string;
-  category: string;
-  totalIngredients: number;
-  mappedIngredients: number;
-  unmappedIngredients: number;
-  mappingStatus: 'complete' | 'partial' | 'missing';
-  totalCost: number;
+  recipe_id: string;
+  inventory_stock_id: string;
+  quantity: number;
+  unit: InventoryUnit;
+  created_at: string;
+  updated_at: string | null;
+  inventory_stock?: {
+    id: string;
+    item: string;
+    unit: InventoryUnit;
+    cost: number | null;
+  } | null;
+}
+
+interface InventoryItem {
+  id: string;
+  item: string;
+  unit: InventoryUnit;
+  cost: number | null;
+  store_id: string;
+  is_active: boolean | null;
 }
 
 export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabProps> = ({
@@ -44,23 +49,16 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
   products
 }) => {
   const [selectedProduct, setSelectedProduct] = useState<string>('');
-  const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredientWithNames[]>([]);
-  const [inventoryItems, setInventoryItems] = useState<InventoryStockItem[]>([]);
-  const [productSummaries, setProductSummaries] = useState<ProductSummary[]>([]);
+  const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [validationStatus, setValidationStatus] = useState<{
-    isValid: boolean;
-    unmappedCount: number;
-    totalCount: number;
-  } | null>(null);
-  const [recipeCost, setRecipeCost] = useState<number>(0);
+  const [applyToAllStores, setApplyToAllStores] = useState(false);
 
   // Load inventory items when store changes
   useEffect(() => {
     if (selectedStore) {
       loadInventoryItems();
-      loadProductSummaries();
     }
   }, [selectedStore]);
 
@@ -70,8 +68,6 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
       loadRecipeIngredients();
     } else {
       setRecipeIngredients([]);
-      setValidationStatus(null);
-      setRecipeCost(0);
     }
   }, [selectedProduct]);
 
@@ -79,81 +75,48 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     if (!selectedStore) return;
     
     try {
-      const items = await fetchInventoryStock(selectedStore);
-      setInventoryItems(items);
+      const { data, error } = await supabase
+        .from('inventory_stock')
+        .select('id, item, unit, cost, store_id, is_active')
+        .eq('store_id', selectedStore)
+        .eq('is_active', true)
+        .order('item');
+
+      if (error) throw error;
+      setInventoryItems((data || []) as InventoryItem[]);
     } catch (error) {
       console.error('Error loading inventory items:', error);
       toast.error('Failed to load inventory items');
     }
   };
 
-  const loadProductSummaries = async () => {
-    if (!selectedStore || !products.length) return;
-
-    const summaries: ProductSummary[] = [];
-
-    for (const product of products) {
-      try {
-        // Only process products that have a recipe_id
-        if (!product.recipe_id) continue;
-
-        const ingredients = await fetchProductRecipeIngredients(product.id, selectedStore);
-        const mapped = ingredients.filter(ing => ing.inventory_stock_id).length;
-        const unmapped = ingredients.length - mapped;
-        
-        let status: 'complete' | 'partial' | 'missing' = 'missing';
-        if (ingredients.length === 0) {
-          status = 'missing';
-        } else if (mapped === ingredients.length) {
-          status = 'complete';
-        } else if (mapped > 0) {
-          status = 'partial';
-        }
-
-        const cost = ingredients.reduce((total, ing) => 
-          total + (ing.quantity * ing.cost_per_unit), 0
-        );
-
-        summaries.push({
-          id: product.id,
-          name: product.name || product.product_name,
-          category: product.category?.name || 'Unknown',
-          totalIngredients: ingredients.length,
-          mappedIngredients: mapped,
-          unmappedIngredients: unmapped,
-          mappingStatus: status,
-          totalCost: cost
-        });
-      } catch (error) {
-        console.error(`Error loading summary for product ${product.name}:`, error);
-      }
-    }
-
-    setProductSummaries(summaries);
-  };
-
   const loadRecipeIngredients = async () => {
     if (!selectedProduct) return;
 
+    const product = products.find(p => p.id === selectedProduct);
+    if (!product?.recipe_id) {
+      toast.error('No recipe found for this product');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const ingredients = await fetchProductRecipeIngredients(selectedProduct, selectedStore);
-      setRecipeIngredients(ingredients);
+      const { data, error } = await supabase
+        .from('recipe_ingredients')
+        .select(`
+          id,
+          recipe_id,
+          inventory_stock_id,
+          quantity,
+          unit,
+          created_at,
+          updated_at,
+          inventory_stock:inventory_stock_id(id, item, unit, cost)
+        `)
+        .eq('recipe_id', product.recipe_id);
 
-      // Calculate validation status
-      const mapped = ingredients.filter(ing => ing.inventory_stock_id).length;
-      setValidationStatus({
-        isValid: mapped === ingredients.length && ingredients.length > 0,
-        unmappedCount: ingredients.length - mapped,
-        totalCount: ingredients.length
-      });
-
-      // Calculate cost
-      const cost = ingredients.reduce((total, ing) => 
-        total + (ing.quantity * ing.cost_per_unit), 0
-      );
-      setRecipeCost(cost);
-
+      if (error) throw error;
+      setRecipeIngredients((data || []) as RecipeIngredient[]);
     } catch (error) {
       console.error('Error loading recipe ingredients:', error);
       toast.error('Failed to load recipe ingredients');
@@ -162,53 +125,65 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     }
   };
 
-  const handleMappingUpdate = async (ingredientId: string, inventoryStockId: string) => {
+  const updateIngredientMapping = async (ingredientId: string, inventoryStockId: string) => {
     setIsSaving(true);
     try {
-      const result = await updateRecipeIngredientMapping(ingredientId, inventoryStockId);
-      
-      if (result.success) {
-        // Reload data to get updated names
-        await loadRecipeIngredients();
-        await loadProductSummaries();
+      const { error } = await supabase
+        .from('recipe_ingredients')
+        .update({ 
+          inventory_stock_id: inventoryStockId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', ingredientId);
+
+      if (error) throw error;
+
+      await loadRecipeIngredients();
+      toast.success('Ingredient mapping updated');
+
+      // If apply to all stores is enabled, deploy changes
+      if (applyToAllStores) {
+        await deployToAllStores();
       }
     } catch (error) {
       console.error('Error updating mapping:', error);
+      toast.error('Failed to update ingredient mapping');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleAutoMap = async () => {
-    if (!selectedProduct) return;
-
-    // Find the recipe ID for this product
-    const product = products.find(p => p.id === selectedProduct);
-    if (!product?.recipe_id) {
-      toast.error('No recipe found for this product');
-      return;
-    }
-
+  const updateIngredientQuantity = async (ingredientId: string, quantity: number) => {
+    if (quantity <= 0) return;
+    
     setIsSaving(true);
     try {
-      const result = await autoMapIngredients(product.recipe_id, selectedStore);
-      
-      if (result.success && result.mappedCount > 0) {
-        await loadRecipeIngredients();
-        await loadProductSummaries();
-        toast.success(result.message);
-      } else {
-        toast.info(result.message);
+      const { error } = await supabase
+        .from('recipe_ingredients')
+        .update({ 
+          quantity,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', ingredientId);
+
+      if (error) throw error;
+
+      await loadRecipeIngredients();
+      toast.success('Quantity updated');
+
+      // If apply to all stores is enabled, deploy changes
+      if (applyToAllStores) {
+        await deployToAllStores();
       }
     } catch (error) {
-      console.error('Error in auto-map:', error);
-      toast.error('Failed to auto-map ingredients');
+      console.error('Error updating quantity:', error);
+      toast.error('Failed to update quantity');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleAddIngredient = async () => {
+  const addNewIngredient = async () => {
     if (!selectedProduct || inventoryItems.length === 0) return;
 
     const product = products.find(p => p.id === selectedProduct);
@@ -218,50 +193,157 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     
     setIsSaving(true);
     try {
-      const result = await createRecipeIngredient(
-        product.recipe_id,
-        firstInventoryItem.id,
-        1,
-        firstInventoryItem.unit,
-        firstInventoryItem.cost_per_unit
-      );
+      const { error } = await supabase
+        .from('recipe_ingredients')
+        .insert({
+          recipe_id: product.recipe_id,
+          inventory_stock_id: firstInventoryItem.id,
+          quantity: 1,
+          unit: firstInventoryItem.unit
+        });
 
-      if (result.success) {
-        await loadRecipeIngredients();
-        await loadProductSummaries();
-        toast.success('New ingredient added');
+      if (error) throw error;
+
+      await loadRecipeIngredients();
+      toast.success('New ingredient added');
+
+      // If apply to all stores is enabled, deploy changes
+      if (applyToAllStores) {
+        await deployToAllStores();
       }
     } catch (error) {
       console.error('Error adding ingredient:', error);
+      toast.error('Failed to add ingredient');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDeleteIngredient = async (ingredientId: string) => {
+  const deleteIngredient = async (ingredientId: string) => {
     setIsSaving(true);
     try {
-      const result = await deleteRecipeIngredient(ingredientId);
-      
-      if (result.success) {
-        await loadRecipeIngredients();
-        await loadProductSummaries();
+      const { error } = await supabase
+        .from('recipe_ingredients')
+        .delete()
+        .eq('id', ingredientId);
+
+      if (error) throw error;
+
+      await loadRecipeIngredients();
+      toast.success('Ingredient removed');
+
+      // If apply to all stores is enabled, deploy changes
+      if (applyToAllStores) {
+        await deployToAllStores();
       }
     } catch (error) {
       console.error('Error deleting ingredient:', error);
+      toast.error('Failed to remove ingredient');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const deployToAllStores = async () => {
+    if (!selectedProduct) return;
+
+    const product = products.find(p => p.id === selectedProduct);
+    if (!product?.recipe_id) return;
+
+    try {
+      // Get all active stores
+      const { data: stores, error: storesError } = await supabase
+        .from('stores')
+        .select('id, name')
+        .eq('is_active', true);
+
+      if (storesError) throw storesError;
+
+      let deployedCount = 0;
+      for (const store of stores || []) {
+        if (store.id === selectedStore) continue; // Skip current store
+
+        // Find existing recipes for this product in other stores
+        const { data: existingRecipes, error: recipesError } = await supabase
+          .from('recipes')
+          .select('id')
+          .eq('name', product.name || product.product_name)
+          .eq('store_id', store.id)
+          .eq('is_active', true);
+
+        if (recipesError) continue;
+
+        let targetRecipeId: string;
+
+        if (existingRecipes && existingRecipes.length > 0) {
+          // Use existing recipe
+          targetRecipeId = existingRecipes[0].id;
+        } else {
+          // Create new recipe
+          const { data: newRecipe, error: recipeError } = await supabase
+            .from('recipes')
+            .insert({
+              name: product.name || product.product_name,
+              store_id: store.id,
+              template_id: product.recipe_id,
+              is_active: true,
+              serving_size: 1,
+              instructions: 'Auto-deployed from admin'
+            })
+            .select()
+            .single();
+
+          if (recipeError) continue;
+          targetRecipeId = newRecipe.id;
+        }
+
+        // Clear existing ingredients
+        await supabase
+          .from('recipe_ingredients')
+          .delete()
+          .eq('recipe_id', targetRecipeId);
+
+        // Copy current ingredients to target recipe
+        const ingredientInserts = recipeIngredients
+          .filter(ing => ing.inventory_stock_id)
+          .map(ing => ({
+            recipe_id: targetRecipeId,
+            inventory_stock_id: ing.inventory_stock_id,
+            quantity: ing.quantity,
+            unit: ing.unit
+          }));
+
+        if (ingredientInserts.length > 0) {
+          await supabase
+            .from('recipe_ingredients')
+            .insert(ingredientInserts);
+        }
+
+        deployedCount++;
+      }
+
+      if (deployedCount > 0) {
+        toast.success(`Recipe deployed to ${deployedCount} stores`);
+      }
+    } catch (error) {
+      console.error('Error deploying to all stores:', error);
+      toast.error('Failed to deploy to all stores');
     }
   };
 
   const getValidationBadge = () => {
-    if (!validationStatus) return null;
+    const mapped = recipeIngredients.filter(ing => ing.inventory_stock_id).length;
+    const total = recipeIngredients.length;
 
-    if (validationStatus.isValid) {
+    if (total === 0) {
+      return <Badge variant="destructive">No Ingredients</Badge>;
+    }
+
+    if (mapped === total) {
       return (
         <Badge variant="secondary" className="bg-green-100 text-green-800">
           <CheckCircle2 className="w-3 h-3 mr-1" />
-          All Mapped ({validationStatus.totalCount})
+          All Mapped ({total})
         </Badge>
       );
     }
@@ -269,20 +351,16 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
     return (
       <Badge variant="destructive">
         <AlertCircle className="w-3 h-3 mr-1" />
-        {validationStatus.unmappedCount} Unmapped
+        {total - mapped} Unmapped
       </Badge>
     );
   };
 
-  const getStatusBadge = (status: 'complete' | 'partial' | 'missing') => {
-    switch (status) {
-      case 'complete':
-        return <Badge className="bg-green-100 text-green-800">Complete</Badge>;
-      case 'partial':
-        return <Badge className="bg-yellow-100 text-yellow-800">Partial</Badge>;
-      case 'missing':
-        return <Badge variant="destructive">Missing</Badge>;
-    }
+  const calculateTotalCost = () => {
+    return recipeIngredients.reduce((total, ing) => {
+      const cost = ing.inventory_stock?.cost || 0;
+      return total + (ing.quantity * cost);
+    }, 0);
   };
 
   if (!selectedStore) {
@@ -302,75 +380,65 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
 
   return (
     <div className="space-y-6">
-      {/* Product Summaries Overview */}
+      {/* Product Selection */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Product Mapping Overview</span>
-            <Button
-              onClick={loadProductSummaries}
-              disabled={isLoading}
-              variant="ghost"
-              size="sm"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
-          </CardTitle>
+          <CardTitle>Select Product to Manage Ingredients</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {productSummaries.map((summary) => (
-              <Card 
-                key={summary.id} 
-                className={`cursor-pointer transition-colors ${
-                  selectedProduct === summary.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
-                }`}
-                onClick={() => setSelectedProduct(summary.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-sm">{summary.name}</h4>
-                    {getStatusBadge(summary.mappingStatus)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-2">{summary.category}</p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-muted-foreground">Mapped:</span>
-                      <span className="ml-1 font-medium">{summary.mappedIngredients}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Total:</span>
-                      <span className="ml-1 font-medium">{summary.totalIngredients}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground">Cost:</span>
-                      <span className="ml-1 font-medium">₱{summary.totalCost.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
+                <Label>Product</Label>
+                <Select
+                  value={selectedProduct}
+                  onValueChange={setSelectedProduct}
+                  disabled={!selectedStore}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a product..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products
+                      .filter(p => p.recipe_id) // Only show products with recipes
+                      .map(product => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name || product.product_name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-end">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="apply-all-stores"
+                    checked={applyToAllStores}
+                    onCheckedChange={setApplyToAllStores}
+                  />
+                  <Label htmlFor="apply-all-stores" className="text-sm">
+                    Apply changes to all stores
+                  </Label>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Detailed Product Ingredient Mapping */}
+      {/* Ingredient Management Interface */}
       {selectedProduct && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Ingredient Mapping</span>
-              {validationStatus && (
-                <div className="flex items-center gap-2">
-                  {getValidationBadge()}
-                  {recipeCost > 0 && (
-                    <Badge variant="outline">
-                      Cost: ₱{recipeCost.toFixed(2)}
-                    </Badge>
-                  )}
-                </div>
-              )}
+              <span>Product Ingredient Mapping</span>
+              <div className="flex items-center gap-2">
+                {getValidationBadge()}
+                <Badge variant="outline">
+                  Cost: ₱{calculateTotalCost().toFixed(2)}
+                </Badge>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -378,22 +446,24 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
             <div className="flex justify-between items-center">
               <div className="flex gap-2">
                 <Button
-                  onClick={handleAutoMap}
-                  disabled={isSaving || isLoading || recipeIngredients.length === 0}
-                  variant="outline"
-                >
-                  {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  Auto-Map Ingredients
-                </Button>
-                
-                <Button
-                  onClick={handleAddIngredient}
+                  onClick={addNewIngredient}
                   disabled={isSaving || inventoryItems.length === 0}
                   variant="outline"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Ingredient
                 </Button>
+                
+                {applyToAllStores && (
+                  <Button
+                    onClick={deployToAllStores}
+                    disabled={isSaving || recipeIngredients.length === 0}
+                    variant="default"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Deploy to All Stores
+                  </Button>
+                )}
               </div>
 
               <Button
@@ -418,13 +488,13 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  No ingredients found for this product recipe.
+                  No ingredients found for this product recipe. Add ingredients to get started.
                 </AlertDescription>
               </Alert>
             ) : (
               <div className="space-y-3">
                 {recipeIngredients.map((ingredient) => (
-                  <Card key={ingredient.id} className="border-l-4 border-l-blue-500">
+                  <Card key={ingredient.id} className="border-l-4 border-l-primary/50">
                     <CardContent className="p-4">
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
                         {/* Inventory Item Selection */}
@@ -432,7 +502,7 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
                           <Label className="text-sm font-medium">Inventory Item</Label>
                           <Select
                             value={ingredient.inventory_stock_id || ''}
-                            onValueChange={(value) => handleMappingUpdate(ingredient.id, value)}
+                            onValueChange={(value) => updateIngredientMapping(ingredient.id, value)}
                             disabled={isSaving}
                           >
                             <SelectTrigger>
@@ -441,46 +511,52 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
                             <SelectContent>
                               {inventoryItems.map(item => (
                                 <SelectItem key={item.id} value={item.id}>
-                                  {item.item} ({item.unit})
+                                  {item.item} ({item.unit} - ₱{item.cost || 0})
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
 
-                        {/* Current Name Display */}
+                        {/* Current Item Display */}
                         <div className="md:col-span-3">
-                          <Label className="text-sm font-medium">Ingredient Name</Label>
+                          <Label className="text-sm font-medium">Selected Item</Label>
                           <div className="text-sm bg-muted/50 p-2 rounded">
-                            {ingredient.ingredient_name || 'Not mapped'}
+                            {ingredient.inventory_stock?.item || 'Not selected'}
                           </div>
                         </div>
 
-                        {/* Quantity */}
+                        {/* Quantity (Editable) */}
                         <div className="md:col-span-2">
                           <Label className="text-sm font-medium">Quantity</Label>
                           <Input
                             type="number"
                             value={ingredient.quantity}
+                            onChange={(e) => {
+                              const newQuantity = parseFloat(e.target.value) || 0;
+                              if (newQuantity !== ingredient.quantity) {
+                                updateIngredientQuantity(ingredient.id, newQuantity);
+                              }
+                            }}
                             className="text-sm"
-                            readOnly
+                            disabled={isSaving}
+                            min="0"
+                            step="0.1"
                           />
                         </div>
 
-                        {/* Unit */}
+                        {/* Unit Display */}
                         <div className="md:col-span-2">
                           <Label className="text-sm font-medium">Unit</Label>
-                          <Input
-                            value={ingredient.unit}
-                            className="text-sm"
-                            readOnly
-                          />
+                          <div className="text-sm bg-muted/50 p-2 rounded">
+                            {ingredient.inventory_stock?.unit || ingredient.unit}
+                          </div>
                         </div>
 
                         {/* Actions */}
                         <div className="md:col-span-1 flex justify-end">
                           <Button
-                            onClick={() => handleDeleteIngredient(ingredient.id)}
+                            onClick={() => deleteIngredient(ingredient.id)}
                             disabled={isSaving}
                             variant="ghost"
                             size="sm"
@@ -491,31 +567,44 @@ export const ProductIngredientMappingTab: React.FC<ProductIngredientMappingTabPr
                       </div>
 
                       {/* Cost Information */}
-                      <div className="mt-2 pt-2 border-t border-muted text-sm text-muted-foreground">
-                        Cost: ₱{ingredient.cost_per_unit}/unit × {ingredient.quantity} = ₱{(ingredient.cost_per_unit * ingredient.quantity).toFixed(2)}
-                      </div>
+                      {ingredient.inventory_stock && ingredient.inventory_stock.cost && (
+                        <div className="mt-2 pt-2 border-t border-muted text-sm text-muted-foreground">
+                          Cost: ₱{ingredient.inventory_stock.cost}/unit × {ingredient.quantity} = ₱{(ingredient.inventory_stock.cost * ingredient.quantity).toFixed(2)}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
 
-            {/* Summary */}
-            {validationStatus && recipeIngredients.length > 0 && (
+            {/* Summary Information */}
+            {recipeIngredients.length > 0 && (
               <Card className="bg-muted/30">
                 <CardContent className="p-4">
-                  <div className="flex justify-between items-center text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <strong>Total Ingredients:</strong> {validationStatus.totalCount}
+                      <span className="text-muted-foreground">Total Ingredients:</span>
+                      <span className="ml-1 font-medium">{recipeIngredients.length}</span>
                     </div>
                     <div>
-                      <strong>Mapped:</strong> {validationStatus.totalCount - validationStatus.unmappedCount}
+                      <span className="text-muted-foreground">Mapped:</span>
+                      <span className="ml-1 font-medium">
+                        {recipeIngredients.filter(ing => ing.inventory_stock_id).length}
+                      </span>
                     </div>
                     <div>
-                      <strong>Unmapped:</strong> {validationStatus.unmappedCount}
+                      <span className="text-muted-foreground">Total Cost:</span>
+                      <span className="ml-1 font-medium">₱{calculateTotalCost().toFixed(2)}</span>
                     </div>
                     <div>
-                      <strong>Total Cost:</strong> ₱{recipeCost.toFixed(2)}
+                      <span className="text-muted-foreground">Status:</span>
+                      <span className="ml-1">
+                        {recipeIngredients.filter(ing => ing.inventory_stock_id).length === recipeIngredients.length 
+                          ? '✅ Complete' 
+                          : '⚠️ Incomplete'
+                        }
+                      </span>
                     </div>
                   </div>
                 </CardContent>
