@@ -835,16 +835,16 @@ export const ProductIngredientMappingTab: React.FC = () => {
                         
                         <div className="flex-1">
                           <Select
-                            value={ingredient.inventoryId || ''}
+                            value={ingredient.inventoryId || 'none'}
                             onValueChange={(value) => 
-                              updateIngredientMapping(product.id, ingredient.ingredientName, value || null)
+                              updateIngredientMapping(product.id, ingredient.ingredientName, value === 'none' ? null : value)
                             }
                           >
                             <SelectTrigger className="h-8">
                               <SelectValue placeholder="Select inventory item" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">No mapping</SelectItem>
+                              <SelectItem value="none">No mapping</SelectItem>
                               {inventoryItems
                                 .filter(item => 
                                   item.item.toLowerCase().includes(ingredient.ingredientName.toLowerCase()) ||
