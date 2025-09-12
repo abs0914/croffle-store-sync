@@ -181,6 +181,8 @@ export const ProductIngredientMappingTab: React.FC = () => {
 
   const loadProductIngredients = async (product: ProductMapping) => {
     try {
+      console.log(`📊 [LOAD] Loading ingredients for product "${product.name}" (${product.id}) in store ${selectedStore}`);
+      
       // Get recipes for this product in the selected store only
       const { data: recipes, error: recipesError } = await supabase
         .from('recipes')
@@ -198,33 +200,79 @@ export const ProductIngredientMappingTab: React.FC = () => {
         .eq('product_id', product.id)
         .eq('store_id', selectedStore);
 
-      if (recipesError) throw recipesError;
+      if (recipesError) {
+        console.error(`❌ [ERROR] Failed to load recipes for product ${product.name}:`, recipesError);
+        throw recipesError;
+      }
 
-      const ingredientMap = new Map<string, IngredientMapping & { recipeIngredientId: string }>();
+      console.log(`📝 [DATA] Found ${recipes?.length || 0} recipes with ingredients`);
+
+      // CRITICAL FIX: Use deterministic aggregation that handles variants properly
+      const ingredientMap = new Map<string, IngredientMapping & { 
+        recipeIngredientId: string; 
+        allMappings: Array<{ id: string; mapped: boolean; inventoryId: string | null }> 
+      }>();
 
       recipes?.forEach(recipe => {
         recipe.recipe_ingredients?.forEach(ri => {
-          if (!ingredientMap.has(ri.ingredient_name)) {
-            ingredientMap.set(ri.ingredient_name, {
+          const key = ri.ingredient_name;
+          
+          if (!ingredientMap.has(key)) {
+            ingredientMap.set(key, {
               ingredientName: ri.ingredient_name,
               inventoryId: ri.inventory_stock_id,
               inventoryName: ri.inventory_stock?.item || null,
               quantity: ri.quantity,
               unit: ri.unit,
               mapped: !!ri.inventory_stock_id,
-              recipeIngredientId: ri.id
+              recipeIngredientId: ri.id,
+              allMappings: []
             });
+          }
+          
+          // Track all mappings for this ingredient variant
+          const existing = ingredientMap.get(key)!;
+          existing.allMappings.push({
+            id: ri.id,
+            mapped: !!ri.inventory_stock_id,
+            inventoryId: ri.inventory_stock_id
+          });
+          
+          // Use the most complete mapping (prioritize mapped over unmapped)
+          if (ri.inventory_stock_id && !existing.inventoryId) {
+            existing.inventoryId = ri.inventory_stock_id;
+            existing.inventoryName = ri.inventory_stock?.item || null;
+            existing.mapped = true;
           }
         });
       });
 
-      product.ingredients = Array.from(ingredientMap.values()).map(({ recipeIngredientId, ...ingredient }) => ingredient);
+      // Convert to final ingredient list with deterministic status
+      product.ingredients = Array.from(ingredientMap.values()).map(({ recipeIngredientId, allMappings, ...ingredient }) => {
+        // CRITICAL FIX: Calculate mapped status based on ALL occurrences, not just first one
+        const totalOccurrences = allMappings.length;
+        const mappedOccurrences = allMappings.filter(m => m.mapped).length;
+        
+        // Consider ingredient "mapped" if ANY occurrence is mapped (most permissive)
+        // Alternative: consider "mapped" only if ALL occurrences are mapped (most strict)
+        const isMapped = mappedOccurrences > 0; // Using permissive approach
+        
+        console.log(`  📝 Ingredient "${ingredient.ingredientName}": ${mappedOccurrences}/${totalOccurrences} mapped → ${isMapped ? 'MAPPED' : 'UNMAPPED'}`);
+        
+        return {
+          ...ingredient,
+          mapped: isMapped
+        };
+      });
       
       // Use unified mapping status calculation
+      const statusBefore = product.mappingStatus;
       product.mappingStatus = calculateMappingStatus(product.ingredients);
       
+      console.log(`🎯 [STATUS] Product "${product.name}" mapping status: ${statusBefore} → ${product.mappingStatus} (${product.ingredients.length} ingredients)`);
+      
     } catch (error) {
-      console.error(`Error loading ingredients for product ${product.name}:`, error);
+      console.error(`💥 [FATAL ERROR] Error loading ingredients for product ${product.name}:`, error);
     }
   };
 
@@ -322,11 +370,48 @@ export const ProductIngredientMappingTab: React.FC = () => {
         })
       );
 
-      // Verify persistence with delay
+      // CRITICAL FIX: Add comprehensive post-update verification
       setTimeout(async () => {
-        console.log('🔄 Verifying mapping persistence...');
+        console.log('🔄 [VERIFY] Starting post-update verification...');
+        
+        try {
+          // Re-query the specific product to verify changes persisted
+          const { data: verifyData, error: verifyError } = await supabase
+            .from('recipe_ingredients')
+            .select(`
+              id,
+              ingredient_name,
+              inventory_stock_id,
+              inventory_stock(item),
+              recipes!inner(product_id, store_id)
+            `)
+            .eq('recipes.product_id', productId)
+            .eq('recipes.store_id', selectedStore)
+            .eq('ingredient_name', ingredientName);
+          
+          if (verifyError) {
+            console.error('❌ [VERIFY ERROR] Failed to verify update:', verifyError);
+          } else {
+            const mappedCount = verifyData?.filter(item => item.inventory_stock_id).length || 0;
+            const totalCount = verifyData?.length || 0;
+            console.log(`✅ [VERIFY] Post-update state: ${mappedCount}/${totalCount} "${ingredientName}" records are mapped`);
+            
+            if (inventoryId && mappedCount === 0) {
+              console.warn('⚠️ [VERIFY WARNING] Expected mapping but found none - possible persistence failure');
+              toast.warning('Mapping may not have persisted correctly');
+            } else if (!inventoryId && mappedCount > 0) {
+              console.warn('⚠️ [VERIFY WARNING] Expected unmapping but found mappings - possible persistence failure');
+              toast.warning('Unmapping may not have completed');
+            }
+          }
+        } catch (verifyError) {
+          console.error('💥 [VERIFY FATAL] Verification failed:', verifyError);
+        }
+        
+        // Reload full product mappings
         await loadProductMappings();
-      }, 500);
+        console.log('🔄 [VERIFY] Product mappings reloaded');
+      }, 1000);
 
     } catch (error) {
       console.error('❌ Unexpected error during mapping update:', error);

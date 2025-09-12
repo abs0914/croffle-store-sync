@@ -249,12 +249,15 @@ export const updateIngredientMappingUnified = async (
   errors: string[];
   warnings: string[];
 }> => {
+  console.log(`🔧 [UNIFIED UPDATE] Starting: ${ingredientName} → ${inventoryId ? 'mapped' : 'unmapped'} (productId: ${productId}, storeId: ${storeId})`);
+  
   const errors: string[] = [];
   const warnings: string[] = [];
   let updatedCount = 0;
 
   try {
     // Get all recipe ingredients for this product in this store
+    console.log(`📊 [QUERY] Fetching recipe ingredients for product ${productId} in store ${storeId}`);
     const { data: recipeIngredients, error: riError } = await supabase
       .from('recipe_ingredients')
       .select(`
@@ -272,10 +275,12 @@ export const updateIngredientMappingUnified = async (
       .eq('recipes.store_id', storeId);
 
     if (riError) {
+      console.error(`❌ [ERROR] Failed to fetch recipe ingredients:`, riError);
       errors.push(`Failed to fetch recipe ingredients: ${riError.message}`);
       return { success: false, updatedCount: 0, errors, warnings };
     }
 
+    console.log(`📝 [DATA] Found ${recipeIngredients?.length || 0} recipe ingredients`);
     if (!recipeIngredients || recipeIngredients.length === 0) {
       errors.push('No recipe ingredients found for this product');
       return { success: false, updatedCount: 0, errors, warnings };
@@ -283,26 +288,31 @@ export const updateIngredientMappingUnified = async (
 
     // Find all ingredients to update (including variants if enabled)
     let targetIngredients = recipeIngredients.filter(ri => ri.ingredient_name === ingredientName);
+    console.log(`🎯 [FILTER] Found ${targetIngredients.length} exact matches for "${ingredientName}"`);
 
     if (options.resolveVariants && targetIngredients.length > 0) {
       const allIngredientNames = recipeIngredients.map(ri => ri.ingredient_name);
       const variants = findIngredientVariants(ingredientName, allIngredientNames);
       
       if (variants.variants.length > 0) {
+        const beforeCount = targetIngredients.length;
         targetIngredients = recipeIngredients.filter(ri => 
           ri.ingredient_name === ingredientName || variants.variants.includes(ri.ingredient_name)
         );
+        console.log(`🔄 [VARIANTS] Expanded from ${beforeCount} to ${targetIngredients.length} ingredients, variants: ${variants.variants.join(', ')}`);
         warnings.push(`Resolving ${variants.variants.length} name variants: ${variants.variants.join(', ')}`);
       }
     }
 
     if (targetIngredients.length === 0) {
+      console.warn(`⚠️ [WARNING] No matching ingredients found for "${ingredientName}"`);
       errors.push(`No matching ingredients found for "${ingredientName}"`);
       return { success: false, updatedCount: 0, errors, warnings };
     }
 
     // Verify inventory item if mapping is being set
     if (inventoryId) {
+      console.log(`🔍 [VERIFY] Checking inventory item ${inventoryId} in store ${storeId}`);
       const { data: inventoryItem, error: invError } = await supabase
         .from('inventory_stock')
         .select('id, item')
@@ -311,68 +321,92 @@ export const updateIngredientMappingUnified = async (
         .single();
 
       if (invError || !inventoryItem) {
+        console.error(`❌ [ERROR] Inventory verification failed:`, invError);
         errors.push(`Inventory item not found or not in selected store`);
         return { success: false, updatedCount: 0, errors, warnings };
       }
+      console.log(`✅ [VERIFY] Inventory item verified: "${inventoryItem.item}"`);
     }
 
-    // Update recipe ingredients
+    // Update recipe ingredients - CRITICAL FIX: Update ALL variants, not just exact matches
+    console.log(`💾 [UPDATE] Updating ${targetIngredients.length} recipe ingredient records`);
     for (const ri of targetIngredients) {
+      console.log(`  🔄 Updating recipe ingredient ${ri.id}: "${ri.ingredient_name}" → ${inventoryId || 'null'}`);
       const { error: updateError } = await supabase
         .from('recipe_ingredients')
         .update({ inventory_stock_id: inventoryId })
         .eq('id', ri.id);
 
       if (updateError) {
+        console.error(`❌ [ERROR] Failed to update recipe ingredient ${ri.id}:`, updateError);
         errors.push(`Failed to update recipe ingredient ${ri.id}: ${updateError.message}`);
       } else {
         updatedCount++;
+        console.log(`  ✅ Updated recipe ingredient ${ri.id}`);
       }
     }
 
-    // Sync mapping table if enabled
+    // CRITICAL FIX: Sync mapping table for ALL variants
     if (options.syncMappingTable) {
+      console.log(`🔄 [MAPPING] Syncing mapping table for all variants`);
       const uniqueRecipeIds = [...new Set(targetIngredients.map(ri => ri.recipe_id))];
+      const uniqueIngredientNames = [...new Set(targetIngredients.map(ri => ri.ingredient_name))];
+      
+      console.log(`  📊 Recipes: ${uniqueRecipeIds.length}, Ingredient names: ${uniqueIngredientNames.length}`);
       
       for (const recipeId of uniqueRecipeIds) {
-        if (inventoryId) {
-          const { error: mappingError } = await supabase
-            .from('recipe_ingredient_mappings')
-            .upsert(
-              {
-                recipe_id: recipeId,
-                ingredient_name: ingredientName,
-                inventory_stock_id: inventoryId,
-                conversion_factor: 1.0
-              },
-              { onConflict: 'recipe_id,ingredient_name' }
-            );
-          
-          if (mappingError) {
-            warnings.push(`Failed to sync mapping table for recipe ${recipeId}: ${mappingError.message}`);
-          }
-        } else {
-          const { error: deleteError } = await supabase
-            .from('recipe_ingredient_mappings')
-            .delete()
-            .eq('recipe_id', recipeId)
-            .eq('ingredient_name', ingredientName);
-          
-          if (deleteError) {
-            warnings.push(`Failed to remove mapping for recipe ${recipeId}: ${deleteError.message}`);
+        for (const ingredientVariantName of uniqueIngredientNames) {
+          if (inventoryId) {
+            console.log(`  💾 Upserting mapping: recipe ${recipeId} + "${ingredientVariantName}" → ${inventoryId}`);
+            const { error: mappingError } = await supabase
+              .from('recipe_ingredient_mappings')
+              .upsert(
+                {
+                  recipe_id: recipeId,
+                  ingredient_name: ingredientVariantName,
+                  inventory_stock_id: inventoryId,
+                  conversion_factor: 1.0
+                },
+                { onConflict: 'recipe_id,ingredient_name' }
+              );
+            
+            if (mappingError) {
+              console.error(`❌ [ERROR] Mapping upsert failed for ${recipeId}+"${ingredientVariantName}":`, mappingError);
+              warnings.push(`Failed to sync mapping table for recipe ${recipeId}, ingredient "${ingredientVariantName}": ${mappingError.message}`);
+            } else {
+              console.log(`  ✅ Mapping upserted successfully`);
+            }
+          } else {
+            console.log(`  🗑️ Deleting mapping: recipe ${recipeId} + "${ingredientVariantName}"`);
+            const { error: deleteError } = await supabase
+              .from('recipe_ingredient_mappings')
+              .delete()
+              .eq('recipe_id', recipeId)
+              .eq('ingredient_name', ingredientVariantName);
+            
+            if (deleteError) {
+              console.error(`❌ [ERROR] Mapping delete failed for ${recipeId}+"${ingredientVariantName}":`, deleteError);
+              warnings.push(`Failed to remove mapping for recipe ${recipeId}, ingredient "${ingredientVariantName}": ${deleteError.message}`);
+            } else {
+              console.log(`  ✅ Mapping deleted successfully`);
+            }
           }
         }
       }
     }
 
-    return {
+    const result = {
       success: errors.length === 0,
       updatedCount,
       errors,
       warnings
     };
 
+    console.log(`🏁 [COMPLETE] Update finished:`, result);
+    return result;
+
   } catch (error) {
+    console.error(`💥 [FATAL ERROR] Unexpected error during unified update:`, error);
     errors.push(`Unexpected error: ${error}`);
     return { success: false, updatedCount: 0, errors, warnings };
   }
