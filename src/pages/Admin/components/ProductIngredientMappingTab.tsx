@@ -289,8 +289,33 @@ export const ProductIngredientMappingTab: React.FC = () => {
         }
       }
 
-      toast.success(`Updated mapping for ${ingredientName}`);
-      await loadProductMappings();
+      // Update local state immediately for instant UI feedback
+      setProducts(prevProducts => 
+        prevProducts.map(product => {
+          if (product.id === productId) {
+            return {
+              ...product,
+              ingredients: product.ingredients.map(ingredient => 
+                ingredient.ingredientName === ingredientName
+                  ? { 
+                      ...ingredient, 
+                      inventoryId,
+                      inventoryName: inventoryId ? inventoryItems.find(item => item.id === inventoryId)?.item || ingredient.inventoryName : undefined,
+                      mappingStatus: inventoryId ? 'mapped' as const : 'missing' as const
+                    }
+                  : ingredient
+              )
+            };
+          }
+          return product;
+        })
+      );
+
+      const inventoryName = inventoryId ? inventoryItems.find(item => item.id === inventoryId)?.item : 'No mapping';
+      toast.success(`Updated "${ingredientName}" → "${inventoryName}"`);
+      
+      // Reload data to ensure consistency
+      setTimeout(() => loadProductMappings(), 500);
     } catch (error) {
       console.error('Error updating ingredient mapping:', error);
       toast.error('Failed to update mapping');
