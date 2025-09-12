@@ -38,7 +38,7 @@ import { RecipeTemplateDialog } from './RecipeTemplateDialog';
 import { ConsolidatedRecipeDeploymentDialog } from '@/components/Admin/components/ConsolidatedRecipeDeploymentDialog';
 import { RecipeAuditDialog } from '@/components/Admin/RecipeAuditDialog';
 import { MasterRecipeImportDialog } from '@/components/Admin/recipe/MasterRecipeImportDialog';
-import { ProductIngredientMappingTab } from './ProductIngredientMappingTab';
+import { RecipeProductSync } from '@/components/RecipeManagement/RecipeProductSync';
 import { formatCurrency } from '@/utils/format';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -452,11 +452,18 @@ export const RecipeManagementTab: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Product Ingredient Mapping Component */}
-          <ProductIngredientMappingTab 
-            selectedStore={selectedMappingStore}
-            products={products}
-          />
+          {/* Advanced Product Ingredient Mapping System */}
+          {selectedMappingStore ? (
+            <RecipeProductSync storeId={selectedMappingStore} />
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <div className="text-muted-foreground">
+                  Select a store above to view the advanced product ingredient mapping dashboard
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
