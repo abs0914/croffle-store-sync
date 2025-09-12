@@ -250,8 +250,20 @@ export class SimplifiedInventoryService {
         // CRITICAL: Throw error to prevent transaction completion
         throw new Error(`Inventory deduction failed: ${errors.join(', ')}`);
       }
+
+      // CRITICAL: Fail if no inventory movements were created (silent failure detection)
+      if (deductedItems.length === 0 && items.length > 0) {
+        const errorMsg = `CRITICAL: No inventory movements created for ${items.length} items - this indicates a silent failure in inventory processing`;
+        console.error('❌ PHASE 4:', errorMsg);
+        
+        // Send critical failure alert
+        await this.sendCriticalFailureAlert(transactionId, new Error(errorMsg));
+        
+        // CRITICAL: Throw error to prevent transaction completion
+        throw new Error(errorMsg);
+      }
       
-      console.log('✅ PHASE 4: Deduction completed successfully');
+      console.log(`✅ PHASE 4: Deduction completed successfully - ${deductedItems.length} movements created`);
       
       // Log successful deduction
       await this.logSuccessfulDeduction(transactionId, deductedItems);

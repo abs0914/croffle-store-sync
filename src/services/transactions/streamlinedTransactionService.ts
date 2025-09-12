@@ -515,9 +515,8 @@ class StreamlinedTransactionService {
     console.log(`📦 Items to process: ${items.length}`);
 
     try {
-      // EMERGENCY FIX: Use direct inventory deduction
-      // Bypass complex enhanced/mix-match system that is failing silently
-      console.log('🚨 EMERGENCY MODE: Using direct inventory deduction');
+      // Process both Regular Products and Mix & Match products through the same reliable path
+      console.log('🔄 Processing inventory deduction for all product types');
       
       const transactionItems: Array<{ product_id?: string; name: string; quantity: number; unit_price: number; total_price: number }> = [];
 
@@ -546,20 +545,7 @@ class StreamlinedTransactionService {
             });
           }
         } else {
-          // Check if this is a Mix & Match product
-          const matchingCart = cartItems?.find(ci => ci.productId === item.productId && (ci.variationId || null) === (item.variationId || null));
-          const isMixMatch = matchingCart?.customization?.type === 'mix_match_croffle';
-          
-          console.log(`🔍 Mix & Match detection for ${item.name}:`, {
-            hasCartItems: !!cartItems,
-            cartItemsLength: cartItems?.length || 0,
-            itemProductId: item.productId,
-            matchingCart: !!matchingCart,
-            customizationType: matchingCart?.customization?.type,
-            isMixMatch
-          });
-          
-          // EMERGENCY: Skip complex mix-match logic
+          // Process all products (Regular and Mix & Match) through normal flow
           transactionItems.push({
             product_id: item.productId,
             name: item.name,
@@ -653,8 +639,11 @@ class StreamlinedTransactionService {
       const errorMessage = error instanceof Error ? error.message : 'Inventory deduction failed';
       console.error(`❌ CRITICAL: Inventory deduction system error for transaction ${transactionId}:`, error);
       
-      // CRITICAL FIX: Re-throw inventory errors to prevent transactions
-      throw new Error(`Inventory deduction failed: ${errorMessage}`);
+      // CRITICAL: Return failure to prevent transaction completion
+      return {
+        success: false,
+        errors: [errorMessage]
+      };
     }
   }
 
