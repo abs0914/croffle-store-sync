@@ -2,7 +2,7 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, Users, Package, Store, Wrench } from 'lucide-react';
-import { InventorySystemManager } from '@/components/admin/InventorySystemManager';
+import { UnifiedInventoryDashboard } from '@/components/admin/UnifiedInventoryDashboard';
 
 export const AdminPage: React.FC = () => {
   return (
@@ -39,7 +39,7 @@ export const AdminPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="inventory-system">
-          <InventorySystemManager />
+          <UnifiedInventoryDashboard />
         </TabsContent>
 
         <TabsContent value="dashboard">
