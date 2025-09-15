@@ -37,6 +37,11 @@ export const deductInventoryForTransactionEnhancedWithAuth = async (
 ): Promise<EnhancedDeductionResult> => {
   console.log(`🔄 ENHANCED DEDUCTION: Starting for transaction ${transactionId} with ${items.length} items, user ${userId}`);
   
+  // **CRITICAL DEBUG**: Check if this function is even being called
+  console.log(`🚨 DEBUG: Enhanced deduction function CALLED at ${new Date().toISOString()}`);
+  console.log(`🚨 DEBUG: Parameters - transactionId: ${transactionId}, storeId: ${storeId}, userId: ${userId}`);
+  console.log(`🚨 DEBUG: Items to process:`, items);
+  
   const result: EnhancedDeductionResult = {
     success: true,
     deductedItems: [],
@@ -48,6 +53,7 @@ export const deductInventoryForTransactionEnhancedWithAuth = async (
   // Validate transaction ID format
   const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId);
   if (!isValidUUID) {
+    console.error(`❌ DEBUG: Invalid transaction ID format: ${transactionId}`);
     result.success = false;
     result.errors.push(`Invalid transaction ID format: ${transactionId}`);
     return result;
@@ -280,22 +286,51 @@ async function deductRegularProductWithAuth(
         continue;
       }
 
-      // Log inventory movement with authenticated user ID
+      // Log inventory transaction with authenticated user ID and transaction linkage
       try {
-        await supabase.rpc('insert_inventory_movement_safe', {
-          p_inventory_stock_id: ingredient.inventory_stock_id,
-          p_movement_type: 'sale',
-          p_quantity_change: -totalDeduction,
-          p_previous_quantity: stockItem.stock_quantity,
-          p_new_quantity: newStock,
-          p_reference_type: 'transaction',
-          p_reference_id: transactionId,
-          p_notes: `Regular deduction: ${ingredientName} for ${recipe.name}`,
-          p_created_by: userId
-        });
-        console.log(`✅ MOVEMENT LOGGED: ${ingredientName} movement logged with user ${userId}`);
+        console.log(`🚨 DEBUG: About to log inventory transaction for ${ingredientName}...`);
+        
+        // Insert into inventory_transactions with new transaction_id column
+        const { error: transactionLogError } = await supabase
+          .from('inventory_transactions')
+          .insert({
+            store_id: storeId,
+            product_id: ingredient.inventory_stock_id,
+            transaction_type: 'sale_deduction',
+            quantity: totalDeduction,
+            previous_quantity: stockItem.stock_quantity,
+            new_quantity: newStock,
+            reference_id: transactionId,
+            transaction_id: transactionId, // NEW: Link to the sales transaction
+            notes: `Sale deduction: ${ingredientName} for ${recipe.name}`,
+            created_by: userId
+          });
+          
+        if (transactionLogError) {
+          console.error(`❌ TRANSACTION LOG FAILED: Failed to log transaction for ${ingredientName}:`, transactionLogError);
+        } else {
+          console.log(`✅ TRANSACTION LOGGED: ${ingredientName} inventory transaction logged with transaction ID ${transactionId}`);
+        }
+        
+        // Also try the legacy RPC call for backwards compatibility
+        try {
+          await supabase.rpc('insert_inventory_movement_safe', {
+            p_inventory_stock_id: ingredient.inventory_stock_id,
+            p_movement_type: 'sale',
+            p_quantity_change: -totalDeduction,
+            p_previous_quantity: stockItem.stock_quantity,
+            p_new_quantity: newStock,
+            p_reference_type: 'transaction',
+            p_reference_id: transactionId,
+            p_notes: `Regular deduction: ${ingredientName} for ${recipe.name}`,
+            p_created_by: userId
+          });
+          console.log(`✅ LEGACY MOVEMENT LOGGED: ${ingredientName} legacy movement logged`);
+        } catch (legacyError) {
+          console.warn(`⚠️ LEGACY MOVEMENT FAILED: ${ingredientName} legacy movement failed (non-critical):`, legacyError);
+        }
       } catch (logError) {
-        console.error(`❌ MOVEMENT FAILED: Failed to log movement for ${ingredientName}:`, logError);
+        console.error(`❌ TRANSACTION LOG SYSTEM FAILED: Failed to log transaction for ${ingredientName}:`, logError);
       }
 
       // Record the deduction

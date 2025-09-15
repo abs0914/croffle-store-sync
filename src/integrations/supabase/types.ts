@@ -3085,6 +3085,7 @@ export type Database = {
           quantity: number
           reference_id: string | null
           store_id: string
+          transaction_id: string | null
           transaction_type: string
           variation_id: string | null
         }
@@ -3099,6 +3100,7 @@ export type Database = {
           quantity: number
           reference_id?: string | null
           store_id: string
+          transaction_id?: string | null
           transaction_type: string
           variation_id?: string | null
         }
@@ -3113,6 +3115,7 @@ export type Database = {
           quantity?: number
           reference_id?: string | null
           store_id?: string
+          transaction_id?: string | null
           transaction_type?: string
           variation_id?: string | null
         }
@@ -3136,6 +3139,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
           {

@@ -116,6 +116,11 @@ export class SimplifiedTransactionInventoryIntegration {
   ): Promise<{ success: boolean; errors: string[]; warnings: string[] }> {
     console.log(`🔄 ENHANCED PROCESSING: Deducting inventory for transaction ${transactionId} with user ${userId}`);
     
+    // **CRITICAL DEBUG**: Track every step
+    console.log(`🚨 DEBUG: SimplifiedTransactionInventoryIntegration.processTransactionInventoryWithAuth CALLED`);
+    console.log(`🚨 DEBUG: Transaction ID: ${transactionId}, User ID: ${userId}, Items count: ${items.length}`);
+    console.log(`🚨 DEBUG: Items data:`, JSON.stringify(items, null, 2));
+    
     try {
       // Use enhanced deduction service that auto-detects Mix & Match products
       const enhancedItems = items.map(item => ({
@@ -124,11 +129,17 @@ export class SimplifiedTransactionInventoryIntegration {
         quantity: item.quantity
       }));
       
+      console.log(`🚨 DEBUG: Enhanced items mapped:`, enhancedItems);
+      
       // Get store ID from first item (all items should be from same store)
       const storeId = items[0]?.storeId;
       if (!storeId) {
+        console.error(`🚨 DEBUG: No store ID found in items`);
         throw new Error('Store ID is required for inventory deduction');
       }
+      
+      console.log(`🚨 DEBUG: Store ID extracted: ${storeId}`);
+      console.log(`🚨 DEBUG: About to call deductInventoryForTransactionEnhancedWithAuth...`);
       
       const result = await deductInventoryForTransactionEnhancedWithAuth(
         transactionId,
@@ -136,6 +147,8 @@ export class SimplifiedTransactionInventoryIntegration {
         enhancedItems,
         userId // Pass authenticated user ID
       );
+      
+      console.log(`🚨 DEBUG: deductInventoryForTransactionEnhancedWithAuth returned:`, result);
       
       if (result.success) {
         console.log(`✅ ENHANCED PROCESSING: Transaction inventory processed successfully`);
@@ -155,6 +168,7 @@ export class SimplifiedTransactionInventoryIntegration {
       };
       
     } catch (error) {
+      console.error('🚨 DEBUG: Exception in processTransactionInventoryWithAuth:', error);
       console.error('❌ ENHANCED PROCESSING: Processing failed:', error);
       const errorMsg = error instanceof Error ? error.message : 'Processing failed';
       return { 

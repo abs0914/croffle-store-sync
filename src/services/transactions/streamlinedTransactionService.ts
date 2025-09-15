@@ -516,6 +516,11 @@ class StreamlinedTransactionService {
   ): Promise<{ success: boolean; errors: string[] }> {
     console.log('🔄 Processing inventory deduction with authenticated user context...');
     
+    // **CRITICAL DEBUG**: Track function entry
+    console.log(`🚨 DEBUG: processInventoryDeduction CALLED at ${new Date().toISOString()}`);
+    console.log(`🚨 DEBUG: Transaction ID: ${transactionId}, Store ID: ${storeId}`);
+    console.log(`🚨 DEBUG: Items count: ${items.length}, Cart items: ${cartItems?.length || 0}`);
+    
     // Get current authenticated user - this is the proper context for user ID
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id;
@@ -530,13 +535,17 @@ class StreamlinedTransactionService {
       };
     }
 
+    console.log(`🚨 DEBUG: About to format items for inventory...`);
     const inventoryItems = SimplifiedTransactionInventoryIntegration.formatItemsForInventory(items, storeId);
+    console.log(`🚨 DEBUG: Formatted inventory items:`, inventoryItems);
     
+    console.log(`🚨 DEBUG: About to call processTransactionInventoryWithAuth...`);
     const result = await SimplifiedTransactionInventoryIntegration.processTransactionInventoryWithAuth(
       transactionId,
       inventoryItems,
       userId // Pass the authenticated user ID
     );
+    console.log(`🚨 DEBUG: processTransactionInventoryWithAuth result:`, result);
 
     return {
       success: result.success,
