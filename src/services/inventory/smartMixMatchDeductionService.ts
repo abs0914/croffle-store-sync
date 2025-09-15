@@ -198,6 +198,20 @@ export const deductMixMatchInventoryWithAuth = async (
 
       console.log(`🔢 SMART MIX & MATCH: Deducting ${totalDeduction} of ${ingredientName} (original: ${ingredient.quantity}, adjusted: ${ingredient.adjustedQuantity}) (${currentStock} → ${newStock})`);
 
+      // Determine category using ingredient groups FIRST
+      let category: 'base' | 'choice' | 'packaging' = 'choice';
+      const groupName = ingredient.ingredient_group_name || 'base';
+      
+      if (groupName === 'packaging') {
+        category = 'packaging';
+      } else if (groupName === 'base') {
+        category = 'base';
+      } else if (categorizedIngredients.base.some(b => b.inventory_stock?.item === ingredientName)) {
+        category = 'base';
+      } else if (categorizedIngredients.packaging.some(p => p.inventory_stock?.item === ingredientName)) {
+        category = 'packaging';
+      }
+
       // Update inventory stock
       const { error: updateError } = await supabase
         .from('inventory_stock')
@@ -213,9 +227,40 @@ export const deductMixMatchInventoryWithAuth = async (
         continue;
       }
 
-      // Log inventory movement with authenticated user ID
+      // CRITICAL: Create complete audit trail BEFORE updating stock
+      console.log(`🚨 AUDIT: About to create audit records for ${ingredientName}...`);
+      
+      // First, log to inventory_transactions (primary audit table)
+      let auditSuccess = false;
       try {
-        await supabase.rpc('insert_inventory_movement_safe', {
+        const { error: transactionLogError } = await supabase
+          .from('inventory_transactions')
+          .insert({
+            store_id: storeId,
+            product_id: ingredient.inventory_stock_id,
+            transaction_type: 'sale_deduction',
+            quantity: totalDeduction,
+            previous_quantity: currentStock,
+            new_quantity: newStock,
+            reference_id: transactionId,
+            transaction_id: transactionId,
+            notes: `Smart Mix & Match deduction: ${ingredientName} for ${productName} (${category})`,
+            created_by: userId
+          });
+          
+        if (transactionLogError) {
+          console.error(`❌ AUDIT FAILED: inventory_transactions insert failed for ${ingredientName}:`, transactionLogError);
+        } else {
+          auditSuccess = true;
+          console.log(`✅ AUDIT LOGGED: ${ingredientName} transaction logged in inventory_transactions`);
+        }
+      } catch (auditError) {
+        console.error(`❌ AUDIT ERROR: Failed to create inventory_transactions record for ${ingredientName}:`, auditError);
+      }
+      
+      // Second, log to inventory_movements (legacy compatibility)
+      try {
+        const { error: rpcError } = await supabase.rpc('insert_inventory_movement_safe', {
           p_inventory_stock_id: ingredient.inventory_stock_id,
           p_movement_type: 'sale',
           p_quantity_change: -totalDeduction,
@@ -223,26 +268,24 @@ export const deductMixMatchInventoryWithAuth = async (
           p_new_quantity: newStock,
           p_reference_type: 'transaction',
           p_reference_id: transactionId,
-          p_notes: `Smart Mix & Match deduction: ${ingredientName} for ${productName}`,
+          p_notes: `Smart Mix & Match deduction: ${ingredientName} for ${productName} (${category})`,
           p_created_by: userId
         });
-        console.log(`✅ MOVEMENT LOGGED: ${ingredientName} movement logged with user ${userId}`);
-      } catch (logError) {
-        console.error(`❌ MOVEMENT FAILED: Failed to log movement for ${ingredientName}:`, logError);
+        
+        if (rpcError) {
+          console.error(`❌ LEGACY AUDIT FAILED: inventory_movements RPC failed for ${ingredientName}:`, rpcError);
+        } else {
+          console.log(`✅ LEGACY AUDIT LOGGED: ${ingredientName} movement logged in inventory_movements`);
+        }
+      } catch (rpcError) {
+        console.error(`❌ RPC ERROR: insert_inventory_movement_safe failed for ${ingredientName}:`, rpcError);
       }
-
-      // Determine category using ingredient groups
-      let category: 'base' | 'choice' | 'packaging' = 'choice';
-      const groupName = ingredient.ingredient_group_name || 'base';
       
-      if (groupName === 'packaging') {
-        category = 'packaging';
-      } else if (groupName === 'base') {
-        category = 'base';
-      } else if (categorizedIngredients.base.some(b => b.inventory_stock?.item === ingredientName)) {
-        category = 'base';
-      } else if (categorizedIngredients.packaging.some(p => p.inventory_stock?.item === ingredientName)) {
-        category = 'packaging';
+      // Log audit status
+      if (auditSuccess) {
+        console.log(`✅ AUDIT STATUS: Complete audit trail created for ${ingredientName}`);
+      } else {
+        console.warn(`⚠️ AUDIT STATUS: Incomplete audit trail for ${ingredientName} - manual review required`);
       }
 
       result.deductedItems.push({
