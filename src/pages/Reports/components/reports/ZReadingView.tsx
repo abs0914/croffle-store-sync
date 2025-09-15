@@ -16,10 +16,17 @@ interface ZReadingViewProps {
 export function ZReadingView({ storeId, date }: ZReadingViewProps) {
   const formattedDate = date ? format(date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
   
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['z-reading', storeId, formattedDate],
-    queryFn: () => fetchZReading(storeId, formattedDate),
-    enabled: !!storeId
+    queryFn: async () => {
+      console.log(`🔍 Z-Reading View: Fetching data for store ${storeId.slice(0, 8)} on ${formattedDate}`);
+      const result = await fetchZReading(storeId, formattedDate);
+      console.log(`📊 Z-Reading View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
+      return result;
+    },
+    enabled: !!storeId,
+    retry: 1,
+    refetchOnWindowFocus: false
   });
   
   const handlePrint = () => {
@@ -41,7 +48,28 @@ export function ZReadingView({ storeId, date }: ZReadingViewProps) {
       <Card>
         <CardContent className="p-4">
           <div className="text-center py-10">
-            <p>No Z-Reading data available for the selected date</p>
+            <div className="mb-4">
+              {error ? (
+                <>
+                  <p className="text-lg font-semibold text-destructive">Error Loading Z-Reading</p>
+                  <p className="text-sm text-muted-foreground">
+                    {error instanceof Error ? error.message : 'Unable to fetch Z-Reading data. Please try again or contact support.'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-semibold text-muted-foreground">No Data Available</p>
+                  <p className="text-sm text-muted-foreground">
+                    No transactions found for {format(new Date(formattedDate), 'MMMM dd, yyyy')}.
+                    <br />
+                    Try selecting a different date or check if there are completed transactions for this date.
+                  </p>
+                </>
+              )}
+            </div>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
           </div>
         </CardContent>
       </Card>

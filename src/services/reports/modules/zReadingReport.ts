@@ -65,10 +65,12 @@ export async function fetchZReading(
       .gte("start_time", `${date}T00:00:00`)
       .lt("start_time", `${date}T23:59:59`);
 
-    // For demo purposes, create sample data if no shifts found
-    if (shiftError || !shifts || shifts.length === 0) {
-      return createSampleZReading(storeData);
+    // Log shift query results for debugging
+    if (shiftError) {
+      console.error("❌ Z-Reading shift query error:", shiftError);
     }
+    
+    console.log(`🔍 Z-Reading found ${shifts?.length || 0} shifts for store ${storeData.name} on ${date}`);
     
     // Get cashier name (would need to get this from users table)
     let cashierName = "Unknown";
@@ -78,16 +80,71 @@ export async function fetchZReading(
       cashierName = "Cashier #" + shifts[0].user_id.substring(0, 5);
     }
     
-    // Get all transactions for this date
+    // Get all transactions for this date using proper timezone handling
+    const startTime = `${date}T00:00:00.000Z`;
+    const endTime = `${date}T23:59:59.999Z`;
+    
+    console.log(`🔍 Z-Reading querying transactions: ${startTime} to ${endTime} for store ${storeId.slice(0, 8)}`);
+    
     const { data: transactions, error: txError } = await supabase
       .from("transactions")
       .select("*")
       .eq("store_id", storeId)
       .eq("status", "completed")
-      .gte("created_at", `${date}T00:00:00`)
-      .lt("created_at", `${date}T23:59:59`);
+      .gte("created_at", startTime)
+      .lte("created_at", endTime);
     
-    if (txError) throw txError;
+    if (txError) {
+      console.error("❌ Z-Reading transaction query error:", txError);
+      throw txError;
+    }
+    
+    console.log(`✅ Z-Reading found ${transactions?.length || 0} transactions for ${date}`);
+    
+    // If no transactions found, return actual zero data instead of sample data
+    if (!transactions || transactions.length === 0) {
+      console.log('❌ No transactions found for Z-Reading, returning zero data instead of sample data');
+      return {
+        storeName: storeData.business_name || storeData.name,
+        storeAddress: storeData.address,
+        contactInfo: storeData.phone || storeData.email,
+        taxId: storeData.tin || storeData.tax_id,
+        storeManager: 'No Manager Data',
+        cashierName: 'No Cashier Data',
+        terminal: storeData.machine_serial_number || 'TERMINAL-01',
+        beginningReceiptNumber: '-',
+        endingReceiptNumber: '-',
+        transactionCount: 0,
+        grossSales: 0,
+        vatableSales: 0,
+        vatExemptSales: 0,
+        vatZeroRatedSales: 0,
+        totalRefunds: 0,
+        totalDiscounts: 0,
+        seniorDiscount: 0,
+        pwdDiscount: 0,
+        employeeDiscount: 0,
+        otherDiscounts: 0,
+        netSales: 0,
+        vatAmount: 0,
+        vatExempt: 0,
+        vatZeroRated: 0,
+        cashPayments: 0,
+        cardPayments: 0,
+        eWalletPayments: 0,
+        totalPayments: 0,
+        beginningCash: 0,
+        cashSales: 0,
+        cashPayouts: 0,
+        expectedCash: 0,
+        actualCash: 0,
+        cashVariance: 0,
+        accumulatedGrossSales: 0,
+        accumulatedVAT: 0
+      };
+    }
+    
+    console.log(`📊 Z-Reading processing ${transactions.length} transactions for ${storeData.name} on ${date}`);
     
     // Calculate totals (similar to X-reading but for all shifts)
     let grossSales = 0;

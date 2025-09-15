@@ -16,10 +16,17 @@ interface XReadingViewProps {
 export function XReadingView({ storeId, date }: XReadingViewProps) {
   const formattedDate = date ? format(date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
   
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['x-reading', storeId, formattedDate],
-    queryFn: () => fetchXReading(storeId, formattedDate),
-    enabled: !!storeId
+    queryFn: async () => {
+      console.log(`🔍 X-Reading View: Fetching data for store ${storeId.slice(0, 8)} on ${formattedDate}`);
+      const result = await fetchXReading(storeId, formattedDate);
+      console.log(`📊 X-Reading View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
+      return result;
+    },
+    enabled: !!storeId,
+    retry: 1,
+    refetchOnWindowFocus: false
   });
   
   const handlePrint = () => {
@@ -42,10 +49,23 @@ export function XReadingView({ storeId, date }: XReadingViewProps) {
         <CardContent className="p-4">
           <div className="text-center py-10">
             <div className="mb-4">
-              <p className="text-lg font-semibold text-destructive">Error Loading X-Reading</p>
-              <p className="text-sm text-muted-foreground">
-                Unable to fetch X-Reading data. Please try again or contact support.
-              </p>
+              {error ? (
+                <>
+                  <p className="text-lg font-semibold text-destructive">Error Loading X-Reading</p>
+                  <p className="text-sm text-muted-foreground">
+                    {error instanceof Error ? error.message : 'Unable to fetch X-Reading data. Please try again or contact support.'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-semibold text-muted-foreground">No Data Available</p>
+                  <p className="text-sm text-muted-foreground">
+                    No transactions found for {format(new Date(formattedDate), 'MMMM dd, yyyy')}.
+                    <br />
+                    Try selecting a different date or check if there are completed transactions for this date.
+                  </p>
+                </>
+              )}
             </div>
             <Button variant="outline" onClick={() => window.location.reload()}>
               Retry

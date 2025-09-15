@@ -20,17 +20,27 @@ export async function fetchVATReport(
       });
     }
 
-    // Get all transactions for the date range
+    // Get all transactions for the date range using proper timezone handling
+    const startTime = `${from}T00:00:00.000Z`;
+    const endTime = `${to}T23:59:59.999Z`;
+    
+    console.log(`🔍 VAT Report querying: ${startTime} to ${endTime} for store ${storeId.slice(0, 8)}`);
+    
     const { data: transactions, error: txError } = await supabase
       .from("transactions")
       .select("*")
       .eq("store_id", storeId)
       .eq("status", "completed")
-      .gte("created_at", `${from}T00:00:00`)
-      .lte("created_at", `${to}T23:59:59`)
+      .gte("created_at", startTime)
+      .lte("created_at", endTime)
       .order("created_at");
     
-    if (txError) throw txError;
+    if (txError) {
+      console.error("❌ VAT Report transaction query error:", txError);
+      throw txError;
+    }
+    
+    console.log(`✅ VAT Report found ${transactions?.length || 0} transactions`);
     
     if (!transactions || transactions.length === 0) {
       // Return empty result instead of sample data
