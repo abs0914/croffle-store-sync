@@ -12,6 +12,7 @@ import { processTransactionInventoryWithMixMatchSupport } from "@/services/inven
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { enrichCartItemsWithCategories, insertTransactionItems, DetailedTransactionItem } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
+import { SimplifiedTransactionInventoryIntegration } from "./simplifiedTransactionInventoryIntegration";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -501,8 +502,7 @@ class StreamlinedTransactionService {
   }
 
   /**
-   * Process inventory deduction with Mix & Match detection and routing
-   * Routes Mix & Match products to smart deduction service, regular products to standard service
+   * Process inventory deduction with user context
    */
   private async processInventoryDeduction(
     transactionId: string,
@@ -510,94 +510,38 @@ class StreamlinedTransactionService {
     items: StreamlinedTransactionItem[],
     cartItems?: any[]
   ): Promise<{ success: boolean; errors: string[] }> {
-    console.log(`🔄 Starting inventory deduction for transaction: ${transactionId}`);
-    console.log(`📍 Store ID: ${storeId}`);
-    console.log(`📦 Items to process: ${items.length}`);
+    console.log('🔄 Processing inventory deduction with authenticated user context...');
+    
+    // Get current authenticated user - this is the proper context for user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    
+    console.log(`🔐 TRANSACTION CONTEXT: Auth user - ${userId || 'NULL'}`);
+    
+    if (!userId) {
+      console.error('❌ CRITICAL: No authenticated user in transaction context');
+      return { 
+        success: false, 
+        errors: ['Authentication context missing - cannot process inventory deduction'] 
+      };
+    }
 
-    try {
-      // Import enhanced deduction service
-      const { deductInventoryForTransactionEnhanced } = await import('@/services/inventory/enhancedInventoryDeductionService');
-      
-      const transactionItems: Array<{ product_id?: string; name: string; quantity: number; unit_price: number; total_price: number }> = [];
+    const inventoryItems = SimplifiedTransactionInventoryIntegration.formatItemsForInventory(items, storeId);
+    
+    const result = await SimplifiedTransactionInventoryIntegration.processTransactionInventoryWithAuth(
+      transactionId,
+      inventoryItems,
+      userId // Pass the authenticated user ID
+    );
 
-      for (const item of items) {
-        if (item.productId?.startsWith('combo-')) {
-          console.log('🔧 Expanding combo in deduction path:', item.productId);
-          try {
-            const components = await this.expandComboProductForTransaction(item);
-            for (const comp of components) {
-              transactionItems.push({
-                product_id: comp.product_id,
-                name: comp.name,
-                quantity: comp.quantity,
-                unit_price: comp.unit_price,
-                total_price: comp.total_price
-              });
-            }
-          } catch (e) {
-            console.warn('⚠️ Failed to expand combo for deduction, falling back to name-only:', e);
-            transactionItems.push({
-              product_id: undefined,
-              name: item.name,
-              quantity: item.quantity,
-              unit_price: item.unitPrice,
-              total_price: item.totalPrice
-            });
-          }
-        } else {
-          transactionItems.push({
-            product_id: item.productId,
-            name: item.name,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            total_price: item.totalPrice
-          });
-        }
-      }
+    return {
+      success: result.success,
+      errors: result.errors
+    };
+  }
 
-      console.log(`📋 Transaction items for deduction (${transactionItems.length} items):`, 
-        transactionItems.map(ti => `${ti.name} (qty: ${ti.quantity})`));
-
-      // CRITICAL FIX: Proper product ID mapping with fallback lookup
-      const enhancedItems = [];
-      for (const item of transactionItems) {
-        let productId = item.product_id;
-        
-        // If no product_id, look it up by name and store
-        if (!productId) {
-          console.log(`🔍 Looking up product ID for: ${item.name}`);
-          const { data: productLookup } = await supabase
-            .from('product_catalog')
-            .select('id')
-            .eq('product_name', item.name)
-            .eq('store_id', storeId)
-            .eq('is_available', true)
-            .maybeSingle();
-          
-          productId = productLookup?.id;
-          console.log(`📍 Found product ID for ${item.name}: ${productId}`);
-        }
-        
-        if (productId) {
-          enhancedItems.push({
-            productId: productId,
-            productName: item.name,
-            quantity: item.quantity
-          });
-        } else {
-          console.warn(`⚠️ No product ID found for: ${item.name}`);
-        }
-      }
-      
-      console.log(`📦 Enhanced deduction items prepared:`, enhancedItems.map(i => `${i.productName} (${i.productId})`));
-      
-      // Use enhanced deduction service that automatically routes Mix & Match vs regular products
-      console.log(`🚀 ENHANCED: Calling enhanced deduction service for transaction ${transactionId}`);
-      const result = await deductInventoryForTransactionEnhanced(transactionId, storeId, enhancedItems);
-      
-      console.log(`🔍 ENHANCED: Enhanced deduction service completed for transaction ${transactionId}`);
-
-      console.log(`📊 Enhanced inventory deduction result:`, {
+  /**
+   * BIR compliance logging (non-critical)
         success: result.success,
         deductedItems: result.deductedItems?.length || 0,
         skippedItems: result.skippedItems?.length || 0,

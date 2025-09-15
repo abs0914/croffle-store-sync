@@ -7,7 +7,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { deductMixMatchInventory, SmartDeductionResult } from './smartMixMatchDeductionService';
+import { deductMixMatchInventory, deductMixMatchInventoryWithAuth, SmartDeductionResult } from './smartMixMatchDeductionService';
 import { InventoryDeductionResult } from './simpleInventoryService';
 
 export interface EnhancedDeductionResult {
@@ -27,13 +27,15 @@ export interface EnhancedDeductionResult {
 
 /**
  * Enhanced inventory deduction that automatically detects and handles Mix & Match products
+ * Now with proper authentication context
  */
-export const deductInventoryForTransactionEnhanced = async (
+export const deductInventoryForTransactionEnhancedWithAuth = async (
   transactionId: string,
   storeId: string,
-  items: Array<{ productId: string; productName: string; quantity: number }>
+  items: Array<{ productId: string; productName: string; quantity: number }>,
+  userId: string
 ): Promise<EnhancedDeductionResult> => {
-  console.log(`🔄 ENHANCED DEDUCTION: Starting for transaction ${transactionId} with ${items.length} items`);
+  console.log(`🔄 ENHANCED DEDUCTION: Starting for transaction ${transactionId} with ${items.length} items, user ${userId}`);
   
   const result: EnhancedDeductionResult = {
     success: true,
@@ -62,13 +64,14 @@ export const deductInventoryForTransactionEnhanced = async (
         console.log(`🎯 ENHANCED DEDUCTION: ${item.productName} detected as Mix & Match, using smart deduction`);
         result.isMixMatch = true;
         
-        // Use smart Mix & Match deduction
-        const smartResult = await deductMixMatchInventory(
+        // Use smart Mix & Match deduction with auth context
+        const smartResult = await deductMixMatchInventoryWithAuth(
           transactionId,
           storeId,
           item.productId,
           item.productName,
-          item.quantity
+          item.quantity,
+          userId // Pass authenticated user ID
         );
         
         // Merge results
@@ -86,13 +89,14 @@ export const deductInventoryForTransactionEnhanced = async (
       } else {
         console.log(`📋 ENHANCED DEDUCTION: ${item.productName} is standard product, using regular deduction`);
         
-        // Use regular deduction for non-Mix & Match products
-        const regularResult = await deductRegularProduct(
+        // Use regular deduction for non-Mix & Match products with auth context
+        const regularResult = await deductRegularProductWithAuth(
           transactionId,
           storeId,
           item.productId,
           item.productName,
-          item.quantity
+          item.quantity,
+          userId // Pass authenticated user ID
         );
         
         // Merge results
@@ -121,6 +125,34 @@ export const deductInventoryForTransactionEnhanced = async (
 };
 
 /**
+ * Legacy method - maintained for backward compatibility
+ */
+export const deductInventoryForTransactionEnhanced = async (
+  transactionId: string,
+  storeId: string,
+  items: Array<{ productId: string; productName: string; quantity: number }>
+): Promise<EnhancedDeductionResult> => {
+  console.warn('⚠️ LEGACY CALL: deductInventoryForTransactionEnhanced called without user context');
+  
+  // Try to get user from current session
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+  
+  if (!userId) {
+    console.error('❌ LEGACY CALL: No user context available');
+    return {
+      success: false,
+      deductedItems: [],
+      skippedItems: [],
+      errors: ['No user context available for inventory deduction'],
+      isMixMatch: false
+    };
+  }
+  
+  return deductInventoryForTransactionEnhancedWithAuth(transactionId, storeId, items, userId);
+};
+
+/**
  * Check if a product is a Mix & Match product
  */
 function isMixMatchProduct(productName: string): boolean {
@@ -129,15 +161,16 @@ function isMixMatchProduct(productName: string): boolean {
 }
 
 /**
- * Regular deduction for non-Mix & Match products
+ * Regular deduction for non-Mix & Match products with auth context
  * Now includes support for ingredient groups and structured addon tracking
  */
-async function deductRegularProduct(
+async function deductRegularProductWithAuth(
   transactionId: string,
   storeId: string,
   productId: string,
   productName: string,
-  quantity: number
+  quantity: number,
+  userId: string
 ): Promise<InventoryDeductionResult> {
   const result: InventoryDeductionResult = {
     success: true,
@@ -189,10 +222,6 @@ async function deductRegularProduct(
 
     console.log(`📝 Found recipe: ${recipe.name} with ${recipe.recipe_ingredients?.length || 0} ingredients`);
 
-    // Get current user for audit trail
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
-
     // Process each ingredient with group-aware logic
     for (const ingredient of recipe.recipe_ingredients || []) {
       if (!ingredient.inventory_stock_id) {
@@ -243,7 +272,7 @@ async function deductRegularProduct(
         continue;
       }
 
-      // Log inventory movement
+      // Log inventory movement with authenticated user ID
       try {
         await supabase.rpc('insert_inventory_movement_safe', {
           p_inventory_stock_id: ingredient.inventory_stock_id,
@@ -254,10 +283,11 @@ async function deductRegularProduct(
           p_reference_type: 'transaction',
           p_reference_id: transactionId,
           p_notes: `Regular deduction: ${ingredientName} for ${recipe.name}`,
-          p_created_by: userId || null
+          p_created_by: userId
         });
+        console.log(`✅ MOVEMENT LOGGED: ${ingredientName} movement logged with user ${userId}`);
       } catch (logError) {
-        console.warn(`⚠️ Failed to log movement for ${ingredientName}:`, logError);
+        console.error(`❌ MOVEMENT FAILED: Failed to log movement for ${ingredientName}:`, logError);
       }
 
       // Record the deduction
@@ -283,4 +313,32 @@ async function deductRegularProduct(
     result.errors.push('Unexpected error during regular deduction');
     return result;
   }
+}
+
+/**
+ * Legacy regular deduction method - maintained for backward compatibility
+ */
+async function deductRegularProduct(
+  transactionId: string,
+  storeId: string,
+  productId: string,
+  productName: string,
+  quantity: number
+): Promise<InventoryDeductionResult> {
+  console.warn('⚠️ LEGACY CALL: deductRegularProduct called without user context');
+  
+  // Try to get user from current session
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+  
+  if (!userId) {
+    console.error('❌ LEGACY CALL: No user context available');
+    return {
+      success: false,
+      deductedItems: [],
+      errors: ['No user context available for regular deduction']
+    };
+  }
+  
+  return deductRegularProductWithAuth(transactionId, storeId, productId, productName, quantity, userId);
 }

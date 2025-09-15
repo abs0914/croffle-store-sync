@@ -5,7 +5,7 @@
  */
 
 import { SimplifiedInventoryAuditService, SimpleDeductionItem } from "@/services/inventory/simplifiedInventoryAuditService";
-import { deductInventoryForTransactionEnhanced } from "@/services/inventory/enhancedInventoryDeductionService";
+import { deductInventoryForTransactionEnhanced, deductInventoryForTransactionEnhancedWithAuth } from "@/services/inventory/enhancedInventoryDeductionService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -98,12 +98,14 @@ export class SimplifiedTransactionInventoryIntegration {
   /**
    * Process inventory deduction after successful payment
    * Uses enhanced deduction system that handles Mix & Match products intelligently
+   * Now with proper authentication context
    */
-  static async processTransactionInventory(
+  static async processTransactionInventoryWithAuth(
     transactionId: string,
-    items: TransactionItem[]
+    items: TransactionItem[],
+    userId: string
   ): Promise<{ success: boolean; errors: string[]; warnings: string[] }> {
-    console.log(`🔄 ENHANCED PROCESSING: Deducting inventory for transaction ${transactionId}`);
+    console.log(`🔄 ENHANCED PROCESSING: Deducting inventory for transaction ${transactionId} with user ${userId}`);
     
     try {
       // Use enhanced deduction service that auto-detects Mix & Match products
@@ -119,10 +121,11 @@ export class SimplifiedTransactionInventoryIntegration {
         throw new Error('Store ID is required for inventory deduction');
       }
       
-      const result = await deductInventoryForTransactionEnhanced(
+      const result = await deductInventoryForTransactionEnhancedWithAuth(
         transactionId,
         storeId,
-        enhancedItems
+        enhancedItems,
+        userId // Pass authenticated user ID
       );
       
       if (result.success) {
@@ -151,6 +154,32 @@ export class SimplifiedTransactionInventoryIntegration {
         warnings: [] 
       };
     }
+  }
+
+  /**
+   * Legacy method - maintained for backward compatibility
+   * Uses the new method with null user context (will log warnings)
+   */
+  static async processTransactionInventory(
+    transactionId: string,
+    items: TransactionItem[]
+  ): Promise<{ success: boolean; errors: string[]; warnings: string[] }> {
+    console.warn('⚠️ LEGACY CALL: processTransactionInventory called without user context');
+    
+    // Try to get user from current session
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    
+    if (!userId) {
+      console.error('❌ LEGACY CALL: No user context available');
+      return {
+        success: false,
+        errors: ['No user context available for inventory deduction'],
+        warnings: []
+      };
+    }
+    
+    return this.processTransactionInventoryWithAuth(transactionId, items, userId);
   }
   
   /**

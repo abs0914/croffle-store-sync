@@ -125,11 +125,14 @@ export const deductMixMatchInventory = async (
       ...categorizedIngredients.packaging.map(ingredient => ({ ...ingredient, adjustedQuantity: ingredient.quantity })), // Always deduct packaging
       // Only deduct selected choices with adjusted portions based on product type
       ...categorizedIngredients.choices
-        .filter(ingredient => 
-          mixMatchInfo.selectedChoices.some(choice => 
-            matchesChoice(ingredient.inventory_stock?.item || '', choice)
-          )
-        )
+        .filter(ingredient => {
+          const inventoryItem = ingredient.inventory_stock?.item || '';
+          const isMatched = mixMatchInfo.selectedChoices.some(choice => 
+            matchesChoice(inventoryItem, choice)
+          );
+          console.log(`🔍 CHOICE MATCHING: "${inventoryItem}" vs selections [${mixMatchInfo.selectedChoices.join(', ')}] → ${isMatched}`);
+          return isMatched;
+        })
         .map(ingredient => ({
           ...ingredient,
           adjustedQuantity: getAdjustedQuantityForMixMatch(ingredient, mixMatchInfo.productType)
@@ -138,9 +141,16 @@ export const deductMixMatchInventory = async (
 
     console.log(`🎯 SMART MIX & MATCH: Will deduct ${ingredientsToDeduct.length} ingredients (${categorizedIngredients.base.length} base + ${categorizedIngredients.packaging.length} packaging + ${ingredientsToDeduct.length - categorizedIngredients.base.length - categorizedIngredients.packaging.length} selected choices)`);
 
-    // Step 5: Process deductions
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
+  // Step 5: Process deductions
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+  
+  console.log(`🔐 SMART MIX & MATCH: Auth context - userId: ${userId || 'NULL'}`);
+  
+  if (!userId) {
+    console.error('❌ SMART MIX & MATCH: No authenticated user found - movement logging will fail');
+    result.errors.push('Authentication context missing - movements cannot be logged');
+  }
 
     for (const ingredient of ingredientsToDeduct) {
       if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
@@ -378,8 +388,11 @@ function matchesChoice(ingredientName: string, selectedChoice: string): boolean 
   const ingredient = ingredientName.toLowerCase();
   const choice = selectedChoice.toLowerCase();
   
+  console.log(`🎯 MATCHING: "${ingredient}" <-> "${choice}"`);
+  
   // Direct match
   if (ingredient.includes(choice)) {
+    console.log(`✅ MATCHING: Direct match found`);
     return true;
   }
   
@@ -392,15 +405,18 @@ function matchesChoice(ingredientName: string, selectedChoice: string): boolean 
     'chocolate sauce': ['chocolate sauce', 'chocolate syrup', 'choco sauce'],
     'whipped cream': ['whipped cream', 'whip cream', 'cream'],
     'tiramisu': ['tiramisu'],
-    'blueberry': ['blueberry', 'blueberries']
+    'blueberry': ['blueberry', 'blueberries'],
+    'colored sprinkles': ['colored sprinkles', 'sprinkles', 'sprinkle'] // Fix missing sprinkles
   };
   
   for (const [key, patterns] of Object.entries(variations)) {
     if (choice.includes(key) && patterns.some(pattern => ingredient.includes(pattern))) {
+      console.log(`✅ MATCHING: Variation match found - ${key} -> ${patterns.join(', ')}`);
       return true;
     }
   }
   
+  console.log(`❌ MATCHING: No match found`);
   return false;
 }
 
