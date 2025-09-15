@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { executeWithValidSession } from "@/contexts/auth/session-utils";
 
 export interface TransactionQueryOptions {
   storeId: string;
@@ -23,32 +24,17 @@ export async function fetchTransactionsWithFallback(
   const { storeId, from, to, status = "completed", orderBy = "created_at", ascending = true } = options;
   const queryAttempts: string[] = [];
   
-  // Check auth session before proceeding
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) {
-    console.error('❌ No authenticated session found for transaction query');
-    return {
-      data: null,
-      error: new Error('Authentication required - no active session'),
-      queryAttempts: ['Failed: No authenticated session'],
-      recordCount: 0
-    };
-  }
-  
-  console.log('✅ Authenticated session found:', {
-    userId: session.user.id.slice(0, 8),
-    email: session.user.email
-  });
-  
-  console.log('🔍 Starting unified transaction query:', { 
-    storeId: storeId === "all" ? "ALL_STORES" : storeId.slice(0, 8), 
-    from, 
-    to, 
-    status 
-  });
+  // Critical: Use enhanced session validation
+  return await executeWithValidSession(async () => {
+    console.log('🔍 Starting unified transaction query:', { 
+      storeId: storeId === "all" ? "ALL_STORES" : storeId.slice(0, 8), 
+      from, 
+      to, 
+      status 
+    });
 
-  // Strategy 1: Use timestamp range filtering (Supabase compatible)
-  console.log('📅 Strategy 1: Using timestamp range filtering');
+    // Strategy 1: Use timestamp range filtering (Supabase compatible)
+    console.log('📅 Strategy 1: Using timestamp range filtering');
   
   let query = supabase
     .from("transactions")
@@ -207,6 +193,7 @@ export async function fetchTransactionsWithFallback(
     queryAttempts,
     recordCount: finalCount
   };
+}, 'transaction query');
 }
 
 export function logTransactionDetails(transactions: any[], label: string) {

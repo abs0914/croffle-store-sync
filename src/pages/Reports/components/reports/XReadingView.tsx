@@ -27,12 +27,27 @@ export function XReadingView({ storeId, date }: XReadingViewProps) {
         throw new Error('Store ID is required for X-Reading report');
       }
       
-      const result = await fetchXReading(storeId, formattedDate);
-      console.log(`📊 X-Reading View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
-      return result;
+      try {
+        const result = await fetchXReading(storeId, formattedDate);
+        console.log(`📊 X-Reading View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
+        return result;
+      } catch (error: any) {
+        // Handle authentication errors specifically
+        if (error.message?.includes('Authentication required') || error.message?.includes('no active session')) {
+          console.error('❌ X-Reading authentication error:', error);
+          throw new Error('Session expired. Please refresh the page and login again.');
+        }
+        throw error;
+      }
     },
     enabled: !!storeId && storeId !== '',
-    retry: 1,
+    retry: (failureCount, error: any) => {
+      // Don't retry authentication errors
+      if (error?.message?.includes('Authentication required') || error?.message?.includes('Session expired')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
     refetchOnWindowFocus: false
   });
   

@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ZReadingReport } from "@/types/reports";
 import { fetchStoreInfo, handleReportError } from "../utils/reportUtils";
+import { executeWithValidSession } from "@/contexts/auth/session-utils";
 
 // Helper function to create sample Z-Reading data
 function createSampleZReading(store: any): ZReadingReport {
@@ -51,11 +52,13 @@ export async function fetchZReading(
   date: string
 ): Promise<ZReadingReport | null> {
   try {
-    // Get store information
-    const storeData = await fetchStoreInfo(storeId);
-    if (!storeData) {
-      throw new Error("Store information not found");
-    }
+    // Critical: Use enhanced session validation
+    return await executeWithValidSession(async () => {
+      // Get store information
+      const storeData = await fetchStoreInfo(storeId);
+      if (!storeData) {
+        throw new Error("Store information not found");
+      }
     
     // Get all shifts for the date
     const { data: shifts, error: shiftError } = await supabase
@@ -249,6 +252,7 @@ export async function fetchZReading(
       accumulatedGrossSales: grossSales + 250000, // For demo - would be from accumulated historical data
       accumulatedVAT: vatAmount + 30000 // For demo - would be from accumulated historical data
     };
+  }, 'Z-Reading generation');
   } catch (error) {
     return handleReportError("Z-Reading", error);
   }

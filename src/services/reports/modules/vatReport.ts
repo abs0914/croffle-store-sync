@@ -4,6 +4,7 @@ import { VATReport } from "@/types/reports";
 import { handleReportError } from "../utils/reportUtils";
 import { createReportResponse, ReportWithDataSource } from "../utils/dataSourceUtils";
 import { format } from "date-fns";
+import { executeWithValidSession } from "@/contexts/auth/session-utils";
 
 // VAT Report
 export async function fetchVATReport(
@@ -13,14 +14,16 @@ export async function fetchVATReport(
   useSampleData = false
 ): Promise<ReportWithDataSource<VATReport> | null> {
   try {
-    if (useSampleData) {
-      const sampleData = createSampleVATReport(from, to);
-      return createReportResponse(sampleData, 'sample', {
-        fallbackReason: 'Explicitly requested sample data'
-      });
-    }
+    // Critical: Use enhanced session validation
+    return await executeWithValidSession(async () => {
+      if (useSampleData) {
+        const sampleData = createSampleVATReport(from, to);
+        return createReportResponse(sampleData, 'sample', {
+          fallbackReason: 'Explicitly requested sample data'
+        });
+      }
 
-    // Get all transactions for the date range using proper timezone handling
+      // Get all transactions for the date range using proper timezone handling
     const startTime = `${from}T00:00:00.000Z`;
     const endTime = `${to}T23:59:59.999Z`;
     
@@ -100,6 +103,7 @@ export async function fetchVATReport(
     return createReportResponse(vatReport, 'real', {
       recordCount: transactions.length
     });
+  }, 'VAT Report generation');
   } catch (error) {
     return handleReportError("VAT Report", error);
   }

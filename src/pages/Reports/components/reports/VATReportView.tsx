@@ -32,12 +32,28 @@ export function VATReportView({ storeId, dateRange }: VATReportViewProps) {
       }
       
       console.log(`🔍 VAT Report View: Fetching data for store ${storeId.slice(0, 8)} from ${from} to ${to}`);
-      const result = await fetchVATReport(storeId, from, to);
-      console.log(`📊 VAT Report View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
-      return result;
+      
+      try {
+        const result = await fetchVATReport(storeId, from, to);
+        console.log(`📊 VAT Report View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
+        return result;
+      } catch (error: any) {
+        // Handle authentication errors specifically
+        if (error.message?.includes('Authentication required') || error.message?.includes('no active session')) {
+          console.error('❌ VAT Report authentication error:', error);
+          throw new Error('Session expired. Please refresh the page and login again.');
+        }
+        throw error;
+      }
     },
     enabled: !!storeId && storeId !== '' && !!from && !!to,
-    retry: 1,
+    retry: (failureCount, error: any) => {
+      // Don't retry authentication errors
+      if (error?.message?.includes('Authentication required') || error?.message?.includes('Session expired')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
     refetchOnWindowFocus: false
   });
   
@@ -203,7 +219,6 @@ export function VATReportView({ storeId, dateRange }: VATReportViewProps) {
                 {/* Totals row */}
                 <TableRow className="font-medium bg-muted/50">
                   <TableCell colSpan={3} className="text-right">TOTAL</TableCell>
-                  <TableCell className="text-right">₱{data.totals.vatableSales.toFixed(2)}</TableCell>
                   <TableCell className="text-right font-medium">₱{reportData.totals.vatableSales.toFixed(2)}</TableCell>
                   <TableCell className="text-right font-medium">₱{reportData.totals.vatAmount.toFixed(2)}</TableCell>
                   <TableCell className="text-right font-medium">₱{reportData.totals.vatExemptSales.toFixed(2)}</TableCell>
