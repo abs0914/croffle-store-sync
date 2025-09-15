@@ -1,5 +1,6 @@
 import { VoidTransactionService, BIRVoidReportData } from '@/services/transactions/voidTransactionService';
 import { formatCurrency, formatDateTime } from '@/utils';
+import { executeWithValidSession } from "@/contexts/auth/session-utils";
 
 export interface VoidReportResponse {
   data: BIRVoidReportData;
@@ -19,29 +20,31 @@ export const fetchVoidReport = async (
   dateRange: { from: Date | undefined; to: Date | undefined }
 ): Promise<VoidReportResponse> => {
   try {
-    console.log('Fetching void report for store:', storeId, 'date range:', dateRange);
+    // Critical: Use enhanced session validation
+    return await executeWithValidSession(async () => {
+      console.log('Fetching void report for store:', storeId, 'date range:', dateRange);
 
-    const fromDate = dateRange.from?.toISOString().split('T')[0] || 
-      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const toDate = dateRange.to?.toISOString().split('T')[0] || 
-      new Date().toISOString().split('T')[0];
+      const fromDate = dateRange.from?.toISOString().split('T')[0] || 
+        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const toDate = dateRange.to?.toISOString().split('T')[0] || 
+        new Date().toISOString().split('T')[0];
 
-    const voidReport = await VoidTransactionService.generateBIRVoidReport(
-      storeId,
-      { from: fromDate + 'T00:00:00Z', to: toDate + 'T23:59:59Z' }
-    );
+      const voidReport = await VoidTransactionService.generateBIRVoidReport(
+        storeId,
+        { from: fromDate + 'T00:00:00Z', to: toDate + 'T23:59:59Z' }
+      );
 
-    return {
-      data: voidReport,
-      metadata: {
-        dataSource: 'real',
-        generatedAt: new Date().toISOString(),
-        debugInfo: {
-          recordCount: voidReport.voidTransactions.length
+      return {
+        data: voidReport,
+        metadata: {
+          dataSource: 'real',
+          generatedAt: new Date().toISOString(),
+          debugInfo: {
+            recordCount: voidReport.voidTransactions.length
+          }
         }
-      }
-    };
-
+      };
+    }, 'Void Report generation');
   } catch (error) {
     console.error('Error fetching void report:', error);
     

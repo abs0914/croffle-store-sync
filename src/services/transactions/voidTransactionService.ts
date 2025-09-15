@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { nowInPhilippines, formatDateTime } from '@/utils';
+import { executeWithValidSession } from "@/contexts/auth/session-utils";
 
 export type VoidReasonCategory = 
   | 'customer_request' 
@@ -329,7 +330,8 @@ export const generateBIRVoidReport = async (
   storeId: string,
   dateRange: { from: string; to: string }
 ): Promise<BIRVoidReportData> => {
-  try {
+  // Critical: Use enhanced session validation
+  return await executeWithValidSession(async () => {
     const [voidTransactions, storeData] = await Promise.all([
       getVoidTransactions(storeId, {
         startDate: dateRange.from,
@@ -384,10 +386,7 @@ export const generateBIRVoidReport = async (
         voidsByDate
       }
     };
-  } catch (error) {
-    console.error('Error generating BIR void report:', error);
-    throw error;
-  }
+  }, 'BIR void report generation');
 };
 
 export const VoidTransactionService = {
