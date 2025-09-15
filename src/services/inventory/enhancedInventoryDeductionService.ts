@@ -153,10 +153,18 @@ export const deductInventoryForTransactionEnhanced = async (
 };
 
 /**
- * Check if a product is a Mix & Match product
+ * Check if a product is a Mix & Match product - Updated with better detection
  */
 function isMixMatchProduct(productName: string): boolean {
   const name = productName.toLowerCase().trim();
+  
+  // Check for Mix & Match indicators first
+  if (name.includes('with ') || name.includes(' and ')) {
+    // Then verify it's actually a Mix & Match product by checking for base products
+    return name.includes('croffle overload') || name.includes('mini croffle');
+  }
+  
+  // Direct check for base products
   return name.includes('croffle overload') || name.includes('mini croffle');
 }
 

@@ -74,7 +74,8 @@ export const deductMixMatchInventoryWithAuth = async (
     // Step 2: Get the recipe ingredients using base product name
     console.log(`🔍 SMART MIX & MATCH: Looking for recipe using base name: "${mixMatchInfo.baseName}"`);
     
-    const { data: productCatalog, error: catalogError } = await supabase
+    // First try: exact match by base name
+    let { data: productCatalog, error: catalogError } = await supabase
       .from('product_catalog')
       .select(`
         id,
@@ -96,10 +97,48 @@ export const deductMixMatchInventoryWithAuth = async (
           )
         )
       `)
-      .eq('product_name', mixMatchInfo.baseName) // Use base name instead of product ID
+      .eq('product_name', mixMatchInfo.baseName)
       .eq('store_id', storeId)
       .eq('is_available', true)
       .maybeSingle();
+
+    // Second try: partial match if exact match fails
+    if (catalogError || !productCatalog?.recipes) {
+      console.log(`🔍 SMART MIX & MATCH: Exact match failed for "${mixMatchInfo.baseName}", trying partial match`);
+      
+      const { data: partialMatches } = await supabase
+        .from('product_catalog')
+        .select(`
+          id,
+          product_name,
+          recipe_id,
+          recipes!inner (
+            id,
+            name,
+            recipe_ingredients (
+              quantity,
+              ingredient_group_name,
+              is_optional,
+              inventory_stock_id,
+              inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
+                id,
+                item,
+                stock_quantity
+              )
+            )
+          )
+        `)
+        .ilike('product_name', `%${mixMatchInfo.baseName}%`)
+        .eq('store_id', storeId)
+        .eq('is_available', true);
+
+      // Find the best match (shortest name that contains the base name)
+      productCatalog = partialMatches?.find(p => p.recipes?.recipe_ingredients?.length > 0) || null;
+      
+      if (productCatalog) {
+        console.log(`✅ SMART MIX & MATCH: Found partial match: "${productCatalog.product_name}" for base "${mixMatchInfo.baseName}"`);
+      }
+    }
 
     if (catalogError || !productCatalog?.recipes) {
       console.error(`❌ SMART MIX & MATCH: No recipe found for base product "${mixMatchInfo.baseName}"`);
@@ -285,7 +324,8 @@ export const deductMixMatchInventory = async (
     // Step 2: Get the recipe ingredients using base product name
     console.log(`🔍 SMART MIX & MATCH: Looking for recipe using base name: "${mixMatchInfo.baseName}"`);
     
-    const { data: productCatalog, error: catalogError } = await supabase
+    // First try: exact match by base name
+    let { data: productCatalog, error: catalogError } = await supabase
       .from('product_catalog')
       .select(`
         id,
@@ -307,10 +347,48 @@ export const deductMixMatchInventory = async (
           )
         )
       `)
-      .eq('product_name', mixMatchInfo.baseName) // Use base name instead of product ID
+      .eq('product_name', mixMatchInfo.baseName)
       .eq('store_id', storeId)
       .eq('is_available', true)
       .maybeSingle();
+
+    // Second try: partial match if exact match fails
+    if (catalogError || !productCatalog?.recipes) {
+      console.log(`🔍 SMART MIX & MATCH: Exact match failed for "${mixMatchInfo.baseName}", trying partial match`);
+      
+      const { data: partialMatches } = await supabase
+        .from('product_catalog')
+        .select(`
+          id,
+          product_name,
+          recipe_id,
+          recipes!inner (
+            id,
+            name,
+            recipe_ingredients (
+              quantity,
+              ingredient_group_name,
+              is_optional,
+              inventory_stock_id,
+              inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
+                id,
+                item,
+                stock_quantity
+              )
+            )
+          )
+        `)
+        .ilike('product_name', `%${mixMatchInfo.baseName}%`)
+        .eq('store_id', storeId)
+        .eq('is_available', true);
+
+      // Find the best match (shortest name that contains the base name)
+      productCatalog = partialMatches?.find(p => p.recipes?.recipe_ingredients?.length > 0) || null;
+      
+      if (productCatalog) {
+        console.log(`✅ SMART MIX & MATCH: Found partial match: "${productCatalog.product_name}" for base "${mixMatchInfo.baseName}"`);
+      }
+    }
 
     if (catalogError || !productCatalog?.recipes) {
       console.error(`❌ SMART MIX & MATCH: No recipe found for base product "${mixMatchInfo.baseName}"`);
