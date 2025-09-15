@@ -6,7 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, Receipt, User, Clock, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 import { format } from "date-fns";
-import { VoidTransactionData, VoidRequestData } from "@/services/transactions/voidTransactionService";
+import { VoidTransactionData, VoidRequestData, VoidReasonCategory } from "@/services/transactions/voidTransactionService";
+import { useAuth } from "@/contexts/auth";
+import { useStore } from "@/contexts/StoreContext";
 
 interface VoidTransactionDialogProps {
   isOpen: boolean;
@@ -17,11 +19,15 @@ interface VoidTransactionDialogProps {
 }
 
 const voidReasons = [
-  { value: 'mistake', label: 'Cashier Mistake' },
-  { value: 'customer_request', label: 'Customer Request' },
-  { value: 'wrong_order', label: 'Wrong Order' },
-  { value: 'system_error', label: 'System Error' },
-  { value: 'other', label: 'Other' }
+  { value: 'cashier_error' as VoidReasonCategory, label: 'Cashier Error' },
+  { value: 'customer_request' as VoidReasonCategory, label: 'Customer Request' },
+  { value: 'system_error' as VoidReasonCategory, label: 'System Error' },
+  { value: 'management_decision' as VoidReasonCategory, label: 'Management Decision' },
+  { value: 'refund' as VoidReasonCategory, label: 'Refund' },
+  { value: 'exchange' as VoidReasonCategory, label: 'Exchange' },
+  { value: 'price_correction' as VoidReasonCategory, label: 'Price Correction' },
+  { value: 'item_unavailable' as VoidReasonCategory, label: 'Item Unavailable' },
+  { value: 'other' as VoidReasonCategory, label: 'Other' }
 ];
 
 export function VoidTransactionDialog({
@@ -31,29 +37,36 @@ export function VoidTransactionDialog({
   onConfirmVoid,
   isVoiding
 }: VoidTransactionDialogProps) {
+  const { user } = useAuth();
+  const { currentStore } = useStore();
   const [reason, setReason] = useState('');
-  const [reasonCategory, setReasonCategory] = useState<VoidTransactionData['reasonCategory']>('mistake');
+  const [reasonCategory, setReasonCategory] = useState<VoidReasonCategory>('cashier_error');
   const [notes, setNotes] = useState('');
 
   const handleVoid = async () => {
-    if (!transaction || !reason.trim()) return;
+    if (!transaction || !reason.trim() || !user?.id || !currentStore?.id) return;
 
     await onConfirmVoid({
+      storeId: currentStore.id,
       transactionId: transaction.id,
-      reason: reason.trim(),
+      receiptNumber: transaction.receipt_number,
       reasonCategory,
-      notes: notes.trim() || undefined
+      reason: reason.trim(),
+      notes: notes.trim() || undefined,
+      voidedBy: user.id,
+      cashierName: user.name || 'Unknown Cashier',
+      terminalId: 'TERMINAL-01' // Default terminal ID
     });
 
     // Reset form
     setReason('');
-    setReasonCategory('mistake');
+    setReasonCategory('cashier_error');
     setNotes('');
   };
 
   const handleClose = () => {
     setReason('');
-    setReasonCategory('mistake');
+    setReasonCategory('cashier_error');
     setNotes('');
     onClose();
   };
@@ -99,7 +112,7 @@ export function VoidTransactionDialog({
           {/* Void Reason Category */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Reason Category</label>
-            <Select value={reasonCategory} onValueChange={(value: any) => setReasonCategory(value)}>
+            <Select value={reasonCategory} onValueChange={(value: VoidReasonCategory) => setReasonCategory(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
