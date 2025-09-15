@@ -24,12 +24,19 @@ export function VATReportView({ storeId, dateRange }: VATReportViewProps) {
     queryKey: ['vat-report', storeId, from, to],
     queryFn: async () => {
       if (!from || !to) return Promise.resolve(null);
+      
+      // Ensure we have valid parameters
+      if (!storeId || storeId === '') {
+        console.error('❌ VAT Report View: No valid storeId provided');
+        throw new Error('Store ID is required for VAT report');
+      }
+      
       console.log(`🔍 VAT Report View: Fetching data for store ${storeId.slice(0, 8)} from ${from} to ${to}`);
       const result = await fetchVATReport(storeId, from, to);
       console.log(`📊 VAT Report View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
       return result;
     },
-    enabled: !!storeId && !!from && !!to,
+    enabled: !!storeId && storeId !== '' && !!from && !!to,
     retry: 1,
     refetchOnWindowFocus: false
   });

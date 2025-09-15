@@ -23,6 +23,23 @@ export async function fetchTransactionsWithFallback(
   const { storeId, from, to, status = "completed", orderBy = "created_at", ascending = true } = options;
   const queryAttempts: string[] = [];
   
+  // Check auth session before proceeding
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) {
+    console.error('❌ No authenticated session found for transaction query');
+    return {
+      data: null,
+      error: new Error('Authentication required - no active session'),
+      queryAttempts: ['Failed: No authenticated session'],
+      recordCount: 0
+    };
+  }
+  
+  console.log('✅ Authenticated session found:', {
+    userId: session.user.id.slice(0, 8),
+    email: session.user.email
+  });
+  
   console.log('🔍 Starting unified transaction query:', { 
     storeId: storeId === "all" ? "ALL_STORES" : storeId.slice(0, 8), 
     from, 

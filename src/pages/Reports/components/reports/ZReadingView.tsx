@@ -20,11 +20,18 @@ export function ZReadingView({ storeId, date }: ZReadingViewProps) {
     queryKey: ['z-reading', storeId, formattedDate],
     queryFn: async () => {
       console.log(`🔍 Z-Reading View: Fetching data for store ${storeId.slice(0, 8)} on ${formattedDate}`);
+      
+      // Ensure we have a valid storeId
+      if (!storeId || storeId === '') {
+        console.error('❌ Z-Reading View: No valid storeId provided');
+        throw new Error('Store ID is required for Z-Reading report');
+      }
+      
       const result = await fetchZReading(storeId, formattedDate);
       console.log(`📊 Z-Reading View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
       return result;
     },
-    enabled: !!storeId,
+    enabled: !!storeId && storeId !== '',
     retry: 1,
     refetchOnWindowFocus: false
   });

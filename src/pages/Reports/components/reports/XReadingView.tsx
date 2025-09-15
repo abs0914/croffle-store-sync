@@ -20,11 +20,18 @@ export function XReadingView({ storeId, date }: XReadingViewProps) {
     queryKey: ['x-reading', storeId, formattedDate],
     queryFn: async () => {
       console.log(`🔍 X-Reading View: Fetching data for store ${storeId.slice(0, 8)} on ${formattedDate}`);
+      
+      // Ensure we have a valid storeId
+      if (!storeId || storeId === '') {
+        console.error('❌ X-Reading View: No valid storeId provided');
+        throw new Error('Store ID is required for X-Reading report');
+      }
+      
       const result = await fetchXReading(storeId, formattedDate);
       console.log(`📊 X-Reading View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
       return result;
     },
-    enabled: !!storeId,
+    enabled: !!storeId && storeId !== '',
     retry: 1,
     refetchOnWindowFocus: false
   });
