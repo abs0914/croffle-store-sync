@@ -113,30 +113,28 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
   if (error) {
     return <ReportErrorState
       onRetry={() => refetch()}
-      errorMessage="Unable to load report data"
+      errorMessage={error instanceof Error ? error.message : "Unable to load report data"}
+      debugInfo={{
+        reportType,
+        storeId: effectiveStoreId,
+        dateRange: `${from} to ${to}`,
+        isAuthenticated: true
+      }}
     />;
   }
 
   // Handle empty state
   if (!data || (Array.isArray(data) && data.length === 0)) {
-    return (
-      <Card className="p-6 text-center">
-        <CardContent className={`${isMobile ? 'py-6' : 'py-10'}`}>
-          <div className="flex flex-col items-center gap-4">
-            <FileBarChart className="h-12 w-12 text-muted-foreground/60" />
-            <div>
-              <p className="font-medium text-lg">No data available</p>
-              <p className="text-muted-foreground text-sm mt-2">
-                No {reportType} data found for {effectiveStoreId === 'all' ? 'all stores' : 'the selected store'} in the date range {from} to {to}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Try adjusting your date range or selected store
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <ReportErrorState 
+      errorMessage="No data available for this report"
+      onRetry={() => refetch()}
+      debugInfo={{
+        reportType,
+        storeId: effectiveStoreId,
+        dateRange: `${from} to ${to}`,
+        isAuthenticated: true
+      }}
+    />;
   }
 
   // Render report content with data source indicator

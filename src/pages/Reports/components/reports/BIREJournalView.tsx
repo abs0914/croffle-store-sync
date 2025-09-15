@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Download, FileText, Printer } from "lucide-react";
+import { Download, FileText, Printer, RefreshCw } from "lucide-react";
 import { BIREJournalService, EJournalData } from "@/services/reports/modules/birEJournalService";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -55,13 +55,44 @@ export function BIREJournalView({ storeId, date }: BIREJournalViewProps) {
   
   if (!data) {
     return (
-      <Card>
-        <CardContent className="p-4">
-          <div className="text-center py-10">
-            <p>No transaction data available for e-Journal generation</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Selected date: {format(new Date(formattedDate), 'MMMM dd, yyyy')}
-            </p>
+      <Card className="border-amber-200 bg-gradient-to-br from-amber-50/30 to-transparent">
+        <CardContent className="p-8 text-center">
+          <div className="space-y-6">
+            <div className="flex flex-col items-center gap-4">
+              <div className="rounded-full bg-amber-100 p-4">
+                <FileText className="h-12 w-12 text-amber-600" />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold text-muted-foreground">No E-Journal Data</h3>
+                <p className="text-muted-foreground max-w-md">
+                  No transaction data available for <strong>{format(new Date(formattedDate), 'MMMM dd, yyyy')}</strong>
+                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 space-y-2">
+                  <p className="text-sm text-blue-700 font-medium">E-Journal Requirements:</p>
+                  <ul className="text-xs text-blue-600 space-y-1 text-left">
+                    <li>• Completed transactions with receipt numbers</li>
+                    <li>• Valid payment method records</li>
+                    <li>• BIR-compliant transaction data</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 max-w-sm mx-auto">
+              <Button variant="default" onClick={() => window.location.reload()}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Page
+              </Button>
+              <Button variant="outline" onClick={() => history.back()}>
+                Go Back
+              </Button>
+            </div>
+
+            <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
+              <p><strong>Selected Date:</strong> {format(new Date(formattedDate), 'EEEE, MMMM dd, yyyy')}</p>
+              <p><strong>Store ID:</strong> {storeId.slice(0, 8)}...</p>
+            </div>
           </div>
         </CardContent>
       </Card>
