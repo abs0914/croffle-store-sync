@@ -7844,17 +7844,29 @@ export type Database = {
         Returns: boolean
       }
       insert_inventory_movement_safe: {
-        Args: {
-          p_created_by?: string
-          p_inventory_stock_id: string
-          p_movement_type: string
-          p_new_quantity: number
-          p_notes?: string
-          p_previous_quantity: number
-          p_quantity_change: number
-          p_reference_id: string
-          p_reference_type: string
-        }
+        Args:
+          | {
+              p_created_by?: string
+              p_inventory_stock_id: string
+              p_movement_type: string
+              p_new_quantity: number
+              p_notes?: string
+              p_previous_quantity: number
+              p_quantity_change: number
+              p_reference_id: string
+              p_reference_type: string
+            }
+          | {
+              p_created_by?: string
+              p_inventory_stock_id: string
+              p_movement_type: string
+              p_new_quantity: number
+              p_notes?: string
+              p_previous_quantity: number
+              p_quantity_change: number
+              p_reference_id: string
+              p_reference_type: string
+            }
         Returns: undefined
       }
       is_admin_email: {
@@ -8144,7 +8156,7 @@ export type Database = {
               p_unit: string
               p_user_id?: string
             }
-        Returns: undefined
+        Returns: boolean
       }
       trigger_auto_close_shifts: {
         Args: Record<PropertyKey, never>

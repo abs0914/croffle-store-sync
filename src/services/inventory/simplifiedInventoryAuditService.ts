@@ -205,31 +205,33 @@ export class SimplifiedInventoryAuditService {
   }
   
   /**
-   * Create simple audit record with retry logic
+   * Create simple audit record with retry logic using the safe RPC function
    */
   private static async createSimpleAuditRecord(
     record: SimpleAuditRecord,
     maxRetries: number = 2
   ): Promise<{ success: boolean; error?: string }> {
     
+    // Get authenticated user for proper audit trail
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const { error } = await supabase
-          .from('inventory_movements')
-          .insert({
-            inventory_stock_id: record.inventory_stock_id,
-            movement_type: 'sale',
-            quantity_change: record.quantity_change,
-            previous_quantity: record.previous_quantity,
-            new_quantity: record.new_quantity,
-            reference_type: 'transaction',
-            reference_id: record.reference_id,
-            notes: record.notes,
-            created_by: 'system',
-            created_at: nowInPhilippines().toISOString()
-          });
+        const { error } = await supabase.rpc('insert_inventory_movement_safe', {
+          p_inventory_stock_id: record.inventory_stock_id,
+          p_movement_type: 'sale',
+          p_quantity_change: record.quantity_change,
+          p_previous_quantity: record.previous_quantity,
+          p_new_quantity: record.new_quantity,
+          p_reference_type: 'transaction',
+          p_reference_id: record.reference_id,
+          p_notes: record.notes,
+          p_created_by: userId || null
+        });
         
         if (!error) {
+          console.log(`✅ SIMPLE: Audit record created successfully (attempt ${attempt})`);
           return { success: true };
         }
         
