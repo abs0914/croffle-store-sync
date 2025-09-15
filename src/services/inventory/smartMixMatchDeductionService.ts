@@ -31,7 +31,216 @@ export interface SmartDeductionResult {
 }
 
 /**
- * Smart Mix & Match deduction that only deducts selected ingredients
+ * Smart Mix & Match deduction that only deducts selected ingredients with auth context
+ */
+export const deductMixMatchInventoryWithAuth = async (
+  transactionId: string,
+  storeId: string,
+  productId: string,
+  productName: string,
+  quantity: number,
+  userId: string
+): Promise<SmartDeductionResult> => {
+  console.log(`🎯 SMART MIX & MATCH: Processing ${productName} x${quantity} with user ${userId}`);
+  
+  const result: SmartDeductionResult = {
+    success: true,
+    deductedItems: [],
+    skippedItems: [],
+    errors: [],
+    debugInfo: {
+      productName,
+      isMixMatch: false,
+      selectedChoices: [],
+      baseIngredients: [],
+      choiceIngredients: [],
+      packagingIngredients: []
+    }
+  };
+
+  try {
+    // Step 1: Detect if this is a Mix & Match product
+    const mixMatchInfo = parseMixMatchProduct(productName);
+    result.debugInfo.isMixMatch = mixMatchInfo.isMixMatch;
+    result.debugInfo.selectedChoices = mixMatchInfo.selectedChoices;
+
+    if (!mixMatchInfo.isMixMatch) {
+      console.log(`ℹ️ SMART MIX & MATCH: ${productName} is not a Mix & Match product, skipping smart deduction`);
+      return result;
+    }
+
+    console.log(`🔍 SMART MIX & MATCH: Detected Mix & Match product with selections:`, mixMatchInfo.selectedChoices);
+
+    // Step 2: Get the recipe ingredients with group information
+    const { data: productCatalog, error: catalogError } = await supabase
+      .from('product_catalog')
+      .select(`
+        id,
+        product_name,
+        recipe_id,
+        recipes!inner (
+          id,
+          name,
+          recipe_ingredients (
+            quantity,
+            ingredient_group_name,
+            is_optional,
+            inventory_stock_id,
+            inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
+              id,
+              item,
+              stock_quantity
+            )
+          )
+        )
+      `)
+      .eq('id', productId)
+      .eq('store_id', storeId)
+      .eq('is_available', true)
+      .maybeSingle();
+
+    if (catalogError || !productCatalog?.recipes) {
+      result.errors.push(`No recipe found for Mix & Match product: ${productName}`);
+      result.success = false;
+      return result;
+    }
+
+    const recipe = productCatalog.recipes;
+    console.log(`📝 SMART MIX & MATCH: Found recipe with ${recipe.recipe_ingredients?.length || 0} ingredients`);
+
+    // Step 3: Use ingredient groups instead of hardcoded categorization
+    const categorizedIngredients = categorizeIngredients(recipe.recipe_ingredients || []);
+    result.debugInfo.baseIngredients = categorizedIngredients.base.map(i => i.inventory_stock?.item || 'unknown');
+    result.debugInfo.choiceIngredients = categorizedIngredients.choices.map(i => i.inventory_stock?.item || 'unknown');
+    result.debugInfo.packagingIngredients = categorizedIngredients.packaging.map(i => i.inventory_stock?.item || 'unknown');
+
+    console.log(`📊 SMART MIX & MATCH: Categorized ingredients:`, {
+      base: result.debugInfo.baseIngredients,
+      choices: result.debugInfo.choiceIngredients,
+      packaging: result.debugInfo.packagingIngredients
+    });
+
+    // Step 4: Determine which ingredients to deduct with correct portions
+    const ingredientsToDeduct = [
+      ...categorizedIngredients.base.map(ingredient => ({ ...ingredient, adjustedQuantity: ingredient.quantity })), // Always deduct base
+      ...categorizedIngredients.packaging.map(ingredient => ({ ...ingredient, adjustedQuantity: ingredient.quantity })), // Always deduct packaging
+      // Only deduct selected choices with adjusted portions based on product type
+      ...categorizedIngredients.choices
+        .filter(ingredient => {
+          const inventoryItem = ingredient.inventory_stock?.item || '';
+          const isMatched = mixMatchInfo.selectedChoices.some(choice => 
+            matchesChoice(inventoryItem, choice)
+          );
+          console.log(`🔍 CHOICE MATCHING: "${inventoryItem}" vs selections [${mixMatchInfo.selectedChoices.join(', ')}] → ${isMatched}`);
+          return isMatched;
+        })
+        .map(ingredient => ({
+          ...ingredient,
+          adjustedQuantity: getAdjustedQuantityForMixMatch(ingredient, mixMatchInfo.productType)
+        }))
+    ];
+
+    console.log(`🎯 SMART MIX & MATCH: Will deduct ${ingredientsToDeduct.length} ingredients (${categorizedIngredients.base.length} base + ${categorizedIngredients.packaging.length} packaging + ${ingredientsToDeduct.length - categorizedIngredients.base.length - categorizedIngredients.packaging.length} selected choices)`);
+
+    // Step 5: Process deductions with authenticated user ID
+    for (const ingredient of ingredientsToDeduct) {
+      if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
+        result.skippedItems.push(`${ingredient.ingredient_name} (no inventory mapping)`);
+        continue;
+      }
+
+      const ingredientName = ingredient.inventory_stock?.item || 'unknown';
+      const totalDeduction = ingredient.adjustedQuantity * quantity;
+      const currentStock = ingredient.inventory_stock?.stock_quantity || 0;
+      const newStock = Math.max(0, currentStock - totalDeduction);
+
+      console.log(`🔢 SMART MIX & MATCH: Deducting ${totalDeduction} of ${ingredientName} (original: ${ingredient.quantity}, adjusted: ${ingredient.adjustedQuantity}) (${currentStock} → ${newStock})`);
+
+      // Update inventory stock
+      const { error: updateError } = await supabase
+        .from('inventory_stock')
+        .update({ 
+          stock_quantity: newStock,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', ingredient.inventory_stock_id);
+
+      if (updateError) {
+        result.errors.push(`Failed to update ${ingredientName}: ${updateError.message}`);
+        result.success = false;
+        continue;
+      }
+
+      // Log inventory movement with authenticated user ID
+      try {
+        await supabase.rpc('insert_inventory_movement_safe', {
+          p_inventory_stock_id: ingredient.inventory_stock_id,
+          p_movement_type: 'sale',
+          p_quantity_change: -totalDeduction,
+          p_previous_quantity: currentStock,
+          p_new_quantity: newStock,
+          p_reference_type: 'transaction',
+          p_reference_id: transactionId,
+          p_notes: `Smart Mix & Match deduction: ${ingredientName} for ${productName}`,
+          p_created_by: userId
+        });
+        console.log(`✅ MOVEMENT LOGGED: ${ingredientName} movement logged with user ${userId}`);
+      } catch (logError) {
+        console.error(`❌ MOVEMENT FAILED: Failed to log movement for ${ingredientName}:`, logError);
+      }
+
+      // Determine category using ingredient groups
+      let category: 'base' | 'choice' | 'packaging' = 'choice';
+      const groupName = ingredient.ingredient_group_name || 'base';
+      
+      if (groupName === 'packaging') {
+        category = 'packaging';
+      } else if (groupName === 'base') {
+        category = 'base';
+      } else if (categorizedIngredients.base.some(b => b.inventory_stock?.item === ingredientName)) {
+        category = 'base';
+      } else if (categorizedIngredients.packaging.some(p => p.inventory_stock?.item === ingredientName)) {
+        category = 'packaging';
+      }
+
+      result.deductedItems.push({
+        inventoryId: ingredient.inventory_stock_id,
+        itemName: ingredientName,
+        quantityDeducted: totalDeduction,
+        newStock,
+        category
+      });
+    }
+
+    // Step 6: Track skipped choice ingredients
+    const skippedChoices = categorizedIngredients.choices.filter(ingredient =>
+      !mixMatchInfo.selectedChoices.some(choice => 
+        matchesChoice(ingredient.inventory_stock?.item || '', choice)
+      )
+    );
+
+    for (const skipped of skippedChoices) {
+      result.skippedItems.push(`${skipped.inventory_stock?.item || 'unknown'} (not selected)`);
+    }
+
+    console.log(`✅ SMART MIX & MATCH: Completed deduction for ${productName}. Deducted ${result.deductedItems.length}, skipped ${result.skippedItems.length}, errors ${result.errors.length}`);
+
+    if (result.errors.length > 0) {
+      result.success = false;
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('❌ SMART MIX & MATCH: Deduction failed:', error);
+    result.success = false;
+    result.errors.push(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return result;
+  }
+};
+
+/**
+ * Legacy Smart Mix & Match deduction - maintained for backward compatibility
  */
 export const deductMixMatchInventory = async (
   transactionId: string,
