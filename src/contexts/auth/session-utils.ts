@@ -90,5 +90,11 @@ export async function executeWithValidSession<T>(
   }
   
   console.log(`✅ Session valid for ${operationName}, executing...`);
+  
+  // Set the session in Supabase client context before executing operation
+  if (sessionResult.session) {
+    await supabase.auth.setSession(sessionResult.session);
+  }
+  
   return await operation();
 }
