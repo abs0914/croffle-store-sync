@@ -38,9 +38,13 @@ export const deductInventoryForTransactionEnhancedWithAuth = async (
   console.log(`🔄 ENHANCED DEDUCTION: Starting for transaction ${transactionId} with ${items.length} items, user ${userId}`);
   
   // **CRITICAL DEBUG**: Check if this function is even being called
-  console.log(`🚨 DEBUG: Enhanced deduction function CALLED at ${new Date().toISOString()}`);
-  console.log(`🚨 DEBUG: Parameters - transactionId: ${transactionId}, storeId: ${storeId}, userId: ${userId}`);
-  console.log(`🚨 DEBUG: Items to process:`, items);
+  console.log(`🚨 🚀 ENHANCED DEDUCTION FUNCTION CALLED! 🚀`);
+  console.log(`🚨 📅 Timestamp: ${new Date().toISOString()}`);
+  console.log(`🚨 📋 Transaction ID: ${transactionId}`);
+  console.log(`🚨 🏪 Store ID: ${storeId}`);
+  console.log(`🚨 👤 User ID: ${userId}`);
+  console.log(`🚨 📦 Items count: ${items.length}`);
+  console.log(`🚨 📊 Items detail:`, JSON.stringify(items, null, 2));
   
   const result: EnhancedDeductionResult = {
     success: true,
@@ -286,11 +290,12 @@ async function deductRegularProductWithAuth(
         continue;
       }
 
-      // Log inventory transaction with authenticated user ID and transaction linkage
+      // CRITICAL: Log inventory transaction BEFORE updating stock to ensure audit trail
+      console.log(`🚨 DEBUG: About to log inventory transaction for ${ingredientName}...`);
+      
+      // First, create audit records in inventory_transactions (primary audit)
+      let auditSuccess = false;
       try {
-        console.log(`🚨 DEBUG: About to log inventory transaction for ${ingredientName}...`);
-        
-        // Insert into inventory_transactions with new transaction_id column
         const { error: transactionLogError } = await supabase
           .from('inventory_transactions')
           .insert({
@@ -301,36 +306,50 @@ async function deductRegularProductWithAuth(
             previous_quantity: stockItem.stock_quantity,
             new_quantity: newStock,
             reference_id: transactionId,
-            transaction_id: transactionId, // NEW: Link to the sales transaction
+            transaction_id: transactionId, // Link to the sales transaction
             notes: `Sale deduction: ${ingredientName} for ${recipe.name}`,
             created_by: userId
           });
           
         if (transactionLogError) {
-          console.error(`❌ TRANSACTION LOG FAILED: Failed to log transaction for ${ingredientName}:`, transactionLogError);
+          console.error(`❌ AUDIT FAILED: inventory_transactions insert failed for ${ingredientName}:`, transactionLogError);
+          // Don't fail the deduction, but log the issue
         } else {
-          console.log(`✅ TRANSACTION LOGGED: ${ingredientName} inventory transaction logged with transaction ID ${transactionId}`);
+          auditSuccess = true;
+          console.log(`✅ AUDIT LOGGED: ${ingredientName} transaction logged in inventory_transactions`);
         }
+      } catch (auditError) {
+        console.error(`❌ AUDIT ERROR: Failed to create inventory_transactions record for ${ingredientName}:`, auditError);
+      }
+      
+      // Second, create audit records in inventory_movements (legacy compatibility)
+      try {
+        const { error: rpcError } = await supabase.rpc('insert_inventory_movement_safe', {
+          p_inventory_stock_id: ingredient.inventory_stock_id,
+          p_movement_type: 'sale',
+          p_quantity_change: -totalDeduction,
+          p_previous_quantity: stockItem.stock_quantity,
+          p_new_quantity: newStock,
+          p_reference_type: 'transaction',
+          p_reference_id: transactionId,
+          p_notes: `Sale deduction: ${ingredientName} for ${recipe.name}`,
+          p_created_by: userId
+        });
         
-        // Also try the legacy RPC call for backwards compatibility
-        try {
-          await supabase.rpc('insert_inventory_movement_safe', {
-            p_inventory_stock_id: ingredient.inventory_stock_id,
-            p_movement_type: 'sale',
-            p_quantity_change: -totalDeduction,
-            p_previous_quantity: stockItem.stock_quantity,
-            p_new_quantity: newStock,
-            p_reference_type: 'transaction',
-            p_reference_id: transactionId,
-            p_notes: `Regular deduction: ${ingredientName} for ${recipe.name}`,
-            p_created_by: userId
-          });
-          console.log(`✅ LEGACY MOVEMENT LOGGED: ${ingredientName} legacy movement logged`);
-        } catch (legacyError) {
-          console.warn(`⚠️ LEGACY MOVEMENT FAILED: ${ingredientName} legacy movement failed (non-critical):`, legacyError);
+        if (rpcError) {
+          console.error(`❌ LEGACY AUDIT FAILED: inventory_movements RPC failed for ${ingredientName}:`, rpcError);
+        } else {
+          console.log(`✅ LEGACY AUDIT LOGGED: ${ingredientName} movement logged in inventory_movements`);
         }
-      } catch (logError) {
-        console.error(`❌ TRANSACTION LOG SYSTEM FAILED: Failed to log transaction for ${ingredientName}:`, logError);
+      } catch (rpcError) {
+        console.error(`❌ RPC ERROR: insert_inventory_movement_safe failed for ${ingredientName}:`, rpcError);
+      }
+      
+      // Log audit status for debugging
+      if (auditSuccess) {
+        console.log(`✅ AUDIT STATUS: Complete audit trail created for ${ingredientName}`);
+      } else {
+        console.warn(`⚠️ AUDIT STATUS: Incomplete audit trail for ${ingredientName} - manual review required`);
       }
 
       // Record the deduction
