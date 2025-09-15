@@ -81,12 +81,11 @@ export const deductMixMatchInventory = async (
           id,
           name,
           recipe_ingredients (
-            ingredient_name,
             quantity,
             ingredient_group_name,
             is_optional,
             inventory_stock_id,
-            inventory_stock (
+            inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
               id,
               item,
               stock_quantity
@@ -110,9 +109,9 @@ export const deductMixMatchInventory = async (
 
     // Step 3: Use ingredient groups instead of hardcoded categorization
     const categorizedIngredients = categorizeIngredients(recipe.recipe_ingredients || []);
-    result.debugInfo.baseIngredients = categorizedIngredients.base.map(i => i.ingredient_name);
-    result.debugInfo.choiceIngredients = categorizedIngredients.choices.map(i => i.ingredient_name);
-    result.debugInfo.packagingIngredients = categorizedIngredients.packaging.map(i => i.ingredient_name);
+    result.debugInfo.baseIngredients = categorizedIngredients.base.map(i => i.inventory_stock?.item || 'unknown');
+    result.debugInfo.choiceIngredients = categorizedIngredients.choices.map(i => i.inventory_stock?.item || 'unknown');
+    result.debugInfo.packagingIngredients = categorizedIngredients.packaging.map(i => i.inventory_stock?.item || 'unknown');
 
     console.log(`📊 SMART MIX & MATCH: Categorized ingredients:`, {
       base: result.debugInfo.baseIngredients,
@@ -128,7 +127,7 @@ export const deductMixMatchInventory = async (
       ...categorizedIngredients.choices
         .filter(ingredient => 
           mixMatchInfo.selectedChoices.some(choice => 
-            matchesChoice(ingredient.ingredient_name, choice)
+            matchesChoice(ingredient.inventory_stock?.item || '', choice)
           )
         )
         .map(ingredient => ({
@@ -149,11 +148,12 @@ export const deductMixMatchInventory = async (
         continue;
       }
 
+      const ingredientName = ingredient.inventory_stock?.item || 'unknown';
       const totalDeduction = ingredient.adjustedQuantity * quantity;
-      const currentStock = ingredient.inventory_stock.stock_quantity;
+      const currentStock = ingredient.inventory_stock?.stock_quantity || 0;
       const newStock = Math.max(0, currentStock - totalDeduction);
 
-      console.log(`🔢 SMART MIX & MATCH: Deducting ${totalDeduction} of ${ingredient.ingredient_name} (original: ${ingredient.quantity}, adjusted: ${ingredient.adjustedQuantity}) (${currentStock} → ${newStock})`);
+      console.log(`🔢 SMART MIX & MATCH: Deducting ${totalDeduction} of ${ingredientName} (original: ${ingredient.quantity}, adjusted: ${ingredient.adjustedQuantity}) (${currentStock} → ${newStock})`);
 
       // Update inventory stock
       const { error: updateError } = await supabase
@@ -165,7 +165,7 @@ export const deductMixMatchInventory = async (
         .eq('id', ingredient.inventory_stock_id);
 
       if (updateError) {
-        result.errors.push(`Failed to update ${ingredient.ingredient_name}: ${updateError.message}`);
+        result.errors.push(`Failed to update ${ingredientName}: ${updateError.message}`);
         result.success = false;
         continue;
       }
@@ -180,11 +180,11 @@ export const deductMixMatchInventory = async (
           p_new_quantity: newStock,
           p_reference_type: 'transaction',
           p_reference_id: transactionId,
-          p_notes: `Smart Mix & Match deduction: ${ingredient.ingredient_name} for ${productName}`,
+          p_notes: `Smart Mix & Match deduction: ${ingredientName} for ${productName}`,
           p_created_by: userId || null
         });
       } catch (logError) {
-        console.warn(`⚠️ SMART MIX & MATCH: Failed to log movement for ${ingredient.ingredient_name}:`, logError);
+        console.warn(`⚠️ SMART MIX & MATCH: Failed to log movement for ${ingredientName}:`, logError);
       }
 
       // Determine category using ingredient groups
@@ -195,15 +195,15 @@ export const deductMixMatchInventory = async (
         category = 'packaging';
       } else if (groupName === 'base') {
         category = 'base';
-      } else if (categorizedIngredients.base.some(b => b.ingredient_name === ingredient.ingredient_name)) {
+      } else if (categorizedIngredients.base.some(b => b.inventory_stock?.item === ingredientName)) {
         category = 'base';
-      } else if (categorizedIngredients.packaging.some(p => p.ingredient_name === ingredient.ingredient_name)) {
+      } else if (categorizedIngredients.packaging.some(p => p.inventory_stock?.item === ingredientName)) {
         category = 'packaging';
       }
 
       result.deductedItems.push({
         inventoryId: ingredient.inventory_stock_id,
-        itemName: ingredient.ingredient_name,
+        itemName: ingredientName,
         quantityDeducted: totalDeduction,
         newStock,
         category
@@ -213,12 +213,12 @@ export const deductMixMatchInventory = async (
     // Step 6: Track skipped choice ingredients
     const skippedChoices = categorizedIngredients.choices.filter(ingredient =>
       !mixMatchInfo.selectedChoices.some(choice => 
-        matchesChoice(ingredient.ingredient_name, choice)
+        matchesChoice(ingredient.inventory_stock?.item || '', choice)
       )
     );
 
     for (const skipped of skippedChoices) {
-      result.skippedItems.push(`${skipped.ingredient_name} (not selected)`);
+      result.skippedItems.push(`${skipped.inventory_stock?.item || 'unknown'} (not selected)`);
     }
 
     console.log(`✅ SMART MIX & MATCH: Completed deduction for ${productName}. Deducted ${result.deductedItems.length}, skipped ${result.skippedItems.length}, errors ${result.errors.length}`);
@@ -341,7 +341,7 @@ function categorizeIngredients(ingredients: any[]): {
   const packaging: any[] = [];
 
   for (const ingredient of ingredients) {
-    const name = ingredient.ingredient_name.toLowerCase();
+    const name = ingredient.inventory_stock?.item?.toLowerCase() || '';
     
     // Packaging items
     if (name.includes('cup') || name.includes('wrapper') || name.includes('paper') || 
@@ -414,19 +414,19 @@ function getAdjustedQuantityForMixMatch(
   productType: 'croffle_overload' | 'mini_croffle' | 'regular'
 ): number {
   const originalQuantity = ingredient.quantity;
-  const ingredientName = ingredient.ingredient_name.toLowerCase();
+  const ingredientName = ingredient.inventory_stock?.item?.toLowerCase() || '';
 
   // Only adjust for Mix & Match choice ingredients
   if (productType === 'croffle_overload') {
     // Croffle Overload: Toppings should be 1.0 portion only (not 4.0)
     if (isTopping(ingredientName)) {
-      console.log(`🎯 CROFFLE OVERLOAD ADJUSTMENT: ${ingredient.ingredient_name} ${originalQuantity} → 1.0`);
+      console.log(`🎯 CROFFLE OVERLOAD ADJUSTMENT: ${ingredient.inventory_stock?.item} ${originalQuantity} → 1.0`);
       return 1.0;
     }
   } else if (productType === 'mini_croffle') {
     // Mini Croffle: Sauces and toppings should be 0.5 portion (not 1.5)
     if (isSauce(ingredientName) || isTopping(ingredientName)) {
-      console.log(`🎯 MINI CROFFLE ADJUSTMENT: ${ingredient.ingredient_name} ${originalQuantity} → 0.5`);
+      console.log(`🎯 MINI CROFFLE ADJUSTMENT: ${ingredient.inventory_stock?.item} ${originalQuantity} → 0.5`);
       return 0.5;
     }
   }

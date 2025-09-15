@@ -501,8 +501,8 @@ class StreamlinedTransactionService {
   }
 
   /**
-   * Process inventory deduction with comprehensive logging and Mix & Match base ingredient support
-   * Updated to work with normalized 1x recipe template quantities
+   * Process inventory deduction with Mix & Match detection and routing
+   * Routes Mix & Match products to smart deduction service, regular products to standard service
    */
   private async processInventoryDeduction(
     transactionId: string,
@@ -515,8 +515,8 @@ class StreamlinedTransactionService {
     console.log(`📦 Items to process: ${items.length}`);
 
     try {
-      // Process both Regular Products and Mix & Match products through the same reliable path
-      console.log('🔄 Processing inventory deduction for all product types');
+      // Import enhanced deduction service
+      const { deductInventoryForTransactionEnhanced } = await import('@/services/inventory/enhancedInventoryDeductionService');
       
       const transactionItems: Array<{ product_id?: string; name: string; quantity: number; unit_price: number; total_price: number }> = [];
 
@@ -545,7 +545,6 @@ class StreamlinedTransactionService {
             });
           }
         } else {
-          // Process all products (Regular and Mix & Match) through normal flow
           transactionItems.push({
             product_id: item.productId,
             name: item.name,
@@ -559,11 +558,8 @@ class StreamlinedTransactionService {
       console.log(`📋 Transaction items for deduction (${transactionItems.length} items):`, 
         transactionItems.map(ti => `${ti.name} (qty: ${ti.quantity})`));
 
-      // PHASE 4: Use simplified inventory service for reliable deduction
-      console.log(`🚀 PHASE 4: About to call SimplifiedInventoryService for transaction ${transactionId}`);
-      
       // CRITICAL FIX: Proper product ID mapping with fallback lookup
-      const phase4Items = [];
+      const enhancedItems = [];
       for (const item of transactionItems) {
         let productId = item.product_id;
         
@@ -583,57 +579,50 @@ class StreamlinedTransactionService {
         }
         
         if (productId) {
-          phase4Items.push({
+          enhancedItems.push({
             productId: productId,
             productName: item.name,
-            quantity: item.quantity,
-            storeId: storeId
+            quantity: item.quantity
           });
         } else {
           console.warn(`⚠️ No product ID found for: ${item.name}`);
         }
       }
       
-      console.log(`📦 Phase 4 items prepared:`, phase4Items.map(i => `${i.productName} (${i.productId})`));
+      console.log(`📦 Enhanced deduction items prepared:`, enhancedItems.map(i => `${i.productName} (${i.productId})`));
       
-      // Step 1: Mandatory pre-validation with correct IDs
-      const validation = await SimplifiedInventoryService.validateInventoryAvailability(phase4Items);
+      // Use enhanced deduction service that automatically routes Mix & Match vs regular products
+      console.log(`🚀 ENHANCED: Calling enhanced deduction service for transaction ${transactionId}`);
+      const result = await deductInventoryForTransactionEnhanced(transactionId, storeId, enhancedItems);
       
-      if (!validation.canProceed) {
-        console.error('❌ PHASE 4: Pre-validation failed', validation.errors);
-        return {
-          success: false,
-          errors: validation.errors
-        };
-      }
+      console.log(`🔍 ENHANCED: Enhanced deduction service completed for transaction ${transactionId}`);
 
-      // Step 2: Perform deduction with correct IDs  
-      const result = await SimplifiedInventoryService.performInventoryDeduction(transactionId, phase4Items);
-      
-      console.log(`🔍 PHASE 4: SimplifiedInventoryService completed for transaction ${transactionId}`);
-
-      console.log(`📊 Inventory deduction result:`, {
+      console.log(`📊 Enhanced inventory deduction result:`, {
         success: result.success,
         deductedItems: result.deductedItems?.length || 0,
+        skippedItems: result.skippedItems?.length || 0,
         errors: result.errors?.length || 0,
-        warnings: result.warnings?.length || 0
+        isMixMatch: result.isMixMatch
       });
 
       // Enhanced success logging for monitoring
       if (result.success) {
         console.log(`✅ INVENTORY DEDUCTION SUCCESS for transaction ${transactionId}`);
+        console.log(`   Mix & Match product detected: ${result.isMixMatch}`);
         console.log(`   Deducted ingredients:`, result.deductedItems.map(item => 
-          `${item.ingredient}: -${item.deducted} units (new stock: ${item.remaining})`
+          `${item.itemName}: -${item.quantityDeducted} units (new stock: ${item.newStock})${item.category ? ` [${item.category}]` : ''}`
         ));
+        if (result.skippedItems && result.skippedItems.length > 0) {
+          console.log(`   Skipped ingredients:`, result.skippedItems);
+        }
       } else {
         console.error(`❌ INVENTORY DEDUCTION FAILED for transaction ${transactionId}`);
         console.error(`   Errors:`, result.errors);
-        console.error(`   Warnings:`, result.warnings);
       }
 
       return {
         success: result.success,
-        errors: [...result.errors, ...result.warnings]
+        errors: result.errors
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Inventory deduction failed';
