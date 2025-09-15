@@ -6,6 +6,8 @@ import { SystemCompletionDashboard } from '@/components/debug/SystemCompletionDa
 import { LoadTestRunner } from '@/components/debug/LoadTestRunner';
 import { TransactionTestRunner } from '@/components/debug/TransactionTestRunner';
 import { InventoryDeductionValidator } from '@/components/debug/InventoryDeductionValidator';
+import MixMatchDeductionTester from '@/components/debug/MixMatchDeductionTester';
+import MixMatchPortionTester from '@/components/debug/MixMatchPortionTester';
 import { Shield, Activity, Zap, Settings } from 'lucide-react';
 
 export function AdminDashboard() {
@@ -51,6 +53,8 @@ export function AdminDashboard() {
           <div className="grid gap-4">
             <TransactionTestRunner />
             <InventoryDeductionValidator />
+            <MixMatchDeductionTester />
+            <MixMatchPortionTester />
           </div>
         </TabsContent>
       </Tabs>

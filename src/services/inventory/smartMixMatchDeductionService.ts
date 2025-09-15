@@ -120,16 +120,21 @@ export const deductMixMatchInventory = async (
       packaging: result.debugInfo.packagingIngredients
     });
 
-    // Step 4: Determine which ingredients to deduct
+    // Step 4: Determine which ingredients to deduct with correct portions
     const ingredientsToDeduct = [
-      ...categorizedIngredients.base, // Always deduct base
-      ...categorizedIngredients.packaging, // Always deduct packaging
-      // Only deduct selected choices
-      ...categorizedIngredients.choices.filter(ingredient => 
-        mixMatchInfo.selectedChoices.some(choice => 
-          matchesChoice(ingredient.ingredient_name, choice)
+      ...categorizedIngredients.base.map(ingredient => ({ ...ingredient, adjustedQuantity: ingredient.quantity })), // Always deduct base
+      ...categorizedIngredients.packaging.map(ingredient => ({ ...ingredient, adjustedQuantity: ingredient.quantity })), // Always deduct packaging
+      // Only deduct selected choices with adjusted portions based on product type
+      ...categorizedIngredients.choices
+        .filter(ingredient => 
+          mixMatchInfo.selectedChoices.some(choice => 
+            matchesChoice(ingredient.ingredient_name, choice)
+          )
         )
-      )
+        .map(ingredient => ({
+          ...ingredient,
+          adjustedQuantity: getAdjustedQuantityForMixMatch(ingredient, mixMatchInfo.productType)
+        }))
     ];
 
     console.log(`🎯 SMART MIX & MATCH: Will deduct ${ingredientsToDeduct.length} ingredients (${categorizedIngredients.base.length} base + ${categorizedIngredients.packaging.length} packaging + ${ingredientsToDeduct.length - categorizedIngredients.base.length - categorizedIngredients.packaging.length} selected choices)`);
@@ -144,11 +149,11 @@ export const deductMixMatchInventory = async (
         continue;
       }
 
-      const totalDeduction = ingredient.quantity * quantity;
+      const totalDeduction = ingredient.adjustedQuantity * quantity;
       const currentStock = ingredient.inventory_stock.stock_quantity;
       const newStock = Math.max(0, currentStock - totalDeduction);
 
-      console.log(`🔢 SMART MIX & MATCH: Deducting ${totalDeduction} of ${ingredient.ingredient_name} (${currentStock} → ${newStock})`);
+      console.log(`🔢 SMART MIX & MATCH: Deducting ${totalDeduction} of ${ingredient.ingredient_name} (original: ${ingredient.quantity}, adjusted: ${ingredient.adjustedQuantity}) (${currentStock} → ${newStock})`);
 
       // Update inventory stock
       const { error: updateError } = await supabase
@@ -233,19 +238,29 @@ export const deductMixMatchInventory = async (
 };
 
 /**
- * Parse Mix & Match product name to identify selected choices
+ * Parse Mix & Match product name to identify selected choices and product type
  */
 function parseMixMatchProduct(productName: string): {
   isMixMatch: boolean;
   selectedChoices: string[];
+  productType: 'croffle_overload' | 'mini_croffle' | 'regular';
 } {
   const name = productName.toLowerCase().trim();
   
-  // Check if this is a Mix & Match product
-  const isMixMatch = name.includes('croffle overload') || name.includes('mini croffle');
+  // Determine product type
+  let productType: 'croffle_overload' | 'mini_croffle' | 'regular' = 'regular';
+  let isMixMatch = false;
+  
+  if (name.includes('croffle overload')) {
+    productType = 'croffle_overload';
+    isMixMatch = true;
+  } else if (name.includes('mini croffle')) {
+    productType = 'mini_croffle';
+    isMixMatch = true;
+  }
   
   if (!isMixMatch) {
-    return { isMixMatch: false, selectedChoices: [] };
+    return { isMixMatch: false, selectedChoices: [], productType: 'regular' };
   }
 
   // Parse selected choices from the product name
@@ -260,7 +275,8 @@ function parseMixMatchProduct(productName: string): {
     { choice: 'Chocolate Sauce', patterns: ['chocolate sauce', 'chocolate syrup', 'choco sauce'] },
     { choice: 'Whipped Cream', patterns: ['whipped cream', 'whip cream', 'cream'] },
     { choice: 'Tiramisu', patterns: ['tiramisu'] },
-    { choice: 'Blueberry', patterns: ['blueberry', 'blueberries'] }
+    { choice: 'Blueberry', patterns: ['blueberry', 'blueberries'] },
+    { choice: 'Colored Sprinkles', patterns: ['colored sprinkles', 'sprinkles'] }
   ];
 
   for (const { choice, patterns } of choicePatterns) {
@@ -269,9 +285,9 @@ function parseMixMatchProduct(productName: string): {
     }
   }
 
-  console.log(`🔍 SMART MIX & MATCH: Parsed "${productName}" → selections: [${selectedChoices.join(', ')}]`);
+  console.log(`🔍 SMART MIX & MATCH: Parsed "${productName}" → type: ${productType}, selections: [${selectedChoices.join(', ')}]`);
   
-  return { isMixMatch: true, selectedChoices };
+  return { isMixMatch: true, selectedChoices, productType };
 }
 
 /**
@@ -386,4 +402,60 @@ function matchesChoice(ingredientName: string, selectedChoice: string): boolean 
   }
   
   return false;
+}
+
+/**
+ * Get adjusted quantity for Mix & Match products based on business rules:
+ * - Croffle Overload: Toppings should be deducted as 1.0 portion (not 4.0)
+ * - Mini Croffle: Sauces and toppings should be deducted as 0.5 portion (not 1.5)
+ */
+function getAdjustedQuantityForMixMatch(
+  ingredient: any, 
+  productType: 'croffle_overload' | 'mini_croffle' | 'regular'
+): number {
+  const originalQuantity = ingredient.quantity;
+  const ingredientName = ingredient.ingredient_name.toLowerCase();
+
+  // Only adjust for Mix & Match choice ingredients
+  if (productType === 'croffle_overload') {
+    // Croffle Overload: Toppings should be 1.0 portion only (not 4.0)
+    if (isTopping(ingredientName)) {
+      console.log(`🎯 CROFFLE OVERLOAD ADJUSTMENT: ${ingredient.ingredient_name} ${originalQuantity} → 1.0`);
+      return 1.0;
+    }
+  } else if (productType === 'mini_croffle') {
+    // Mini Croffle: Sauces and toppings should be 0.5 portion (not 1.5)
+    if (isSauce(ingredientName) || isTopping(ingredientName)) {
+      console.log(`🎯 MINI CROFFLE ADJUSTMENT: ${ingredient.ingredient_name} ${originalQuantity} → 0.5`);
+      return 0.5;
+    }
+  }
+
+  // No adjustment for base ingredients or regular products
+  return originalQuantity;
+}
+
+/**
+ * Check if ingredient is a topping
+ */
+function isTopping(ingredientName: string): boolean {
+  const toppingKeywords = [
+    'peanut', 'marshmallow', 'choco flakes', 'chocolate flakes', 
+    'colored sprinkles', 'sprinkles', 'crushed oreo', 'graham cracker',
+    'blueberry', 'strawberry', 'banana'
+  ];
+  
+  return toppingKeywords.some(keyword => ingredientName.includes(keyword));
+}
+
+/**
+ * Check if ingredient is a sauce
+ */
+function isSauce(ingredientName: string): boolean {
+  const sauceKeywords = [
+    'caramel sauce', 'chocolate sauce', 'tiramisu', 'strawberry sauce',
+    'nutella', 'vanilla sauce', 'matcha sauce', 'sauce', 'syrup'
+  ];
+  
+  return sauceKeywords.some(keyword => ingredientName.includes(keyword));
 }
