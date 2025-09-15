@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem } from "@/types";
+import { extractBaseProductName } from "@/utils/productNameUtils";
 
 export interface DetailedTransactionItem {
   product_id: string;
@@ -50,10 +51,15 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
         console.warn('Failed to fetch product category for:', item.productId, error);
       }
 
+      // Use clean base product name for consistent inventory processing
+      const itemName = item.variation ? 
+        `${extractBaseProductName(item.product.name)} (${item.variation.name})` : 
+        extractBaseProductName(product?.product_name || item.product.name);
+
       const enrichedItem: DetailedTransactionItem = {
         product_id: item.productId,
         variation_id: item.variationId || undefined,
-        name: item.variation ? `${item.product.name} (${item.variation.name})` : (product?.product_name || item.product.name),
+        name: itemName,
         quantity: item.quantity,
         unit_price: item.price,
         total_price: item.price * item.quantity,
@@ -65,11 +71,15 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
       enrichedItems.push(enrichedItem);
     } catch (error) {
       console.warn('Error enriching cart item:', error);
-      // Fallback to basic item structure
+      // Fallback to basic item structure with clean names
+      const fallbackName = item.variation ? 
+        `${extractBaseProductName(item.product.name)} (${item.variation.name})` : 
+        extractBaseProductName(item.product.name);
+
       enrichedItems.push({
         product_id: item.productId,
         variation_id: item.variationId || undefined,
-        name: item.variation ? `${item.product.name} (${item.variation.name})` : item.product.name,
+        name: fallbackName,
         quantity: item.quantity,
         unit_price: item.price,
         total_price: item.price * item.quantity,

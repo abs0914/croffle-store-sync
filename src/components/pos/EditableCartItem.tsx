@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2, Plus, Minus, Edit3, Check, X } from 'lucide-react';
 import { CartItem } from '@/types';
 import { DeliveryPlatform } from '@/contexts/cart/CartContext';
+import { extractBaseProductName } from '@/utils/productNameUtils';
 
 interface EditableCartItemProps {
   item: CartItem;
@@ -125,19 +126,16 @@ export function EditableCartItem({
           <div className="flex-1">
             <h4 className="font-medium text-sm">
               {(() => {
-                const c: any = (item as any).customization;
-                if (c?.type === 'mix_match_croffle') {
-                  // Use product base name + short summary for mix & match
-                  const base = item.product?.name || 'Item';
-                  const toppings = extractAddonNames(c?.combo?.toppings);
-                  const sauces = extractAddonNames(c?.combo?.sauces);
-                  const summary = [
-                    toppings.length ? `+ ${toppings.join(', ')}` : null,
-                    sauces.length ? `with ${sauces.join(', ')}` : null
-                  ].filter(Boolean).join(' ');
-                  return summary ? `${base} ${summary}` : base;
+                // Extract clean base product name (remove redundant customization details)
+                const productName = item.product?.name || 'Item';
+                const baseName = extractBaseProductName(productName);
+                
+                // For customized items, show variation name if available
+                if (item.customization?.display_name) {
+                  return extractBaseProductName(item.customization.display_name);
                 }
-                return item.customization ? (item.customization.display_name || item.product.name) : item.product.name;
+                
+                return baseName;
               })()}
               {item.variation && !item.customization && (
                 <span className="text-muted-foreground"> ({item.variation.name})</span>

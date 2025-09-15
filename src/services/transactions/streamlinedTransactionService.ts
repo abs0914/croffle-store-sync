@@ -12,6 +12,7 @@ import { processTransactionInventoryWithMixMatchSupport } from "@/services/inven
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { enrichCartItemsWithCategories, insertTransactionItems, DetailedTransactionItem } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
+import { extractBaseProductName } from "@/utils/productNameUtils";
 import { SimplifiedTransactionInventoryIntegration } from "./simplifiedTransactionInventoryIntegration";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -369,11 +370,14 @@ class StreamlinedTransactionService {
             const comboComponents = await this.expandComboProductForTransaction(item);
             basicItems.push(...comboComponents);
           } else {
+            // Use clean base product name for inventory matching
+            const cleanName = extractBaseProductName(item.name);
+            
             // Regular product
             basicItems.push({
               product_id: item.productId,
               variation_id: item.variationId || undefined,
-              name: item.name,
+              name: cleanName, // Store clean base name for inventory processing
               quantity: item.quantity,
               unit_price: item.unitPrice,
               total_price: item.totalPrice,
