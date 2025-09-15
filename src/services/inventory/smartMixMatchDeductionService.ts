@@ -71,7 +71,9 @@ export const deductMixMatchInventoryWithAuth = async (
 
     console.log(`🔍 SMART MIX & MATCH: Detected Mix & Match product with selections:`, mixMatchInfo.selectedChoices);
 
-    // Step 2: Get the recipe ingredients with group information
+    // Step 2: Get the recipe ingredients using base product name
+    console.log(`🔍 SMART MIX & MATCH: Looking for recipe using base name: "${mixMatchInfo.baseName}"`);
+    
     const { data: productCatalog, error: catalogError } = await supabase
       .from('product_catalog')
       .select(`
@@ -94,12 +96,13 @@ export const deductMixMatchInventoryWithAuth = async (
           )
         )
       `)
-      .eq('id', productId)
+      .eq('product_name', mixMatchInfo.baseName) // Use base name instead of product ID
       .eq('store_id', storeId)
       .eq('is_available', true)
       .maybeSingle();
 
     if (catalogError || !productCatalog?.recipes) {
+      console.error(`❌ SMART MIX & MATCH: No recipe found for base product "${mixMatchInfo.baseName}"`);
       result.errors.push(`No recipe found for Mix & Match product: ${productName}`);
       result.success = false;
       return result;
@@ -279,7 +282,9 @@ export const deductMixMatchInventory = async (
 
     console.log(`🔍 SMART MIX & MATCH: Detected Mix & Match product with selections:`, mixMatchInfo.selectedChoices);
 
-    // Step 2: Get the recipe ingredients with group information
+    // Step 2: Get the recipe ingredients using base product name
+    console.log(`🔍 SMART MIX & MATCH: Looking for recipe using base name: "${mixMatchInfo.baseName}"`);
+    
     const { data: productCatalog, error: catalogError } = await supabase
       .from('product_catalog')
       .select(`
@@ -302,12 +307,13 @@ export const deductMixMatchInventory = async (
           )
         )
       `)
-      .eq('id', productId)
+      .eq('product_name', mixMatchInfo.baseName) // Use base name instead of product ID
       .eq('store_id', storeId)
       .eq('is_available', true)
       .maybeSingle();
 
     if (catalogError || !productCatalog?.recipes) {
+      console.error(`❌ SMART MIX & MATCH: No recipe found for base product "${mixMatchInfo.baseName}"`);
       result.errors.push(`No recipe found for Mix & Match product: ${productName}`);
       result.success = false;
       return result;
@@ -457,33 +463,43 @@ export const deductMixMatchInventory = async (
 };
 
 /**
- * Parse Mix & Match product name to identify selected choices and product type
+ * Parse Mix & Match product name to identify selected choices, product type, and base name
  */
 function parseMixMatchProduct(productName: string): {
   isMixMatch: boolean;
   selectedChoices: string[];
   productType: 'croffle_overload' | 'mini_croffle' | 'regular';
+  baseName: string;
 } {
   const name = productName.toLowerCase().trim();
   
-  // Determine product type
+  // Determine product type and extract base name
   let productType: 'croffle_overload' | 'mini_croffle' | 'regular' = 'regular';
   let isMixMatch = false;
+  let baseName = productName; // Default to original name
   
   if (name.includes('croffle overload')) {
     productType = 'croffle_overload';
     isMixMatch = true;
+    // Extract base name: "Croffle Overload with Choco Flakes" → "Croffle Overload"
+    baseName = productName.replace(/\s+(with|and)\s+.*/i, '').trim();
   } else if (name.includes('mini croffle')) {
     productType = 'mini_croffle';
     isMixMatch = true;
+    // Extract base name: "Mini Croffle with Choco Flakes and Tiramisu" → "Mini Croffle"
+    baseName = productName.replace(/\s+(with|and)\s+.*/i, '').trim();
   }
   
   if (!isMixMatch) {
-    return { isMixMatch: false, selectedChoices: [], productType: 'regular' };
+    return { isMixMatch: false, selectedChoices: [], productType: 'regular', baseName: productName };
   }
 
   // Parse selected choices from the product name
   const selectedChoices: string[] = [];
+  
+  // Extract customization part after "with" or "and"
+  const customizationMatch = productName.match(/\s+(with|and)\s+(.+)$/i);
+  const customizationText = customizationMatch ? customizationMatch[2] : '';
   
   // Common Mix & Match choices and their variations
   const choicePatterns = [
@@ -499,14 +515,14 @@ function parseMixMatchProduct(productName: string): {
   ];
 
   for (const { choice, patterns } of choicePatterns) {
-    if (patterns.some(pattern => name.includes(pattern))) {
+    if (patterns.some(pattern => customizationText.toLowerCase().includes(pattern))) {
       selectedChoices.push(choice);
     }
   }
 
-  console.log(`🔍 SMART MIX & MATCH: Parsed "${productName}" → type: ${productType}, selections: [${selectedChoices.join(', ')}]`);
+  console.log(`🔍 SMART MIX & MATCH: Parsed "${productName}" → base: "${baseName}", type: ${productType}, selections: [${selectedChoices.join(', ')}]`);
   
-  return { isMixMatch: true, selectedChoices, productType };
+  return { isMixMatch: true, selectedChoices, productType, baseName };
 }
 
 /**

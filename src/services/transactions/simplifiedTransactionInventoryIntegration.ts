@@ -24,7 +24,7 @@ export class SimplifiedTransactionInventoryIntegration {
   
   /**
    * Validate inventory availability before transaction
-   * Lightweight validation without complex fallback logic
+   * Skip validation for Mix & Match products since they use smart deduction
    */
   static async validateTransactionInventory(
     transactionId: string,
@@ -36,7 +36,16 @@ export class SimplifiedTransactionInventoryIntegration {
     
     try {
       for (const item of items) {
-        // Get recipe ingredients
+        // Check if this is a Mix & Match product
+        const isMixMatch = item.productName.toLowerCase().includes('croffle overload') || 
+                          item.productName.toLowerCase().includes('mini croffle');
+        
+        if (isMixMatch) {
+          console.log(`🎯 SIMPLE VALIDATION: Skipping validation for Mix & Match product: ${item.productName}`);
+          continue; // Skip validation for Mix & Match - let smart deduction handle it
+        }
+        
+        // Get recipe ingredients for non-Mix & Match products
         const { data: productData } = await supabase
           .from('product_catalog')
           .select(`
