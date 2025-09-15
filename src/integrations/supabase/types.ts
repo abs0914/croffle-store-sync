@@ -178,6 +178,51 @@ export type Database = {
         }
         Relationships: []
       }
+      agt_resets: {
+        Row: {
+          agt_before_reset: number
+          created_at: string | null
+          created_by: string
+          id: string
+          rdo_notification_date: string | null
+          rdo_notification_sent: boolean | null
+          rdo_office: string | null
+          reset_counter: number
+          reset_date: string
+          reset_reason: string | null
+          store_id: string
+          terminal_id: string
+        }
+        Insert: {
+          agt_before_reset: number
+          created_at?: string | null
+          created_by: string
+          id?: string
+          rdo_notification_date?: string | null
+          rdo_notification_sent?: boolean | null
+          rdo_office?: string | null
+          reset_counter: number
+          reset_date?: string
+          reset_reason?: string | null
+          store_id: string
+          terminal_id: string
+        }
+        Update: {
+          agt_before_reset?: number
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          rdo_notification_date?: string | null
+          rdo_notification_sent?: boolean | null
+          rdo_office?: string | null
+          reset_counter?: number
+          reset_date?: string
+          reset_reason?: string | null
+          store_id?: string
+          terminal_id?: string
+        }
+        Relationships: []
+      }
       app_users: {
         Row: {
           contact_number: string | null
@@ -7017,6 +7062,87 @@ export type Database = {
           },
         ]
       }
+      void_transactions: {
+        Row: {
+          authorized_by_name: string | null
+          authorized_by_user_id: string | null
+          bir_report_date: string | null
+          created_at: string | null
+          id: string
+          is_bir_reported: boolean | null
+          original_discount_amount: number | null
+          original_items: Json
+          original_receipt_number: string
+          original_total: number
+          original_transaction_date: string
+          original_transaction_id: string
+          original_vat_amount: number | null
+          sequence_number: number | null
+          store_id: string
+          terminal_id: string | null
+          updated_at: string | null
+          void_date: string
+          void_notes: string | null
+          void_reason: string
+          void_reason_category: string
+          void_receipt_number: string
+          voided_by_cashier_name: string
+          voided_by_user_id: string
+        }
+        Insert: {
+          authorized_by_name?: string | null
+          authorized_by_user_id?: string | null
+          bir_report_date?: string | null
+          created_at?: string | null
+          id?: string
+          is_bir_reported?: boolean | null
+          original_discount_amount?: number | null
+          original_items: Json
+          original_receipt_number: string
+          original_total: number
+          original_transaction_date: string
+          original_transaction_id: string
+          original_vat_amount?: number | null
+          sequence_number?: number | null
+          store_id: string
+          terminal_id?: string | null
+          updated_at?: string | null
+          void_date?: string
+          void_notes?: string | null
+          void_reason: string
+          void_reason_category: string
+          void_receipt_number: string
+          voided_by_cashier_name: string
+          voided_by_user_id: string
+        }
+        Update: {
+          authorized_by_name?: string | null
+          authorized_by_user_id?: string | null
+          bir_report_date?: string | null
+          created_at?: string | null
+          id?: string
+          is_bir_reported?: boolean | null
+          original_discount_amount?: number | null
+          original_items?: Json
+          original_receipt_number?: string
+          original_total?: number
+          original_transaction_date?: string
+          original_transaction_id?: string
+          original_vat_amount?: number | null
+          sequence_number?: number | null
+          store_id?: string
+          terminal_id?: string | null
+          updated_at?: string | null
+          void_date?: string
+          void_notes?: string | null
+          void_reason?: string
+          void_reason_category?: string
+          void_receipt_number?: string
+          voided_by_cashier_name?: string
+          voided_by_user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       cross_store_mapping_issues: {
@@ -7543,6 +7669,10 @@ export type Database = {
           items_created: number
           stores_processed: number
         }[]
+      }
+      generate_void_sequence_number: {
+        Args: { p_store_id: string }
+        Returns: number
       }
       get_all_users: {
         Args: Record<PropertyKey, never>
