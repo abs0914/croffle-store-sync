@@ -298,79 +298,40 @@ async function deductRegularProductWithAuth(
         continue;
       }
 
-      // CRITICAL: Log inventory transaction BEFORE updating stock to ensure audit trail
-      console.log(`🚨 DEBUG: About to log inventory transaction for ${ingredientName}...`);
+      // CRITICAL: Log inventory audit using the new comprehensive audit function
+      console.log(`🚨 DEBUG: About to log inventory audit for ${ingredientName}...`);
       
       // Use the actual product catalog ID for logging, with proper validation
       const actualProductId = productCatalog?.id || (productId && productId !== 'undefined' ? productId : null);
       
-      // First, create audit records in inventory_transactions (primary audit) - only if we have a valid product ID
-      let auditSuccess = false;
       if (actualProductId) {
         try {
-          const { error: transactionLogError } = await supabase
-            .from('inventory_transactions')
-            .insert({
-              store_id: storeId,
-              product_id: actualProductId, // Validated product ID from catalog
-              transaction_type: 'sale',
-              quantity: totalDeduction,
-              previous_quantity: stockItem.stock_quantity,
-              new_quantity: newStock,
-              reference_id: transactionId,
-              notes: `Sale deduction: ${ingredientName} for ${recipe.name}`,
-              created_by: userId
-            });
+          // Use the new comprehensive audit logging function
+          const { error: auditError } = await supabase.rpc('log_inventory_deduction_audit', {
+            p_transaction_id: transactionId,
+            p_store_id: storeId,
+            p_product_id: actualProductId,
+            p_inventory_stock_id: ingredient.inventory_stock_id,
+            p_ingredient_name: ingredientName,
+            p_quantity_deducted: totalDeduction,
+            p_previous_quantity: stockItem.stock_quantity,
+            p_new_quantity: newStock,
+            p_recipe_name: recipe.name,
+            p_user_id: userId
+          });
           
-          if (transactionLogError) {
-            console.error(`❌ AUDIT FAILED: inventory_transactions insert failed for ${ingredientName}:`, transactionLogError);
-            console.error(`❌ AUDIT DETAILS: Store ID: ${storeId}, Product ID: ${actualProductId}, User ID: ${userId}`);
-            // Check for common RLS policy issues
-            if (transactionLogError.message?.includes('policy')) {
-              console.error(`❌ RLS POLICY ISSUE: User ${userId} may not have access to store ${storeId} in user_stores table`);
-            }
-            if (transactionLogError.message?.includes('null value')) {
-              console.error(`❌ NULL CONSTRAINT: One of the required fields is null - Product ID: ${actualProductId}, User ID: ${userId}`);
-            }
+          if (auditError) {
+            console.error(`❌ COMPREHENSIVE AUDIT FAILED for ${ingredientName}:`, auditError);
+            console.warn(`⚠️ Inventory deduction will continue but audit trail may be incomplete`);
           } else {
-            auditSuccess = true;
-            console.log(`✅ AUDIT LOGGED: ${ingredientName} transaction logged in inventory_transactions`);
+            console.log(`✅ COMPREHENSIVE AUDIT LOGGED: Complete audit trail created for ${ingredientName}`);
           }
         } catch (auditError) {
-          console.error(`❌ AUDIT ERROR: Failed to create inventory_transactions record for ${ingredientName}:`, auditError);
+          console.error(`❌ AUDIT EXCEPTION: Failed to create comprehensive audit for ${ingredientName}:`, auditError);
+          console.warn(`⚠️ Inventory deduction will continue but audit trail may be incomplete`);
         }
       } else {
         console.warn(`⚠️ AUDIT SKIPPED: No valid product ID for ${ingredientName} - Product Catalog ID: ${productCatalog?.id}, Original Product ID: ${productId}`);
-      }
-      
-      // Second, create audit records in inventory_movements (legacy compatibility)
-      try {
-        const { error: rpcError } = await supabase.rpc('insert_inventory_movement_safe', {
-          p_inventory_stock_id: ingredient.inventory_stock_id,
-          p_movement_type: 'sale',
-          p_quantity_change: -totalDeduction,
-          p_previous_quantity: stockItem.stock_quantity,
-          p_new_quantity: newStock,
-          p_reference_type: 'transaction',
-          p_reference_id: transactionId,
-          p_notes: `Sale deduction: ${ingredientName} for ${recipe.name}`,
-          p_created_by: userId
-        });
-        
-        if (rpcError) {
-          console.error(`❌ LEGACY AUDIT FAILED: inventory_movements RPC failed for ${ingredientName}:`, rpcError);
-        } else {
-          console.log(`✅ LEGACY AUDIT LOGGED: ${ingredientName} movement logged in inventory_movements`);
-        }
-      } catch (rpcError) {
-        console.error(`❌ RPC ERROR: insert_inventory_movement_safe failed for ${ingredientName}:`, rpcError);
-      }
-      
-      // Log audit status for debugging
-      if (auditSuccess) {
-        console.log(`✅ AUDIT STATUS: Complete audit trail created for ${ingredientName}`);
-      } else {
-        console.warn(`⚠️ AUDIT STATUS: Incomplete audit trail for ${ingredientName} - manual review required`);
       }
 
       // Record the deduction

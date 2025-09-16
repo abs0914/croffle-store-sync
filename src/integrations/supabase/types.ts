@@ -7732,6 +7732,14 @@ export type Database = {
           template_unit: string
         }[]
       }
+      backfill_missing_audit_records: {
+        Args: {
+          p_limit?: number
+          p_store_id?: string
+          p_transaction_id?: string
+        }
+        Returns: Json
+      }
       begin_transaction: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -7930,6 +7938,10 @@ export type Database = {
       enable_sync_triggers: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      expand_combo_products: {
+        Args: { p_transaction_items: Json }
+        Returns: Json
       }
       export_transaction_details_csv: {
         Args: { end_date?: string; start_date?: string }
@@ -8296,6 +8308,21 @@ export type Database = {
               p_user_id?: string
             }
         Returns: string
+      }
+      log_inventory_deduction_audit: {
+        Args: {
+          p_ingredient_name: string
+          p_inventory_stock_id: string
+          p_new_quantity: number
+          p_previous_quantity: number
+          p_product_id: string
+          p_quantity_deducted: number
+          p_recipe_name?: string
+          p_store_id: string
+          p_transaction_id: string
+          p_user_id?: string
+        }
+        Returns: undefined
       }
       log_inventory_sync_result: {
         Args: {

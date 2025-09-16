@@ -1,11 +1,13 @@
 /**
  * Simplified Transaction Inventory Integration
  * 
- * Clean integration layer for POS transactions using the simplified audit system
+ * Clean integration layer for POS transactions with combo expansion support
+ * and comprehensive audit trail logging
  */
 
 import { SimplifiedInventoryAuditService, SimpleDeductionItem } from "@/services/inventory/simplifiedInventoryAuditService";
 import { deductInventoryForTransactionEnhanced, deductInventoryForTransactionEnhancedWithAuth } from "@/services/inventory/enhancedInventoryDeductionService";
+import { ComboExpansionService, ComboExpansionItem } from "@/services/transactions/comboExpansionService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -122,14 +124,30 @@ export class SimplifiedTransactionInventoryIntegration {
     console.log(`🚨 DEBUG: Items data:`, JSON.stringify(items, null, 2));
     
     try {
-      // Use enhanced deduction service that auto-detects Mix & Match products
-      const enhancedItems = items.map(item => ({
+      // **NEW: COMBO EXPANSION** - First expand any combo products
+      console.log(`🔄 COMBO EXPANSION: Checking for combo products in ${items.length} items`);
+      
+      const expansionResult = await ComboExpansionService.expandComboItems(items);
+      
+      if (!expansionResult.success) {
+        console.error(`❌ COMBO EXPANSION FAILED:`, expansionResult.errors);
+        return {
+          success: false,
+          errors: [`Combo expansion failed: ${expansionResult.errors.join(', ')}`],
+          warnings: []
+        };
+      }
+      
+      console.log(`✅ COMBO EXPANSION: Processed ${expansionResult.combosProcessed} combos, resulting in ${expansionResult.expandedItems.length} items`);
+      
+      // Use expanded items for inventory deduction
+      const enhancedItems = expansionResult.expandedItems.map(item => ({
         productId: item.productId,
         productName: item.productName,
         quantity: item.quantity
       }));
       
-      console.log(`🚨 DEBUG: Enhanced items mapped:`, enhancedItems);
+      console.log(`🚨 DEBUG: Enhanced items (post-expansion):`, enhancedItems);
       
       // Get store ID from first item (all items should be from same store)
       const storeId = items[0]?.storeId;
@@ -150,9 +168,18 @@ export class SimplifiedTransactionInventoryIntegration {
       
       console.log(`🚨 DEBUG: deductInventoryForTransactionEnhancedWithAuth returned:`, result);
       
+      // Combine combo expansion warnings with deduction warnings
+      const allWarnings = [
+        ...(expansionResult.combosProcessed > 0 ? [`Expanded ${expansionResult.combosProcessed} combo products`] : []),
+        ...(result.skippedItems || [])
+      ];
+      
       if (result.success) {
         console.log(`✅ ENHANCED PROCESSING: Transaction inventory processed successfully`);
         console.log(`📊 ENHANCED PROCESSING: Deducted ${result.deductedItems.length} items${result.isMixMatch ? ' (Mix & Match detected)' : ''}`);
+        if (expansionResult.combosProcessed > 0) {
+          console.log(`🎯 COMBO SUCCESS: Successfully processed ${expansionResult.combosProcessed} combo products`);
+        }
         if (result.skippedItems && result.skippedItems.length > 0) {
           console.log(`⚠️ ENHANCED PROCESSING: Skipped ${result.skippedItems.length} items: ${result.skippedItems.join(', ')}`);
         }
@@ -164,7 +191,7 @@ export class SimplifiedTransactionInventoryIntegration {
       return { 
         success: result.success, 
         errors: result.errors, 
-        warnings: result.skippedItems || [] 
+        warnings: allWarnings
       };
       
     } catch (error) {
