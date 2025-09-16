@@ -363,14 +363,14 @@ async function deductRegularProductWithAuth(
         continue;
       }
 
-      // **PHASE 1 FIX**: Enhanced audit logging with proper error propagation
+      // **EMERGENCY FIX**: Enhanced audit logging with correct foreign key reference
       console.log(`🚨 AUDIT: Creating comprehensive audit trail for ${ingredientName}...`);
       
-      const actualProductId = productCatalog?.id || (productId && productId !== 'undefined' ? productId : null);
+      const validInventoryStockId = ingredient.inventory_stock_id;
       
-      if (actualProductId) {
+      if (validInventoryStockId) {
         try {
-          // Use safe audit logging function with better error handling
+          // Use safe audit logging function with proper inventory stock ID
           const auditId = await supabase.rpc('log_inventory_deduction_audit_safe', {
             p_transaction_id: transactionId,
             p_store_id: storeId,
@@ -378,8 +378,8 @@ async function deductRegularProductWithAuth(
             p_status: 'success',
             p_items_processed: 1,
             p_metadata: {
-              product_id: actualProductId,
-              inventory_stock_id: ingredient.inventory_stock_id,
+              inventory_stock_id: validInventoryStockId, // **FIX**: Use correct FK reference
+              product_catalog_id: productCatalog?.id || productId, // Store catalog reference in metadata
               ingredient_name: ingredientName,
               quantity_deducted: totalDeduction,
               previous_quantity: stockItem.stock_quantity,
@@ -394,19 +394,19 @@ async function deductRegularProductWithAuth(
             console.log(`✅ ENHANCED AUDIT LOGGED: Audit ID ${auditId.data} for ${ingredientName}`);
           } else {
             console.warn(`⚠️ ENHANCED AUDIT: Function returned null for ${ingredientName} - check audit logs`);
-            // **PHASE 1 FIX**: Don't fail silently, but don't fail the transaction either
+            // **EMERGENCY FIX**: Don't fail silently, but don't fail the transaction either
             result.errors.push(`Audit logging warning for ${ingredientName}: Function returned null`);
           }
         } catch (auditError) {
           const errorMsg = `Audit exception for ${ingredientName}: ${auditError instanceof Error ? auditError.message : 'Unknown error'}`;
           console.error(`❌ AUDIT EXCEPTION: ${errorMsg}`);
-          // **PHASE 1 FIX**: Proper error propagation - add to errors but don't fail the deduction
+          // **EMERGENCY FIX**: Proper error propagation - add to errors but don't fail the deduction
           result.errors.push(errorMsg);
         }
       } else {
-        const warningMsg = `No valid product ID for audit logging: ${ingredientName}`;
+        const warningMsg = `No valid inventory_stock_id for audit logging: ${ingredientName}`;
         console.warn(`⚠️ AUDIT SKIPPED: ${warningMsg}`);
-        result.errors.push(warningMsg); // **PHASE 1 FIX**: Track missing product IDs as errors
+        result.errors.push(warningMsg); // **EMERGENCY FIX**: Track missing inventory stock IDs as errors
       }
 
       // Record the deduction

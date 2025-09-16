@@ -287,20 +287,20 @@ export const deductMixMatchInventoryWithAuth = async (
         continue;
       }
 
-      // **PHASE 1 FIX**: Enhanced audit trail with proper error propagation
+      // **EMERGENCY FIX**: Enhanced audit trail with correct foreign key reference
       console.log(`🚨 AUDIT: About to create audit records for ${ingredientName}...`);
       
-      // First, log to inventory_transactions (primary audit table) - only if we have a valid product ID
+      // First, log to inventory_transactions (primary audit table) - use inventory_stock_id for FK constraint
       let auditSuccess = false;
-      const validProductId = productId && productId !== 'undefined' ? productId : null;
+      const validInventoryStockId = ingredient.inventory_stock_id;
       
-      if (validProductId) {
+      if (validInventoryStockId) {
         try {
           const { error: transactionLogError } = await supabase
             .from('inventory_transactions')
             .insert({
               store_id: storeId,
-              product_id: validProductId,
+              product_id: validInventoryStockId, // **FIX**: Use inventory_stock.id for FK constraint
               transaction_type: 'sale',
               quantity: totalDeduction,
               previous_quantity: currentStock,
@@ -314,14 +314,14 @@ export const deductMixMatchInventoryWithAuth = async (
             const errorMsg = `Audit logging failed for ${ingredientName}: ${transactionLogError.message}`;
             console.error(`❌ AUDIT FAILED: ${errorMsg}`);
             
-            // **PHASE 1 FIX**: Don't fail silently - add to errors but continue
+            // **EMERGENCY FIX**: Proper error propagation but continue processing
             result.errors.push(errorMsg);
             
-            // Enhanced RLS diagnostics
-            if (transactionLogError.message?.includes('policy')) {
-              const policyError = `RLS policy issue: User ${validatedUserId} may not have access to store ${storeId}`;
-              console.error(`❌ RLS POLICY ISSUE: ${policyError}`);
-              result.errors.push(policyError);
+            // Enhanced FK diagnostics
+            if (transactionLogError.message?.includes('foreign key constraint')) {
+              const fkError = `FK constraint violation: inventory_transactions expects inventory_stock.id but got ${validInventoryStockId}`;
+              console.error(`❌ FK VIOLATION: ${fkError}`);
+              result.errors.push(fkError);
             }
           } else {
             auditSuccess = true;
@@ -330,10 +330,10 @@ export const deductMixMatchInventoryWithAuth = async (
         } catch (auditError) {
           const errorMsg = `Audit exception for ${ingredientName}: ${auditError instanceof Error ? auditError.message : 'Unknown error'}`;
           console.error(`❌ AUDIT ERROR: ${errorMsg}`);
-          result.errors.push(errorMsg); // **PHASE 1 FIX**: Don't swallow exceptions
+          result.errors.push(errorMsg); // **EMERGENCY FIX**: Don't swallow exceptions
         }
       } else {
-        const warningMsg = `No valid product ID for audit logging: ${ingredientName}`;
+        const warningMsg = `No valid inventory_stock_id for audit logging: ${ingredientName}`;
         console.warn(`⚠️ AUDIT SKIPPED: ${warningMsg}`);
         result.skippedItems.push(warningMsg);
       }
