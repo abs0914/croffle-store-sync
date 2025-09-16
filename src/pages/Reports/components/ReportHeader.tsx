@@ -22,8 +22,8 @@ export function ReportHeader({ storeId, reportType, isAllStores }: ReportHeaderP
         return 'X-Reading Report';
       case 'z_reading':
         return 'Z-Reading Report';
-      case 'vat':
-        return 'VAT Report';
+      case 'void_report':
+        return 'Void Report';
       case 'cashier':
         return 'Cashier Performance';
       default:

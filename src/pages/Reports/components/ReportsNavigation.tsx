@@ -37,7 +37,7 @@ export function ReportsNavigation({ activeReport, onSelectReport }: ReportsNavig
     { id: 'z_reading' as ReportType, name: 'Z-Reading Report', icon: <Receipt className="h-4 w-4" />, roles: ['admin', 'owner', 'manager', 'cashier'] },
     { id: 'bir_ejournal' as ReportType, name: 'BIR E-Journal', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
     { id: 'bir_backup' as ReportType, name: 'BIR Data Backup', icon: <Database className="h-4 w-4" />, roles: ['admin', 'owner'] },
-    { id: 'vat' as ReportType, name: 'VAT Report', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
+    { id: 'void_report' as ReportType, name: 'Void Report', icon: <FileText className="h-4 w-4" />, roles: ['admin', 'owner', 'manager'] },
   ];
 
   // Filter navigation items based on user role
