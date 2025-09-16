@@ -4,6 +4,7 @@
 // Core Transaction Services (CLEAN PATH)
 export * from './transactions/streamlinedTransactionService';
 export * from './transactions/transactionItemsService';
+export * from './transactions/comboExpansionService';
 
 // ENHANCED TRANSACTION INVENTORY INTEGRATION (Mix & Match Support)
 export * from './transactions/simplifiedTransactionInventoryIntegration';
