@@ -300,20 +300,23 @@ async function deductRegularProductWithAuth(
           .from('inventory_transactions')
           .insert({
             store_id: storeId,
-            product_id: ingredient.inventory_stock_id,
-            transaction_type: 'sale_deduction',
+            product_id: productId, // Use actual product ID, not inventory stock ID
+            transaction_type: 'sale',
             quantity: totalDeduction,
             previous_quantity: stockItem.stock_quantity,
             new_quantity: newStock,
             reference_id: transactionId,
-            transaction_id: transactionId, // Link to the sales transaction
             notes: `Sale deduction: ${ingredientName} for ${recipe.name}`,
             created_by: userId
           });
           
         if (transactionLogError) {
           console.error(`❌ AUDIT FAILED: inventory_transactions insert failed for ${ingredientName}:`, transactionLogError);
-          // Don't fail the deduction, but log the issue
+          console.error(`❌ AUDIT DETAILS: Store ID: ${storeId}, Product ID: ${productId}, User ID: ${userId}`);
+          // Check for common RLS policy issues
+          if (transactionLogError.message?.includes('policy')) {
+            console.error(`❌ RLS POLICY ISSUE: User ${userId} may not have access to store ${storeId} in user_stores table`);
+          }
         } else {
           auditSuccess = true;
           console.log(`✅ AUDIT LOGGED: ${ingredientName} transaction logged in inventory_transactions`);
