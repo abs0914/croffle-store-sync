@@ -36,11 +36,14 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
 
   // Check if this is a special cashier report that doesn't need data fetching
   const isSpecialCashierReport = reportType === 'daily_shift' || reportType === 'inventory_status';
+  
+  // Check if this is a BIR report that handles its own data fetching
+  const isBIRReport = ['x_reading', 'z_reading', 'bir_ejournal', 'vat_report', 'void_report'].includes(reportType);
 
   // Use selectedStoreId if available, fallback to storeId for data fetching
   const effectiveStoreId = selectedStoreId || storeId;
   
-  // Fetch data based on report type (but only for non-special reports)
+  // Fetch data based on report type (but only for standard reports that use centralized data fetching)
   const { data, dataSource, generatedAt, debugInfo, isLoading, error, refetch } = useReportData({
     reportType,
     storeId: effectiveStoreId,
@@ -61,9 +64,9 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
     });
   }, [reportType, storeId, selectedStoreId, effectiveStoreId, from, to]);
 
-  // Display toast notifications for success/failure (only for regular reports)
+  // Display toast notifications for success/failure (only for standard reports that use centralized data fetching)
   useEffect(() => {
-    if (!isSpecialCashierReport) {
+    if (!isSpecialCashierReport && !isBIRReport) {
       if (error) {
         toast.error("Failed to load report data", {
           description: "Please check your connection and try again",
@@ -84,7 +87,25 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
         }
       }
     }
-  }, [data, error, isLoading, dataSource, isMobile, isSpecialCashierReport]);
+  }, [data, error, isLoading, dataSource, isMobile, isSpecialCashierReport, isBIRReport]);
+
+  // Handle BIR reports that handle their own data fetching
+  if (isBIRReport) {
+    return (
+      <div className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring space-y-4" tabIndex={0}>
+        <CashierReportGuard reportType={reportType}>
+          <ReportView
+            reportType={reportType}
+            data={null}
+            storeId={storeId}
+            selectedStoreId={effectiveStoreId}
+            isAllStores={effectiveStoreId === 'all'}
+            dateRange={dateRange}
+          />
+        </CashierReportGuard>
+      </div>
+    );
+  }
 
   // Handle special cashier reports that don't use the standard data fetching
   if (isSpecialCashierReport) {
