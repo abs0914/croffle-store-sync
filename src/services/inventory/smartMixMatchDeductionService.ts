@@ -641,7 +641,7 @@ function parseMixMatchProduct(productName: string): {
     { choice: 'Marshmallow', patterns: ['marshmallow', 'marshmallows'] },
     { choice: 'Choco Flakes', patterns: ['choco flakes', 'chocolate flakes', 'choco flake'] },
     { choice: 'Caramel Sauce', patterns: ['caramel sauce', 'caramel', 'caramel syrup'] },
-    { choice: 'Chocolate Sauce', patterns: ['chocolate sauce', 'chocolate syrup', 'choco sauce'] },
+    { choice: 'Chocolate Sauce', patterns: ['chocolate sauce', 'chocolate syrup', 'choco sauce', 'chocolate'] },
     { choice: 'Whipped Cream', patterns: ['whipped cream', 'whip cream', 'cream'] },
     { choice: 'Tiramisu', patterns: ['tiramisu'] },
     { choice: 'Blueberry', patterns: ['blueberry', 'blueberries'] },
@@ -649,12 +649,15 @@ function parseMixMatchProduct(productName: string): {
   ];
 
   for (const { choice, patterns } of choicePatterns) {
-    if (patterns.some(pattern => customizationText.toLowerCase().includes(pattern))) {
+    const matchingPattern = patterns.find(pattern => customizationText.toLowerCase().includes(pattern));
+    if (matchingPattern) {
       selectedChoices.push(choice);
+      console.log(`🎯 CHOICE DETECTED: "${matchingPattern}" → "${choice}"`);
     }
   }
 
   console.log(`🔍 SMART MIX & MATCH: Parsed "${productName}" → base: "${baseName}", type: ${productType}, selections: [${selectedChoices.join(', ')}]`);
+  console.log(`🔍 CUSTOMIZATION TEXT: "${customizationText}"`);
   
   return { isMixMatch: true, selectedChoices, productType, baseName };
 }
@@ -761,7 +764,7 @@ function matchesChoice(ingredientName: string, selectedChoice: string): boolean 
     'marshmallow': ['marshmallows', 'marshmallow'],
     'choco flakes': ['choco flakes', 'chocolate flakes', 'choco flake'],
     'caramel sauce': ['caramel sauce', 'caramel', 'caramel syrup'],
-    'chocolate sauce': ['chocolate sauce', 'chocolate syrup', 'choco sauce'],
+    'chocolate sauce': ['chocolate sauce', 'chocolate syrup', 'choco sauce', 'chocolate'],
     'whipped cream': ['whipped cream', 'whip cream', 'cream'],
     'tiramisu': ['tiramisu'],
     'blueberry': ['blueberry', 'blueberries'],
