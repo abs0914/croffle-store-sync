@@ -18,8 +18,10 @@ interface UseReportDataProps {
 }
 
 export function useReportData({ reportType, storeId, isAllStores = false, from, to, useSampleData = false }: UseReportDataProps) {
+  console.log('🔍 useReportData called with:', { reportType, storeId, from, to, isAllStores });
+
   const queryResult = useQuery({
-    queryKey: ['report', reportType, storeId, isAllStores, from, to, useSampleData],
+    queryKey: ['report-data', reportType, storeId, isAllStores, from, to, useSampleData],
     queryFn: async () => {
       if (!from || !to) return Promise.resolve(null);
 
@@ -66,15 +68,15 @@ export function useReportData({ reportType, storeId, isAllStores = false, from, 
         throw error;
       }
     },
-    enabled: !!storeId && !!from && !!to &&
+    enabled: !!storeId && !!from && !!to && !!reportType &&
             ['sales', 'expense', 'profit_loss', 'cashier'].includes(reportType),
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    retry: 1,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
-    staleTime: Infinity, // Data never becomes stale
-    gcTime: 10 * 60 * 1000 // Keep data in cache for 10 minutes
+    staleTime: 10000, // 10 seconds - shorter for more responsive date changes
+    gcTime: 2 * 60 * 1000 // Keep data in cache for 2 minutes
   });
 
   // Handle both old and new response formats

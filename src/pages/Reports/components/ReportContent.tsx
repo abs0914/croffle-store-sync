@@ -5,12 +5,14 @@ import { ReportErrorState } from "./ReportErrorState";
 import { ReportView } from "./ReportView";
 import { useReportData } from "../hooks/useReportData";
 import { useEffect } from "react";
+import React from "react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileBarChart } from "lucide-react";
 import { CashierReportGuard } from "@/components/auth/CashierReportGuard";
 import { DataSourceIndicator } from "@/components/reports/DataSourceIndicator";
+import { formatDate } from "@/utils";
 
 interface ReportContentProps {
   reportType: ReportType;
@@ -31,8 +33,23 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
     return <ReportErrorState errorMessage="Date range not available" />;
   }
   
-  const from = dateRange.from?.toISOString().split('T')[0];
-  const to = dateRange.to?.toISOString().split('T')[0];
+  // Convert Date objects to proper string format for API calls
+  const formattedDateRange = React.useMemo(() => {
+    if (!dateRange.from) return { from: undefined, to: undefined };
+    
+    const fromStr = dateRange.from instanceof Date ? formatDate(dateRange.from) : dateRange.from;
+    const toStr = dateRange.to instanceof Date ? formatDate(dateRange.to) : (dateRange.to ? formatDate(dateRange.to) : fromStr);
+    
+    console.log('📊 ReportContent formatted date range:', { 
+      original: dateRange, 
+      formatted: { from: fromStr, to: toStr }
+    });
+    
+    return { from: fromStr, to: toStr };
+  }, [dateRange]);
+
+  const from = formattedDateRange.from;
+  const to = formattedDateRange.to;
 
   // Check if this is a special cashier report that doesn't need data fetching
   const isSpecialCashierReport = reportType === 'daily_shift' || reportType === 'inventory_status';
@@ -49,7 +66,8 @@ export function ReportContent({ reportType, storeId, selectedStoreId, dateRange 
     storeId: effectiveStoreId,
     isAllStores: effectiveStoreId === 'all',
     from,
-    to
+    to,
+    useSampleData: false
   });
 
   // Log report parameters for debugging
