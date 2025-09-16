@@ -8,6 +8,7 @@ import { TransactionTestRunner } from '@/components/debug/TransactionTestRunner'
 import { InventoryDeductionValidator } from '@/components/debug/InventoryDeductionValidator';
 import MixMatchDeductionTester from '@/components/debug/MixMatchDeductionTester';
 import MixMatchPortionTester from '@/components/debug/MixMatchPortionTester';
+import MixMatchChocolateSauceTest from '@/components/debug/MixMatchChocolateSauceTest';
 import { Shield, Activity, Zap, Settings } from 'lucide-react';
 
 export function AdminDashboard() {
@@ -51,6 +52,7 @@ export function AdminDashboard() {
 
         <TabsContent value="debug-tools" className="space-y-4">
           <div className="grid gap-4">
+            <MixMatchChocolateSauceTest />
             <TransactionTestRunner />
             <InventoryDeductionValidator />
             <MixMatchDeductionTester />
