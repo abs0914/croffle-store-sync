@@ -20,7 +20,7 @@ export * from './inventory/simplifiedInventoryAuditService';
 
 // LEGACY UNIFIED INVENTORY AUDIT SYSTEM (STANDARDIZED)
 export * from './inventory/unifiedInventoryAuditService';
-export * from './inventory/standardizedInventoryMigration';
+export * from './transactions/comboExpansionService';
 
 // Recipe Management Services  
 export * from './recipes/missingRecipeHandler';
