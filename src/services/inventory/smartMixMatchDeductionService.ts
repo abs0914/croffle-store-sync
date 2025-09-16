@@ -33,6 +33,42 @@ export interface SmartDeductionResult {
 /**
  * Smart Mix & Match deduction that only deducts selected ingredients with auth context
  */
+/**
+ * Authentication fallback mechanism with retry logic
+ */
+const getAuthenticatedUserWithFallback = async (): Promise<{ userId: string | null; error?: string }> => {
+  try {
+    // Primary: Try to get authenticated user
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      console.warn(`⚠️ AUTH FALLBACK: Primary auth failed: ${error.message}`);
+      
+      // Fallback: Retry once after brief delay
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const { data: { user: retryUser }, error: retryError } = await supabase.auth.getUser();
+      
+      if (retryError || !retryUser) {
+        console.error(`❌ AUTH FALLBACK: Retry failed: ${retryError?.message}`);
+        return { userId: null, error: `Authentication failed: ${retryError?.message || 'No user context'}` };
+      }
+      
+      console.log(`✅ AUTH FALLBACK: Retry succeeded for user ${retryUser.id}`);
+      return { userId: retryUser.id };
+    }
+    
+    if (!user) {
+      console.error(`❌ AUTH FALLBACK: No user in session`);
+      return { userId: null, error: 'No authenticated user found' };
+    }
+    
+    return { userId: user.id };
+  } catch (error) {
+    console.error(`❌ AUTH FALLBACK: Unexpected error:`, error);
+    return { userId: null, error: `Auth service error: ${error instanceof Error ? error.message : 'Unknown error'}` };
+  }
+};
+
 export const deductMixMatchInventoryWithAuth = async (
   transactionId: string,
   storeId: string,
@@ -42,6 +78,30 @@ export const deductMixMatchInventoryWithAuth = async (
   userId: string
 ): Promise<SmartDeductionResult> => {
   console.log(`🎯 SMART MIX & MATCH: Processing ${productName} x${quantity} with user ${userId}`);
+  
+  // **PHASE 1 FIX**: Authentication validation with fallback
+  let validatedUserId = userId;
+  if (!userId) {
+    console.warn(`⚠️ SMART MIX & MATCH: No user ID provided, attempting fallback authentication`);
+    const authResult = await getAuthenticatedUserWithFallback();
+    if (!authResult.userId) {
+      return {
+        success: false,
+        deductedItems: [],
+        skippedItems: [],
+        errors: [`Authentication failed: ${authResult.error}`],
+        debugInfo: {
+          productName,
+          isMixMatch: false,
+          selectedChoices: [],
+          baseIngredients: [],
+          choiceIngredients: [],
+          packagingIngredients: []
+        }
+      };
+    }
+    validatedUserId = authResult.userId;
+  }
   
   const result: SmartDeductionResult = {
     success: true,
@@ -227,7 +287,7 @@ export const deductMixMatchInventoryWithAuth = async (
         continue;
       }
 
-      // CRITICAL: Create complete audit trail BEFORE updating stock
+      // **PHASE 1 FIX**: Enhanced audit trail with proper error propagation
       console.log(`🚨 AUDIT: About to create audit records for ${ingredientName}...`);
       
       // First, log to inventory_transactions (primary audit table) - only if we have a valid product ID
@@ -240,38 +300,45 @@ export const deductMixMatchInventoryWithAuth = async (
             .from('inventory_transactions')
             .insert({
               store_id: storeId,
-              product_id: validProductId, // Validated product ID
+              product_id: validProductId,
               transaction_type: 'sale',
               quantity: totalDeduction,
               previous_quantity: currentStock,
               new_quantity: newStock,
               reference_id: transactionId,
               notes: `Smart Mix & Match deduction: ${ingredientName} for ${productName} (${category})`,
-              created_by: userId
+              created_by: validatedUserId // Use validated user ID
             });
           
           if (transactionLogError) {
-            console.error(`❌ AUDIT FAILED: inventory_transactions insert failed for ${ingredientName}:`, transactionLogError);
-            console.error(`❌ AUDIT DETAILS: Store ID: ${storeId}, Product ID: ${validProductId}, User ID: ${userId}`);
-            // Check for common RLS policy issues
+            const errorMsg = `Audit logging failed for ${ingredientName}: ${transactionLogError.message}`;
+            console.error(`❌ AUDIT FAILED: ${errorMsg}`);
+            
+            // **PHASE 1 FIX**: Don't fail silently - add to errors but continue
+            result.errors.push(errorMsg);
+            
+            // Enhanced RLS diagnostics
             if (transactionLogError.message?.includes('policy')) {
-              console.error(`❌ RLS POLICY ISSUE: User ${userId} may not have access to store ${storeId} in user_stores table`);
-            }
-            if (transactionLogError.message?.includes('null value')) {
-              console.error(`❌ NULL CONSTRAINT: One of the required fields is null - Product ID: ${validProductId}, User ID: ${userId}`);
+              const policyError = `RLS policy issue: User ${validatedUserId} may not have access to store ${storeId}`;
+              console.error(`❌ RLS POLICY ISSUE: ${policyError}`);
+              result.errors.push(policyError);
             }
           } else {
             auditSuccess = true;
-            console.log(`✅ AUDIT LOGGED: ${ingredientName} transaction logged in inventory_transactions`);
+            console.log(`✅ AUDIT LOGGED: ${ingredientName} transaction logged successfully`);
           }
         } catch (auditError) {
-          console.error(`❌ AUDIT ERROR: Failed to create inventory_transactions record for ${ingredientName}:`, auditError);
+          const errorMsg = `Audit exception for ${ingredientName}: ${auditError instanceof Error ? auditError.message : 'Unknown error'}`;
+          console.error(`❌ AUDIT ERROR: ${errorMsg}`);
+          result.errors.push(errorMsg); // **PHASE 1 FIX**: Don't swallow exceptions
         }
       } else {
-        console.warn(`⚠️ AUDIT SKIPPED: No valid product ID for ${ingredientName} - Original Product ID: ${productId}`);
+        const warningMsg = `No valid product ID for audit logging: ${ingredientName}`;
+        console.warn(`⚠️ AUDIT SKIPPED: ${warningMsg}`);
+        result.skippedItems.push(warningMsg);
       }
       
-      // Second, log to inventory_movements (legacy compatibility)
+      // Second, log to inventory_movements (legacy compatibility) - with improved error handling
       try {
         const { error: rpcError } = await supabase.rpc('insert_inventory_movement_safe', {
           p_inventory_stock_id: ingredient.inventory_stock_id,
@@ -282,23 +349,29 @@ export const deductMixMatchInventoryWithAuth = async (
           p_reference_type: 'transaction',
           p_reference_id: transactionId,
           p_notes: `Smart Mix & Match deduction: ${ingredientName} for ${productName} (${category})`,
-          p_created_by: userId
+          p_created_by: validatedUserId
         });
         
         if (rpcError) {
-          console.error(`❌ LEGACY AUDIT FAILED: inventory_movements RPC failed for ${ingredientName}:`, rpcError);
+          const errorMsg = `Legacy audit RPC failed for ${ingredientName}: ${rpcError.message}`;
+          console.error(`❌ LEGACY AUDIT FAILED: ${errorMsg}`);
+          result.errors.push(errorMsg); // **PHASE 1 FIX**: Proper error propagation
         } else {
-          console.log(`✅ LEGACY AUDIT LOGGED: ${ingredientName} movement logged in inventory_movements`);
+          console.log(`✅ LEGACY AUDIT LOGGED: ${ingredientName} movement logged successfully`);
         }
       } catch (rpcError) {
-        console.error(`❌ RPC ERROR: insert_inventory_movement_safe failed for ${ingredientName}:`, rpcError);
+        const errorMsg = `RPC exception for ${ingredientName}: ${rpcError instanceof Error ? rpcError.message : 'Unknown error'}`;
+        console.error(`❌ RPC ERROR: ${errorMsg}`);
+        result.errors.push(errorMsg); // **PHASE 1 FIX**: Don't swallow RPC exceptions
       }
       
-      // Log audit status
+      // **PHASE 1 FIX**: Enhanced audit status reporting
       if (auditSuccess) {
         console.log(`✅ AUDIT STATUS: Complete audit trail created for ${ingredientName}`);
       } else {
-        console.warn(`⚠️ AUDIT STATUS: Incomplete audit trail for ${ingredientName} - manual review required`);
+        const auditWarning = `Incomplete audit trail for ${ingredientName} - manual review required`;
+        console.warn(`⚠️ AUDIT STATUS: ${auditWarning}`);
+        // Note: We don't add this to errors since it's not a fatal error, but it's logged for monitoring
       }
 
       result.deductedItems.push({

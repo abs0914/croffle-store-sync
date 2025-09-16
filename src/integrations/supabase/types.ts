@@ -8076,6 +8076,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_authenticated_user_with_fallback: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_category_statistics: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -8323,6 +8327,17 @@ export type Database = {
           p_user_id?: string
         }
         Returns: undefined
+      }
+      log_inventory_deduction_audit_safe: {
+        Args: {
+          p_items_processed?: number
+          p_metadata?: Json
+          p_operation_type: string
+          p_status: string
+          p_store_id: string
+          p_transaction_id: string
+        }
+        Returns: string
       }
       log_inventory_sync_result: {
         Args: {

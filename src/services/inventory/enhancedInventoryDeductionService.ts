@@ -135,7 +135,72 @@ export const deductInventoryForTransactionEnhancedWithAuth = async (
 };
 
 /**
- * Legacy method - maintained for backward compatibility
+ * **PHASE 1 FIX**: Enhanced authentication fallback with circuit breaker pattern
+ */
+const getAuthenticatedUserWithCircuitBreaker = async (): Promise<{ userId: string | null; error?: string }> => {
+  const maxRetries = 3;
+  const baseDelay = 100; // ms
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔐 CIRCUIT BREAKER: Auth attempt ${attempt}/${maxRetries}`);
+      
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.warn(`⚠️ CIRCUIT BREAKER ${attempt}: Auth error - ${error.message}`);
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff with jitter
+          const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 50;
+          console.log(`⏳ CIRCUIT BREAKER: Retrying in ${delay.toFixed(0)}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        return { 
+          userId: null, 
+          error: `Circuit breaker: Authentication failed after ${maxRetries} attempts - ${error.message}` 
+        };
+      }
+      
+      if (!user) {
+        console.warn(`⚠️ CIRCUIT BREAKER ${attempt}: No user session`);
+        
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, baseDelay));
+          continue;
+        }
+        
+        return { 
+          userId: null, 
+          error: 'Circuit breaker: No authenticated user found after retries' 
+        };
+      }
+      
+      console.log(`✅ CIRCUIT BREAKER: Success on attempt ${attempt} - User ${user.id}`);
+      return { userId: user.id };
+      
+    } catch (error) {
+      console.error(`❌ CIRCUIT BREAKER ${attempt}: Exception -`, error);
+      
+      if (attempt === maxRetries) {
+        return { 
+          userId: null, 
+          error: `Circuit breaker: Auth service exception - ${error instanceof Error ? error.message : 'Unknown error'}` 
+        };
+      }
+      
+      // Progressive delay for exceptions
+      await new Promise(resolve => setTimeout(resolve, baseDelay * attempt));
+    }
+  }
+  
+  return { userId: null, error: 'Circuit breaker: Authentication system unavailable' };
+};
+
+/**
+ * Legacy method - **PHASE 1 FIX**: Enhanced with circuit breaker authentication
  */
 export const deductInventoryForTransactionEnhanced = async (
   transactionId: string,
@@ -144,22 +209,22 @@ export const deductInventoryForTransactionEnhanced = async (
 ): Promise<EnhancedDeductionResult> => {
   console.warn('⚠️ LEGACY CALL: deductInventoryForTransactionEnhanced called without user context');
   
-  // Try to get user from current session
-  const { data: { user } } = await supabase.auth.getUser();
-  const userId = user?.id;
+  // **PHASE 1 FIX**: Use circuit breaker authentication
+  const authResult = await getAuthenticatedUserWithCircuitBreaker();
   
-  if (!userId) {
-    console.error('❌ LEGACY CALL: No user context available');
+  if (!authResult.userId) {
+    console.error(`❌ LEGACY CALL: ${authResult.error}`);
     return {
       success: false,
       deductedItems: [],
-      skippedItems: [],
-      errors: ['No user context available for inventory deduction'],
+      skippedItems: [`Authentication failed: ${authResult.error}`],
+      errors: [authResult.error || 'Authentication system unavailable'],
       isMixMatch: false
     };
   }
   
-  return deductInventoryForTransactionEnhancedWithAuth(transactionId, storeId, items, userId);
+  console.log(`✅ LEGACY CALL: Circuit breaker authentication succeeded - User ${authResult.userId}`);
+  return deductInventoryForTransactionEnhancedWithAuth(transactionId, storeId, items, authResult.userId);
 };
 
 /**
@@ -298,40 +363,50 @@ async function deductRegularProductWithAuth(
         continue;
       }
 
-      // CRITICAL: Log inventory audit using the new comprehensive audit function
-      console.log(`🚨 DEBUG: About to log inventory audit for ${ingredientName}...`);
+      // **PHASE 1 FIX**: Enhanced audit logging with proper error propagation
+      console.log(`🚨 AUDIT: Creating comprehensive audit trail for ${ingredientName}...`);
       
-      // Use the actual product catalog ID for logging, with proper validation
       const actualProductId = productCatalog?.id || (productId && productId !== 'undefined' ? productId : null);
       
       if (actualProductId) {
         try {
-          // Use the new comprehensive audit logging function
-          const { error: auditError } = await supabase.rpc('log_inventory_deduction_audit', {
+          // Use safe audit logging function with better error handling
+          const auditId = await supabase.rpc('log_inventory_deduction_audit_safe', {
             p_transaction_id: transactionId,
             p_store_id: storeId,
-            p_product_id: actualProductId,
-            p_inventory_stock_id: ingredient.inventory_stock_id,
-            p_ingredient_name: ingredientName,
-            p_quantity_deducted: totalDeduction,
-            p_previous_quantity: stockItem.stock_quantity,
-            p_new_quantity: newStock,
-            p_recipe_name: recipe.name,
-            p_user_id: userId
+            p_operation_type: 'regular_deduction',
+            p_status: 'success',
+            p_items_processed: 1,
+            p_metadata: {
+              product_id: actualProductId,
+              inventory_stock_id: ingredient.inventory_stock_id,
+              ingredient_name: ingredientName,
+              quantity_deducted: totalDeduction,
+              previous_quantity: stockItem.stock_quantity,
+              new_quantity: newStock,
+              recipe_name: recipe.name,
+              ingredient_group: groupName,
+              deduction_timestamp: new Date().toISOString()
+            }
           });
           
-          if (auditError) {
-            console.error(`❌ COMPREHENSIVE AUDIT FAILED for ${ingredientName}:`, auditError);
-            console.warn(`⚠️ Inventory deduction will continue but audit trail may be incomplete`);
+          if (auditId.data) {
+            console.log(`✅ ENHANCED AUDIT LOGGED: Audit ID ${auditId.data} for ${ingredientName}`);
           } else {
-            console.log(`✅ COMPREHENSIVE AUDIT LOGGED: Complete audit trail created for ${ingredientName}`);
+            console.warn(`⚠️ ENHANCED AUDIT: Function returned null for ${ingredientName} - check audit logs`);
+            // **PHASE 1 FIX**: Don't fail silently, but don't fail the transaction either
+            result.errors.push(`Audit logging warning for ${ingredientName}: Function returned null`);
           }
         } catch (auditError) {
-          console.error(`❌ AUDIT EXCEPTION: Failed to create comprehensive audit for ${ingredientName}:`, auditError);
-          console.warn(`⚠️ Inventory deduction will continue but audit trail may be incomplete`);
+          const errorMsg = `Audit exception for ${ingredientName}: ${auditError instanceof Error ? auditError.message : 'Unknown error'}`;
+          console.error(`❌ AUDIT EXCEPTION: ${errorMsg}`);
+          // **PHASE 1 FIX**: Proper error propagation - add to errors but don't fail the deduction
+          result.errors.push(errorMsg);
         }
       } else {
-        console.warn(`⚠️ AUDIT SKIPPED: No valid product ID for ${ingredientName} - Product Catalog ID: ${productCatalog?.id}, Original Product ID: ${productId}`);
+        const warningMsg = `No valid product ID for audit logging: ${ingredientName}`;
+        console.warn(`⚠️ AUDIT SKIPPED: ${warningMsg}`);
+        result.errors.push(warningMsg); // **PHASE 1 FIX**: Track missing product IDs as errors
       }
 
       // Record the deduction

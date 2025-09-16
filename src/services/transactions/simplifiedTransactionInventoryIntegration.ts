@@ -8,6 +8,7 @@
 import { SimplifiedInventoryAuditService, SimpleDeductionItem } from "@/services/inventory/simplifiedInventoryAuditService";
 import { deductInventoryForTransactionEnhanced, deductInventoryForTransactionEnhancedWithAuth } from "@/services/inventory/enhancedInventoryDeductionService";
 import { ComboExpansionService, ComboExpansionItem } from "@/services/transactions/comboExpansionService";
+import { inventoryAuditService } from "@/services/inventory/inventoryAuditService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -107,15 +108,16 @@ export class SimplifiedTransactionInventoryIntegration {
   }
   
   /**
-   * Process inventory deduction after successful payment
-   * Uses enhanced deduction system that handles Mix & Match products intelligently
-   * Now with proper authentication context
+   * **PHASE 2**: Enhanced processing with comprehensive monitoring
    */
   static async processTransactionInventoryWithAuth(
     transactionId: string,
     items: TransactionItem[],
     userId: string
   ): Promise<{ success: boolean; errors: string[]; warnings: string[] }> {
+    // **PHASE 2**: Start performance monitoring
+    inventoryAuditService.startPerformanceTimer(transactionId);
+    
     console.log(`🔄 ENHANCED PROCESSING: Deducting inventory for transaction ${transactionId} with user ${userId}`);
     
     // **CRITICAL DEBUG**: Track every step
@@ -131,6 +133,23 @@ export class SimplifiedTransactionInventoryIntegration {
       
       if (!expansionResult.success) {
         console.error(`❌ COMBO EXPANSION FAILED:`, expansionResult.errors);
+        
+        // **PHASE 2**: Log combo expansion failure
+        await inventoryAuditService.logInventoryEvent({
+          transactionId,
+          storeId: items[0]?.storeId || 'unknown',
+          operationType: 'validation',
+          status: 'failure',
+          itemsProcessed: items.length,
+          processingTimeMs: inventoryAuditService.getElapsedTime(transactionId),
+          userId,
+          metadata: {
+            error_type: 'combo_expansion_failure',
+            errors: expansionResult.errors,
+            original_items: items.length
+          }
+        });
+        
         return {
           success: false,
           errors: [`Combo expansion failed: ${expansionResult.errors.join(', ')}`],
@@ -153,6 +172,22 @@ export class SimplifiedTransactionInventoryIntegration {
       const storeId = items[0]?.storeId;
       if (!storeId) {
         console.error(`🚨 DEBUG: No store ID found in items`);
+        
+        // **PHASE 2**: Log missing store ID
+        await inventoryAuditService.logInventoryEvent({
+          transactionId,
+          storeId: 'unknown',
+          operationType: 'validation',
+          status: 'failure',
+          itemsProcessed: 0,
+          processingTimeMs: inventoryAuditService.getElapsedTime(transactionId),
+          userId,
+          metadata: {
+            error_type: 'missing_store_id',
+            errors: ['Store ID is required for inventory deduction']
+          }
+        });
+        
         throw new Error('Store ID is required for inventory deduction');
       }
       
@@ -168,6 +203,33 @@ export class SimplifiedTransactionInventoryIntegration {
       
       console.log(`🚨 DEBUG: deductInventoryForTransactionEnhancedWithAuth returned:`, result);
       
+      // **PHASE 2**: Log comprehensive audit event
+      const processingTime = inventoryAuditService.getElapsedTime(transactionId);
+      
+      await inventoryAuditService.logInventoryEvent({
+        transactionId,
+        storeId,
+        operationType: result.isMixMatch ? 'mix_match_deduction' : 'regular_deduction',
+        status: result.success ? 'success' : 'failure',
+        itemsProcessed: result.deductedItems.length,
+        processingTimeMs: processingTime,
+        userId,
+        metadata: {
+          productNames: enhancedItems.map(item => item.productName),
+          deductedItems: result.deductedItems.map(item => ({
+            itemName: item.itemName,
+            quantityDeducted: item.quantityDeducted,
+            newStock: item.newStock
+          })),
+          skippedItems: result.skippedItems || [],
+          errors: result.errors,
+          combosProcessed: expansionResult.combosProcessed,
+          is_mix_match: result.isMixMatch,
+          original_items_count: items.length,
+          expanded_items_count: enhancedItems.length
+        }
+      });
+      
       // Combine combo expansion warnings with deduction warnings
       const allWarnings = [
         ...(expansionResult.combosProcessed > 0 ? [`Expanded ${expansionResult.combosProcessed} combo products`] : []),
@@ -175,7 +237,7 @@ export class SimplifiedTransactionInventoryIntegration {
       ];
       
       if (result.success) {
-        console.log(`✅ ENHANCED PROCESSING: Transaction inventory processed successfully`);
+        console.log(`✅ ENHANCED PROCESSING: Transaction inventory processed successfully in ${processingTime}ms`);
         console.log(`📊 ENHANCED PROCESSING: Deducted ${result.deductedItems.length} items${result.isMixMatch ? ' (Mix & Match detected)' : ''}`);
         if (expansionResult.combosProcessed > 0) {
           console.log(`🎯 COMBO SUCCESS: Successfully processed ${expansionResult.combosProcessed} combo products`);
@@ -184,7 +246,7 @@ export class SimplifiedTransactionInventoryIntegration {
           console.log(`⚠️ ENHANCED PROCESSING: Skipped ${result.skippedItems.length} items: ${result.skippedItems.join(', ')}`);
         }
       } else {
-        console.error(`❌ ENHANCED PROCESSING: Transaction inventory failed:`, result.errors);
+        console.error(`❌ ENHANCED PROCESSING: Transaction inventory failed in ${processingTime}ms:`, result.errors);
         toast.error(`Inventory deduction failed: ${result.errors[0]}`);
       }
       
@@ -195,8 +257,27 @@ export class SimplifiedTransactionInventoryIntegration {
       };
       
     } catch (error) {
+      const processingTime = inventoryAuditService.getElapsedTime(transactionId);
+      
       console.error('🚨 DEBUG: Exception in processTransactionInventoryWithAuth:', error);
       console.error('❌ ENHANCED PROCESSING: Processing failed:', error);
+      
+      // **PHASE 2**: Log processing exception
+      await inventoryAuditService.logInventoryEvent({
+        transactionId,
+        storeId: items[0]?.storeId || 'unknown',
+        operationType: 'regular_deduction',
+        status: 'failure',
+        itemsProcessed: 0,
+        processingTimeMs: processingTime,
+        userId,
+        metadata: {
+          error_type: 'processing_exception',
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+          stack_trace: error instanceof Error ? error.stack : undefined
+        }
+      });
+      
       const errorMsg = error instanceof Error ? error.message : 'Processing failed';
       return { 
         success: false, 
@@ -207,8 +288,53 @@ export class SimplifiedTransactionInventoryIntegration {
   }
 
   /**
+   * **PHASE 1 FIX**: Enhanced authentication fallback with retry logic
+   */
+  static async getAuthenticatedUserWithRetry(maxRetries: number = 2): Promise<{ userId: string | null; error?: string }> {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔐 AUTH RETRY: Attempt ${attempt}/${maxRetries}`);
+        
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error) {
+          console.warn(`⚠️ AUTH RETRY ${attempt}: ${error.message}`);
+          if (attempt < maxRetries) {
+            // Exponential backoff: 100ms, 300ms, etc.
+            const delay = 100 * (Math.pow(3, attempt - 1));
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          return { userId: null, error: `Authentication failed after ${maxRetries} attempts: ${error.message}` };
+        }
+        
+        if (!user) {
+          console.warn(`⚠️ AUTH RETRY ${attempt}: No user in session`);
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            continue;
+          }
+          return { userId: null, error: 'No authenticated user found after retries' };
+        }
+        
+        console.log(`✅ AUTH SUCCESS: User ${user.id} authenticated on attempt ${attempt}`);
+        return { userId: user.id };
+        
+      } catch (error) {
+        console.error(`❌ AUTH RETRY ${attempt} ERROR:`, error);
+        if (attempt === maxRetries) {
+          return { userId: null, error: `Auth service error: ${error instanceof Error ? error.message : 'Unknown error'}` };
+        }
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+    
+    return { userId: null, error: 'Authentication failed - max retries exceeded' };
+  }
+
+  /**
    * Legacy method - maintained for backward compatibility
-   * Uses the new method with null user context (will log warnings)
+   * **PHASE 1 FIX**: Now uses enhanced authentication with retry logic
    */
   static async processTransactionInventory(
     transactionId: string,
@@ -216,20 +342,20 @@ export class SimplifiedTransactionInventoryIntegration {
   ): Promise<{ success: boolean; errors: string[]; warnings: string[] }> {
     console.warn('⚠️ LEGACY CALL: processTransactionInventory called without user context');
     
-    // Try to get user from current session
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
+    // **PHASE 1 FIX**: Use enhanced authentication with retry logic
+    const authResult = await this.getAuthenticatedUserWithRetry();
     
-    if (!userId) {
-      console.error('❌ LEGACY CALL: No user context available');
+    if (!authResult.userId) {
+      console.error(`❌ LEGACY CALL: ${authResult.error}`);
       return {
         success: false,
-        errors: ['No user context available for inventory deduction'],
-        warnings: []
+        errors: [`Authentication failed: ${authResult.error}`],
+        warnings: ['Consider migrating to processTransactionInventoryWithAuth method for better reliability']
       };
     }
     
-    return this.processTransactionInventoryWithAuth(transactionId, items, userId);
+    console.log(`✅ LEGACY CALL: Authentication succeeded, proceeding with user ${authResult.userId}`);
+    return this.processTransactionInventoryWithAuth(transactionId, items, authResult.userId);
   }
   
   /**
