@@ -204,7 +204,7 @@ async function deductRegularProductWithAuth(
         id,
         product_name,
         recipe_id,
-        recipes!inner (
+        recipe:recipes!recipe_id (
           id,
           name,
           recipe_ingredients (
@@ -231,7 +231,7 @@ async function deductRegularProductWithAuth(
       return result;
     }
 
-    const recipe = productCatalog?.recipes;
+    const recipe = productCatalog?.recipe;
 
     if (!recipe) {
       console.log(`ℹ️ No recipe found for product ${productName}, skipping deduction`);

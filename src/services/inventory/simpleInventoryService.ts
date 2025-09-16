@@ -88,7 +88,7 @@ export const deductInventoryForSingleProduct = async (
         id,
         product_name,
         recipe_id,
-        recipes!inner (
+        recipe:recipes!recipe_id (
           id,
           name,
           recipe_ingredients (
@@ -114,7 +114,7 @@ export const deductInventoryForSingleProduct = async (
       return result;
     }
 
-    const recipe = productCatalog?.recipes;
+    const recipe = productCatalog?.recipe;
 
     if (!recipe) {
       console.log(`ℹ️ No recipe found for product ${productName}, skipping`);
@@ -240,7 +240,7 @@ export const performSimpleInventoryDeduction = async (
         .from('product_catalog')
         .select(`
           recipe_id,
-          recipes!inner (
+          recipe:recipes!recipe_id (
             id,
             name,
             recipe_ingredients (
@@ -267,12 +267,12 @@ export const performSimpleInventoryDeduction = async (
         continue;
       }
 
-      if (!recipeData || !recipeData.recipes) {
+      if (!recipeData || !recipeData.recipe) {
         console.log(`⚠️ No recipe found for ${item.productName}, skipping`);
         continue;
       }
 
-      const recipe = recipeData.recipes;
+      const recipe = recipeData.recipe;
       const ingredients = recipe.recipe_ingredients || [];
 
       console.log(`📝 Found ${ingredients.length} ingredients for ${item.productName}`);
