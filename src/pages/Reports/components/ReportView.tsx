@@ -10,7 +10,8 @@ import { BIRDataBackupView } from "./reports/BIRDataBackupView";
 import { VATReportView } from "./reports/VATReportView";
 import { CashierReportView } from "./reports/CashierReportView";
 import CashierShiftReportView from "./reports/CashierShiftReportView";
-import CashierInventoryReportView from "./reports/CashierInventoryReportView";
+import { BIRXReadingView } from "./reports/BIRXReadingView";
+import { BIRZReadingView } from "./reports/BIRZReadingView";
 
 interface ReportViewProps {
   reportType: ReportType;
