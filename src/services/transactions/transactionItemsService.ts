@@ -23,7 +23,7 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
   for (const item of items) {
     try {
     // Check if this is a combo product
-    if (item.productId.startsWith('combo_')) {
+    if (item.productId.startsWith('combo-')) {
         console.log('🔧 Processing combo item:', item.productId, item.product.name);
         
         // Handle combo product - expand into component items
@@ -98,13 +98,17 @@ async function expandComboProduct(comboItem: CartItem): Promise<DetailedTransact
   console.log('🔧 Expanding combo product:', comboItem.product.name);
   
   try {
-    // Extract component IDs from combo ID: "combo_{uuid1}_{uuid2}"
-    const parts = comboItem.productId.split('_');
-    if (parts.length !== 3) {
-      throw new Error(`Invalid combo ID format: ${comboItem.productId}. Expected format: combo_{uuid1}_{uuid2}`);
+    // Extract component IDs from combo ID: "combo-{uuid1}-{uuid2}"
+    const parts = comboItem.productId.split('-');
+    if (parts.length !== 11) { // combo + 5 parts for each UUID = 11 parts total
+      throw new Error(`Invalid combo ID format: ${comboItem.productId}. Expected format: combo-{uuid1}-{uuid2}`);
     }
 
-    const componentIds = [parts[1], parts[2]];
+    // Reconstruct the two UUIDs from the parts
+    const componentIds = [
+      `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}-${parts[5]}`, // First UUID
+      `${parts[6]}-${parts[7]}-${parts[8]}-${parts[9]}-${parts[10]}` // Second UUID
+    ];
 
     // Validate that both parts are valid UUIDs
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

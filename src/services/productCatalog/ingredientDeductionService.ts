@@ -113,7 +113,7 @@ export const deductIngredientsForProduct = async (
       console.error('🏪 Mini Croffle products for current store:', storeProducts);
       
       // Check if this might be a combo product ID
-      if (productId.startsWith('combo_')) {
+      if (productId.startsWith('combo-')) {
         console.error('🧩 This appears to be a combo product ID, but validation failed');
       }
       

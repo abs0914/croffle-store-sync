@@ -17,8 +17,8 @@ export const validateProductForSale = async (
   try {
     console.log('🔍 Validating product for sale:', { productId, quantity });
 
-  // Check if this is a combo product (has "combo_" prefix)
-  if (productId.startsWith('combo_')) {
+  // Check if this is a combo product (has "combo-" prefix)
+  if (productId.startsWith('combo-')) {
       return await validateComboProduct(productId, quantity);
     }
 
