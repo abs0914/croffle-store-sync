@@ -81,8 +81,8 @@ export const deductInventoryForSingleProduct = async (
   };
 
   try {
-    // Get recipe for this product
-    const { data: productCatalog, error: catalogError } = await supabase
+    // Build query based on whether we have productId or need to use productName
+    let query = supabase
       .from('product_catalog')
       .select(`
         id,
@@ -103,10 +103,18 @@ export const deductInventoryForSingleProduct = async (
           )
         )
       `)
-      .eq('id', productId)
       .eq('store_id', storeId)
-      .eq('is_available', true)
-      .maybeSingle();
+      .eq('is_available', true);
+
+    // Use productId if available, otherwise fall back to productName
+    if (productId && productId !== 'undefined') {
+      query = query.eq('id', productId);
+    } else {
+      console.log(`🔍 No valid productId provided for ${productName}, searching by name`);
+      query = query.eq('product_name', productName);
+    }
+
+    const { data: productCatalog, error: catalogError } = await query.maybeSingle();
 
     if (catalogError) {
       result.errors.push(`Error fetching recipe for product ${productName}: ${catalogError.message}`);
@@ -235,31 +243,70 @@ export const performSimpleInventoryDeduction = async (
     for (const item of items) {
       console.log(`📦 Processing ${item.productName} x${item.quantity}`);
       
-      // Get recipe ingredients using the new schema
-      const { data: recipeData, error: recipeError } = await supabase
-        .from('product_catalog')
-        .select(`
-          recipe_id,
-          recipe:recipes!recipe_id (
-            id,
-            name,
-            recipe_ingredients (
-              inventory_stock_id,
-              quantity,
-              unit,
-              inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
-                id,
-                item,
-                stock_quantity,
-                unit
+      // Get recipe ingredients using the new schema, with fallback to name search
+      let recipeData: any = null;
+      let recipeError: any = null;
+
+      // Try to look up by productId first if available
+      if (item.productId && item.productId !== 'undefined') {
+        const result = await supabase
+          .from('product_catalog')
+          .select(`
+            recipe_id,
+            recipe:recipes!recipe_id (
+              id,
+              name,
+              recipe_ingredients (
+                inventory_stock_id,
+                quantity,
+                unit,
+                inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
+                  id,
+                  item,
+                  stock_quantity,
+                  unit
+                )
               )
             )
-          )
-        `)
-        .eq('id', item.productId)
-        .eq('store_id', storeId)
-        .eq('is_available', true)
-        .maybeSingle();
+          `)
+          .eq('id', item.productId)
+          .eq('store_id', storeId)
+          .eq('is_available', true)
+          .maybeSingle();
+        
+        recipeData = result.data;
+        recipeError = result.error;
+      } else {
+        // Fall back to name search
+        console.log(`🔍 No valid productId provided for ${item.productName}, searching by name`);
+        const result = await supabase
+          .from('product_catalog')
+          .select(`
+            recipe_id,
+            recipe:recipes!recipe_id (
+              id,
+              name,
+              recipe_ingredients (
+                inventory_stock_id,
+                quantity,
+                unit,
+                inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
+                  id,
+                  item,
+                  stock_quantity,
+                  unit
+                )
+              )
+            )
+          `)
+          .eq('product_name', item.productName)
+          .eq('store_id', storeId)
+          .eq('is_available', true)
+          .maybeSingle();
+        
+        recipeData = result.data;
+        recipeError = result.error;
+      }
 
       if (recipeError) {
         console.error(`❌ Recipe query failed for ${item.productName}:`, recipeError);

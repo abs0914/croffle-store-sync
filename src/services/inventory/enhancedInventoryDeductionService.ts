@@ -197,8 +197,8 @@ async function deductRegularProductWithAuth(
   };
 
   try {
-    // Get recipe for this product with ingredient groups
-    const { data: productCatalog, error: catalogError } = await supabase
+    // Build query based on whether we have productId or need to use productName
+    let query = supabase
       .from('product_catalog')
       .select(`
         id,
@@ -220,13 +220,21 @@ async function deductRegularProductWithAuth(
           )
         )
       `)
-      .eq('id', productId)
       .eq('store_id', storeId)
-      .eq('is_available', true)
-      .maybeSingle();
+      .eq('is_available', true);
+
+    // Use productId if available, otherwise fall back to productName
+    if (productId && productId !== 'undefined') {
+      query = query.eq('id', productId);
+    } else {
+      console.log(`🔍 No valid productId provided for ${productName}, searching by name`);
+      query = query.eq('product_name', productName);
+    }
+
+    const { data: productCatalog, error: catalogError } = await query.maybeSingle();
 
     if (catalogError) {
-      result.errors.push(`Error fetching recipe for product ${productName}`);
+      result.errors.push(`Error fetching recipe for product ${productName}: ${catalogError.message}`);
       result.success = false;
       return result;
     }
@@ -293,6 +301,9 @@ async function deductRegularProductWithAuth(
       // CRITICAL: Log inventory transaction BEFORE updating stock to ensure audit trail
       console.log(`🚨 DEBUG: About to log inventory transaction for ${ingredientName}...`);
       
+      // Use the actual product catalog ID for logging, not the undefined productId
+      const actualProductId = productCatalog?.id || productId;
+      
       // First, create audit records in inventory_transactions (primary audit)
       let auditSuccess = false;
       try {
@@ -300,7 +311,7 @@ async function deductRegularProductWithAuth(
           .from('inventory_transactions')
           .insert({
             store_id: storeId,
-            product_id: productId, // Use actual product ID, not inventory stock ID
+            product_id: actualProductId, // Use actual product ID from catalog
             transaction_type: 'sale',
             quantity: totalDeduction,
             previous_quantity: stockItem.stock_quantity,
