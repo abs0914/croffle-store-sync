@@ -362,8 +362,8 @@ class StreamlinedTransactionService {
         const basicItems: DetailedTransactionItem[] = [];
         
         for (const item of items) {
-          // Check if this is a combo product
-          if (item.productId.startsWith('combo-')) {
+        // Check if this is a combo product
+        if (item.productId.startsWith('combo_')) {
             console.log('🔧 Processing combo item in transaction:', item.productId);
             
             // Expand combo product into component items
@@ -401,32 +401,18 @@ class StreamlinedTransactionService {
    */
   private async expandComboProductForTransaction(item: StreamlinedTransactionItem): Promise<DetailedTransactionItem[]> {
     try {
-      // Extract component IDs from combo ID: "combo-{uuid1}-{uuid2}"
-      const parts = item.productId.split('-');
-      if (parts.length < 3) {
-        throw new Error(`Invalid combo ID format: ${item.productId}`);
+      // Extract component IDs from combo ID: "combo_{uuid1}_{uuid2}"
+      const parts = item.productId.split('_');
+      if (parts.length !== 3) {
+        throw new Error(`Invalid combo ID format: ${item.productId}. Expected format: combo_{uuid1}_{uuid2}`);
       }
 
-      // Extract the component product IDs (everything after "combo-")
-      const componentIds: string[] = [];
-      let currentId = '';
-      
-      for (let i = 1; i < parts.length; i++) {
-        if (currentId) {
-          currentId += '-' + parts[i];
-        } else {
-          currentId = parts[i];
-        }
-        
-        // Check if this looks like a complete UUID (36 characters with dashes)
-        if (currentId.length === 36 && currentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          componentIds.push(currentId);
-          currentId = '';
-        }
-      }
+      const componentIds = [parts[1], parts[2]];
 
-      if (componentIds.length !== 2) {
-        throw new Error(`Expected 2 component IDs in combo, found ${componentIds.length}: ${item.productId}`);
+      // Validate that both parts are valid UUIDs
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(componentIds[0]) || !uuidRegex.test(componentIds[1])) {
+        throw new Error(`Invalid UUID format in combo ID: ${item.productId}`);
       }
       
       const croffleId = componentIds[0];

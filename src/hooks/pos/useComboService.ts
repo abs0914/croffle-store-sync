@@ -139,7 +139,7 @@ export function useComboService() {
     return {
       product: {
         ...croffle,
-        id: `combo-${croffle.id}-${espresso.id}`,
+        id: `combo_${croffle.id}_${espresso.id}`,
         name: comboName,
         price: comboPrice,
         description: `${croffle.name} with ${espresso.name}`,
