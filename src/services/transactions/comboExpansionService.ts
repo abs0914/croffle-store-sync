@@ -128,66 +128,30 @@ export class ComboExpansionService {
       for (let i = 0; i < componentNames.length; i++) {
         const componentName = componentNames[i];
         
-        // Find the product in the catalog for this component
-        const { data: componentProduct, error: productError } = await supabase
-          .from('product_catalog')
-          .select('id, product_name')
-          .eq('store_id', comboItem.storeId)
-          .eq('is_available', true)
-          .ilike('product_name', `%${componentName}%`)
-          .limit(1)
-          .maybeSingle();
-
-        if (productError) {
-          console.error(`❌ COMPONENT LOOKUP ERROR: ${componentName}:`, productError);
+        // Try to resolve the component
+        const componentResult = await this.resolveComponent(componentName, comboItem.storeId);
+        
+        if (componentResult.success && componentResult.components.length > 0) {
+          // Add all resolved components (could be multiple for Mix & Match)
+          componentResult.components.forEach((comp, idx) => {
+            components.push({
+              ...comp,
+              quantity: comboItem.quantity,
+              storeId: comboItem.storeId,
+              isExpanded: true,
+              originalComboName: comboItem.productName,
+              componentType: (i === 0 && idx === 0) ? 'base' : 'addon'
+            });
+          });
+          
+          console.log(`✅ COMPONENT RESOLVED: ${componentName} → ${componentResult.components.length} item(s)`);
+        } else {
+          console.error(`❌ COMPONENT RESOLUTION FAILED: ${componentName}: ${componentResult.error}`);
           return {
             success: false,
             components: [],
-            error: `Failed to lookup component ${componentName}: ${productError.message}`
+            error: componentResult.error || `Component ${componentName} not found in product catalog`
           };
-        }
-
-        if (!componentProduct) {
-          console.warn(`⚠️ COMPONENT NOT FOUND: ${componentName} in store ${comboItem.storeId}`);
-          
-          // Try exact name match as fallback
-          const { data: exactMatch } = await supabase
-            .from('product_catalog')
-            .select('id, product_name')
-            .eq('store_id', comboItem.storeId)
-            .eq('product_name', componentName)
-            .eq('is_available', true)
-            .maybeSingle();
-
-          if (!exactMatch) {
-            return {
-              success: false,
-              components: [],
-              error: `Component ${componentName} not found in product catalog`
-            };
-          }
-          
-          console.log(`✅ EXACT MATCH FOUND: ${componentName}`);
-          components.push({
-            productId: exactMatch.id,
-            productName: exactMatch.product_name,
-            quantity: comboItem.quantity,
-            storeId: comboItem.storeId,
-            isExpanded: true,
-            originalComboName: comboItem.productName,
-            componentType: i === 0 ? 'base' : 'addon'
-          });
-        } else {
-          console.log(`✅ COMPONENT FOUND: ${componentName} → ${componentProduct.product_name}`);
-          components.push({
-            productId: componentProduct.id,
-            productName: componentProduct.product_name,
-            quantity: comboItem.quantity,
-            storeId: comboItem.storeId,
-            isExpanded: true,
-            originalComboName: comboItem.productName,
-            componentType: i === 0 ? 'base' : 'addon'
-          });
         }
       }
 
@@ -202,6 +166,163 @@ export class ComboExpansionService {
         success: false,
         components: [],
         error: error instanceof Error ? error.message : 'Unknown expansion error'
+      };
+    }
+  }
+
+  /**
+   * Resolve a single component - handles both regular products and Mix & Match patterns
+   */
+  private static async resolveComponent(
+    componentName: string,
+    storeId: string
+  ): Promise<{
+    success: boolean;
+    components: Array<{ productId: string; productName: string }>;
+    error?: string;
+  }> {
+    console.log(`🔍 RESOLVING COMPONENT: ${componentName}`);
+    
+    // Step 1: Try exact product match first
+    const exactMatch = await this.findExactProduct(componentName, storeId);
+    if (exactMatch) {
+      console.log(`✅ EXACT MATCH: ${componentName} → ${exactMatch.product_name}`);
+      return {
+        success: true,
+        components: [{ productId: exactMatch.id, productName: exactMatch.product_name }]
+      };
+    }
+
+    // Step 2: Try partial product match
+    const partialMatch = await this.findPartialProduct(componentName, storeId);
+    if (partialMatch) {
+      console.log(`✅ PARTIAL MATCH: ${componentName} → ${partialMatch.product_name}`);
+      return {
+        success: true,
+        components: [{ productId: partialMatch.id, productName: partialMatch.product_name }]
+      };
+    }
+
+    // Step 3: Check if this is a Mix & Match pattern (contains "with" and "and")
+    if (componentName.includes(' with ') && componentName.includes(' and ')) {
+      console.log(`🎯 MIX & MATCH PATTERN DETECTED: ${componentName}`);
+      return await this.resolveMixAndMatchComponent(componentName, storeId);
+    }
+
+    // Step 4: Failed to resolve
+    return {
+      success: false,
+      components: [],
+      error: `Component ${componentName} not found in product catalog`
+    };
+  }
+
+  /**
+   * Find exact product match
+   */
+  private static async findExactProduct(productName: string, storeId: string) {
+    const { data } = await supabase
+      .from('product_catalog')
+      .select('id, product_name')
+      .eq('store_id', storeId)
+      .eq('product_name', productName)
+      .eq('is_available', true)
+      .maybeSingle();
+    
+    return data;
+  }
+
+  /**
+   * Find partial product match
+   */
+  private static async findPartialProduct(productName: string, storeId: string) {
+    const { data } = await supabase
+      .from('product_catalog')
+      .select('id, product_name')
+      .eq('store_id', storeId)
+      .eq('is_available', true)
+      .ilike('product_name', `%${productName}%`)
+      .limit(1)
+      .maybeSingle();
+    
+    return data;
+  }
+
+  /**
+   * Resolve Mix & Match component (e.g., "Mini Croffle with Marshmallow and Chocolate")
+   */
+  private static async resolveMixAndMatchComponent(
+    componentName: string,
+    storeId: string
+  ): Promise<{
+    success: boolean;
+    components: Array<{ productId: string; productName: string }>;
+    error?: string;
+  }> {
+    try {
+      // Parse the Mix & Match pattern: "Base with Addon1 and Addon2"
+      const parts = componentName.split(' with ');
+      if (parts.length !== 2) {
+        return {
+          success: false,
+          components: [],
+          error: `Invalid Mix & Match pattern: ${componentName}`
+        };
+      }
+
+      const baseName = parts[0].trim();
+      const addonsString = parts[1].trim();
+      
+      // Split addons by "and"
+      const addonNames = addonsString.split(' and ').map(name => name.trim());
+      
+      console.log(`📝 PARSED MIX & MATCH: Base="${baseName}", Addons=[${addonNames.join(', ')}]`);
+      
+      const components: Array<{ productId: string; productName: string }> = [];
+      
+      // Find base product
+      const baseProduct = await this.findExactProduct(baseName, storeId) || 
+                         await this.findPartialProduct(baseName, storeId);
+      
+      if (!baseProduct) {
+        return {
+          success: false,
+          components: [],
+          error: `Base product "${baseName}" not found`
+        };
+      }
+      
+      components.push({ productId: baseProduct.id, productName: baseProduct.product_name });
+      console.log(`✅ BASE FOUND: ${baseName} → ${baseProduct.product_name}`);
+      
+      // Find each addon
+      for (const addonName of addonNames) {
+        const addonProduct = await this.findExactProduct(addonName, storeId) || 
+                            await this.findPartialProduct(addonName, storeId);
+        
+        if (!addonProduct) {
+          return {
+            success: false,
+            components: [],
+            error: `Addon "${addonName}" not found`
+          };
+        }
+        
+        components.push({ productId: addonProduct.id, productName: addonProduct.product_name });
+        console.log(`✅ ADDON FOUND: ${addonName} → ${addonProduct.product_name}`);
+      }
+      
+      return {
+        success: true,
+        components
+      };
+      
+    } catch (error) {
+      console.error('❌ MIX & MATCH RESOLUTION ERROR:', error);
+      return {
+        success: false,
+        components: [],
+        error: error instanceof Error ? error.message : 'Unknown Mix & Match resolution error'
       };
     }
   }
