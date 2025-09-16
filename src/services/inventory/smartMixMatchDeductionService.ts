@@ -230,36 +230,45 @@ export const deductMixMatchInventoryWithAuth = async (
       // CRITICAL: Create complete audit trail BEFORE updating stock
       console.log(`🚨 AUDIT: About to create audit records for ${ingredientName}...`);
       
-      // First, log to inventory_transactions (primary audit table)
+      // First, log to inventory_transactions (primary audit table) - only if we have a valid product ID
       let auditSuccess = false;
-      try {
-        const { error: transactionLogError } = await supabase
-          .from('inventory_transactions')
-          .insert({
-            store_id: storeId,
-            product_id: productId, // Use actual product ID, not inventory stock ID
-            transaction_type: 'sale',
-            quantity: totalDeduction,
-            previous_quantity: currentStock,
-            new_quantity: newStock,
-            reference_id: transactionId,
-            notes: `Smart Mix & Match deduction: ${ingredientName} for ${productName} (${category})`,
-            created_by: userId
-          });
+      const validProductId = productId && productId !== 'undefined' ? productId : null;
+      
+      if (validProductId) {
+        try {
+          const { error: transactionLogError } = await supabase
+            .from('inventory_transactions')
+            .insert({
+              store_id: storeId,
+              product_id: validProductId, // Validated product ID
+              transaction_type: 'sale',
+              quantity: totalDeduction,
+              previous_quantity: currentStock,
+              new_quantity: newStock,
+              reference_id: transactionId,
+              notes: `Smart Mix & Match deduction: ${ingredientName} for ${productName} (${category})`,
+              created_by: userId
+            });
           
-        if (transactionLogError) {
-          console.error(`❌ AUDIT FAILED: inventory_transactions insert failed for ${ingredientName}:`, transactionLogError);
-          console.error(`❌ AUDIT DETAILS: Store ID: ${storeId}, Product ID: ${productId}, User ID: ${userId}`);
-          // Check for common RLS policy issues
-          if (transactionLogError.message?.includes('policy')) {
-            console.error(`❌ RLS POLICY ISSUE: User ${userId} may not have access to store ${storeId} in user_stores table`);
+          if (transactionLogError) {
+            console.error(`❌ AUDIT FAILED: inventory_transactions insert failed for ${ingredientName}:`, transactionLogError);
+            console.error(`❌ AUDIT DETAILS: Store ID: ${storeId}, Product ID: ${validProductId}, User ID: ${userId}`);
+            // Check for common RLS policy issues
+            if (transactionLogError.message?.includes('policy')) {
+              console.error(`❌ RLS POLICY ISSUE: User ${userId} may not have access to store ${storeId} in user_stores table`);
+            }
+            if (transactionLogError.message?.includes('null value')) {
+              console.error(`❌ NULL CONSTRAINT: One of the required fields is null - Product ID: ${validProductId}, User ID: ${userId}`);
+            }
+          } else {
+            auditSuccess = true;
+            console.log(`✅ AUDIT LOGGED: ${ingredientName} transaction logged in inventory_transactions`);
           }
-        } else {
-          auditSuccess = true;
-          console.log(`✅ AUDIT LOGGED: ${ingredientName} transaction logged in inventory_transactions`);
+        } catch (auditError) {
+          console.error(`❌ AUDIT ERROR: Failed to create inventory_transactions record for ${ingredientName}:`, auditError);
         }
-      } catch (auditError) {
-        console.error(`❌ AUDIT ERROR: Failed to create inventory_transactions record for ${ingredientName}:`, auditError);
+      } else {
+        console.warn(`⚠️ AUDIT SKIPPED: No valid product ID for ${ingredientName} - Original Product ID: ${productId}`);
       }
       
       // Second, log to inventory_movements (legacy compatibility)

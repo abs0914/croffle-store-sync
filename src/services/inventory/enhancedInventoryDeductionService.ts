@@ -301,39 +301,46 @@ async function deductRegularProductWithAuth(
       // CRITICAL: Log inventory transaction BEFORE updating stock to ensure audit trail
       console.log(`🚨 DEBUG: About to log inventory transaction for ${ingredientName}...`);
       
-      // Use the actual product catalog ID for logging, not the undefined productId
-      const actualProductId = productCatalog?.id || productId;
+      // Use the actual product catalog ID for logging, with proper validation
+      const actualProductId = productCatalog?.id || (productId && productId !== 'undefined' ? productId : null);
       
-      // First, create audit records in inventory_transactions (primary audit)
+      // First, create audit records in inventory_transactions (primary audit) - only if we have a valid product ID
       let auditSuccess = false;
-      try {
-        const { error: transactionLogError } = await supabase
-          .from('inventory_transactions')
-          .insert({
-            store_id: storeId,
-            product_id: actualProductId, // Use actual product ID from catalog
-            transaction_type: 'sale',
-            quantity: totalDeduction,
-            previous_quantity: stockItem.stock_quantity,
-            new_quantity: newStock,
-            reference_id: transactionId,
-            notes: `Sale deduction: ${ingredientName} for ${recipe.name}`,
-            created_by: userId
-          });
+      if (actualProductId) {
+        try {
+          const { error: transactionLogError } = await supabase
+            .from('inventory_transactions')
+            .insert({
+              store_id: storeId,
+              product_id: actualProductId, // Validated product ID from catalog
+              transaction_type: 'sale',
+              quantity: totalDeduction,
+              previous_quantity: stockItem.stock_quantity,
+              new_quantity: newStock,
+              reference_id: transactionId,
+              notes: `Sale deduction: ${ingredientName} for ${recipe.name}`,
+              created_by: userId
+            });
           
-        if (transactionLogError) {
-          console.error(`❌ AUDIT FAILED: inventory_transactions insert failed for ${ingredientName}:`, transactionLogError);
-          console.error(`❌ AUDIT DETAILS: Store ID: ${storeId}, Product ID: ${productId}, User ID: ${userId}`);
-          // Check for common RLS policy issues
-          if (transactionLogError.message?.includes('policy')) {
-            console.error(`❌ RLS POLICY ISSUE: User ${userId} may not have access to store ${storeId} in user_stores table`);
+          if (transactionLogError) {
+            console.error(`❌ AUDIT FAILED: inventory_transactions insert failed for ${ingredientName}:`, transactionLogError);
+            console.error(`❌ AUDIT DETAILS: Store ID: ${storeId}, Product ID: ${actualProductId}, User ID: ${userId}`);
+            // Check for common RLS policy issues
+            if (transactionLogError.message?.includes('policy')) {
+              console.error(`❌ RLS POLICY ISSUE: User ${userId} may not have access to store ${storeId} in user_stores table`);
+            }
+            if (transactionLogError.message?.includes('null value')) {
+              console.error(`❌ NULL CONSTRAINT: One of the required fields is null - Product ID: ${actualProductId}, User ID: ${userId}`);
+            }
+          } else {
+            auditSuccess = true;
+            console.log(`✅ AUDIT LOGGED: ${ingredientName} transaction logged in inventory_transactions`);
           }
-        } else {
-          auditSuccess = true;
-          console.log(`✅ AUDIT LOGGED: ${ingredientName} transaction logged in inventory_transactions`);
+        } catch (auditError) {
+          console.error(`❌ AUDIT ERROR: Failed to create inventory_transactions record for ${ingredientName}:`, auditError);
         }
-      } catch (auditError) {
-        console.error(`❌ AUDIT ERROR: Failed to create inventory_transactions record for ${ingredientName}:`, auditError);
+      } else {
+        console.warn(`⚠️ AUDIT SKIPPED: No valid product ID for ${ingredientName} - Product Catalog ID: ${productCatalog?.id}, Original Product ID: ${productId}`);
       }
       
       // Second, create audit records in inventory_movements (legacy compatibility)
