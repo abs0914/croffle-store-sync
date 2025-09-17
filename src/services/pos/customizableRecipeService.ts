@@ -183,7 +183,7 @@ export const generateCustomizedDisplayName = (
   }
 
   const choiceNames = selectedChoices.map(choice => choice.selected_ingredient.ingredient_name);
-  return `${recipe.name} (${choiceNames.join(', ')})`;
+  return `${recipe.name} with ${choiceNames.join(' and ')}`;
 };
 
 /**
