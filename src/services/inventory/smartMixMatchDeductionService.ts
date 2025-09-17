@@ -820,7 +820,8 @@ function categorizeIngredients(ingredients: any[]): {
     if (name.includes('cup') || name.includes('wrapper') || name.includes('paper') || 
         name.includes('packaging') || name.includes('container') || name.includes('bag') || 
         name.includes('box') || name.includes('lid') || name.includes('wax') || 
-        name.includes('chopstick') || name.includes('spoon') || name.includes('fork')) {
+        name.includes('chopstick') || name.includes('spoon') || name.includes('fork') ||
+        name.includes('popsicle')) {
       packaging.push(ingredient);
     }
     // Base ingredients (croissant, etc.)

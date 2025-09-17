@@ -229,7 +229,11 @@ export const getBaseIngredients = (recipe: CustomizableRecipe): CustomizableIngr
  * Get packaging ingredients for a recipe
  */
 export const getPackagingIngredients = (recipe: CustomizableRecipe): CustomizableIngredient[] => {
-  return recipe.ingredients.filter(ing => ing.ingredient_name.includes('Box') || ing.ingredient_name.includes('Cup'));
+  return recipe.ingredients.filter(ing => 
+    ing.ingredient_name.includes('Box') || 
+    ing.ingredient_name.includes('Cup') || 
+    ing.ingredient_name.toLowerCase().includes('popsicle')
+  );
 };
 
 /**
