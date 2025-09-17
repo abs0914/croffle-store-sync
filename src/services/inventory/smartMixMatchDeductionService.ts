@@ -729,7 +729,7 @@ function parseMixMatchProduct(productName: string): {
   // Common Mix & Match choices and their variations
   // IMPORTANT: Order matters - more specific patterns should come FIRST to avoid conflicts
   const choicePatterns = [
-    { choice: 'Chocolate Sauce', patterns: ['chocolate sauce', 'chocolate syrup', 'choco sauce'] }, // Removed generic 'chocolate'
+    { choice: 'Chocolate Sauce', patterns: ['chocolate sauce', 'chocolate syrup', 'choco sauce', 'chocolate'] }, // Added generic 'chocolate' back for POS compatibility
     { choice: 'Caramel Sauce', patterns: ['caramel sauce', 'caramel syrup', 'caramel'] },
     { choice: 'Choco Flakes', patterns: ['choco flakes', 'chocolate flakes', 'choco flake'] },
     { choice: 'Whipped Cream', patterns: ['whipped cream', 'whip cream', 'cream'] },
