@@ -910,21 +910,30 @@ function getAdjustedQuantityForMixMatch(
   const originalQuantity = ingredient.quantity;
   const ingredientName = ingredient.inventory_stock?.item?.toLowerCase() || '';
 
+  console.log(`🔍 QUANTITY ADJUSTMENT DEBUG: Ingredient "${ingredient.inventory_stock?.item}", Product Type: ${productType}, Original: ${originalQuantity}`);
+
   // Only adjust for Mix & Match choice ingredients
   if (productType === 'croffle_overload') {
     // Croffle Overload: Toppings should be 1.0 portion only (not 4.0)
-    if (isTopping(ingredientName)) {
+    const isTopCheck = isTopping(ingredientName);
+    console.log(`🔍 CROFFLE OVERLOAD CHECK: Is "${ingredientName}" a topping? ${isTopCheck}`);
+    if (isTopCheck) {
       console.log(`🎯 CROFFLE OVERLOAD ADJUSTMENT: ${ingredient.inventory_stock?.item} ${originalQuantity} → 1.0`);
       return 1.0;
     }
   } else if (productType === 'mini_croffle') {
     // Mini Croffle: Sauces and toppings should be 0.5 portion (not 1.5)
-    if (isSauce(ingredientName) || isTopping(ingredientName)) {
+    const isSauceCheck = isSauce(ingredientName);
+    const isTopCheck = isTopping(ingredientName);
+    console.log(`🔍 MINI CROFFLE CHECK: Is "${ingredientName}" a sauce? ${isSauceCheck}, Is topping? ${isTopCheck}`);
+    
+    if (isSauceCheck || isTopCheck) {
       console.log(`🎯 MINI CROFFLE ADJUSTMENT: ${ingredient.inventory_stock?.item} ${originalQuantity} → 0.5`);
       return 0.5;
     }
   }
 
+  console.log(`🔍 NO ADJUSTMENT: ${ingredient.inventory_stock?.item} keeps original quantity ${originalQuantity}`);
   // No adjustment for base ingredients or regular products
   return originalQuantity;
 }
@@ -934,12 +943,21 @@ function getAdjustedQuantityForMixMatch(
  */
 function isTopping(ingredientName: string): boolean {
   const toppingKeywords = [
-    'peanut', 'marshmallow', 'choco flakes', 'chocolate flakes', 
-    'colored sprinkles', 'sprinkles', 'crushed oreo', 'graham cracker',
-    'blueberry', 'strawberry', 'banana'
+    'peanut', 'marshmallow', 'choco flakes', 'chocolate flakes', 'choco flake',
+    'colored sprinkles', 'sprinkles', 'crushed oreo', 'oreo crushed', 'crushed grahams',
+    'graham cracker', 'graham', 'blueberry', 'strawberry', 'banana'
   ];
   
-  return toppingKeywords.some(keyword => ingredientName.includes(keyword));
+  console.log(`🔍 TOPPING CHECK: Testing "${ingredientName}" against keywords: [${toppingKeywords.join(', ')}]`);
+  
+  const isMatch = toppingKeywords.some(keyword => {
+    const matches = ingredientName.includes(keyword);
+    console.log(`  - "${keyword}": ${matches ? '✅' : '❌'}`);
+    return matches;
+  });
+  
+  console.log(`🔍 TOPPING RESULT: "${ingredientName}" is ${isMatch ? 'a topping ✅' : 'not a topping ❌'}`);
+  return isMatch;
 }
 
 /**
@@ -948,8 +966,17 @@ function isTopping(ingredientName: string): boolean {
 function isSauce(ingredientName: string): boolean {
   const sauceKeywords = [
     'caramel sauce', 'chocolate sauce', 'tiramisu', 'strawberry sauce',
-    'nutella', 'vanilla sauce', 'matcha sauce', 'sauce', 'syrup'
+    'nutella', 'vanilla sauce', 'matcha sauce', 'sauce', 'syrup', 'chocolate'
   ];
   
-  return sauceKeywords.some(keyword => ingredientName.includes(keyword));
+  console.log(`🔍 SAUCE CHECK: Testing "${ingredientName}" against keywords: [${sauceKeywords.join(', ')}]`);
+  
+  const isMatch = sauceKeywords.some(keyword => {
+    const matches = ingredientName.includes(keyword);
+    console.log(`  - "${keyword}": ${matches ? '✅' : '❌'}`);
+    return matches;
+  });
+  
+  console.log(`🔍 SAUCE RESULT: "${ingredientName}" is ${isMatch ? 'a sauce ✅' : 'not a sauce ❌'}`);
+  return isMatch;
 }
