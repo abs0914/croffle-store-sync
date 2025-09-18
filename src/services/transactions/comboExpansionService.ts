@@ -250,6 +250,7 @@ export class ComboExpansionService {
 
   /**
    * Resolve Mix & Match component (e.g., "Mini Croffle with Marshmallow and Chocolate")
+   * **FIXED**: Return the full Mix & Match product name to preserve choice selections
    */
   private static async resolveMixAndMatchComponent(
     componentName: string,
@@ -260,6 +261,12 @@ export class ComboExpansionService {
     error?: string;
   }> {
     try {
+      console.log(`🎯 MIX & MATCH RESOLUTION: Processing "${componentName}"`);
+      
+      // **CRITICAL FIX**: For Mix & Match products, return the FULL product name
+      // This ensures the Smart Mix & Match deduction service can properly parse
+      // the selected choices and deduct the correct ingredients
+      
       // Parse the Mix & Match pattern: "Base with Addon1 and Addon2"
       const parts = componentName.split(' with ');
       if (parts.length !== 2) {
@@ -276,11 +283,9 @@ export class ComboExpansionService {
       // Split addons by "and"
       const addonNames = addonsString.split(' and ').map(name => name.trim());
       
-      console.log(`📝 PARSED MIX & MATCH: Base="${baseName}", Addons=[${addonNames.join(', ')}]`);
+      console.log(`📝 PARSED MIX & MATCH: Base="${baseName}", Choices=[${addonNames.join(', ')}]`);
       
-      const components: Array<{ productId: string; productName: string }> = [];
-      
-      // Find base product
+      // **CRITICAL**: Find the base product to get its ID
       const baseProduct = await this.findExactProduct(baseName, storeId) || 
                          await this.findPartialProduct(baseName, storeId);
       
@@ -292,29 +297,16 @@ export class ComboExpansionService {
         };
       }
       
-      components.push({ productId: baseProduct.id, productName: baseProduct.product_name });
-      console.log(`✅ BASE FOUND: ${baseName} → ${baseProduct.product_name}`);
+      console.log(`✅ BASE FOUND: ${baseName} → ${baseProduct.product_name} (${baseProduct.id})`);
       
-      // Find each addon
-      for (const addonName of addonNames) {
-        const addonProduct = await this.findExactProduct(addonName, storeId) || 
-                            await this.findPartialProduct(addonName, storeId);
-        
-        if (!addonProduct) {
-          return {
-            success: false,
-            components: [],
-            error: `Addon "${addonName}" not found`
-          };
-        }
-        
-        components.push({ productId: addonProduct.id, productName: addonProduct.product_name });
-        console.log(`✅ ADDON FOUND: ${addonName} → ${addonProduct.product_name}`);
-      }
-      
+      // **CRITICAL FIX**: Return the full Mix & Match product name
+      // This preserves the choice selections for the Smart Mix & Match deduction service
       return {
         success: true,
-        components
+        components: [{
+          productId: baseProduct.id,
+          productName: componentName  // **KEY FIX**: Use full component name with choices
+        }]
       };
       
     } catch (error) {

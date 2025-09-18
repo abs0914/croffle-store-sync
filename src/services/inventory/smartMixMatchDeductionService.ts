@@ -847,6 +847,7 @@ function categorizeIngredients(ingredients: any[]): {
 }
 /**
  * Check if an ingredient name matches a selected choice
+ * **ENHANCED**: Comprehensive matching for all Mini Croffle sauces and toppings
  */
 function matchesChoice(ingredientName: string, selectedChoice: string): boolean {
   const ingredient = ingredientName.toLowerCase();
@@ -860,37 +861,77 @@ function matchesChoice(ingredientName: string, selectedChoice: string): boolean 
     return true;
   }
   
-  // Handle variations - IMPORTANT: More specific patterns FIRST to avoid conflicts
+  // Reverse match (choice contains ingredient)
+  if (choice.includes(ingredient)) {
+    console.log(`✅ MATCHING: Choice contains ingredient`);
+    return true;
+  }
+  
+  // **ENHANCED**: Comprehensive variations for all Mini Croffle ingredients
   const variations: Record<string, string[]> = {
-    'chocolate sauce': ['chocolate sauce', 'chocolate syrup', 'choco sauce'], // Removed generic 'chocolate'
-    'caramel sauce': ['caramel sauce', 'caramel syrup', 'caramel'],
+    // Chocolate variations (most common)
+    'chocolate sauce': ['chocolate sauce', 'chocolate syrup', 'choco sauce', 'dark chocolate sauce'],
+    'chocolate': ['chocolate', 'choco', 'chocolate sauce', 'dark chocolate', 'chocolate syrup', 'chocolate crumble'],
     'choco flakes': ['choco flakes', 'chocolate flakes', 'choco flake'],
+    
+    // Other sauces
+    'caramel sauce': ['caramel sauce', 'caramel syrup', 'caramel'],
+    'strawberry sauce': ['strawberry sauce', 'strawberry syrup', 'strawberry'],
+    'tiramisu': ['tiramisu', 'tiramisu sauce'],
+    'vanilla sauce': ['vanilla sauce', 'vanilla syrup', 'vanilla'],
+    'nutella': ['nutella', 'nutella sauce'],
+    
+    // Toppings
+    'colored sprinkles': ['colored sprinkles', 'sprinkles', 'sprinkle', 'rainbow sprinkles'],
+    'sprinkles': ['colored sprinkles', 'sprinkles', 'sprinkle', 'rainbow sprinkles'],
+    'marshmallow': ['marshmallows', 'marshmallow', 'marshmallow sauce'],
+    'oreo': ['oreo', 'oreo crumbs', 'crushed oreo'],
+    'graham': ['graham', 'graham cracker', 'crushed graham'],
+    'nuts': ['crushed nuts', 'almonds', 'peanuts', 'peanut'],
+    'peanut': ['peanuts', 'peanut', 'crushed nuts'],
+    
+    // Base ingredients
     'whipped cream': ['whipped cream', 'whip cream', 'cream'],
-    'colored sprinkles': ['colored sprinkles', 'sprinkles', 'sprinkle'],
-    'peanut': ['peanuts', 'peanut'],
-    'marshmallow': ['marshmallows', 'marshmallow'],
-    'tiramisu': ['tiramisu'],
-    'blueberry': ['blueberry', 'blueberries']
+    'croissant': ['croissant', 'regular croissant'],
+    'popsicle stick': ['popsicle stick', 'stick'],
+    
+    // Beverages (for combo expansion)
+    'americano': ['americano', 'iced americano', 'hot americano'],
+    'latte': ['latte', 'cafe latte', 'iced latte', 'hot latte'],
+    'cappuccino': ['cappuccino', 'iced cappuccino', 'hot cappuccino']
   };
   
-  // Enhanced variation matching with detailed logging
+  // Enhanced variation matching with bidirectional checks
   for (const [key, patterns] of Object.entries(variations)) {
     console.log(`🔍 MATCHING DEBUG: Testing variation "${key}" for choice "${choice}"`);
     
-    if (choice.includes(key)) {
-      console.log(`  - Choice contains key "${key}": ✅`);
+    // Check if choice matches the key or any pattern
+    const choiceMatchesKey = choice.includes(key) || patterns.some(pattern => choice.includes(pattern));
+    
+    if (choiceMatchesKey) {
+      console.log(`  - Choice matches variation "${key}": ✅`);
       
-      for (const pattern of patterns) {
-        const matches = ingredient.includes(pattern);
-        console.log(`  - Testing pattern "${pattern}" against ingredient: ${matches ? '✅ MATCH' : '❌ NO MATCH'}`);
-        
-        if (matches) {
-          console.log(`✅ MATCHING: Variation match found - ${key} -> pattern "${pattern}"`);
-          return true;
-        }
+      // Check if ingredient matches the key or any pattern
+      const ingredientMatchesVariation = ingredient.includes(key) || patterns.some(pattern => ingredient.includes(pattern));
+      
+      if (ingredientMatchesVariation) {
+        console.log(`✅ MATCHING: Variation match found - ${key}`);
+        return true;
       }
-    } else {
-      console.log(`  - Choice does not contain key "${key}": ❌`);
+    }
+    
+    // Also check reverse: if ingredient matches key, check if choice matches patterns
+    const ingredientMatchesKey = ingredient.includes(key) || patterns.some(pattern => ingredient.includes(pattern));
+    
+    if (ingredientMatchesKey) {
+      console.log(`  - Ingredient matches variation "${key}": ✅`);
+      
+      const choiceMatchesVariation = choice.includes(key) || patterns.some(pattern => choice.includes(pattern));
+      
+      if (choiceMatchesVariation) {
+        console.log(`✅ MATCHING: Reverse variation match found - ${key}`);
+        return true;
+      }
     }
   }
   
