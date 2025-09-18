@@ -228,19 +228,28 @@ export const deductInventoryForTransactionEnhanced = async (
 };
 
 /**
- * Check if a product is a Mix & Match product - Updated with better detection
+ * Check if a product is a Mix & Match product - Updated with combo expansion support
  */
 function isMixMatchProduct(productName: string): boolean {
   const name = productName.toLowerCase().trim();
   
+  // Extract original product name from combo expansion format
+  // "Mini Croffle (from Mini Croffle with Choco Flakes + Americano Iced)" → "Mini Croffle with Choco Flakes"
+  let actualProductName = name;
+  const comboMatch = name.match(/^(.+)\s*\(from\s+(.+?)\s*\+/);
+  if (comboMatch) {
+    actualProductName = comboMatch[2].toLowerCase().trim();
+    console.log(`🔍 MIX & MATCH DETECTION: Extracted "${actualProductName}" from combo format "${name}"`);
+  }
+  
   // Check for Mix & Match indicators first
-  if (name.includes('with ') || name.includes(' and ')) {
+  if (actualProductName.includes('with ') || actualProductName.includes(' and ')) {
     // Then verify it's actually a Mix & Match product by checking for base products
-    return name.includes('croffle overload') || name.includes('mini croffle');
+    return actualProductName.includes('croffle overload') || actualProductName.includes('mini croffle');
   }
   
   // Direct check for base products
-  return name.includes('croffle overload') || name.includes('mini croffle');
+  return actualProductName.includes('croffle overload') || actualProductName.includes('mini croffle');
 }
 
 /**

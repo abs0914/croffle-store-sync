@@ -119,7 +119,7 @@ export const deductMixMatchInventoryWithAuth = async (
   };
 
   try {
-    // Step 1: Detect if this is a Mix & Match product
+    // Step 1: Detect if this is a Mix & Match product (handle combo expansion format)
     const mixMatchInfo = parseMixMatchProduct(productName);
     result.debugInfo.isMixMatch = mixMatchInfo.isMixMatch;
     result.debugInfo.selectedChoices = mixMatchInfo.selectedChoices;
@@ -696,35 +696,48 @@ function parseMixMatchProduct(productName: string): {
   productType: 'croffle_overload' | 'mini_croffle' | 'regular';
   baseName: string;
 } {
-  const name = productName.toLowerCase().trim();
+  let name = productName.toLowerCase().trim();
+  let actualProductName = productName; // The actual Mix & Match name to parse
+  
+  // Handle combo expansion format: extract original Mix & Match name
+  // "Mini Croffle (from Mini Croffle with Choco Flakes + Americano Iced)" → "Mini Croffle with Choco Flakes"
+  const comboMatch = productName.match(/^(.+)\s*\(from\s+(.+?)\s*\+/);
+  if (comboMatch) {
+    actualProductName = comboMatch[2].trim();
+    name = actualProductName.toLowerCase().trim();
+    console.log(`🔍 COMBO EXTRACTION: Extracted "${actualProductName}" from combo format "${productName}"`);
+  }
   
   // Determine product type and extract base name
   let productType: 'croffle_overload' | 'mini_croffle' | 'regular' = 'regular';
   let isMixMatch = false;
-  let baseName = productName; // Default to original name
+  let baseName = actualProductName; // Default to actual product name
   
   if (name.includes('croffle overload')) {
     productType = 'croffle_overload';
     isMixMatch = true;
     // Extract base name: "Croffle Overload with Choco Flakes" → "Croffle Overload"
-    baseName = productName.replace(/\s+(with|and)\s+.*/i, '').trim();
+    baseName = actualProductName.replace(/\s+(with|and)\s+.*/i, '').trim();
   } else if (name.includes('mini croffle')) {
     productType = 'mini_croffle';
     isMixMatch = true;
     // Extract base name: "Mini Croffle with Choco Flakes and Tiramisu" → "Mini Croffle"
-    baseName = productName.replace(/\s+(with|and)\s+.*/i, '').trim();
+    baseName = actualProductName.replace(/\s+(with|and)\s+.*/i, '').trim();
   }
   
   if (!isMixMatch) {
-    return { isMixMatch: false, selectedChoices: [], productType: 'regular', baseName: productName };
+    return { isMixMatch: false, selectedChoices: [], productType: 'regular', baseName: actualProductName };
   }
 
-  // Parse selected choices from the product name
+  // Parse selected choices from the actual product name (not the combo wrapper)
   const selectedChoices: string[] = [];
   
   // Extract customization part after "with" or "and"
-  const customizationMatch = productName.match(/\s+(with|and)\s+(.+)$/i);
+  const customizationMatch = actualProductName.match(/\s+(with|and)\s+(.+)$/i);
   const customizationText = customizationMatch ? customizationMatch[2] : '';
+  
+  console.log(`🔍 PARSING DEBUG: Using actual product name "${actualProductName}" for customization parsing`);
+  console.log(`🔍 CUSTOMIZATION TEXT: "${customizationText}"`);
   
   // Common Mix & Match choices and their variations
   // IMPORTANT: Order matters - more specific patterns should come FIRST to avoid conflicts
@@ -757,8 +770,8 @@ function parseMixMatchProduct(productName: string): {
     }
   }
 
-  console.log(`🔍 SMART MIX & MATCH: Parsed "${productName}" → base: "${baseName}", type: ${productType}, selections: [${selectedChoices.join(', ')}]`);
-  console.log(`🔍 CUSTOMIZATION TEXT: "${customizationText}"`);
+  console.log(`🔍 SMART MIX & MATCH: Parsed "${productName}" → actual: "${actualProductName}", base: "${baseName}", type: ${productType}, selections: [${selectedChoices.join(', ')}]`);
+  console.log(`🔍 CUSTOMIZATION TEXT USED: "${customizationText}"`);
   
   return { isMixMatch: true, selectedChoices, productType, baseName };
 }
