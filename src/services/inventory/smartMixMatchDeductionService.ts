@@ -955,7 +955,7 @@ function matchesChoice(ingredientName: string, selectedChoice: string): boolean 
 /**
  * Get adjusted quantity for Mix & Match products based on business rules:
  * - Croffle Overload: Toppings should be deducted as 1.0 portion (not 4.0)
- * - Mini Croffle: Sauces and toppings should be deducted as 0.5 portion (not 1.5)
+ * - Mini Croffle: All choice ingredients (sauces and toppings) should be deducted as 0.5 portion
  */
 function getAdjustedQuantityForMixMatch(
   ingredient: any, 
@@ -963,8 +963,9 @@ function getAdjustedQuantityForMixMatch(
 ): number {
   const originalQuantity = ingredient.quantity;
   const ingredientName = ingredient.inventory_stock?.item?.toLowerCase() || '';
+  const groupName = ingredient.ingredient_group_name || 'base';
 
-  console.log(`🔍 QUANTITY ADJUSTMENT DEBUG: Ingredient "${ingredient.inventory_stock?.item}", Product Type: ${productType}, Original: ${originalQuantity}`);
+  console.log(`🔍 QUANTITY ADJUSTMENT DEBUG: Ingredient "${ingredient.inventory_stock?.item}", Product Type: ${productType}, Original: ${originalQuantity}, Group: ${groupName}`);
 
   // Only adjust for Mix & Match choice ingredients
   if (productType === 'croffle_overload') {
@@ -976,13 +977,20 @@ function getAdjustedQuantityForMixMatch(
       return 1.0;
     }
   } else if (productType === 'mini_croffle') {
-    // Mini Croffle: Sauces and toppings should be 0.5 portion (not 1.5)
+    // Mini Croffle: ALL choice ingredients should be 0.5 portion
+    // Check if this is a choice ingredient (not base or packaging)
+    if (groupName !== 'base' && groupName !== 'packaging') {
+      console.log(`🎯 MINI CROFFLE CHOICE ADJUSTMENT: ${ingredient.inventory_stock?.item} ${originalQuantity} → 0.5 (group: ${groupName})`);
+      return 0.5;
+    }
+    
+    // Additional fallback check for legacy ingredients without groups
     const isSauceCheck = isSauce(ingredientName);
     const isTopCheck = isTopping(ingredientName);
-    console.log(`🔍 MINI CROFFLE CHECK: Is "${ingredientName}" a sauce? ${isSauceCheck}, Is topping? ${isTopCheck}`);
+    console.log(`🔍 MINI CROFFLE LEGACY CHECK: Is "${ingredientName}" a sauce? ${isSauceCheck}, Is topping? ${isTopCheck}`);
     
     if (isSauceCheck || isTopCheck) {
-      console.log(`🎯 MINI CROFFLE ADJUSTMENT: ${ingredient.inventory_stock?.item} ${originalQuantity} → 0.5`);
+      console.log(`🎯 MINI CROFFLE LEGACY ADJUSTMENT: ${ingredient.inventory_stock?.item} ${originalQuantity} → 0.5`);
       return 0.5;
     }
   }
