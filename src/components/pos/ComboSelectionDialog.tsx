@@ -338,8 +338,10 @@ export function ComboSelectionDialog({
     let categoryForPricing = croffleCategory;
     if (selectedCroffle?.name.toLowerCase().includes("mini")) {
       categoryForPricing = "Mini Croffle";
-    } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
-      categoryForPricing = "Mix & Match";
+    } else if (selectedCroffle?.name.toLowerCase().includes("choco overload")) {
+      categoryForPricing = "Choco Overload";
+    } else if (selectedCroffle?.name.toLowerCase().includes("croffle overload")) {
+      categoryForPricing = "Croffle Overload";
     }
 
     // Map espresso product name to espresso type for pricing
@@ -648,8 +650,10 @@ export function ComboSelectionDialog({
                       let categoryForPricing = croffleCategory;
                       if (selectedCroffle?.name.toLowerCase().includes("mini")) {
                         categoryForPricing = "Mini Croffle";
-                      } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
-                        categoryForPricing = "Mix & Match";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("choco overload")) {
+                        categoryForPricing = "Choco Overload";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("croffle overload")) {
+                        categoryForPricing = "Croffle Overload";
                       }
                       
                       const espressoType = "Hot Espresso";
@@ -689,8 +693,10 @@ export function ComboSelectionDialog({
                       let categoryForPricing = croffleCategory;
                       if (selectedCroffle?.name.toLowerCase().includes("mini")) {
                         categoryForPricing = "Mini Croffle";
-                      } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
-                        categoryForPricing = "Mix & Match";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("choco overload")) {
+                        categoryForPricing = "Choco Overload";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("croffle overload")) {
+                        categoryForPricing = "Croffle Overload";
                       }
                       
                       const espressoType = "Cold Espresso";
