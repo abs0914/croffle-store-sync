@@ -8539,6 +8539,14 @@ export type Database = {
         }
         Returns: string
       }
+      sync_inventory_across_stores: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          added_items: string[]
+          items_added: number
+          store_name: string
+        }[]
+      }
       sync_missing_app_users: {
         Args: Record<PropertyKey, never>
         Returns: {
