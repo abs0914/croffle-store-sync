@@ -8618,6 +8618,20 @@ export type Database = {
           status: string
         }[]
       }
+      validate_complete_inventory_system: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          can_process_transactions: boolean
+          conversion_mappings: number
+          inventory_items: number
+          products_count: number
+          recipes_count: number
+          sample_test_results: Json
+          store_id: string
+          store_name: string
+          system_health: string
+        }[]
+      }
       validate_inventory_before_transaction: {
         Args: { p_store_id: string; p_transaction_items: Json }
         Returns: {
