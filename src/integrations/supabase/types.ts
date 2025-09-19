@@ -7816,6 +7816,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      complete_inventory_sync: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          action_type: string
+          details: string
+          items_added: number
+        }[]
+      }
       complete_recipe_ingredients: {
         Args: Record<PropertyKey, never>
         Returns: {
