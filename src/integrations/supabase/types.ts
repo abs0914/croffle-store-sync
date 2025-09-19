@@ -7918,6 +7918,19 @@ export type Database = {
           total_stores: number
         }[]
       }
+      deploy_recipe_templates_to_all_stores_v2: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          deployed_ingredients: number
+          deployed_products: number
+          deployed_recipes: number
+          execution_time_ms: number
+          fixed_recipes: number
+          skipped_existing: number
+          total_stores: number
+          total_templates: number
+        }[]
+      }
       detect_foreign_mappings: {
         Args: { p_store_id: string }
         Returns: {
