@@ -35,11 +35,17 @@ export default function EnhancedInventoryAlerts({ storeId }: EnhancedInventoryAl
           .select('id, item, unit, stock_quantity, minimum_threshold, cost, item_category')
           .eq('store_id', storeId)
           .eq('is_active', true)
-          .or('stock_quantity.eq.0,stock_quantity.lte.minimum_threshold')
+          .filter('stock_quantity', 'lte', 10)
           .order('stock_quantity', { ascending: true });
 
         if (error) throw error;
-        setAlerts(data || []);
+        
+        // Filter items that are actually low stock or out of stock
+        const filteredAlerts = (data || []).filter(item => 
+          item.stock_quantity === 0 || item.stock_quantity <= (item.minimum_threshold || 10)
+        );
+        
+        setAlerts(filteredAlerts);
       } catch (error) {
         console.error('Error fetching inventory alerts:', error);
       } finally {

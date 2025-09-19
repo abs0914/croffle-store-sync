@@ -29,10 +29,16 @@ export default function RecentTransactions({ storeId }: RecentTransactionsProps)
       if (!storeId) return;
 
       try {
+        // Get today's date in Philippine timezone for filtering recent transactions
+        const today = new Date().toLocaleDateString('en-CA', {
+          timeZone: 'Asia/Manila'
+        });
+        
         const { data, error } = await supabase
           .from('transactions')
           .select('id, receipt_number, total, payment_method, created_at, status')
           .eq('store_id', storeId)
+          .gte('created_at', `${today}T00:00:00+08:00`)
           .order('created_at', { ascending: false })
           .limit(5);
 
