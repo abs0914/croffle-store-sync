@@ -42,7 +42,8 @@ export function SalesReportView({ data, dateRange, isAllStores, storeId }: Sales
         to: toStr,
         status: "completed",
         orderBy: "created_at",
-        ascending: false
+        ascending: false,
+        includeCashierInfo: true
       });
 
       const { data, error } = queryResult;
@@ -52,7 +53,6 @@ export function SalesReportView({ data, dateRange, isAllStores, storeId }: Sales
 
       return data?.map(tx => ({
         ...tx,
-        cashier_name: 'N/A', // We'll enhance this when we have proper cashier data
         customer_name: 'Walk-in' // Default customer name
       })) || [];
     },
