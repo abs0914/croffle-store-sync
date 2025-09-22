@@ -22,7 +22,7 @@ interface SalesReportViewProps {
 
 export function SalesReportView({ data, dateRange, isAllStores, storeId }: SalesReportViewProps) {
   // Fetch detailed transactions for the table using the same robust utility
-  const { data: transactions } = useQuery({
+  const { data: transactions, refetch: refetchTransactions } = useQuery({
     queryKey: ['transactions', storeId, dateRange.from, dateRange.to],
     queryFn: async () => {
       if (!dateRange.from || !dateRange.to) return [];
@@ -182,7 +182,10 @@ export function SalesReportView({ data, dateRange, isAllStores, storeId }: Sales
 
       {/* Transaction Details Table */}
       {transactions && transactions.length > 0 && (
-        <TransactionDetailsTable transactions={transactions} />
+        <TransactionDetailsTable 
+          transactions={transactions} 
+          onTransactionVoided={refetchTransactions}
+        />
       )}
     </div>
   );
