@@ -5,14 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { User } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import ShiftPhotoSection from "./ShiftPhotoSection";
-import InventoryItemsList from "./InventoryItemsList";
 interface DialogState {
   startingCash: number;
   photo: string | null;
   selectedCashierId: string | null;
   showCameraView: boolean;
   isLoading: boolean;
-  inventoryCounts: Record<string, number>;
 }
 interface StartShiftDialogContentProps {
   isOpen: boolean;
@@ -28,7 +26,6 @@ export default function StartShiftDialogContent({
   const [startingCash, setStartingCash] = useState<number>(0);
   const [photo, setPhoto] = useState<string | null>(null);
   const [showCameraView, setShowCameraView] = useState<boolean>(false);
-  const [inventoryCounts, setInventoryCounts] = useState<Record<string, number>>({});
 
   // Auto-select current user as cashier
   const selectedCashierId = user?.id || null;
@@ -40,10 +37,9 @@ export default function StartShiftDialogContent({
       photo,
       selectedCashierId,
       showCameraView,
-      isLoading: false,
-      inventoryCounts
+      isLoading: false
     });
-  }, [startingCash, photo, selectedCashierId, showCameraView, inventoryCounts, onStateChange]);
+  }, [startingCash, photo, selectedCashierId, showCameraView, onStateChange]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -51,7 +47,6 @@ export default function StartShiftDialogContent({
       setStartingCash(0);
       setPhoto(null);
       setShowCameraView(false);
-      setInventoryCounts({});
     }
   }, [isOpen]);
   return (
@@ -103,12 +98,6 @@ export default function StartShiftDialogContent({
           You are logged in as the cashier for this shift
         </p>
       </div>
-
-      {/* Inventory Items List */}
-      <InventoryItemsList 
-        storeId={storeId}
-        onInventoryCountChange={setInventoryCounts}
-      />
 
       {/* Required Photo Capture */}
       <div className="space-y-2">

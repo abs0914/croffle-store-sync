@@ -16,7 +16,7 @@ import StartShiftDialogFooter from "./shift/StartShiftDialogFooter";
 interface StartShiftDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onStartShift: (startingCash: number, photo?: string, cashierId?: string, inventoryCounts?: Record<string, number>) => Promise<void>;
+  onStartShift: (startingCash: number, photo?: string, cashierId?: string) => Promise<void>;
   storeId: string | null;
 }
 
@@ -26,7 +26,6 @@ interface DialogState {
   selectedCashierId: string | null;
   showCameraView: boolean;
   isLoading: boolean;
-  inventoryCounts: Record<string, number>;
 }
 
 export default function StartShiftDialog({
@@ -41,8 +40,7 @@ export default function StartShiftDialog({
     photo: null,
     selectedCashierId: null,
     showCameraView: false,
-    isLoading: false,
-    inventoryCounts: {}
+    isLoading: false
   });
 
   const handleStateChange = useCallback((state: DialogState) => {
@@ -70,16 +68,13 @@ export default function StartShiftDialog({
       console.log("Starting shift with params:", {
         startingCash: dialogState.startingCash,
         storeId,
-        cashierId: dialogState.selectedCashierId,
-        inventoryItemsCount: Object.keys(dialogState.inventoryCounts).length,
-        totalInventoryCount: Object.values(dialogState.inventoryCounts).reduce((sum, count) => sum + count, 0)
+        cashierId: dialogState.selectedCashierId
       });
       
       await onStartShift(
         dialogState.startingCash,
         dialogState.photo,
-        dialogState.selectedCashierId,
-        dialogState.inventoryCounts
+        dialogState.selectedCashierId
       );
     } catch (error) {
       console.error("Error starting shift:", error);
@@ -93,7 +88,7 @@ export default function StartShiftDialog({
     onOpenChange(false);
   };
 
-  const canSubmit = !!(dialogState.photo && dialogState.selectedCashierId && Object.keys(dialogState.inventoryCounts).length > 0);
+  const canSubmit = !!(dialogState.photo && dialogState.selectedCashierId);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
