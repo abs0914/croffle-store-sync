@@ -354,6 +354,9 @@ export default function MultipleSeniorDiscountSelector({
             </div>)}
         </div>}
       
-      {currentOtherDiscount}
+      {currentOtherDiscount && <div className="mt-1 text-xs text-muted-foreground">
+          {currentOtherDiscount.type.toUpperCase()}: {formatCurrency(currentOtherDiscount.amount)}
+          {currentOtherDiscount.idNumber && ` • ID: ${currentOtherDiscount.idNumber}`}
+        </div>}
     </div>;
 }
