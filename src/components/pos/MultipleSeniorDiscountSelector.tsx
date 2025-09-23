@@ -33,7 +33,7 @@ export default function MultipleSeniorDiscountSelector({
   const [isOpen, setIsOpen] = useState(false);
   const [discountMode, setDiscountMode] = useState<'senior' | 'other'>('senior');
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>(currentSeniorDiscounts);
-  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo'>('pwd');
+  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary'>('pwd');
   const [otherIdNumber, setOtherIdNumber] = useState(currentOtherDiscount?.idNumber || '');
   const [complimentaryReason, setComplimentaryReason] = useState('');
   const [approverName, setApproverName] = useState('');
@@ -74,21 +74,11 @@ export default function MultipleSeniorDiscountSelector({
       const validSeniors = seniorDiscounts.filter(d => d.idNumber.trim() !== '').length;
       return CartCalculationService.calculateSeniorDiscountPreview(subtotal, validSeniors, totalDiners);
     } else {
-      let otherDiscountObj: OtherDiscount;
-      
-      if (otherDiscountType === 'bogo') {
-        const bogoResult = BOGOService.analyzeBOGO(cartItems);
-        otherDiscountObj = {
-          type: 'bogo',
-          amount: bogoResult.discountAmount
-        };
-      } else {
-        otherDiscountObj = {
-          type: otherDiscountType,
-          amount: 0,
-          idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
-        };
-      }
+      let otherDiscountObj: OtherDiscount = {
+        type: otherDiscountType,
+        amount: 0,
+        idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
+      };
       
       // Create a mock cart item to calculate discount properly
       const mockCartItems = [{ price: subtotal, quantity: 1, productId: 'mock', product: {} as any }];
@@ -314,12 +304,6 @@ export default function MultipleSeniorDiscountSelector({
                     <RadioGroupItem value="complimentary" id="complimentary" />
                     <Label htmlFor="complimentary">Complimentary (100%)</Label>
                   </div>
-                  {BOGOService.hasEligibleItems(cartItems) && (
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="bogo" id="bogo" />
-                      <Label htmlFor="bogo">BOGO Promotion (Auto-Calculated)</Label>
-                    </div>
-                  )}
                 </RadioGroup>
 
                 {otherDiscountType === 'pwd' && (
@@ -331,17 +315,6 @@ export default function MultipleSeniorDiscountSelector({
                       onChange={(e) => setOtherIdNumber(e.target.value)}
                       placeholder="Enter PWD ID number"
                     />
-                  </div>
-                )}
-
-                {otherDiscountType === 'bogo' && BOGOService.hasEligibleItems(cartItems) && (
-                  <div className="space-y-2">
-                    <Label>BOGO Promotion Details:</Label>
-                    <div className="text-sm space-y-1">
-                      {BOGOService.analyzeBOGO(cartItems).breakdown.map((line, index) => (
-                        <p key={index} className="text-muted-foreground">{line}</p>
-                      ))}
-                    </div>
                   </div>
                 )}
 
@@ -372,6 +345,42 @@ export default function MultipleSeniorDiscountSelector({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+            
+            {/* Manual BOGO Button - Outside of discount modes */}
+            {BOGOService.hasEligibleItems(cartItems) && (
+              <div className="p-3 bg-croffle-background rounded-lg border">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <Label className="font-medium text-croffle-primary">BOGO Available!</Label>
+                    <p className="text-sm text-muted-foreground">Click to apply BOGO promotion</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      const bogoResult = BOGOService.analyzeBOGO(cartItems);
+                      const bogoDiscount: OtherDiscount = {
+                        type: 'bogo',
+                        amount: bogoResult.discountAmount
+                      };
+                      onApplyDiscounts([], bogoDiscount, 1);
+                      setIsOpen(false);
+                    }}
+                  >
+                    Apply BOGO
+                  </Button>
+                </div>
+                <div className="text-xs space-y-1">
+                  {BOGOService.analyzeBOGO(cartItems).breakdown.map((line, index) => (
+                    <p key={index} className="text-muted-foreground">{line}</p>
+                  ))}
+                  <p className="font-medium text-croffle-primary">
+                    Total BOGO Savings: ₱{BOGOService.analyzeBOGO(cartItems).discountAmount.toFixed(2)}
+                  </p>
+                </div>
               </div>
             )}
             
