@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useStore } from "../StoreContext";
 import { CartContext, OrderType, DeliveryPlatform } from "./CartContext";
 import { CartCalculationService, SeniorDiscount, OtherDiscount, CartCalculations } from "@/services/cart/CartCalculationService";
+import { BOGOService } from "@/services/cart/BOGOService";
 import { CartValidationService } from "@/services/cart/CartValidationService";
 import { enhancedPricingService } from "@/services/pos/enhancedPricingService";
 
@@ -60,18 +61,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Get calculations using the centralized service
   const getCartCalculations = (): CartCalculations => {
+    // Check if we should auto-apply BOGO (don't if there's already a manual BOGO discount)
+    const shouldAutoApplyBOGO = !otherDiscount || otherDiscount.type !== 'bogo';
+    
     const calculationResult = CartCalculationService.calculateCartTotals(
       items,
       seniorDiscounts,
       otherDiscount,
-      totalDiners
+      totalDiners,
+      shouldAutoApplyBOGO
     );
+    
     console.log("🧮 CartProvider: Cart calculation debug", {
       itemsCount: items.length,
       itemsData: items.map(i => ({ name: i.product.name, qty: i.quantity, price: i.price })),
       seniorDiscountsCount: seniorDiscounts.length,
       otherDiscount: otherDiscount,
       totalDiners,
+      shouldAutoApplyBOGO,
       calculationResult
     });
     return calculationResult;

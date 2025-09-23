@@ -7,13 +7,15 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BadgePercent } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
+import { BOGOService } from "@/services/cart/BOGOService";
 
 interface DiscountSelectorProps {
   subtotal: number;
-  onApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo', idNumber?: string) => void;
+  onApplyDiscount: (discountAmount: number, discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'bogo', idNumber?: string) => void;
   currentDiscount: number;
   currentDiscountType?: string;
   currentDiscountIdNumber?: string;
+  cartItems?: any[]; // For BOGO analysis
 }
 
 export default function DiscountSelector({ 
@@ -21,10 +23,11 @@ export default function DiscountSelector({
   onApplyDiscount, 
   currentDiscount, 
   currentDiscountType,
-  currentDiscountIdNumber
+  currentDiscountIdNumber,
+  cartItems = []
 }: DiscountSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo'>(
+  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'bogo'>(
     (currentDiscountType as any) || 'senior'
   );
   const [idNumber, setIdNumber] = useState(currentDiscountIdNumber || '');
@@ -36,6 +39,9 @@ export default function DiscountSelector({
   // Other discount rates
   const EMPLOYEE_DISCOUNT_RATE = 0.15; // 15% for employees
   const LOYALTY_DISCOUNT_RATE = 0.10;  // 10% for loyal customers
+  
+  // Check for BOGO eligibility
+  const bogoResult = BOGOService.analyzeBOGO(cartItems);
   
   const calculateDiscount = (type: string): number => {
     switch(type) {
@@ -49,6 +55,8 @@ export default function DiscountSelector({
         return subtotal * LOYALTY_DISCOUNT_RATE;
       case 'promo':
         return 0; // Custom amount will be entered
+      case 'bogo':
+        return bogoResult.discountAmount;
       default:
         return 0;
     }
@@ -110,6 +118,12 @@ export default function DiscountSelector({
                 <RadioGroupItem value="promo" id="promo" />
                 <Label htmlFor="promo">Promo (Custom)</Label>
               </div>
+              {bogoResult.hasEligibleItems && (
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="bogo" id="bogo" />
+                  <Label htmlFor="bogo">BOGO Promotion (Auto-Applied)</Label>
+                </div>
+              )}
             </RadioGroup>
             
             {(discountType === 'senior' || discountType === 'pwd') && (
@@ -131,6 +145,17 @@ export default function DiscountSelector({
                   id="promoCode"
                   placeholder="Enter promo code"
                 />
+              </div>
+            )}
+            
+            {discountType === 'bogo' && bogoResult.hasEligibleItems && (
+              <div className="mt-4 space-y-2">
+                <Label>BOGO Promotion Details:</Label>
+                <div className="text-sm space-y-1">
+                  {bogoResult.breakdown.map((line, index) => (
+                    <p key={index} className="text-muted-foreground">{line}</p>
+                  ))}
+                </div>
               </div>
             )}
             

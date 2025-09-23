@@ -241,6 +241,7 @@ export default function CartView({
             currentSeniorDiscounts={seniorDiscounts}
             currentOtherDiscount={otherDiscount}
             currentTotalDiners={calculations.totalDiners}
+            cartItems={cartItems}
           />
 
           {/* Action Buttons */}

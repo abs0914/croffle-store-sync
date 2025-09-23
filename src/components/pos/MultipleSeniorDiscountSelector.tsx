@@ -9,6 +9,7 @@ import { BadgePercent, Plus, X, Users } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { CartCalculationService, SeniorDiscount, OtherDiscount } from "@/services/cart/CartCalculationService";
+import { BOGOService } from "@/services/cart/BOGOService";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/auth/AuthProvider";
 
@@ -18,6 +19,7 @@ interface MultipleSeniorDiscountSelectorProps {
   currentSeniorDiscounts: SeniorDiscount[];
   currentOtherDiscount?: OtherDiscount | null;
   currentTotalDiners: number;
+  cartItems?: any[]; // For BOGO analysis
 }
 
 export default function MultipleSeniorDiscountSelector({ 
@@ -25,12 +27,13 @@ export default function MultipleSeniorDiscountSelector({
   onApplyDiscounts, 
   currentSeniorDiscounts,
   currentOtherDiscount,
-  currentTotalDiners
+  currentTotalDiners,
+  cartItems = []
 }: MultipleSeniorDiscountSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [discountMode, setDiscountMode] = useState<'senior' | 'other'>('senior');
   const [seniorDiscounts, setSeniorDiscounts] = useState<SeniorDiscount[]>(currentSeniorDiscounts);
-  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary'>('pwd');
+  const [otherDiscountType, setOtherDiscountType] = useState<'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo'>('pwd');
   const [otherIdNumber, setOtherIdNumber] = useState(currentOtherDiscount?.idNumber || '');
   const [complimentaryReason, setComplimentaryReason] = useState('');
   const [approverName, setApproverName] = useState('');
@@ -71,11 +74,22 @@ export default function MultipleSeniorDiscountSelector({
       const validSeniors = seniorDiscounts.filter(d => d.idNumber.trim() !== '').length;
       return CartCalculationService.calculateSeniorDiscountPreview(subtotal, validSeniors, totalDiners);
     } else {
-      const otherDiscountObj: OtherDiscount = {
-        type: otherDiscountType,
-        amount: 0,
-        idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
-      };
+      let otherDiscountObj: OtherDiscount;
+      
+      if (otherDiscountType === 'bogo') {
+        const bogoResult = BOGOService.analyzeBOGO(cartItems);
+        otherDiscountObj = {
+          type: 'bogo',
+          amount: bogoResult.discountAmount
+        };
+      } else {
+        otherDiscountObj = {
+          type: otherDiscountType,
+          amount: 0,
+          idNumber: otherDiscountType === 'pwd' ? otherIdNumber : undefined
+        };
+      }
+      
       // Create a mock cart item to calculate discount properly
       const mockCartItems = [{ price: subtotal, quantity: 1, productId: 'mock', product: {} as any }];
       const calculations = CartCalculationService.calculateCartTotals(mockCartItems, [], otherDiscountObj, 1);
@@ -300,6 +314,12 @@ export default function MultipleSeniorDiscountSelector({
                     <RadioGroupItem value="complimentary" id="complimentary" />
                     <Label htmlFor="complimentary">Complimentary (100%)</Label>
                   </div>
+                  {BOGOService.hasEligibleItems(cartItems) && (
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="bogo" id="bogo" />
+                      <Label htmlFor="bogo">BOGO Promotion (Auto-Calculated)</Label>
+                    </div>
+                  )}
                 </RadioGroup>
 
                 {otherDiscountType === 'pwd' && (
@@ -311,6 +331,17 @@ export default function MultipleSeniorDiscountSelector({
                       onChange={(e) => setOtherIdNumber(e.target.value)}
                       placeholder="Enter PWD ID number"
                     />
+                  </div>
+                )}
+
+                {otherDiscountType === 'bogo' && BOGOService.hasEligibleItems(cartItems) && (
+                  <div className="space-y-2">
+                    <Label>BOGO Promotion Details:</Label>
+                    <div className="text-sm space-y-1">
+                      {BOGOService.analyzeBOGO(cartItems).breakdown.map((line, index) => (
+                        <p key={index} className="text-muted-foreground">{line}</p>
+                      ))}
+                    </div>
                   </div>
                 )}
 

@@ -88,6 +88,7 @@ const OptimizedCartView = memo(function OptimizedCartView({
           currentDiscount={discount}
           currentDiscountType={discountType}
           currentDiscountIdNumber={discountIdNumber}
+          cartItems={items}
         />
         
         {/* Order Summary */}
