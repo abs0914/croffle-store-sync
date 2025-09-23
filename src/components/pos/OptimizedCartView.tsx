@@ -6,6 +6,7 @@ import { CustomerLookup } from "@/components/pos/customer";
 import DiscountSelector from "./DiscountSelector";
 import { CartItemsList, CartSummary } from "./cart";
 import { useCartState, useCartActions, useCartCalculations } from "@/contexts/OptimizedCartContext";
+import { BOGOService } from "@/services/cart/BOGOService";
 
 interface OptimizedCartViewProps {
   selectedCustomer: Customer | null;
@@ -40,6 +41,9 @@ const OptimizedCartView = memo(function OptimizedCartView({
   const { items } = useCartState();
   const { removeItem, updateQuantity, clearCart } = useCartActions();
   const { subtotal, tax, total } = useCartCalculations();
+  
+  // Check for BOGO eligibility
+  const bogoResult = BOGOService.analyzeBOGO(items);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
@@ -57,6 +61,21 @@ const OptimizedCartView = memo(function OptimizedCartView({
             Clear All
           </Button>
         </div>
+        
+        {/* BOGO Eligibility Indicator */}
+        {bogoResult.hasEligibleItems && (
+          <div className="p-2 bg-croffle-accent/10 border border-croffle-accent/20 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-croffle-accent rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-croffle-accent">BOGO Available</span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                Save ₱{bogoResult.discountAmount.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        )}
         
         {/* Customer Selection */}
         <CustomerLookup 

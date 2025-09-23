@@ -118,12 +118,6 @@ export default function DiscountSelector({
                 <RadioGroupItem value="promo" id="promo" />
                 <Label htmlFor="promo">Promo (Custom)</Label>
               </div>
-              {bogoResult.hasEligibleItems && (
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="bogo" id="bogo" />
-                  <Label htmlFor="bogo">BOGO Promotion (Auto-Applied)</Label>
-                </div>
-              )}
             </RadioGroup>
             
             {(discountType === 'senior' || discountType === 'pwd') && (
@@ -148,13 +142,34 @@ export default function DiscountSelector({
               </div>
             )}
             
-            {discountType === 'bogo' && bogoResult.hasEligibleItems && (
-              <div className="mt-4 space-y-2">
-                <Label>BOGO Promotion Details:</Label>
-                <div className="text-sm space-y-1">
+            
+            {/* Manual BOGO Button */}
+            {bogoResult.hasEligibleItems && (
+              <div className="mt-4 p-3 bg-croffle-background rounded-lg border">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <Label className="font-medium text-croffle-primary">BOGO Available!</Label>
+                    <p className="text-sm text-muted-foreground">Click to apply BOGO promotion</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      onApplyDiscount(bogoResult.discountAmount, 'bogo', '');
+                      setIsOpen(false);
+                    }}
+                  >
+                    Apply BOGO
+                  </Button>
+                </div>
+                <div className="text-xs space-y-1">
                   {bogoResult.breakdown.map((line, index) => (
                     <p key={index} className="text-muted-foreground">{line}</p>
                   ))}
+                  <p className="font-medium text-croffle-primary">
+                    Total BOGO Savings: ₱{bogoResult.discountAmount.toFixed(2)}
+                  </p>
                 </div>
               </div>
             )}

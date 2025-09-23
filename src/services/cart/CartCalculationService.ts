@@ -41,7 +41,6 @@ export interface CartCalculations {
   // Metadata
   totalDiners: number;
   numberOfSeniors: number;
-  bogoDiscountAmount?: number; // BOGO promotion discount
 }
 
 export class CartCalculationService {
@@ -55,8 +54,7 @@ export class CartCalculationService {
     items: CartItem[],
     seniorDiscounts: SeniorDiscount[] = [],
     otherDiscount?: OtherDiscount | null,
-    totalDiners: number = 1,
-    applyAutoBOGO: boolean = true
+    totalDiners: number = 1
   ): CartCalculations {
     console.log("🧮 CartCalculationService: Starting calculation", {
       itemsCount: items.length,
@@ -113,16 +111,6 @@ export class CartCalculationService {
     
     // Other discount calculations
     let otherDiscountAmount = 0;
-    let bogoDiscountAmount = 0;
-    
-    // Check for automatic BOGO promotion first
-    if (applyAutoBOGO) {
-      const bogoResult = BOGOService.analyzeBOGO(items);
-      if (bogoResult.hasEligibleItems) {
-        bogoDiscountAmount = bogoResult.discountAmount;
-        console.log("🎁 CartCalculation: Auto-applied BOGO discount", bogoDiscountAmount);
-      }
-    }
     
     if (otherDiscount) {
       const discountSubtotal = grossSubtotal > 0 ? grossSubtotal : items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -151,8 +139,8 @@ export class CartCalculationService {
     // Final calculations
     const standardVAT = grossSubtotal * this.VAT_RATE / (1 + this.VAT_RATE);
     const adjustedVAT = Math.max(0, standardVAT - vatExemption);
-    const totalDiscountAmount = seniorDiscountAmount + otherDiscountAmount + bogoDiscountAmount;
-    const finalTotal = grossSubtotal - vatExemption - seniorDiscountAmount - otherDiscountAmount - bogoDiscountAmount;
+    const totalDiscountAmount = seniorDiscountAmount + otherDiscountAmount;
+    const finalTotal = grossSubtotal - vatExemption - seniorDiscountAmount - otherDiscountAmount;
     
     const result = {
       grossSubtotal,
@@ -161,15 +149,14 @@ export class CartCalculationService {
       vatExemption,
       adjustedVAT,
       seniorDiscountAmount,
-      otherDiscountAmount: otherDiscountAmount + bogoDiscountAmount, // Combine for display
+      otherDiscountAmount,
       totalDiscountAmount,
       finalTotal,
       vatableSales,
       vatExemptSales,
       zeroRatedSales: 0,
       totalDiners: effectiveTotalDiners,
-      numberOfSeniors,
-      bogoDiscountAmount // Add BOGO amount for detailed breakdown
+      numberOfSeniors
     };
     
     console.log("🧮 CartCalculationService: Final result", result);

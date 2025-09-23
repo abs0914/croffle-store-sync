@@ -10,6 +10,7 @@ import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
 import { useStore } from '@/contexts/StoreContext';
 import { useCart } from '@/contexts/cart/CartContext';
 import { toast } from 'sonner';
+import { BOGOService } from '@/services/cart/BOGOService';
 import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
 import { quickCheckoutValidation } from '@/services/pos/lightweightValidationService';
 import {
@@ -180,6 +181,9 @@ export default function CartView({
     (orderType === 'online_delivery' && deliveryPlatform && deliveryOrderNumber.trim());
   
   const canCheckout = cartItems.length > 0 && isShiftActive && !isValidating && !Boolean(validationMessage) && isDeliveryOrderValid;
+  
+  // Check for BOGO eligibility
+  const bogoResult = BOGOService.analyzeBOGO(cartItems);
 
   return (
     <div className="flex flex-col h-full min-h-0 space-y-3 overflow-y-auto pr-1">
@@ -187,6 +191,21 @@ export default function CartView({
         itemCount={cartItems?.length || 0}
         onClearCart={clearCart}
       />
+      
+      {/* BOGO Eligibility Indicator */}
+      {bogoResult.hasEligibleItems && (
+        <div className="flex-shrink-0 p-2 bg-croffle-accent/10 border border-croffle-accent/20 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-croffle-accent rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium text-croffle-accent">BOGO Available</span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              Save ₱{bogoResult.discountAmount.toFixed(2)}
+            </span>
+          </div>
+        </div>
+      )}
 
       <CartValidationMessage message={validationMessage} />
 

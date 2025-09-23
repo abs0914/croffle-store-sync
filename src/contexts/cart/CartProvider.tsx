@@ -61,15 +61,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Get calculations using the centralized service
   const getCartCalculations = (): CartCalculations => {
-    // Check if we should auto-apply BOGO (don't if there's already a manual BOGO discount)
-    const shouldAutoApplyBOGO = !otherDiscount || otherDiscount.type !== 'bogo';
-    
     const calculationResult = CartCalculationService.calculateCartTotals(
       items,
       seniorDiscounts,
       otherDiscount,
-      totalDiners,
-      shouldAutoApplyBOGO
+      totalDiners
     );
     
     console.log("🧮 CartProvider: Cart calculation debug", {
@@ -78,7 +74,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       seniorDiscountsCount: seniorDiscounts.length,
       otherDiscount: otherDiscount,
       totalDiners,
-      shouldAutoApplyBOGO,
       calculationResult
     });
     return calculationResult;
