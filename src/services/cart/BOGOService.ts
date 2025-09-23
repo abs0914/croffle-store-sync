@@ -20,19 +20,19 @@ export class BOGOService {
     {
       targetPrice: 125,
       categoryPattern: "croffle",
-      discountAmount: 62.5, // 50% of ₱125
+      discountAmount: 125, // Full price of ₱125 - true BOGO
       description: "Buy 1 Regular Croffle ₱125, Get 1 Free"
     },
     {
       targetPrice: 65,
       categoryPattern: "croffle",
-      discountAmount: 32.5, // 50% of ₱65
+      discountAmount: 65, // Full price of ₱65 - true BOGO
       description: "Buy 1 Mini Croffle ₱65, Get 1 Free"
     },
     {
       targetPrice: 99,
       categoryPattern: "croffle",
-      discountAmount: 49.5, // 50% of ₱99
+      discountAmount: 99, // Full price of ₱99 - true BOGO
       description: "Buy 1 Overload Croffle ₱99, Get 1 Free"
     }
   ];
