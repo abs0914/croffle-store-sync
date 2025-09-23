@@ -282,9 +282,7 @@ export default function MultipleSeniorDiscountSelector({
                 </div>
                 <div className="text-xs space-y-1">
                   {BOGOService.analyzeBOGO(cartItems).breakdown.map((line, index) => <p key={index} className="text-muted-foreground">{line}</p>)}
-                  <p className="font-medium text-croffle-primary">
-                    Total BOGO Savings: ₱{BOGOService.analyzeBOGO(cartItems).discountAmount.toFixed(2)}
-                  </p>
+                  
                 </div>
               </div>}
             
