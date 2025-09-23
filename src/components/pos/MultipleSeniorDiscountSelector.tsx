@@ -277,7 +277,7 @@ export default function MultipleSeniorDiscountSelector({
                 onApplyDiscounts([], bogoDiscount, 1);
                 setIsOpen(false);
               }}>
-                    Apply BOGO
+                    Apply Buy 1 Take 1
                   </Button>
                 </div>
                 <div className="text-xs space-y-1">
