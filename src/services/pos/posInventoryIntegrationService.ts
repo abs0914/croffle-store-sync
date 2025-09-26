@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types";
 import { checkProductAvailabilityByRecipe } from "@/services/productCatalog/automaticAvailabilityService";
+import { SimplifiedInventoryService } from "@/services/inventory/phase4InventoryService";
 
 export interface POSInventoryStatus {
   productId: string;
@@ -15,7 +16,7 @@ const getStockStatus = (availableQuantity: number): 'in_stock' | 'out_of_stock' 
   return 'in_stock';
 };
 
-// Fetch inventory status for POS products with template-based calculations
+// Fetch inventory status for POS products with real inventory validation
 export const fetchPOSInventoryStatus = async (
   products: Product[], 
   storeId: string
@@ -23,7 +24,7 @@ export const fetchPOSInventoryStatus = async (
   const statusMap = new Map<string, POSInventoryStatus>();
   
   try {
-    console.log(`🔍 POS Inventory: Calculating status for ${products.length} products in store ${storeId}`);
+    console.log(`🔍 POS Inventory: Validating inventory for ${products.length} products in store ${storeId}`);
     
     for (const product of products) {
       // Determine if this is a direct product or template-based
@@ -35,22 +36,39 @@ export const fetchPOSInventoryStatus = async (
                                product.name.toLowerCase().includes('bottle')));
       
       let availableQuantity = 0;
+      let status: 'in_stock' | 'out_of_stock' = 'out_of_stock';
       
-      // Simplify stock calculation to use static inventory quantities only
-      // Remove all recipe-based calculations that are causing conflicts
       if (isDirectProduct) {
         // For direct products, use the static stock quantity
         availableQuantity = product.stock_quantity || 0;
+        status = getStockStatus(availableQuantity);
         console.log(`📦 Direct product ${product.name}: stock = ${availableQuantity}`);
       } else {
-        // For recipe-based products, use a simplified approach
-        // If product is marked as available, assume reasonable stock
-        // If not available, treat as out of stock
-        availableQuantity = (product.is_available !== false) ? 25 : 0;
-        console.log(`🧪 Recipe product ${product.name}: availability = ${product.is_available}, stock = ${availableQuantity}`);
+        // For recipe-based products, use real inventory validation
+        try {
+          const validationResult = await SimplifiedInventoryService.validateInventoryAvailability([{
+            productId: product.id,
+            productName: product.name,
+            quantity: 1,
+            storeId: storeId
+          }]);
+          
+          if (validationResult.canProceed && validationResult.errors.length === 0) {
+            status = 'in_stock';
+            availableQuantity = 25; // Assume reasonable stock if validation passes
+            console.log(`✅ Recipe product ${product.name}: validation passed, marking as in stock`);
+          } else {
+            status = 'out_of_stock';
+            availableQuantity = 0;
+            console.log(`❌ Recipe product ${product.name}: validation failed`, validationResult.errors);
+          }
+        } catch (error) {
+          // If validation throws an error, mark as out of stock
+          status = 'out_of_stock';
+          availableQuantity = 0;
+          console.log(`❌ Recipe product ${product.name}: validation error`, error);
+        }
       }
-      
-      const status = getStockStatus(availableQuantity);
       
       statusMap.set(product.id, {
         productId: product.id,
