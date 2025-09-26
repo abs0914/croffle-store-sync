@@ -29,9 +29,9 @@ export default function ProductCard({
   // Get inventory status from context
   const inventoryStatus = getProductStatus(product.id);
   
-  // Use inventory status for availability calculations
+  // Use inventory status for availability calculations - don't default to out_of_stock
   const stockQuantity = inventoryStatus?.availableQuantity || 0;
-  const stockStatus = inventoryStatus?.status || 'out_of_stock';
+  const stockStatus = inventoryStatus?.status || 'in_stock'; // Default to in_stock until loaded
   const isIngredientAvailable = stockStatus !== 'out_of_stock' && (product.is_available !== false);
   
   const canSell = isActive && isIngredientAvailable;

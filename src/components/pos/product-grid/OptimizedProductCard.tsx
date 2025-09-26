@@ -31,7 +31,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
   // Check if product is active, handling both is_active and isActive properties
   const isActive = product.is_active || product.isActive;
   
-  // Check stock availability for direct products
+  // Check stock availability - only show out of stock if explicitly set
   const isOutOfStock = inventoryStatus?.status === 'out_of_stock';
   const isDirectProduct = inventoryStatus?.isDirectProduct || false;
   
