@@ -29,7 +29,7 @@ export default function ProductCard({
   const unifiedProduct = product as UnifiedProductData;
   const stockQuantity = unifiedProduct.available_quantity || product.stock_quantity || 0;
   const availabilityStatus = unifiedProduct.availability_status || 'available';
-  const isIngredientAvailable = availabilityStatus !== 'out_of_stock' && (product.is_available !== false);
+  const isIngredientAvailable = availabilityStatus === 'available' || availabilityStatus === 'low_stock';
   
   const canSell = isActive && isIngredientAvailable;
 
