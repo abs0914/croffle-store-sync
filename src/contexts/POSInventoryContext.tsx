@@ -29,9 +29,13 @@ export const POSInventoryProvider: React.FC<POSInventoryProviderProps> = ({
     if (!products.length || !storeId) return;
 
     setIsLoading(true);
+    console.log('🧹 Clearing inventory status map for fresh calculation');
+    setInventoryStatusMap(new Map()); // Clear existing status
+    
     try {
       const statusMap = await fetchPOSInventoryStatus(products, storeId);
       setInventoryStatusMap(statusMap);
+      console.log('✅ POS Inventory Context: Status updated for', statusMap.size, 'products');
     } catch (error) {
       console.error('❌ POS Inventory Context: Failed to refresh inventory status:', error);
     } finally {

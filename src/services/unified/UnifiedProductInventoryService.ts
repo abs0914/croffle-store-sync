@@ -81,6 +81,8 @@ class UnifiedProductInventoryService {
         const availableQuantity = availability.quantity;
         const availabilityStatus = availability.status;
 
+        console.log(`📊 Product ${product.product_name}: recipe_id=${product.recipe_id}, availability=${availabilityStatus}, quantity=${availableQuantity}`);
+
         return {
           ...product,
           available_quantity: availableQuantity,
@@ -98,8 +100,8 @@ class UnifiedProductInventoryService {
           is_active: product.is_available,
           stock_quantity: availableQuantity,
           sku: `CAT-${product.id.slice(0, 8)}`,
-          recipe_id: null,
-          product_type: 'direct',
+          recipe_id: product.recipe_id, // Preserve actual recipe_id from database
+          product_type: product.recipe_id ? 'recipe' : 'direct',
           is_available: true,
           created_at: product.created_at,
           updated_at: product.updated_at
@@ -225,6 +227,8 @@ class UnifiedProductInventoryService {
         const availableQuantity = availability.quantity;
         const availabilityStatus = availability.status;
 
+        console.log(`📊 Product ${product.product_name}: recipe_id=${product.recipe_id}, availability=${availabilityStatus}, quantity=${availableQuantity}`);
+
         return {
           ...product,
           available_quantity: availableQuantity,
@@ -242,8 +246,8 @@ class UnifiedProductInventoryService {
           is_active: product.is_available,
           stock_quantity: availableQuantity,
           sku: `CAT-${product.id.slice(0, 8)}`,
-          recipe_id: null,
-          product_type: 'direct',
+          recipe_id: product.recipe_id, // Preserve actual recipe_id from database
+          product_type: product.recipe_id ? 'recipe' : 'direct',
           is_available: true,
           created_at: product.created_at,
           updated_at: product.updated_at
