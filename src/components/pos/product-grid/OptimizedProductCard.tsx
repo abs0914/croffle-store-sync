@@ -7,10 +7,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertTriangle, Package, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ImageWithFallback } from "../ImageWithFallback";
-import { usePOSInventory } from "@/contexts/POSInventoryContext";
+import { UnifiedProductData } from "@/services/unified/UnifiedProductInventoryService";
 
 interface OptimizedProductCardProps {
-  product: Product;
+  product: Product | UnifiedProductData;
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
   onClick: (product: Product) => void;
@@ -23,17 +23,18 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
   onClick
 }: OptimizedProductCardProps) {
   const navigate = useNavigate();
-  const { getProductStatus } = usePOSInventory();
   
-  // Get inventory status from context
-  const inventoryStatus = getProductStatus(product.id);
+  // Use unified inventory data directly from product if available
+  const unifiedProduct = product as UnifiedProductData;
+  const availabilityStatus = unifiedProduct.availability_status || 'available';
+  const stockQuantity = unifiedProduct.available_quantity || product.stock_quantity || 0;
   
   // Check if product is active, handling both is_active and isActive properties
   const isActive = product.is_active || product.isActive;
   
   // Check stock availability - only show out of stock if explicitly set
-  const isOutOfStock = inventoryStatus?.status === 'out_of_stock';
-  const isDirectProduct = inventoryStatus?.isDirectProduct || false;
+  const isOutOfStock = availabilityStatus === 'out_of_stock';
+  const isDirectProduct = unifiedProduct.product_type === 'direct';
   
   // Auto-disable if out of stock
   const isDisabled = !isShiftActive || !isActive || isOutOfStock;
@@ -61,9 +62,9 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
   const tooltipText = React.useMemo(() => {
     if (!isShiftActive) return "Start a shift to add items to cart";
     if (!isActive) return "This product is inactive";
-    if (isOutOfStock && isDirectProduct) return `Out of stock - ${inventoryStatus?.availableQuantity || 0} units available`;
+    if (isOutOfStock && isDirectProduct) return `Out of stock - ${stockQuantity} units available`;
     return `Select ${product.name}`;
-  }, [isShiftActive, isActive, isOutOfStock, isDirectProduct, product.name, inventoryStatus?.availableQuantity]);
+  }, [isShiftActive, isActive, isOutOfStock, isDirectProduct, product.name, stockQuantity]);
 
   const getStockBadge = () => {
     if (!isDirectProduct || !isOutOfStock) return null;

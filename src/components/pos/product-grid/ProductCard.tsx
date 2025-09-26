@@ -8,10 +8,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Plus, Info, AlertTriangle, XCircle } from "lucide-react";
 import { ProductStatusIndicator } from "@/components/pos/ProductStatusIndicator";
 import { ImageWithFallback } from "../ImageWithFallback";
-import { usePOSInventory } from "@/contexts/POSInventoryContext";
+import { UnifiedProductData } from "@/services/unified/UnifiedProductInventoryService";
 
 interface ProductCardProps {
-  product: Product;
+  product: Product | UnifiedProductData;
   isShiftActive: boolean;
   getCategoryName: (categoryId: string | undefined) => string;
   onClick: (product: Product) => void;
@@ -24,15 +24,12 @@ export default function ProductCard({
   onClick
 }: ProductCardProps) {
   const isActive = product.is_active || product.isActive;
-  const { getProductStatus } = usePOSInventory();
   
-  // Get inventory status from context
-  const inventoryStatus = getProductStatus(product.id);
-  
-  // Use inventory status for availability calculations - don't default to out_of_stock
-  const stockQuantity = inventoryStatus?.availableQuantity || 0;
-  const stockStatus = inventoryStatus?.status || 'in_stock'; // Default to in_stock until loaded
-  const isIngredientAvailable = stockStatus !== 'out_of_stock' && (product.is_available !== false);
+  // Use unified inventory data directly from product if available
+  const unifiedProduct = product as UnifiedProductData;
+  const stockQuantity = unifiedProduct.available_quantity || product.stock_quantity || 0;
+  const availabilityStatus = unifiedProduct.availability_status || 'available';
+  const isIngredientAvailable = availabilityStatus !== 'out_of_stock' && (product.is_available !== false);
   
   const canSell = isActive && isIngredientAvailable;
 
@@ -108,7 +105,7 @@ export default function ProductCard({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs">
-                    {inventoryStatus?.isDirectProduct 
+                    {unifiedProduct.product_type === 'direct'
                       ? `Only ${stockQuantity} units in stock`
                       : `Cannot make this item`
                     }
@@ -161,8 +158,10 @@ export default function ProductCard({
                 <Tooltip>
                   <TooltipTrigger>
                     <div className={`text-xs px-1 py-0.5 rounded-md ${
-                      stockStatus === 'out_of_stock' 
+                      availabilityStatus === 'out_of_stock' 
                         ? 'text-red-700 bg-red-100' 
+                        : availabilityStatus === 'low_stock'
+                        ? 'text-yellow-700 bg-yellow-100'
                         : 'text-gray-500 bg-gray-100'
                     }`}>
                       {stockQuantity}
@@ -170,7 +169,7 @@ export default function ProductCard({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="text-xs">
-                      {inventoryStatus?.isDirectProduct 
+                      {unifiedProduct.product_type === 'direct'
                         ? `${stockQuantity} units in stock`
                         : `Can make ${stockQuantity} units`
                       }
