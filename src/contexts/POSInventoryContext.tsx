@@ -26,14 +26,26 @@ export const POSInventoryProvider: React.FC<POSInventoryProviderProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const refreshInventoryStatus = useCallback(async () => {
-    if (!products.length || !storeId) return;
+    if (!products.length || !storeId) {
+      console.log('⏭️ POS Inventory Context: Skipping refresh - no products or store ID', { 
+        productsLength: products.length, 
+        storeId 
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
-      console.log('🔄 POS Inventory Context: Refreshing status for', products.length, 'products');
+      console.log('🔄 POS Inventory Context: Refreshing status for', products.length, 'products in store:', storeId);
+      console.log('📦 Sample products:', products.slice(0, 3).map(p => ({ id: p.id, name: p.name })));
+      
       const statusMap = await fetchPOSInventoryStatus(products, storeId);
       setInventoryStatusMap(statusMap);
       console.log('✅ POS Inventory Context: Status updated for', statusMap.size, 'products');
+      
+      // Log first few status entries for debugging
+      const statusEntries = Array.from(statusMap.entries()).slice(0, 3);
+      console.log('📊 Sample status entries:', statusEntries);
     } catch (error) {
       console.error('❌ POS Inventory Context: Failed to refresh inventory status:', error);
     } finally {
