@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Wifi, WifiOff, Menu, RefreshCw, RotateCcw } from 'lucide-react';
+import { Wifi, WifiOff, Menu } from 'lucide-react';
 import { PrinterStatusIndicator } from '@/components/printer/PrinterStatusIndicator';
 import { useSidebar } from '@/components/ui/sidebar';
 interface OptimizedPOSHeaderProps {
@@ -13,14 +13,13 @@ interface OptimizedPOSHeaderProps {
   };
   connectionStatus: 'online' | 'offline';
   onShowLastReceipt?: () => void;
-  onRefreshProducts?: () => void;
+  
 }
 export function OptimizedPOSHeader({
   storeName,
   shiftInfo,
   connectionStatus,
-  onShowLastReceipt,
-  onRefreshProducts
+  onShowLastReceipt
 }: OptimizedPOSHeaderProps) {
   const {
     toggleSidebar
@@ -63,16 +62,6 @@ export function OptimizedPOSHeader({
             {/* Printer Status */}
             <PrinterStatusIndicator />
 
-            {/* Refresh Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onRefreshProducts}
-              className="flex items-center gap-2"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Refresh
-            </Button>
           </div>
         </div>
 

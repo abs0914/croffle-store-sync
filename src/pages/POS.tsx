@@ -300,7 +300,6 @@ export default function POS() {
             startTime: new Date(currentShift.startTime).toLocaleTimeString()
           } : undefined}
           connectionStatus={isOnline ? 'online' : 'offline'}
-          onRefreshProducts={refreshProducts}
         />
         
         {/* Offline Mode Indicator */}
