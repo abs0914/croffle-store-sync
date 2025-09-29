@@ -1,8 +1,8 @@
 {
-  "timestamp": "2025-08-27T06:00:48.970Z",
+  "timestamp": "2025-09-01T00:31:38.913Z",
   "status": "warning",
   "metrics": {
-    "mapping_completion": "15.1",
+    "mapping_completion": "5.0",
     "low_stock_items": 0,
     "total_alerts": 1
   },
@@ -10,7 +10,7 @@
     {
       "type": "missing_mappings",
       "severity": "high",
-      "message": "258 products missing ingredient mappings",
+      "message": "456 products missing ingredient mappings",
       "action": "Review and create missing mappings"
     }
   ],
@@ -18,7 +18,7 @@
     {
       "priority": "high",
       "action": "Complete ingredient mappings",
-      "description": "258 products need ingredient mappings",
+      "description": "456 products need ingredient mappings",
       "estimated_time": "2-4 hours"
     },
     {
