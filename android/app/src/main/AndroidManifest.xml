@@ -35,6 +35,15 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
+            <!-- Custom Tabs intent filter -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                      android:host="pos.thecrofflestore.com" />
+            </intent-filter>
+
         </activity>
 
         <provider
@@ -81,4 +90,9 @@
 
     <!-- Device admin for kiosk mode (optional) -->
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN" />
+
+    <!-- Chrome Custom Tabs permissions -->
+    <queries>
+        <package android:name="com.android.chrome" />
+    </queries>
 </manifest>

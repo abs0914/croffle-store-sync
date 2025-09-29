@@ -36,7 +36,15 @@ export default function PrinterSettings() {
 
   const isCapacitor = useMemo(() => !!(window as any).Capacitor?.isNativePlatform?.(), []);
   const isAndroid = useMemo(() => Capacitor.getPlatform() === 'android', []);
-  const shouldUseWebView = useMemo(() => isCapacitor && isAndroid, [isCapacitor, isAndroid]);
+  const isChrome = useMemo(() => navigator.userAgent.includes('Chrome'), []);
+  const isChromeCustomTabs = useMemo(() => {
+    // Detect Chrome Custom Tabs by checking user agent and referrer
+    return isChrome && (
+      document.referrer.includes('android-app://') ||
+      navigator.userAgent.includes('wv') === false // Not WebView
+    );
+  }, [isChrome]);
+  const shouldUseWebView = useMemo(() => isCapacitor && isAndroid && !isChromeCustomTabs, [isCapacitor, isAndroid, isChromeCustomTabs]);
 
   useEffect(() => {
     // Debug plugin availability first
@@ -93,7 +101,7 @@ export default function PrinterSettings() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Printer Settings</h2>
         <div className="text-xs text-muted-foreground">
-          Mode: {shouldUseWebView ? 'Android (WebView)' : isCapacitor ? 'Android (Native)' : 'Web Browser'}
+          Mode: {isChromeCustomTabs ? 'Chrome Custom Tabs' : shouldUseWebView ? 'Android (WebView)' : isCapacitor ? 'Android (Native)' : 'Web Browser'}
         </div>
       </div>
 

@@ -82,18 +82,35 @@ export default function PrinterWebView() {
 
     try {
       console.log('🔍 Scanning for thermal printers...');
-      
-      // Request device with thermal printer services
+
+      // Request device with thermal printer name filters (this works in Chrome!)
       const device = await navigator.bluetooth.requestDevice({
         filters: [
-          { services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Generic printer service
-          { services: ['49535343-fe7d-4ae5-8fa9-9fafd205e455'] }, // POS58 service
+          { namePrefix: 'POS' },
+          { namePrefix: 'Thermal' },
+          { namePrefix: 'Printer' },
+          { namePrefix: 'BT-' },
+          { namePrefix: 'TP-' },
+          { namePrefix: 'EPSON' },
+          { namePrefix: 'CITIZEN' },
+          { namePrefix: 'STAR' },
+          { namePrefix: 'BIXOLON' },
+          { namePrefix: 'SEWOO' },
+          { namePrefix: 'CUSTOM' },
+          { namePrefix: 'GOOJPRT' },
+          { namePrefix: 'MUNBYN' },
+          { namePrefix: 'RONGTA' },
+          { namePrefix: 'XPRINTER' }
         ],
         optionalServices: [
-          '000018f0-0000-1000-8000-00805f9b34fb',
+          'battery_service',
+          'device_information',
+          // Common thermal printer service UUIDs
           '49535343-fe7d-4ae5-8fa9-9fafd205e455',
-          '00001800-0000-1000-8000-00805f9b34fb', // Generic Access
-          '00001801-0000-1000-8000-00805f9b34fb'  // Generic Attribute
+          '000018f0-0000-1000-8000-00805f9b34fb',
+          '0000fff0-0000-1000-8000-00805f9b34fb',
+          '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+          '12345678-1234-1234-1234-123456789abc'
         ]
       });
 
