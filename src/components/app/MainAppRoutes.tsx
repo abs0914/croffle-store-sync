@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Route } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { MainLayout } from '@/components/layout/MainLayout';
 
@@ -242,8 +243,8 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Debug Routes - Development only */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* Debug Routes - Enabled on native builds or when VITE_ENABLE_BLUETOOTH_DEBUG=true */}
+      {((import.meta as any).env?.VITE_ENABLE_BLUETOOTH_DEBUG === 'true' || Capacitor.isNativePlatform()) && (
         <Route
           path="/debug/bluetooth"
           element={
