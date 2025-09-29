@@ -8,7 +8,20 @@ export interface PermissionStatus {
 }
 
 export class BluetoothPermissionManager {
-  
+
+  /**
+   * Debug method to check plugin availability
+   */
+  static debugPluginAvailability(): void {
+    console.log('🔧 Debugging Capacitor plugin availability:');
+    console.log('- Capacitor.isNativePlatform():', Capacitor.isNativePlatform());
+    console.log('- Capacitor.getPlatform():', Capacitor.getPlatform());
+    console.log('- BluetoothLe plugin available:', Capacitor.isPluginAvailable('BluetoothLe'));
+    console.log('- App plugin available:', Capacitor.isPluginAvailable('App'));
+    console.log('- BleClient available:', typeof BleClient !== 'undefined');
+    console.log('- Window.Capacitor:', !!(window as any).Capacitor);
+  }
+
   /**
    * Check current permission status
    */
@@ -96,6 +109,12 @@ export class BluetoothPermissionManager {
     try {
       // Step 1: Initialize BLE client (this requests basic Bluetooth permissions)
       console.log('📱 Initializing BLE client...');
+
+      // Check if BleClient is available
+      if (typeof BleClient === 'undefined') {
+        throw new Error('BleClient is not available - Capacitor Bluetooth LE plugin not loaded');
+      }
+
       await BleClient.initialize({
         androidNeverForLocation: false
       });
@@ -103,14 +122,39 @@ export class BluetoothPermissionManager {
 
       // Step 2: Request location permissions by attempting a scan
       console.log('📍 Requesting location permissions...');
-      await BleClient.requestLEScan({}, () => {});
-      await BleClient.stopLEScan();
+
+      // Use a timeout to prevent hanging
+      const scanPromise = new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Permission request timeout'));
+        }, 10000); // 10 second timeout
+
+        BleClient.requestLEScan({}, () => {})
+          .then(() => BleClient.stopLEScan())
+          .then(() => {
+            clearTimeout(timeout);
+            resolve();
+          })
+          .catch((error) => {
+            clearTimeout(timeout);
+            reject(error);
+          });
+      });
+
+      await scanPromise;
       console.log('✅ Location permissions granted');
 
       // Step 3: Check if Bluetooth is enabled
       console.log('📡 Checking Bluetooth enabled status...');
-      const isEnabled = await BleClient.isEnabled();
-      console.log(`📡 Bluetooth enabled: ${isEnabled}`);
+      let isEnabled = false;
+      try {
+        isEnabled = await BleClient.isEnabled();
+        console.log(`📡 Bluetooth enabled: ${isEnabled}`);
+      } catch (enabledError) {
+        console.warn('Could not check Bluetooth enabled status:', enabledError);
+        // Assume enabled if we can't check
+        isEnabled = true;
+      }
 
       return {
         bluetooth: true,
@@ -120,7 +164,14 @@ export class BluetoothPermissionManager {
 
     } catch (error: any) {
       console.error('❌ Permission request failed:', error);
-      
+
+      // Provide more specific error information
+      if (error.message?.includes('timeout')) {
+        console.error('Permission request timed out - this may indicate a system issue');
+      } else if (error.message?.includes('not available')) {
+        console.error('BLE plugin not available - check Capacitor configuration');
+      }
+
       // Return current status even if some permissions failed
       return await this.checkPermissions();
     }
@@ -176,18 +227,46 @@ export class BluetoothPermissionManager {
     }
 
     try {
-      // This will open the app's permission settings page
+      console.log('🔧 Attempting to open app settings...');
+
+      // Check if App plugin is available
+      if (!Capacitor.isPluginAvailable('App')) {
+        throw new Error('App plugin not available');
+      }
+
       const { App } = await import('@capacitor/app');
-      await App.openUrl({ url: 'app-settings:' });
-    } catch (error) {
-      console.error('Failed to open settings:', error);
+
+      // Try to open app-specific settings first
+      try {
+        // Android intent to open app-specific settings
+        await App.openUrl({ url: 'android-app://com.android.settings/android.settings.APPLICATION_DETAILS_SETTINGS' });
+        console.log('✅ Opened app-specific settings');
+        return;
+      } catch (specificError) {
+        console.log('App-specific settings failed, trying general approach:', specificError);
+      }
+
       // Fallback: try to open general settings
       try {
-        const { App } = await import('@capacitor/app');
-        await App.openUrl({ url: 'settings:' });
-      } catch (fallbackError) {
-        console.error('Failed to open settings (fallback):', fallbackError);
+        await App.openUrl({ url: 'android.settings.SETTINGS' });
+        console.log('✅ Opened general settings');
+        return;
+      } catch (generalError) {
+        console.log('General settings failed, trying basic settings:', generalError);
       }
+
+      // Final fallback: try basic settings intent
+      try {
+        await App.openUrl({ url: 'android.intent.action.MAIN' });
+        console.log('✅ Opened basic settings');
+      } catch (basicError) {
+        console.error('All settings attempts failed:', basicError);
+        throw new Error('Could not open device settings');
+      }
+
+    } catch (error: any) {
+      console.error('❌ Failed to open settings:', error);
+      throw new Error(`Settings access failed: ${error.message || 'Unknown error'}`);
     }
   }
 }

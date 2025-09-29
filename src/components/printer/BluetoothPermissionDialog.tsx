@@ -40,67 +40,114 @@ export function BluetoothPermissionDialog({
   // Check permissions when dialog opens
   useEffect(() => {
     if (isOpen) {
+      // Debug plugin availability first
+      BluetoothPermissionManager.debugPluginAvailability();
       checkCurrentPermissions();
     }
   }, [isOpen]);
 
   const checkCurrentPermissions = async () => {
+    console.log('🔍 BluetoothPermissionDialog: Checking current permissions...');
     setIsChecking(true);
+
     try {
+      console.log('🔍 Calling BluetoothPermissionManager.checkPermissions()...');
       const status = await BluetoothPermissionManager.checkPermissions();
+      console.log('🔍 Permission check result:', status);
+
       setPermissionStatus(status);
-      
+
       // If all permissions are granted, automatically close and proceed
       if (status.bluetooth && status.location && status.bluetoothEnabled) {
+        console.log('✅ All permissions are granted, proceeding...');
         toast.success('All Bluetooth permissions are granted!');
         onPermissionsGranted();
         onClose();
+      } else {
+        console.log('⚠️ Some permissions still missing after check:', status);
       }
-    } catch (error) {
-      console.error('Failed to check permissions:', error);
-      toast.error('Failed to check permissions');
+    } catch (error: any) {
+      console.error('❌ Failed to check permissions:', error);
+      console.error('Permission check error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+
+      toast.error('Failed to check permissions', {
+        description: error.message || 'Please try again'
+      });
     } finally {
+      console.log('🔍 Permission check completed, setting isChecking to false');
       setIsChecking(false);
     }
   };
 
   const requestPermissions = async () => {
+    console.log('🔐 BluetoothPermissionDialog: Starting permission request...');
     setIsRequesting(true);
+
     try {
       toast.info('Requesting Bluetooth permissions...', {
         description: 'Please allow all permission requests'
       });
 
+      console.log('🔐 Calling BluetoothPermissionManager.requestPermissions()...');
       const status = await BluetoothPermissionManager.requestPermissions();
+      console.log('🔐 Permission request result:', status);
+
       setPermissionStatus(status);
 
       if (status.bluetooth && status.location && status.bluetoothEnabled) {
+        console.log('✅ All permissions granted successfully');
         toast.success('All permissions granted!');
         onPermissionsGranted();
         onClose();
       } else {
+        console.log('⚠️ Some permissions still missing:', status);
         const errorMessage = BluetoothPermissionManager.getPermissionErrorMessage(status);
         if (errorMessage) {
+          console.log('❌ Permission error:', errorMessage);
           toast.error('Permissions incomplete', { description: errorMessage });
         }
       }
     } catch (error: any) {
-      console.error('Permission request failed:', error);
-      toast.error('Permission request failed', { 
-        description: error.message || 'Please try again or check settings manually' 
+      console.error('❌ Permission request failed:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+
+      toast.error('Permission request failed', {
+        description: error.message || 'Please try again or check settings manually'
       });
     } finally {
+      console.log('🔐 Permission request completed, setting isRequesting to false');
       setIsRequesting(false);
     }
   };
 
   const openSettings = async () => {
+    console.log('🔧 BluetoothPermissionDialog: Opening settings...');
+
     try {
-      await BluetoothPermissionManager.openSettings();
       toast.info('Opening device settings...', {
         description: 'Please enable Bluetooth and Location permissions, then return to the app'
       });
-    } catch (error) {
+
+      console.log('🔧 Calling BluetoothPermissionManager.openSettings()...');
+      await BluetoothPermissionManager.openSettings();
+      console.log('✅ Settings opened successfully');
+
+    } catch (error: any) {
+      console.error('❌ Failed to open settings:', error);
+      console.error('Settings error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+
       toast.error('Could not open settings', {
         description: 'Please manually go to Settings → Apps → Croffle Store POS Kiosk → Permissions'
       });
@@ -233,6 +280,22 @@ export function BluetoothPermissionDialog({
                 </>
               )}
             </Button>
+
+            {/* Debug button for development */}
+            {process.env.NODE_ENV === 'development' && (
+              <Button
+                onClick={() => {
+                  console.log('🔧 Manual debug trigger');
+                  BluetoothPermissionManager.debugPluginAvailability();
+                  toast.info('Debug info logged to console');
+                }}
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs"
+              >
+                🔍 Debug Plugin Status
+              </Button>
+            )}
 
             <Button
               onClick={onClose}
