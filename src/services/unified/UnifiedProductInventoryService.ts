@@ -81,6 +81,8 @@ class UnifiedProductInventoryService {
         const availableQuantity = availability.quantity;
         const availabilityStatus = availability.status;
 
+        console.log(`📊 Product ${product.product_name}: recipe_id=${product.recipe_id}, availability=${availabilityStatus}, quantity=${availableQuantity}`);
+
         return {
           ...product,
           available_quantity: availableQuantity,
@@ -98,8 +100,8 @@ class UnifiedProductInventoryService {
           is_active: product.is_available,
           stock_quantity: availableQuantity,
           sku: `CAT-${product.id.slice(0, 8)}`,
-          recipe_id: null,
-          product_type: 'direct',
+          recipe_id: product.recipe_id, // Preserve actual recipe_id from database
+          product_type: product.recipe_id ? 'recipe' : 'direct',
           is_available: true,
           created_at: product.created_at,
           updated_at: product.updated_at
@@ -225,6 +227,8 @@ class UnifiedProductInventoryService {
         const availableQuantity = availability.quantity;
         const availabilityStatus = availability.status;
 
+        console.log(`📊 Product ${product.product_name}: recipe_id=${product.recipe_id}, availability=${availabilityStatus}, quantity=${availableQuantity}`);
+
         return {
           ...product,
           available_quantity: availableQuantity,
@@ -242,8 +246,8 @@ class UnifiedProductInventoryService {
           is_active: product.is_available,
           stock_quantity: availableQuantity,
           sku: `CAT-${product.id.slice(0, 8)}`,
-          recipe_id: null,
-          product_type: 'direct',
+          recipe_id: product.recipe_id, // Preserve actual recipe_id from database
+          product_type: product.recipe_id ? 'recipe' : 'direct',
           is_available: true,
           created_at: product.created_at,
           updated_at: product.updated_at
@@ -440,41 +444,86 @@ class UnifiedProductInventoryService {
     }>;
   }> {
     try {
-      // FIXED: Use constraint name hint to avoid PostgREST ambiguity
-      const { data: productCatalog, error: recipeError } = await supabase
+      console.log(`🔍 DEBUG: Starting availability calculation for product ${productId}`);
+
+      // First, check if product has a recipe_id in the product catalog
+      const { data: productInfo, error: productError } = await supabase
         .from('product_catalog')
+        .select('recipe_id, product_name, is_available')
+        .eq('id', productId)
+        .eq('store_id', storeId)
+        .single();
+
+      if (productError) {
+        console.error(`❌ DEBUG: Error fetching product info for ${productId}:`, productError);
+        return { quantity: 0, status: 'out_of_stock', requirements: [] };
+      }
+
+      console.log(`📊 DEBUG: Product ${productInfo.product_name} has recipe_id: ${productInfo.recipe_id}, is_available: ${productInfo.is_available}`);
+
+      // If no recipe_id, treat as direct sale product
+      if (!productInfo.recipe_id) {
+        console.log(`✅ DEBUG: Product ${productInfo.product_name} is direct sale (no recipe)`);
+        return {
+          quantity: 100, // High quantity for direct sale products
+          status: 'available',
+          requirements: []
+        };
+      }
+
+      // Product has recipe - fetch recipe and ingredients with less restrictive conditions
+      console.log(`🧾 DEBUG: Fetching recipe data for product ${productInfo.product_name} with recipe_id: ${productInfo.recipe_id}`);
+      
+      const { data: recipeData, error: recipeError } = await supabase
+        .from('recipes')
         .select(`
-          recipe_id,
-          recipes!inner (
+          id,
+          name,
+          is_active,
+          recipe_ingredients_with_names (
             id,
-            name,
-            recipe_ingredients_with_names (
-              inventory_stock_id,
-              ingredient_name,
-              quantity,
-              inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
-                id,
-                item,
-                stock_quantity
-              )
+            inventory_stock_id,
+            ingredient_name,
+            quantity,
+            inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
+              id,
+              item,
+              stock_quantity,
+              is_active
             )
           )
         `)
-        .eq('id', productId)
-        .eq('store_id', storeId)
-        .eq('is_available', true)
-        .eq('recipes.is_active', true)
-        .not('recipe_id', 'is', null)
-        .maybeSingle();
+        .eq('id', productInfo.recipe_id)
+        .single();
 
-      const recipe = productCatalog?.recipes;
-
-      if (recipeError || !recipe) {
-        // No recipe found - check if product is direct sale
-        console.log(`No recipe found for product ${productId}, treating as direct sale`);
+      if (recipeError) {
+        console.error(`❌ DEBUG: Error fetching recipe for ${productInfo.product_name}:`, recipeError);
+        // If recipe lookup fails but product has recipe_id, mark as no_recipe
         return {
-          quantity: 1, // Allow 1 unit for direct sale products
-          status: 'available',
+          quantity: 0,
+          status: 'no_recipe',
+          requirements: []
+        };
+      }
+
+      if (!recipeData.is_active) {
+        console.log(`⚠️ DEBUG: Recipe ${recipeData.name} is inactive`);
+        return {
+          quantity: 0,
+          status: 'out_of_stock',
+          requirements: []
+        };
+      }
+
+      console.log(`📋 DEBUG: Recipe ${recipeData.name} found with ${recipeData.recipe_ingredients_with_names?.length || 0} ingredients`);
+
+      const ingredients = recipeData.recipe_ingredients_with_names || [];
+      
+      if (ingredients.length === 0) {
+        console.log(`⚠️ DEBUG: Recipe ${recipeData.name} has no ingredients`);
+        return {
+          quantity: 0,
+          status: 'no_recipe',
           requirements: []
         };
       }
@@ -492,16 +541,40 @@ class UnifiedProductInventoryService {
       let hasLowStock = false;
 
       // Check each ingredient
-      for (const ingredient of recipe.recipe_ingredients_with_names || []) {
+      for (const ingredient of ingredients) {
+        console.log(`🥄 DEBUG: Checking ingredient ${ingredient.ingredient_name}:`, {
+          inventory_stock_id: ingredient.inventory_stock_id,
+          required_quantity: ingredient.quantity,
+          has_inventory_stock: !!ingredient.inventory_stock
+        });
+
         if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
-          console.warn(`Ingredient ${ingredient.ingredient_name} not mapped to inventory`);
+          console.warn(`⚠️ DEBUG: Ingredient ${ingredient.ingredient_name} not mapped to inventory or inventory stock missing`);
+          // Mark as insufficient if ingredient has no inventory mapping
+          hasInsufficientStock = true;
+          minAvailableQuantity = 0;
           continue;
         }
 
         const stock = ingredient.inventory_stock;
-        const availableStock = stock.stock_quantity; // Remove fractional_stock reference
+        
+        if (!stock.is_active) {
+          console.warn(`⚠️ DEBUG: Inventory stock ${stock.item} is inactive`);
+          hasInsufficientStock = true;
+          minAvailableQuantity = 0;
+          continue;
+        }
+
+        const availableStock = stock.stock_quantity;
         const requiredPerUnit = ingredient.quantity;
         const possibleUnits = Math.floor(availableStock / requiredPerUnit);
+
+        console.log(`📊 DEBUG: Ingredient ${ingredient.ingredient_name} calculation:`, {
+          availableStock,
+          requiredPerUnit,
+          possibleUnits,
+          sufficient: availableStock >= requiredPerUnit
+        });
 
         requirements.push({
           inventory_item_id: stock.id,
@@ -533,13 +606,22 @@ class UnifiedProductInventoryService {
         status = 'available';
       }
 
-      return {
+      const result = {
         quantity: minAvailableQuantity === Infinity ? 0 : minAvailableQuantity,
         status,
         requirements
       };
+
+      console.log(`✅ DEBUG: Final availability for ${productInfo.product_name}:`, {
+        quantity: result.quantity,
+        status: result.status,
+        ingredientCount: requirements.length,
+        insufficientIngredients: requirements.filter(r => !r.is_sufficient).length
+      });
+
+      return result;
     } catch (error) {
-      console.error(`Error calculating availability for product ${productId}:`, error);
+      console.error(`❌ DEBUG: Error calculating availability for product ${productId}:`, error);
       return {
         quantity: 0,
         status: 'out_of_stock',

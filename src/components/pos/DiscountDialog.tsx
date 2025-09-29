@@ -14,7 +14,7 @@ interface DiscountDialogProps {
   onClose: () => void;
   onApplyDiscount: (
     discountAmount: number,
-    discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary',
+    discountType: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'athletes_coaches' | 'solo_parent',
     idNumber?: string,
     justification?: string
   ) => void;
@@ -27,7 +27,7 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
   onApplyDiscount,
   currentTotal
 }) => {
-  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary'>('senior');
+  const [discountType, setDiscountType] = useState<'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'athletes_coaches' | 'solo_parent'>('senior');
   const [discountPercentage, setDiscountPercentage] = useState(20);
   const [idNumber, setIdNumber] = useState('');
   const [justification, setJustification] = useState('');
@@ -40,13 +40,15 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
     employee: { label: 'Employee', defaultPercent: 10 },
     loyalty: { label: 'Loyalty', defaultPercent: 5 },
     promo: { label: 'Promo', defaultPercent: 15 },
-    complimentary: { label: 'Complimentary (100%)', defaultPercent: 100 }
+    complimentary: { label: 'Complimentary (100%)', defaultPercent: 100 },
+    athletes_coaches: { label: 'National Athletes & Coaches', defaultPercent: 20 },
+    solo_parent: { label: 'Solo Parent', defaultPercent: 20 }
   };
 
   // Allow all authenticated users to apply complimentary discounts with proper authorization
   const canApplyComplimentary = !!user;
 
-  const handleTypeChange = (type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary') => {
+  const handleTypeChange = (type: 'senior' | 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'athletes_coaches' | 'solo_parent') => {
     setDiscountType(type);
     setDiscountPercentage(discountTypes[type].defaultPercent);
     if (type !== 'complimentary') {
@@ -120,11 +122,14 @@ export const DiscountDialog: React.FC<DiscountDialogProps> = ({
             />
           </div>
 
-          {(discountType === 'senior' || discountType === 'pwd' || discountType === 'employee') && (
+          {(discountType === 'senior' || discountType === 'pwd' || discountType === 'employee' || discountType === 'athletes_coaches' || discountType === 'solo_parent') && (
             <div>
               <Label htmlFor="id-number">
                 {discountType === 'senior' ? 'Senior Citizen ID' : 
-                 discountType === 'pwd' ? 'PWD ID' : 'Employee ID'}
+                 discountType === 'pwd' ? 'PWD ID' : 
+                 discountType === 'employee' ? 'Employee ID' :
+                 discountType === 'athletes_coaches' ? 'Athletes/Coaches ID' :
+                 discountType === 'solo_parent' ? 'Solo Parent ID' : 'ID Number'}
               </Label>
               <Input
                 id="id-number"

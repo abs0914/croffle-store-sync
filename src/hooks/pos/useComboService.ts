@@ -27,6 +27,14 @@ export function useComboService() {
       "Mini Croffle": {
         "Hot Espresso": 110,
         "Cold Espresso": 115
+      },
+      "Choco Overload": {
+        "Hot Espresso": 170,
+        "Cold Espresso": 175
+      },
+      "Croffle Overload": {
+        "Hot Espresso": 170,
+        "Cold Espresso": 175
       }
     };
     
@@ -139,7 +147,7 @@ export function useComboService() {
     return {
       product: {
         ...croffle,
-        id: `combo-${croffle.id}-${espresso.id}`,
+        id: `combo_${croffle.id}_${espresso.id}`,
         name: comboName,
         price: comboPrice,
         description: `${croffle.name} with ${espresso.name}`,

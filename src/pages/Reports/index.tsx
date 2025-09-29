@@ -14,7 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 
-export type ReportType = 'sales' | 'expense' | 'profit_loss' | 'x_reading' | 'z_reading' | 'bir_ejournal' | 'bir_backup' | 'vat' | 'cashier' | 'daily_shift' | 'inventory_status';
+export type ReportType = 'sales' | 'expense' | 'profit_loss' | 'x_reading' | 'z_reading' | 'bir_ejournal' | 'bir_backup' | 'void_report' | 'cashier' | 'daily_shift' | 'inventory_status';
 
 export default function Reports() {
   const { currentStore, isLoading: storeLoading } = useStore();
@@ -32,16 +32,26 @@ export default function Reports() {
   const isMobile = useIsMobile();
   const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
-  // Set initial store selection only for non-admin users
+  // Set initial store selection - for non-admin users use current store, for admin users set to current store if none selected
   useEffect(() => {
-    if (currentStore && !selectedStoreId && !isAdmin) {
-      console.log('🏪 Reports: Setting initial store selection:', { 
-        storeId: currentStore.id.slice(0, 8), 
-        storeName: currentStore.name 
-      });
-      setSelectedStoreId(currentStore.id);
+    if (currentStore && !selectedStoreId) {
+      if (!isAdmin) {
+        // Non-admin users: automatically select their assigned store
+        console.log('🏪 Reports: Setting initial store selection for non-admin:', { 
+          storeId: currentStore.id.slice(0, 8), 
+          storeName: currentStore.name 
+        });
+        setSelectedStoreId(currentStore.id);
+      } else {
+        // Admin users: set to current store as default to prevent empty state
+        console.log('🏪 Reports: Setting default store selection for admin:', { 
+          storeId: currentStore.id.slice(0, 8), 
+          storeName: currentStore.name 
+        });
+        setSelectedStoreId(currentStore.id);
+      }
     }
-  }, [currentStore, isAdmin]);
+  }, [currentStore, isAdmin, selectedStoreId]);
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(prev => !prev);
@@ -152,7 +162,7 @@ export default function Reports() {
           <ReportContent 
             reportType={reportType}
             storeId={currentStore.id} 
-            selectedStoreId={selectedStoreId}
+            selectedStoreId={selectedStoreId || currentStore.id}
             dateRange={dateRange}
           />
         </div>

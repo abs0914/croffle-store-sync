@@ -64,26 +64,80 @@ export class SimplifiedInventoryService {
       for (const item of items) {
         console.log(`🔍 PHASE 4: Processing item: ${item.productName} (${item.productId})`);
         
-        // FIXED: Use proper SQL query with explicit JOINs
-        const { data: recipeData, error: recipeError } = await supabase
+      // FIXED: Handle ID mismatch between products table and product_catalog table
+        // Try product_catalog ID first, then fallback to products table lookup
+        let recipeData: any = null;
+        let recipeError: any = null;
+
+        // First attempt: Direct lookup by product_catalog ID
+        const catalogResult = await supabase
           .from('product_catalog')
           .select(`
             recipe_id,
             recipes!inner (
               id,
               is_active,
-            recipe_ingredients (
-              quantity,
-              unit,
-              inventory_stock_id,
-              inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(item)
-            )
+              recipe_ingredients (
+                quantity,
+                unit,
+                inventory_stock_id,
+                inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(item)
+              )
             )
           `)
           .eq('id', item.productId)
           .eq('is_available', true)
           .eq('recipes.is_active', true)
           .not('recipe_id', 'is', null);
+
+        if (catalogResult.error || !catalogResult.data || catalogResult.data.length === 0) {
+          console.log(`🔄 PHASE 4: Direct catalog lookup failed for ${item.productName}, trying products table lookup`);
+          
+          // Fallback: Lookup via products table using the productId
+          const productsResult = await supabase
+            .from('products')
+            .select(`
+              name,
+              store_id
+            `)
+            .eq('id', item.productId)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (productsResult.data) {
+            console.log(`🔄 PHASE 4: Found product in products table: ${productsResult.data.name}`);
+            
+            // Now lookup in product_catalog using the product name and store_id
+            const catalogByNameResult = await supabase
+              .from('product_catalog')
+              .select(`
+                recipe_id,
+                recipes!inner (
+                  id,
+                  is_active,
+                  recipe_ingredients (
+                    quantity,
+                    unit,
+                    inventory_stock_id,
+                    inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(item)
+                  )
+                )
+              `)
+              .eq('product_name', productsResult.data.name)
+              .eq('store_id', productsResult.data.store_id)
+              .eq('is_available', true)
+              .eq('recipes.is_active', true)
+              .not('recipe_id', 'is', null);
+
+            recipeData = catalogByNameResult.data;
+            recipeError = catalogByNameResult.error;
+          } else {
+            recipeError = catalogResult.error || new Error('Product not found in either table');
+          }
+        } else {
+          recipeData = catalogResult.data;
+          recipeError = catalogResult.error;
+        }
 
         if (recipeError) {
           console.error(`❌ PHASE 4: Recipe query failed for ${item.productName}:`, recipeError);
@@ -306,8 +360,13 @@ export class SimplifiedInventoryService {
     try {
       console.log(`🔄 PHASE 4: Deducting item: ${item.productName} (${item.productId})`);
       
-      // FIXED: Use proper SQL query with foreign key constraint hint to avoid ambiguity
-      const { data: recipeData, error: recipeError } = await supabase
+      // FIXED: Handle ID mismatch between products table and product_catalog table
+      // Try product_catalog ID first, then fallback to products table lookup
+      let recipeData: any = null;
+      let recipeError: any = null;
+
+      // First attempt: Direct lookup by product_catalog ID
+      const catalogResult = await supabase
         .from('product_catalog')
         .select(`
           recipe_id,
@@ -326,6 +385,55 @@ export class SimplifiedInventoryService {
         .eq('is_available', true)
         .eq('recipes.is_active', true)
         .not('recipe_id', 'is', null);
+
+      if (catalogResult.error || !catalogResult.data || catalogResult.data.length === 0) {
+        console.log(`🔄 PHASE 4: Direct catalog lookup failed for ${item.productName}, trying products table lookup`);
+        
+        // Fallback: Lookup via products table using the productId
+        const productsResult = await supabase
+          .from('products')
+          .select(`
+            name,
+            store_id
+          `)
+          .eq('id', item.productId)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (productsResult.data) {
+          console.log(`🔄 PHASE 4: Found product in products table: ${productsResult.data.name}`);
+          
+          // Now lookup in product_catalog using the product name and store_id
+          const catalogByNameResult = await supabase
+            .from('product_catalog')
+            .select(`
+              recipe_id,
+              recipes!inner (
+                id,
+                is_active,
+                recipe_ingredients (
+                  quantity,
+                  unit,
+                  inventory_stock_id,
+                  inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(item)
+                )
+              )
+            `)
+            .eq('product_name', productsResult.data.name)
+            .eq('store_id', productsResult.data.store_id)
+            .eq('is_available', true)
+            .eq('recipes.is_active', true)
+            .not('recipe_id', 'is', null);
+
+          recipeData = catalogByNameResult.data;
+          recipeError = catalogByNameResult.error;
+        } else {
+          recipeError = catalogResult.error || new Error('Product not found in either table');
+        }
+      } else {
+        recipeData = catalogResult.data;
+        recipeError = catalogResult.error;
+      }
 
       if (recipeError) {
         console.error(`❌ PHASE 4: Recipe query failed for ${item.productName}:`, recipeError);

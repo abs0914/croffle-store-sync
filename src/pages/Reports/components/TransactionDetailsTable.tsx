@@ -5,11 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Download, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/utils/format";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth";
+import { VoidTransactionDialog } from "@/components/pos/void/VoidTransactionDialog";
+import { voidTransaction, VoidRequestData } from "@/services/transactions/voidTransactionService";
+import { toast } from "sonner";
+import { hasPermission } from "@/types/rolePermissions";
 
 interface Transaction {
   id: string;
@@ -24,15 +29,25 @@ interface Transaction {
 
 interface TransactionDetailsTableProps {
   transactions: Transaction[];
+  onTransactionVoided?: () => void; // Callback to refresh transactions after voiding
 }
 
 const ITEMS_PER_PAGE = 20;
 
-export function TransactionDetailsTable({ transactions }: TransactionDetailsTableProps) {
+export function TransactionDetailsTable({ transactions, onTransactionVoided }: TransactionDetailsTableProps) {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set());
+  const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isVoiding, setIsVoiding] = useState(false);
+
+  // Check if user can void transactions (managers, admins, owners)
+  const canVoidTransactions = user?.role ? 
+    hasPermission(user.role, 'order_management') || 
+    hasPermission(user.role, 'user_management') : false;
 
   // Filter and search transactions
   const filteredTransactions = useMemo(() => {
@@ -67,6 +82,35 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
       newExpanded.add(transactionId);
     }
     setExpandedTransactions(newExpanded);
+  };
+
+  const handleVoidClick = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setVoidDialogOpen(true);
+  };
+
+  const handleVoidConfirm = async (voidData: VoidRequestData) => {
+    setIsVoiding(true);
+    try {
+      const result = await voidTransaction(voidData);
+      
+      if (result.success) {
+        toast.success('Transaction voided successfully');
+        setVoidDialogOpen(false);
+        setSelectedTransaction(null);
+        // Call the callback to refresh transactions
+        if (onTransactionVoided) {
+          onTransactionVoided();
+        }
+      } else {
+        toast.error(result.message || 'Failed to void transaction');
+      }
+    } catch (error) {
+      console.error('Error voiding transaction:', error);
+      toast.error('An error occurred while voiding the transaction');
+    } finally {
+      setIsVoiding(false);
+    }
   };
 
   const exportToCSV = () => {
@@ -173,6 +217,7 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
                 <TableHead className="hidden sm:table-cell">Items</TableHead>
                 <TableHead>Payment</TableHead>
                 <TableHead className="text-right">Total</TableHead>
+                {canVoidTransactions && <TableHead className="text-center">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -227,6 +272,19 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
                       <TableCell className="text-right font-medium">
                         {formatCurrency(tx.total)}
                       </TableCell>
+                      {canVoidTransactions && (
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleVoidClick(tx)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            title="Void Transaction"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
 
                     {/* Expanded items rows */}
@@ -247,6 +305,7 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
                         <TableCell className="text-right text-sm text-muted-foreground">
                           {formatCurrency(item.totalPrice || (item.unitPrice * item.quantity))}
                         </TableCell>
+                        {canVoidTransactions && <TableCell></TableCell>}
                       </TableRow>
                     ))}
                   </>
@@ -309,6 +368,18 @@ export function TransactionDetailsTable({ transactions }: TransactionDetailsTabl
             </div>
           </div>
         )}
+
+        {/* Void Transaction Dialog */}
+        <VoidTransactionDialog
+          isOpen={voidDialogOpen}
+          onClose={() => {
+            setVoidDialogOpen(false);
+            setSelectedTransaction(null);
+          }}
+          transaction={selectedTransaction}
+          onConfirmVoid={handleVoidConfirm}
+          isVoiding={isVoiding}
+        />
       </CardContent>
     </Card>
   );

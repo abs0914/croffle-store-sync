@@ -81,32 +81,88 @@ export const deductInventoryForSingleProduct = async (
   };
 
   try {
-    // Get recipe for this product
-    const { data: productCatalog, error: catalogError } = await supabase
-      .from('product_catalog')
-      .select(`
+    // FIXED: Handle ID mismatch between products table and product_catalog table
+    let productCatalog: any = null;
+    let catalogError: any = null;
+
+    // Build base query
+    const baseQuery = `
+      id,
+      product_name,
+      recipe_id,
+      recipe:recipes!recipe_id (
         id,
-        product_name,
-        recipe_id,
-        recipes!inner (
-          id,
-          name,
-          recipe_ingredients (
-            inventory_stock_id,
-            quantity,
-            unit,
-            inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
-              id,
-              item,
-              stock_quantity
-            )
+        name,
+        recipe_ingredients (
+          inventory_stock_id,
+          quantity,
+          unit,
+          inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
+            id,
+            item,
+            stock_quantity
           )
         )
-      `)
-      .eq('id', productId)
-      .eq('store_id', storeId)
-      .eq('is_available', true)
-      .maybeSingle();
+      )
+    `;
+
+    // Use productId if available, otherwise fall back to productName
+    if (productId && productId !== 'undefined') {
+      // First attempt: Direct lookup by product_catalog ID
+      const catalogResult = await supabase
+        .from('product_catalog')
+        .select(baseQuery)
+        .eq('store_id', storeId)
+        .eq('is_available', true)
+        .eq('id', productId)
+        .maybeSingle();
+
+      if (catalogResult.error || !catalogResult.data) {
+        console.log(`🔄 Direct catalog lookup failed for productId ${productId}, trying products table lookup`);
+        
+        // Fallback: Lookup via products table using the productId
+        const productsResult = await supabase
+          .from('products')
+          .select('name, store_id')
+          .eq('id', productId)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (productsResult.data) {
+          console.log(`🔄 Found product in products table: ${productsResult.data.name}`);
+          
+          // Now lookup in product_catalog using the product name and store_id
+          const catalogByNameResult = await supabase
+            .from('product_catalog')
+            .select(baseQuery)
+            .eq('store_id', storeId)
+            .eq('is_available', true)
+            .eq('product_name', productsResult.data.name)
+            .maybeSingle();
+
+          productCatalog = catalogByNameResult.data;
+          catalogError = catalogByNameResult.error;
+        } else {
+          productCatalog = catalogResult.data;
+          catalogError = catalogResult.error;
+        }
+      } else {
+        productCatalog = catalogResult.data;
+        catalogError = catalogResult.error;
+      }
+    } else {
+      console.log(`🔍 No valid productId provided for ${productName}, searching by name`);
+      const nameResult = await supabase
+        .from('product_catalog')
+        .select(baseQuery)
+        .eq('store_id', storeId)
+        .eq('is_available', true)
+        .eq('product_name', productName)
+        .maybeSingle();
+      
+      productCatalog = nameResult.data;
+      catalogError = nameResult.error;
+    }
 
     if (catalogError) {
       result.errors.push(`Error fetching recipe for product ${productName}: ${catalogError.message}`);
@@ -114,7 +170,7 @@ export const deductInventoryForSingleProduct = async (
       return result;
     }
 
-    const recipe = productCatalog?.recipes;
+    const recipe = productCatalog?.recipe;
 
     if (!recipe) {
       console.log(`ℹ️ No recipe found for product ${productName}, skipping`);
@@ -235,31 +291,88 @@ export const performSimpleInventoryDeduction = async (
     for (const item of items) {
       console.log(`📦 Processing ${item.productName} x${item.quantity}`);
       
-      // Get recipe ingredients using the new schema
-      const { data: recipeData, error: recipeError } = await supabase
-        .from('product_catalog')
-        .select(`
-          recipe_id,
-          recipes!inner (
-            id,
-            name,
-            recipe_ingredients (
-              inventory_stock_id,
-              quantity,
-              unit,
-              inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
-                id,
-                item,
-                stock_quantity,
-                unit
-              )
+      // Get recipe ingredients using the new schema, with fallback to name search
+      let recipeData: any = null;
+      let recipeError: any = null;
+
+      // FIXED: Handle ID mismatch between products table and product_catalog table
+      const baseSelectQuery = `
+        recipe_id,
+        recipe:recipes!recipe_id (
+          id,
+          name,
+          recipe_ingredients (
+            inventory_stock_id,
+            quantity,
+            unit,
+            inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
+              id,
+              item,
+              stock_quantity,
+              unit
             )
           )
-        `)
-        .eq('id', item.productId)
-        .eq('store_id', storeId)
-        .eq('is_available', true)
-        .maybeSingle();
+        )
+      `;
+
+      // Try to look up by productId first if available
+      if (item.productId && item.productId !== 'undefined') {
+        // First attempt: Direct lookup by product_catalog ID
+        const catalogResult = await supabase
+          .from('product_catalog')
+          .select(baseSelectQuery)
+          .eq('id', item.productId)
+          .eq('store_id', storeId)
+          .eq('is_available', true)
+          .maybeSingle();
+
+        if (catalogResult.error || !catalogResult.data) {
+          console.log(`🔄 Direct catalog lookup failed for ${item.productName}, trying products table lookup`);
+          
+          // Fallback: Lookup via products table using the productId
+          const productsResult = await supabase
+            .from('products')
+            .select('name, store_id')
+            .eq('id', item.productId)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (productsResult.data) {
+            console.log(`🔄 Found product in products table: ${productsResult.data.name}`);
+            
+            // Now lookup in product_catalog using the product name and store_id
+            const catalogByNameResult = await supabase
+              .from('product_catalog')
+              .select(baseSelectQuery)
+              .eq('product_name', productsResult.data.name)
+              .eq('store_id', storeId)
+              .eq('is_available', true)
+              .maybeSingle();
+
+            recipeData = catalogByNameResult.data;
+            recipeError = catalogByNameResult.error;
+          } else {
+            recipeData = catalogResult.data;
+            recipeError = catalogResult.error;
+          }
+        } else {
+          recipeData = catalogResult.data;
+          recipeError = catalogResult.error;
+        }
+      } else {
+        // Fall back to name search
+        console.log(`🔍 No valid productId provided for ${item.productName}, searching by name`);
+        const result = await supabase
+          .from('product_catalog')
+          .select(baseSelectQuery)
+          .eq('product_name', item.productName)
+          .eq('store_id', storeId)
+          .eq('is_available', true)
+          .maybeSingle();
+        
+        recipeData = result.data;
+        recipeError = result.error;
+      }
 
       if (recipeError) {
         console.error(`❌ Recipe query failed for ${item.productName}:`, recipeError);
@@ -267,12 +380,12 @@ export const performSimpleInventoryDeduction = async (
         continue;
       }
 
-      if (!recipeData || !recipeData.recipes) {
+      if (!recipeData || !recipeData.recipe) {
         console.log(`⚠️ No recipe found for ${item.productName}, skipping`);
         continue;
       }
 
-      const recipe = recipeData.recipes;
+      const recipe = recipeData.recipe;
       const ingredients = recipe.recipe_ingredients || [];
 
       console.log(`📝 Found ${ingredients.length} ingredients for ${item.productName}`);

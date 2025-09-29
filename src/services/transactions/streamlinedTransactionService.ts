@@ -12,6 +12,8 @@ import { processTransactionInventoryWithMixMatchSupport } from "@/services/inven
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { enrichCartItemsWithCategories, insertTransactionItems, DetailedTransactionItem } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
+import { extractBaseProductName } from "@/utils/productNameUtils";
+import { SimplifiedTransactionInventoryIntegration } from "./simplifiedTransactionInventoryIntegration";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -360,19 +362,22 @@ class StreamlinedTransactionService {
         const basicItems: DetailedTransactionItem[] = [];
         
         for (const item of items) {
-          // Check if this is a combo product
-          if (item.productId.startsWith('combo-')) {
+        // Check if this is a combo product
+        if (item.productId.startsWith('combo-')) {
             console.log('🔧 Processing combo item in transaction:', item.productId);
             
             // Expand combo product into component items
             const comboComponents = await this.expandComboProductForTransaction(item);
             basicItems.push(...comboComponents);
           } else {
+            // Use clean base product name for inventory matching
+            const cleanName = extractBaseProductName(item.name);
+            
             // Regular product
             basicItems.push({
               product_id: item.productId,
               variation_id: item.variationId || undefined,
-              name: item.name,
+              name: cleanName, // Store clean base name for inventory processing
               quantity: item.quantity,
               unit_price: item.unitPrice,
               total_price: item.totalPrice,
@@ -398,30 +403,20 @@ class StreamlinedTransactionService {
     try {
       // Extract component IDs from combo ID: "combo-{uuid1}-{uuid2}"
       const parts = item.productId.split('-');
-      if (parts.length < 3) {
-        throw new Error(`Invalid combo ID format: ${item.productId}`);
+      if (parts.length !== 11) { // combo + 5 parts for each UUID = 11 parts total
+        throw new Error(`Invalid combo ID format: ${item.productId}. Expected format: combo-{uuid1}-{uuid2}`);
       }
 
-      // Extract the component product IDs (everything after "combo-")
-      const componentIds: string[] = [];
-      let currentId = '';
-      
-      for (let i = 1; i < parts.length; i++) {
-        if (currentId) {
-          currentId += '-' + parts[i];
-        } else {
-          currentId = parts[i];
-        }
-        
-        // Check if this looks like a complete UUID (36 characters with dashes)
-        if (currentId.length === 36 && currentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          componentIds.push(currentId);
-          currentId = '';
-        }
-      }
+      // Reconstruct the two UUIDs from the parts
+      const componentIds = [
+        `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}-${parts[5]}`, // First UUID
+        `${parts[6]}-${parts[7]}-${parts[8]}-${parts[9]}-${parts[10]}` // Second UUID
+      ];
 
-      if (componentIds.length !== 2) {
-        throw new Error(`Expected 2 component IDs in combo, found ${componentIds.length}: ${item.productId}`);
+      // Validate that both parts are valid UUIDs
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(componentIds[0]) || !uuidRegex.test(componentIds[1])) {
+        throw new Error(`Invalid UUID format in combo ID: ${item.productId}`);
       }
       
       const croffleId = componentIds[0];
@@ -501,8 +496,7 @@ class StreamlinedTransactionService {
   }
 
   /**
-   * Process inventory deduction with comprehensive logging and Mix & Match base ingredient support
-   * Updated to work with normalized 1x recipe template quantities
+   * Process inventory deduction with user context
    */
   private async processInventoryDeduction(
     transactionId: string,
@@ -510,130 +504,72 @@ class StreamlinedTransactionService {
     items: StreamlinedTransactionItem[],
     cartItems?: any[]
   ): Promise<{ success: boolean; errors: string[] }> {
-    console.log(`🔄 Starting inventory deduction for transaction: ${transactionId}`);
-    console.log(`📍 Store ID: ${storeId}`);
-    console.log(`📦 Items to process: ${items.length}`);
+    console.log('🔄 Processing inventory deduction with authenticated user context...');
+    
+    // **CRITICAL DEBUG**: Track function entry
+    console.log(`🚨 DEBUG: processInventoryDeduction CALLED at ${new Date().toISOString()}`);
+    console.log(`🚨 DEBUG: Transaction ID: ${transactionId}, Store ID: ${storeId}`);
+    console.log(`🚨 DEBUG: Items count: ${items.length}, Cart items: ${cartItems?.length || 0}`);
+    
+    // Get current authenticated user - this is the proper context for user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    
+    console.log(`🔐 TRANSACTION CONTEXT: Auth user - ${userId || 'NULL'}`);
+    
+    if (!userId) {
+      console.error('❌ CRITICAL: No authenticated user in transaction context');
+      return { 
+        success: false, 
+        errors: ['Authentication context missing - cannot process inventory deduction'] 
+      };
+    }
 
-    try {
-      // Process both Regular Products and Mix & Match products through the same reliable path
-      console.log('🔄 Processing inventory deduction for all product types');
-      
-      const transactionItems: Array<{ product_id?: string; name: string; quantity: number; unit_price: number; total_price: number }> = [];
+    console.log(`🚨 DEBUG: About to format items for inventory...`);
+    const inventoryItems = SimplifiedTransactionInventoryIntegration.formatItemsForInventory(items, storeId);
+    console.log(`🚨 DEBUG: Formatted inventory items:`, inventoryItems);
+    
+    console.log(`🚨 DEBUG: About to call processTransactionInventoryWithAuth...`);
+    const result = await SimplifiedTransactionInventoryIntegration.processTransactionInventoryWithAuth(
+      transactionId,
+      inventoryItems,
+      userId // Pass the authenticated user ID
+    );
+    console.log(`🚨 DEBUG: processTransactionInventoryWithAuth result:`, result);
 
-      for (const item of items) {
-        if (item.productId?.startsWith('combo-')) {
-          console.log('🔧 Expanding combo in deduction path:', item.productId);
-          try {
-            const components = await this.expandComboProductForTransaction(item);
-            for (const comp of components) {
-              transactionItems.push({
-                product_id: comp.product_id,
-                name: comp.name,
-                quantity: comp.quantity,
-                unit_price: comp.unit_price,
-                total_price: comp.total_price
-              });
-            }
-          } catch (e) {
-            console.warn('⚠️ Failed to expand combo for deduction, falling back to name-only:', e);
-            transactionItems.push({
-              product_id: undefined,
-              name: item.name,
-              quantity: item.quantity,
-              unit_price: item.unitPrice,
-              total_price: item.totalPrice
-            });
-          }
-        } else {
-          // Process all products (Regular and Mix & Match) through normal flow
-          transactionItems.push({
-            product_id: item.productId,
-            name: item.name,
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            total_price: item.totalPrice
-          });
-        }
-      }
+    return {
+      success: result.success,
+      errors: result.errors
+    };
+  }
 
-      console.log(`📋 Transaction items for deduction (${transactionItems.length} items):`, 
-        transactionItems.map(ti => `${ti.name} (qty: ${ti.quantity})`));
-
-      // PHASE 4: Use simplified inventory service for reliable deduction
-      console.log(`🚀 PHASE 4: About to call SimplifiedInventoryService for transaction ${transactionId}`);
-      
-      // CRITICAL FIX: Proper product ID mapping with fallback lookup
-      const phase4Items = [];
-      for (const item of transactionItems) {
-        let productId = item.product_id;
-        
-        // If no product_id, look it up by name and store
-        if (!productId) {
-          console.log(`🔍 Looking up product ID for: ${item.name}`);
-          const { data: productLookup } = await supabase
-            .from('product_catalog')
-            .select('id')
-            .eq('product_name', item.name)
-            .eq('store_id', storeId)
-            .eq('is_available', true)
-            .maybeSingle();
-          
-          productId = productLookup?.id;
-          console.log(`📍 Found product ID for ${item.name}: ${productId}`);
-        }
-        
-        if (productId) {
-          phase4Items.push({
-            productId: productId,
-            productName: item.name,
-            quantity: item.quantity,
-            storeId: storeId
-          });
-        } else {
-          console.warn(`⚠️ No product ID found for: ${item.name}`);
-        }
-      }
-      
-      console.log(`📦 Phase 4 items prepared:`, phase4Items.map(i => `${i.productName} (${i.productId})`));
-      
-      // Step 1: Mandatory pre-validation with correct IDs
-      const validation = await SimplifiedInventoryService.validateInventoryAvailability(phase4Items);
-      
-      if (!validation.canProceed) {
-        console.error('❌ PHASE 4: Pre-validation failed', validation.errors);
-        return {
-          success: false,
-          errors: validation.errors
-        };
-      }
-
-      // Step 2: Perform deduction with correct IDs  
-      const result = await SimplifiedInventoryService.performInventoryDeduction(transactionId, phase4Items);
-      
-      console.log(`🔍 PHASE 4: SimplifiedInventoryService completed for transaction ${transactionId}`);
-
-      console.log(`📊 Inventory deduction result:`, {
+  /**
+   * BIR compliance logging (non-critical)
         success: result.success,
         deductedItems: result.deductedItems?.length || 0,
+        skippedItems: result.skippedItems?.length || 0,
         errors: result.errors?.length || 0,
-        warnings: result.warnings?.length || 0
+        isMixMatch: result.isMixMatch
       });
 
       // Enhanced success logging for monitoring
       if (result.success) {
         console.log(`✅ INVENTORY DEDUCTION SUCCESS for transaction ${transactionId}`);
+        console.log(`   Mix & Match product detected: ${result.isMixMatch}`);
         console.log(`   Deducted ingredients:`, result.deductedItems.map(item => 
-          `${item.ingredient}: -${item.deducted} units (new stock: ${item.remaining})`
+          `${item.itemName}: -${item.quantityDeducted} units (new stock: ${item.newStock})${item.category ? ` [${item.category}]` : ''}`
         ));
+        if (result.skippedItems && result.skippedItems.length > 0) {
+          console.log(`   Skipped ingredients:`, result.skippedItems);
+        }
       } else {
         console.error(`❌ INVENTORY DEDUCTION FAILED for transaction ${transactionId}`);
         console.error(`   Errors:`, result.errors);
-        console.error(`   Warnings:`, result.warnings);
       }
 
       return {
         success: result.success,
-        errors: [...result.errors, ...result.warnings]
+        errors: result.errors
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Inventory deduction failed';

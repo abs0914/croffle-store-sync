@@ -3,59 +3,64 @@ import { supabase } from "@/integrations/supabase/client";
 import { XReadingReport } from "@/types/reports";
 import { fetchStoreInfo, handleReportError } from "../utils/reportUtils";
 import { fetchTransactionsWithFallback } from "../utils/transactionQueryUtils";
+import { executeWithValidSession } from "@/contexts/auth/session-utils";
 import { toast } from "sonner";
 
-// Helper function to get cashier name from user_id
+// Helper function to get cashier name from user_id with session validation
 async function getCashierName(userId: string): Promise<string> {
-  try {
-    const { data: appUser } = await supabase
-      .from('app_users')
-      .select('first_name, last_name')
-      .eq('user_id', userId)
-      .maybeSingle();
-    
-    if (appUser) {
-      return `${appUser.first_name} ${appUser.last_name}`;
+  return await executeWithValidSession(async () => {
+    try {
+      const { data: appUser } = await supabase
+        .from('app_users')
+        .select('first_name, last_name')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (appUser) {
+        return `${appUser.first_name} ${appUser.last_name}`;
+      }
+      
+      return "Unknown Cashier";
+    } catch (error) {
+      console.error('Error fetching cashier name:', error);
+      return "Unknown Cashier";
     }
-    
-    return "Unknown Cashier";
-  } catch (error) {
-    console.error('Error fetching cashier name:', error);
-    return "Unknown Cashier";
-  }
+  }, 'get cashier name');
 }
 
-// Helper function to find current or recent active shift
+// Helper function to find current or recent active shift with session validation
 async function findActiveShift(storeId: string, date: string) {
-  const startOfDay = new Date(date + "T00:00:00.000Z");
-  const endOfDay = new Date(date + "T23:59:59.999Z");
-  
-  // First try to find an active shift for today
-  const { data: activeShift } = await supabase
-    .from("shifts")
-    .select("id, user_id, start_time, starting_cash, status")
-    .eq("store_id", storeId)
-    .eq("status", "active")
-    .gte("start_time", startOfDay.toISOString())
-    .lte("start_time", endOfDay.toISOString())
-    .maybeSingle();
-  
-  if (activeShift) {
-    return activeShift;
-  }
-  
-  // If no active shift, try to find the most recent shift for the date
-  const { data: recentShift } = await supabase
-    .from("shifts")
-    .select("id, user_id, start_time, starting_cash, status")
-    .eq("store_id", storeId)
-    .gte("start_time", startOfDay.toISOString())
-    .lte("start_time", endOfDay.toISOString())
-    .order("start_time", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  return await executeWithValidSession(async () => {
+    const startOfDay = new Date(date + "T00:00:00.000Z");
+    const endOfDay = new Date(date + "T23:59:59.999Z");
     
-  return recentShift;
+    // First try to find an active shift for today
+    const { data: activeShift } = await supabase
+      .from("shifts")
+      .select("id, user_id, start_time, starting_cash, status")
+      .eq("store_id", storeId)
+      .eq("status", "active")
+      .gte("start_time", startOfDay.toISOString())
+      .lte("start_time", endOfDay.toISOString())
+      .maybeSingle();
+    
+    if (activeShift) {
+      return activeShift;
+    }
+    
+    // If no active shift, try to find the most recent shift for the date
+    const { data: recentShift } = await supabase
+      .from("shifts")
+      .select("id, user_id, start_time, starting_cash, status")
+      .eq("store_id", storeId)
+      .gte("start_time", startOfDay.toISOString())
+      .lte("start_time", endOfDay.toISOString())
+      .order("start_time", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+      
+    return recentShift;
+  }, 'find active shift');
 }
 
 // X-Reading Report (current shift/day status)
@@ -64,24 +69,26 @@ export async function fetchXReading(
   date: string
 ): Promise<XReadingReport | null> {
   try {
-    // Get store information
-    const storeData = await fetchStoreInfo(storeId);
-    if (!storeData) {
-      throw new Error("Store information not found");
-    }
-    
-    // Find active or recent shift for the date
-    const shiftData = await findActiveShift(storeId, date);
+    // Critical: Use enhanced session validation
+    return await executeWithValidSession(async () => {
+      // Get store information
+      const storeData = await fetchStoreInfo(storeId);
+      if (!storeData) {
+        throw new Error("Store information not found");
+      }
+      
+      // Find active or recent shift for the date
+      const shiftData = await findActiveShift(storeId, date);
 
-    // Use the same robust transaction query as the Sales Report
-    const queryResult = await fetchTransactionsWithFallback({
-      storeId,
-      from: date,
-      to: date,
-      status: "completed",
-      orderBy: "created_at",
-      ascending: true
-    });
+      // Use the same robust transaction query as the Sales Report
+      const queryResult = await fetchTransactionsWithFallback({
+        storeId,
+        from: date,
+        to: date,
+        status: "completed",
+        orderBy: "created_at",
+        ascending: true
+      });
 
     const { data: transactions, error: txError } = queryResult;
     
@@ -183,34 +190,35 @@ export async function fetchXReading(
     const beginningReceiptNumber = receiptNumbers[0] || '-';
     const endingReceiptNumber = receiptNumbers[receiptNumbers.length - 1] || '-';
 
-    return {
-      storeName: storeData.business_name || storeData.name,
-      storeAddress: storeData.address,
-      contactInfo: storeData.phone || storeData.email,
-      taxId: storeData.tin || storeData.tax_id,
-      cashierName,
-      terminal: storeData.machine_serial_number || storeData.machine_accreditation_number || 'TERMINAL-01',
-      beginningReceiptNumber,
-      endingReceiptNumber,
-      transactionCount: transactions?.length || 0,
-      grossSales,
-      vatableSales,
-      vatExemptSales,
-      vatZeroRatedSales,
-      totalDiscounts,
-      seniorDiscount,
-      pwdDiscount,
-      employeeDiscount,
-      otherDiscounts,
-      netSales,
-      vatAmount,
-      vatExempt: vatExemptSales,
-      vatZeroRated: vatZeroRatedSales,
-      cashPayments,
-      cardPayments,
-      eWalletPayments,
-      totalPayments: cashPayments + cardPayments + eWalletPayments
-    };
+      return {
+        storeName: storeData.business_name || storeData.name,
+        storeAddress: storeData.address,
+        contactInfo: storeData.phone || storeData.email,
+        taxId: storeData.tin || storeData.tax_id,
+        cashierName,
+        terminal: storeData.machine_serial_number || storeData.machine_accreditation_number || 'TERMINAL-01',
+        beginningReceiptNumber,
+        endingReceiptNumber,
+        transactionCount: transactions?.length || 0,
+        grossSales,
+        vatableSales,
+        vatExemptSales,
+        vatZeroRatedSales,
+        totalDiscounts,
+        seniorDiscount,
+        pwdDiscount,
+        employeeDiscount,
+        otherDiscounts,
+        netSales,
+        vatAmount,
+        vatExempt: vatExemptSales,
+        vatZeroRated: vatZeroRatedSales,
+        cashPayments,
+        cardPayments,
+        eWalletPayments,
+        totalPayments: cashPayments + cardPayments + eWalletPayments
+      };
+    }, 'X-Reading generation');
   } catch (error) {
     console.error("❌ X-Reading generation error:", error);
     

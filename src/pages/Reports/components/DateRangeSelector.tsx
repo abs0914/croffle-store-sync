@@ -22,6 +22,7 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
 
   // Set appropriate default dates based on report type
   useEffect(() => {
+    console.log('🗓️ DateRangeSelector useEffect triggered:', { reportType, currentDateRange: dateRange });
     const today = new Date();
     
     switch (reportType) {
@@ -29,6 +30,7 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
       case 'z_reading':
       case 'daily_shift':
         // Single date reports - Today only
+        console.log('📅 Setting single date for report type:', reportType);
         setDateRange({
           from: today,
           to: today
@@ -37,10 +39,11 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
       case 'sales':
       case 'expense':
       case 'profit_loss':
-      case 'vat':
+      case 'void_report':
       case 'cashier':
         // Default to current month if not already set
         if (!dateRange.from) {
+          console.log('📅 Setting default month range for report type:', reportType);
           const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
           setDateRange({
             from: firstDayOfMonth,
@@ -49,11 +52,12 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
         }
         break;
     }
-  }, [reportType]);
+  }, [reportType, setDateRange]); // Added missing dependencies
 
   // Quick date range options
   const selectToday = () => {
     const today = new Date();
+    console.log('📅 Selected Today:', today);
     setDateRange({ from: today, to: today });
     setIsCalendarOpen(false);
   };
@@ -62,6 +66,7 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+    console.log('📅 Selected Yesterday:', yesterday);
     setDateRange({ from: yesterday, to: yesterday });
     setIsCalendarOpen(false);
   };
@@ -72,6 +77,7 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
     const day = today.getDay();
     const diff = today.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Sunday
     firstDayOfWeek.setDate(diff);
+    console.log('📅 Selected This Week:', { from: firstDayOfWeek, to: today });
     setDateRange({ from: firstDayOfWeek, to: today });
     setIsCalendarOpen(false);
   };
@@ -79,6 +85,7 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
   const selectThisMonth = () => {
     const today = new Date();
     const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    console.log('📅 Selected This Month:', { from: firstDayOfMonth, to: today });
     setDateRange({ from: firstDayOfMonth, to: today });
     setIsCalendarOpen(false);
   };
@@ -136,9 +143,17 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
               <Calendar
                 initialFocus
                 mode="range"
-                defaultMonth={dateRange.from}
+                defaultMonth={dateRange?.from}
                 selected={dateRange}
-                onSelect={setDateRange as any}
+                onSelect={(range) => {
+                  console.log('📅 Calendar range selected:', range);
+                  if (range && range.from) {
+                    setDateRange({
+                      from: range.from,
+                      to: range.to || range.from
+                    });
+                  }
+                }}
                 numberOfMonths={2}
                 className={cn("p-3 pointer-events-auto")}
               />
@@ -146,9 +161,12 @@ export function DateRangeSelector({ dateRange, setDateRange, reportType }: DateR
               <Calendar
                 initialFocus
                 mode="single"
-                defaultMonth={dateRange.from}
-                selected={dateRange.from}
-                onSelect={(date) => setDateRange({ from: date, to: date })}
+                defaultMonth={dateRange?.from}
+                selected={dateRange?.from}
+                onSelect={(date) => {
+                  console.log('📅 Calendar single date selected:', date);
+                  setDateRange({ from: date, to: date });
+                }}
                 numberOfMonths={1}
                 className={cn("p-3 pointer-events-auto")}
               />

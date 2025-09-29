@@ -245,19 +245,20 @@ export function ComboSelectionDialog({
     setSelectedCroffle(croffle);
     
     // For Mini Croffle: go to espresso first, then customization
-    // For Croffle Overload: go to customization first (unchanged)
-    // For Regular: go to espresso directly (unchanged)
+    // For Croffle Overload (not Choco Overload): go to customization first
+    // For Choco Overload and Regular: go to espresso directly
     const isMiniCroffle = croffle.name.toLowerCase().includes("mini");
-    const isOverload = croffle.name.toLowerCase().includes("overload");
+    const isCroffleOverload = croffle.name.toLowerCase().includes("croffle overload");
+    const isChocoOverload = croffle.name.toLowerCase().includes("choco overload");
     
     if (isMiniCroffle) {
       console.log("Mini Croffle selected, going to espresso step first");
       setStep("espresso");
-    } else if (isOverload) {
+    } else if (isCroffleOverload && !isChocoOverload) {
       console.log("Croffle Overload selected, going to customize step");
       setStep("customize");
     } else {
-      console.log("Regular croffle, going to espresso step");
+      console.log("Regular croffle or Choco Overload, going to espresso step");
       setStep("espresso");
     }
   };
@@ -337,8 +338,10 @@ export function ComboSelectionDialog({
     let categoryForPricing = croffleCategory;
     if (selectedCroffle?.name.toLowerCase().includes("mini")) {
       categoryForPricing = "Mini Croffle";
-    } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
-      categoryForPricing = "Mix & Match";
+    } else if (selectedCroffle?.name.toLowerCase().includes("choco overload")) {
+      categoryForPricing = "Choco Overload";
+    } else if (selectedCroffle?.name.toLowerCase().includes("croffle overload")) {
+      categoryForPricing = "Croffle Overload";
     }
 
     // Map espresso product name to espresso type for pricing
@@ -647,8 +650,10 @@ export function ComboSelectionDialog({
                       let categoryForPricing = croffleCategory;
                       if (selectedCroffle?.name.toLowerCase().includes("mini")) {
                         categoryForPricing = "Mini Croffle";
-                      } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
-                        categoryForPricing = "Mix & Match";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("choco overload")) {
+                        categoryForPricing = "Choco Overload";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("croffle overload")) {
+                        categoryForPricing = "Croffle Overload";
                       }
                       
                       const espressoType = "Hot Espresso";
@@ -688,8 +693,10 @@ export function ComboSelectionDialog({
                       let categoryForPricing = croffleCategory;
                       if (selectedCroffle?.name.toLowerCase().includes("mini")) {
                         categoryForPricing = "Mini Croffle";
-                      } else if (selectedCroffle?.name.toLowerCase().includes("overload")) {
-                        categoryForPricing = "Mix & Match";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("choco overload")) {
+                        categoryForPricing = "Choco Overload";
+                      } else if (selectedCroffle?.name.toLowerCase().includes("croffle overload")) {
+                        categoryForPricing = "Croffle Overload";
                       }
                       
                       const espressoType = "Cold Espresso";

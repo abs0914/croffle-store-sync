@@ -1,7 +1,7 @@
 import React, { useState, useMemo, memo, useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 import { Product, Category, ProductVariation } from "@/types";
-import { POSInventoryProvider } from "@/contexts/POSInventoryContext";
+
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -163,7 +163,7 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
   return (
     <>
       {storeId && (
-        <POSInventoryProvider products={products} storeId={storeId}>
+        <>
           <div className="mb-4 flex gap-2">
             <OptimizedProductSearch 
               searchTerm={searchTerm} 
@@ -209,36 +209,36 @@ const OptimizedProductGrid = memo(function OptimizedProductGrid({
               )}
             </TabsContent>
           </Tabs>
-
-          {/* Product Variations Dialog */}
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>{selectedProduct?.name} - Select Size</DialogTitle>
-                <DialogDescription>
-                  Choose a variation or select regular size
-                </DialogDescription>
-              </DialogHeader>
-              
-              <ProductVariationsList 
-                isLoading={isLoadingVariations}
-                variations={productVariations}
-                onVariationSelect={handleVariationSelect}
-                onRegularSelect={handleRegularProductSelect}
-                selectedProduct={selectedProduct}
-              />
-            </DialogContent>
-          </Dialog>
-
-          {/* Recipe Customization Dialog */}
-          <RecipeCustomizationDialog
-            isOpen={isCustomizationDialogOpen}
-            onClose={() => setIsCustomizationDialogOpen(false)}
-            recipe={selectedCustomizableRecipe}
-            onAddToCart={handleCustomizedAddToCart}
-          />
-        </POSInventoryProvider>
+        </>
       )}
+
+      {/* Product Variations Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{selectedProduct?.name} - Select Size</DialogTitle>
+            <DialogDescription>
+              Choose a variation or select regular size
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ProductVariationsList 
+            isLoading={isLoadingVariations}
+            variations={productVariations}
+            onVariationSelect={handleVariationSelect}
+            onRegularSelect={handleRegularProductSelect}
+            selectedProduct={selectedProduct}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Recipe Customization Dialog */}
+      <RecipeCustomizationDialog
+        isOpen={isCustomizationDialogOpen}
+        onClose={() => setIsCustomizationDialogOpen(false)}
+        recipe={selectedCustomizableRecipe}
+        onAddToCart={handleCustomizedAddToCart}
+      />
     </>
   );
 });

@@ -7,7 +7,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { deductMixMatchInventory, SmartDeductionResult } from './smartMixMatchDeductionService';
+import { deductMixMatchInventory, deductMixMatchInventoryWithAuth, SmartDeductionResult } from './smartMixMatchDeductionService';
 import { InventoryDeductionResult } from './simpleInventoryService';
 
 export interface EnhancedDeductionResult {
@@ -27,13 +27,24 @@ export interface EnhancedDeductionResult {
 
 /**
  * Enhanced inventory deduction that automatically detects and handles Mix & Match products
+ * Now with proper authentication context
  */
-export const deductInventoryForTransactionEnhanced = async (
+export const deductInventoryForTransactionEnhancedWithAuth = async (
   transactionId: string,
   storeId: string,
-  items: Array<{ productId: string; productName: string; quantity: number }>
+  items: Array<{ productId: string; productName: string; quantity: number }>,
+  userId: string
 ): Promise<EnhancedDeductionResult> => {
-  console.log(`🔄 ENHANCED DEDUCTION: Starting for transaction ${transactionId} with ${items.length} items`);
+  console.log(`🔄 ENHANCED DEDUCTION: Starting for transaction ${transactionId} with ${items.length} items, user ${userId}`);
+  
+  // **CRITICAL DEBUG**: Check if this function is even being called
+  console.log(`🚨 🚀 ENHANCED DEDUCTION FUNCTION CALLED! 🚀`);
+  console.log(`🚨 📅 Timestamp: ${new Date().toISOString()}`);
+  console.log(`🚨 📋 Transaction ID: ${transactionId}`);
+  console.log(`🚨 🏪 Store ID: ${storeId}`);
+  console.log(`🚨 👤 User ID: ${userId}`);
+  console.log(`🚨 📦 Items count: ${items.length}`);
+  console.log(`🚨 📊 Items detail:`, JSON.stringify(items, null, 2));
   
   const result: EnhancedDeductionResult = {
     success: true,
@@ -46,6 +57,7 @@ export const deductInventoryForTransactionEnhanced = async (
   // Validate transaction ID format
   const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transactionId);
   if (!isValidUUID) {
+    console.error(`❌ DEBUG: Invalid transaction ID format: ${transactionId}`);
     result.success = false;
     result.errors.push(`Invalid transaction ID format: ${transactionId}`);
     return result;
@@ -62,13 +74,14 @@ export const deductInventoryForTransactionEnhanced = async (
         console.log(`🎯 ENHANCED DEDUCTION: ${item.productName} detected as Mix & Match, using smart deduction`);
         result.isMixMatch = true;
         
-        // Use smart Mix & Match deduction
-        const smartResult = await deductMixMatchInventory(
+        // Use smart Mix & Match deduction with auth context
+        const smartResult = await deductMixMatchInventoryWithAuth(
           transactionId,
           storeId,
           item.productId,
           item.productName,
-          item.quantity
+          item.quantity,
+          userId // Pass authenticated user ID
         );
         
         // Merge results
@@ -86,13 +99,14 @@ export const deductInventoryForTransactionEnhanced = async (
       } else {
         console.log(`📋 ENHANCED DEDUCTION: ${item.productName} is standard product, using regular deduction`);
         
-        // Use regular deduction for non-Mix & Match products
-        const regularResult = await deductRegularProduct(
+        // Use regular deduction for non-Mix & Match products with auth context
+        const regularResult = await deductRegularProductWithAuth(
           transactionId,
           storeId,
           item.productId,
           item.productName,
-          item.quantity
+          item.quantity,
+          userId // Pass authenticated user ID
         );
         
         // Merge results
@@ -121,23 +135,134 @@ export const deductInventoryForTransactionEnhanced = async (
 };
 
 /**
- * Check if a product is a Mix & Match product
+ * **PHASE 1 FIX**: Enhanced authentication fallback with circuit breaker pattern
+ */
+const getAuthenticatedUserWithCircuitBreaker = async (): Promise<{ userId: string | null; error?: string }> => {
+  const maxRetries = 3;
+  const baseDelay = 100; // ms
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔐 CIRCUIT BREAKER: Auth attempt ${attempt}/${maxRetries}`);
+      
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.warn(`⚠️ CIRCUIT BREAKER ${attempt}: Auth error - ${error.message}`);
+        
+        if (attempt < maxRetries) {
+          // Exponential backoff with jitter
+          const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 50;
+          console.log(`⏳ CIRCUIT BREAKER: Retrying in ${delay.toFixed(0)}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        return { 
+          userId: null, 
+          error: `Circuit breaker: Authentication failed after ${maxRetries} attempts - ${error.message}` 
+        };
+      }
+      
+      if (!user) {
+        console.warn(`⚠️ CIRCUIT BREAKER ${attempt}: No user session`);
+        
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, baseDelay));
+          continue;
+        }
+        
+        return { 
+          userId: null, 
+          error: 'Circuit breaker: No authenticated user found after retries' 
+        };
+      }
+      
+      console.log(`✅ CIRCUIT BREAKER: Success on attempt ${attempt} - User ${user.id}`);
+      return { userId: user.id };
+      
+    } catch (error) {
+      console.error(`❌ CIRCUIT BREAKER ${attempt}: Exception -`, error);
+      
+      if (attempt === maxRetries) {
+        return { 
+          userId: null, 
+          error: `Circuit breaker: Auth service exception - ${error instanceof Error ? error.message : 'Unknown error'}` 
+        };
+      }
+      
+      // Progressive delay for exceptions
+      await new Promise(resolve => setTimeout(resolve, baseDelay * attempt));
+    }
+  }
+  
+  return { userId: null, error: 'Circuit breaker: Authentication system unavailable' };
+};
+
+/**
+ * Legacy method - **PHASE 1 FIX**: Enhanced with circuit breaker authentication
+ */
+export const deductInventoryForTransactionEnhanced = async (
+  transactionId: string,
+  storeId: string,
+  items: Array<{ productId: string; productName: string; quantity: number }>
+): Promise<EnhancedDeductionResult> => {
+  console.warn('⚠️ LEGACY CALL: deductInventoryForTransactionEnhanced called without user context');
+  
+  // **PHASE 1 FIX**: Use circuit breaker authentication
+  const authResult = await getAuthenticatedUserWithCircuitBreaker();
+  
+  if (!authResult.userId) {
+    console.error(`❌ LEGACY CALL: ${authResult.error}`);
+    return {
+      success: false,
+      deductedItems: [],
+      skippedItems: [`Authentication failed: ${authResult.error}`],
+      errors: [authResult.error || 'Authentication system unavailable'],
+      isMixMatch: false
+    };
+  }
+  
+  console.log(`✅ LEGACY CALL: Circuit breaker authentication succeeded - User ${authResult.userId}`);
+  return deductInventoryForTransactionEnhancedWithAuth(transactionId, storeId, items, authResult.userId);
+};
+
+/**
+ * Check if a product is a Mix & Match product - Updated with combo expansion support
  */
 function isMixMatchProduct(productName: string): boolean {
   const name = productName.toLowerCase().trim();
-  return name.includes('croffle overload') || name.includes('mini croffle');
+  
+  // Extract original product name from combo expansion format
+  // "Mini Croffle (from Mini Croffle with Choco Flakes + Americano Iced)" → "Mini Croffle with Choco Flakes"
+  let actualProductName = name;
+  const comboMatch = name.match(/^(.+)\s*\(from\s+(.+?)\s*\+/);
+  if (comboMatch) {
+    actualProductName = comboMatch[2].toLowerCase().trim();
+    console.log(`🔍 MIX & MATCH DETECTION: Extracted "${actualProductName}" from combo format "${name}"`);
+  }
+  
+  // Check for Mix & Match indicators first
+  if (actualProductName.includes('with ') || actualProductName.includes(' and ')) {
+    // Then verify it's actually a Mix & Match product by checking for base products
+    return actualProductName.includes('croffle overload') || actualProductName.includes('mini croffle');
+  }
+  
+  // Direct check for base products
+  return actualProductName.includes('croffle overload') || actualProductName.includes('mini croffle');
 }
 
 /**
- * Regular deduction for non-Mix & Match products
+ * Regular deduction for non-Mix & Match products with auth context
  * Now includes support for ingredient groups and structured addon tracking
  */
-async function deductRegularProduct(
+async function deductRegularProductWithAuth(
   transactionId: string,
   storeId: string,
   productId: string,
   productName: string,
-  quantity: number
+  quantity: number,
+  userId: string
 ): Promise<InventoryDeductionResult> {
   const result: InventoryDeductionResult = {
     success: true,
@@ -146,14 +271,14 @@ async function deductRegularProduct(
   };
 
   try {
-    // Get recipe for this product with ingredient groups
-    const { data: productCatalog, error: catalogError } = await supabase
+    // Build query based on whether we have productId or need to use productName
+    let query = supabase
       .from('product_catalog')
       .select(`
         id,
         product_name,
         recipe_id,
-        recipes!inner (
+        recipe:recipes!recipe_id (
           id,
           name,
           recipe_ingredients (
@@ -161,22 +286,34 @@ async function deductRegularProduct(
             ingredient_group_name,
             is_optional,
             inventory_stock_id,
-            inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(item)
+            inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
+              id,
+              item,
+              stock_quantity
+            )
           )
         )
       `)
-      .eq('id', productId)
       .eq('store_id', storeId)
-      .eq('is_available', true)
-      .maybeSingle();
+      .eq('is_available', true);
+
+    // Use productId if available, otherwise fall back to productName
+    if (productId && productId !== 'undefined') {
+      query = query.eq('id', productId);
+    } else {
+      console.log(`🔍 No valid productId provided for ${productName}, searching by name`);
+      query = query.eq('product_name', productName);
+    }
+
+    const { data: productCatalog, error: catalogError } = await query.maybeSingle();
 
     if (catalogError) {
-      result.errors.push(`Error fetching recipe for product ${productName}`);
+      result.errors.push(`Error fetching recipe for product ${productName}: ${catalogError.message}`);
       result.success = false;
       return result;
     }
 
-    const recipe = productCatalog?.recipes;
+    const recipe = productCatalog?.recipe;
 
     if (!recipe) {
       console.log(`ℹ️ No recipe found for product ${productName}, skipping deduction`);
@@ -184,10 +321,6 @@ async function deductRegularProduct(
     }
 
     console.log(`📝 Found recipe: ${recipe.name} with ${recipe.recipe_ingredients?.length || 0} ingredients`);
-
-    // Get current user for audit trail
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
 
     // Process each ingredient with group-aware logic
     for (const ingredient of recipe.recipe_ingredients || []) {
@@ -239,21 +372,50 @@ async function deductRegularProduct(
         continue;
       }
 
-      // Log inventory movement
-      try {
-        await supabase.rpc('insert_inventory_movement_safe', {
-          p_inventory_stock_id: ingredient.inventory_stock_id,
-          p_movement_type: 'sale',
-          p_quantity_change: -totalDeduction,
-          p_previous_quantity: stockItem.stock_quantity,
-          p_new_quantity: newStock,
-          p_reference_type: 'transaction',
-          p_reference_id: transactionId,
-          p_notes: `Regular deduction: ${ingredientName} for ${recipe.name}`,
-          p_created_by: userId || null
-        });
-      } catch (logError) {
-        console.warn(`⚠️ Failed to log movement for ${ingredientName}:`, logError);
+      // **EMERGENCY FIX**: Enhanced audit logging with correct foreign key reference
+      console.log(`🚨 AUDIT: Creating comprehensive audit trail for ${ingredientName}...`);
+      
+      const validInventoryStockId = ingredient.inventory_stock_id;
+      
+      if (validInventoryStockId) {
+        try {
+          // Use safe audit logging function with proper inventory stock ID
+          const auditId = await supabase.rpc('log_inventory_deduction_audit_safe', {
+            p_transaction_id: transactionId,
+            p_store_id: storeId,
+            p_operation_type: 'regular_deduction',
+            p_status: 'success',
+            p_items_processed: 1,
+            p_metadata: {
+              inventory_stock_id: validInventoryStockId, // **FIX**: Use correct FK reference
+              product_catalog_id: productCatalog?.id || productId, // Store catalog reference in metadata
+              ingredient_name: ingredientName,
+              quantity_deducted: totalDeduction,
+              previous_quantity: stockItem.stock_quantity,
+              new_quantity: newStock,
+              recipe_name: recipe.name,
+              ingredient_group: groupName,
+              deduction_timestamp: new Date().toISOString()
+            }
+          });
+          
+          if (auditId.data) {
+            console.log(`✅ ENHANCED AUDIT LOGGED: Audit ID ${auditId.data} for ${ingredientName}`);
+          } else {
+            console.warn(`⚠️ ENHANCED AUDIT: Function returned null for ${ingredientName} - check audit logs`);
+            // **EMERGENCY FIX**: Don't fail silently, but don't fail the transaction either
+            result.errors.push(`Audit logging warning for ${ingredientName}: Function returned null`);
+          }
+        } catch (auditError) {
+          const errorMsg = `Audit exception for ${ingredientName}: ${auditError instanceof Error ? auditError.message : 'Unknown error'}`;
+          console.error(`❌ AUDIT EXCEPTION: ${errorMsg}`);
+          // **EMERGENCY FIX**: Proper error propagation - add to errors but don't fail the deduction
+          result.errors.push(errorMsg);
+        }
+      } else {
+        const warningMsg = `No valid inventory_stock_id for audit logging: ${ingredientName}`;
+        console.warn(`⚠️ AUDIT SKIPPED: ${warningMsg}`);
+        result.errors.push(warningMsg); // **EMERGENCY FIX**: Track missing inventory stock IDs as errors
       }
 
       // Record the deduction
@@ -279,4 +441,32 @@ async function deductRegularProduct(
     result.errors.push('Unexpected error during regular deduction');
     return result;
   }
+}
+
+/**
+ * Legacy regular deduction method - maintained for backward compatibility
+ */
+async function deductRegularProduct(
+  transactionId: string,
+  storeId: string,
+  productId: string,
+  productName: string,
+  quantity: number
+): Promise<InventoryDeductionResult> {
+  console.warn('⚠️ LEGACY CALL: deductRegularProduct called without user context');
+  
+  // Try to get user from current session
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+  
+  if (!userId) {
+    console.error('❌ LEGACY CALL: No user context available');
+    return {
+      success: false,
+      deductedItems: [],
+      errors: ['No user context available for regular deduction']
+    };
+  }
+  
+  return deductRegularProductWithAuth(transactionId, storeId, productId, productName, quantity, userId);
 }

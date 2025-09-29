@@ -234,21 +234,38 @@ export class BirComplianceService {
       const startDate = `${date}T00:00:00`;
       const endDate = `${date}T23:59:59`;
 
-      const { data: transactions, error } = await supabase
+      // Get transactions for the date using improved query
+      const startTime = `${date}T00:00:00.000Z`;
+      const endTime = `${date}T23:59:59.999Z`;
+      
+      console.log(`🔍 BIR E-Journal querying: ${startTime} to ${endTime} for store ${storeId.slice(0, 8)}`);
+
+      let query = supabase
         .from('transactions')
         .select('*')
         .eq('store_id', storeId)
-        .gte('created_at', startDate)
-        .lte('created_at', endDate)
+        .gte('created_at', startTime)
+        .lte('created_at', endTime)
         .eq('status', 'completed')
         .order('created_at');
 
+      // Only add terminal filter if explicitly provided and not default
+      if (terminalId && terminalId !== 'TERMINAL-01') {
+        query = query.eq('terminal_id', terminalId);
+        console.log(`🖥️ Terminal filter applied: ${terminalId}`);
+      }
+
+      const { data: transactions, error } = await query;
+
       if (error) {
-        console.error('Error fetching transactions for e-journal:', error);
+        console.error('❌ BIR E-Journal transaction query error:', error);
         return null;
       }
 
+      console.log(`✅ BIR E-Journal found ${transactions?.length || 0} transactions`);
+
       if (!transactions || transactions.length === 0) {
+        console.log('❌ No transactions found for e-journal');
         return null;
       }
 

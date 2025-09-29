@@ -26,7 +26,10 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
 
   const { data: transactions = [], isLoading, refetch } = useQuery({
     queryKey: ['shift-transactions-voidable', shiftId, storeId],
-    queryFn: () => getVoidableTransactions(shiftId, storeId),
+    queryFn: () => getVoidableTransactions(storeId, { 
+      startDate: new Date().toISOString().split('T')[0] + 'T00:00:00Z',
+      endDate: new Date().toISOString().split('T')[0] + 'T23:59:59Z'
+    }),
     enabled: !!shiftId && !!storeId,
     refetchInterval: 30000 // Refetch every 30 seconds
   });
@@ -37,19 +40,13 @@ export function ShiftTransactionsTab({ shiftId, storeId }: ShiftTransactionsTabP
   };
 
   const handleConfirmVoid = async (data: VoidRequestData) => {
-    if (!user?.id) return;
+    if (!user?.id || !selectedTransaction) return;
 
     setIsVoiding(true);
     try {
-      const success = await voidTransaction({
-        transactionId: data.transactionId,
-        reason: data.reason || 'Transaction voided',
-        reasonCategory: data.reasonCategory,
-        notes: data.notes,
-        voidedBy: user.id
-      });
+      const result = await voidTransaction(data);
 
-      if (success) {
+      if (result.success) {
         setIsVoidDialogOpen(false);
         setSelectedTransaction(null);
         refetch(); // Refresh the transactions list

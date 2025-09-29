@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useStore } from "../StoreContext";
 import { CartContext, OrderType, DeliveryPlatform } from "./CartContext";
 import { CartCalculationService, SeniorDiscount, OtherDiscount, CartCalculations } from "@/services/cart/CartCalculationService";
+import { BOGOService } from "@/services/cart/BOGOService";
 import { CartValidationService } from "@/services/cart/CartValidationService";
 import { enhancedPricingService } from "@/services/pos/enhancedPricingService";
 
@@ -66,6 +67,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       otherDiscount,
       totalDiners
     );
+    
     console.log("🧮 CartProvider: Cart calculation debug", {
       itemsCount: items.length,
       itemsData: items.map(i => ({ name: i.product.name, qty: i.quantity, price: i.price })),

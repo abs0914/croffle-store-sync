@@ -7,10 +7,12 @@ import { XReadingView } from "./reports/XReadingView";
 import { ZReadingView } from "./reports/ZReadingView";
 import { BIREJournalView } from "./reports/BIREJournalView";
 import { BIRDataBackupView } from "./reports/BIRDataBackupView";
-import { VATReportView } from "./reports/VATReportView";
+import { VoidReportView } from "./reports/VoidReportView";
 import { CashierReportView } from "./reports/CashierReportView";
 import CashierShiftReportView from "./reports/CashierShiftReportView";
 import CashierInventoryReportView from "./reports/CashierInventoryReportView";
+import { BIRXReadingView } from "@/components/reports/BIRXReadingView";
+import { BIRZReadingView } from "@/components/reports/BIRZReadingView";
 
 interface ReportViewProps {
   reportType: ReportType;
@@ -25,28 +27,31 @@ interface ReportViewProps {
 }
 
 export function ReportView({ reportType, data, storeId, selectedStoreId, isAllStores, dateRange }: ReportViewProps) {
+  // Use selectedStoreId with fallback to storeId to ensure we always have a valid store ID
+  const effectiveStoreId = selectedStoreId || storeId;
+  
   switch (reportType) {
     case 'sales':
-      return <SalesReportView data={data} dateRange={dateRange} isAllStores={isAllStores} storeId={selectedStoreId} />;
+      return <SalesReportView data={data} dateRange={dateRange} isAllStores={isAllStores} storeId={effectiveStoreId} />;
     case 'expense':
-      return <ExpenseReportView data={data} dateRange={dateRange} isAllStores={isAllStores} storeId={storeId} selectedStoreId={selectedStoreId} />;
+      return <ExpenseReportView data={data} dateRange={dateRange} isAllStores={isAllStores} storeId={storeId} selectedStoreId={effectiveStoreId} />;
     case 'profit_loss':
       return <ProfitLossReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
     case 'x_reading':
-      return <XReadingView storeId={selectedStoreId} date={dateRange.from} />;
+      return <XReadingView storeId={effectiveStoreId} date={dateRange.from} />;
     case 'z_reading':
-      return <ZReadingView storeId={selectedStoreId} date={dateRange.from} />;
+      return <ZReadingView storeId={effectiveStoreId} date={dateRange.from} />;
     case 'bir_ejournal':
-      return <BIREJournalView storeId={selectedStoreId} date={dateRange.from} />;
+      return <BIREJournalView storeId={effectiveStoreId} date={dateRange.from} />;
     case 'bir_backup':
-      return <BIRDataBackupView storeId={selectedStoreId} />;
-    case 'vat':
-      return <VATReportView storeId={selectedStoreId} dateRange={dateRange} />;
+      return <BIRDataBackupView storeId={effectiveStoreId} />;
+    case 'void_report':
+      return <VoidReportView storeId={effectiveStoreId} dateRange={dateRange} />;
     case 'cashier':
       return <CashierReportView 
         data={data} 
         storeId={storeId} 
-        selectedStoreId={selectedStoreId} 
+        selectedStoreId={effectiveStoreId} 
         isAllStores={isAllStores} 
         dateRange={dateRange} 
       />;

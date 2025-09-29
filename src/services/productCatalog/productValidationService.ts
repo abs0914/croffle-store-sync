@@ -17,8 +17,8 @@ export const validateProductForSale = async (
   try {
     console.log('🔍 Validating product for sale:', { productId, quantity });
 
-    // Check if this is a combo product (has "combo-" prefix)
-    if (productId.startsWith('combo-')) {
+  // Check if this is a combo product (has "combo-" prefix)
+  if (productId.startsWith('combo-')) {
       return await validateComboProduct(productId, quantity);
     }
 
@@ -150,43 +150,29 @@ const validateComboProduct = async (
     console.log('🔍 Validating combo product:', comboProductId);
     
     // Extract component product IDs from combo ID
-    // Format: combo-{product1-id}-{product2-id}
-    const parts = comboProductId.split('-');
-    if (parts.length < 3) {
+    // Format: combo_{product1-id}_{product2-id}
+    const parts = comboProductId.split('_');
+    if (parts.length !== 3) {
       return {
         isValid: false,
         productName: 'Invalid Combo Product',
         missingIngredients: true,
         lowStockIngredients: [],
-        errors: ['Invalid combo product format']
+        errors: [`Invalid combo product ID format: ${comboProductId}. Expected format: combo_{uuid1}_{uuid2}`]
       };
     }
 
-    // Extract the component product IDs (everything after "combo-")
-    const componentIds: string[] = [];
-    let currentId = '';
-    
-    for (let i = 1; i < parts.length; i++) {
-      if (currentId) {
-        currentId += '-' + parts[i];
-      } else {
-        currentId = parts[i];
-      }
-      
-      // Check if this looks like a complete UUID (36 characters with dashes)
-      if (currentId.length === 36 && currentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        componentIds.push(currentId);
-        currentId = '';
-      }
-    }
+    const componentIds = [parts[1], parts[2]];
 
-    if (componentIds.length === 0) {
+    // Validate that both parts are valid UUIDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(componentIds[0]) || !uuidRegex.test(componentIds[1])) {
       return {
         isValid: false,
         productName: 'Invalid Combo Product',
         missingIngredients: true,
         lowStockIngredients: [],
-        errors: ['Could not parse combo product components']
+        errors: [`Invalid UUID format in combo ID: ${comboProductId}`]
       };
     }
 

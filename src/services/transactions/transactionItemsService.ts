@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { CartItem } from "@/types";
+import { extractBaseProductName } from "@/utils/productNameUtils";
 
 export interface DetailedTransactionItem {
   product_id: string;
@@ -21,8 +22,8 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
   
   for (const item of items) {
     try {
-      // Check if this is a combo product
-      if (item.productId.startsWith('combo-')) {
+    // Check if this is a combo product
+    if (item.productId.startsWith('combo-')) {
         console.log('🔧 Processing combo item:', item.productId, item.product.name);
         
         // Handle combo product - expand into component items
@@ -50,10 +51,15 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
         console.warn('Failed to fetch product category for:', item.productId, error);
       }
 
+      // Use clean base product name for consistent inventory processing
+      const itemName = item.variation ? 
+        `${extractBaseProductName(item.product.name)} (${item.variation.name})` : 
+        extractBaseProductName(product?.product_name || item.product.name);
+
       const enrichedItem: DetailedTransactionItem = {
         product_id: item.productId,
         variation_id: item.variationId || undefined,
-        name: item.variation ? `${item.product.name} (${item.variation.name})` : (product?.product_name || item.product.name),
+        name: itemName,
         quantity: item.quantity,
         unit_price: item.price,
         total_price: item.price * item.quantity,
@@ -65,11 +71,15 @@ export const enrichCartItemsWithCategories = async (items: CartItem[]): Promise<
       enrichedItems.push(enrichedItem);
     } catch (error) {
       console.warn('Error enriching cart item:', error);
-      // Fallback to basic item structure
+      // Fallback to basic item structure with clean names
+      const fallbackName = item.variation ? 
+        `${extractBaseProductName(item.product.name)} (${item.variation.name})` : 
+        extractBaseProductName(item.product.name);
+
       enrichedItems.push({
         product_id: item.productId,
         variation_id: item.variationId || undefined,
-        name: item.variation ? `${item.product.name} (${item.variation.name})` : item.product.name,
+        name: fallbackName,
         quantity: item.quantity,
         unit_price: item.price,
         total_price: item.price * item.quantity,
@@ -90,30 +100,20 @@ async function expandComboProduct(comboItem: CartItem): Promise<DetailedTransact
   try {
     // Extract component IDs from combo ID: "combo-{uuid1}-{uuid2}"
     const parts = comboItem.productId.split('-');
-    if (parts.length < 3) {
-      throw new Error(`Invalid combo ID format: ${comboItem.productId}`);
+    if (parts.length !== 11) { // combo + 5 parts for each UUID = 11 parts total
+      throw new Error(`Invalid combo ID format: ${comboItem.productId}. Expected format: combo-{uuid1}-{uuid2}`);
     }
 
-    // Extract the component product IDs (everything after "combo-")
-    const componentIds: string[] = [];
-    let currentId = '';
-    
-    for (let i = 1; i < parts.length; i++) {
-      if (currentId) {
-        currentId += '-' + parts[i];
-      } else {
-        currentId = parts[i];
-      }
-      
-      // Check if this looks like a complete UUID (36 characters with dashes)
-      if (currentId.length === 36 && currentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        componentIds.push(currentId);
-        currentId = '';
-      }
-    }
+    // Reconstruct the two UUIDs from the parts
+    const componentIds = [
+      `${parts[1]}-${parts[2]}-${parts[3]}-${parts[4]}-${parts[5]}`, // First UUID
+      `${parts[6]}-${parts[7]}-${parts[8]}-${parts[9]}-${parts[10]}` // Second UUID
+    ];
 
-    if (componentIds.length !== 2) {
-      throw new Error(`Expected 2 component IDs in combo, found ${componentIds.length}: ${comboItem.productId}`);
+    // Validate that both parts are valid UUIDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(componentIds[0]) || !uuidRegex.test(componentIds[1])) {
+      throw new Error(`Invalid UUID format in combo ID: ${comboItem.productId}`);
     }
     
     const croffleId = componentIds[0];

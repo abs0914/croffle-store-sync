@@ -4,6 +4,7 @@
 // Core Transaction Services (CLEAN PATH)
 export * from './transactions/streamlinedTransactionService';
 export * from './transactions/transactionItemsService';
+export * from './transactions/comboExpansionService';
 
 // ENHANCED TRANSACTION INVENTORY INTEGRATION (Mix & Match Support)
 export * from './transactions/simplifiedTransactionInventoryIntegration';
@@ -19,7 +20,7 @@ export * from './inventory/simplifiedInventoryAuditService';
 
 // LEGACY UNIFIED INVENTORY AUDIT SYSTEM (STANDARDIZED)
 export * from './inventory/unifiedInventoryAuditService';
-export * from './inventory/standardizedInventoryMigration';
+export * from './transactions/comboExpansionService';
 
 // Recipe Management Services  
 export * from './recipes/missingRecipeHandler';

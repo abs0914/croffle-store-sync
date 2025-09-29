@@ -25,8 +25,7 @@ export interface ShiftState {
   startShift: (
     startingCash: number,
     startPhoto?: string,
-    cashierId?: string,
-    inventoryCounts?: Record<string, number>
+    cashierId?: string
   ) => Promise<boolean>;
   endShift: (
     endingCash: number,

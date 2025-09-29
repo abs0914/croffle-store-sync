@@ -24,9 +24,17 @@ export async function fetchDailySalesSummary(
     
     if (txError) throw txError;
     
+    console.log(`🔍 Daily Summary found ${transactions?.length || 0} transactions for store ${storeId.slice(0, 8)} on ${date}`);
+    
     if (!transactions || transactions.length === 0) {
-      // For demo purposes, return sample data
-      return createSampleDailySummary();
+      console.log('❌ No transactions found for Daily Summary, returning zero data instead of sample data');
+      return {
+        totalSales: 0,
+        transactionCount: 0,
+        totalItemsSold: 0,
+        items: [],
+        paymentMethods: []
+      };
     }
     
     // Calculate sales by item

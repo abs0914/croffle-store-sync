@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/types";
 import { checkProductAvailabilityByRecipe } from "@/services/productCatalog/automaticAvailabilityService";
+import { SimplifiedInventoryService } from "@/services/inventory/phase4InventoryService";
 
 export interface POSInventoryStatus {
   productId: string;
@@ -15,7 +16,7 @@ const getStockStatus = (availableQuantity: number): 'in_stock' | 'out_of_stock' 
   return 'in_stock';
 };
 
-// Fetch inventory status for POS products with template-based calculations
+// Fetch inventory status for POS products with real inventory validation
 export const fetchPOSInventoryStatus = async (
   products: Product[], 
   storeId: string
@@ -23,7 +24,7 @@ export const fetchPOSInventoryStatus = async (
   const statusMap = new Map<string, POSInventoryStatus>();
   
   try {
-    console.log(`🔍 POS Inventory: Calculating status for ${products.length} products in store ${storeId}`);
+    console.log(`🔍 POS Inventory: Validating inventory for ${products.length} products in store ${storeId}`);
     
     for (const product of products) {
       // Determine if this is a direct product or template-based
@@ -35,22 +36,87 @@ export const fetchPOSInventoryStatus = async (
                                product.name.toLowerCase().includes('bottle')));
       
       let availableQuantity = 0;
+      let status: 'in_stock' | 'out_of_stock' = 'out_of_stock';
       
-      // Simplify stock calculation to use static inventory quantities only
-      // Remove all recipe-based calculations that are causing conflicts
       if (isDirectProduct) {
         // For direct products, use the static stock quantity
         availableQuantity = product.stock_quantity || 0;
+        status = getStockStatus(availableQuantity);
         console.log(`📦 Direct product ${product.name}: stock = ${availableQuantity}`);
       } else {
-        // For recipe-based products, use a simplified approach
-        // If product is marked as available, assume reasonable stock
-        // If not available, treat as out of stock
-        availableQuantity = (product.is_available !== false) ? 25 : 0;
-        console.log(`🧪 Recipe product ${product.name}: availability = ${product.is_available}, stock = ${availableQuantity}`);
+        // For recipe-based products, validate using direct recipe availability check
+        try {
+          // Check if product has sufficient inventory by querying recipe ingredients directly
+          const { data: productData, error: productError } = await supabase
+            .from('product_catalog')
+            .select(`
+              recipe_id,
+              recipes!inner (
+                id,
+                is_active,
+                recipe_ingredients (
+                  quantity,
+                  inventory_stock_id,
+                  inventory_stock:inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
+                    id,
+                    item,
+                    stock_quantity
+                  )
+                )
+              )
+            `)
+            .eq('id', product.id)
+            .eq('store_id', storeId)
+            .eq('is_available', true)
+            .eq('recipes.is_active', true)
+            .not('recipe_id', 'is', null)
+            .maybeSingle();
+
+          if (productError || !productData) {
+            // No recipe found, assume available based on product availability flag
+            status = (product.is_available !== false) ? 'in_stock' : 'out_of_stock';
+            availableQuantity = status === 'in_stock' ? 25 : 0;
+            console.log(`⚠️ Recipe product ${product.name}: no recipe data, using availability flag: ${status}`);
+          } else {
+            // Check if all ingredients have sufficient stock
+            const recipe = productData.recipes;
+            let hasStock = true;
+            let minStock = Infinity;
+
+            if (recipe.recipe_ingredients && recipe.recipe_ingredients.length > 0) {
+              for (const ingredient of recipe.recipe_ingredients) {
+                if (ingredient.inventory_stock_id && ingredient.inventory_stock) {
+                  const requiredQty = ingredient.quantity || 1;
+                  const availableStock = ingredient.inventory_stock.stock_quantity || 0;
+                  
+                  if (availableStock < requiredQty) {
+                    hasStock = false;
+                    console.log(`❌ ${product.name}: insufficient ${ingredient.inventory_stock.item} (need: ${requiredQty}, have: ${availableStock})`);
+                  } else {
+                    const possibleQty = Math.floor(availableStock / requiredQty);
+                    minStock = Math.min(minStock, possibleQty);
+                  }
+                }
+              }
+            }
+
+            if (hasStock && minStock > 0) {
+              status = 'in_stock';
+              availableQuantity = Math.min(minStock, 50); // Cap at reasonable number
+              console.log(`✅ Recipe product ${product.name}: sufficient stock, can make ${availableQuantity} units`);
+            } else {
+              status = 'out_of_stock';
+              availableQuantity = 0;
+              console.log(`❌ Recipe product ${product.name}: insufficient ingredients`);
+            }
+          }
+        } catch (error) {
+          // If validation fails, fallback to product availability flag
+          status = (product.is_available !== false) ? 'in_stock' : 'out_of_stock';
+          availableQuantity = status === 'in_stock' ? 1 : 0;
+          console.log(`❌ Recipe product ${product.name}: validation error, using fallback`, error);
+        }
       }
-      
-      const status = getStockStatus(availableQuantity);
       
       statusMap.set(product.id, {
         productId: product.id,

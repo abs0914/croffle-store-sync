@@ -107,18 +107,24 @@ export const useAuthState = () => {
       if (refreshTime > 0) {
         refreshTimeoutRef.current = setTimeout(async () => {
           try {
+            console.log('🔄 Auto-refreshing session token...');
             const { data, error } = await supabase.auth.refreshSession();
             if (error) throw error;
             if (data.session) {
+              console.log('✅ Session token refreshed successfully');
               setSession(data.session);
               await logSecurityEvent('token_refreshed', {}, 'low');
               setupTokenRefresh(data.session);
             }
           } catch (error) {
-            console.error("Token refresh failed:", error);
+            console.error("❌ Token refresh failed:", error);
             await logSecurityEvent('token_refresh_failed', { error: String(error) }, 'medium');
-            toast.error("Session expired. Please log in again.");
-            logout();
+            // Only show error and logout if this isn't a manual refresh
+            if (!authErrorHandledRef.current) {
+              authErrorHandledRef.current = true;
+              toast.error("Session expired. Please log in again.");
+              logout();
+            }
           }
         }, refreshTime);
       }

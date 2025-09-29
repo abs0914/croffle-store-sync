@@ -11,9 +11,9 @@ export function DashboardHeader() {
   const { currentShift, isLoading, startShift } = useShift();
   const { currentStore } = useStore();
 
-  const handleStartShift = async (startingCash: number, photo?: string, cashierId?: string, inventoryCounts?: Record<string, number>) => {
+  const handleStartShift = async (startingCash: number, photo?: string, cashierId?: string) => {
     try {
-      const success = await startShift(startingCash, photo, cashierId, inventoryCounts);
+      const success = await startShift(startingCash, photo, cashierId);
       if (success) {
         setShowStartDialog(false);
         toast.success("Shift started successfully!");

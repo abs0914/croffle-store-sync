@@ -82,8 +82,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           let defaultStore: Store | null = null;
 
           if (user.role === 'admin' || user.role === 'owner') {
-            // For admin/owner, use the first store alphabetically
-            defaultStore = data[0] as Store;
+            // For admin/owner, prefer SM City Store if available, otherwise use first store
+            const smCityStore = data.find(store => 
+              store.name.toLowerCase().includes('sm city') || 
+              store.name.toLowerCase().includes('sm-city')
+            ) as Store;
+            defaultStore = smCityStore || data[0] as Store;
           } else {
             // For regular users, use their first assigned store
             if (user.storeIds && user.storeIds.length > 0) {

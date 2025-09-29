@@ -20,18 +20,49 @@ export function VATReportView({ storeId, dateRange }: VATReportViewProps) {
   const from = dateRange.from?.toISOString().split('T')[0];
   const to = dateRange.to?.toISOString().split('T')[0];
   
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['vat-report', storeId, from, to],
-    queryFn: () => from && to ? fetchVATReport(storeId, from, to) : Promise.resolve(null),
-    enabled: !!storeId && !!from && !!to
+    queryFn: async () => {
+      if (!from || !to) return Promise.resolve(null);
+      
+      // Ensure we have valid parameters
+      if (!storeId || storeId === '') {
+        console.error('❌ VAT Report View: No valid storeId provided');
+        throw new Error('Store ID is required for VAT report');
+      }
+      
+      console.log(`🔍 VAT Report View: Fetching data for store ${storeId.slice(0, 8)} from ${from} to ${to}`);
+      
+      try {
+        const result = await fetchVATReport(storeId, from, to);
+        console.log(`📊 VAT Report View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
+        return result;
+      } catch (error: any) {
+        // Handle authentication errors specifically
+        if (error.message?.includes('Authentication required') || error.message?.includes('no active session')) {
+          console.error('❌ VAT Report authentication error:', error);
+          throw new Error('Session expired. Please refresh the page and login again.');
+        }
+        throw error;
+      }
+    },
+    enabled: !!storeId && storeId !== '' && !!from && !!to,
+    retry: (failureCount, error: any) => {
+      // Don't retry authentication errors
+      if (error?.message?.includes('Authentication required') || error?.message?.includes('Session expired')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    refetchOnWindowFocus: false
   });
   
   const handleExportCSV = () => {
-    if (!data) return;
+    if (!reportData) return;
     
     // Generate CSV content
     const headers = ["Date", "Receipt No.", "Transaction Type", "VATable Sales", "VAT Amount", "VAT Exempt Sales", "Zero-Rated Sales"];
-    const rows = data.transactions.map(tx => [
+    const rows = reportData.transactions.map(tx => [
       format(new Date(tx.date), 'MM/dd/yyyy'),
       tx.receiptNumber,
       tx.transactionType,
@@ -44,10 +75,10 @@ export function VATReportView({ storeId, dateRange }: VATReportViewProps) {
     // Add summary row
     rows.push([
       "TOTAL", "", "", 
-      data.totals.vatableSales.toFixed(2),
-      data.totals.vatAmount.toFixed(2),
-      data.totals.vatExemptSales.toFixed(2),
-      data.totals.vatZeroRatedSales.toFixed(2)
+      reportData.totals.vatableSales.toFixed(2),
+      reportData.totals.vatAmount.toFixed(2),
+      reportData.totals.vatExemptSales.toFixed(2),
+      reportData.totals.vatZeroRatedSales.toFixed(2)
     ]);
     
     const csvContent = [
@@ -79,12 +110,36 @@ export function VATReportView({ storeId, dateRange }: VATReportViewProps) {
     );
   }
   
-  if (!data) {
+  // Extract the data from the response wrapper
+  const reportData = data?.data || data;
+
+  if (!reportData || !reportData.transactions || reportData.transactions.length === 0) {
     return (
       <Card>
         <CardContent className="p-4">
           <div className="text-center py-10">
-            <p>No VAT data available for the selected period</p>
+            <div className="mb-4">
+              {error ? (
+                <>
+                  <p className="text-lg font-semibold text-destructive">Error Loading VAT Report</p>
+                  <p className="text-sm text-muted-foreground">
+                    {error instanceof Error ? error.message : 'Unable to fetch VAT report data. Please try again or contact support.'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-semibold text-muted-foreground">No Data Available</p>
+                  <p className="text-sm text-muted-foreground">
+                    No transactions found for the selected date range.
+                    <br />
+                    Try selecting a different date range or check if there are completed transactions for this period.
+                  </p>
+                </>
+              )}
+            </div>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -112,19 +167,19 @@ export function VATReportView({ storeId, dateRange }: VATReportViewProps) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-croffle-light/20 p-4 rounded-lg">
               <p className="text-sm text-muted-foreground">VATable Sales</p>
-              <h3 className="text-2xl font-bold text-croffle-primary">₱{data.totals.vatableSales.toFixed(2)}</h3>
+              <h3 className="text-2xl font-bold text-croffle-primary">₱{reportData.totals.vatableSales.toFixed(2)}</h3>
             </div>
             <div className="bg-croffle-light/20 p-4 rounded-lg">
               <p className="text-sm text-muted-foreground">VAT Amount</p>
-              <h3 className="text-2xl font-bold text-croffle-primary">₱{data.totals.vatAmount.toFixed(2)}</h3>
+              <h3 className="text-2xl font-bold text-croffle-primary">₱{reportData.totals.vatAmount.toFixed(2)}</h3>
             </div>
             <div className="bg-croffle-light/20 p-4 rounded-lg">
               <p className="text-sm text-muted-foreground">VAT-Exempt Sales</p>
-              <h3 className="text-2xl font-bold text-croffle-primary">₱{data.totals.vatExemptSales.toFixed(2)}</h3>
+              <h3 className="text-2xl font-bold text-croffle-primary">₱{reportData.totals.vatExemptSales.toFixed(2)}</h3>
             </div>
             <div className="bg-croffle-light/20 p-4 rounded-lg">
               <p className="text-sm text-muted-foreground">Zero-Rated Sales</p>
-              <h3 className="text-2xl font-bold text-croffle-primary">₱{data.totals.vatZeroRatedSales.toFixed(2)}</h3>
+              <h3 className="text-2xl font-bold text-croffle-primary">₱{reportData.totals.vatZeroRatedSales.toFixed(2)}</h3>
             </div>
           </div>
         </CardContent>
@@ -149,7 +204,7 @@ export function VATReportView({ storeId, dateRange }: VATReportViewProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.transactions.map((tx, index) => (
+                {reportData.transactions.map((tx, index) => (
                   <TableRow key={index}>
                     <TableCell>{format(new Date(tx.date), 'MM/dd/yyyy')}</TableCell>
                     <TableCell>{tx.receiptNumber}</TableCell>
@@ -164,17 +219,17 @@ export function VATReportView({ storeId, dateRange }: VATReportViewProps) {
                 {/* Totals row */}
                 <TableRow className="font-medium bg-muted/50">
                   <TableCell colSpan={3} className="text-right">TOTAL</TableCell>
-                  <TableCell className="text-right">₱{data.totals.vatableSales.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">₱{data.totals.vatAmount.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">₱{data.totals.vatExemptSales.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">₱{data.totals.vatZeroRatedSales.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">₱{reportData.totals.vatableSales.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">₱{reportData.totals.vatAmount.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">₱{reportData.totals.vatExemptSales.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-medium">₱{reportData.totals.vatZeroRatedSales.toFixed(2)}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
           </div>
           
           <p className="text-sm text-muted-foreground mt-2">
-            Showing {data.transactions.length} transactions
+            Showing {reportData.transactions.length} transactions
           </p>
         </CardContent>
       </Card>

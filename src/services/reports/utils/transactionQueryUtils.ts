@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { executeWithValidSession } from "@/contexts/auth/session-utils";
 
 export interface TransactionQueryOptions {
   storeId: string;
@@ -8,6 +9,7 @@ export interface TransactionQueryOptions {
   status?: string;
   orderBy?: string;
   ascending?: boolean;
+  includeCashierInfo?: boolean;
 }
 
 export interface QueryResult<T> {
@@ -20,18 +22,20 @@ export interface QueryResult<T> {
 export async function fetchTransactionsWithFallback(
   options: TransactionQueryOptions
 ): Promise<QueryResult<any>> {
-  const { storeId, from, to, status = "completed", orderBy = "created_at", ascending = true } = options;
+  const { storeId, from, to, status = "completed", orderBy = "created_at", ascending = true, includeCashierInfo = false } = options;
   const queryAttempts: string[] = [];
   
-  console.log('🔍 Starting unified transaction query:', { 
-    storeId: storeId === "all" ? "ALL_STORES" : storeId.slice(0, 8), 
-    from, 
-    to, 
-    status 
-  });
+  // Critical: Use enhanced session validation
+  return await executeWithValidSession(async () => {
+    console.log('🔍 Starting unified transaction query:', { 
+      storeId: storeId === "all" ? "ALL_STORES" : storeId.slice(0, 8), 
+      from, 
+      to, 
+      status 
+    });
 
-  // Strategy 1: Use timestamp range filtering (Supabase compatible)
-  console.log('📅 Strategy 1: Using timestamp range filtering');
+    // Strategy 1: Use timestamp range filtering (Supabase compatible)
+    console.log('📅 Strategy 1: Using timestamp range filtering');
   
   let query = supabase
     .from("transactions")
@@ -184,12 +188,47 @@ export async function fetchTransactionsWithFallback(
   const finalCount = transactions?.length || 0;
   console.log(`📊 Final result: ${finalCount} transactions found for store ${storeId === "all" ? "ALL_STORES" : storeId.slice(0, 8)}`);
 
+  // Transform transactions to include cashier_name if cashier info was requested
+  if (includeCashierInfo && transactions && transactions.length > 0) {
+    // Get unique user IDs from transactions
+    const userIds = [...new Set(transactions.map(tx => tx.user_id).filter(Boolean))];
+    
+    if (userIds.length > 0) {
+      // Fetch cashier information
+      const { data: cashiers } = await supabase
+        .from('app_users')
+        .select('user_id, first_name, last_name')
+        .in('user_id', userIds);
+
+      // Create a mapping of user_id to cashier name
+      const cashierMap = new Map();
+      cashiers?.forEach(cashier => {
+        if (cashier.user_id) {
+          cashierMap.set(cashier.user_id, `${cashier.first_name} ${cashier.last_name}`);
+        }
+      });
+
+      // Add cashier names to transactions
+      transactions = transactions.map(tx => ({
+        ...tx,
+        cashier_name: tx.user_id ? (cashierMap.get(tx.user_id) || 'Unknown Cashier') : 'Unknown Cashier'
+      }));
+    } else {
+      // No user IDs found, add default cashier name
+      transactions = transactions.map(tx => ({
+        ...tx,
+        cashier_name: 'Unknown Cashier'
+      }));
+    }
+  }
+
   return {
     data: transactions,
     error,
     queryAttempts,
     recordCount: finalCount
   };
+}, 'transaction query');
 }
 
 export function logTransactionDetails(transactions: any[], label: string) {

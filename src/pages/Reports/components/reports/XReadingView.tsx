@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Printer } from "lucide-react";
+import { Printer, RefreshCw, FileBarChart } from "lucide-react";
 import { fetchXReading } from "@/services/reports";
 import { format } from "date-fns";
 
@@ -16,10 +16,39 @@ interface XReadingViewProps {
 export function XReadingView({ storeId, date }: XReadingViewProps) {
   const formattedDate = date ? format(date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
   
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['x-reading', storeId, formattedDate],
-    queryFn: () => fetchXReading(storeId, formattedDate),
-    enabled: !!storeId
+    queryFn: async () => {
+      console.log(`🔍 X-Reading View: Fetching data for store ${storeId.slice(0, 8)} on ${formattedDate}`);
+      
+      // Ensure we have a valid storeId
+      if (!storeId || storeId === '') {
+        console.error('❌ X-Reading View: No valid storeId provided');
+        throw new Error('Store ID is required for X-Reading report');
+      }
+      
+      try {
+        const result = await fetchXReading(storeId, formattedDate);
+        console.log(`📊 X-Reading View: Result for ${storeId.slice(0, 8)}:`, result ? 'Data received' : 'No data');
+        return result;
+      } catch (error: any) {
+        // Handle authentication errors specifically
+        if (error.message?.includes('Authentication required') || error.message?.includes('no active session')) {
+          console.error('❌ X-Reading authentication error:', error);
+          throw new Error('Session expired. Please refresh the page and login again.');
+        }
+        throw error;
+      }
+    },
+    enabled: !!storeId && storeId !== '',
+    retry: (failureCount, error: any) => {
+      // Don't retry authentication errors
+      if (error?.message?.includes('Authentication required') || error?.message?.includes('Session expired')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    refetchOnWindowFocus: false
   });
   
   const handlePrint = () => {
@@ -38,18 +67,58 @@ export function XReadingView({ storeId, date }: XReadingViewProps) {
   
   if (!data) {
     return (
-      <Card>
-        <CardContent className="p-4">
-          <div className="text-center py-10">
-            <div className="mb-4">
-              <p className="text-lg font-semibold text-destructive">Error Loading X-Reading</p>
-              <p className="text-sm text-muted-foreground">
-                Unable to fetch X-Reading data. Please try again or contact support.
-              </p>
+      <Card className="border-amber-200 bg-gradient-to-br from-amber-50/30 to-transparent">
+        <CardContent className="p-8 text-center">
+          <div className="space-y-6">
+            <div className="flex flex-col items-center gap-4">
+              <div className="rounded-full bg-amber-100 p-4">
+                <FileBarChart className="h-12 w-12 text-amber-600" />
+              </div>
+              
+              {error ? (
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold text-destructive">X-Reading Error</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    {error instanceof Error ? error.message : 'Unable to generate X-Reading report.'}
+                  </p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
+                    <p className="text-sm text-red-700">
+                      This could be due to authentication issues or missing transaction data.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold text-muted-foreground">No X-Reading Data</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    No transactions found for <strong>{format(new Date(formattedDate), 'MMMM dd, yyyy')}</strong>
+                  </p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 space-y-2">
+                    <p className="text-sm text-blue-700 font-medium">Possible reasons:</p>
+                    <ul className="text-xs text-blue-600 space-y-1 text-left">
+                      <li>• No transactions were completed on this date</li>
+                      <li>• No active cashier shift for the selected date</li>
+                      <li>• Data may still be processing</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
-            <Button variant="outline" onClick={() => window.location.reload()}>
-              Retry
-            </Button>
+
+            <div className="flex flex-col gap-3 max-w-sm mx-auto">
+              <Button variant="default" onClick={() => window.location.reload()}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Page
+              </Button>
+              <Button variant="outline" onClick={() => history.back()}>
+                Go Back
+              </Button>
+            </div>
+
+            <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
+              <p><strong>Selected Date:</strong> {format(new Date(formattedDate), 'EEEE, MMMM dd, yyyy')}</p>
+              <p><strong>Store ID:</strong> {storeId.slice(0, 8)}...</p>
+            </div>
           </div>
         </CardContent>
       </Card>

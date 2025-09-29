@@ -1,4 +1,5 @@
 import { CartItem } from "@/types";
+import { BOGOService } from "./BOGOService";
 
 export interface SeniorDiscount {
   id: string;
@@ -8,7 +9,7 @@ export interface SeniorDiscount {
 }
 
 export interface OtherDiscount {
-  type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary';
+  type: 'pwd' | 'employee' | 'loyalty' | 'promo' | 'complimentary' | 'bogo';
   amount: number;
   idNumber?: string;
   justification?: string;
@@ -110,6 +111,7 @@ export class CartCalculationService {
     
     // Other discount calculations
     let otherDiscountAmount = 0;
+    
     if (otherDiscount) {
       const discountSubtotal = grossSubtotal > 0 ? grossSubtotal : items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       switch (otherDiscount.type) {
@@ -127,6 +129,9 @@ export class CartCalculationService {
           break;
         case 'complimentary':
           otherDiscountAmount = discountSubtotal; // 100% discount
+          break;
+        case 'bogo':
+          otherDiscountAmount = otherDiscount.amount;
           break;
       }
     }

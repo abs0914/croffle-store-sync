@@ -91,6 +91,8 @@ export interface BIRReceiptData {
     senior: number;
     pwd: number;
     employee: number;
+    athletes_coaches: number;
+    solo_parent: number;
     other: number;
     total: number;
   };

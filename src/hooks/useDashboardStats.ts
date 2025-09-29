@@ -34,8 +34,10 @@ export function useDashboardStats() {
     
     async function fetchDashboardStats() {
       try {
-        // Get today's date and format it
-        const today = format(new Date(), "yyyy-MM-dd");
+        // Get today's date in Philippine timezone
+        const today = new Date().toLocaleDateString('en-CA', {
+          timeZone: 'Asia/Manila'
+        });
         
         // First try to get data from store_metrics (real sales data)
         const { data: metricsData } = await supabase
@@ -54,8 +56,8 @@ export function useDashboardStats() {
             .select("total")
             .eq("store_id", currentStore.id)
             .eq("status", "completed")
-            .gte("created_at", `${today}T00:00:00`)
-            .lte("created_at", `${today}T23:59:59`);
+            .gte("created_at", `${today}T00:00:00+08:00`)
+            .lte("created_at", `${today}T23:59:59+08:00`);
           
           if (salesError) throw salesError;
           dailySales = salesData?.reduce((sum, tx) => sum + (tx.total || 0), 0) || 0;
@@ -79,14 +81,17 @@ export function useDashboardStats() {
         if (customersError) throw customersError;
         
         // Fetch transactions from past week to find best seller
-        const weekAgo = format(subDays(new Date(), 7), "yyyy-MM-dd");
+        const weekAgo = subDays(new Date(), 7).toLocaleDateString('en-CA', {
+          timeZone: 'Asia/Manila'
+        });
+        
         const { data: transactions, error: txError } = await supabase
           .from("transactions")
           .select("items")
           .eq("store_id", currentStore.id)
           .eq("status", "completed")
-          .gte("created_at", `${weekAgo}T00:00:00`)
-          .lte("created_at", `${today}T23:59:59`);
+          .gte("created_at", `${weekAgo}T00:00:00+08:00`)
+          .lte("created_at", `${today}T23:59:59+08:00`);
         
         if (txError) throw txError;
         

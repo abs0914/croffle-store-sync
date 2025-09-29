@@ -178,6 +178,51 @@ export type Database = {
         }
         Relationships: []
       }
+      agt_resets: {
+        Row: {
+          agt_before_reset: number
+          created_at: string | null
+          created_by: string
+          id: string
+          rdo_notification_date: string | null
+          rdo_notification_sent: boolean | null
+          rdo_office: string | null
+          reset_counter: number
+          reset_date: string
+          reset_reason: string | null
+          store_id: string
+          terminal_id: string
+        }
+        Insert: {
+          agt_before_reset: number
+          created_at?: string | null
+          created_by: string
+          id?: string
+          rdo_notification_date?: string | null
+          rdo_notification_sent?: boolean | null
+          rdo_office?: string | null
+          reset_counter: number
+          reset_date?: string
+          reset_reason?: string | null
+          store_id: string
+          terminal_id: string
+        }
+        Update: {
+          agt_before_reset?: number
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          rdo_notification_date?: string | null
+          rdo_notification_sent?: boolean | null
+          rdo_office?: string | null
+          reset_counter?: number
+          reset_date?: string
+          reset_reason?: string | null
+          store_id?: string
+          terminal_id?: string
+        }
+        Relationships: []
+      }
       app_users: {
         Row: {
           contact_number: string | null
@@ -424,6 +469,87 @@ export type Database = {
           },
         ]
       }
+      bir_daily_summary: {
+        Row: {
+          business_date: string
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string | null
+          id: string
+          is_closed: boolean | null
+          payment_breakdown: Json | null
+          store_id: string
+          terminal_id: string
+          top_items: Json | null
+          total_discounts: number | null
+          total_gross_sales: number | null
+          total_net_sales: number | null
+          total_transactions: number | null
+          total_vat_amount: number | null
+          total_vat_exempt: number | null
+          total_vat_sales: number | null
+          total_zero_rated: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          business_date: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          id?: string
+          is_closed?: boolean | null
+          payment_breakdown?: Json | null
+          store_id: string
+          terminal_id?: string
+          top_items?: Json | null
+          total_discounts?: number | null
+          total_gross_sales?: number | null
+          total_net_sales?: number | null
+          total_transactions?: number | null
+          total_vat_amount?: number | null
+          total_vat_exempt?: number | null
+          total_vat_sales?: number | null
+          total_zero_rated?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          business_date?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string | null
+          id?: string
+          is_closed?: boolean | null
+          payment_breakdown?: Json | null
+          store_id?: string
+          terminal_id?: string
+          top_items?: Json | null
+          total_discounts?: number | null
+          total_gross_sales?: number | null
+          total_net_sales?: number | null
+          total_transactions?: number | null
+          total_vat_amount?: number | null
+          total_vat_exempt?: number | null
+          total_vat_sales?: number | null
+          total_zero_rated?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_daily_summary_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "bir_daily_summary_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bir_ejournal: {
         Row: {
           backup_date: string | null
@@ -494,6 +620,289 @@ export type Database = {
             foreignKeyName: "bir_ejournal_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bir_readings: {
+        Row: {
+          accumulated_gross_sales: number | null
+          accumulated_net_sales: number | null
+          accumulated_vat: number | null
+          actual_cash: number | null
+          backup_date: string | null
+          beginning_cash: number | null
+          beginning_si_number: string | null
+          cash_payouts: number | null
+          cash_sales: number | null
+          cash_variance: number | null
+          cashier_name: string | null
+          created_at: string | null
+          ending_si_number: string | null
+          expected_cash: number | null
+          gross_sales: number | null
+          id: string
+          is_backed_up: boolean | null
+          manager_name: string | null
+          naac_discount: number | null
+          net_sales: number | null
+          other_discounts: number | null
+          printed_at: string | null
+          pwd_discount: number | null
+          reading_date: string
+          reading_number: number
+          reading_type: string
+          reset_counter: number
+          sc_discount: number | null
+          shift_id: string | null
+          sp_discount: number | null
+          store_id: string
+          terminal_id: string
+          total_discounts: number | null
+          transaction_count: number | null
+          updated_at: string | null
+          vat_amount: number | null
+          vat_exempt_sales: number | null
+          vat_sales: number | null
+          zero_rated_sales: number | null
+        }
+        Insert: {
+          accumulated_gross_sales?: number | null
+          accumulated_net_sales?: number | null
+          accumulated_vat?: number | null
+          actual_cash?: number | null
+          backup_date?: string | null
+          beginning_cash?: number | null
+          beginning_si_number?: string | null
+          cash_payouts?: number | null
+          cash_sales?: number | null
+          cash_variance?: number | null
+          cashier_name?: string | null
+          created_at?: string | null
+          ending_si_number?: string | null
+          expected_cash?: number | null
+          gross_sales?: number | null
+          id?: string
+          is_backed_up?: boolean | null
+          manager_name?: string | null
+          naac_discount?: number | null
+          net_sales?: number | null
+          other_discounts?: number | null
+          printed_at?: string | null
+          pwd_discount?: number | null
+          reading_date?: string
+          reading_number: number
+          reading_type: string
+          reset_counter?: number
+          sc_discount?: number | null
+          shift_id?: string | null
+          sp_discount?: number | null
+          store_id: string
+          terminal_id?: string
+          total_discounts?: number | null
+          transaction_count?: number | null
+          updated_at?: string | null
+          vat_amount?: number | null
+          vat_exempt_sales?: number | null
+          vat_sales?: number | null
+          zero_rated_sales?: number | null
+        }
+        Update: {
+          accumulated_gross_sales?: number | null
+          accumulated_net_sales?: number | null
+          accumulated_vat?: number | null
+          actual_cash?: number | null
+          backup_date?: string | null
+          beginning_cash?: number | null
+          beginning_si_number?: string | null
+          cash_payouts?: number | null
+          cash_sales?: number | null
+          cash_variance?: number | null
+          cashier_name?: string | null
+          created_at?: string | null
+          ending_si_number?: string | null
+          expected_cash?: number | null
+          gross_sales?: number | null
+          id?: string
+          is_backed_up?: boolean | null
+          manager_name?: string | null
+          naac_discount?: number | null
+          net_sales?: number | null
+          other_discounts?: number | null
+          printed_at?: string | null
+          pwd_discount?: number | null
+          reading_date?: string
+          reading_number?: number
+          reading_type?: string
+          reset_counter?: number
+          sc_discount?: number | null
+          shift_id?: string | null
+          sp_discount?: number | null
+          store_id?: string
+          terminal_id?: string
+          total_discounts?: number | null
+          transaction_count?: number | null
+          updated_at?: string | null
+          vat_amount?: number | null
+          vat_exempt_sales?: number | null
+          vat_sales?: number | null
+          zero_rated_sales?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_readings_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bir_readings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "bir_readings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bir_reset_counters: {
+        Row: {
+          agt_before_reset: number | null
+          created_at: string | null
+          id: string
+          last_reset_date: string | null
+          last_reset_reason: string | null
+          reset_counter: number
+          store_id: string
+          terminal_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          agt_before_reset?: number | null
+          created_at?: string | null
+          id?: string
+          last_reset_date?: string | null
+          last_reset_reason?: string | null
+          reset_counter?: number
+          store_id: string
+          terminal_id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          agt_before_reset?: number | null
+          created_at?: string | null
+          id?: string
+          last_reset_date?: string | null
+          last_reset_reason?: string | null
+          reset_counter?: number
+          store_id?: string
+          terminal_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_reset_counters_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "bir_reset_counters_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bir_store_config: {
+        Row: {
+          accreditation_date: string | null
+          accreditation_number: string | null
+          business_address: string
+          business_name: string
+          created_at: string | null
+          date_issued: string | null
+          id: string
+          is_active: boolean | null
+          machine_identification_number: string
+          machine_serial_number: string
+          permit_number: string | null
+          pos_version: string | null
+          store_id: string
+          supplier_address: string | null
+          supplier_name: string | null
+          supplier_tin: string | null
+          taxpayer_name: string
+          tin: string
+          updated_at: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          accreditation_date?: string | null
+          accreditation_number?: string | null
+          business_address: string
+          business_name: string
+          created_at?: string | null
+          date_issued?: string | null
+          id?: string
+          is_active?: boolean | null
+          machine_identification_number: string
+          machine_serial_number: string
+          permit_number?: string | null
+          pos_version?: string | null
+          store_id: string
+          supplier_address?: string | null
+          supplier_name?: string | null
+          supplier_tin?: string | null
+          taxpayer_name: string
+          tin: string
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          accreditation_date?: string | null
+          accreditation_number?: string | null
+          business_address?: string
+          business_name?: string
+          created_at?: string | null
+          date_issued?: string | null
+          id?: string
+          is_active?: boolean | null
+          machine_identification_number?: string
+          machine_serial_number?: string
+          permit_number?: string | null
+          pos_version?: string | null
+          store_id?: string
+          supplier_address?: string | null
+          supplier_name?: string | null
+          supplier_tin?: string | null
+          taxpayer_name?: string
+          tin?: string
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bir_store_config_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "bir_store_config_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
@@ -3040,6 +3449,7 @@ export type Database = {
           quantity: number
           reference_id: string | null
           store_id: string
+          transaction_id: string | null
           transaction_type: string
           variation_id: string | null
         }
@@ -3054,6 +3464,7 @@ export type Database = {
           quantity: number
           reference_id?: string | null
           store_id: string
+          transaction_id?: string | null
           transaction_type: string
           variation_id?: string | null
         }
@@ -3068,6 +3479,7 @@ export type Database = {
           quantity?: number
           reference_id?: string | null
           store_id?: string
+          transaction_id?: string | null
           transaction_type?: string
           variation_id?: string | null
         }
@@ -3091,6 +3503,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
           {
@@ -7017,6 +7436,87 @@ export type Database = {
           },
         ]
       }
+      void_transactions: {
+        Row: {
+          authorized_by_name: string | null
+          authorized_by_user_id: string | null
+          bir_report_date: string | null
+          created_at: string | null
+          id: string
+          is_bir_reported: boolean | null
+          original_discount_amount: number | null
+          original_items: Json
+          original_receipt_number: string
+          original_total: number
+          original_transaction_date: string
+          original_transaction_id: string
+          original_vat_amount: number | null
+          sequence_number: number | null
+          store_id: string
+          terminal_id: string | null
+          updated_at: string | null
+          void_date: string
+          void_notes: string | null
+          void_reason: string
+          void_reason_category: string
+          void_receipt_number: string
+          voided_by_cashier_name: string
+          voided_by_user_id: string
+        }
+        Insert: {
+          authorized_by_name?: string | null
+          authorized_by_user_id?: string | null
+          bir_report_date?: string | null
+          created_at?: string | null
+          id?: string
+          is_bir_reported?: boolean | null
+          original_discount_amount?: number | null
+          original_items: Json
+          original_receipt_number: string
+          original_total: number
+          original_transaction_date: string
+          original_transaction_id: string
+          original_vat_amount?: number | null
+          sequence_number?: number | null
+          store_id: string
+          terminal_id?: string | null
+          updated_at?: string | null
+          void_date?: string
+          void_notes?: string | null
+          void_reason: string
+          void_reason_category: string
+          void_receipt_number: string
+          voided_by_cashier_name: string
+          voided_by_user_id: string
+        }
+        Update: {
+          authorized_by_name?: string | null
+          authorized_by_user_id?: string | null
+          bir_report_date?: string | null
+          created_at?: string | null
+          id?: string
+          is_bir_reported?: boolean | null
+          original_discount_amount?: number | null
+          original_items?: Json
+          original_receipt_number?: string
+          original_total?: number
+          original_transaction_date?: string
+          original_transaction_id?: string
+          original_vat_amount?: number | null
+          sequence_number?: number | null
+          store_id?: string
+          terminal_id?: string | null
+          updated_at?: string | null
+          void_date?: string
+          void_notes?: string | null
+          void_reason?: string
+          void_reason_category?: string
+          void_receipt_number?: string
+          voided_by_cashier_name?: string
+          voided_by_user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       cross_store_mapping_issues: {
@@ -7232,6 +7732,14 @@ export type Database = {
           template_unit: string
         }[]
       }
+      backfill_missing_audit_records: {
+        Args: {
+          p_limit?: number
+          p_store_id?: string
+          p_transaction_id?: string
+        }
+        Returns: Json
+      }
       begin_transaction: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -7307,6 +7815,14 @@ export type Database = {
       commit_transaction: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      complete_inventory_sync: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          action_type: string
+          details: string
+          items_added: number
+        }[]
       }
       complete_recipe_ingredients: {
         Args: Record<PropertyKey, never>
@@ -7410,6 +7926,32 @@ export type Database = {
           total_stores: number
         }[]
       }
+      deploy_recipe_templates_to_all_stores_v2: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          deployed_ingredients: number
+          deployed_products: number
+          deployed_recipes: number
+          execution_time_ms: number
+          fixed_recipes: number
+          skipped_existing: number
+          total_stores: number
+          total_templates: number
+        }[]
+      }
+      deploy_recipe_templates_to_all_stores_v3: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          deployed_ingredients: number
+          deployed_products: number
+          deployed_recipes: number
+          execution_time_ms: number
+          fixed_recipes: number
+          skipped_existing: number
+          total_stores: number
+          total_templates: number
+        }[]
+      }
       detect_foreign_mappings: {
         Args: { p_store_id: string }
         Returns: {
@@ -7430,6 +7972,10 @@ export type Database = {
       enable_sync_triggers: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      expand_combo_products: {
+        Args: { p_transaction_items: Json }
+        Returns: Json
       }
       export_transaction_details_csv: {
         Args: { end_date?: string; start_date?: string }
@@ -7544,6 +8090,10 @@ export type Database = {
           stores_processed: number
         }[]
       }
+      generate_void_sequence_number: {
+        Args: { p_store_id: string }
+        Returns: number
+      }
       get_all_users: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -7559,6 +8109,10 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
+      }
+      get_authenticated_user_with_fallback: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_category_statistics: {
         Args: Record<PropertyKey, never>
@@ -7781,6 +8335,32 @@ export type Database = {
             }
         Returns: string
       }
+      log_inventory_deduction_audit: {
+        Args: {
+          p_ingredient_name: string
+          p_inventory_stock_id: string
+          p_new_quantity: number
+          p_previous_quantity: number
+          p_product_id: string
+          p_quantity_deducted: number
+          p_recipe_name?: string
+          p_store_id: string
+          p_transaction_id: string
+          p_user_id?: string
+        }
+        Returns: undefined
+      }
+      log_inventory_deduction_audit_safe: {
+        Args: {
+          p_items_processed?: number
+          p_metadata?: Json
+          p_operation_type: string
+          p_status: string
+          p_store_id: string
+          p_transaction_id: string
+        }
+        Returns: string
+      }
       log_inventory_sync_result: {
         Args: {
           p_affected_inventory_items?: Json
@@ -7967,6 +8547,14 @@ export type Database = {
         }
         Returns: string
       }
+      sync_inventory_across_stores: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          added_items: string[]
+          items_added: number
+          store_name: string
+        }[]
+      }
       sync_missing_app_users: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -8014,7 +8602,7 @@ export type Database = {
               p_unit: string
               p_user_id?: string
             }
-        Returns: undefined
+        Returns: boolean
       }
       trigger_auto_close_shifts: {
         Args: Record<PropertyKey, never>
@@ -8044,6 +8632,20 @@ export type Database = {
           count_items: number
           details: string
           status: string
+        }[]
+      }
+      validate_complete_inventory_system: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          can_process_transactions: boolean
+          conversion_mappings: number
+          inventory_items: number
+          products_count: number
+          recipes_count: number
+          sample_test_results: Json
+          store_id: string
+          store_name: string
+          system_health: string
         }[]
       }
       validate_inventory_before_transaction: {
