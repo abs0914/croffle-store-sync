@@ -184,7 +184,32 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Settings route moved to ProtectedRoutes.tsx to allow proper role-based access */}
+      {/* Settings - All authenticated users */}
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Settings />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/thermal-printer"
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Settings />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* SM Accreditation Testing - Admin only */}
       <Route

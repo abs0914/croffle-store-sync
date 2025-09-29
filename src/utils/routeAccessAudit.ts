@@ -52,8 +52,8 @@ export const auditRouteAccess = () => {
     },
     {
       route: ROUTE_PATHS.SETTINGS,
-      description: 'Settings - accessible to managers and above',
-      allowedRoles: ['admin', 'owner', 'manager'],
+      description: 'Settings - accessible to all authenticated users (role-specific tabs)',
+      allowedRoles: ['admin', 'owner', 'manager', 'cashier'],
       requiresStoreAccess: false
     },
     {
