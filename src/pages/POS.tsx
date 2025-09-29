@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift"; 
 import { useCart } from "@/contexts/cart/CartContext";
+import { useAuth } from "@/contexts/auth";
 import { useUnifiedProducts } from "@/hooks/unified/useUnifiedProducts";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
 import { useLargeOrderDiagnostics } from "@/hooks/useLargeOrderDiagnostics";
@@ -21,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import ReceiptGenerator from "@/components/pos/ReceiptGenerator";
 
 export default function POS() {
+  const { user } = useAuth();
   const { currentStore } = useStore();
   const { currentShift } = useShift();
   const { items, subtotal, tax, total, addItem, orderType, deliveryPlatform, deliveryOrderNumber } = useCart();
@@ -228,11 +230,10 @@ export default function POS() {
         <OptimizedPOSHeader
           storeName={currentStore?.name || 'POS System'}
           shiftInfo={currentShift ? {
-            cashierName: currentShift.cashierName || 'Unknown Cashier',
+            cashierName: user?.name || 'Unknown Cashier',
             startTime: new Date(currentShift.startTime).toLocaleTimeString()
           } : undefined}
           connectionStatus={isConnected ? 'online' : 'offline'}
-          onShowLastReceipt={() => setShowReceiptModal(true)}
           onRefreshProducts={refreshProducts}
         />
       </div>
