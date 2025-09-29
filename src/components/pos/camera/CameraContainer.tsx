@@ -36,7 +36,7 @@ export default function CameraContainer({
   return (
     <div 
       ref={containerRef}
-      className="w-full aspect-[9/16] bg-black rounded-md relative overflow-hidden max-h-[70vh]" /* Mobile portrait aspect ratio */
+      className="w-full bg-black rounded-md relative overflow-hidden h-[50vh] md:h-[60vh] min-h-[400px]"
     >
       {showCamera ? (
         <CameraView 

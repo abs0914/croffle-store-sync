@@ -52,16 +52,13 @@ export default function CameraView({
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
       <div className="w-full h-full flex items-center justify-center">
-        {/* Using 9:16 aspect ratio for mobile portrait orientation */}
-        <AspectRatio ratio={9/16} className="w-full max-h-full">
-          <video 
-            ref={videoRef}
-            className="w-full h-full object-contain" 
-            autoPlay
-            playsInline
-            muted
-          />
-        </AspectRatio>
+        <video 
+          ref={videoRef}
+          className="w-full h-full object-contain max-h-full" 
+          autoPlay
+          playsInline
+          muted
+        />
       </div>
       
       {!cameraInitialized && isStartingCamera && (
