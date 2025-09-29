@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThermalPrinterPage } from './Settings/ThermalPrinter';
+import PrinterSettings from './Settings/PrinterSettings';
 import { PrinterStatusIndicator } from '@/components/printer/PrinterStatusIndicator';
 import { BIRComplianceSettings } from './Settings/components/BIRComplianceSettings';
 import { useStore } from '@/contexts/StoreContext';
@@ -48,9 +49,10 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full ${canAccessBIRCompliance ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <TabsList className={`grid w-full ${canAccessBIRCompliance ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <TabsTrigger value="profile">User Profile</TabsTrigger>
           <TabsTrigger value="printer">Thermal Printer</TabsTrigger>
+          <TabsTrigger value="printer-settings">Printer Settings</TabsTrigger>
           {canAccessBIRCompliance && (
             <TabsTrigger value="bir-compliance">BIR Compliance</TabsTrigger>
           )}
@@ -145,6 +147,21 @@ export default function Settings() {
             </CardHeader>
             <CardContent>
               <ThermalPrinterPage />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="printer-settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Printer className="h-5 w-5" />
+                Printer Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Full-page printer configuration and testing */}
+              <PrinterSettings />
             </CardContent>
           </Card>
         </TabsContent>
