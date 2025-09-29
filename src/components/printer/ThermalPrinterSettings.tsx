@@ -16,6 +16,7 @@ import { Printer, Bluetooth, Search } from 'lucide-react';
 import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 import { PrinterTypeManager } from '@/services/printer/PrinterTypeManager';
 import { BluetoothDevicePickerDialog } from './BluetoothDevicePickerDialog';
+import { BluetoothPermissionDialog } from './BluetoothPermissionDialog';
 import { BluetoothPrinter } from '@/types/printer';
 
 interface ThermalPrinterSettingsProps {
@@ -24,6 +25,7 @@ interface ThermalPrinterSettingsProps {
 
 export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps) {
   const [showDevicePicker, setShowDevicePicker] = useState(false);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const {
     isAvailable,
     isConnected,
@@ -57,25 +59,45 @@ export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps
 
   if (!isAvailable) {
     return (
-      <Dialog>
-        <DialogTrigger asChild>
-          {children}
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Thermal Printer</DialogTitle>
-            <DialogDescription>
-              Bluetooth thermal printing is not available on this device.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="text-center py-8">
-            <Bluetooth className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600">
-              This feature requires a mobile device with Bluetooth capabilities.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <>
+        <Dialog>
+          <DialogTrigger asChild>
+            {children}
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Thermal Printer</DialogTitle>
+              <DialogDescription>
+                Bluetooth permissions are required to connect to thermal printers.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="text-center py-8">
+              <Bluetooth className="h-12 w-12 mx-auto text-orange-500 mb-4" />
+              <p className="text-gray-600 mb-4">
+                Bluetooth permissions need to be enabled to use thermal printing.
+              </p>
+              <Button
+                onClick={() => setShowPermissionDialog(true)}
+                className="w-full"
+              >
+                <Bluetooth className="mr-2 h-4 w-4" />
+                Enable Bluetooth Permissions
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Permission Dialog */}
+        <BluetoothPermissionDialog
+          isOpen={showPermissionDialog}
+          onClose={() => setShowPermissionDialog(false)}
+          onPermissionsGranted={() => {
+            setShowPermissionDialog(false);
+            // Refresh the availability check
+            window.location.reload();
+          }}
+        />
+      </>
     );
   }
 

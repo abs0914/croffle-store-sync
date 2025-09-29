@@ -40,16 +40,48 @@ export function useThermalPrinter() {
       const available = await BluetoothPrinterService.isAvailable();
       console.log(`📱 Thermal printer availability result: ${available}`);
       setIsAvailable(available);
-      
+
       if (available) {
         const connected = PrinterDiscovery.isConnected();
         setIsConnected(connected);
         setConnectedPrinter(PrinterDiscovery.getConnectedPrinter());
         console.log(`🔗 Printer connection status: ${connected}`);
+      } else {
+        console.log('❌ Bluetooth thermal printing not available');
+        // Try to get more specific error information
+        try {
+          await PrinterDiscovery.initialize();
+        } catch (initError: any) {
+          console.error('🔧 Bluetooth initialization error details:', initError.message);
+
+          // Show specific error messages to help user troubleshoot
+          if (initError.message?.includes('Location permissions')) {
+            toast.error('Location permissions required', {
+              description: 'Please enable Location permissions in device settings for Bluetooth scanning'
+            });
+          } else if (initError.message?.includes('Bluetooth permissions')) {
+            toast.error('Bluetooth permissions required', {
+              description: 'Please enable Bluetooth permissions in device settings'
+            });
+          } else if (initError.message?.includes('not enabled')) {
+            toast.error('Bluetooth not enabled', {
+              description: 'Please enable Bluetooth in your device settings'
+            });
+          } else if (initError.message?.includes('not supported')) {
+            toast.error('Bluetooth not supported', {
+              description: 'This device does not support Bluetooth LE'
+            });
+          }
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Failed to check printer availability:', error);
       setIsAvailable(false);
+
+      // Show user-friendly error message
+      toast.error('Bluetooth check failed', {
+        description: error.message || 'Unable to check Bluetooth availability'
+      });
     }
   };
 

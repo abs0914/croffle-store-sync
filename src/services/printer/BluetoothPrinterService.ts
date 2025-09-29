@@ -6,6 +6,7 @@ import { PrinterTypeManager } from './PrinterTypeManager';
 import { Transaction, Customer } from '@/types';
 import { Store } from '@/types/store';
 import { BIRComplianceService } from '@/services/bir/birComplianceService';
+import { BluetoothPermissionManager } from '@/services/permissions/BluetoothPermissionManager';
 
 export class BluetoothPrinterService {
   // Capacitor BLE UUIDs (for mobile apps)
@@ -19,54 +20,31 @@ export class BluetoothPrinterService {
   static async isAvailable(): Promise<boolean> {
     try {
       console.log('🔍 Checking Bluetooth thermal printing availability...');
-      
+
       // Check if we're in a browser environment
       if (typeof window === 'undefined') {
         console.log('Not in browser environment');
         return false;
       }
 
-      // Check if we're running in a Capacitor native app
-      if (Capacitor.isNativePlatform()) {
-        console.log('Running in Capacitor native app - checking Capacitor BLE');
-        try {
-          await PrinterDiscovery.initialize();
-          console.log('Capacitor Bluetooth LE available');
-          return true;
-        } catch (error) {
-          console.log('Capacitor Bluetooth LE not available:', error);
-          return false;
-        }
+      // Use the permission manager to check availability
+      const permissionStatus = await BluetoothPermissionManager.checkPermissions();
+      console.log('📱 Permission status:', permissionStatus);
+
+      // All permissions must be granted for the service to be available
+      const isAvailable = permissionStatus.bluetooth &&
+                         permissionStatus.location &&
+                         permissionStatus.bluetoothEnabled;
+
+      if (isAvailable) {
+        console.log('✅ Bluetooth thermal printing available');
+      } else {
+        const errorMessage = BluetoothPermissionManager.getPermissionErrorMessage(permissionStatus);
+        console.log('❌ Bluetooth thermal printing not available:', errorMessage);
       }
 
-      // Check for Web Bluetooth API (for web browsers)
-      if ('bluetooth' in navigator) {
-        try {
-          const available = await navigator.bluetooth.getAvailability();
-          console.log(`Web Bluetooth getAvailability(): ${available}`);
-          
-          if (available) {
-            console.log('✅ Web Bluetooth thermal printing available');
-            return true;
-          } else {
-            console.log('⚠️ Web Bluetooth not available on this device');
-            // Fall through to try Capacitor BLE
-          }
-        } catch (error) {
-          console.log('Web Bluetooth check failed:', error);
-          // Fall through to try Capacitor BLE
-        }
-      }
+      return isAvailable;
 
-      // Try Capacitor BLE (for mobile apps)
-      try {
-        await PrinterDiscovery.initialize();
-        console.log('Capacitor Bluetooth LE available');
-        return true;
-      } catch (error) {
-        console.log('Capacitor Bluetooth LE not available:', error);
-        return false;
-      }
     } catch (error) {
       console.error('❌ Bluetooth thermal printing availability check failed:', error);
       return false;

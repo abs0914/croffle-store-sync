@@ -3,6 +3,7 @@ import { BleClient, BleDevice } from '@capacitor-community/bluetooth-le';
 import { Capacitor } from '@capacitor/core';
 import { BluetoothPrinter, ThermalPrinter, PrinterType } from '@/types/printer';
 import { PrinterTypeManager } from './PrinterTypeManager';
+import { BluetoothPermissionManager } from '@/services/permissions/BluetoothPermissionManager';
 
 // Legacy export for backward compatibility
 export type { ThermalPrinter, BluetoothPrinter };
@@ -14,7 +15,7 @@ export class PrinterDiscovery {
   static async initialize(): Promise<void> {
     try {
       console.log('🔄 Initializing Bluetooth services...');
-      
+
       // Check if we're in a supported environment
       if (typeof window === 'undefined') {
         throw new Error('Bluetooth not available in server environment');
@@ -31,16 +32,54 @@ export class PrinterDiscovery {
       // Detect environment
       const isCapacitor = this.isCapacitorEnvironment();
       const hasWebBluetooth = this.hasWebBluetoothSupport();
-      
+
       console.log(`📱 Environment: ${isCapacitor ? 'Capacitor Mobile App' : 'Web Browser'}`);
       console.log(`🌐 Web Bluetooth: ${hasWebBluetooth ? 'Available' : 'Not Available'}`);
 
       if (isCapacitor) {
-        // Initialize Capacitor Bluetooth LE
-        await BleClient.initialize({
-          androidNeverForLocation: false // Required for Android BLE scanning
-        });
-        console.log('✅ Capacitor Bluetooth LE initialized successfully');
+        console.log('🔧 Attempting Capacitor Bluetooth LE initialization...');
+
+        // Check if BleClient is available
+        if (!BleClient) {
+          throw new Error('BleClient not available - Capacitor Bluetooth LE plugin not loaded');
+        }
+
+        // Initialize Capacitor Bluetooth LE with detailed error handling
+        try {
+          await BleClient.initialize({
+            androidNeverForLocation: false // Required for Android BLE scanning
+          });
+          console.log('✅ Capacitor Bluetooth LE initialized successfully');
+
+          // Additional check: try to get enabled status
+          try {
+            const isEnabled = await BleClient.isEnabled();
+            console.log(`📡 Bluetooth enabled status: ${isEnabled}`);
+            if (!isEnabled) {
+              throw new Error('Bluetooth is not enabled on this device - please enable Bluetooth in device settings');
+            }
+          } catch (enabledError) {
+            console.warn('⚠️ Could not check Bluetooth enabled status:', enabledError);
+            // Continue anyway as some devices may not support this check
+          }
+
+        } catch (initError: any) {
+          console.error('❌ BleClient.initialize() failed:', initError);
+
+          // Provide specific error messages based on the error
+          if (initError.message?.includes('location')) {
+            throw new Error('Location permissions required for Bluetooth scanning on Android - please enable Location permissions in device settings');
+          } else if (initError.message?.includes('permission')) {
+            throw new Error('Bluetooth permissions denied - please enable Bluetooth permissions in device settings');
+          } else if (initError.message?.includes('not supported')) {
+            throw new Error('Bluetooth LE not supported on this device');
+          } else if (initError.message?.includes('not available')) {
+            throw new Error('Bluetooth not available - please check if Bluetooth is enabled');
+          } else {
+            throw new Error(`Bluetooth initialization failed: ${initError.message || 'Unknown error'}`);
+          }
+        }
+
       } else if (hasWebBluetooth) {
         // Check Web Bluetooth availability
         const available = await navigator.bluetooth.getAvailability();
@@ -51,11 +90,20 @@ export class PrinterDiscovery {
       } else {
         throw new Error('No Bluetooth support detected - requires Web Bluetooth API or Capacitor environment');
       }
-      
+
     } catch (error: any) {
       console.error('❌ Failed to initialize Bluetooth:', error);
 
-      // Provide specific error messages
+      // Re-throw the error with the specific message if it's already detailed
+      if (error.message?.includes('Location permissions') ||
+          error.message?.includes('Bluetooth permissions') ||
+          error.message?.includes('not enabled') ||
+          error.message?.includes('not supported') ||
+          error.message?.includes('initialization failed')) {
+        throw error;
+      }
+
+      // Provide generic error messages for other cases
       if (error.message?.includes('not supported')) {
         throw new Error('Bluetooth not supported on this device');
       } else if (error.message?.includes('not enabled')) {
@@ -63,7 +111,7 @@ export class PrinterDiscovery {
       } else if (error.message?.includes('permission')) {
         throw new Error('Bluetooth permissions denied - please enable in device settings');
       } else {
-        throw new Error('Bluetooth not available on this device');
+        throw new Error(`Bluetooth not available: ${error.message || 'Unknown error'}`);
       }
     }
   }

@@ -14,6 +14,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Bluetooth, Search, Printer, CheckCircle, AlertCircle } from 'lucide-react';
 import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 import { BluetoothDevicePickerDialog } from './BluetoothDevicePickerDialog';
+import { BluetoothPermissionDialog } from './BluetoothPermissionDialog';
 import { BluetoothPrinter } from '@/types/printer';
 
 interface QuickPrinterSetupProps {
@@ -23,6 +24,7 @@ interface QuickPrinterSetupProps {
 export function QuickPrinterSetup({ children }: QuickPrinterSetupProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showDevicePicker, setShowDevicePicker] = useState(false);
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const {
     isAvailable,
     isConnected,
@@ -55,28 +57,51 @@ export function QuickPrinterSetup({ children }: QuickPrinterSetupProps) {
 
   if (!isAvailable) {
     return (
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          {children}
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Bluetooth className="h-5 w-5" />
-              Bluetooth Printer Setup
-            </DialogTitle>
-            <DialogDescription>
-              Bluetooth thermal printing is not available on this device.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="text-center py-8">
-            <AlertCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600">
-              This feature requires a mobile device with Bluetooth capabilities.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogTrigger asChild>
+            {children}
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Bluetooth className="h-5 w-5" />
+                Bluetooth Printer Setup
+              </DialogTitle>
+              <DialogDescription>
+                Bluetooth permissions are required to connect to thermal printers.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="text-center py-8">
+              <AlertCircle className="h-12 w-12 mx-auto text-orange-500 mb-4" />
+              <p className="text-gray-600 mb-4">
+                Bluetooth permissions need to be enabled to use thermal printing.
+              </p>
+              <Button
+                onClick={() => {
+                  setIsOpen(false);
+                  setShowPermissionDialog(true);
+                }}
+                className="w-full"
+              >
+                <Bluetooth className="mr-2 h-4 w-4" />
+                Enable Bluetooth Permissions
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Permission Dialog */}
+        <BluetoothPermissionDialog
+          isOpen={showPermissionDialog}
+          onClose={() => setShowPermissionDialog(false)}
+          onPermissionsGranted={() => {
+            setShowPermissionDialog(false);
+            // Refresh the availability check
+            window.location.reload();
+          }}
+        />
+      </>
     );
   }
 
