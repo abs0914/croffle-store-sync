@@ -36,16 +36,19 @@ export function useThermalPrinter() {
 
   const checkAvailability = async () => {
     try {
+      console.log('🔍 Checking thermal printer availability...');
       const available = await BluetoothPrinterService.isAvailable();
+      console.log(`📱 Thermal printer availability result: ${available}`);
       setIsAvailable(available);
       
       if (available) {
         const connected = PrinterDiscovery.isConnected();
         setIsConnected(connected);
         setConnectedPrinter(PrinterDiscovery.getConnectedPrinter());
+        console.log(`🔗 Printer connection status: ${connected}`);
       }
     } catch (error) {
-      console.error('Failed to check printer availability:', error);
+      console.error('❌ Failed to check printer availability:', error);
       setIsAvailable(false);
     }
   };
