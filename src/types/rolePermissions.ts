@@ -135,7 +135,7 @@ export const USER_ROLE_DEFINITIONS: Record<string, UserRoleDefinition> = {
       expenses: false,
       recipe_management: false,
       reports: true,
-      settings: false,
+      settings: true,
       user_management: false,
       purchasing: false,
     },
