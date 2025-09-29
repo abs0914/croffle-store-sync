@@ -110,6 +110,30 @@ export class BluetoothPrinterService {
     }
   }
 
+  static async printZReading(zReadingData: any): Promise<boolean> {
+    const printer = PrinterDiscovery.getConnectedPrinter();
+    if (!printer?.isConnected) {
+      throw new Error('No printer connected');
+    }
+
+    try {
+      console.log('🖨️ Preparing Z-Reading report...');
+      const reportData = PrinterTypeManager.formatZReading(printer, zReadingData);
+      console.log(`📄 Z-Reading formatted (${reportData.length} characters)`);
+
+      const success = await this.sendDataToPrinter(printer, reportData);
+
+      if (success) {
+        console.log('Z-Reading printed successfully');
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Failed to print Z-Reading:', error);
+      return false;
+    }
+  }
+
   static async openCashDrawer(drawerPin: number = 0, onTime: number = 25, offTime: number = 25): Promise<boolean> {
     const printer = PrinterDiscovery.getConnectedPrinter();
     if (!printer?.isConnected) {

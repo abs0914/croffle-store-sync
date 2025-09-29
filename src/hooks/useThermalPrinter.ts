@@ -281,6 +281,48 @@ export function useThermalPrinter() {
     }
   };
 
+  const printZReading = async (zReadingData: any) => {
+    if (!isConnected) {
+      toast.error('No printer connected');
+      return false;
+    }
+
+    setIsPrinting(true);
+    try {
+      console.log('Starting Z-Reading print...');
+      toast.info('Sending Z-Reading to printer...');
+
+      const success = await BluetoothPrinterService.printZReading(zReadingData);
+
+      if (success) {
+        toast.success('Z-Reading sent to printer successfully!');
+        console.log('✅ Z-Reading printed successfully');
+      } else {
+        toast.error('Failed to send Z-Reading to printer');
+        console.error('❌ Z-Reading printing failed');
+      }
+
+      return success;
+    } catch (error: any) {
+      console.error('Failed to print Z-Reading:', error);
+
+      // Provide specific error messages based on error type
+      if (error.message?.includes('service')) {
+        toast.error('Printer service not found. Check printer compatibility.');
+      } else if (error.message?.includes('characteristic')) {
+        toast.error('Printer communication failed. Try reconnecting.');
+      } else if (error.message?.includes('write')) {
+        toast.error('Failed to send data to printer. Check connection.');
+      } else {
+        toast.error(`Z-Reading print failed: ${error.message || 'Unknown error'}`);
+      }
+
+      return false;
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   const testServiceDiscovery = async () => {
     if (!isConnected) {
       toast.error('No printer connected');
@@ -321,6 +363,7 @@ export function useThermalPrinter() {
     disconnectPrinter,
     printReceipt,
     printTestReceipt,
+    printZReading,
     testServiceDiscovery,
     checkAvailability
   };
