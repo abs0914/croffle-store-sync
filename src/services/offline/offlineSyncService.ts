@@ -13,6 +13,9 @@ export interface SyncResult {
 class OfflineSyncService {
   private isSyncing = false;
   private syncListeners: ((result: SyncResult) => void)[] = [];
+  private retryTimeouts: NodeJS.Timeout[] = [];
+  private readonly MAX_RETRY_ATTEMPTS = 3;
+  private readonly RETRY_DELAYS = [5000, 15000, 60000]; // 5s, 15s, 1m
 
   // Sync all pending offline data
   async syncAll(): Promise<SyncResult> {
@@ -199,6 +202,153 @@ class OfflineSyncService {
         this.syncAll();
       }, 2000);
     }
+  }
+
+  // Retry failed transactions with exponential backoff
+  async retryFailedTransactions(): Promise<void> {
+    const allTransactions = offlineTransactionQueue.getAllTransactions();
+    const failedTransactions = allTransactions.filter(t => 
+      t.syncStatus === 'failed' && 
+      t.syncAttempts < this.MAX_RETRY_ATTEMPTS
+    );
+
+    if (failedTransactions.length === 0) {
+      return;
+    }
+
+    console.log(`🔄 Retrying ${failedTransactions.length} failed transactions`);
+
+    for (const transaction of failedTransactions) {
+      const delay = this.RETRY_DELAYS[Math.min(transaction.syncAttempts, this.RETRY_DELAYS.length - 1)];
+      
+      const timeoutId = setTimeout(async () => {
+        try {
+          await this.syncTransaction(transaction);
+          offlineTransactionQueue.markTransactionSynced(transaction.id);
+          toast.success(`✅ Retried transaction ${transaction.id} successfully`);
+        } catch (error) {
+          offlineTransactionQueue.markTransactionFailed(transaction.id, error.message);
+          
+          if (transaction.syncAttempts >= this.MAX_RETRY_ATTEMPTS) {
+            toast.error(`❌ Transaction ${transaction.id} failed after ${this.MAX_RETRY_ATTEMPTS} attempts`);
+          }
+        }
+      }, delay);
+
+      this.retryTimeouts.push(timeoutId);
+    }
+  }
+
+  // Cancel all pending retries
+  cancelRetries(): void {
+    this.retryTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.retryTimeouts = [];
+  }
+
+  // Get failed transactions that need manual intervention
+  getFailedTransactions(): OfflineTransaction[] {
+    const allTransactions = offlineTransactionQueue.getAllTransactions();
+    return allTransactions.filter(t => 
+      t.syncStatus === 'failed' && 
+      t.syncAttempts >= this.MAX_RETRY_ATTEMPTS
+    );
+  }
+
+  // Force retry a specific transaction
+  async forceRetryTransaction(transactionId: string): Promise<boolean> {
+    const transaction = offlineTransactionQueue.getTransaction(transactionId);
+    
+    if (!transaction || transaction.syncStatus === 'synced') {
+      return false;
+    }
+
+    try {
+      await this.syncTransaction(transaction);
+      offlineTransactionQueue.markTransactionSynced(transactionId);
+      toast.success(`✅ Force retry successful for ${transactionId}`);
+      return true;
+    } catch (error) {
+      offlineTransactionQueue.markTransactionFailed(transactionId, error.message);
+      toast.error(`❌ Force retry failed for ${transactionId}`);
+      return false;
+    }
+  }
+
+  // Get sync statistics
+  getSyncStats(): {
+    totalTransactions: number;
+    pendingTransactions: number;
+    failedTransactions: number;
+    permanentlyFailedTransactions: number;
+    syncedTransactions: number;
+    oldestPendingAge?: number;
+  } {
+    const stats = offlineTransactionQueue.getQueueStats();
+    const allTransactions = offlineTransactionQueue.getAllTransactions();
+    const permanentlyFailed = allTransactions.filter(t => 
+      t.syncStatus === 'failed' && 
+      t.syncAttempts >= this.MAX_RETRY_ATTEMPTS
+    ).length;
+
+    return {
+      ...stats,
+      permanentlyFailedTransactions: permanentlyFailed,
+      oldestPendingAge: stats.oldestPending ? Date.now() - stats.oldestPending : undefined
+    };
+  }
+
+  // Enhanced error handling
+  private async syncTransactionWithRetry(transaction: OfflineTransaction): Promise<void> {
+    try {
+      await this.syncTransaction(transaction);
+    } catch (error) {
+      // Check if it's a recoverable error
+      const isRecoverable = this.isRecoverableError(error);
+      
+      if (isRecoverable && transaction.syncAttempts < this.MAX_RETRY_ATTEMPTS) {
+        // Schedule retry
+        const delay = this.RETRY_DELAYS[Math.min(transaction.syncAttempts, this.RETRY_DELAYS.length - 1)];
+        console.log(`⏳ Scheduling retry for transaction ${transaction.id} in ${delay}ms`);
+        
+        setTimeout(() => {
+          this.syncTransactionWithRetry(transaction);
+        }, delay);
+      } else {
+        // Mark as permanently failed
+        throw error;
+      }
+    }
+  }
+
+  // Check if error is recoverable
+  private isRecoverableError(error: any): boolean {
+    // Network errors are usually recoverable
+    if (error.name === 'NetworkError' || error.code === 'NETWORK_ERROR') {
+      return true;
+    }
+    
+    // Server errors (5xx) are recoverable
+    if (error.status >= 500 && error.status < 600) {
+      return true;
+    }
+    
+    // Timeout errors are recoverable
+    if (error.name === 'TimeoutError' || error.code === 'TIMEOUT') {
+      return true;
+    }
+    
+    // Client errors (4xx) are usually not recoverable
+    if (error.status >= 400 && error.status < 500) {
+      return false;
+    }
+    
+    // Default to recoverable for unknown errors
+    return true;
+  }
+
+  // Get queue for specific transaction access
+  private getQueue(): OfflineTransaction[] {
+    return offlineTransactionQueue.getAllTransactions();
   }
 }
 

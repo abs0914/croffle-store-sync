@@ -19,6 +19,8 @@ class OfflineProductCache {
   private readonly PRODUCTS_CACHE_KEY = 'offline_products_cache';
   private readonly INVENTORY_CACHE_KEY = 'offline_inventory_levels';
   private readonly CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+  private readonly LOW_STOCK_THRESHOLD = 10;
+  private readonly CRITICAL_STOCK_THRESHOLD = 5;
 
   // Cache products and categories
   cacheProducts(storeId: string, products: Product[], categories: Category[]): void {
@@ -188,6 +190,87 @@ class OfflineProductCache {
     }
     
     console.log('🧹 Cleared offline product cache');
+  }
+
+  // Get low stock items
+  getLowStockItems(storeId: string): Array<{productId: string, variationId?: string, availableQuantity: number, stockLevel: 'low' | 'critical'}> {
+    const levels = this.getCachedInventoryLevels(storeId);
+    return levels
+      .map(level => {
+        const available = this.getAvailableQuantity(storeId, level.productId, level.variationId);
+        let stockLevel: 'low' | 'critical' | null = null;
+        
+        if (available <= this.CRITICAL_STOCK_THRESHOLD) {
+          stockLevel = 'critical';
+        } else if (available <= this.LOW_STOCK_THRESHOLD) {
+          stockLevel = 'low';
+        }
+        
+        return stockLevel ? {
+          productId: level.productId,
+          variationId: level.variationId,
+          availableQuantity: available,
+          stockLevel
+        } : null;
+      })
+      .filter(Boolean);
+  }
+
+  // Check if cache is stale (older than 6 hours)
+  isCacheStale(storeId: string): boolean {
+    const cached = this.getCachedProducts(storeId);
+    if (!cached) return true;
+
+    const age = Date.now() - cached.lastSync;
+    const sixHours = 6 * 60 * 60 * 1000;
+    return age > sixHours;
+  }
+
+  // Get cache status
+  getCacheStatus(storeId: string): {
+    isValid: boolean;
+    isFresh: boolean;
+    isStale: boolean;
+    ageMinutes: number | null;
+    totalProducts: number;
+    lowStockCount: number;
+    criticalStockCount: number;
+  } {
+    const cached = this.getCachedProducts(storeId);
+    const lowStockItems = this.getLowStockItems(storeId);
+    
+    if (!cached) {
+      return {
+        isValid: false,
+        isFresh: false,
+        isStale: true,
+        ageMinutes: null,
+        totalProducts: 0,
+        lowStockCount: 0,
+        criticalStockCount: 0
+      };
+    }
+
+    const ageMinutes = this.getCacheAge(storeId) || 0;
+    
+    return {
+      isValid: true,
+      isFresh: this.isCacheFresh(storeId),
+      isStale: this.isCacheStale(storeId),
+      ageMinutes,
+      totalProducts: cached.products.length,
+      lowStockCount: lowStockItems.filter(item => item.stockLevel === 'low').length,
+      criticalStockCount: lowStockItems.filter(item => item.stockLevel === 'critical').length
+    };
+  }
+
+  // Refresh cache expiry (for when data is validated as current)
+  refreshCacheTimestamp(storeId: string): void {
+    const cached = this.getCachedProducts(storeId);
+    if (cached) {
+      cached.lastSync = Date.now();
+      this.cacheProducts(storeId, cached.products, cached.categories);
+    }
   }
 }
 

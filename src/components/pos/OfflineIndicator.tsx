@@ -1,8 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wifi, WifiOff, Clock, RotateCcw, AlertTriangle } from "lucide-react";
+import { Wifi, WifiOff, Clock, RotateCcw, AlertTriangle, Database } from "lucide-react";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface OfflineIndicatorProps {
   storeId: string | null;
@@ -46,6 +47,15 @@ export function OfflineIndicator({ storeId, className }: OfflineIndicatorProps) 
     return 'text-red-600'; // Stale (> 6 hours)
   };
 
+  const getCacheStatusText = (): string => {
+    if (!cacheAge) return 'No cache';
+    if (cacheAge < 60) return 'Fresh';
+    if (cacheAge < 360) return 'Good';
+    return 'Stale';
+  };
+
+  const shouldShowDataWarning = !isOnline && (cacheAge === null || cacheAge > 360);
+
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {/* Connection Status */}
@@ -66,43 +76,50 @@ export function OfflineIndicator({ storeId, className }: OfflineIndicatorProps) 
         )}
       </Badge>
 
-      {/* Offline Capability */}
+      {/* Offline Capability with enhanced status */}
       {!isOnline && (
         <Badge 
-          variant={isOfflineCapable ? "secondary" : "outline"}
+          variant={isOfflineCapable ? "secondary" : "destructive"}
           className="flex items-center gap-1"
         >
-          {isOfflineCapable ? (
-            <>
-              ✓ Ready
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="h-3 w-3" />
-              No Cache
-            </>
-          )}
+          <Database className="h-3 w-3" />
+          {isOfflineCapable ? getCacheStatusText() : 'No Cache'}
         </Badge>
       )}
 
-      {/* Pending Transactions */}
+      {/* Enhanced Pending Transactions */}
       {pendingTransactions > 0 && (
-        <Badge variant="outline" className="flex items-center gap-1">
+        <Badge 
+          variant={pendingTransactions > 10 ? "destructive" : "outline"} 
+          className="flex items-center gap-1"
+        >
           <Clock className="h-3 w-3" />
           {pendingTransactions} pending
         </Badge>
       )}
 
-      {/* Cache Age (when offline) */}
+      {/* Cache Age with warning colors */}
       {!isOnline && cacheAge !== null && (
-        <Badge variant="outline" className="flex items-center gap-1">
-          <span className={cn("text-xs", getCacheStatusColor())}>
-            Cache: {cacheAge < 60 ? `${cacheAge}m` : `${Math.floor(cacheAge / 60)}h`} old
+        <Badge 
+          variant={cacheAge > 360 ? "destructive" : cacheAge > 60 ? "secondary" : "outline"} 
+          className="flex items-center gap-1"
+        >
+          <AlertTriangle className="h-3 w-3" />
+          <span className="text-xs">
+            {cacheAge < 60 ? `${cacheAge}m` : `${Math.floor(cacheAge / 60)}h`}
           </span>
         </Badge>
       )}
 
-      {/* Sync Button */}
+      {/* Data Accuracy Warning */}
+      {shouldShowDataWarning && (
+        <Badge variant="destructive" className="flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          <span className="text-xs">Data may be outdated</span>
+        </Badge>
+      )}
+
+      {/* Enhanced Sync Button */}
       {isOnline && pendingTransactions > 0 && (
         <Button
           size="sm"
@@ -112,8 +129,15 @@ export function OfflineIndicator({ storeId, className }: OfflineIndicatorProps) 
           className="h-6 px-2 text-xs"
         >
           <RotateCcw className={cn("h-3 w-3 mr-1", isSyncing && "animate-spin")} />
-          {isSyncing ? 'Syncing...' : 'Sync'}
+          {isSyncing ? 'Syncing...' : `Sync ${pendingTransactions}`}
         </Button>
+      )}
+
+      {/* Offline Mode Notice */}
+      {!isOnline && isOfflineCapable && (
+        <span className="text-xs text-muted-foreground">
+          Operating offline - transactions will sync when online
+        </span>
       )}
 
       {/* Last Sync Info */}

@@ -48,14 +48,24 @@ export interface OfflineInventoryChange {
 class OfflineTransactionQueue {
   private readonly STORAGE_KEY = 'offline_transactions';
   private readonly INVENTORY_STORAGE_KEY = 'offline_inventory_changes';
+  private readonly RECEIPT_COUNTER_KEY = 'offline_receipt_counter';
   private readonly MAX_QUEUE_SIZE = 100;
   private readonly MAX_SYNC_ATTEMPTS = 3;
+  private readonly OFFLINE_RECEIPT_PREFIX = 'OFF';
+
+  // Generate sequential offline receipt number
+  private generateOfflineReceiptNumber(): string {
+    const counter = this.getReceiptCounter() + 1;
+    this.saveReceiptCounter(counter);
+    return `${this.OFFLINE_RECEIPT_PREFIX}${counter.toString().padStart(6, '0')}`;
+  }
 
   // Queue a transaction for offline processing
   queueTransaction(transaction: Omit<OfflineTransaction, 'id' | 'timestamp' | 'syncStatus' | 'syncAttempts'>): string {
+    const receiptNumber = this.generateOfflineReceiptNumber();
     const offlineTransaction: OfflineTransaction = {
       ...transaction,
-      id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: receiptNumber,
       timestamp: Date.now(),
       syncStatus: 'pending',
       syncAttempts: 0
@@ -222,6 +232,42 @@ class OfflineTransactionQueue {
     } catch (error) {
       console.error('Error saving offline inventory changes:', error);
     }
+  }
+
+  // Receipt counter management
+  private getReceiptCounter(): number {
+    try {
+      const stored = localStorage.getItem(this.RECEIPT_COUNTER_KEY);
+      return stored ? parseInt(stored, 10) : 0;
+    } catch (error) {
+      console.error('Error reading receipt counter:', error);
+      return 0;
+    }
+  }
+
+  private saveReceiptCounter(counter: number): void {
+    try {
+      localStorage.setItem(this.RECEIPT_COUNTER_KEY, counter.toString());
+    } catch (error) {
+      console.error('Error saving receipt counter:', error);
+    }
+  }
+
+  // Reset receipt counter (for admin use)
+  resetReceiptCounter(): void {
+    localStorage.removeItem(this.RECEIPT_COUNTER_KEY);
+    console.log('🔢 Receipt counter reset');
+  }
+
+  // Get next receipt number without incrementing
+  getNextReceiptNumber(): string {
+    const counter = this.getReceiptCounter() + 1;
+    return `${this.OFFLINE_RECEIPT_PREFIX}${counter.toString().padStart(6, '0')}`;
+  }
+
+  // Public access to queue for sync service
+  getAllTransactions(): OfflineTransaction[] {
+    return this.getQueue();
   }
 }
 

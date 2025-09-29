@@ -200,6 +200,18 @@ export function useOfflineMode(storeId: string | null) {
     return available >= quantity;
   };
 
+  // Get enhanced cache status
+  const getCacheStatus = () => {
+    if (!storeId) return null;
+    return offlineProductCache.getCacheStatus(storeId);
+  };
+
+  // Get low stock items
+  const getLowStockItems = () => {
+    if (!storeId) return [];
+    return offlineProductCache.getLowStockItems(storeId);
+  };
+
   return {
     ...offlineStatus,
     processOfflineTransaction,
@@ -207,6 +219,10 @@ export function useOfflineMode(storeId: string | null) {
     cacheProductsForOffline,
     getCachedProducts,
     checkOfflineAvailability,
-    queueStats: storeId ? offlineTransactionQueue.getQueueStats() : null
+    getCacheStatus,
+    getLowStockItems,
+    queueStats: storeId ? offlineTransactionQueue.getQueueStats() : null,
+    syncStats: offlineSyncService.getSyncStats(),
+    failedTransactions: offlineSyncService.getFailedTransactions()
   };
 }
