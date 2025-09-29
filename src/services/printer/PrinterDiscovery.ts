@@ -1,4 +1,3 @@
-
 import { BleClient, BleDevice } from '@capacitor-community/bluetooth-le';
 import { Capacitor } from '@capacitor/core';
 import { BluetoothPrinter, ThermalPrinter, PrinterType } from '@/types/printer';
@@ -11,17 +10,17 @@ export type { ThermalPrinter, BluetoothPrinter };
 export class PrinterDiscovery {
   private static connectedPrinter: BluetoothPrinter | null = null;
   private static discoveredDevices: Map<string, BleDevice> = new Map();
+  private static connectionKeepAlive: ReturnType<typeof setInterval> | null = null;
+  private static isReconnecting: boolean = false;
 
   static async initialize(): Promise<void> {
     try {
       console.log('🔄 Initializing Bluetooth services...');
 
-      // Check if we're in a supported environment
       if (typeof window === 'undefined') {
         throw new Error('Bluetooth not available in server environment');
       }
 
-      // Log platform information for debugging
       console.log('PrinterDiscovery.initialize() - Platform info:', {
         isNativePlatform: Capacitor.isNativePlatform(),
         platform: Capacitor.getPlatform(),
@@ -29,7 +28,6 @@ export class PrinterDiscovery {
         userAgent: navigator.userAgent
       });
 
-      // Detect environment
       const isCapacitor = this.isCapacitorEnvironment();
       const hasWebBluetooth = this.hasWebBluetoothSupport();
 
@@ -39,19 +37,16 @@ export class PrinterDiscovery {
       if (isCapacitor) {
         console.log('🔧 Attempting Capacitor Bluetooth LE initialization...');
 
-        // Check if BleClient is available
         if (!BleClient) {
           throw new Error('BleClient not available - Capacitor Bluetooth LE plugin not loaded');
         }
 
-        // Initialize Capacitor Bluetooth LE with detailed error handling
         try {
           await BleClient.initialize({
-            androidNeverForLocation: false // Required for Android BLE scanning
+            androidNeverForLocation: false
           });
           console.log('✅ Capacitor Bluetooth LE initialized successfully');
 
-          // Additional check: try to get enabled status
           try {
             const isEnabled = await BleClient.isEnabled();
             console.log(`📡 Bluetooth enabled status: ${isEnabled}`);
@@ -60,13 +55,11 @@ export class PrinterDiscovery {
             }
           } catch (enabledError) {
             console.warn('⚠️ Could not check Bluetooth enabled status:', enabledError);
-            // Continue anyway as some devices may not support this check
           }
 
         } catch (initError: any) {
           console.error('❌ BleClient.initialize() failed:', initError);
 
-          // Provide specific error messages based on the error
           if (initError.message?.includes('location')) {
             throw new Error('Location permissions required for Bluetooth scanning on Android - please enable Location permissions in device settings');
           } else if (initError.message?.includes('permission')) {
@@ -81,7 +74,6 @@ export class PrinterDiscovery {
         }
 
       } else if (hasWebBluetooth) {
-        // Check Web Bluetooth availability
         const available = await navigator.bluetooth.getAvailability();
         if (!available) {
           throw new Error('Web Bluetooth not available - check browser support and permissions');
@@ -93,35 +85,8 @@ export class PrinterDiscovery {
 
     } catch (error: any) {
       console.error('❌ Failed to initialize Bluetooth:', error);
-
-      // Re-throw the error with the specific message if it's already detailed
-      if (error.message?.includes('Location permissions') ||
-          error.message?.includes('Bluetooth permissions') ||
-          error.message?.includes('not enabled') ||
-          error.message?.includes('not supported') ||
-          error.message?.includes('initialization failed')) {
-        throw error;
-      }
-
-      // Provide generic error messages for other cases
-      if (error.message?.includes('not supported')) {
-        throw new Error('Bluetooth not supported on this device');
-      } else if (error.message?.includes('not enabled')) {
-        throw new Error('Bluetooth not enabled on this device');
-      } else if (error.message?.includes('permission')) {
-        throw new Error('Bluetooth permissions denied - please enable in device settings');
-      } else {
-        throw new Error(`Bluetooth not available: ${error.message || 'Unknown error'}`);
-      }
+      throw error;
     }
-  }
-
-  private static isCapacitorEnvironment(): boolean {
-    return !!(window as any).Capacitor?.isNativePlatform?.();
-  }
-
-  private static hasWebBluetoothSupport(): boolean {
-    return typeof window !== 'undefined' && 'bluetooth' in navigator;
   }
 
   static async requestPermissions(): Promise<boolean> {
@@ -384,9 +349,13 @@ export class PrinterDiscovery {
       console.log(`Attempting to connect to printer: ${printer.name} (Type: ${printer.connectionType})`);
 
       if (printer.connectionType === 'web' && printer.webBluetoothDevice) {
-        return await this.connectWithWebBluetooth(printer);
+        const success = await this.connectWithWebBluetooth(printer);
+        if (success) this.startConnectionKeepAlive();
+        return success;
       } else if (printer.connectionType === 'capacitor' && printer.device) {
-        return await this.connectWithCapacitorBLE(printer);
+        const success = await this.connectWithCapacitorBLE(printer);
+        if (success) this.startConnectionKeepAlive();
+        return success;
       } else {
         console.error('Invalid printer configuration for connection');
         return false;
@@ -404,26 +373,25 @@ export class PrinterDiscovery {
       }
 
       console.log('Connecting via Web Bluetooth...');
-
-      // Connect to GATT server
       const server = await printer.webBluetoothDevice.gatt?.connect();
       if (!server) {
         throw new Error('Failed to connect to GATT server');
       }
 
-      console.log('Connected to GATT server successfully');
-
-      // Update printer state
       printer.isConnected = true;
       this.connectedPrinter = printer;
 
-      // Set up disconnect listener
+      // Set up auto-reconnect on disconnect (no timeout)
       printer.webBluetoothDevice.addEventListener('gattserverdisconnected', () => {
-        console.log('Web Bluetooth device disconnected');
-        printer.isConnected = false;
-        if (this.connectedPrinter?.id === printer.id) {
-          this.connectedPrinter = null;
-        }
+        console.log('⚠️ Web Bluetooth disconnected - will attempt reconnection');
+        setTimeout(async () => {
+          try {
+            await printer.webBluetoothDevice?.gatt?.connect();
+            console.log('✅ Web Bluetooth reconnected automatically');
+          } catch (error) {
+            console.warn('Auto-reconnection failed:', error);
+          }
+        }, 2000);
       });
 
       console.log('Connected to printer via Web Bluetooth:', printer.name);
@@ -441,10 +409,8 @@ export class PrinterDiscovery {
       }
 
       console.log('Connecting via Capacitor BLE...');
-
       await BleClient.connect(printer.device.deviceId);
 
-      // Update printer state
       printer.isConnected = true;
       this.connectedPrinter = printer;
 
@@ -455,31 +421,25 @@ export class PrinterDiscovery {
       return false;
     }
   }
-  
+
   static async disconnectPrinter(): Promise<void> {
     if (!this.connectedPrinter) return;
 
     try {
-      console.log(`Disconnecting printer: ${this.connectedPrinter.name} (Type: ${this.connectedPrinter.connectionType})`);
+      this.stopConnectionKeepAlive();
 
       if (this.connectedPrinter.connectionType === 'web' && this.connectedPrinter.webBluetoothDevice) {
-        // Disconnect Web Bluetooth device
         if (this.connectedPrinter.webBluetoothDevice.gatt?.connected) {
           this.connectedPrinter.webBluetoothDevice.gatt.disconnect();
-          console.log('Web Bluetooth device disconnected');
         }
       } else if (this.connectedPrinter.connectionType === 'capacitor' && this.connectedPrinter.device) {
-        // Disconnect Capacitor BLE device
         await BleClient.disconnect(this.connectedPrinter.device.deviceId);
-        console.log('Capacitor BLE device disconnected');
       }
 
-      // Update state
       this.connectedPrinter.isConnected = false;
       this.connectedPrinter = null;
     } catch (error) {
       console.error('Failed to disconnect printer:', error);
-      // Still clear the connection state even if disconnect failed
       if (this.connectedPrinter) {
         this.connectedPrinter.isConnected = false;
         this.connectedPrinter = null;
@@ -494,4 +454,45 @@ export class PrinterDiscovery {
   static isConnected(): boolean {
     return this.connectedPrinter?.isConnected || false;
   }
+
+  private static startConnectionKeepAlive(): void {
+    this.stopConnectionKeepAlive();
+    console.log('🔄 Starting Bluetooth keep-alive (no timeout disconnect)');
+    
+    this.connectionKeepAlive = setInterval(async () => {
+      if (!this.connectedPrinter?.isConnected) {
+        this.stopConnectionKeepAlive();
+        return;
+      }
+
+      try {
+        if (this.connectedPrinter.connectionType === 'web' && this.connectedPrinter.webBluetoothDevice) {
+          const isConnected = this.connectedPrinter.webBluetoothDevice.gatt?.connected;
+          if (!isConnected) {
+            await this.connectedPrinter.webBluetoothDevice.gatt?.connect();
+            console.log('✅ Bluetooth connection restored');
+          }
+        }
+      } catch (error) {
+        console.warn('Keep-alive check failed:', error);
+      }
+    }, 120000); // Every 2 minutes
+  }
+
+  private static stopConnectionKeepAlive(): void {
+    if (this.connectionKeepAlive) {
+      clearInterval(this.connectionKeepAlive);
+      this.connectionKeepAlive = null;
+    }
+  }
+
+  
+  private static isCapacitorEnvironment(): boolean {
+    return !!(window as any).Capacitor?.isNativePlatform?.();
+  }
+
+  private static hasWebBluetoothSupport(): boolean {
+    return typeof window !== 'undefined' && 'bluetooth' in navigator;
+  }
+
 }
