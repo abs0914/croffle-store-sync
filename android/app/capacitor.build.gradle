@@ -9,9 +9,6 @@ android {
 
 apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
-<<<<<<< HEAD
-
-=======
     implementation project(':capacitor-community-bluetooth-le')
     implementation project(':capacitor-app')
     implementation project(':capacitor-device')
@@ -20,7 +17,6 @@ dependencies {
     implementation project(':capacitor-network')
     implementation project(':capacitor-splash-screen')
     implementation project(':capacitor-status-bar')
->>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
 
 }
 

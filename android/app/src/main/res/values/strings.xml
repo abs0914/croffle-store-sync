@@ -1,14 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-<<<<<<< HEAD
-    <string name="app_name">Croffle Store Sync</string>
-    <string name="title_activity_main">Croffle Store Sync</string>
-    <string name="package_name">com.croffle.storesync</string>
-    <string name="custom_url_scheme">com.croffle.storesync</string>
-=======
     <string name="app_name">Croffle Store POS</string>
     <string name="title_activity_main">Croffle Store POS</string>
     <string name="package_name">com.crofflestore.pos</string>
     <string name="custom_url_scheme">com.crofflestore.pos</string>
->>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
 </resources>

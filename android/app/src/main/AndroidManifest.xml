@@ -7,40 +7,27 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-<<<<<<< HEAD
-        android:theme="@style/AppTheme">
-
-        <activity
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
-=======
         android:theme="@style/AppTheme"
         android:hardwareAccelerated="true"
         android:usesCleartextTraffic="true">
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density|screenLayout|fontScale"
->>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-<<<<<<< HEAD
-            android:exported="true">
-=======
             android:exported="true"
             android:keepScreenOn="true"
             android:windowSoftInputMode="adjustResize"
             android:screenOrientation="unspecified"
             android:resizeableActivity="true">
->>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-<<<<<<< HEAD
-=======
             <!-- Kiosk mode intent filter -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -48,7 +35,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
->>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
         </activity>
 
         <provider
@@ -62,11 +48,6 @@
         </provider>
     </application>
 
-<<<<<<< HEAD
-    <!-- Permissions -->
-
-    <uses-permission android:name="android.permission.INTERNET" />
-=======
     <!-- Required Features -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
@@ -100,6 +81,4 @@
 
     <!-- Device admin for kiosk mode (optional) -->
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN" />
-
->>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
 </manifest>

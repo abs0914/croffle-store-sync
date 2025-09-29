@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-import type { CapacitorConfig } from '@capacitor/cli';
-
-const config: CapacitorConfig = {
-  appId: 'com.croffle.storesync',
-  appName: 'Croffle Store Sync',
-  webDir: 'dist'
-=======
-
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
@@ -85,7 +76,6 @@ const config: CapacitorConfig = {
     cacheMode: "LOAD_DEFAULT",
     mixedContentMode: "always_allow",
   },
->>>>>>> 84181ad48801591cc84f3da69c5078f7b74dbb92
 };
 
 export default config;
