@@ -14,6 +14,7 @@ import CashierInventoryReportView from "./reports/CashierInventoryReportView";
 import { BIRXReadingView } from "@/components/reports/BIRXReadingView";
 import { BIRZReadingView } from "@/components/reports/BIRZReadingView";
 import { ZReadingThermalWrapper } from "./reports/ZReadingThermalWrapper";
+import { XReadingThermalWrapper } from "./reports/XReadingThermalWrapper";
 
 interface ReportViewProps {
   reportType: ReportType;
@@ -39,7 +40,7 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
     case 'profit_loss':
       return <ProfitLossReportView data={data} dateRange={dateRange} isAllStores={isAllStores} />;
     case 'x_reading':
-      return <XReadingView storeId={effectiveStoreId} date={dateRange.from} />;
+      return <XReadingThermalWrapper storeId={effectiveStoreId} date={dateRange.from} />;
     case 'z_reading':
       return <ZReadingThermalWrapper storeId={effectiveStoreId} date={dateRange.from} />;
     case 'bir_ejournal':
