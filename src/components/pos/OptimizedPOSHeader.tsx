@@ -71,11 +71,6 @@ export function OptimizedPOSHeader({
                 Refresh
               </Button>
             )}
-            {onShowLastReceipt && (
-              <Button variant="outline" size="sm" onClick={onShowLastReceipt}>
-                Last Receipt
-              </Button>
-            )}
           </div>
         </div>
 
