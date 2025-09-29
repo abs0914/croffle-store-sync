@@ -42,27 +42,19 @@ export class BluetoothPrinterService {
       // Check for Web Bluetooth API (for web browsers)
       if ('bluetooth' in navigator) {
         try {
-          // Don't rely solely on getAvailability() - it can return false even when Bluetooth works
           const available = await navigator.bluetooth.getAvailability();
           console.log(`Web Bluetooth getAvailability(): ${available}`);
           
-          // If getAvailability() says it's available, great!
           if (available) {
             console.log('✅ Web Bluetooth thermal printing available');
             return true;
+          } else {
+            console.log('⚠️ Web Bluetooth not available on this device');
+            // Fall through to try Capacitor BLE
           }
-          
-          // Even if getAvailability() returns false, Web Bluetooth might still work
-          // This is a known issue where getAvailability() is unreliable
-          console.log('⚠️ getAvailability() returned false, but Web Bluetooth API exists');
-          console.log('📱 Web Bluetooth may still work - allowing user to try');
-          return true; // Allow the user to try - requestDevice() will handle permissions
-          
         } catch (error) {
           console.log('Web Bluetooth check failed:', error);
-          // If we have the Web Bluetooth API but getAvailability fails, still allow trying
-          console.log('📱 Web Bluetooth API exists, allowing user to try despite error');
-          return true;
+          // Fall through to try Capacitor BLE
         }
       }
 

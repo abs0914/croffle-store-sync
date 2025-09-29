@@ -126,12 +126,6 @@ export class PrinterDiscovery {
     console.log('Using Web Bluetooth API for scanning...');
 
     try {
-      // Check if Bluetooth is available
-      const available = await navigator.bluetooth.getAvailability();
-      if (!available) {
-        throw new Error('Bluetooth not available on this device');
-      }
-
       // Request device with thermal printer filters
       const device = await navigator.bluetooth.requestDevice({
         filters: [
