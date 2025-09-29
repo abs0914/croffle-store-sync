@@ -1,5 +1,6 @@
 
 import { BleClient, BleDevice } from '@capacitor-community/bluetooth-le';
+import { Capacitor } from '@capacitor/core';
 import { BluetoothPrinter, ThermalPrinter, PrinterType } from '@/types/printer';
 import { PrinterTypeManager } from './PrinterTypeManager';
 
@@ -17,6 +18,14 @@ export class PrinterDiscovery {
         throw new Error('Bluetooth not available in server environment');
       }
 
+      // Log platform information for debugging
+      console.log('PrinterDiscovery.initialize() - Platform info:', {
+        isNativePlatform: Capacitor.isNativePlatform(),
+        platform: Capacitor.getPlatform(),
+        isPluginAvailable: Capacitor.isPluginAvailable('BluetoothLe'),
+        userAgent: navigator.userAgent
+      });
+
       // Initialize Bluetooth LE client
       await BleClient.initialize();
       console.log('Bluetooth LE initialized successfully');
@@ -29,19 +38,28 @@ export class PrinterDiscovery {
       } else if (error.message?.includes('not enabled')) {
         throw new Error('Bluetooth not enabled on this device');
       } else {
-        throw new Error('Bluetooth not available on this device');
+        throw new Error(`Bluetooth not available on this device: ${error.message}`);
       }
     }
   }
 
   static async requestPermissions(): Promise<boolean> {
     try {
-      // Request Bluetooth permissions
+      console.log('Requesting Bluetooth permissions...');
+
+      // Request Bluetooth permissions by starting and immediately stopping a scan
       await BleClient.requestLEScan({}, () => {});
       await BleClient.stopLEScan();
+
+      console.log('Bluetooth permissions granted');
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Bluetooth permissions denied:', error);
+      console.error('Permission error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
       return false;
     }
   }
@@ -51,13 +69,20 @@ export class PrinterDiscovery {
       // Clear previous scan results
       this.discoveredDevices.clear();
 
+      // Check if we're running in a Capacitor native app
+      if (Capacitor.isNativePlatform()) {
+        console.log('Running in Capacitor native app - using Capacitor BLE');
+        return await this.scanWithCapacitorBLE();
+      }
+
       // Check if we're in a web environment and use Web Bluetooth API
       if (typeof window !== 'undefined' && 'bluetooth' in navigator) {
+        console.log('Running in web browser - using Web Bluetooth API');
         return await this.scanWithWebBluetooth();
       }
 
-      // Fallback to Capacitor BLE for mobile apps
-      return await this.scanWithCapacitorBLE();
+      // No Bluetooth support available
+      throw new Error('Bluetooth not supported in this environment');
     } catch (error) {
       console.error('Failed to scan for printers:', error);
       throw error;
@@ -132,6 +157,13 @@ export class PrinterDiscovery {
 
   private static async scanWithCapacitorBLE(): Promise<BluetoothPrinter[]> {
     console.log('Using Capacitor BLE for scanning...');
+
+    // Log additional debugging information
+    console.log('Capacitor BLE scan - Platform info:', {
+      isNativePlatform: Capacitor.isNativePlatform(),
+      platform: Capacitor.getPlatform(),
+      isPluginAvailable: Capacitor.isPluginAvailable('BluetoothLe')
+    });
 
     // Request permissions first
     const hasPermissions = await this.requestPermissions();

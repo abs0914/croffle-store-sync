@@ -1,4 +1,5 @@
 import { BleClient } from '@capacitor-community/bluetooth-le';
+import { Capacitor } from '@capacitor/core';
 import { ESCPOSFormatter } from './ESCPOSFormatter';
 import { PrinterDiscovery, BluetoothPrinter } from './PrinterDiscovery';
 import { PrinterTypeManager } from './PrinterTypeManager';
@@ -23,6 +24,19 @@ export class BluetoothPrinterService {
         return false;
       }
 
+      // Check if we're running in a Capacitor native app
+      if (Capacitor.isNativePlatform()) {
+        console.log('Running in Capacitor native app - checking Capacitor BLE');
+        try {
+          await PrinterDiscovery.initialize();
+          console.log('Capacitor Bluetooth LE available');
+          return true;
+        } catch (error) {
+          console.log('Capacitor Bluetooth LE not available:', error);
+          return false;
+        }
+      }
+
       // Check for Web Bluetooth API (for web browsers)
       if ('bluetooth' in navigator) {
         try {
@@ -36,19 +50,13 @@ export class BluetoothPrinterService {
           }
         } catch (error) {
           console.log('Web Bluetooth check failed:', error);
-          // Continue to try Capacitor BLE
+          return false;
         }
       }
 
-      // Try Capacitor BLE (for mobile apps)
-      try {
-        await PrinterDiscovery.initialize();
-        console.log('Capacitor Bluetooth LE available');
-        return true;
-      } catch (error) {
-        console.log('Capacitor Bluetooth LE not available:', error);
-        return false;
-      }
+      // No Bluetooth support available
+      console.log('No Bluetooth support available in this environment');
+      return false;
     } catch (error) {
       console.log('Bluetooth thermal printing not available:', error);
       return false;
