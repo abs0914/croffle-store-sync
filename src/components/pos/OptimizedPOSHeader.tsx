@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Wifi, WifiOff, Menu, RefreshCw } from 'lucide-react';
 import { PrinterStatusIndicator } from '@/components/printer/PrinterStatusIndicator';
 import { useSidebar } from '@/components/ui/sidebar';
-
 interface OptimizedPOSHeaderProps {
   storeName: string;
   shiftInfo?: {
@@ -16,9 +15,9 @@ interface OptimizedPOSHeaderProps {
   onShowLastReceipt?: () => void;
   onRefreshProducts?: () => void;
 }
-export function OptimizedPOSHeader({ 
-  storeName, 
-  shiftInfo, 
+export function OptimizedPOSHeader({
+  storeName,
+  shiftInfo,
   connectionStatus,
   onShowLastReceipt,
   onRefreshProducts
@@ -65,12 +64,7 @@ export function OptimizedPOSHeader({
             <PrinterStatusIndicator />
 
             {/* Refresh & Last Receipt Buttons */}
-            {onRefreshProducts && (
-              <Button variant="outline" size="sm" onClick={onRefreshProducts}>
-                <RefreshCw className="w-4 h-4 mr-1" />
-                Refresh
-              </Button>
-            )}
+            {onRefreshProducts}
           </div>
         </div>
 
