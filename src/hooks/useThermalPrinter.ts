@@ -17,19 +17,45 @@ export function useThermalPrinter() {
   useEffect(() => {
     checkAvailability();
 
-    // Set up periodic connection monitoring
+    // Set up persistent connection monitoring with retry logic
     const monitorInterval = setInterval(() => {
       if (isConnected && connectedPrinter) {
         // Check if printer is still connected
         const currentlyConnected = PrinterDiscovery.isConnected();
         if (!currentlyConnected) {
-          console.log('Printer disconnected, updating status...');
-          setIsConnected(false);
-          setConnectedPrinter(null);
-          toast.info('Thermal printer disconnected');
+          console.log('⚠️ Printer connection check failed - attempting reconnection...');
+          
+          // Instead of immediately disconnecting, try to reconnect
+          setTimeout(async () => {
+            try {
+              console.log('🔄 Attempting to restore printer connection...');
+              const reconnected = await PrinterDiscovery.connectToPrinter(connectedPrinter);
+              
+              if (reconnected) {
+                console.log('✅ Printer connection restored successfully');
+                toast.success('Printer connection restored', {
+                  description: 'Bluetooth connection has been re-established'
+                });
+              } else {
+                // Only disconnect after failed reconnection attempt
+                console.log('❌ Failed to restore printer connection - marking as disconnected');
+                setIsConnected(false);
+                setConnectedPrinter(null);
+                toast.warning('Printer connection lost', {
+                  description: 'Please reconnect your printer manually'
+                });
+              }
+            } catch (error) {
+              console.error('Failed to restore printer connection:', error);
+              // Don't automatically disconnect - let user decide
+              toast.warning('Printer connection unstable', {
+                description: 'Connection may be intermittent. Try printing to test.'
+              });
+            }
+          }, 1000); // Small delay before reconnection attempt
         }
       }
-    }, 5000); // Check every 5 seconds
+    }, 30000); // Check every 30 seconds instead of 5 seconds to reduce interference
 
     return () => clearInterval(monitorInterval);
   }, [isConnected, connectedPrinter]);
@@ -255,6 +281,48 @@ export function useThermalPrinter() {
     }
   };
 
+  const printZReading = async (zReadingData: any) => {
+    if (!isConnected) {
+      toast.error('No printer connected');
+      return false;
+    }
+
+    setIsPrinting(true);
+    try {
+      console.log('Starting Z-Reading print...');
+      toast.info('Sending Z-Reading to printer...');
+
+      const success = await BluetoothPrinterService.printZReading(zReadingData);
+
+      if (success) {
+        toast.success('Z-Reading sent to printer successfully!');
+        console.log('✅ Z-Reading printed successfully');
+      } else {
+        toast.error('Failed to send Z-Reading to printer');
+        console.error('❌ Z-Reading printing failed');
+      }
+
+      return success;
+    } catch (error: any) {
+      console.error('Failed to print Z-Reading:', error);
+
+      // Provide specific error messages based on error type
+      if (error.message?.includes('service')) {
+        toast.error('Printer service not found. Check printer compatibility.');
+      } else if (error.message?.includes('characteristic')) {
+        toast.error('Printer communication failed. Try reconnecting.');
+      } else if (error.message?.includes('write')) {
+        toast.error('Failed to send data to printer. Check connection.');
+      } else {
+        toast.error(`Z-Reading print failed: ${error.message || 'Unknown error'}`);
+      }
+
+      return false;
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
   const testServiceDiscovery = async () => {
     if (!isConnected) {
       toast.error('No printer connected');
@@ -295,6 +363,7 @@ export function useThermalPrinter() {
     disconnectPrinter,
     printReceipt,
     printTestReceipt,
+    printZReading,
     testServiceDiscovery,
     checkAvailability
   };

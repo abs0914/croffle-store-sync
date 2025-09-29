@@ -1,3 +1,4 @@
+import { triggerPriceRefresh } from '@/utils/triggerPriceRefresh';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -163,16 +164,10 @@ export function StoreCatalogTab({ storeId }: StoreCatalogTabProps) {
     {
       onSuccess: async () => {
         setEditingProduct(null);
-        toast.success('Price updated successfully');
+        toast.success('Price updated successfully - POS systems notified');
         
-        // Notify POS to refresh product data
-        try {
-          const { priceRefreshService } = await import('@/services/pos/priceRefreshService');
-          priceRefreshService.triggerRefresh();
-          console.log('🔄 Triggered POS price refresh after catalog update');
-        } catch (error) {
-          console.error('Failed to trigger POS refresh:', error);
-        }
+        // Trigger immediate price refresh for POS systems
+        triggerPriceRefresh();
       },
       onError: (error) => {
         console.error('Error updating price:', error);

@@ -7,7 +7,7 @@ import { ArrowLeft, Bluetooth } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
-export function BluetoothDebugPage() {
+function BluetoothDebugPage() {
   const navigate = useNavigate();
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
 
@@ -104,3 +104,5 @@ export function BluetoothDebugPage() {
     </div>
   );
 }
+
+export default BluetoothDebugPage;
