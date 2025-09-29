@@ -175,19 +175,7 @@ export class BluetoothPermissionManager {
       return;
     }
 
-    try {
-      // This will open the app's permission settings page
-      const { App } = await import('@capacitor/app');
-      await App.openUrl({ url: 'app-settings:' });
-    } catch (error) {
-      console.error('Failed to open settings:', error);
-      // Fallback: try to open general settings
-      try {
-        const { App } = await import('@capacitor/app');
-        await App.openUrl({ url: 'settings:' });
-      } catch (fallbackError) {
-        console.error('Failed to open settings (fallback):', fallbackError);
-      }
-    }
+    // Settings opening is not available in current Capacitor version
+    console.log('Please manually enable Bluetooth permissions in device settings');
   }
 }

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BluetoothPrinterService } from '@/services/printer/BluetoothPrinterService';
 import { PrinterDiscovery, BluetoothPrinter, ThermalPrinter } from '@/services/printer/PrinterDiscovery';
 import { Transaction, Customer } from '@/types';
@@ -166,7 +166,7 @@ export function useThermalPrinter() {
     }
   };
 
-  const printReceipt = async (
+  const printReceipt = useCallback(async (
     transaction: Transaction,
     customer?: Customer | null,
     store?: Store,
@@ -211,7 +211,7 @@ export function useThermalPrinter() {
     } finally {
       setIsPrinting(false);
     }
-  };
+  }, [isConnected]);
 
   const printTestReceipt = async () => {
     if (!isConnected) {
