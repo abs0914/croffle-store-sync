@@ -184,19 +184,7 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Settings - Managers+ */}
-      <Route
-        path="/settings/*"
-        element={
-          <ProtectedRoute requiredRole="manager">
-            <MainLayout>
-              <React.Suspense fallback={<LoadingSpinner />}>
-                <Settings />
-              </React.Suspense>
-            </MainLayout>
-          </ProtectedRoute>
-        }
-      />
+      {/* Settings route moved to ProtectedRoutes.tsx to allow proper role-based access */}
 
       {/* SM Accreditation Testing - Admin only */}
       <Route
