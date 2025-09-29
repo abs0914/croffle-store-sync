@@ -17,6 +17,8 @@ export class BluetoothPrinterService {
   
   static async isAvailable(): Promise<boolean> {
     try {
+      console.log('🔍 Checking Bluetooth thermal printing availability...');
+      
       // Check if we're in a browser environment
       if (typeof window === 'undefined') {
         console.log('Not in browser environment');
@@ -28,29 +30,34 @@ export class BluetoothPrinterService {
         try {
           const available = await navigator.bluetooth.getAvailability();
           if (available) {
-            console.log('Web Bluetooth API available');
+            console.log('✅ Web Bluetooth thermal printing available');
             return true;
           } else {
-            console.log('Bluetooth not available on this device');
-            return false;
+            console.log('⚠️ Bluetooth not available on this device');
           }
         } catch (error) {
-          console.log('Web Bluetooth check failed:', error);
-          // Continue to try Capacitor BLE
+          console.log('⚠️ Web Bluetooth check failed, trying Capacitor BLE...', error);
         }
       }
 
       // Try Capacitor BLE (for mobile apps)
       try {
         await PrinterDiscovery.initialize();
-        console.log('Capacitor Bluetooth LE available');
+        console.log('✅ Capacitor Bluetooth LE thermal printing available');
         return true;
-      } catch (error) {
-        console.log('Capacitor Bluetooth LE not available:', error);
+      } catch (error: any) {
+        console.log('❌ Capacitor BLE initialization failed:', error?.message || error);
+        
+        // Check if it's a permission issue vs hardware issue
+        if (error?.message?.includes('permission') || error?.message?.includes('location')) {
+          console.log('💡 Bluetooth hardware available but needs permissions');
+          return true; // Still return true as hardware is available, just needs permission
+        }
+        
         return false;
       }
     } catch (error) {
-      console.log('Bluetooth thermal printing not available:', error);
+      console.error('❌ Bluetooth thermal printing availability check failed:', error);
       return false;
     }
   }
