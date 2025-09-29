@@ -134,6 +134,30 @@ export class BluetoothPrinterService {
     }
   }
 
+  static async printXReading(xReadingData: any): Promise<boolean> {
+    const printer = PrinterDiscovery.getConnectedPrinter();
+    if (!printer?.isConnected) {
+      throw new Error('No printer connected');
+    }
+
+    try {
+      console.log('🖨️ Preparing X-Reading report...');
+      const reportData = PrinterTypeManager.formatXReading(printer, xReadingData);
+      console.log(`📄 X-Reading formatted (${reportData.length} characters)`);
+
+      const success = await this.sendDataToPrinter(printer, reportData);
+
+      if (success) {
+        console.log('X-Reading printed successfully');
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Failed to print X-Reading:', error);
+      return false;
+    }
+  }
+
   static async openCashDrawer(drawerPin: number = 0, onTime: number = 25, offTime: number = 25): Promise<boolean> {
     const printer = PrinterDiscovery.getConnectedPrinter();
     if (!printer?.isConnected) {

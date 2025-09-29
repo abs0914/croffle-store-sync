@@ -142,14 +142,6 @@ export function BIRXReadingView({ data }: BIRXReadingViewProps) {
           <div>Date Issued: {data.permitNumber ? 'N/A' : 'N/A'}</div>
           <div>Valid Until: {data.permitNumber ? 'N/A' : 'N/A'}</div>
         </div>
-        <div className="mt-2 text-xs">
-          <div>POS PROVIDER:</div>
-          <div>Croffle Bro System</div>
-          <div>TIN: 123-456-789-000</div>
-          <div>Addr: Philippines</div>
-          <div>Date Issued: N/A</div>
-          <div>PTU No. N/A Valid Until: N/A</div>
-        </div>
       </div>
     </div>
   );
