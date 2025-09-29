@@ -17,3 +17,9 @@ export const triggerPriceRefresh = () => {
     toast.error('Failed to refresh POS prices');
   }
 };
+
+// Trigger refresh for Dark Chocolate Croffle price update
+console.log('🔄 Triggering POS refresh for Dark Chocolate Croffle price update');
+setTimeout(() => {
+  triggerPriceRefresh();
+}, 500);
