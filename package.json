@@ -21,6 +21,8 @@
     "@capacitor-community/bluetooth-le": "^7.1.1",
     "@capacitor/android": "^7.4.1",
     "@capacitor/app": "^7.0.1",
+    "@capacitor/app-launcher": "^7.0.2",
+    "@capacitor/browser": "^7.0.2",
     "@capacitor/cli": "^7.4.1",
     "@capacitor/core": "^7.4.1",
     "@capacitor/device": "^7.0.1",

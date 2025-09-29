@@ -227,18 +227,51 @@ export class BluetoothPermissionManager {
     }
 
     try {
-      // This will open the app's permission settings page
-      const { App } = await import('@capacitor/app');
-      await App.openUrl({ url: 'app-settings:' });
-    } catch (error) {
-      console.error('Failed to open settings:', error);
-      // Fallback: try to open general settings
+      console.log('🔧 Attempting to open app settings...');
+
+      // First try using AppLauncher plugin for opening URLs
       try {
-        const { App } = await import('@capacitor/app');
-        await App.openUrl({ url: 'settings:' });
-      } catch (fallbackError) {
-        console.error('Failed to open settings (fallback):', fallbackError);
+        const { AppLauncher } = await import('@capacitor/app-launcher');
+
+        // Try to open app-specific settings first
+        try {
+          await AppLauncher.openUrl({ url: 'android.settings.APPLICATION_DETAILS_SETTINGS' });
+          console.log('✅ Opened app-specific settings via AppLauncher');
+          return;
+        } catch (specificError) {
+          console.log('App-specific settings failed, trying general settings:', specificError);
+        }
+
+        // Fallback: try to open general settings
+        try {
+          await AppLauncher.openUrl({ url: 'android.settings.SETTINGS' });
+          console.log('✅ Opened general settings via AppLauncher');
+          return;
+        } catch (generalError) {
+          console.log('General settings failed via AppLauncher:', generalError);
+        }
+
+      } catch (appLauncherError) {
+        console.log('AppLauncher not available, trying alternative methods:', appLauncherError);
       }
+
+      // Alternative: Try using Browser plugin
+      try {
+        const { Browser } = await import('@capacitor/browser');
+        await Browser.open({ url: 'android.settings.APPLICATION_DETAILS_SETTINGS' });
+        console.log('✅ Opened settings via Browser plugin');
+        return;
+      } catch (browserError) {
+        console.log('Browser plugin failed:', browserError);
+      }
+
+      // Final fallback: Simple approach
+      console.log('All methods failed - settings could not be opened automatically');
+      throw new Error('Could not open device settings automatically. Please go to Settings → Apps → Croffle Store POS → Permissions manually.');
+
+    } catch (error: any) {
+      console.error('❌ Failed to open settings:', error);
+      throw error;
     }
   }
 }

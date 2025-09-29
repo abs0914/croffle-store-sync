@@ -15,6 +15,9 @@ const OrderManagement = React.lazy(() => import('@/pages/OrderManagement/index')
 const Reports = React.lazy(() => import('@/pages/Reports'));
 const Expenses = React.lazy(() => import('@/pages/Expenses'));
 const Settings = React.lazy(() => import('@/pages/Settings'));
+
+// Debug components (development only)
+const BluetoothDebugPage = React.lazy(() => import('@/pages/BluetoothDebugPage'));
 const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
 const SMAccreditationTesting = React.lazy(() => import('@/pages/SMAccreditationTesting'));
 const CustomerManagement = React.lazy(() => import('@/pages/Customers/CustomerManagement'));
@@ -238,6 +241,20 @@ export const MainAppRoutes = () => {
           </ProtectedRoute>
         }
       />
+
+      {/* Debug Routes - Development only */}
+      {process.env.NODE_ENV === 'development' && (
+        <Route
+          path="/debug/bluetooth"
+          element={
+            <ProtectedRoute>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <BluetoothDebugPage />
+              </React.Suspense>
+            </ProtectedRoute>
+          }
+        />
+      )}
     </>
   );
 };
