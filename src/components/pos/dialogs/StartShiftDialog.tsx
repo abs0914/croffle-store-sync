@@ -92,7 +92,7 @@ export default function StartShiftDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-4xl md:max-h-[90vh] max-h-[95vh] w-[95vw] md:w-auto overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Start New Shift</DialogTitle>
           <DialogDescription>

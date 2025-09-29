@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { useCamera } from "@/hooks/camera";  
 import CameraContainer from "./CameraContainer";
@@ -46,6 +46,34 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
       stopCamera();
     };
   }, [stopCamera]);
+
+  const handleCaptureClick = useCallback(() => {
+    try {
+      const photoUrl = capturePhoto();
+      if (photoUrl) {
+        console.log('[ShiftCamera] Photo captured successfully');
+        onCapture(photoUrl);
+      } else {
+        console.error('[ShiftCamera] Failed to capture photo');
+        toast.error("Failed to capture photo. Please try again.");
+      }
+    } catch (error) {
+      console.error('[ShiftCamera] Error during photo capture:', error);
+      toast.error("Error capturing photo. Please try again.");
+    }
+  }, [capturePhoto, onCapture]);
+
+  // Listen for capture photo event from the UI button
+  useEffect(() => {
+    const handleCaptureEvent = () => {
+      handleCaptureClick();
+    };
+
+    window.addEventListener('capturePhoto', handleCaptureEvent);
+    return () => {
+      window.removeEventListener('capturePhoto', handleCaptureEvent);
+    };
+  }, [handleCaptureClick]);
   
   // Initialize camera when component mounts or when camera selection changes
   useEffect(() => {
@@ -93,22 +121,6 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
     selectCamera(deviceId);
   };
 
-  const handleCaptureClick = () => {
-    try {
-      const photoUrl = capturePhoto();
-      if (photoUrl) {
-        console.log('[ShiftCamera] Photo captured successfully');
-        onCapture(photoUrl);
-      } else {
-        console.error('[ShiftCamera] Failed to capture photo');
-        toast.error("Failed to capture photo. Please try again.");
-      }
-    } catch (error) {
-      console.error('[ShiftCamera] Error during photo capture:', error);
-      toast.error("Error capturing photo. Please try again.");
-    }
-  };
-  
   const resetPhoto = () => {
     console.log('[ShiftCamera] Resetting photo');
     setPhoto(null);
@@ -163,7 +175,6 @@ export default function ShiftCamera({ onCapture, onReset }: ShiftCameraProps) {
         isStartingCamera={isStartingCamera}
         cameraError={cameraError}
         logVideoState={logVideoState}
-        handleCaptureClick={handleCaptureClick}
         resetPhoto={resetPhoto}
         initCamera={() => {
           setAttemptedInit(false);

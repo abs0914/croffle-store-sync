@@ -12,7 +12,6 @@ interface CameraContainerProps {
   isStartingCamera: boolean;
   cameraError: string | null;
   logVideoState: () => void;
-  handleCaptureClick: () => void;
   resetPhoto: () => void;
   initCamera: () => void;
   handleRetry: () => void;
@@ -26,7 +25,6 @@ export default function CameraContainer({
   isStartingCamera,
   cameraError,
   logVideoState,
-  handleCaptureClick,
   resetPhoto,
   initCamera,
   handleRetry
@@ -36,7 +34,7 @@ export default function CameraContainer({
   return (
     <div 
       ref={containerRef}
-      className="w-full aspect-[9/16] bg-black rounded-md relative overflow-hidden max-h-[70vh]" /* Mobile portrait aspect ratio */
+      className="w-full bg-black rounded-md relative overflow-hidden h-[50vh] md:h-[60vh] min-h-[400px]"
     >
       {showCamera ? (
         <CameraView 
@@ -44,7 +42,6 @@ export default function CameraContainer({
           cameraInitialized={cameraInitialized}
           isStartingCamera={isStartingCamera}
           logVideoState={logVideoState}
-          onCaptureClick={handleCaptureClick}
         />
       ) : photo ? (
         <PhotoPreview photoUrl={photo} onReset={resetPhoto} />

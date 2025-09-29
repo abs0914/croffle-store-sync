@@ -50,7 +50,7 @@ export default function ShiftPhotoSection({
             }}
           />
           
-          <div className="mt-2 flex justify-end">
+          <div className="mt-2 flex justify-between">
             <Button 
               variant="outline" 
               size="sm"
@@ -58,6 +58,17 @@ export default function ShiftPhotoSection({
             >
               <CameraOff className="mr-2 h-4 w-4" />
               Cancel
+            </Button>
+            <Button 
+              size="sm"
+              onClick={() => {
+                // This will be handled by the ShiftCamera component
+                const event = new CustomEvent('capturePhoto');
+                window.dispatchEvent(event);
+              }}
+            >
+              <Camera className="mr-2 h-4 w-4" />
+              Capture
             </Button>
           </div>
         </div>

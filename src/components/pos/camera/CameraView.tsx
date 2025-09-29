@@ -2,7 +2,6 @@
 import { RefObject, useEffect } from "react";
 import { useStore } from "@/contexts/StoreContext";
 import TimestampOverlay from "./TimestampOverlay";
-import CaptureButton from "./CaptureButton";
 import { Spinner } from "@/components/ui/spinner";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 
@@ -11,15 +10,13 @@ interface CameraViewProps {
   cameraInitialized: boolean;
   isStartingCamera: boolean;
   logVideoState: () => void;
-  onCaptureClick: () => void;
 }
 
 export default function CameraView({
   videoRef,
   cameraInitialized,
   isStartingCamera,
-  logVideoState,
-  onCaptureClick
+  logVideoState
 }: CameraViewProps) {
   const { currentStore } = useStore();
   
@@ -52,16 +49,13 @@ export default function CameraView({
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
       <div className="w-full h-full flex items-center justify-center">
-        {/* Using 9:16 aspect ratio for mobile portrait orientation */}
-        <AspectRatio ratio={9/16} className="w-full max-h-full">
-          <video 
-            ref={videoRef}
-            className="w-full h-full object-contain" 
-            autoPlay
-            playsInline
-            muted
-          />
-        </AspectRatio>
+        <video 
+          ref={videoRef}
+          className="w-full h-full object-contain max-h-full" 
+          autoPlay
+          playsInline
+          muted
+        />
       </div>
       
       {!cameraInitialized && isStartingCamera && (
@@ -74,10 +68,7 @@ export default function CameraView({
       )}
       
       {cameraInitialized && (
-        <>
-          <TimestampOverlay storeName={currentStore?.name} />
-          <CaptureButton onClick={onCaptureClick} />
-        </>
+        <TimestampOverlay storeName={currentStore?.name} />
       )}
     </div>
   );
