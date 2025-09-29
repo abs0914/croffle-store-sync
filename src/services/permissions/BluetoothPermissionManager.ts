@@ -227,46 +227,18 @@ export class BluetoothPermissionManager {
     }
 
     try {
-      console.log('🔧 Attempting to open app settings...');
-
-      // Check if App plugin is available
-      if (!Capacitor.isPluginAvailable('App')) {
-        throw new Error('App plugin not available');
-      }
-
+      // This will open the app's permission settings page
       const { App } = await import('@capacitor/app');
-
-      // Try to open app-specific settings first
-      try {
-        // Android intent to open app-specific settings
-        await App.openUrl({ url: 'android-app://com.android.settings/android.settings.APPLICATION_DETAILS_SETTINGS' });
-        console.log('✅ Opened app-specific settings');
-        return;
-      } catch (specificError) {
-        console.log('App-specific settings failed, trying general approach:', specificError);
-      }
-
+      await App.openUrl({ url: 'app-settings:' });
+    } catch (error) {
+      console.error('Failed to open settings:', error);
       // Fallback: try to open general settings
       try {
-        await App.openUrl({ url: 'android.settings.SETTINGS' });
-        console.log('✅ Opened general settings');
-        return;
-      } catch (generalError) {
-        console.log('General settings failed, trying basic settings:', generalError);
+        const { App } = await import('@capacitor/app');
+        await App.openUrl({ url: 'settings:' });
+      } catch (fallbackError) {
+        console.error('Failed to open settings (fallback):', fallbackError);
       }
-
-      // Final fallback: try basic settings intent
-      try {
-        await App.openUrl({ url: 'android.intent.action.MAIN' });
-        console.log('✅ Opened basic settings');
-      } catch (basicError) {
-        console.error('All settings attempts failed:', basicError);
-        throw new Error('Could not open device settings');
-      }
-
-    } catch (error: any) {
-      console.error('❌ Failed to open settings:', error);
-      throw new Error(`Settings access failed: ${error.message || 'Unknown error'}`);
     }
   }
 }

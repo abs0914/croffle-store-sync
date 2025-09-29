@@ -4,7 +4,7 @@ import ReceiptGenerator from "./ReceiptGenerator";
 import { Transaction, Customer } from "@/types";
 import { useThermalPrinter } from "@/hooks/useThermalPrinter";
 import { useStore } from "@/contexts/StoreContext";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { CheckCircle, Printer } from "lucide-react";
 import { toast } from "sonner";
 interface CompletedTransactionProps {
@@ -26,6 +26,13 @@ export default function CompletedTransaction({
   } = useStore();
   const [countdown, setCountdown] = useState(3);
   const [showBriefSuccess, setShowBriefSuccess] = useState(false);
+  
+  // Track printed receipts to prevent duplicates
+  const printedReceipts = useRef(new Set<string>());
+  
+  // Stabilize object references to prevent unnecessary useEffect triggers
+  const stableCustomer = useMemo(() => customer, [customer?.id, customer?.name]);
+  const stableStore = useMemo(() => currentStore, [currentStore?.id, currentStore?.name]);
 
   // Add defensive checks for transaction data
   React.useEffect(() => {
@@ -59,23 +66,31 @@ export default function CompletedTransaction({
   // Automatically print receipt when transaction completes and printer is connected
   useEffect(() => {
     // Skip printing process entirely if no printer is connected
-    if (!isConnected) {
+    if (!isConnected || !transaction?.receiptNumber) {
       return;
     }
-    let hasTriggered = false; // Prevent multiple prints
+    
+    // Check if we've already printed this receipt
+    if (printedReceipts.current.has(transaction.receiptNumber)) {
+      console.log(`Receipt ${transaction.receiptNumber} already printed, skipping...`);
+      return;
+    }
 
     const autoPrint = async () => {
-      if (transaction && !hasTriggered) {
-        hasTriggered = true;
+      // Double-check we haven't printed this receipt
+      if (!printedReceipts.current.has(transaction.receiptNumber)) {
+        printedReceipts.current.add(transaction.receiptNumber);
+        
         try {
           console.log('Auto-printing receipt to thermal printer...');
-          await printReceipt(transaction, customer, currentStore, 'Cashier');
+          await printReceipt(transaction, stableCustomer, stableStore, 'Cashier');
 
           // Show brief success message and start countdown for auto-navigation
           setShowBriefSuccess(true);
         } catch (error) {
           console.error('Auto-print failed:', error);
-          // Don't show error to user, just skip auto-print
+          // Remove from printed set on failure so it can be retried
+          printedReceipts.current.delete(transaction.receiptNumber);
         }
       }
     };
@@ -83,7 +98,7 @@ export default function CompletedTransaction({
     // Small delay to ensure transaction is fully processed
     const timer = setTimeout(autoPrint, 1000);
     return () => clearTimeout(timer);
-  }, [isConnected, transaction?.receiptNumber, printReceipt, customer, currentStore]); // Only depend on essential values
+  }, [isConnected, transaction?.receiptNumber]); // Removed unstable dependencies
 
   // Auto-navigation countdown when printer is connected
   useEffect(() => {
