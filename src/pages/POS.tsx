@@ -6,6 +6,7 @@ import { useCart } from "@/contexts/cart/CartContext";
 import { useAuth } from "@/contexts/auth";
 import { useUnifiedProducts } from "@/hooks/unified/useUnifiedProducts";
 import { useTransactionHandler } from "@/hooks/useTransactionHandler";
+import { useOfflineMode } from "@/hooks/useOfflineMode";
 import { useLargeOrderDiagnostics } from "@/hooks/useLargeOrderDiagnostics";
 import { manualRefreshService } from "@/services/pos/manualRefreshService";
 
@@ -20,12 +21,13 @@ import { toast } from "sonner";
 import { TransactionItem } from "@/types/transaction";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ReceiptGenerator from "@/components/pos/ReceiptGenerator";
+import { OfflineIndicator } from "@/components/pos/OfflineIndicator";
 
 export default function POS() {
   const { user } = useAuth();
   const { currentStore } = useStore();
   const { currentShift } = useShift();
-  const { items, subtotal, tax, total, addItem, orderType, deliveryPlatform, deliveryOrderNumber } = useCart();
+  const { items, subtotal, tax, total, addItem, clearCart, orderType, deliveryPlatform, deliveryOrderNumber } = useCart();
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [lastCompletedTransaction, setLastCompletedTransaction] = useState<any>(null);
   const [lastTransactionCustomer, setLastTransactionCustomer] = useState<any>(null);
@@ -66,6 +68,17 @@ export default function POS() {
     autoRefresh: true
   });
 
+  // Offline mode capabilities
+  const {
+    isOnline,
+    isOfflineCapable,
+    pendingTransactions,
+    processOfflineTransaction,
+    cacheProductsForOffline,
+    getCachedProducts,
+    checkOfflineAvailability
+  } = useOfflineMode(currentStore?.id || null);
+
   // Local state for active category filter - initialize to "all" to show all products
   const [activeCategory, setActiveCategory] = useState<string | null>("all");
 
@@ -86,6 +99,13 @@ export default function POS() {
       manualRefreshService.forceRefresh(currentStore.id);
     }
   }, [currentStore?.id]);
+
+  // Cache products for offline use when online
+  useEffect(() => {
+    if (isOnline && products.length > 0 && categories.length > 0) {
+      cacheProductsForOffline(products, categories);
+    }
+  }, [isOnline, products, categories, cacheProductsForOffline]);
 
   // Real-time notifications removed - using simplified toast system
 
@@ -122,7 +142,7 @@ export default function POS() {
     addItem(product, quantity, variation, customization);
   };
   
-  // Wrapper for payment processing with inventory validation
+  // Wrapper for payment processing with inventory validation and offline support
   const handlePaymentComplete = async (
     paymentMethod: 'cash' | 'card' | 'e-wallet',
     amountTendered: number,
@@ -149,15 +169,61 @@ export default function POS() {
     try {
       console.log("POS: Processing payment with streamlined transaction service...");
       
-      // Enhanced validation is now handled in CheckoutModal before payment begins
-      // This provides a simpler, more reliable transaction flow
+      // Check if we're online or offline
+      if (!isOnline) {
+        console.log("🔌 Processing offline transaction...");
+        
+        // Prepare offline transaction data
+        const transactionData = {
+          storeId: currentStore.id,
+          userId: currentShift.userId,
+          shiftId: currentShift.id,
+          customerId: selectedCustomer?.id,
+          items: items.map(item => ({
+            productId: item.productId,
+            variationId: item.variationId,
+            name: item.product?.name || 'Unknown Product',
+            quantity: item.quantity,
+            unitPrice: item.price,
+            totalPrice: item.price * item.quantity
+          })),
+          subtotal,
+          tax,
+          discount,
+          discountType,
+          discountIdNumber,
+          total: total - discount,
+          amountTendered,
+          change: paymentMethod === 'cash' ? amountTendered - (total - discount) : undefined,
+          paymentMethod,
+          paymentDetails,
+          orderType: orderType || 'dine_in',
+          deliveryPlatform,
+          deliveryOrderNumber
+        };
+
+        // Process offline transaction
+        const offlineTransactionId = processOfflineTransaction(transactionData);
+        
+        if (offlineTransactionId) {
+          // Clear cart and navigate to a simple success page
+          clearCart();
+          toast.success(`Offline transaction saved: ${offlineTransactionId}`);
+          return true;
+        } else {
+          return false;
+        }
+      }
       
-    // Convert cart items to the format expected by the transaction handler
-    const cartItemsForTransaction = items.map(item => ({
-      ...item,
-      id: item.productId,
-      name: item.product?.name || 'Unknown Product'
-    }));
+      // Online processing - use existing flow
+      console.log("🌐 Processing online transaction...");
+      
+      // Convert cart items to the format expected by the transaction handler
+      const cartItemsForTransaction = items.map(item => ({
+        ...item,
+        id: item.productId,
+        name: item.product?.name || 'Unknown Product'
+      }));
 
       const success = await processPayment(
         currentStore, 
@@ -233,9 +299,14 @@ export default function POS() {
             cashierName: user?.name || 'Unknown Cashier',
             startTime: new Date(currentShift.startTime).toLocaleTimeString()
           } : undefined}
-          connectionStatus={isConnected ? 'online' : 'offline'}
+          connectionStatus={isOnline ? 'online' : 'offline'}
           onRefreshProducts={refreshProducts}
         />
+        
+        {/* Offline Mode Indicator */}
+        <div className="px-4 pb-2">
+          <OfflineIndicator storeId={currentStore?.id || null} />
+        </div>
       </div>
 
       {/* Main POS Content */}
