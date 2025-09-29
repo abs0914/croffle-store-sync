@@ -46,8 +46,8 @@ export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps
       // For Capacitor (native Android app), show our custom device picker dialog
       setShowDevicePicker(true);
     } else {
-      // For web browsers, use the existing scan function which will show native dialog
-      await scanForPrinters();
+      // For web browsers, show the native Web Bluetooth device selection dialog
+      await scanForPrinters(true);
     }
   };
 

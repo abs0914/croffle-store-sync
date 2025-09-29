@@ -50,7 +50,7 @@ export function useThermalPrinter() {
     }
   };
 
-  const scanForPrinters = async () => {
+  const scanForPrinters = async (showNativeDialog?: boolean) => {
     if (!isAvailable) {
       toast.error('Bluetooth not available on this device');
       return;
@@ -59,7 +59,7 @@ export function useThermalPrinter() {
     setIsScanning(true);
     try {
       toast.info('Scanning for thermal printers...');
-      const printers = await PrinterDiscovery.scanForPrinters();
+      const printers = await PrinterDiscovery.scanForPrinters(showNativeDialog);
       setAvailablePrinters(printers);
 
       if (printers.length === 0) {
