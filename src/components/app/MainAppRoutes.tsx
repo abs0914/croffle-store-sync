@@ -23,6 +23,9 @@ const StockOrders = React.lazy(() => import('@/pages/StockOrders'));
 const SMAccreditationTesting = React.lazy(() => import('@/pages/SMAccreditationTesting'));
 const CustomerManagement = React.lazy(() => import('@/pages/Customers/CustomerManagement'));
 
+// WebView components
+const PrinterWebView = React.lazy(() => import('@/pages/PrinterWebView'));
+
 // Loading component
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-64">
@@ -240,6 +243,16 @@ export const MainAppRoutes = () => {
               </React.Suspense>
             </MainLayout>
           </ProtectedRoute>
+        }
+      />
+
+      {/* WebView Routes - Standalone pages for WebView integration */}
+      <Route
+        path="/printer-webview"
+        element={
+          <React.Suspense fallback={<LoadingSpinner />}>
+            <PrinterWebView />
+          </React.Suspense>
         }
       />
 

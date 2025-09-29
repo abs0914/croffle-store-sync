@@ -10,6 +10,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
+import android.webkit.PermissionRequest;
+import android.webkit.WebChromeClient;
 import android.widget.Toast;
 
 public class MainActivity extends BridgeActivity {
@@ -50,6 +52,17 @@ public class MainActivity extends BridgeActivity {
 
         // Configure WebView settings for optimal rendering
         configureWebViewSettings(webView);
+
+        // Set up WebChromeClient to handle permissions (including Web Bluetooth)
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(PermissionRequest request) {
+                // Grant all requested permissions for Web Bluetooth and other features
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    request.grant(request.getResources());
+                }
+            }
+        });
 
         // Set custom WebViewClient for URL filtering
         webView.setWebViewClient(new WebViewClient() {
@@ -100,7 +113,15 @@ public class MainActivity extends BridgeActivity {
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
 
-        // Set user agent to match Chrome on Android tablets
+        // Enable Web Bluetooth and other modern web features
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            settings.setJavaScriptCanOpenWindowsAutomatically(true);
+            settings.setAllowFileAccessFromFileURLs(true);
+            settings.setAllowUniversalAccessFromFileURLs(true);
+            settings.setMediaPlaybackRequiresUserGesture(false);
+        }
+
+        // Set user agent to match Chrome on Android tablets (important for Web Bluetooth)
         String userAgent = "Mozilla/5.0 (Linux; Android 12; SM-T870) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
         settings.setUserAgentString(userAgent);
     }

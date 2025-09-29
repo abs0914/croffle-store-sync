@@ -11,6 +11,7 @@ import { BluetoothPermissionManager, type PermissionStatus } from '@/services/pe
 import { BluetoothPrinter } from '@/types/printer';
 import { PrinterTypeManager } from '@/services/printer/PrinterTypeManager';
 import { Capacitor } from '@capacitor/core';
+import { PrinterWebView } from '@/components/printer/PrinterWebView';
 
 export default function PrinterSettings() {
   const [showDevicePicker, setShowDevicePicker] = useState(false);
@@ -34,6 +35,8 @@ export default function PrinterSettings() {
   } = useThermalPrinter();
 
   const isCapacitor = useMemo(() => !!(window as any).Capacitor?.isNativePlatform?.(), []);
+  const isAndroid = useMemo(() => Capacitor.getPlatform() === 'android', []);
+  const shouldUseWebView = useMemo(() => isCapacitor && isAndroid, [isCapacitor, isAndroid]);
 
   useEffect(() => {
     // Debug plugin availability first
@@ -90,9 +93,28 @@ export default function PrinterSettings() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Printer Settings</h2>
         <div className="text-xs text-muted-foreground">
-          Mode: {isCapacitor ? 'Android (Capacitor)' : 'Web Browser'}
+          Mode: {shouldUseWebView ? 'Android (WebView)' : isCapacitor ? 'Android (Native)' : 'Web Browser'}
         </div>
       </div>
+
+      {/* Conditional rendering: WebView for Android, Native for others */}
+      {shouldUseWebView ? (
+        <PrinterWebView
+          onPrinterConnected={(printer) => {
+            console.log('WebView printer connected:', printer);
+            // Update the main app state if needed
+          }}
+          onPrinterDisconnected={() => {
+            console.log('WebView printer disconnected');
+            // Update the main app state if needed
+          }}
+          onPrintComplete={(success) => {
+            console.log('WebView print complete:', success);
+          }}
+        />
+      ) : (
+        <>
+          {/* Original native/web implementation */}
 
       {/* Permissions */}
       <Card>
@@ -240,6 +262,8 @@ export default function PrinterSettings() {
           <p>• On Android, grant Nearby Devices and Location permissions.</p>
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 }
