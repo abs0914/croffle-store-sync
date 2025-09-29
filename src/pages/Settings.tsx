@@ -26,6 +26,7 @@ export default function Settings() {
   const navigate = useNavigate();
 
   const canAccessAdmin = canAccessAdminPanel(user?.role);
+  const canAccessBIRCompliance = user?.role !== 'cashier';
 
   return (
     <div className="space-y-6">
@@ -47,10 +48,12 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className={`grid w-full ${canAccessBIRCompliance ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <TabsTrigger value="profile">User Profile</TabsTrigger>
           <TabsTrigger value="printer">Thermal Printer</TabsTrigger>
-          <TabsTrigger value="bir-compliance">BIR Compliance</TabsTrigger>
+          {canAccessBIRCompliance && (
+            <TabsTrigger value="bir-compliance">BIR Compliance</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile" className="space-y-4">
@@ -146,9 +149,11 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="bir-compliance" className="space-y-4">
-          <BIRComplianceSettings />
-        </TabsContent>
+        {canAccessBIRCompliance && (
+          <TabsContent value="bir-compliance" className="space-y-4">
+            <BIRComplianceSettings />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

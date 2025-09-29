@@ -18,6 +18,8 @@ export class BluetoothPrinterService {
   
   static async isAvailable(): Promise<boolean> {
     try {
+      console.log('🔍 Checking Bluetooth thermal printing availability...');
+      
       // Check if we're in a browser environment
       if (typeof window === 'undefined') {
         console.log('Not in browser environment');
@@ -42,23 +44,28 @@ export class BluetoothPrinterService {
         try {
           const available = await navigator.bluetooth.getAvailability();
           if (available) {
-            console.log('Web Bluetooth API available');
+            console.log('✅ Web Bluetooth thermal printing available');
             return true;
           } else {
-            console.log('Bluetooth not available on this device');
-            return false;
+            console.log('⚠️ Bluetooth not available on this device');
           }
         } catch (error) {
           console.log('Web Bluetooth check failed:', error);
-          return false;
+          // Continue to try Capacitor BLE
         }
       }
 
-      // No Bluetooth support available
-      console.log('No Bluetooth support available in this environment');
-      return false;
+      // Try Capacitor BLE (for mobile apps)
+      try {
+        await PrinterDiscovery.initialize();
+        console.log('Capacitor Bluetooth LE available');
+        return true;
+      } catch (error) {
+        console.log('Capacitor Bluetooth LE not available:', error);
+        return false;
+      }
     } catch (error) {
-      console.log('Bluetooth thermal printing not available:', error);
+      console.error('❌ Bluetooth thermal printing availability check failed:', error);
       return false;
     }
   }

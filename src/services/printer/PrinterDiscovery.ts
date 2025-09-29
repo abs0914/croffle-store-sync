@@ -13,6 +13,8 @@ export class PrinterDiscovery {
 
   static async initialize(): Promise<void> {
     try {
+      console.log('🔄 Initializing Bluetooth services...');
+      
       // Check if we're in a supported environment
       if (typeof window === 'undefined') {
         throw new Error('Bluetooth not available in server environment');
@@ -26,46 +28,70 @@ export class PrinterDiscovery {
         userAgent: navigator.userAgent
       });
 
-      // Initialize Bluetooth LE client
-      await BleClient.initialize();
-      console.log('Bluetooth LE initialized successfully');
+      // Detect environment
+      const isCapacitor = this.isCapacitorEnvironment();
+      const hasWebBluetooth = this.hasWebBluetoothSupport();
+      
+      console.log(`📱 Environment: ${isCapacitor ? 'Capacitor Mobile App' : 'Web Browser'}`);
+      console.log(`🌐 Web Bluetooth: ${hasWebBluetooth ? 'Available' : 'Not Available'}`);
+
+      if (isCapacitor) {
+        // Initialize Capacitor Bluetooth LE
+        await BleClient.initialize({
+          androidNeverForLocation: false // Required for Android BLE scanning
+        });
+        console.log('✅ Capacitor Bluetooth LE initialized successfully');
+      } else if (hasWebBluetooth) {
+        // Check Web Bluetooth availability
+        const available = await navigator.bluetooth.getAvailability();
+        if (!available) {
+          throw new Error('Web Bluetooth not available - check browser support and permissions');
+        }
+        console.log('✅ Web Bluetooth API available');
+      } else {
+        throw new Error('No Bluetooth support detected - requires Web Bluetooth API or Capacitor environment');
+      }
+      
     } catch (error: any) {
-      console.error('Failed to initialize Bluetooth:', error);
+      console.error('❌ Failed to initialize Bluetooth:', error);
 
       // Provide specific error messages
       if (error.message?.includes('not supported')) {
         throw new Error('Bluetooth not supported on this device');
       } else if (error.message?.includes('not enabled')) {
         throw new Error('Bluetooth not enabled on this device');
+      } else if (error.message?.includes('permission')) {
+        throw new Error('Bluetooth permissions denied - please enable in device settings');
       } else {
-        throw new Error(`Bluetooth not available on this device: ${error.message}`);
+        throw new Error('Bluetooth not available on this device');
       }
     }
   }
 
+  private static isCapacitorEnvironment(): boolean {
+    return !!(window as any).Capacitor?.isNativePlatform?.();
+  }
+
+  private static hasWebBluetoothSupport(): boolean {
+    return typeof window !== 'undefined' && 'bluetooth' in navigator;
+  }
+
   static async requestPermissions(): Promise<boolean> {
     try {
-      console.log('Requesting Bluetooth permissions...');
-
-      // Request Bluetooth permissions by starting and immediately stopping a scan
+      // Request Bluetooth permissions
       await BleClient.requestLEScan({}, () => {});
       await BleClient.stopLEScan();
-
-      console.log('Bluetooth permissions granted');
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Bluetooth permissions denied:', error);
-      console.error('Permission error details:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack
-      });
       return false;
     }
   }
 
   static async scanForPrinters(): Promise<BluetoothPrinter[]> {
     try {
+      console.log('🔍 Starting printer discovery...');
+      
       // Clear previous scan results
       this.discoveredDevices.clear();
 
@@ -77,14 +103,15 @@ export class PrinterDiscovery {
 
       // Check if we're in a web environment and use Web Bluetooth API
       if (typeof window !== 'undefined' && 'bluetooth' in navigator) {
-        console.log('Running in web browser - using Web Bluetooth API');
         return await this.scanWithWebBluetooth();
+      } else {
+        throw new Error('No Bluetooth scanning method available - requires Web Bluetooth API or Capacitor environment');
       }
 
-      // No Bluetooth support available
-      throw new Error('Bluetooth not supported in this environment');
+      // Fallback to Capacitor BLE for mobile apps
+      return await this.scanWithCapacitorBLE();
     } catch (error) {
-      console.error('Failed to scan for printers:', error);
+      console.error('❌ Printer discovery failed:', error);
       throw error;
     }
   }
@@ -158,39 +185,68 @@ export class PrinterDiscovery {
   private static async scanWithCapacitorBLE(): Promise<BluetoothPrinter[]> {
     console.log('Using Capacitor BLE for scanning...');
 
-    // Log additional debugging information
-    console.log('Capacitor BLE scan - Platform info:', {
-      isNativePlatform: Capacitor.isNativePlatform(),
-      platform: Capacitor.getPlatform(),
-      isPluginAvailable: Capacitor.isPluginAvailable('BluetoothLe')
-    });
-
-    // Request permissions first
-    const hasPermissions = await this.requestPermissions();
-    if (!hasPermissions) {
-      throw new Error('Bluetooth permissions required');
+    try {
+      // Request permissions first
+      await this.requestPermissions();
+      console.log('✅ Bluetooth permissions confirmed');
+    } catch (error) {
+      console.error('❌ Permission request failed:', error);
+      throw error;
     }
 
-    console.log('Starting Bluetooth LE scan for thermal printers...');
+    console.log('🚀 Starting Bluetooth LE scan for thermal printers...');
 
-    // Start scanning with callback to collect devices
-    await BleClient.requestLEScan(
-      {
-        services: [], // Scan for all devices, filter later
-        allowDuplicates: false
-      },
-      (result) => {
-        console.log('Found device:', result);
-        this.discoveredDevices.set(result.device.deviceId, result.device);
+    try {
+      // Start scanning with enhanced callback to collect devices
+      await BleClient.requestLEScan(
+        {
+          services: [], // Scan for all devices, filter later
+          allowDuplicates: false,
+          // Android-specific optimizations
+          scanMode: 'lowPowerScan' as any, // Balance between power and discovery speed
+        },
+        (result) => {
+          const deviceName = result.device.name || result.device.deviceId || 'Unknown';
+          console.log(`📱 Found BLE device: "${deviceName}" (${result.device.deviceId}) RSSI: ${result.rssi}dBm`);
+          
+          // Store device with additional metadata
+          this.discoveredDevices.set(result.device.deviceId, {
+            ...result.device,
+            rssi: result.rssi // Store signal strength for debugging
+          } as any);
+        }
+      );
+
+      console.log('⏱️ Scanning for 10 seconds...');
+      
+      // Scan for 10 seconds
+      await new Promise(resolve => setTimeout(resolve, 10000));
+
+      // Stop scanning
+      await BleClient.stopLEScan();
+      console.log(`✅ Scan completed. Found ${this.discoveredDevices.size} BLE devices total.`);
+
+    } catch (scanError: any) {
+      console.error('❌ BLE scan failed:', scanError);
+      
+      // Try to stop scanning in case it's still running
+      try {
+        await BleClient.stopLEScan();
+      } catch (stopError) {
+        console.error('Failed to stop scan:', stopError);
       }
-    );
-
-    // Scan for 10 seconds
-    await new Promise(resolve => setTimeout(resolve, 10000));
-
-    // Stop scanning
-    await BleClient.stopLEScan();
-    console.log(`Scan completed. Found ${this.discoveredDevices.size} devices.`);
+      
+      // Provide specific error messages based on the error
+      if (scanError.message?.includes('permission')) {
+        throw new Error('Bluetooth scanning permissions denied. Please check app permissions in Android settings.');
+      } else if (scanError.message?.includes('location')) {
+        throw new Error('Location services required for Bluetooth scanning on Android. Please enable location access.');
+      } else if (scanError.message?.includes('not enabled')) {
+        throw new Error('Bluetooth not enabled. Please turn on Bluetooth in device settings.');
+      } else {
+        throw new Error(`Bluetooth scan failed: ${scanError.message || 'Unknown error'}`);
+      }
+    }
 
     // Filter for thermal printers based on device names
     const printers: BluetoothPrinter[] = [];
@@ -217,15 +273,23 @@ export class PrinterDiscovery {
       /XPRINTER/i
     ];
 
+    // Process discovered devices and filter for thermal printers
+    console.log('🔎 Analyzing discovered devices for thermal printer patterns...');
+    
     for (const [deviceId, device] of this.discoveredDevices) {
       const deviceName = device.name || 'Unknown Device';
+      const deviceInfo = `"${deviceName}" (${deviceId})`;
+      
+      console.log(`📋 Checking device: ${deviceInfo}`);
 
       // Check if device name matches thermal printer patterns
-      const isThermalPrinter = thermalPrinterPatterns.some(pattern =>
-        pattern.test(deviceName)
-      );
+      const matchedPatterns = thermalPrinterPatterns.filter(pattern => pattern.test(deviceName));
+      const isThermalPrinter = matchedPatterns.length > 0;
+      
+      // Also check for generic "print" keyword as fallback
+      const hasGenericPrint = deviceName.toLowerCase().includes('print');
 
-      if (isThermalPrinter || deviceName.toLowerCase().includes('print')) {
+      if (isThermalPrinter || hasGenericPrint) {
         const printer: BluetoothPrinter = {
           id: deviceId,
           name: deviceName,
@@ -239,11 +303,31 @@ export class PrinterDiscovery {
         printer.capabilities = PrinterTypeManager.getCapabilities(printer.printerType);
         
         printers.push(printer);
-        console.log(`Identified printer: ${deviceName} (${printer.printerType}) (${deviceId})`);
+        
+        if (isThermalPrinter) {
+          console.log(`✅ Identified thermal printer: ${deviceInfo} -> Patterns: [${matchedPatterns.map(p => p.source).join(', ')}] -> Type: ${printer.printerType}`);
+        } else {
+          console.log(`⚠️ Potential printer (generic): ${deviceInfo} -> Type: ${printer.printerType}`);
+        }
+      } else {
+        console.log(`❌ Skipped non-printer device: ${deviceInfo}`);
       }
     }
 
-    console.log(`Found ${printers.length} thermal printer(s)`);
+    console.log(`🎯 Found ${printers.length} thermal printer(s) out of ${this.discoveredDevices.size} total BLE devices`);
+    
+    // If no printers found, provide helpful debug info
+    if (printers.length === 0) {
+      console.log('🔍 Debug: All discovered devices:');
+      for (const [deviceId, device] of this.discoveredDevices) {
+        console.log(`  - "${device.name || 'Unnamed Device'}" (${deviceId})`);
+      }
+      console.log('💡 Tip: Make sure your thermal printer is:');
+      console.log('  1. Powered on');
+      console.log('  2. In Bluetooth pairing mode');
+      console.log('  3. Named with recognizable printer keywords');
+    }
+    
     return printers;
   }
   

@@ -212,6 +212,8 @@ export function QuickPrinterSetup({ children }: QuickPrinterSetupProps) {
           {process.env.NODE_ENV === 'development' && (
             <div className="text-xs text-gray-500 space-y-1 p-2 bg-gray-50 rounded">
               <p><strong>Debug Info:</strong></p>
+              <p>Environment: {(window as any).Capacitor?.isNativePlatform?.() ? 'Capacitor Mobile App' : 'Web Browser'}</p>
+              <p>Web Bluetooth: {'bluetooth' in navigator ? 'Available' : 'Not Available'}</p>
               <p>Bluetooth Available: {isAvailable ? 'Yes' : 'No'}</p>
               <p>Currently Scanning: {isScanning ? 'Yes' : 'No'}</p>
               <p>Found Printers: {availablePrinters.length}</p>
@@ -233,6 +235,12 @@ export function QuickPrinterSetup({ children }: QuickPrinterSetupProps) {
                   ))}
                 </div>
               )}
+              <div className="mt-2 pt-2 border-t">
+                <p><strong>Troubleshooting:</strong></p>
+                <p className="text-orange-600">Android: Check Bluetooth & Location permissions</p>
+                <p className="text-blue-600">iOS: Ensure Bluetooth is enabled</p>
+                <p className="text-green-600">Web: Use Chrome/Edge for best support</p>
+              </div>
             </div>
           )}
 
@@ -240,12 +248,15 @@ export function QuickPrinterSetup({ children }: QuickPrinterSetupProps) {
           <div className="text-xs text-gray-500 space-y-1">
             <p><strong>Setup Instructions:</strong></p>
             <p>1. Turn on your thermal printer</p>
-            <p>2. Enable Bluetooth pairing mode</p>
+            <p>2. Enable Bluetooth pairing mode on printer</p>
             <p>3. Click "Scan for Printers"</p>
             <p>4. Select your printer from the list</p>
             <p>5. Test the connection</p>
             <p className="text-orange-600 mt-2">
-              <strong>Note:</strong> This feature works best on mobile devices with Bluetooth support.
+              <strong>Android:</strong> Ensure Bluetooth and Location permissions are enabled in Settings → Apps → Croffle Store POS Kiosk → Permissions.
+            </p>
+            <p className="text-blue-600">
+              <strong>Web:</strong> Use Chrome or Edge browser for best Bluetooth support.
             </p>
           </div>
         </div>

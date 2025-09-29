@@ -184,11 +184,24 @@ export const MainAppRoutes = () => {
         }
       />
 
-      {/* Settings - Managers+ */}
+      {/* Settings - All authenticated users */}
       <Route
-        path="/settings/*"
+        path="/settings"
         element={
-          <ProtectedRoute requiredRole="manager">
+          <ProtectedRoute>
+            <MainLayout>
+              <React.Suspense fallback={<LoadingSpinner />}>
+                <Settings />
+              </React.Suspense>
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/thermal-printer"
+        element={
+          <ProtectedRoute>
             <MainLayout>
               <React.Suspense fallback={<LoadingSpinner />}>
                 <Settings />

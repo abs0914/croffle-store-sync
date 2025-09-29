@@ -41,11 +41,23 @@ export function ProtectedRoute({
 
   // Check role-based access
   const hasRoleAccess = () => {
-    if (!user?.role) return false;
+    console.log(`🔍 ProtectedRoute hasRoleAccess Debug:`, {
+      userRole: user?.role,
+      allowedRoles,
+      requiredRole,
+      currentPath: window.location.pathname
+    });
+    
+    if (!user?.role) {
+      console.log(`❌ No user role found`);
+      return false;
+    }
     
     // If specific allowed roles are provided, check against them
     if (allowedRoles && allowedRoles.length > 0) {
-      return allowedRoles.includes(user.role);
+      const hasAllowedRole = allowedRoles.includes(user.role);
+      console.log(`🎯 Checking allowed roles:`, { allowedRoles, userRole: user.role, hasAllowed: hasAllowedRole });
+      return hasAllowedRole;
     }
     
     // If a required role is specified, check role hierarchy
@@ -60,30 +72,65 @@ export function ProtectedRoute({
         cashier: 1
       };
       
-      return roleHierarchy[user.role] >= roleHierarchy[requiredRole];
+      const hasHierarchyAccess = roleHierarchy[user.role] >= roleHierarchy[requiredRole];
+      console.log(`📊 Checking role hierarchy:`, { 
+        userRole: user.role, 
+        requiredRole, 
+        userLevel: roleHierarchy[user.role],
+        requiredLevel: roleHierarchy[requiredRole],
+        hasAccess: hasHierarchyAccess 
+      });
+      return hasHierarchyAccess;
     }
     
     // Check route-based access using current path
     const currentPath = window.location.pathname;
-    return checkRouteAccess(user.role, currentPath);
+    const routeAccess = checkRouteAccess(user.role, currentPath);
+    console.log(`🛣️ Checking route-based access:`, { 
+      userRole: user.role, 
+      currentPath, 
+      routeAccess 
+    });
+    return routeAccess;
   };
 
   // Check store access if required
   const hasStoreAccess = () => {
-    if (!requireStoreAccess) return true;
+    console.log(`🏪 ProtectedRoute hasStoreAccess Debug:`, {
+      requireStoreAccess,
+      userRole: user?.role,
+      storeIds: user?.storeIds
+    });
+    
+    if (!requireStoreAccess) {
+      console.log(`✅ Store access not required`);
+      return true;
+    }
     
     // Admin and owner have access to all stores
     if (user?.role === 'admin' || user?.role === 'owner') {
+      console.log(`✅ Admin/Owner has access to all stores`);
       return true;
     }
     
     // For other roles, check if they have at least one store assigned
-    return user?.storeIds && user.storeIds.length > 0;
+    const hasStores = user?.storeIds && user.storeIds.length > 0;
+    console.log(`🔍 Checking store assignment:`, { hasStores, storeCount: user?.storeIds?.length });
+    return hasStores;
   };
 
   const roleAccess = hasRoleAccess();
   const storeAccess = hasStoreAccess();
   const currentPath = window.location.pathname;
+
+  // Final access determination debug
+  console.log(`🚦 Final Access Decision:`, {
+    roleAccess,
+    storeAccess,
+    willAllow: roleAccess && storeAccess,
+    currentPath,
+    userRole: user?.role
+  });
 
   // Debug logging in development
   debugRouteAccess(user?.role, currentPath, storeAccess);
