@@ -12,7 +12,6 @@ interface CameraContainerProps {
   isStartingCamera: boolean;
   cameraError: string | null;
   logVideoState: () => void;
-  handleCaptureClick: () => void;
   resetPhoto: () => void;
   initCamera: () => void;
   handleRetry: () => void;
@@ -26,7 +25,6 @@ export default function CameraContainer({
   isStartingCamera,
   cameraError,
   logVideoState,
-  handleCaptureClick,
   resetPhoto,
   initCamera,
   handleRetry
@@ -44,7 +42,6 @@ export default function CameraContainer({
           cameraInitialized={cameraInitialized}
           isStartingCamera={isStartingCamera}
           logVideoState={logVideoState}
-          onCaptureClick={handleCaptureClick}
         />
       ) : photo ? (
         <PhotoPreview photoUrl={photo} onReset={resetPhoto} />
