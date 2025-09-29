@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Bluetooth, Search, Printer, CheckCircle, AlertCircle } from 'lucide-react';
 import { useThermalPrinter } from '@/hooks/useThermalPrinter';
+import { BluetoothDevicePickerDialog } from './BluetoothDevicePickerDialog';
+import { BluetoothPrinter } from '@/types/printer';
 
 interface QuickPrinterSetupProps {
   children: React.ReactNode;
@@ -20,6 +22,7 @@ interface QuickPrinterSetupProps {
 
 export function QuickPrinterSetup({ children }: QuickPrinterSetupProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showDevicePicker, setShowDevicePicker] = useState(false);
   const {
     isAvailable,
     isConnected,
@@ -32,6 +35,23 @@ export function QuickPrinterSetup({ children }: QuickPrinterSetupProps) {
     disconnectPrinter,
     printTestReceipt
   } = useThermalPrinter();
+
+  const handleScanClick = async () => {
+    // Check if we're in a Capacitor environment
+    const isCapacitor = !!(window as any).Capacitor?.isNativePlatform?.();
+    
+    if (isCapacitor) {
+      // For Capacitor (native Android app), show our custom device picker dialog
+      setShowDevicePicker(true);
+    } else {
+      // For web browsers, use the existing scan function which will show native dialog
+      await scanForPrinters();
+    }
+  };
+
+  const handleDeviceSelected = async (printer: BluetoothPrinter) => {
+    await connectToPrinter(printer);
+  };
 
   if (!isAvailable) {
     return (
@@ -114,7 +134,7 @@ export function QuickPrinterSetup({ children }: QuickPrinterSetupProps) {
           {!isConnected && (
             <div className="space-y-3">
               <Button
-                onClick={scanForPrinters}
+                onClick={handleScanClick}
                 disabled={isScanning}
                 className="w-full flex items-center justify-center"
               >
@@ -260,6 +280,13 @@ export function QuickPrinterSetup({ children }: QuickPrinterSetupProps) {
             </p>
           </div>
         </div>
+
+        {/* Device Picker Dialog for Capacitor */}
+        <BluetoothDevicePickerDialog
+          isOpen={showDevicePicker}
+          onClose={() => setShowDevicePicker(false)}
+          onDeviceSelected={handleDeviceSelected}
+        />
       </DialogContent>
     </Dialog>
   );

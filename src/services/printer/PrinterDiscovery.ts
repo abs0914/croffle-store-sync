@@ -88,7 +88,7 @@ export class PrinterDiscovery {
     }
   }
 
-  static async scanForPrinters(): Promise<BluetoothPrinter[]> {
+  static async scanForPrinters(showNativeDialog: boolean = false): Promise<BluetoothPrinter[]> {
     try {
       console.log('🔍 Starting printer discovery...');
       
@@ -103,7 +103,13 @@ export class PrinterDiscovery {
 
       // Check if we're in a web environment and use Web Bluetooth API
       if (typeof window !== 'undefined' && 'bluetooth' in navigator) {
-        return await this.scanWithWebBluetooth();
+        // For web environments, we can optionally show the native dialog
+        if (showNativeDialog) {
+          return await this.scanWithWebBluetooth();
+        } else {
+          // Return empty array to trigger custom dialog in web environment
+          return [];
+        }
       } else {
         throw new Error('No Bluetooth scanning method available - requires Web Bluetooth API or Capacitor environment');
       }

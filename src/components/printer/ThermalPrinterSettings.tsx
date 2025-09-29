@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,12 +15,15 @@ import { Spinner } from '@/components/ui/spinner';
 import { Printer, Bluetooth, Search } from 'lucide-react';
 import { useThermalPrinter } from '@/hooks/useThermalPrinter';
 import { PrinterTypeManager } from '@/services/printer/PrinterTypeManager';
+import { BluetoothDevicePickerDialog } from './BluetoothDevicePickerDialog';
+import { BluetoothPrinter } from '@/types/printer';
 
 interface ThermalPrinterSettingsProps {
   children: React.ReactNode;
 }
 
 export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps) {
+  const [showDevicePicker, setShowDevicePicker] = useState(false);
   const {
     isAvailable,
     isConnected,
@@ -34,6 +37,23 @@ export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps
     printTestReceipt,
     testServiceDiscovery
   } = useThermalPrinter();
+
+  const handleScanClick = async () => {
+    // Check if we're in a Capacitor environment
+    const isCapacitor = !!(window as any).Capacitor?.isNativePlatform?.();
+    
+    if (isCapacitor) {
+      // For Capacitor (native Android app), show our custom device picker dialog
+      setShowDevicePicker(true);
+    } else {
+      // For web browsers, use the existing scan function which will show native dialog
+      await scanForPrinters();
+    }
+  };
+
+  const handleDeviceSelected = async (printer: BluetoothPrinter) => {
+    await connectToPrinter(printer);
+  };
 
   if (!isAvailable) {
     return (
@@ -141,7 +161,7 @@ export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps
             </CardHeader>
             <CardContent className="space-y-3">
               <Button
-                onClick={scanForPrinters}
+                onClick={handleScanClick}
                 disabled={isScanning}
                 className="w-full"
               >
@@ -231,6 +251,13 @@ export function ThermalPrinterSettings({ children }: ThermalPrinterSettingsProps
             </Card>
           )}
         </div>
+
+        {/* Device Picker Dialog for Capacitor */}
+        <BluetoothDevicePickerDialog
+          isOpen={showDevicePicker}
+          onClose={() => setShowDevicePicker(false)}
+          onDeviceSelected={handleDeviceSelected}
+        />
       </DialogContent>
     </Dialog>
   );
