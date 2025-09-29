@@ -16,7 +16,6 @@ public class MainActivity extends BridgeActivity {
 
     private static final String TARGET_URL = "https://pos.thecrofflestore.com/";
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

@@ -10,6 +10,7 @@ import { BluetoothDevicePickerDialog } from '@/components/printer/BluetoothDevic
 import { BluetoothPermissionManager, type PermissionStatus } from '@/services/permissions/BluetoothPermissionManager';
 import { BluetoothPrinter } from '@/types/printer';
 import { PrinterTypeManager } from '@/services/printer/PrinterTypeManager';
+import { Capacitor } from '@capacitor/core';
 
 export default function PrinterSettings() {
   const [showDevicePicker, setShowDevicePicker] = useState(false);
@@ -35,6 +36,15 @@ export default function PrinterSettings() {
   const isCapacitor = useMemo(() => !!(window as any).Capacitor?.isNativePlatform?.(), []);
 
   useEffect(() => {
+    // Debug plugin availability first
+    console.log('🔧 Debugging Capacitor plugin availability:');
+    console.log('- Capacitor.isNativePlatform():', Capacitor.isNativePlatform());
+    console.log('- Capacitor.getPlatform():', Capacitor.getPlatform());
+    console.log('- BluetoothLe plugin available:', Capacitor.isPluginAvailable('BluetoothLe'));
+    console.log('- Window.Capacitor:', !!(window as any).Capacitor);
+
+    BluetoothPermissionManager.debugPluginAvailability();
+
     // Initial check on mount for clear status badges
     refreshPermissions();
   }, []);
