@@ -13,6 +13,7 @@ import CashierShiftReportView from "./reports/CashierShiftReportView";
 import CashierInventoryReportView from "./reports/CashierInventoryReportView";
 import { BIRXReadingView } from "@/components/reports/BIRXReadingView";
 import { BIRZReadingView } from "@/components/reports/BIRZReadingView";
+import { ZReadingThermalWrapper } from "./reports/ZReadingThermalWrapper";
 
 interface ReportViewProps {
   reportType: ReportType;
@@ -40,7 +41,7 @@ export function ReportView({ reportType, data, storeId, selectedStoreId, isAllSt
     case 'x_reading':
       return <XReadingView storeId={effectiveStoreId} date={dateRange.from} />;
     case 'z_reading':
-      return <ZReadingView storeId={effectiveStoreId} date={dateRange.from} />;
+      return <ZReadingThermalWrapper storeId={effectiveStoreId} date={dateRange.from} />;
     case 'bir_ejournal':
       return <BIREJournalView storeId={effectiveStoreId} date={dateRange.from} />;
     case 'bir_backup':
