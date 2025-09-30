@@ -381,18 +381,8 @@ export class PrinterDiscovery {
       printer.isConnected = true;
       this.connectedPrinter = printer;
 
-      // Set up auto-reconnect on disconnect (no timeout)
-      printer.webBluetoothDevice.addEventListener('gattserverdisconnected', () => {
-        console.log('⚠️ Web Bluetooth disconnected - will attempt reconnection');
-        setTimeout(async () => {
-          try {
-            await printer.webBluetoothDevice?.gatt?.connect();
-            console.log('✅ Web Bluetooth reconnected automatically');
-          } catch (error) {
-            console.warn('Auto-reconnection failed:', error);
-          }
-        }, 2000);
-      });
+      // Disconnection listener is now handled by BluetoothReconnectionService
+      // Import and setup in the calling code after successful connection
 
       console.log('Connected to printer via Web Bluetooth:', printer.name);
       return true;
@@ -409,6 +399,8 @@ export class PrinterDiscovery {
       }
 
       console.log('Connecting via Capacitor BLE...');
+      // Disconnection callback is now handled by BluetoothReconnectionService
+      // Will be set up in the calling code after successful connection
       await BleClient.connect(printer.device.deviceId);
 
       printer.isConnected = true;

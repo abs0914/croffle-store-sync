@@ -4,14 +4,15 @@
  */
 
 import { PrinterDiscovery } from './PrinterDiscovery';
+import { BluetoothReconnectionService } from './BluetoothReconnectionService';
 import { toast } from 'sonner';
 
 export class BluetoothConnectionManager {
   private static reconnectionAttempts: number = 0;
-  private static maxReconnectionAttempts: number = 3;
+  private static maxReconnectionAttempts: number = 1; // Simplified to single attempt
 
   /**
-   * Force a connection health check and attempt reconnection if needed
+   * Manual health check - used for user-triggered reconnection
    */
   static async checkAndRestoreConnection(): Promise<boolean> {
     const connectedPrinter = PrinterDiscovery.getConnectedPrinter();
@@ -21,88 +22,39 @@ export class BluetoothConnectionManager {
       return false;
     }
 
-    try {
-      console.log('🔍 Checking printer connection health...');
-      
-      // Check current connection status
-      const isConnected = PrinterDiscovery.isConnected();
-      
-      if (!isConnected) {
-        console.log('⚠️ Printer connection lost - attempting restoration...');
-        
-        // Attempt reconnection
-        const restored = await this.forceReconnection();
-        
-        if (restored) {
-          this.reconnectionAttempts = 0; // Reset counter on success
-          toast.success('Printer connection restored', {
-            description: 'Bluetooth connection has been re-established'
-          });
-          return true;
-        } else {
-          toast.error('Failed to restore printer connection', {
-            description: 'Please check your printer and try reconnecting manually'
-          });
-          return false;
-        }
-      } else {
-        console.log('✅ Printer connection is healthy');
-        this.reconnectionAttempts = 0; // Reset counter
-        return true;
-      }
-    } catch (error) {
-      console.error('Connection health check failed:', error);
-      return false;
+    // Check if connection is healthy
+    if (PrinterDiscovery.isConnected()) {
+      console.log('✅ Printer connection is healthy');
+      return true;
     }
+
+    console.log('🔧 Manual connection restore requested...');
+    
+    // Use the reconnection service for manual attempts
+    return await BluetoothReconnectionService.manualReconnect(connectedPrinter);
   }
 
   /**
-   * Force reconnection to the current printer
+   * Force reconnection - for user-triggered manual reconnection
    */
   static async forceReconnection(): Promise<boolean> {
     const connectedPrinter = PrinterDiscovery.getConnectedPrinter();
     
     if (!connectedPrinter) {
+      console.log('No printer to reconnect');
       return false;
     }
 
-    if (this.reconnectionAttempts >= this.maxReconnectionAttempts) {
-      console.log(`❌ Maximum reconnection attempts (${this.maxReconnectionAttempts}) reached`);
-      return false;
-    }
-
-    try {
-      this.reconnectionAttempts++;
-      console.log(`🔄 Force reconnection attempt ${this.reconnectionAttempts}/${this.maxReconnectionAttempts}...`);
-
-      // Attempt to reconnect
-      const success = await PrinterDiscovery.connectToPrinter(connectedPrinter);
-      
-      if (success) {
-        console.log('✅ Force reconnection successful');
-        return true;
-      } else {
-        console.log(`❌ Force reconnection attempt ${this.reconnectionAttempts} failed`);
-        
-        if (this.reconnectionAttempts < this.maxReconnectionAttempts) {
-          // Wait before next attempt
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          return await this.forceReconnection();
-        }
-        
-        return false;
-      }
-    } catch (error) {
-      console.error(`❌ Force reconnection attempt ${this.reconnectionAttempts} failed:`, error);
-      
-      if (this.reconnectionAttempts < this.maxReconnectionAttempts) {
-        // Wait before next attempt
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return await this.forceReconnection();
-      }
-      
-      return false;
-    }
+    console.log('🔄 Force reconnection requested...');
+    
+    // Disconnect first
+    await PrinterDiscovery.disconnectPrinter();
+    
+    // Brief delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Use the reconnection service for manual attempts
+    return await BluetoothReconnectionService.manualReconnect(connectedPrinter);
   }
 
   /**
