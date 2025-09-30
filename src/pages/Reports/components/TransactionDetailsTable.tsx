@@ -16,8 +16,9 @@ import { voidTransaction, VoidRequestData } from "@/services/transactions/voidTr
 import { toast } from "sonner";
 import { hasPermission } from "@/types/rolePermissions";
 import { supabase } from "@/integrations/supabase/client";
-import { ReceiptPdfGenerator, ReceiptData } from "@/services/reports/receiptPdfGenerator";
 import { formatInTimeZone as formatInTZ } from "date-fns-tz";
+import { thermalPrinter, ThermalReceiptData } from "@/services/thermalPrinter/thermalPrinterService";
+import { Capacitor } from "@capacitor/core";
 
 interface Transaction {
   id: string;
@@ -150,8 +151,8 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
 
       const storeData = txData.stores as any;
 
-      // Transform to ReceiptData format
-      const receiptData: ReceiptData = {
+      // Transform to thermal receipt format
+      const thermalReceiptData: ThermalReceiptData = {
         receiptNumber: transaction.receipt_number,
         businessDate: formatInTZ(new Date(transaction.created_at), 'Asia/Manila', 'yyyy-MM-dd'),
         transactionTime: formatInTZ(new Date(transaction.created_at), 'Asia/Manila', 'HH:mm:ss'),
@@ -164,8 +165,7 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
           quantity: item.quantity,
           unitPrice: item.unitPrice || 0,
           lineTotal: item.totalPrice || (item.unitPrice * item.quantity),
-          itemDiscount: 0,
-          vatExemptFlag: false
+          itemDiscount: 0
         })),
         grossAmount: transaction.total,
         discountAmount: 0,
@@ -177,33 +177,54 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
                        transaction.payment_method
       };
 
-      // Generate PDF
-      const generator = new ReceiptPdfGenerator();
-      const pdfDataUri = generator.generateReceipt(receiptData);
+      // Check if running on native mobile platform
+      const isNative = Capacitor.isNativePlatform();
 
-      // Open in new window
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(`
-          <html>
-            <head><title>Receipt - ${transaction.receipt_number}</title></head>
-            <body style="margin:0">
-              <iframe src="${pdfDataUri}" width="100%" height="100%" style="border:none"></iframe>
-            </body>
-          </html>
-        `);
+      if (isNative) {
+        // Print to Bluetooth thermal printer
+        const success = await thermalPrinter.printReceipt(thermalReceiptData);
+        if (!success) {
+          throw new Error('Failed to print to thermal printer');
+        }
       } else {
-        // Fallback: download the PDF
-        const link = document.createElement('a');
-        link.href = pdfDataUri;
-        link.download = `receipt-${transaction.receipt_number}.pdf`;
-        link.click();
+        // Web fallback: Show formatted receipt in new window
+        const receiptText = thermalPrinter.formatReceipt(thermalReceiptData);
+        const newWindow = window.open();
+        if (newWindow) {
+          newWindow.document.write(`
+            <html>
+              <head>
+                <title>Receipt - ${transaction.receipt_number}</title>
+                <style>
+                  body {
+                    font-family: 'Courier New', monospace;
+                    white-space: pre;
+                    padding: 20px;
+                    background: #f5f5f5;
+                  }
+                  .receipt {
+                    background: white;
+                    padding: 20px;
+                    max-width: 400px;
+                    margin: 0 auto;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="receipt">${receiptText.replace(/\n/g, '<br>')}</div>
+              </body>
+            </html>
+          `);
+        } else {
+          toast.info('Please allow pop-ups to view the receipt');
+        }
       }
 
-      toast.success('Receipt generated successfully');
+      toast.success('Receipt printed successfully');
     } catch (error) {
       console.error('Error reprinting receipt:', error);
-      toast.error('Failed to generate receipt');
+      toast.error('Failed to print receipt');
     } finally {
       setIsReprinting(null);
     }
