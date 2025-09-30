@@ -37,15 +37,6 @@ export const deductInventoryForTransactionEnhancedWithAuth = async (
 ): Promise<EnhancedDeductionResult> => {
   console.log(`🔄 ENHANCED DEDUCTION: Starting for transaction ${transactionId} with ${items.length} items, user ${userId}`);
   
-  // **CRITICAL DEBUG**: Check if this function is even being called
-  console.log(`🚨 🚀 ENHANCED DEDUCTION FUNCTION CALLED! 🚀`);
-  console.log(`🚨 📅 Timestamp: ${new Date().toISOString()}`);
-  console.log(`🚨 📋 Transaction ID: ${transactionId}`);
-  console.log(`🚨 🏪 Store ID: ${storeId}`);
-  console.log(`🚨 👤 User ID: ${userId}`);
-  console.log(`🚨 📦 Items count: ${items.length}`);
-  console.log(`🚨 📊 Items detail:`, JSON.stringify(items, null, 2));
-  
   const result: EnhancedDeductionResult = {
     success: true,
     deductedItems: [],
@@ -64,61 +55,64 @@ export const deductInventoryForTransactionEnhancedWithAuth = async (
   }
 
   try {
+    // 🚀 PHASE 2 OPTIMIZATION: Separate Mix & Match from regular products
+    const mixMatchItems: typeof items = [];
+    const regularItems: typeof items = [];
+    
     for (const item of items) {
-      console.log(`📦 ENHANCED DEDUCTION: Processing ${item.productName} x${item.quantity}`);
-      
-      // Check if this is a Mix & Match product
-      const isMixMatch = isMixMatchProduct(item.productName);
-      
-      if (isMixMatch) {
-        console.log(`🎯 ENHANCED DEDUCTION: ${item.productName} detected as Mix & Match, using smart deduction`);
+      if (isMixMatchProduct(item.productName)) {
+        mixMatchItems.push(item);
         result.isMixMatch = true;
-        
-        // Use smart Mix & Match deduction with auth context
-        const smartResult = await deductMixMatchInventoryWithAuth(
-          transactionId,
-          storeId,
-          item.productId,
-          item.productName,
-          item.quantity,
-          userId // Pass authenticated user ID
-        );
-        
-        // Merge results
-        result.deductedItems.push(...smartResult.deductedItems);
-        if (smartResult.skippedItems) {
-          result.skippedItems = [...(result.skippedItems || []), ...smartResult.skippedItems];
-        }
-        result.errors.push(...smartResult.errors);
-        result.debugInfo = smartResult.debugInfo;
-        
-        if (!smartResult.success) {
-          result.success = false;
-        }
-        
       } else {
-        console.log(`📋 ENHANCED DEDUCTION: ${item.productName} is standard product, using regular deduction`);
-        
-        // Use regular deduction for non-Mix & Match products with auth context
-        const regularResult = await deductRegularProductWithAuth(
-          transactionId,
-          storeId,
-          item.productId,
-          item.productName,
-          item.quantity,
-          userId // Pass authenticated user ID
-        );
-        
-        // Merge results
-        result.deductedItems.push(...regularResult.deductedItems.map(item => ({
-          ...item,
-          category: undefined // Regular products don't have categories
-        })));
-        result.errors.push(...regularResult.errors);
-        
-        if (!regularResult.success) {
-          result.success = false;
-        }
+        regularItems.push(item);
+      }
+    }
+    
+    console.log(`📊 BATCH SPLIT: ${mixMatchItems.length} Mix & Match, ${regularItems.length} regular products`);
+    
+    // 🚀 Process regular products in batch
+    if (regularItems.length > 0) {
+      console.log(`🚀 BATCH DEDUCTION: Processing ${regularItems.length} regular products...`);
+      const batchResult = await deductRegularProductsBatch(
+        transactionId,
+        storeId,
+        regularItems,
+        userId
+      );
+      
+      result.deductedItems.push(...batchResult.deductedItems.map(item => ({
+        ...item,
+        category: undefined
+      })));
+      result.errors.push(...batchResult.errors);
+      
+      if (!batchResult.success) {
+        result.success = false;
+      }
+    }
+    
+    // Process Mix & Match products individually (they require special handling)
+    for (const item of mixMatchItems) {
+      console.log(`🎯 ENHANCED DEDUCTION: ${item.productName} detected as Mix & Match, using smart deduction`);
+      
+      const smartResult = await deductMixMatchInventoryWithAuth(
+        transactionId,
+        storeId,
+        item.productId,
+        item.productName,
+        item.quantity,
+        userId
+      );
+      
+      result.deductedItems.push(...smartResult.deductedItems);
+      if (smartResult.skippedItems) {
+        result.skippedItems = [...(result.skippedItems || []), ...smartResult.skippedItems];
+      }
+      result.errors.push(...smartResult.errors);
+      result.debugInfo = smartResult.debugInfo;
+      
+      if (!smartResult.success) {
+        result.success = false;
       }
     }
 
@@ -177,6 +171,203 @@ function isMixMatchProduct(productName: string): boolean {
   
   // Direct check for base products
   return actualProductName.includes('croffle overload') || actualProductName.includes('mini croffle');
+}
+
+/**
+ * 🚀 PHASE 2 OPTIMIZATION: Batch deduction for regular products
+ * Processes multiple products with a single inventory fetch and batch updates
+ */
+async function deductRegularProductsBatch(
+  transactionId: string,
+  storeId: string,
+  items: Array<{ productId: string; productName: string; quantity: number }>,
+  userId: string
+): Promise<InventoryDeductionResult> {
+  const result: InventoryDeductionResult = {
+    success: true,
+    deductedItems: [],
+    errors: []
+  };
+
+  try {
+    // Step 1: Fetch all product recipes in one query
+    console.log(`🔍 BATCH: Fetching recipes for ${items.length} products...`);
+    
+    const productIds = items.map(i => i.productId).filter(id => id && id !== 'undefined');
+    const productNames = items.filter(i => !i.productId || i.productId === 'undefined').map(i => i.productName);
+    
+    let query = supabase
+      .from('product_catalog')
+      .select(`
+        id,
+        product_name,
+        recipe_id,
+        recipe:recipes!recipe_id (
+          id,
+          name,
+          recipe_ingredients (
+            quantity,
+            ingredient_group_name,
+            is_optional,
+            inventory_stock_id,
+            inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
+              id,
+              item,
+              stock_quantity
+            )
+          )
+        )
+      `)
+      .eq('store_id', storeId)
+      .eq('is_available', true);
+    
+    if (productIds.length > 0) {
+      query = query.in('id', productIds);
+    } else if (productNames.length > 0) {
+      query = query.in('product_name', productNames);
+    }
+    
+    const { data: products, error: catalogError } = await query;
+    
+    if (catalogError) {
+      result.errors.push(`Error fetching recipes: ${catalogError.message}`);
+      result.success = false;
+      return result;
+    }
+    
+    console.log(`✅ BATCH: Fetched ${products?.length || 0} product recipes`);
+    
+    // Step 2: Calculate all deductions
+    interface DeductionPlan {
+      inventoryStockId: string;
+      itemName: string;
+      totalDeduction: number;
+      currentStock: number;
+      productName: string;
+      recipeName: string;
+      groupName: string;
+    }
+    
+    const deductionMap = new Map<string, DeductionPlan>();
+    const inventoryStockIds = new Set<string>();
+    
+    for (const item of items) {
+      const product = products?.find(p => 
+        p.id === item.productId || p.product_name === item.productName
+      );
+      
+      if (!product?.recipe) {
+        console.log(`ℹ️ No recipe found for ${item.productName}, skipping`);
+        continue;
+      }
+      
+      const recipe = product.recipe;
+      console.log(`📝 Processing recipe: ${recipe.name} with ${recipe.recipe_ingredients?.length || 0} ingredients for ${item.productName} x${item.quantity}`);
+      
+      for (const ingredient of recipe.recipe_ingredients || []) {
+        if (!ingredient.inventory_stock_id || ingredient.is_optional) {
+          continue;
+        }
+        
+        inventoryStockIds.add(ingredient.inventory_stock_id);
+        const deduction = ingredient.quantity * item.quantity;
+        const itemName = ingredient.inventory_stock?.item || 'unknown';
+        
+        const existing = deductionMap.get(ingredient.inventory_stock_id);
+        if (existing) {
+          existing.totalDeduction += deduction;
+        } else {
+          deductionMap.set(ingredient.inventory_stock_id, {
+            inventoryStockId: ingredient.inventory_stock_id,
+            itemName,
+            totalDeduction: deduction,
+            currentStock: ingredient.inventory_stock?.stock_quantity || 0,
+            productName: item.productName,
+            recipeName: recipe.name,
+            groupName: ingredient.ingredient_group_name || 'base'
+          });
+        }
+      }
+    }
+    
+    console.log(`📊 BATCH: Calculated ${deductionMap.size} unique inventory deductions`);
+    
+    // Step 3: Fetch current stock for all items (SINGLE QUERY)
+    if (inventoryStockIds.size === 0) {
+      console.log(`ℹ️ No inventory items to deduct`);
+      return result;
+    }
+    
+    const { data: stockItems, error: stockError } = await supabase
+      .from('inventory_stock')
+      .select('*')
+      .in('id', Array.from(inventoryStockIds));
+    
+    if (stockError) {
+      result.errors.push(`Error fetching stock: ${stockError.message}`);
+      result.success = false;
+      return result;
+    }
+    
+    console.log(`✅ BATCH: Fetched ${stockItems?.length || 0} inventory stock items`);
+    
+    // Step 4: Perform all updates (BATCH UPDATE)
+    const updates = [];
+    
+    for (const [stockId, plan] of deductionMap.entries()) {
+      const stockItem = stockItems?.find(s => s.id === stockId);
+      if (!stockItem) {
+        result.errors.push(`Stock item not found: ${plan.itemName}`);
+        continue;
+      }
+      
+      const newStock = Math.max(0, stockItem.stock_quantity - plan.totalDeduction);
+      updates.push({ id: stockId, stock_quantity: newStock });
+      
+      result.deductedItems.push({
+        inventoryId: stockId,
+        itemName: plan.itemName,
+        quantityDeducted: plan.totalDeduction,
+        newStock
+      });
+      
+      console.log(`📦 BATCH: Deducting ${plan.totalDeduction} of ${plan.itemName}, new stock: ${newStock}`);
+    }
+    
+    // Execute batch update
+    if (updates.length > 0) {
+      console.log(`🚀 BATCH UPDATE: Updating ${updates.length} inventory items...`);
+      
+      for (const update of updates) {
+        const { error: updateError } = await supabase
+          .from('inventory_stock')
+          .update({ 
+            stock_quantity: update.stock_quantity,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', update.id);
+        
+        if (updateError) {
+          result.errors.push(`Error updating stock: ${updateError.message}`);
+          result.success = false;
+        }
+      }
+      
+      console.log(`✅ BATCH UPDATE: Completed ${updates.length} inventory updates`);
+    }
+    
+    if (result.errors.length > 0) {
+      result.success = false;
+    }
+    
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Batch deduction failed:', error);
+    result.success = false;
+    result.errors.push('Unexpected error during batch deduction');
+    return result;
+  }
 }
 
 /**
