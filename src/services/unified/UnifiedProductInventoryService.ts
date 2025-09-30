@@ -645,15 +645,18 @@ class UnifiedProductInventoryService {
     const errors: string[] = [];
     const warnings: string[] = [];
 
+    // 🚀 BATCH OPTIMIZATION: Fetch inventory once for all items
+    const { data: inventoryData } = await supabase
+      .from('inventory_stock')
+      .select('*')
+      .eq('store_id', storeId);
+
+    const inventoryStock = inventoryData || [];
+
     for (const item of items) {
       try {
-        // Get real availability for this specific product
-        const { data: inventoryData } = await supabase
-          .from('inventory_stock')
-          .select('*')
-          .eq('store_id', storeId);
-
-        const availability = await this.calculateRealAvailability(item.productId, storeId, inventoryData || []);
+        // Use the pre-fetched inventory data for all items
+        const availability = await this.calculateRealAvailability(item.productId, storeId, inventoryStock);
         
         if (availability.status === 'out_of_stock') {
           errors.push(`Product is out of stock (insufficient ingredients)`);
