@@ -7,6 +7,7 @@ import { PaymentProcessor } from "./payment/PaymentProcessor";
 import ReceiptGenerator from "./ReceiptGenerator";
 import { useStore } from "@/contexts/StoreContext";
 import { useShift } from "@/contexts/shift";
+import { useAuthSession } from "@/contexts/AuthSessionContext";
 import { toast } from "sonner";
 import { streamlinedTransactionService } from "@/services/transactions/streamlinedTransactionService";
 import { transactionHealthMonitor } from "@/services/transactions/transactionHealthMonitor";
@@ -49,6 +50,7 @@ export function CheckoutModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const { currentStore } = useStore();
   const { currentShift } = useShift();
+  const { userId } = useAuthSession();  // ⭐ Use cached userId
 
   // Pre-payment validation state
   const [isValidating, setIsValidating] = useState(false);
@@ -153,9 +155,14 @@ export function CheckoutModal({
     setIsProcessing(true);
     
     try {
+      if (!userId) {
+        toast.error("Authentication required");
+        return false;
+      }
+
       const transactionData = {
         storeId: currentStore.id,
-        userId: currentShift.cashier_id,
+        userId: userId,  // ⭐ Use cached userId
         shiftId: currentShift.id,
         customerId: customerId || undefined,
         items: cartItems.map(item => ({

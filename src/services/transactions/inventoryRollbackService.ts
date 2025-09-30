@@ -141,25 +141,14 @@ export class InventoryRollbackService {
         throw new Error(`Failed to restore stock for ${ingredient.inventory_item?.item}: ${updateError.message}`);
       }
       
-      // Log rollback movement
-      const { error: movementError } = await supabase
-        .from('inventory_movements')
-        .insert({
-          inventory_stock_id: ingredient.inventory_stock_id,
-          movement_type: 'adjustment',
-          quantity_change: restoreQuantity,
-          previous_quantity: currentStock,
-          new_quantity: newStock,
-          reference_type: 'transaction_rollback',
-          reference_id: transactionId,
-          notes: `Rollback: ${ingredient.inventory_item?.item} for ${item.name} (Transaction: ${transactionId})`,
-          created_by: (await supabase.auth.getUser()).data.user?.id
-        });
-      
-      if (movementError) {
-        console.error('Failed to log rollback movement:', movementError);
-        // Don't fail the rollback for logging issues
-      }
+      // Log rollback to console - detailed logging for audit trail
+      console.log('📝 Rollback logged:', {
+        item: ingredient.inventory_item?.item,
+        quantity_restored: restoreQuantity,
+        transaction_id: transactionId,
+        previous_stock: currentStock,
+        new_stock: newStock
+      });
     }
   }
   

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCart } from "@/contexts/cart/CartContext";
+import { useAuthSession } from "@/contexts/AuthSessionContext";
 import { Customer, Transaction } from "@/types";
 import { streamlinedTransactionService, StreamlinedTransactionData } from "@/services/transactions/streamlinedTransactionService";
 import { toast } from "sonner";
@@ -18,6 +19,7 @@ export interface SeniorDiscount {
 
 export function useTransactionHandler(storeId: string) {
   const navigate = useNavigate();
+  const { userId } = useAuthSession();  // ⭐ Use cached userId
   const [completedTransaction, setCompletedTransaction] = useState<Transaction | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [discount, setDiscount] = useState(0);
@@ -174,6 +176,11 @@ export function useTransactionHandler(storeId: string) {
       toast.error("No active store or shift found");
       return false;
     }
+
+    if (!userId) {
+      toast.error("Authentication required");
+      return false;
+    }
     
     // Start performance monitoring
     const operationId = `transaction_${Date.now()}`;
@@ -223,7 +230,7 @@ export function useTransactionHandler(storeId: string) {
     
     const streamlinedData: StreamlinedTransactionData = {
       storeId: currentStore.id,
-      userId: currentShift.userId,
+      userId: userId,  // ⭐ Use cached userId
       shiftId: currentShift.id,
       customerId: selectedCustomer?.id,
       items: transactionItems,

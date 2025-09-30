@@ -185,6 +185,7 @@ class StreamlinedTransactionService {
           transaction.id,
           transactionData.storeId,
           transactionData.items,
+          transactionData.userId,  // ⭐ Use cached userId from transactionData (required param)
           cartItems
         );
 
@@ -502,28 +503,14 @@ class StreamlinedTransactionService {
     transactionId: string,
     storeId: string,
     items: StreamlinedTransactionItem[],
+    userId: string,  // ⭐ Accept userId from cached auth context (required)
     cartItems?: any[]
   ): Promise<{ success: boolean; errors: string[] }> {
-    console.log('🔄 Processing inventory deduction with authenticated user context...');
-    
-    // **CRITICAL DEBUG**: Track function entry
+    console.log('✅ Using cached auth context - no auth query needed');
+    console.log(`🔐 TRANSACTION CONTEXT: Cached user - ${userId}`);
     console.log(`🚨 DEBUG: processInventoryDeduction CALLED at ${new Date().toISOString()}`);
     console.log(`🚨 DEBUG: Transaction ID: ${transactionId}, Store ID: ${storeId}`);
     console.log(`🚨 DEBUG: Items count: ${items.length}, Cart items: ${cartItems?.length || 0}`);
-    
-    // Get current authenticated user - this is the proper context for user ID
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
-    
-    console.log(`🔐 TRANSACTION CONTEXT: Auth user - ${userId || 'NULL'}`);
-    
-    if (!userId) {
-      console.error('❌ CRITICAL: No authenticated user in transaction context');
-      return { 
-        success: false, 
-        errors: ['Authentication context missing - cannot process inventory deduction'] 
-      };
-    }
 
     console.log(`🚨 DEBUG: About to format items for inventory...`);
     const inventoryItems = SimplifiedTransactionInventoryIntegration.formatItemsForInventory(items, storeId);
@@ -533,7 +520,7 @@ class StreamlinedTransactionService {
     const result = await SimplifiedTransactionInventoryIntegration.processTransactionInventoryWithAuth(
       transactionId,
       inventoryItems,
-      userId // Pass the authenticated user ID
+      userId  // ⭐ Use cached userId - no auth query!
     );
     console.log(`🚨 DEBUG: processTransactionInventoryWithAuth result:`, result);
 

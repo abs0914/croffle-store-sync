@@ -22,7 +22,8 @@ export class TransactionAuditService {
   static async logInventorySyncSuccess(
     transactionId: string,
     itemCount: number,
-    storeId: string
+    storeId: string,
+    userId?: string  // ⭐ Accept optional userId
   ): Promise<void> {
     try {
       const auditLog: TransactionAuditLog = {
@@ -34,7 +35,7 @@ export class TransactionAuditService {
           status: 'success'
         },
         store_id: storeId,
-        user_id: (await supabase.auth.getUser()).data.user?.id
+        user_id: userId  // ⭐ Use provided userId instead of querying
       };
       
       await this.writeAuditLog(auditLog);
@@ -203,9 +204,10 @@ export class TransactionAuditService {
 export const logInventorySyncSuccess = (
   transactionId: string,
   itemCount: number,
-  storeId: string
+  storeId: string,
+  userId?: string
 ): Promise<void> => {
-  return TransactionAuditService.logInventorySyncSuccess(transactionId, itemCount, storeId);
+  return TransactionAuditService.logInventorySyncSuccess(transactionId, itemCount, storeId, userId);
 };
 
 export const rollbackTransactionWithAudit = async (
