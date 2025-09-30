@@ -13,7 +13,7 @@ interface ComboDataValidationResult {
   resetError: () => void;
 }
 
-const CROFFLE_CATEGORIES = ["Classic", "Glaze", "Fruity", "Premium", "Mini Croffle"];
+const CROFFLE_CATEGORIES = ["Classic", "Plain", "Fruity", "Premium", "Mini Croffle"];
 
 export function useComboDataValidation(
   products: Product[], 

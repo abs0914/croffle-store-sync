@@ -12,7 +12,7 @@ export function useComboService() {
         "Hot Espresso": 170,
         "Cold Espresso": 175
       },
-      "Glaze": {
+      "Plain": {
         "Hot Espresso": 125,
         "Cold Espresso": 130
       },
