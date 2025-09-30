@@ -38,42 +38,63 @@ export class SimplifiedTransactionInventoryIntegration {
     const errors: string[] = [];
     
     try {
-      for (const item of items) {
-        // Check if this is a Mix & Match product
+      // 🚀 OPTIMIZATION: Fetch ALL product recipes in ONE query
+      const nonMixMatchItems = items.filter(item => {
         const isMixMatch = item.productName.toLowerCase().includes('croffle overload') || 
                           item.productName.toLowerCase().includes('mini croffle');
-        
         if (isMixMatch) {
           console.log(`🎯 SIMPLE VALIDATION: Skipping validation for Mix & Match product: ${item.productName}`);
-          continue; // Skip validation for Mix & Match - let smart deduction handle it
         }
-        
-        // Get recipe ingredients for non-Mix & Match products
-        const { data: productData } = await supabase
-          .from('product_catalog')
-          .select(`
-            recipe_id,
-            recipes!inner (
-              recipe_ingredients_with_names!inner (
-                ingredient_name,
-                quantity,
-                inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
-                  id,
-                  stock_quantity
-                )
+        return !isMixMatch;
+      });
+      
+      if (nonMixMatchItems.length === 0) {
+        console.log(`✅ SIMPLE VALIDATION: All items are Mix & Match, skipping validation`);
+        return { canProceed: true, errors: [] };
+      }
+      
+      const productIds = nonMixMatchItems.map(item => item.productId);
+      const storeId = items[0]?.storeId;
+      
+      console.log(`🚀 BATCH VALIDATION: Fetching ${productIds.length} product recipes in ONE query...`);
+      
+      const { data: productsData, error: batchError } = await supabase
+        .from('product_catalog')
+        .select(`
+          id,
+          recipe_id,
+          recipes!inner (
+            recipe_ingredients_with_names!inner (
+              ingredient_name,
+              quantity,
+              inventory_stock!recipe_ingredients_inventory_stock_id_fkey (
+                id,
+                stock_quantity
               )
             )
-          `)
-          .eq('id', item.productId)
-          .eq('recipes.recipe_ingredients_with_names.inventory_stock.store_id', item.storeId)
-          .eq('recipes.recipe_ingredients_with_names.inventory_stock.is_active', true);
+          )
+        `)
+        .in('id', productIds)
+        .eq('recipes.recipe_ingredients_with_names.inventory_stock.store_id', storeId)
+        .eq('recipes.recipe_ingredients_with_names.inventory_stock.is_active', true);
+      
+      if (batchError) {
+        console.error(`❌ BATCH VALIDATION: Error fetching recipes:`, batchError);
+        return { canProceed: false, errors: [batchError.message] };
+      }
+      
+      console.log(`✅ BATCH VALIDATION: Fetched ${productsData?.length || 0} product recipes`);
+      
+      // Check each item against fetched data
+      for (const item of nonMixMatchItems) {
+        const productData = productsData?.find(p => p.id === item.productId);
         
-        if (!productData || productData.length === 0) {
+        if (!productData) {
           console.warn(`⚠️ SIMPLE VALIDATION: No recipe found for ${item.productName}`);
           continue; // Don't block transaction for non-recipe items
         }
         
-        const recipe = productData[0].recipes;
+        const recipe = productData.recipes;
         if (!recipe?.recipe_ingredients_with_names) continue;
         
         // Check each ingredient

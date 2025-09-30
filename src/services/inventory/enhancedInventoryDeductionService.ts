@@ -334,26 +334,24 @@ async function deductRegularProductsBatch(
       console.log(`📦 BATCH: Deducting ${plan.totalDeduction} of ${plan.itemName}, new stock: ${newStock}`);
     }
     
-    // Execute batch update
+    // 🚀 OPTIMIZATION: Execute batch update using PostgreSQL function
     if (updates.length > 0) {
-      console.log(`🚀 BATCH UPDATE: Updating ${updates.length} inventory items...`);
+      console.log(`🚀 BATCH UPDATE: Updating ${updates.length} inventory items in ONE call...`);
       
-      for (const update of updates) {
-        const { error: updateError } = await supabase
-          .from('inventory_stock')
-          .update({ 
-            stock_quantity: update.stock_quantity,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', update.id);
-        
-        if (updateError) {
-          result.errors.push(`Error updating stock: ${updateError.message}`);
-          result.success = false;
-        }
+      const { error: batchError } = await supabase.rpc('batch_update_inventory_stock', {
+        p_updates: updates.map(u => ({
+          inventory_id: u.id,
+          new_quantity: u.stock_quantity
+        }))
+      });
+      
+      if (batchError) {
+        console.error(`❌ BATCH UPDATE: Failed:`, batchError);
+        result.errors.push(`Batch update failed: ${batchError.message}`);
+        result.success = false;
+      } else {
+        console.log(`✅ BATCH UPDATE: Completed ${updates.length} inventory updates in ONE query`);
       }
-      
-      console.log(`✅ BATCH UPDATE: Completed ${updates.length} inventory updates`);
     }
     
     if (result.errors.length > 0) {
