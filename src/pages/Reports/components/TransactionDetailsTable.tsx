@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Search, Download, Filter, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Trash2, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { formatCurrency } from "@/utils/format";
@@ -15,6 +15,9 @@ import { VoidTransactionDialog } from "@/components/pos/void/VoidTransactionDial
 import { voidTransaction, VoidRequestData } from "@/services/transactions/voidTransactionService";
 import { toast } from "sonner";
 import { hasPermission } from "@/types/rolePermissions";
+import { supabase } from "@/integrations/supabase/client";
+import { ReceiptPdfGenerator, ReceiptData } from "@/services/reports/receiptPdfGenerator";
+import { formatInTimeZone as formatInTZ } from "date-fns-tz";
 
 interface Transaction {
   id: string;
@@ -43,6 +46,7 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
   const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isVoiding, setIsVoiding] = useState(false);
+  const [isReprinting, setIsReprinting] = useState<string | null>(null);
 
   // Check if user can void transactions (managers, admins, owners)
   const canVoidTransactions = user?.role ? 
@@ -110,6 +114,98 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
       toast.error('An error occurred while voiding the transaction');
     } finally {
       setIsVoiding(false);
+    }
+  };
+
+  const handleReprintReceipt = async (transaction: Transaction) => {
+    setIsReprinting(transaction.id);
+    try {
+      // Fetch full transaction details with store and BIR config
+      const { data: txData, error: txError } = await supabase
+        .from('transactions')
+        .select(`
+          *,
+          stores:store_id (
+            name,
+            address
+          )
+        `)
+        .eq('id', transaction.id)
+        .single();
+
+      if (txError || !txData) {
+        throw new Error('Failed to fetch transaction details');
+      }
+
+      // Fetch BIR config separately
+      const { data: birConfig } = await supabase
+        .from('bir_store_config')
+        .select('tin, business_name, business_address')
+        .eq('store_id', txData.store_id)
+        .single();
+
+      const items = typeof transaction.items === 'string' 
+        ? JSON.parse(transaction.items) 
+        : transaction.items;
+
+      const storeData = txData.stores as any;
+
+      // Transform to ReceiptData format
+      const receiptData: ReceiptData = {
+        receiptNumber: transaction.receipt_number,
+        businessDate: formatInTZ(new Date(transaction.created_at), 'Asia/Manila', 'yyyy-MM-dd'),
+        transactionTime: formatInTZ(new Date(transaction.created_at), 'Asia/Manila', 'HH:mm:ss'),
+        storeName: birConfig?.business_name || storeData?.name || 'Store',
+        storeAddress: birConfig?.business_address || storeData?.address || 'N/A',
+        storeTin: birConfig?.tin || 'N/A',
+        cashierName: transaction.cashier_name || 'Cashier',
+        items: items.map((item: any) => ({
+          description: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice || 0,
+          lineTotal: item.totalPrice || (item.unitPrice * item.quantity),
+          itemDiscount: 0,
+          vatExemptFlag: false
+        })),
+        grossAmount: transaction.total,
+        discountAmount: 0,
+        netAmount: transaction.total,
+        vatAmount: transaction.total * 0.12 / 1.12,
+        paymentMethod: transaction.payment_method === 'cash' ? 'Cash' : 
+                       transaction.payment_method === 'card' ? 'Card' : 
+                       transaction.payment_method === 'e-wallet' ? 'E-Wallet' : 
+                       transaction.payment_method
+      };
+
+      // Generate PDF
+      const generator = new ReceiptPdfGenerator();
+      const pdfDataUri = generator.generateReceipt(receiptData);
+
+      // Open in new window
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head><title>Receipt - ${transaction.receipt_number}</title></head>
+            <body style="margin:0">
+              <iframe src="${pdfDataUri}" width="100%" height="100%" style="border:none"></iframe>
+            </body>
+          </html>
+        `);
+      } else {
+        // Fallback: download the PDF
+        const link = document.createElement('a');
+        link.href = pdfDataUri;
+        link.download = `receipt-${transaction.receipt_number}.pdf`;
+        link.click();
+      }
+
+      toast.success('Receipt generated successfully');
+    } catch (error) {
+      console.error('Error reprinting receipt:', error);
+      toast.error('Failed to generate receipt');
+    } finally {
+      setIsReprinting(null);
     }
   };
 
@@ -217,7 +313,7 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
                 <TableHead className="hidden sm:table-cell">Items</TableHead>
                 <TableHead>Payment</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                {canVoidTransactions && <TableHead className="text-center">Actions</TableHead>}
+                <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -272,19 +368,31 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
                       <TableCell className="text-right font-medium">
                         {formatCurrency(tx.total)}
                       </TableCell>
-                      {canVoidTransactions && (
-                        <TableCell className="text-center">
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleVoidClick(tx)}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            title="Void Transaction"
+                            onClick={() => handleReprintReceipt(tx)}
+                            disabled={isReprinting === tx.id}
+                            className="h-8 w-8 p-0"
+                            title="Reprint Receipt"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Printer className="h-4 w-4" />
                           </Button>
-                        </TableCell>
-                      )}
+                          {canVoidTransactions && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleVoidClick(tx)}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              title="Void Transaction"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
 
                     {/* Expanded items rows */}
@@ -305,7 +413,7 @@ export function TransactionDetailsTable({ transactions, onTransactionVoided }: T
                         <TableCell className="text-right text-sm text-muted-foreground">
                           {formatCurrency(item.totalPrice || (item.unitPrice * item.quantity))}
                         </TableCell>
-                        {canVoidTransactions && <TableCell></TableCell>}
+                        <TableCell></TableCell>
                       </TableRow>
                     ))}
                   </>
