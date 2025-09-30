@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { deductInventoryForTransactionEnhanced } from '@/services/inventory/enhancedInventoryDeductionService';
+import { supabase } from '@/integrations/supabase/client';
 
 const MixMatchPortionTester: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -50,6 +51,10 @@ const MixMatchPortionTester: React.FC = () => {
       const transactionId = `test-portion-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const storeId = 'fd45e07e-7832-4f51-b46b-7ef604359b86'; // Sugbo Mercado IT Park store ID
       
+      // Get current user for testing
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || 'test-user-id';
+      
       console.log(`🧪 PORTION TEST: ${scenario.name}`);
       
       const result = await deductInventoryForTransactionEnhanced(
@@ -59,7 +64,8 @@ const MixMatchPortionTester: React.FC = () => {
           productId: 'test-product-id', 
           productName: scenario.productName,
           quantity: 1
-        }]
+        }],
+        userId
       );
       
       const testResult = {

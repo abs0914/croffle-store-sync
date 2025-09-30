@@ -7740,6 +7740,10 @@ export type Database = {
         }
         Returns: Json
       }
+      batch_update_inventory_stock: {
+        Args: { p_updates: Json }
+        Returns: undefined
+      }
       begin_transaction: {
         Args: Record<PropertyKey, never>
         Returns: string

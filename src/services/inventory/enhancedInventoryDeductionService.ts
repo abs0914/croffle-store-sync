@@ -135,96 +135,23 @@ export const deductInventoryForTransactionEnhancedWithAuth = async (
 };
 
 /**
- * **PHASE 1 FIX**: Enhanced authentication fallback with circuit breaker pattern
+ * PHASE 1 OPTIMIZATION: Auth circuit breaker removed
+ * Auth session is now cached in AuthSessionContext
+ * userId is passed as parameter from cached session
  */
-const getAuthenticatedUserWithCircuitBreaker = async (): Promise<{ userId: string | null; error?: string }> => {
-  const maxRetries = 3;
-  const baseDelay = 100; // ms
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`🔐 CIRCUIT BREAKER: Auth attempt ${attempt}/${maxRetries}`);
-      
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
-      if (error) {
-        console.warn(`⚠️ CIRCUIT BREAKER ${attempt}: Auth error - ${error.message}`);
-        
-        if (attempt < maxRetries) {
-          // Exponential backoff with jitter
-          const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 50;
-          console.log(`⏳ CIRCUIT BREAKER: Retrying in ${delay.toFixed(0)}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-        
-        return { 
-          userId: null, 
-          error: `Circuit breaker: Authentication failed after ${maxRetries} attempts - ${error.message}` 
-        };
-      }
-      
-      if (!user) {
-        console.warn(`⚠️ CIRCUIT BREAKER ${attempt}: No user session`);
-        
-        if (attempt < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, baseDelay));
-          continue;
-        }
-        
-        return { 
-          userId: null, 
-          error: 'Circuit breaker: No authenticated user found after retries' 
-        };
-      }
-      
-      console.log(`✅ CIRCUIT BREAKER: Success on attempt ${attempt} - User ${user.id}`);
-      return { userId: user.id };
-      
-    } catch (error) {
-      console.error(`❌ CIRCUIT BREAKER ${attempt}: Exception -`, error);
-      
-      if (attempt === maxRetries) {
-        return { 
-          userId: null, 
-          error: `Circuit breaker: Auth service exception - ${error instanceof Error ? error.message : 'Unknown error'}` 
-        };
-      }
-      
-      // Progressive delay for exceptions
-      await new Promise(resolve => setTimeout(resolve, baseDelay * attempt));
-    }
-  }
-  
-  return { userId: null, error: 'Circuit breaker: Authentication system unavailable' };
-};
 
 /**
- * Legacy method - **PHASE 1 FIX**: Enhanced with circuit breaker authentication
+ * PHASE 1 OPTIMIZATION: Legacy method now requires userId
+ * Callers must provide userId from cached session
  */
 export const deductInventoryForTransactionEnhanced = async (
   transactionId: string,
   storeId: string,
-  items: Array<{ productId: string; productName: string; quantity: number }>
+  items: Array<{ productId: string; productName: string; quantity: number }>,
+  userId: string
 ): Promise<EnhancedDeductionResult> => {
-  console.warn('⚠️ LEGACY CALL: deductInventoryForTransactionEnhanced called without user context');
-  
-  // **PHASE 1 FIX**: Use circuit breaker authentication
-  const authResult = await getAuthenticatedUserWithCircuitBreaker();
-  
-  if (!authResult.userId) {
-    console.error(`❌ LEGACY CALL: ${authResult.error}`);
-    return {
-      success: false,
-      deductedItems: [],
-      skippedItems: [`Authentication failed: ${authResult.error}`],
-      errors: [authResult.error || 'Authentication system unavailable'],
-      isMixMatch: false
-    };
-  }
-  
-  console.log(`✅ LEGACY CALL: Circuit breaker authentication succeeded - User ${authResult.userId}`);
-  return deductInventoryForTransactionEnhancedWithAuth(transactionId, storeId, items, authResult.userId);
+  console.log('✅ OPTIMIZED: deductInventoryForTransactionEnhanced with cached userId');
+  return deductInventoryForTransactionEnhancedWithAuth(transactionId, storeId, items, userId);
 };
 
 /**

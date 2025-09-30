@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { deductInventoryForTransactionEnhanced } from '@/services/inventory/enhancedInventoryDeductionService';
+import { supabase } from '@/integrations/supabase/client';
 
 const MixMatchDeductionTester: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +49,10 @@ const MixMatchDeductionTester: React.FC = () => {
       const transactionId = `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const storeId = 'a1b2c3d4-e5f6-7890-1234-567890abcdef'; // Test store ID
       
+      // Get current user for testing
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || 'test-user-id';
+      
       console.log(`🧪 TESTING: ${scenario.name}`);
       
       const result = await deductInventoryForTransactionEnhanced(
@@ -57,7 +62,8 @@ const MixMatchDeductionTester: React.FC = () => {
           productId: scenario.productId,
           productName: scenario.productName,
           quantity: scenario.quantity
-        }]
+        }],
+        userId
       );
       
       const testResult = {
