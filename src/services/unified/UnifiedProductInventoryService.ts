@@ -9,6 +9,8 @@ import { Product, Category } from "@/types";
 import { toast } from "sonner";
 import { optimizedBatchProductService } from "./OptimizedBatchProductService";
 import { storeDataCache } from "./StoreDataCache";
+import { debouncedRealtimeManager } from "./DebouncedRealtimeManager";
+import { multiLayerCache } from "./MultiLayerCache";
 
 export interface UnifiedProductData extends Product {
   available_quantity: number;
@@ -203,9 +205,16 @@ class UnifiedProductInventoryService {
 
   /**
    * Subscribe to real-time updates for a store
+   * OPTIMIZED: Uses debounced updates to prevent cascading refreshes
    */
   subscribeToUpdates(storeId: string): () => void {
-    console.log('🔔 Setting up real-time subscriptions for store:', storeId);
+    console.log('🔔 [OPTIMIZED RT] Setting up debounced real-time subscriptions for store:', storeId.slice(0, 8));
+
+    // Register debounced callback
+    debouncedRealtimeManager.registerCallback(storeId, (updates) => {
+      console.log(`🚀 [OPTIMIZED RT] Processing ${updates.length} grouped updates`);
+      this.handleSelectiveRefresh(storeId, updates);
+    });
 
     // Subscribe to inventory changes
     const inventoryChannel = supabase
@@ -216,8 +225,7 @@ class UnifiedProductInventoryService {
         table: 'inventory_stock',
         filter: `store_id=eq.${storeId}`
       }, () => {
-        console.log('📦 Inventory change detected, refreshing unified data');
-        this.refreshData(storeId);
+        debouncedRealtimeManager.queueUpdate(storeId, 'inventory_stock');
       })
       .subscribe();
 
@@ -230,8 +238,7 @@ class UnifiedProductInventoryService {
         table: 'product_catalog',
         filter: `store_id=eq.${storeId}`
       }, () => {
-        console.log('🛍️ Product catalog change detected, refreshing unified data');
-        this.refreshData(storeId);
+        debouncedRealtimeManager.queueUpdate(storeId, 'product_catalog');
       })
       .subscribe();
 
@@ -243,18 +250,58 @@ class UnifiedProductInventoryService {
         schema: 'public',
         table: 'product_ingredients'
       }, () => {
-        console.log('🧾 Recipe change detected, refreshing unified data');
-        this.refreshData(storeId);
+        debouncedRealtimeManager.queueUpdate(storeId, 'product_ingredients');
       })
       .subscribe();
 
     // Return cleanup function
     return () => {
-      console.log('🧹 Cleaning up real-time subscriptions for store:', storeId);
+      console.log('🧹 Cleaning up debounced real-time subscriptions for store:', storeId.slice(0, 8));
+      debouncedRealtimeManager.unregisterCallback(storeId);
       inventoryChannel.unsubscribe();
       catalogChannel.unsubscribe();
       recipeChannel.unsubscribe();
     };
+  }
+
+  /**
+   * Handle selective refresh based on which tables were updated
+   * OPTIMIZED: Only refreshes affected data layers
+   */
+  private async handleSelectiveRefresh(storeId: string, updates: any[]): Promise<void> {
+    const affectedTables = new Set(updates.map(u => u.table));
+    
+    console.log('🎯 [SELECTIVE REFRESH] Affected tables:', Array.from(affectedTables));
+
+    // Determine which cache layers to invalidate
+    const layersToInvalidate: Array<'inventory' | 'products' | 'recipeIngredients'> = [];
+    
+    if (affectedTables.has('inventory_stock')) {
+      layersToInvalidate.push('inventory');
+    }
+    
+    if (affectedTables.has('product_catalog')) {
+      layersToInvalidate.push('products');
+    }
+    
+    if (affectedTables.has('product_ingredients') || affectedTables.has('recipes')) {
+      layersToInvalidate.push('recipeIngredients');
+    }
+
+    // Selective cache invalidation
+    console.log('🧹 [SELECTIVE REFRESH] Invalidating layers:', layersToInvalidate);
+    layersToInvalidate.forEach(layer => {
+      multiLayerCache.invalidateLayer(storeId, layer);
+    });
+
+    // Invalidate batched data cache to force refetch
+    optimizedBatchProductService.invalidateStoreCache(storeId, 
+      layersToInvalidate.includes('inventory') ? 'inventory' : 
+      layersToInvalidate.includes('products') ? 'products' : 'all'
+    );
+
+    // Refresh unified data (will use remaining valid caches)
+    await this.refreshData(storeId);
   }
 
   /**
@@ -273,26 +320,12 @@ class UnifiedProductInventoryService {
   }
 
   /**
-   * Refresh data for a store (debounced)
+   * Refresh data for a store
+   * Note: Individual debouncing is now handled by DebouncedRealtimeManager
    */
-  private refreshData(storeId: string) {
-    // Clear cache immediately to ensure fresh data
-    this.cache.delete(storeId);
-    
-    // Clear existing timeout
-    const existingTimeout = this.refreshTimeouts.get(storeId);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
-
-    // Set new timeout (debounce for 500ms - faster refresh)
-    const timeout = setTimeout(async () => {
-      console.log('🔄 Refreshing unified data after catalog update');
-      await this.getUnifiedData(storeId);
-      this.refreshTimeouts.delete(storeId);
-    }, 500);
-
-    this.refreshTimeouts.set(storeId, timeout);
+  private async refreshData(storeId: string): Promise<void> {
+    console.log('🔄 [OPTIMIZED] Refreshing unified data');
+    await this.getUnifiedData(storeId);
   }
 
   /**
