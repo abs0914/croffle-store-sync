@@ -3714,6 +3714,70 @@ export type Database = {
         }
         Relationships: []
       }
+      mix_match_ingredient_deductions: {
+        Row: {
+          base_name: string
+          created_at: string
+          id: string
+          ingredient_category: string
+          ingredient_name: string
+          inventory_stock_id: string | null
+          is_active: boolean
+          product_name: string
+          quantity_per_unit: number
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          base_name: string
+          created_at?: string
+          id?: string
+          ingredient_category: string
+          ingredient_name: string
+          inventory_stock_id?: string | null
+          is_active?: boolean
+          product_name: string
+          quantity_per_unit?: number
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          base_name?: string
+          created_at?: string
+          id?: string
+          ingredient_category?: string
+          ingredient_name?: string
+          inventory_stock_id?: string | null
+          is_active?: boolean
+          product_name?: string
+          quantity_per_unit?: number
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mix_match_ingredient_deductions_inventory_stock_id_fkey"
+            columns: ["inventory_stock_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mix_match_ingredient_deductions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "mix_match_ingredient_deductions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_audit_trail: {
         Row: {
           action: string
@@ -4206,6 +4270,13 @@ export type Database = {
             foreignKeyName: "product_catalog_variations_product_catalog_id_fkey"
             columns: ["product_catalog_id"]
             isOneToOne: false
+            referencedRelation: "product_availability_summary"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_catalog_variations_product_catalog_id_fkey"
+            columns: ["product_catalog_id"]
+            isOneToOne: false
             referencedRelation: "product_catalog"
             referencedColumns: ["id"]
           },
@@ -4289,6 +4360,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "inventory_stock"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_ingredients_product_catalog_id_fkey"
+            columns: ["product_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "product_availability_summary"
+            referencedColumns: ["product_id"]
           },
           {
             foreignKeyName: "product_ingredients_product_catalog_id_fkey"
@@ -7578,6 +7656,56 @@ export type Database = {
           },
         ]
       }
+      product_availability_summary: {
+        Row: {
+          has_valid_recipe: boolean | null
+          ingredient_count: number | null
+          is_available: boolean | null
+          price: number | null
+          product_id: string | null
+          product_name: string | null
+          product_type: string | null
+          recipe_id: string | null
+          store_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_catalog_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "cross_store_mapping_issues"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "product_catalog_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_usage_analytics"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "product_catalog_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_catalog_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "product_catalog_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_ingredients_by_store: {
         Row: {
           cost_per_unit: number | null
@@ -8536,6 +8664,10 @@ export type Database = {
         Args: { unit_text: string }
         Returns: string
       }
+      populate_mix_match_deductions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       rebuild_performance_indexes: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -8553,6 +8685,10 @@ export type Database = {
           p_window_minutes?: number
         }
         Returns: boolean
+      }
+      refresh_product_availability: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       repair_missing_product_catalog_entries: {
         Args: Record<PropertyKey, never>
