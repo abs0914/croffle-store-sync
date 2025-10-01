@@ -225,6 +225,19 @@ export default function POS() {
       return false;
     }
     
+    // CRITICAL: Capture cart items at the moment of payment to prevent them from being lost
+    const currentItems = [...items];
+    console.log('🛒 PAYMENT START: Captured cart items', {
+      itemCount: currentItems.length,
+      items: currentItems.map(i => ({ id: i.productId, name: i.product?.name, qty: i.quantity }))
+    });
+    
+    if (currentItems.length === 0) {
+      toast.error("Cart is empty - cannot process payment");
+      console.error('❌ BLOCKED: Cart is empty at payment processing');
+      return false;
+    }
+    
     try {
       // Check if we're online or offline
       if (!isOnline) {
@@ -235,7 +248,7 @@ export default function POS() {
           userId: currentShift.userId,
           shiftId: currentShift.id,
           customerId: selectedCustomer?.id,
-          items: items.map(item => ({
+          items: currentItems.map(item => ({
             productId: item.productId,
             variationId: item.variationId,
             name: item.product?.name || 'Unknown Product',
@@ -271,15 +284,17 @@ export default function POS() {
         }
       }
       
-      // Online processing - use existing flow
-      console.log("🌐 Processing online transaction...");
+      // Online processing - use current captured items
+      console.log("🌐 Processing online transaction with", currentItems.length, "items");
       
       // Convert cart items to the format expected by the transaction handler
-      const cartItemsForTransaction = items.map(item => ({
+      const cartItemsForTransaction = currentItems.map(item => ({
         ...item,
         id: item.productId,
         name: item.product?.name || 'Unknown Product'
       }));
+
+      console.log('🛒 FORMATTED ITEMS for transaction:', cartItemsForTransaction.length);
 
       const success = await processPayment(
         currentStore, 

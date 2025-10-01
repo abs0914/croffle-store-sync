@@ -550,6 +550,15 @@ class StreamlinedTransactionService {
     console.log(`🚨 DEBUG: Transaction ID: ${transactionId}, Store ID: ${storeId}`);
     console.log(`🚨 DEBUG: Items count: ${items.length}, Cart items: ${cartItems?.length || 0}`);
 
+    // CRITICAL: Check for empty items before processing
+    if (!items || items.length === 0) {
+      console.error('❌ BLOCKED: Attempted inventory deduction with empty items array');
+      return {
+        success: false,
+        errors: ['No items provided for inventory deduction - transaction data may be corrupted']
+      };
+    }
+
     console.log(`🚨 DEBUG: About to format items for inventory...`);
     const inventoryItems = SimplifiedTransactionInventoryIntegration.formatItemsForInventory(items, storeId);
     console.log(`🚨 DEBUG: Formatted inventory items:`, inventoryItems);
