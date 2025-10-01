@@ -107,6 +107,14 @@ const CartView = memo(function CartView({
       toast.error('No store selected');
       return false;
     }
+    
+    // CRITICAL: Prevent empty cart transactions
+    if (!cartItems || cartItems.length === 0) {
+      toast.error('Cannot complete transaction with empty cart');
+      console.error('❌ BLOCKED: Attempted transaction with empty cart');
+      return false;
+    }
+    
     try {
       // Step 1: Use IMMEDIATE validation for checkout (bypass debounce)
       const isValid = await validateCartImmediate(cartItems);
