@@ -87,18 +87,21 @@ const CartView = memo(function CartView({
         return;
       }
       
-      const isValid = await validateCartItems(cartItems);
-      
-      if (!isValid) {
-        setValidationMessage(errors.join(', ') || 'Some items have insufficient stock');
-      } else if (warnings.length > 0) {
-        setValidationMessage(warnings.join(', '));
-      } else {
-        setValidationMessage('');
-      }
+      await validateCartItems(cartItems);
     };
     validateCart();
-  }, [cartItems, validateCartItems, errors, warnings]);
+  }, [cartItems, validateCartItems]);
+
+  // Update validation message when errors/warnings change (separate effect)
+  useEffect(() => {
+    if (errors.length > 0) {
+      setValidationMessage(errors.join(', ') || 'Some items have insufficient stock');
+    } else if (warnings.length > 0) {
+      setValidationMessage(warnings.join(', '));
+    } else {
+      setValidationMessage('');
+    }
+  }, [errors, warnings]);
   const handlePaymentCompleteWithInventoryValidation = async (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any): Promise<boolean> => {
     if (!currentStore?.id) {
       toast.error('No store selected');
