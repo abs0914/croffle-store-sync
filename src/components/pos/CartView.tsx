@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { BOGOService } from '@/services/cart/BOGOService';
 import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
 import { quickCheckoutValidation } from '@/services/pos/lightweightValidationService';
-import { CartHeader, CartValidationMessage, CartItemsList, CartSummary, CartActions } from './cart';
+import { CartHeader, CartValidationMessage, OptimizedCartItemsList, CartSummary, CartActions } from './cart';
 interface CartViewProps {
   selectedCustomer: Customer | null;
   setSelectedCustomer: (customer: Customer | null) => void;
@@ -201,8 +201,8 @@ export default function CartView({
         <OrderTypeSelector orderType={orderType} onOrderTypeChange={handleOrderTypeChange} deliveryPlatform={deliveryPlatform} onDeliveryPlatformChange={setDeliveryPlatform} deliveryOrderNumber={deliveryOrderNumber} onDeliveryOrderNumberChange={setDeliveryOrderNumber} />
       </div>
 
-      {/* Cart Items */}
-      <CartItemsList items={cartItems || []} isTransitioning={isOrderTypeTransitioning} orderType={orderType} deliveryPlatform={deliveryPlatform} updateQuantity={updateQuantity} updateItemPrice={updateItemPrice} removeItem={removeItem} getItemValidation={getItemValidation} />
+      {/* Cart Items - Optimized with React.memo */}
+      <OptimizedCartItemsList items={cartItems || []} isTransitioning={isOrderTypeTransitioning} orderType={orderType} deliveryPlatform={deliveryPlatform} updateQuantity={updateQuantity} updateItemPrice={updateItemPrice} removeItem={removeItem} getItemValidation={getItemValidation} />
 
       {/* Bottom Section - Fixed with better spacing */}
       {(cartItems?.length || 0) > 0 && <div className="flex-shrink-0 space-y-2 pb-3">
