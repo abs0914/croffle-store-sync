@@ -6,7 +6,7 @@ import { Product } from "@/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Info, AlertTriangle, XCircle } from "lucide-react";
 import { ProductStatusIndicator } from "@/components/pos/ProductStatusIndicator";
-import { ImageWithFallback } from "../ImageWithFallback";
+import { OptimizedProductImage } from "@/components/pos/OptimizedProductImage";
 import { UnifiedProductData } from "@/services/unified/UnifiedProductInventoryService";
 
 interface ProductCardProps {
@@ -67,12 +67,11 @@ const ProductCard = memo(function ProductCard({
       {/* Product Image */}
       <div className="relative w-full aspect-square bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
         {product.image_url || product.image ? (
-          <ImageWithFallback
+          <OptimizedProductImage
             src={product.image_url || product.image}
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            fallbackClassName="w-full h-full"
-            enableZoom={true}
+            priority="medium"
             onError={() => console.warn(`Image failed for product: ${product.name}`)}
           />
         ) : (

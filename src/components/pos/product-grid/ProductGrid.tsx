@@ -36,6 +36,7 @@ import {
 import { fetchMixMatchRules } from "@/services/pos/mixMatchRulesService";
 import { MixMatchRule } from "@/types/productVariations";
 import { shouldDisplayCategoryInPOS, sortCategoriesForPOS } from "@/utils/categoryOrdering";
+import { useProductImagePreload } from "@/hooks/useProductImagePreload";
 
 interface ProductGridProps {
   products: Product[];
@@ -329,6 +330,12 @@ const ProductGrid = memo(function ProductGrid({
       return isActive && shouldDisplayCategory && matchesCategory && matchesSearch;
     });
   }, [products, activeCategory, searchTerm, categories, getCategoryName, isCustomizableProduct]);
+
+  // Preload product images for better performance
+  useProductImagePreload(products, filteredProducts, {
+    enabled: !isLoading,
+    preloadAll: true // Background preload all images
+  });
 
   const handleRegularProductSelect = () => {
     if (selectedProduct) {
