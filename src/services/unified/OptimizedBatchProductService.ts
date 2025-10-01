@@ -223,6 +223,7 @@ export class OptimizedBatchProductService {
 
   /**
    * Calculate product availability from batched data (in-memory, no queries!)
+   * PHASE 5: Optimistic availability when recipe ingredients not loaded
    */
   calculateAvailabilityFromBatch(
     productId: string,
@@ -259,6 +260,19 @@ export class OptimizedBatchProductService {
       ri => ri.recipeId === product.recipeId
     );
 
+    // PHASE 5 FIX: If recipe ingredients aren't loaded yet (lazy loading),
+    // be optimistic and show as available. Real validation happens at payment.
+    if (ingredients.length === 0 && batchedData.recipeIngredients.length === 0) {
+      // Recipe ingredients not loaded yet - assume available for display
+      // Use product's is_available flag as the source of truth
+      if (product.isAvailable) {
+        return { quantity: 100, status: 'available', requirements: [] };
+      } else {
+        return { quantity: 0, status: 'out_of_stock', requirements: [] };
+      }
+    }
+
+    // If we have recipe ingredients loaded but this product has none, it's missing recipe data
     if (ingredients.length === 0) {
       return { quantity: 0, status: 'no_recipe', requirements: [] };
     }
