@@ -370,35 +370,46 @@ export class OptimizedBatchProductService {
     console.log('🎯 Fetching cart-specific data for products:', productIds);
 
     try {
-      // QUERY 1: Fetch ONLY the products in the cart (not all 72 products)
+      // Filter out combo products (synthetic IDs) before database query
+      // Combo products have IDs like "combo-xxx-yyy" and don't exist in the database
+      const realProductIds = productIds.filter(id => !id.startsWith('combo-'));
+      const comboProductIds = productIds.filter(id => id.startsWith('combo-'));
+      
+      if (comboProductIds.length > 0) {
+        console.log('🔧 Filtering out combo products from validation:', comboProductIds.length, 'combos');
+      }
+
+      // QUERY 1: Fetch ONLY the real products in the cart (not combos, not all 72 products)
       // Changed from INNER JOIN to LEFT JOIN to include products without categories
-      const { data: productsData, error: productsError } = await supabase
-        .from('product_catalog')
-        .select(`
-          id,
-          product_name,
-          description,
-          price,
-          store_id,
-          image_url,
-          is_available,
-          display_order,
-          recipe_id,
-          created_at,
-          updated_at,
-          categories(
+      const { data: productsData, error: productsError } = realProductIds.length > 0 
+        ? await supabase
+          .from('product_catalog')
+          .select(`
             id,
-            name,
-            is_active
-          ),
-          recipes(
-            id,
-            name,
-            is_active
-          )
-        `)
-        .in('id', productIds)
-        .eq('store_id', storeId);
+            product_name,
+            description,
+            price,
+            store_id,
+            image_url,
+            is_available,
+            display_order,
+            recipe_id,
+            created_at,
+            updated_at,
+            categories(
+              id,
+              name,
+              is_active
+            ),
+            recipes(
+              id,
+              name,
+              is_active
+            )
+          `)
+          .in('id', realProductIds)
+          .eq('store_id', storeId)
+        : { data: [], error: null }; // No real products to fetch
 
       if (productsError) {
         console.error('❌ Error fetching cart products:', productsError);

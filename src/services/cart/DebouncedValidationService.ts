@@ -132,6 +132,21 @@ class DebouncedValidationService {
       // Validate each item using batched data (no queries!)
       for (const item of request.items) {
         const itemKey = this.getItemKey(item);
+        
+        // Skip database validation for combo products (they're synthetic/virtual products)
+        if (item.productId.startsWith('combo-')) {
+          itemValidations.set(itemKey, {
+            itemKey,
+            productId: item.productId,
+            isValid: true,
+            availableQuantity: 999, // Combo availability depends on components
+            requestedQuantity: item.quantity,
+            errors: [],
+            warnings: []
+          });
+          continue;
+        }
+        
         const availability = optimizedBatchProductService.calculateAvailabilityFromBatch(
           item.productId,
           batchedData
