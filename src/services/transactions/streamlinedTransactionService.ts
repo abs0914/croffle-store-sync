@@ -190,7 +190,7 @@ class StreamlinedTransactionService {
           {
             name: 'inventory_deduction',
             isCritical: true, // Failure causes rollback
-            timeout: 15000, // 15 second timeout (increased for parallel ingredient deductions)
+            timeout: 30000, // 30 second timeout for inventory deduction with audit trails
             execute: async () => {
               return await this.processInventoryDeduction(
                 transaction.id,
