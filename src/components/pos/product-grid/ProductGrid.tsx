@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { AlertCircle, Info } from "lucide-react";
 import { Category, ProductVariation } from "@/types";
 import { Product } from "@/types";
@@ -305,15 +305,15 @@ export default function ProductGrid({
     }
   };
 
-  // Get category name by id for display purposes
-  const getCategoryName = (categoryId: string | undefined): string => {
+  // Get category name by id for display purposes (memoized to prevent recalculation)
+  const getCategoryName = useCallback((categoryId: string | undefined): string => {
     if (!categoryId) return "Uncategorized";
     const category = categories.find(cat => cat.id === categoryId);
     return category ? category.name : "Uncategorized";
-  };
+  }, [categories]);
 
-  // Helper function to identify customizable products for Mix & Match
-  const isCustomizableProduct = (product: Product): boolean => {
+  // Helper function to identify customizable products for Mix & Match (memoized)
+  const isCustomizableProduct = useCallback((product: Product): boolean => {
     const productName = product.name.toLowerCase().trim();
     const categoryName = getCategoryName(product.category_id).toLowerCase();
     
@@ -321,30 +321,32 @@ export default function ProductGrid({
     return categoryName.includes('mix') && categoryName.includes('match') ||
            productName.includes('mini croffle') || 
            productName.includes('croffle overload');
-  };
+  }, [getCategoryName]);
 
-  // Filter products based on category and search term
-  const filteredProducts = products.filter(product => {
-    const isActive = product.is_active || product.isActive;
+  // Filter products based on category and search term (memoized to prevent excessive filtering)
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      const isActive = product.is_active || product.isActive;
 
-    // Exclude products from hidden categories (like Add-ons and Combo)
-    const categoryName = getCategoryName(product.category_id);
-    const shouldDisplayCategory = shouldDisplayCategoryInPOS(categoryName) && categoryName !== "Combo";
+      // Exclude products from hidden categories (like Add-ons and Combo)
+      const categoryName = getCategoryName(product.category_id);
+      const shouldDisplayCategory = shouldDisplayCategoryInPOS(categoryName) && categoryName !== "Combo";
 
-    // Special handling for Mix & Match category - show customizable products
-    const selectedCategoryName = categories.find(c => c.id === activeCategory)?.name || '';
-    const isMixMatchSelected = selectedCategoryName.toLowerCase().includes('mix') && selectedCategoryName.toLowerCase().includes('match');
-    
-    const matchesCategory = activeCategory === "all" ||
-                           (product.category_id === activeCategory) ||
-                           (isMixMatchSelected && isCustomizableProduct(product));
+      // Special handling for Mix & Match category - show customizable products
+      const selectedCategoryName = categories.find(c => c.id === activeCategory)?.name || '';
+      const isMixMatchSelected = selectedCategoryName.toLowerCase().includes('mix') && selectedCategoryName.toLowerCase().includes('match');
+      
+      const matchesCategory = activeCategory === "all" ||
+                             (product.category_id === activeCategory) ||
+                             (isMixMatchSelected && isCustomizableProduct(product));
 
-    const matchesSearch = !searchTerm ||
-                          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesSearch = !searchTerm ||
+                            product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    return isActive && shouldDisplayCategory && matchesCategory && matchesSearch;
-  });
+      return isActive && shouldDisplayCategory && matchesCategory && matchesSearch;
+    });
+  }, [products, activeCategory, searchTerm, categories, getCategoryName, isCustomizableProduct]);
 
   const handleRegularProductSelect = () => {
     if (selectedProduct) {

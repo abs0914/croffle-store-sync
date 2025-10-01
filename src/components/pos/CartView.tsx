@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { CartItem, Customer } from '@/types';
 import PaymentProcessor from './payment/PaymentProcessor';
 import { CustomerSelector } from './CustomerSelector';
@@ -9,7 +9,7 @@ import { useOptimizedInventoryValidation } from '@/hooks/pos/useOptimizedInvento
 import { useStore } from '@/contexts/StoreContext';
 import { useCart } from '@/contexts/cart/CartContext';
 import { toast } from 'sonner';
-import { BOGOService } from '@/services/cart/BOGOService';
+import { useMemoizedBOGO } from '@/hooks/pos/useMemoizedBOGO';
 import { SeniorDiscount, OtherDiscount } from '@/services/cart/CartCalculationService';
 import { quickCheckoutValidation } from '@/services/pos/lightweightValidationService';
 import { CartHeader, CartValidationMessage, OptimizedCartItemsList, CartSummary, CartActions } from './cart';
@@ -25,7 +25,7 @@ interface CartViewProps {
   handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any, orderType?: string, deliveryPlatform?: string, deliveryOrderNumber?: string) => Promise<boolean>;
   isShiftActive: boolean;
 }
-export default function CartView({
+const CartView = memo(function CartView({
   selectedCustomer,
   setSelectedCustomer,
   handleApplyDiscount,
@@ -176,8 +176,8 @@ export default function CartView({
   const isDeliveryOrderValid = orderType === 'dine_in' || orderType === 'online_delivery' && deliveryPlatform && deliveryOrderNumber.trim();
   const canCheckout = cartItems.length > 0 && isShiftActive && !isValidating && !Boolean(validationMessage) && isDeliveryOrderValid;
 
-  // Check for BOGO eligibility
-  const bogoResult = BOGOService.analyzeBOGO(cartItems);
+  // Check for BOGO eligibility (memoized to prevent excessive calculations)
+  const bogoResult = useMemoizedBOGO(cartItems);
   return <div className="flex flex-col h-full min-h-0 space-y-3 overflow-y-auto pr-1">
       <CartHeader itemCount={cartItems?.length || 0} onClearCart={clearCart} />
       
@@ -263,4 +263,6 @@ export default function CartView({
           </div>
         </div>}
     </div>;
-}
+});
+
+export default CartView;

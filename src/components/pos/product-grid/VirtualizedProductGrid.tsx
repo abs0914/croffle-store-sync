@@ -165,3 +165,5 @@ export const VirtualizedProductGrid = memo(function VirtualizedProductGrid({
     prevProps.columnCount === nextProps.columnCount
   );
 });
+
+export default VirtualizedProductGrid;

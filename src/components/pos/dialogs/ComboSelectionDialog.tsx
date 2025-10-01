@@ -12,7 +12,7 @@ interface ComboSelectionDialogProps {
   onSelectCombo: (espressoType: 'hot' | 'cold') => void;
 }
 
-export const ComboSelectionDialog: React.FC<ComboSelectionDialogProps> = ({
+export const ComboSelectionDialog = React.memo<ComboSelectionDialogProps>(({
   open,
   onClose,
   product,
@@ -114,4 +114,6 @@ export const ComboSelectionDialog: React.FC<ComboSelectionDialogProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
+});
+
+export default ComboSelectionDialog;

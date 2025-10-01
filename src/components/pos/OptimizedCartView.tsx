@@ -6,7 +6,7 @@ import { CustomerLookup } from "@/components/pos/customer";
 import DiscountSelector from "./DiscountSelector";
 import { CartItemsList, CartSummary } from "./cart";
 import { useCartState, useCartActions, useCartCalculations } from "@/contexts/OptimizedCartContext";
-import { BOGOService } from "@/services/cart/BOGOService";
+import { useMemoizedBOGO } from "@/hooks/pos/useMemoizedBOGO";
 
 interface OptimizedCartViewProps {
   selectedCustomer: Customer | null;
@@ -42,8 +42,8 @@ const OptimizedCartView = memo(function OptimizedCartView({
   const { removeItem, updateQuantity, clearCart } = useCartActions();
   const { subtotal, tax, total } = useCartCalculations();
   
-  // Check for BOGO eligibility
-  const bogoResult = BOGOService.analyzeBOGO(items);
+  // Check for BOGO eligibility (memoized to prevent excessive calculations)
+  const bogoResult = useMemoizedBOGO(items);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
