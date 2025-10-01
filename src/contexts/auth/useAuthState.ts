@@ -237,6 +237,10 @@ export const useAuthState = () => {
     }
     
     try {
+      // Clear user mapping cache
+      const { clearUserMappingCache } = await import('./user-mapping-utils');
+      clearUserMappingCache();
+      
       // Clear local state immediately to prevent UI issues
       setUser(null);
       setSession(null);
