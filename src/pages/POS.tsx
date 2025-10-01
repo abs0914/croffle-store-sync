@@ -100,32 +100,18 @@ export default function POS() {
     }
   }, [currentStore?.id]);
 
-  // Cache products for offline use when online
+  // Cache products for offline use when online - memoized to prevent excessive caching
   useEffect(() => {
     if (isOnline && products.length > 0 && categories.length > 0) {
       cacheProductsForOffline(products, categories);
     }
-  }, [isOnline, products, categories, cacheProductsForOffline]);
+  }, [isOnline, products.length, categories.length, cacheProductsForOffline]);
 
   // Real-time notifications removed - using simplified toast system
 
   
-  // Check the product activation status - for debugging
-  const activeProductsCount = products.filter(p => p.is_active).length;
-  console.log(`POS: Total products: ${products.length}, Active products: ${activeProductsCount}`);
-  
   // Enhanced wrapper for addItem with detailed logging
   const handleAddItemToCart = (product, quantity, variation, customization?) => {
-    console.log("POS: handleAddItemToCart called with:", {
-      product: product.name,
-      productId: product.id,
-      quantity,
-      variation: variation ? variation.name : "none",
-      hasCustomization: !!customization,
-      currentStore: currentStore?.id,
-      currentShift: currentShift?.id
-    });
-
     if (!currentStore) {
       console.error("POS: No store selected");
       toast.error("Please select a store first");
@@ -138,7 +124,6 @@ export default function POS() {
       return;
     }
 
-    console.log("POS: Calling addItem from CartContext");
     addItem(product, quantity, variation, customization);
   };
   
@@ -167,11 +152,8 @@ export default function POS() {
     }
     
     try {
-      console.log("POS: Processing payment with streamlined transaction service...");
-      
       // Check if we're online or offline
       if (!isOnline) {
-        console.log("🔌 Processing offline transaction...");
         
         // Prepare offline transaction data
         const transactionData = {
@@ -254,8 +236,6 @@ export default function POS() {
   // Store completed transaction for receipt modal only (when explicitly requested)
   useEffect(() => {
     if (completedTransaction && showReceiptModal) {
-      console.log("POS: Processing completed transaction for receipt modal only");
-      
       // Convert for receipt display only
       const transactionItems: TransactionItem[] = completedTransaction.items?.map((item, index) => ({
         productId: item.productId || '',

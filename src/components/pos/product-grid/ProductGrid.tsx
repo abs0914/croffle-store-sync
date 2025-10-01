@@ -539,14 +539,6 @@ const ProductGrid = memo(function ProductGrid({
   };
 
 
-  console.log("ProductGrid: Render state", {
-    productsCount: products.length,
-    filteredProductsCount: filteredProducts.length,
-    isShiftActive,
-    isLoading,
-    activeCategory
-  });
-
   return (
     <>
       <div className="flex flex-col h-full">

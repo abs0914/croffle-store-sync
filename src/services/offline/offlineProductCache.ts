@@ -33,7 +33,7 @@ class OfflineProductCache {
 
     try {
       localStorage.setItem(this.PRODUCTS_CACHE_KEY, JSON.stringify(cacheData));
-      console.log('📦 Cached products for offline use:', products.length, 'products');
+      // Removed excessive logging for performance
     } catch (error) {
       console.error('Error caching products:', error);
     }
@@ -74,7 +74,7 @@ class OfflineProductCache {
         levels,
         lastUpdated: Date.now()
       }));
-      console.log('📊 Cached inventory levels for offline use:', levels.length, 'items');
+      // Removed excessive logging for performance
     } catch (error) {
       console.error('Error caching inventory levels:', error);
     }

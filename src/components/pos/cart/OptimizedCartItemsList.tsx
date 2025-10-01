@@ -73,8 +73,6 @@ export const OptimizedCartItemsList = memo(function OptimizedCartItemsList({
   removeItem,
   getItemValidation
 }: CartItemsListProps) {
-  console.log('⚡ [OPTIMIZED] CartItemsList: Render with', items?.length || 0, 'items');
-
   return (
     <div className="flex-1 overflow-hidden min-h-[200px]">
       <div className="h-full overflow-y-auto space-y-2 pr-2">

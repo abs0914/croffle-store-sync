@@ -59,44 +59,14 @@ const CartView = memo(function CartView({
     clearCart
   } = useCart();
 
-  // Debug logging to track cart data
-  console.log('🔍 CartView: Cart data from context', {
-    itemCount: cartItems?.length || 0,
-    orderType,
-    calculations: calculations,
-    calculationsFinalTotal: calculations?.finalTotal,
-    calculationsType: typeof calculations,
-    seniorDiscountsCount: seniorDiscounts?.length || 0,
-    cartItemsRaw: cartItems,
-    isOrderTypeTransitioning
-  });
-
-  // Debug logging for cart items
-  useEffect(() => {
-    console.log('CartView: Cart items changed', {
-      itemCount: cartItems?.length || 0,
-      orderType,
-      isTransitioning: isOrderTypeTransitioning,
-      items: cartItems?.map(item => ({
-        id: item.productId,
-        name: item.product.name
-      }))
-    });
-  }, [cartItems, orderType, isOrderTypeTransitioning]);
-
   // Handle order type transitions with loading state
   const handleOrderTypeChange = (newOrderType: any) => {
-    console.log('CartView: Order type changing', {
-      from: orderType,
-      to: newOrderType
-    });
     setIsOrderTypeTransitioning(true);
     setOrderType(newOrderType);
 
     // Small delay to ensure context stability
     setTimeout(() => {
       setIsOrderTypeTransitioning(false);
-      console.log('CartView: Order type transition complete');
     }, 100);
   };
   const {
@@ -117,18 +87,7 @@ const CartView = memo(function CartView({
         return;
       }
       
-      console.log('🔄 [CART VIEW] Starting debounced validation for', cartItems.length, 'items');
-      const startTime = performance.now();
-      
       const isValid = await validateCartItems(cartItems);
-      
-      const duration = performance.now() - startTime;
-      console.log('✅ [CART VIEW] Validation complete', {
-        isValid,
-        duration: `${duration.toFixed(2)}ms`,
-        errors: errors.length,
-        warnings: warnings.length
-      });
       
       if (!isValid) {
         setValidationMessage(errors.join(', ') || 'Some items have insufficient stock');
@@ -147,7 +106,6 @@ const CartView = memo(function CartView({
     }
     try {
       // Step 1: Use IMMEDIATE validation for checkout (bypass debounce)
-      console.log('⚡ [CHECKOUT] Starting immediate validation for', cartItems.length, 'items');
       const isValid = await validateCartImmediate(cartItems);
       
       if (!isValid) {
@@ -221,29 +179,14 @@ const CartView = memo(function CartView({
 
           {/* Action Buttons */}
           <CartActions canCheckout={Boolean(canCheckout)} isShiftActive={isShiftActive} isValidating={isValidating} validationMessage={validationMessage} orderType={orderType} deliveryPlatform={deliveryPlatform} deliveryOrderNumber={deliveryOrderNumber} onCheckout={() => {
-        console.log("🚀 Checkout attempt", {
-          calculationsObject: calculations,
-          finalTotal: calculations?.finalTotal,
-          cartItemsLength: cartItems?.length,
-          type: typeof calculations
-        });
-
         // Allow checkout if there are items in cart, even if total is 0 (complimentary)
         if (!calculations || cartItems?.length === 0) {
-          console.error("❌ Checkout blocked - no items in cart", {
-            calculations,
-            finalTotal: calculations?.finalTotal,
-            itemsInCart: cartItems?.length
-          });
           toast.error('Cannot checkout with empty cart');
           return;
         }
 
         // Allow ₱0 total for complimentary discounts
         if (calculations.finalTotal < 0) {
-          console.error("❌ Checkout blocked - negative total", {
-            finalTotal: calculations.finalTotal
-          });
           toast.error('Invalid cart total');
           return;
         }
