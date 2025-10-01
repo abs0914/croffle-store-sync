@@ -85,7 +85,7 @@ export default function POSContent({
         {/* Products Section */}
         <div className="flex-1 bg-card rounded-lg shadow-sm border border-border overflow-hidden">
           <div className="p-3 md:p-4 h-full flex flex-col">
-            {storeId && (
+            {storeId && products.length > 0 && (
               <ProductGrid
                 products={products} 
                 allProducts={allProducts}

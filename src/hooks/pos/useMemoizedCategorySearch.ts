@@ -14,12 +14,23 @@ export function useMemoizedCategorySearch({ products, categories }: CategorySear
     return category ? category.name : "Uncategorized";
   }, [categories]);
 
-  // Memoize products by category
+  // Memoize products by category with Mini Croffle special handling
   const productsByCategory = useMemo(() => {
     const categoryMap = new Map<string, Product[]>();
     
     products.forEach(product => {
       const categoryName = getCategoryName(product.category_id);
+      
+      // Special handling for Mini Croffle products
+      const isMini = product.name?.toLowerCase().includes("mini");
+      if (isMini) {
+        if (!categoryMap.has("Mini Croffle")) {
+          categoryMap.set("Mini Croffle", []);
+        }
+        categoryMap.get("Mini Croffle")!.push(product);
+      }
+      
+      // Add to regular category as well
       if (!categoryMap.has(categoryName)) {
         categoryMap.set(categoryName, []);
       }
@@ -29,11 +40,9 @@ export function useMemoizedCategorySearch({ products, categories }: CategorySear
     return categoryMap;
   }, [products, getCategoryName]);
 
-  // Cached category search function
+  // Cached category search function with debug logs removed for performance
   const getProductsForCategory = useCallback((categoryName: string): Product[] => {
-    console.log(`Getting products for category: "${categoryName}"`);
     const result = productsByCategory.get(categoryName) || [];
-    console.log(`Products in "${categoryName}" category:`, { count: result.length });
     return result;
   }, [productsByCategory]);
 
