@@ -213,7 +213,8 @@ export default function POS() {
     },
     orderType?: string,
     deliveryPlatform?: string,
-    deliveryOrderNumber?: string
+    deliveryOrderNumber?: string,
+    cartItems?: any[] // Accept cart items as parameter
   ) => {
     if (!currentStore) {
       toast.error("Please select a store first");
@@ -225,10 +226,11 @@ export default function POS() {
       return false;
     }
     
-    // CRITICAL: Capture cart items at the moment of payment to prevent them from being lost
-    const currentItems = [...items];
-    console.log('🛒 PAYMENT START: Captured cart items', {
+    // CRITICAL: Use cart items passed as parameter, fallback to context items
+    const currentItems = cartItems && cartItems.length > 0 ? [...cartItems] : [...items];
+    console.log('🛒 PAYMENT START: Using cart items', {
       itemCount: currentItems.length,
+      source: cartItems && cartItems.length > 0 ? 'parameter' : 'context',
       items: currentItems.map(i => ({ id: i.productId, name: i.product?.name, qty: i.quantity }))
     });
     

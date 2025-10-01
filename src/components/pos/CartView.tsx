@@ -22,7 +22,7 @@ interface CartViewProps {
     amount: number;
     idNumber?: string;
   }) => void;
-  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any, orderType?: string, deliveryPlatform?: string, deliveryOrderNumber?: string) => Promise<boolean>;
+  handlePaymentComplete: (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any, orderType?: string, deliveryPlatform?: string, deliveryOrderNumber?: string, cartItems?: CartItem[]) => Promise<boolean>;
   isShiftActive: boolean;
 }
 const CartView = memo(function CartView({
@@ -108,8 +108,15 @@ const CartView = memo(function CartView({
       return false;
     }
     
+    // CRITICAL: Capture cart items here before any async operations
+    const currentCartItems = [...cartItems];
+    console.log('🛒 CART VIEW: Captured cart items for payment', {
+      itemCount: currentCartItems.length,
+      items: currentCartItems.map(i => ({ id: i.productId, name: i.product?.name, qty: i.quantity }))
+    });
+    
     // CRITICAL: Prevent empty cart transactions
-    if (!cartItems || cartItems.length === 0) {
+    if (!currentCartItems || currentCartItems.length === 0) {
       toast.error('Cannot complete transaction with empty cart');
       console.error('❌ BLOCKED: Attempted transaction with empty cart');
       return false;
@@ -117,15 +124,23 @@ const CartView = memo(function CartView({
     
     try {
       // Step 1: Use IMMEDIATE validation for checkout (bypass debounce)
-      const isValid = await validateCartImmediate(cartItems);
+      const isValid = await validateCartImmediate(currentCartItems);
       
       if (!isValid) {
         toast.error(`Cannot proceed: ${errors.join(', ')}`);
         return false;
       }
 
-      // Proceed with payment
-      const success = await handlePaymentComplete(paymentMethod, amountTendered, paymentDetails, orderType, deliveryPlatform, deliveryOrderNumber);
+      // Proceed with payment - PASS cartItems as parameter
+      const success = await handlePaymentComplete(
+        paymentMethod, 
+        amountTendered, 
+        paymentDetails, 
+        orderType, 
+        deliveryPlatform, 
+        deliveryOrderNumber,
+        currentCartItems // Pass cart items explicitly
+      );
       if (success) {
         setIsPaymentDialogOpen(false);
       }
