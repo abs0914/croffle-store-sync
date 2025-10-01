@@ -1,5 +1,5 @@
 
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, useMemo, useCallback, ReactNode } from "react";
 import { CartItem, Product, ProductVariation } from "@/types";
 import { toast } from "sonner";
 import { useStore } from "../StoreContext";
@@ -59,8 +59,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Get calculations using the centralized service
-  const getCartCalculations = (): CartCalculations => {
+  // Memoize calculations to prevent spam - only recalculate when dependencies change
+  const calculations = useMemo(() => {
     const calculationResult = CartCalculationService.calculateCartTotals(
       items,
       seniorDiscounts,
@@ -68,19 +68,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
       totalDiners
     );
     
-    console.log("🧮 CartProvider: Cart calculation debug", {
+    console.log("🧮 CartProvider: Cart calculation", {
       itemsCount: items.length,
-      itemsData: items.map(i => ({ name: i.product.name, qty: i.quantity, price: i.price })),
       seniorDiscountsCount: seniorDiscounts.length,
-      otherDiscount: otherDiscount,
       totalDiners,
-      calculationResult
+      finalTotal: calculationResult.finalTotal
     });
+    
     return calculationResult;
-  };
+  }, [items, seniorDiscounts, otherDiscount, totalDiners]);
 
-  const calculations = getCartCalculations();
-  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const itemCount = useMemo(() => 
+    items.reduce((sum, item) => sum + item.quantity, 0),
+    [items]
+  );
+  
+  // Provide getCartCalculations for backward compatibility
+  const getCartCalculations = useCallback((): CartCalculations => {
+    return calculations;
+  }, [calculations]);
 
   const addItem = (product: Product, quantity = 1, variation?: ProductVariation, customization?: any) => {
     console.log("🛒 CartContext: addItem function called! Arguments:", {

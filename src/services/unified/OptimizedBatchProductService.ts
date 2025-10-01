@@ -80,7 +80,8 @@ export class OptimizedBatchProductService {
     console.log('🚀 Fetching batched store data for:', storeId);
 
     try {
-      // QUERY 1: Fetch all products with categories in ONE query using JOIN
+      // QUERY 1: Fetch all products with categories in ONE query using LEFT JOIN
+      // Changed from INNER JOIN to LEFT JOIN to include products without categories
       const { data: productsData, error: productsError } = await supabase
         .from('product_catalog')
         .select(`
@@ -95,7 +96,7 @@ export class OptimizedBatchProductService {
           recipe_id,
           created_at,
           updated_at,
-          categories!inner(
+          categories(
             id,
             name,
             is_active
@@ -111,8 +112,11 @@ export class OptimizedBatchProductService {
 
       if (productsError) {
         console.error('❌ Error fetching products:', productsError);
+        console.error('❌ Error details:', { code: productsError.code, message: productsError.message });
         throw productsError;
       }
+      
+      console.log('✅ Products query returned:', productsData?.length || 0, 'products');
 
       // QUERY 2: Fetch ALL inventory for the store in ONE query
       const { data: inventoryData, error: inventoryError } = await supabase
@@ -367,6 +371,7 @@ export class OptimizedBatchProductService {
 
     try {
       // QUERY 1: Fetch ONLY the products in the cart (not all 72 products)
+      // Changed from INNER JOIN to LEFT JOIN to include products without categories
       const { data: productsData, error: productsError } = await supabase
         .from('product_catalog')
         .select(`
@@ -381,7 +386,7 @@ export class OptimizedBatchProductService {
           recipe_id,
           created_at,
           updated_at,
-          categories!inner(
+          categories(
             id,
             name,
             is_active
@@ -397,8 +402,11 @@ export class OptimizedBatchProductService {
 
       if (productsError) {
         console.error('❌ Error fetching cart products:', productsError);
+        console.error('❌ Error details:', { code: productsError.code, message: productsError.message });
         throw productsError;
       }
+      
+      console.log('✅ Cart products query returned:', productsData?.length || 0, 'products');
 
       // QUERY 2: Fetch ALL inventory for the store (reuse from cache if available)
       const { data: inventoryData, error: inventoryError } = await supabase

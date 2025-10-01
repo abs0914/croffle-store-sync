@@ -57,7 +57,7 @@ export function useUnifiedProducts({
   const debouncedSearchTerm = useDebounce(filters.searchTerm, 300);
 
   /**
-   * Load unified data
+   * Load unified data with debouncing to prevent multiple rapid fetches
    */
   const loadData = useCallback(async () => {
     if (!storeId) {
@@ -75,12 +75,24 @@ export function useUnifiedProducts({
       return;
     }
 
+    // Prevent loading if already loading for the same store
+    if (isLoading) {
+      console.log('⏳ Already loading data, skipping duplicate request');
+      return;
+    }
+
     try {
       console.log('🔄 Loading unified data for store:', storeId);
       setIsLoading(true);
       setError(null);
       
       const unifiedData = await unifiedProductInventoryService.getUnifiedData(storeId);
+      
+      // Early return if no products (empty data)
+      if (!unifiedData.products || unifiedData.products.length === 0) {
+        console.warn('⚠️ No products returned from service');
+      }
+      
       setData(unifiedData);
       setIsConnected(true);
       
@@ -104,7 +116,7 @@ export function useUnifiedProducts({
     } finally {
       setIsLoading(false);
     }
-  }, [storeId]);
+  }, [storeId, isLoading]);
 
   /**
    * Filtered and sorted products
