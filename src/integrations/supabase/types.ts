@@ -7584,10 +7584,14 @@ export type Database = {
           created_at: string | null
           id: string | null
           ingredient_name: string | null
+          inventory_active: boolean | null
           inventory_stock_id: string | null
           quantity: number | null
+          recipe_active: boolean | null
           recipe_id: string | null
           recipe_name: string | null
+          recipe_store_id: string | null
+          stock_quantity: number | null
           store_id: string | null
           unit: Database["public"]["Enums"]["inventory_unit"] | null
           updated_at: string | null
@@ -7640,6 +7644,20 @@ export type Database = {
             columns: ["recipe_id"]
             isOneToOne: false
             referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_store_id_fkey"
+            columns: ["recipe_store_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_management_summary"
+            referencedColumns: ["store_id"]
+          },
+          {
+            foreignKeyName: "recipes_store_id_fkey"
+            columns: ["recipe_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
