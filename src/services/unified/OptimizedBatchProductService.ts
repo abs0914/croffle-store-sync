@@ -138,38 +138,12 @@ export class OptimizedBatchProductService {
         throw inventoryError;
       }
 
-      // QUERY 3: Fetch recipe ingredients using NEW OPTIMIZED VIEW
-      // Uses recipe_ingredients_by_store view with pre-filtered store data
-      const recipeIds = productsData
-        ?.filter(p => p.recipe_id)
-        .map(p => p.recipe_id) || [];
-
-      let recipeIngredientsData: any[] = [];
-      if (recipeIds.length > 0) {
-        const ingredientsStartTime = performance.now();
-        
-        // PHASE 1 OPTIMIZATION: Use optimized view with store-level pre-filtering
-        const { data, error: ingredientsError } = await supabase
-          .from('recipe_ingredients_by_store')
-          .select('*')
-          .eq('store_id', storeId) // Filter at database level, not application level!
-          .in('recipe_id', recipeIds);
-
-        const ingredientsFetchTime = performance.now() - ingredientsStartTime;
-        
-        if (ingredientsError) {
-          console.error('❌ Error fetching recipe ingredients:', ingredientsError);
-        } else {
-          recipeIngredientsData = data || [];
-          
-          console.log(`⚡ Recipe ingredients fetched in ${ingredientsFetchTime.toFixed(2)}ms (${recipeIngredientsData.length} ingredients)`);
-          
-          // Log slow queries for monitoring
-          if (ingredientsFetchTime > 500) {
-            console.warn(`⚠️ SLOW QUERY: Recipe ingredients took ${ingredientsFetchTime.toFixed(2)}ms`);
-          }
-        }
-      }
+      // PHASE 5 OPTIMIZATION: SKIP recipe ingredients during initial product load
+      // Recipe ingredients are only needed for cart validation and payment processing
+      // This eliminates the 1s query that was slowing down the initial load
+      console.log('⚡ [PHASE 5] Skipping recipe ingredients during product display (lazy loading enabled)');
+      
+      const recipeIngredientsData: any[] = []; // Empty array for product display
 
       // Transform data into optimized format
       const products: BatchProductData[] = (productsData || []).map(p => ({

@@ -8,12 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "@/types";
 import { SimplifiedInventoryService } from "@/services/inventory/phase4InventoryService";
 import { unifiedProductInventoryService } from "@/services/unified/UnifiedProductInventoryService";
-import { processTransactionInventoryWithMixMatchSupport } from "@/services/inventory/mixMatchInventoryIntegration";
+import { processTransactionInventoryUltraSimplified, TransactionItem as UltraSimplifiedTransactionItem } from "./ultraSimplifiedTransactionInventory";
 import { BIRComplianceService } from "@/services/bir/birComplianceService";
 import { enrichCartItemsWithCategories, insertTransactionItems, DetailedTransactionItem } from "./transactionItemsService";
 import { transactionErrorLogger } from "./transactionErrorLogger";
 import { extractBaseProductName } from "@/utils/productNameUtils";
-import { SimplifiedTransactionInventoryIntegration } from "./simplifiedTransactionInventoryIntegration";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { parallelTransactionProcessor } from "./ParallelTransactionProcessor";
@@ -560,16 +559,24 @@ class StreamlinedTransactionService {
     }
 
     console.log(`🚨 DEBUG: About to format items for inventory...`);
-    const inventoryItems = SimplifiedTransactionInventoryIntegration.formatItemsForInventory(items, storeId);
+    
+    // PHASE 5: Use ultra simplified transaction inventory processing
+    const inventoryItems: UltraSimplifiedTransactionItem[] = items.map(item => ({
+      productId: item.productId,
+      productName: item.name, // StreamlinedTransactionItem uses 'name' property
+      quantity: item.quantity,
+      storeId: storeId
+    }));
+    
     console.log(`🚨 DEBUG: Formatted inventory items:`, inventoryItems);
     
-    console.log(`🚨 DEBUG: About to call processTransactionInventoryWithAuth...`);
-    const result = await SimplifiedTransactionInventoryIntegration.processTransactionInventoryWithAuth(
+    console.log(`🚨 DEBUG: About to call processTransactionInventoryUltraSimplified...`);
+    const result = await processTransactionInventoryUltraSimplified(
       transactionId,
       inventoryItems,
       userId  // ⭐ Use cached userId - no auth query!
     );
-    console.log(`🚨 DEBUG: processTransactionInventoryWithAuth result:`, result);
+    console.log(`🚨 DEBUG: processTransactionInventoryUltraSimplified result:`, result);
 
     return {
       success: result.success,

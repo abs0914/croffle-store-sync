@@ -1,10 +1,9 @@
 /**
  * Optimized Inventory Validation Hook
- * Phase 2: Real-time Inventory Optimization
- * - Debounced validation (500ms)
- * - Incremental validation (only changed items)
- * - Pre-calculated availability from cache
- * Achieves 95% faster cart operations
+ * Phase 5: Radical Simplification
+ * - Automatic validation DISABLED (only validates at payment)
+ * - Eliminates 1.6-2.2s overhead on every cart change
+ * - Immediate validation still available for payment processing
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -31,74 +30,26 @@ export function useOptimizedInventoryValidation(storeId: string) {
   const validationCountRef = useRef(0);
 
   /**
-   * Validate cart items with debouncing
-   * Multiple rapid calls are collapsed into a single validation
+   * PHASE 5: Automatic validation disabled for performance
+   * This function now returns true immediately without validation
+   * Use validateCartImmediate() for payment-time validation instead
    */
   const validateCartItems = useCallback(async (items: CartItem[]): Promise<boolean> => {
-    if (!storeId || items.length === 0) {
-      setState(prev => ({
-        ...prev,
-        validationResult: null,
-        isValidating: false
-      }));
-      return true;
-    }
-
-    const operationId = `validation_${Date.now()}`;
-    performanceMonitor.start(operationId, 'Cart Validation (Debounced)', {
-      itemCount: items.length,
-      storeId
+    console.log('⚡ [PHASE 5] Skipping automatic cart validation (only validates at payment)');
+    
+    setState({
+      isValidating: false,
+      validationResult: null,
+      lastValidatedItemCount: 0,
+      validationTime: null
     });
-
-    setState(prev => ({ ...prev, isValidating: true }));
-    validationCountRef.current++;
-
-    try {
-      // Use debounced validation service
-      const result = await debouncedValidationService.validateCartDebounced(storeId, items);
-
-      const duration = performanceMonitor.end(operationId, {
-        success: true,
-        isValid: result.isValid,
-        errorsCount: result.errors.length
-      });
-
-      setState({
-        isValidating: false,
-        validationResult: result,
-        lastValidatedItemCount: items.length,
-        validationTime: duration
-      });
-
-      previousItemsRef.current = items;
-
-      console.log('✅ [OPTIMIZED VALIDATION] Complete', {
-        itemCount: items.length,
-        isValid: result.isValid,
-        errors: result.errors.length,
-        warnings: result.warnings.length,
-        duration: `${duration?.toFixed(2)}ms`,
-        validationCount: validationCountRef.current
-      });
-
-      return result.isValid;
-    } catch (error: any) {
-      // If superseded, don't update state
-      if (error.message === 'Superseded by newer validation request') {
-        console.log('⏭️ [OPTIMIZED VALIDATION] Superseded by newer request');
-        return true;
-      }
-
-      performanceMonitor.end(operationId, { success: false, error: String(error) });
-      console.error('❌ [OPTIMIZED VALIDATION] Error:', error);
-      
-      setState(prev => ({ ...prev, isValidating: false }));
-      return false;
-    }
+    
+    return true;
   }, [storeId]);
 
   /**
    * Validate immediately without debounce (for checkout)
+   * This is the ONLY validation that runs now - at payment time
    */
   const validateCartImmediate = useCallback(async (items: CartItem[]): Promise<boolean> => {
     if (!storeId || items.length === 0) return true;
@@ -147,7 +98,6 @@ export function useOptimizedInventoryValidation(storeId: string) {
   const getItemValidation = useCallback((productId: string, variationId?: string): ItemValidation | null => {
     if (!state.validationResult) return null;
 
-    // Generate key matching the service's key format
     const key = variationId ? `${productId}_${variationId}` : productId;
     
     for (const [itemKey, validation] of state.validationResult.itemValidations) {
