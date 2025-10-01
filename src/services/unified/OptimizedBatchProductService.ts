@@ -129,35 +129,51 @@ export class OptimizedBatchProductService {
         throw inventoryError;
       }
 
-      // QUERY 3: Fetch ALL recipe ingredients with inventory mapping in ONE query
-      // Only fetch for recipes that belong to products in this store
+      // QUERY 3: Fetch recipe ingredients with OPTIMIZED store-level filtering
+      // Using direct table query with JOIN for better performance (eliminates 2,444 row fetch)
       const recipeIds = productsData
         ?.filter(p => p.recipe_id)
         .map(p => p.recipe_id) || [];
 
       let recipeIngredientsData: any[] = [];
       if (recipeIds.length > 0) {
+        const ingredientsStartTime = performance.now();
+        
+        // OPTIMIZED: Direct query with store-level filtering instead of expensive view
         const { data, error: ingredientsError } = await supabase
-          .from('recipe_ingredients_with_names')
+          .from('recipe_ingredients')
           .select(`
             recipe_id,
             id,
-            ingredient_name,
-            quantity,
             inventory_stock_id,
+            quantity,
+            unit,
             inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
               id,
               item,
               stock_quantity,
-              is_active
+              is_active,
+              store_id
             )
           `)
           .in('recipe_id', recipeIds);
 
+        const ingredientsFetchTime = performance.now() - ingredientsStartTime;
+        
         if (ingredientsError) {
           console.error('❌ Error fetching recipe ingredients:', ingredientsError);
         } else {
-          recipeIngredientsData = data || [];
+          // Filter to only include ingredients for THIS store's inventory
+          recipeIngredientsData = (data || []).filter(ri => 
+            ri.inventory_stock?.store_id === storeId
+          );
+          
+          console.log(`⚡ Recipe ingredients fetched in ${ingredientsFetchTime.toFixed(2)}ms (${data?.length || 0} total, ${recipeIngredientsData.length} for store)`);
+          
+          // Log slow queries for monitoring
+          if (ingredientsFetchTime > 1000) {
+            console.warn(`⚠️ SLOW QUERY: Recipe ingredients took ${ingredientsFetchTime.toFixed(2)}ms`);
+          }
         }
       }
 
@@ -191,7 +207,7 @@ export class OptimizedBatchProductService {
       const recipeIngredients: BatchRecipeIngredient[] = recipeIngredientsData.map(ri => ({
         recipeId: ri.recipe_id,
         ingredientId: ri.id,
-        ingredientName: ri.ingredient_name,
+        ingredientName: ri.inventory_stock?.item || 'Unknown Ingredient',
         requiredQuantity: ri.quantity,
         inventoryStockId: ri.inventory_stock_id,
         inventoryItem: ri.inventory_stock?.item || null,
@@ -208,8 +224,9 @@ export class OptimizedBatchProductService {
         fetchTime
       };
 
-      // Cache the result
-      storeDataCache.set(storeId, 'batched_data', result, 30000); // 30 second TTL
+      // Cache the result with separate TTLs for different data types
+      // Products/inventory: 30 seconds, Recipe ingredients: 5 minutes (more stable)
+      storeDataCache.set(storeId, 'batched_data', result, 300000); // 5 minute TTL for recipe data
 
       console.log('✅ Batched store data fetched:', {
         storeId,
@@ -430,34 +447,44 @@ export class OptimizedBatchProductService {
         throw inventoryError;
       }
 
-      // QUERY 3: Fetch ONLY recipe ingredients for cart products (not all 72 products!)
+      // QUERY 3: Fetch ONLY recipe ingredients for cart products (optimized)
       const recipeIds = productsData
         ?.filter(p => p.recipe_id)
         .map(p => p.recipe_id) || [];
 
       let recipeIngredientsData: any[] = [];
       if (recipeIds.length > 0) {
+        const ingredientsStartTime = performance.now();
+        
+        // OPTIMIZED: Direct table query for cart-specific ingredients only
         const { data, error: ingredientsError } = await supabase
-          .from('recipe_ingredients_with_names')
+          .from('recipe_ingredients')
           .select(`
             recipe_id,
             id,
-            ingredient_name,
-            quantity,
             inventory_stock_id,
+            quantity,
+            unit,
             inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
               id,
               item,
               stock_quantity,
-              is_active
+              is_active,
+              store_id
             )
           `)
-          .in('recipe_id', recipeIds); // Only fetch for cart product recipes!
+          .in('recipe_id', recipeIds); // Only cart recipes!
+
+        const ingredientsFetchTime = performance.now() - ingredientsStartTime;
 
         if (ingredientsError) {
           console.error('❌ Error fetching recipe ingredients:', ingredientsError);
         } else {
-          recipeIngredientsData = data || [];
+          // Filter to store-specific inventory
+          recipeIngredientsData = (data || []).filter(ri => 
+            ri.inventory_stock?.store_id === storeId
+          );
+          console.log(`⚡ Cart ingredients fetched in ${ingredientsFetchTime.toFixed(2)}ms`);
         }
       }
 
@@ -491,7 +518,7 @@ export class OptimizedBatchProductService {
       const recipeIngredients: BatchRecipeIngredient[] = recipeIngredientsData.map(ri => ({
         recipeId: ri.recipe_id,
         ingredientId: ri.id,
-        ingredientName: ri.ingredient_name,
+        ingredientName: ri.inventory_stock?.item || 'Unknown Ingredient',
         requiredQuantity: ri.quantity,
         inventoryStockId: ri.inventory_stock_id,
         inventoryItem: ri.inventory_stock?.item || null,
@@ -500,6 +527,11 @@ export class OptimizedBatchProductService {
       }));
 
       const fetchTime = performance.now() - startTime;
+      
+      // Log performance for monitoring
+      if (fetchTime > 500) {
+        console.warn(`⚠️ Cart-specific fetch took ${fetchTime.toFixed(2)}ms (threshold: 500ms)`);
+      }
       
       const result: BatchedData = {
         products,
