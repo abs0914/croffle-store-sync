@@ -5,7 +5,7 @@ import { CustomerSelector } from './CustomerSelector';
 import MultipleSeniorDiscountSelector from './MultipleSeniorDiscountSelector';
 import { OrderTypeSelector } from './OrderTypeSelector';
 import { Separator } from '@/components/ui/separator';
-import { useInventoryValidation } from '@/hooks/pos/useInventoryValidation';
+import { useOptimizedInventoryValidation } from '@/hooks/pos/useOptimizedInventoryValidation';
 import { useStore } from '@/contexts/StoreContext';
 import { useCart } from '@/contexts/cart/CartContext';
 import { toast } from 'sonner';
@@ -102,36 +102,56 @@ export default function CartView({
   const {
     isValidating,
     validateCartItems,
-    getItemValidation
-  } = useInventoryValidation(currentStore?.id || '');
+    validateCartImmediate,
+    getItemValidation,
+    errors,
+    warnings,
+    validationTime
+  } = useOptimizedInventoryValidation(currentStore?.id || '');
 
-  // Validate cart items when they change
+  // Validate cart items when they change (debounced automatically)
   useEffect(() => {
     const validateCart = async () => {
       if (cartItems.length === 0) {
         setValidationMessage('');
         return;
       }
+      
+      console.log('🔄 [CART VIEW] Starting debounced validation for', cartItems.length, 'items');
+      const startTime = performance.now();
+      
       const isValid = await validateCartItems(cartItems);
+      
+      const duration = performance.now() - startTime;
+      console.log('✅ [CART VIEW] Validation complete', {
+        isValid,
+        duration: `${duration.toFixed(2)}ms`,
+        errors: errors.length,
+        warnings: warnings.length
+      });
+      
       if (!isValid) {
-        setValidationMessage('Some items have insufficient stock');
+        setValidationMessage(errors.join(', ') || 'Some items have insufficient stock');
+      } else if (warnings.length > 0) {
+        setValidationMessage(warnings.join(', '));
       } else {
         setValidationMessage('');
       }
     };
     validateCart();
-  }, [cartItems, validateCartItems]);
+  }, [cartItems, validateCartItems, errors, warnings]);
   const handlePaymentCompleteWithInventoryValidation = async (paymentMethod: 'cash' | 'card' | 'e-wallet', amountTendered: number, paymentDetails?: any): Promise<boolean> => {
     if (!currentStore?.id) {
       toast.error('No store selected');
       return false;
     }
     try {
-      // Step 1: Use lightweight validation for final check
-      console.log('💨 Quick checkout validation for', cartItems.length, 'items');
-      const quickValidation = await quickCheckoutValidation(cartItems, currentStore.id);
-      if (!quickValidation.isValid) {
-        toast.error(`Cannot proceed: ${quickValidation.invalidProducts.join(', ')}`);
+      // Step 1: Use IMMEDIATE validation for checkout (bypass debounce)
+      console.log('⚡ [CHECKOUT] Starting immediate validation for', cartItems.length, 'items');
+      const isValid = await validateCartImmediate(cartItems);
+      
+      if (!isValid) {
+        toast.error(`Cannot proceed: ${errors.join(', ')}`);
         return false;
       }
 
