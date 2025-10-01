@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { AlertCircle, Info } from "lucide-react";
 import { Category, ProductVariation } from "@/types";
 import { Product } from "@/types";
@@ -50,7 +49,7 @@ interface ProductGridProps {
   storeId?: string;
 }
 
-export default function ProductGrid({
+const ProductGrid = memo(function ProductGrid({
   products,
   allProducts,
   categories,
@@ -163,21 +162,11 @@ export default function ProductGrid({
 
   // Handle product selection
   const handleProductClick = async (product: Product) => {
-    console.log("ProductGrid: Product clicked", {
-      productName: product.name,
-      productId: product.id,
-      categoryName: getCategoryName(product.category_id),
-      isShiftActive,
-      isActive: product.is_active || product.isActive
-    });
-
     if (!isShiftActive) {
-      console.log("ProductGrid: Shift not active, cannot add to cart");
       return;
     }
 
     if (!(product.is_active || product.isActive)) {
-      console.log("ProductGrid: Product not active, cannot add to cart");
       return;
     }
 
@@ -206,17 +195,13 @@ export default function ProductGrid({
 
     // For products that don't need customization, add directly to cart
     if (!shouldCustomize) {
-      console.log("ProductGrid: Regular product - adding directly to cart:", product.name);
       addItemToCart(product);
       return;
     }
 
     // For products that need customization, show customization flow
-    console.log("ProductGrid: Product needs customization:", product.name, { isMixMatchCategory });
-
     // Check for enhanced customization first (croffles) - prioritize over recipe customization
     if (shouldShowEnhancedCustomization(product)) {
-      console.log("ProductGrid: ✅ Showing ProductCustomizationDialog for:", product.name);
       setSelectedProductForCustomization(product);
       setIsEnhancedCustomizationOpen(true);
       return;
@@ -247,7 +232,6 @@ export default function ProductGrid({
     });
 
     if (customizableRecipe) {
-      console.log("ProductGrid: Found customizable recipe for Mix & Match product:", customizableRecipe);
       setSelectedCustomizableRecipe(customizableRecipe);
       setIsRecipeCustomizationOpen(true);
       return;
@@ -258,7 +242,6 @@ export default function ProductGrid({
     try {
       setIsLoadingVariations(true);
       const variations = await fetchProductVariations(product.id);
-      console.log("ProductGrid: Fetched variations:", variations);
 
       // If there are variations, show the dialog
       if (variations && variations.length > 0) {
@@ -266,7 +249,6 @@ export default function ProductGrid({
         setIsDialogOpen(true);
       } else {
         // For Mix & Match products without variations or recipes, always show addon selection
-        console.log("ProductGrid: Showing addon selection for Mix & Match product:", product.name);
         setSelectedProductForAddons(product);
         setIsAddonDialogOpen(true);
       }
@@ -752,4 +734,15 @@ export default function ProductGrid({
       />
     </>
   );
-}
+}, (prevProps, nextProps) => {
+  // Only re-render if critical props change
+  return (
+    prevProps.products === nextProps.products &&
+    prevProps.activeCategory === nextProps.activeCategory &&
+    prevProps.isShiftActive === nextProps.isShiftActive &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.storeId === nextProps.storeId
+  );
+});
+
+export default ProductGrid;

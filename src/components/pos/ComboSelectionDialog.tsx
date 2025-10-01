@@ -120,41 +120,11 @@ export function ComboSelectionDialog({
     }
   }, [open, resetError]);
 
-  // Enhanced debug log for combo dialog data  
-  console.log('🔍 ComboSelectionDialog received:', {
-    totalProducts: products.length,
-    totalCategories: categories.length,
-    sampleProductNames: products.slice(0, 5).map(p => p.name),
-    storeFilter: categories.length > 0 ? categories[0].store_id : 'unknown',
-    categoriesDetails: categories.map(c => ({
-      id: c.id,
-      name: c.name,
-      is_active: c.is_active,
-      store_id: c.store_id
-    })),
-    croffleProductCounts: CROFFLE_CATEGORIES.map(catName => ({
-      category: catName,
-      count: getCategoryProducts(catName).length,
-      foundCategories: categories.filter(c => c.name === catName).length,
-      categoryDetails: categories.filter(c => c.name === catName).map(c => ({ id: c.id, is_active: c.is_active }))
-    })),
-    allProductsDetailed: products.map(p => ({
-      id: p.id,
-      name: p.name,
-      category_id: p.category_id,
-      is_active: p.is_active,
-      matchedCategory: categories.find(c => c.id === p.category_id)?.name || 'NO CATEGORY'
-    }))
-  });
-
-  // Log combo service debug info
-  const espressoProducts = getEspressoProducts(products, categories);
-  console.log('🔍 ComboDialog - Final validation:', {
-    hasEspressoProducts: espressoProducts.length > 0,
-    espressoCount: espressoProducts.length,
-    dataLoadStatus: { isDataLoaded, isDataReady, hasAnyValidProducts },
-    validationErrors: dataError
-  });
+  // Memoize espresso products to prevent excessive re-calculations
+  const espressoProducts = useMemo(() => 
+    getEspressoProducts(products, categories), 
+    [products, categories]
+  );
 
   // Enhanced category selection with visual feedback
   const handleCategorySelect = useCallback((category: string) => {

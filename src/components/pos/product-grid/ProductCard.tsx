@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +16,7 @@ interface ProductCardProps {
   onClick: (product: Product) => void;
 }
 
-export default function ProductCard({ 
+const ProductCard = memo(function ProductCard({ 
   product, 
   isShiftActive, 
   getCategoryName,
@@ -183,4 +182,14 @@ export default function ProductCard({
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Optimize re-renders by comparing key props
+  return (
+    prevProps.product.id === nextProps.product.id &&
+    prevProps.product.price === nextProps.product.price &&
+    prevProps.product.stock_quantity === nextProps.product.stock_quantity &&
+    prevProps.isShiftActive === nextProps.isShiftActive
+  );
+});
+
+export default ProductCard;

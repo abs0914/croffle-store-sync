@@ -1,4 +1,5 @@
 
+import React, { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ interface POSContentProps {
   storeId?: string;
 }
 
-export default function POSContent({
+const POSContent = memo(function POSContent({
   activeCategory,
   setActiveCategory,
   products,
@@ -133,4 +134,14 @@ export default function POSContent({
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Only re-render if critical props change
+  return (
+    prevProps.products === nextProps.products &&
+    prevProps.activeCategory === nextProps.activeCategory &&
+    prevProps.currentShift?.id === nextProps.currentShift?.id &&
+    prevProps.discount === nextProps.discount
+  );
+});
+
+export default POSContent;

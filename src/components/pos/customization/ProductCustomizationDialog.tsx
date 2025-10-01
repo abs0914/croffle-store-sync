@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -132,62 +132,49 @@ export const ProductCustomizationDialog: React.FC<ProductCustomizationDialogProp
     return category?.items || [];
   };
 
-  // Get dynamic sauce and topping options for Mix & Match
+  // Apply business rules for Mix & Match selections
+  const allowedMiniSauceNames = ['chocolate', 'caramel', 'tiramisu'];
+  const allowedToppingNames = ['colored sprinkles', 'marshmallow', 'choco flakes', 'chocolate flakes', 'peanut', 'peanuts'];
+  
+  // Get unique items to avoid duplicates (moved to prevent undefined reference)
   const getDynamicSauces = (): AddonItem[] => {
     const allowedBaseNames = ['chocolate', 'caramel', 'tiramisu'];
     const sauces = dynamicAddons.filter(addon => {
       const name = addon.name.toLowerCase();
-      // Accept only our allowed base sauce names, and explicitly exclude croffle and dark variants
       const matchesAllowed = allowedBaseNames.some(n => name.includes(n));
       const isCroffle = name.includes('croffle');
       const isDarkVariant = name.includes('dark');
       return matchesAllowed && !isCroffle && !isDarkVariant;
     });
-    console.log('🥫 Filtered sauces:', sauces.map(s => s.name));
     return sauces;
   };
 
   const getDynamicToppings = (): AddonItem[] => {
     const sauces = getDynamicSauces();
     const sauceIds = new Set(sauces.map(s => s.id));
-    
-    // Get all non-sauce items as toppings
     const toppings = dynamicAddons.filter(addon => !sauceIds.has(addon.id));
-    
-    console.log('🍓 Filtered toppings:', toppings.map(t => t.name));
     return toppings;
   };
 
-  // Get unique items to avoid duplicates
-  const mixMatchSauces = getDynamicSauces();
-  const mixMatchToppings = getDynamicToppings().filter(t =>
-    !mixMatchSauces.some(s => s.id === t.id)
-  );
+  // Memoize filtering functions to prevent excessive re-calculations
+  const filteredSauces = useMemo(() => {
+    if (croffleType !== 'mini') return [];
+    const mixMatchSauces = getDynamicSauces();
+    return mixMatchSauces.filter(s => 
+      allowedMiniSauceNames.some(n => s.name.toLowerCase().includes(n))
+    );
+  }, [dynamicAddons, croffleType]);
 
-  // Apply business rules for Mix & Match selections
-  const allowedMiniSauceNames = ['chocolate', 'caramel', 'tiramisu'];
-  const allowedToppingNames = ['colored sprinkles', 'marshmallow', 'choco flakes', 'chocolate flakes', 'peanut', 'peanuts'];
-
-  const filteredSauces = croffleType === 'mini'
-    ? mixMatchSauces.filter(s => allowedMiniSauceNames.some(n => s.name.toLowerCase().includes(n)))
-    : []; // Overload: no sauces; Regular handled elsewhere
-
-  // Remove any croffle base items from toppings by guarding against names containing 'croffle'
-  const filteredToppings = mixMatchToppings.filter(t =>
-    !t.name.toLowerCase().includes('croffle') &&
-    allowedToppingNames.some(n => t.name.toLowerCase().includes(n))
-  );
-
-  // Debug logging
-  console.log('🎯 ProductCustomizationDialog:', {
-    productName: product?.name,
-    detectedType: croffleType,
-    dynamicAddonsCount: dynamicAddons.length,
-    isLoading: isLoadingAddons,
-    sauces: (croffleType === 'mini' ? filteredSauces.length : 0),
-    toppings: filteredToppings.length,
-    allAddonNames: dynamicAddons.map(a => a.name)
-  });
+  const filteredToppings = useMemo(() => {
+    const mixMatchSauces = getDynamicSauces();
+    const mixMatchToppings = getDynamicToppings().filter(t =>
+      !mixMatchSauces.some(s => s.id === t.id)
+    );
+    return mixMatchToppings.filter(t =>
+      !t.name.toLowerCase().includes('croffle') &&
+      allowedToppingNames.some(n => t.name.toLowerCase().includes(n))
+    );
+  }, [dynamicAddons]);
 
   // For regular croffles, use addon categories (simplified)
   const classicToppings = croffleType === 'regular' ? getAddonsByCategory('basic_toppings') : [];
