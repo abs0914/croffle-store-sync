@@ -109,10 +109,10 @@ export async function processTransactionInventoryUltraSimplified(
           continue;
         }
 
-        // Deduct each ingredient
-        for (const ingredient of productData.recipes.recipe_ingredients) {
+        // PHASE 5 FIX: Parallelize ingredient deductions for speed
+        const deductionPromises = productData.recipes.recipe_ingredients.map(async (ingredient) => {
           if (!ingredient.inventory_stock_id || !ingredient.inventory_stock) {
-            continue;
+            return null;
           }
 
           const deductQuantity = ingredient.quantity * item.quantity;
@@ -125,9 +125,7 @@ export async function processTransactionInventoryUltraSimplified(
             .eq('id', ingredient.inventory_stock_id);
 
           if (updateError) {
-            result.errors.push(`Failed to deduct ${ingredient.inventory_stock.item}`);
-            result.success = false;
-            continue;
+            throw new Error(`Failed to deduct ${ingredient.inventory_stock.item}`);
           }
 
           // Create audit trail
@@ -138,8 +136,21 @@ export async function processTransactionInventoryUltraSimplified(
             ingredient.inventory_stock.item
           );
 
-          result.deductedCount++;
           console.log(`✅ Deducted ${deductQuantity} of ${ingredient.inventory_stock.item}`);
+          return ingredient.inventory_stock.item;
+        });
+
+        // Wait for all deductions to complete in parallel
+        const deductionResults = await Promise.allSettled(deductionPromises);
+        
+        // Process results
+        for (const deductionResult of deductionResults) {
+          if (deductionResult.status === 'rejected') {
+            result.errors.push(deductionResult.reason.message);
+            result.success = false;
+          } else if (deductionResult.value) {
+            result.deductedCount++;
+          }
         }
       }
     }
