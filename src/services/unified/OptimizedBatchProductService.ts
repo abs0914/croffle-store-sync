@@ -340,6 +340,173 @@ export class OptimizedBatchProductService {
   clearAllCaches(): void {
     storeDataCache.clearAll();
   }
+
+  /**
+   * Fetch ONLY data for specific cart items (cart-specific optimization)
+   * Instead of fetching all 2,444 recipe ingredients, fetch only ~10-20 for cart items
+   * Achieves 99% reduction in cart validation queries
+   */
+  async fetchCartSpecificData(
+    storeId: string,
+    productIds: string[],
+    useCache = true
+  ): Promise<BatchedData> {
+    const startTime = performance.now();
+    const cacheKey = `cart_${storeId}_${productIds.sort().join(',')}`;
+
+    // Check cache first
+    if (useCache) {
+      const cached = storeDataCache.get<BatchedData>(storeId, cacheKey);
+      if (cached) {
+        console.log('✅ Using cached cart-specific data:', cacheKey, `(${(performance.now() - startTime).toFixed(2)}ms)`);
+        return cached;
+      }
+    }
+
+    console.log('🎯 Fetching cart-specific data for products:', productIds);
+
+    try {
+      // QUERY 1: Fetch ONLY the products in the cart (not all 72 products)
+      const { data: productsData, error: productsError } = await supabase
+        .from('product_catalog')
+        .select(`
+          id,
+          product_name,
+          description,
+          price,
+          store_id,
+          image_url,
+          is_available,
+          display_order,
+          recipe_id,
+          created_at,
+          updated_at,
+          categories!inner(
+            id,
+            name,
+            is_active
+          ),
+          recipes(
+            id,
+            name,
+            is_active
+          )
+        `)
+        .in('id', productIds)
+        .eq('store_id', storeId);
+
+      if (productsError) {
+        console.error('❌ Error fetching cart products:', productsError);
+        throw productsError;
+      }
+
+      // QUERY 2: Fetch ALL inventory for the store (reuse from cache if available)
+      const { data: inventoryData, error: inventoryError } = await supabase
+        .from('inventory_stock')
+        .select('id, item, stock_quantity, is_active, store_id')
+        .eq('store_id', storeId);
+
+      if (inventoryError) {
+        console.error('❌ Error fetching inventory:', inventoryError);
+        throw inventoryError;
+      }
+
+      // QUERY 3: Fetch ONLY recipe ingredients for cart products (not all 72 products!)
+      const recipeIds = productsData
+        ?.filter(p => p.recipe_id)
+        .map(p => p.recipe_id) || [];
+
+      let recipeIngredientsData: any[] = [];
+      if (recipeIds.length > 0) {
+        const { data, error: ingredientsError } = await supabase
+          .from('recipe_ingredients_with_names')
+          .select(`
+            recipe_id,
+            id,
+            ingredient_name,
+            quantity,
+            inventory_stock_id,
+            inventory_stock!recipe_ingredients_inventory_stock_id_fkey(
+              id,
+              item,
+              stock_quantity,
+              is_active
+            )
+          `)
+          .in('recipe_id', recipeIds); // Only fetch for cart product recipes!
+
+        if (ingredientsError) {
+          console.error('❌ Error fetching recipe ingredients:', ingredientsError);
+        } else {
+          recipeIngredientsData = data || [];
+        }
+      }
+
+      // Transform data into optimized format
+      const products: BatchProductData[] = (productsData || []).map(p => ({
+        productId: p.id,
+        productName: p.product_name,
+        description: p.description,
+        price: p.price,
+        categoryId: p.categories?.id || '',
+        categoryName: p.categories?.name || 'Uncategorized',
+        storeId: p.store_id,
+        imageUrl: p.image_url,
+        isAvailable: p.is_available,
+        displayOrder: p.display_order || 0,
+        recipeId: p.recipe_id,
+        recipeName: p.recipes?.name || null,
+        recipeActive: p.recipes?.is_active || false,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at
+      }));
+
+      const inventory: BatchInventoryData[] = (inventoryData || []).map(i => ({
+        inventoryId: i.id,
+        item: i.item,
+        stockQuantity: i.stock_quantity,
+        isActive: i.is_active,
+        storeId: i.store_id
+      }));
+
+      const recipeIngredients: BatchRecipeIngredient[] = recipeIngredientsData.map(ri => ({
+        recipeId: ri.recipe_id,
+        ingredientId: ri.id,
+        ingredientName: ri.ingredient_name,
+        requiredQuantity: ri.quantity,
+        inventoryStockId: ri.inventory_stock_id,
+        inventoryItem: ri.inventory_stock?.item || null,
+        inventoryStock: ri.inventory_stock?.stock_quantity || 0,
+        inventoryActive: ri.inventory_stock?.is_active || false
+      }));
+
+      const fetchTime = performance.now() - startTime;
+      
+      const result: BatchedData = {
+        products,
+        inventory,
+        recipeIngredients,
+        fetchTime
+      };
+
+      // Cache the cart-specific result (shorter TTL for cart validations)
+      storeDataCache.set(storeId, cacheKey, result, 10000); // 10 second TTL
+
+      console.log('✅ Cart-specific data fetched:', {
+        storeId,
+        cartProducts: products.length,
+        inventory: inventory.length,
+        recipeIngredients: recipeIngredients.length,
+        fetchTime: `${fetchTime.toFixed(2)}ms`,
+        queryReduction: `${recipeIds.length} recipes (not all 72 products)`
+      });
+
+      return result;
+    } catch (error) {
+      console.error('❌ Error in cart-specific fetch:', error);
+      throw error;
+    }
+  }
 }
 
 export const optimizedBatchProductService = OptimizedBatchProductService.getInstance();

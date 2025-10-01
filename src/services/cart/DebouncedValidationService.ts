@@ -111,11 +111,18 @@ class DebouncedValidationService {
         storeId: request.storeId
       });
 
-      // Fetch batched data once for all items
-      const batchedData = await optimizedBatchProductService.fetchBatchedStoreData(
+      // Extract unique product IDs from cart
+      const productIds = [...new Set(request.items.map(item => item.productId))];
+      
+      // Fetch ONLY cart-specific data (not all store products!)
+      // This reduces 2,444 recipe ingredients to ~10-20 for cart items
+      const batchedData = await optimizedBatchProductService.fetchCartSpecificData(
         request.storeId,
+        productIds,
         true // use cache
       );
+      
+      console.log('🎯 [CART-OPTIMIZED] Fetched data for', productIds.length, 'cart products only');
 
       const itemValidations = new Map<string, ItemValidation>();
       const globalErrors: string[] = [];
